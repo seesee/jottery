@@ -122,23 +122,57 @@ pub async fn push(
     let now = chrono::Utc::now().to_rfc3339();
 
     for note in push_req.notes {
-        // Check if this note was hard-deleted by another device
-        // If so, skip it - the client will receive the deletion in the pull response
-        let deletion_count = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM note_deletions WHERE id = ? AND user_id = ?",
+        // Check if this note was hard-deleted by another device. A pushed
+        // edit made *after* the tombstone wins (edit-wins-over-delete,
+        // matching the client's own conflict semantics): clear the
+        // tombstone and let the note fall through to the normal upsert
+        // below, resurrecting it. An edit that is not newer than the
+        // tombstone stays rejected as deleted.
+        let tombstone = sqlx::query!(
+            "SELECT deleted_at FROM note_deletions WHERE id = ? AND user_id = ?",
             note.id,
             client_info.user_id
         )
-        .fetch_one(&state.pool)
+        .fetch_optional(&state.pool)
         .await?;
-        let was_deleted = deletion_count > 0;
 
-        if was_deleted {
-            tracing::info!(
-                "Ignoring push for note {} - was hard-deleted by another device",
-                note.id
-            );
-            continue;
+        if let Some(tombstone) = tombstone {
+            if note.modified_at > tombstone.deleted_at {
+                // Edit postdates the deletion - resurrect the note. Clear
+                // the tombstone first so the upsert below (which finds no
+                // existing row in `notes`) inserts a fresh row, and other
+                // devices see this as a normal update - not a deletion - on
+                // their next pull.
+                sqlx::query!(
+                    "DELETE FROM note_deletions WHERE id = ? AND user_id = ?",
+                    note.id,
+                    client_info.user_id
+                )
+                .execute(&state.pool)
+                .await?;
+
+                tracing::info!(
+                    "Resurrecting note {} - pushed edit ({}) postdates tombstone ({})",
+                    note.id,
+                    note.modified_at,
+                    tombstone.deleted_at
+                );
+            } else {
+                // Edit does not postdate the deletion - the note stays
+                // deleted. There is no live server note to describe for the
+                // `rejected` conflict-resolution channel (that structure
+                // reports the *current* server note's content/tags/version
+                // for a 3-way merge, which does not exist here), so we keep
+                // this as an explicit skip. The client will re-learn the
+                // note is gone from the `deletions` list on its next pull.
+                tracing::info!(
+                    "Ignoring push for note {} - was hard-deleted by another device (edit {} does not postdate tombstone {})",
+                    note.id,
+                    note.modified_at,
+                    tombstone.deleted_at
+                );
+                continue;
+            }
         }
 
         // Validate note content size

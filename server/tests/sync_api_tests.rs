@@ -817,3 +817,203 @@ async fn test_sync_push_conflict_with_attachments() {
 
     pool.close().await;
 }
+
+// Tombstone resurrection tests (jottery-tqwh)
+//
+// A tombstone in `note_deletions` records a hard delete made by another
+// device. Historically, pushing *any* note that matched a tombstone was
+// silently ignored forever, even if the push carried an edit made after the
+// deletion - permanently stranding notes with unsynced local edits. These
+// tests cover both the resurrection (edit postdates tombstone) and the
+// still-deleted (edit does not postdate tombstone) paths.
+
+/// Insert a tombstone directly into `note_deletions`, simulating a hard
+/// delete already synced from another device.
+async fn insert_tombstone(pool: &SqlitePool, note_id: &str, user_id: &str, deleted_at: &str) {
+    let expires_at = (chrono::Utc::now() + chrono::Duration::days(30)).to_rfc3339();
+    sqlx::query!(
+        r#"INSERT INTO note_deletions (id, user_id, deleted_at, synced_from_client_id, expires_at)
+           VALUES (?, ?, ?, NULL, ?)"#,
+        note_id,
+        user_id,
+        deleted_at,
+        expires_at
+    )
+    .execute(pool)
+    .await
+    .expect("Failed to insert tombstone");
+}
+
+#[tokio::test]
+async fn test_sync_push_resurrects_note_when_edit_postdates_tombstone() {
+    let (app, pool) = create_test_app().await;
+
+    let api_key = create_test_user_and_device(&pool).await;
+
+    // Look up the user id that owns this API key's device (needed to seed
+    // the tombstone directly, bypassing the push endpoint).
+    let user_id: String = sqlx::query_scalar!("SELECT user_id FROM clients LIMIT 1")
+        .fetch_one(&pool)
+        .await
+        .expect("Failed to look up user id");
+
+    let note_id = uuid::Uuid::new_v4().to_string();
+    let deleted_at = "2025-01-01T00:00:00Z";
+    insert_tombstone(&pool, &note_id, &user_id, deleted_at).await;
+
+    // Edit made after the tombstone - should resurrect the note.
+    let edit_time = "2025-06-01T00:00:00Z";
+    let request = Request::builder()
+        .uri("/api/v1/sync/push")
+        .method("POST")
+        .header("content-type", "application/json")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .body(Body::from(
+            json!({
+                "notes": [
+                    {
+                        "id": note_id,
+                        "content": "Edited after deletion",
+                        "createdAt": deleted_at,
+                        "modifiedAt": edit_time,
+                        "deleted": false,
+                        "deletedAt": null,
+                        "archived": false,
+                        "archivedAt": null,
+                        "tags": [],
+                        "attachments": [],
+                        "pinned": false,
+                        "version": 1,
+                        "wordWrap": null,
+                        "syntaxLanguage": null
+                    }
+                ],
+                "attachments": [],
+                "versions": []
+            })
+            .to_string(),
+        ))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = parse_json_response(response.into_body()).await;
+    assert_eq!(
+        body["accepted"].as_array().unwrap().len(),
+        1,
+        "post-tombstone edit should be accepted: {:?}",
+        body
+    );
+    assert_eq!(body["rejected"].as_array().unwrap().len(), 0);
+
+    // The note should exist again in `notes`...
+    let note = sqlx::query!(r#"SELECT id, content FROM notes WHERE id = ?"#, note_id)
+        .fetch_optional(&pool)
+        .await
+        .expect("Query should succeed");
+    assert!(note.is_some(), "Resurrected note should be in database");
+    assert_eq!(note.unwrap().content, "Edited after deletion");
+
+    // ...and the tombstone should be gone, so other devices pull the
+    // resurrected note as a normal update rather than a deletion.
+    let tombstone = sqlx::query!(
+        r#"SELECT id FROM note_deletions WHERE id = ? AND user_id = ?"#,
+        note_id,
+        user_id
+    )
+    .fetch_optional(&pool)
+    .await
+    .expect("Query should succeed");
+    assert!(tombstone.is_none(), "Tombstone should be cleared on resurrection");
+
+    pool.close().await;
+}
+
+#[tokio::test]
+async fn test_sync_push_still_rejects_note_when_edit_does_not_postdate_tombstone() {
+    let (app, pool) = create_test_app().await;
+
+    let api_key = create_test_user_and_device(&pool).await;
+
+    let user_id: String = sqlx::query_scalar!("SELECT user_id FROM clients LIMIT 1")
+        .fetch_one(&pool)
+        .await
+        .expect("Failed to look up user id");
+
+    let note_id = uuid::Uuid::new_v4().to_string();
+    let deleted_at = "2025-06-01T00:00:00Z";
+    insert_tombstone(&pool, &note_id, &user_id, deleted_at).await;
+
+    // Edit made before the tombstone - the note should stay deleted.
+    let stale_edit_time = "2025-01-01T00:00:00Z";
+    let request = Request::builder()
+        .uri("/api/v1/sync/push")
+        .method("POST")
+        .header("content-type", "application/json")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .body(Body::from(
+            json!({
+                "notes": [
+                    {
+                        "id": note_id,
+                        "content": "Stale edit predating deletion",
+                        "createdAt": stale_edit_time,
+                        "modifiedAt": stale_edit_time,
+                        "deleted": false,
+                        "deletedAt": null,
+                        "archived": false,
+                        "archivedAt": null,
+                        "tags": [],
+                        "attachments": [],
+                        "pinned": false,
+                        "version": 1,
+                        "wordWrap": null,
+                        "syntaxLanguage": null
+                    }
+                ],
+                "attachments": [],
+                "versions": []
+            })
+            .to_string(),
+        ))
+        .unwrap();
+
+    let response = app.oneshot(request).await.unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = parse_json_response(response.into_body()).await;
+    assert_eq!(
+        body["accepted"].as_array().unwrap().len(),
+        0,
+        "stale pre-tombstone edit must not be accepted: {:?}",
+        body
+    );
+
+    // Neither a note row nor a rejection is currently produced for this
+    // case (see comment at the call site in sync.rs) - document the
+    // current, still-silent-skip behaviour here so a future change to add
+    // an explicit rejection channel has a test to update.
+    assert_eq!(body["rejected"].as_array().unwrap().len(), 0);
+
+    let note = sqlx::query!(r#"SELECT id FROM notes WHERE id = ?"#, note_id)
+        .fetch_optional(&pool)
+        .await
+        .expect("Query should succeed");
+    assert!(note.is_none(), "Note must not be resurrected by a stale edit");
+
+    // Tombstone must remain so other devices still learn of the deletion.
+    let tombstone = sqlx::query!(
+        r#"SELECT id FROM note_deletions WHERE id = ? AND user_id = ?"#,
+        note_id,
+        user_id
+    )
+    .fetch_optional(&pool)
+    .await
+    .expect("Query should succeed");
+    assert!(tombstone.is_some(), "Tombstone should remain for a still-deleted note");
+
+    pool.close().await;
+}
