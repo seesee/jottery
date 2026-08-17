@@ -79,50 +79,79 @@ struct AttachmentListView: View {
 
     private func decryptAndPreview(_ attachment: AttachmentRef) {
         errorMessage = nil
-        guard let url = decryptToTempFile(attachment) else { return }
-        previewURL = url
+        Task { @MainActor in
+            if let url = await decryptToTempFile(attachment) {
+                previewURL = url
+            }
+        }
     }
 
     private func decryptAndShare(_ attachment: AttachmentRef) {
         errorMessage = nil
-        guard let url = decryptToTempFile(attachment) else { return }
-        shareURL = url
-        showingShareSheet = true
+        Task { @MainActor in
+            if let url = await decryptToTempFile(attachment) {
+                shareURL = url
+                showingShareSheet = true
+            }
+        }
     }
 
-    /// Decrypt an attachment blob and write to a temporary file.
-    /// Returns the file URL on success, nil on failure.
-    private func decryptToTempFile(_ attachment: AttachmentRef) -> URL? {
+    /// Decrypt an attachment blob and write to a temporary file, off the
+    /// main thread. Blob fetch, decrypt, and file write are the expensive
+    /// steps, so they all run inside `Task.detached` — only plain,
+    /// `Sendable` values (repo, key, filename, blob id) are captured, matching
+    /// the pattern in `AppState.loadNotes`. Returns the file URL on success,
+    /// nil on failure (setting `errorMessage`, hopped back to MainActor
+    /// explicitly since this function itself is not actor-isolated).
+    private func decryptToTempFile(_ attachment: AttachmentRef) async -> URL? {
+        let repo = attachmentRepo
+        let key = encryptionKey
+        let filename = attachment.filename
+        let blobId = attachment.data
+
         do {
-            // Fetch the encrypted blob from the database
-            guard let blobData = try attachmentRepo.getBlob(id: attachment.data) else {
-                errorMessage = L.attachmentsDataNotAvailable
-                return nil
-            }
+            return try await Task.detached(priority: .userInitiated) {
+                // Fetch the encrypted blob from the database
+                guard let blobData = try repo.getBlob(id: blobId) else {
+                    throw AttachmentDecryptError.dataNotAvailable
+                }
 
-            // The blob is UTF-8 of {"ciphertext":"...","iv":"..."}
-            guard let blobString = String(data: blobData, encoding: .utf8) else {
-                errorMessage = L.attachmentsInvalidData
-                return nil
-            }
+                // The blob is UTF-8 of {"ciphertext":"...","iv":"..."}
+                guard let blobString = String(data: blobData, encoding: .utf8) else {
+                    throw AttachmentDecryptError.invalidData
+                }
 
-            let encrypted = try CryptoService.parseEncryptedJSON(blobString)
-            let decryptedData = try CryptoService.decrypt(encrypted, key: encryptionKey)
+                let encrypted = try CryptoService.parseEncryptedJSON(blobString)
+                let decryptedData = try CryptoService.decrypt(encrypted, key: key)
 
-            // Write to temp file with the correct filename
-            let tempDir = FileManager.default.temporaryDirectory
-                .appendingPathComponent("jottery-attachments", isDirectory: true)
-            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+                // Write to temp file with the correct filename
+                let tempDir = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("jottery-attachments", isDirectory: true)
+                try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
 
-            let fileURL = tempDir.appendingPathComponent(attachment.filename)
-            try decryptedData.write(to: fileURL)
+                let fileURL = tempDir.appendingPathComponent(filename)
+                try decryptedData.write(to: fileURL)
 
-            return fileURL
+                return fileURL
+            }.value
+        } catch AttachmentDecryptError.dataNotAvailable {
+            await MainActor.run { errorMessage = L.attachmentsDataNotAvailable }
+            return nil
+        } catch AttachmentDecryptError.invalidData {
+            await MainActor.run { errorMessage = L.attachmentsInvalidData }
+            return nil
         } catch {
-            errorMessage = L.attachmentsDecryptFailed
+            await MainActor.run { errorMessage = L.attachmentsDecryptFailed }
             return nil
         }
     }
+}
+
+/// Errors surfaced by `AttachmentListView.decryptToTempFile` so the specific
+/// localized message can be chosen back on MainActor.
+private enum AttachmentDecryptError: Error {
+    case dataNotAvailable
+    case invalidData
 }
 
 // MARK: - Attachment Row
