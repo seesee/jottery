@@ -15,8 +15,12 @@ final class AppState {
 
     // MARK: - Notes
 
-    var notes: [DecryptedNote] = []
-    var archivedNotes: [DecryptedNote] = []
+    var notes: [DecryptedNote] = [] {
+        didSet { rebuildAllTags() }
+    }
+    var archivedNotes: [DecryptedNote] = [] {
+        didSet { rebuildAllTags() }
+    }
     var showArchive: Bool = false
     var selectedNoteId: String?
     var searchQuery: String = ""
@@ -210,9 +214,28 @@ final class AppState {
     }
 
     /// All unique tags across all notes, sorted alphabetically.
-    var allTags: [String] {
+    ///
+    /// Memoised (jottery-fxmq): `TagInputView` reads this on every keystroke,
+    /// and it used to `flatMap` both note arrays on every access — O(notes)
+    /// per character typed. Rebuilding is now driven by `didSet` on
+    /// `notes`/`archivedNotes` instead: those are the only two properties
+    /// `allTags` derives from, and Swift fires `didSet` for *every* mutation
+    /// of a stored array property — full reassignment (`notes = active`),
+    /// `insert`/`removeAll`, and in-place element writes (`notes[i] = x`)
+    /// alike. That means every current and future publication site (loadNotes,
+    /// applySyncChanges, saveNote, createNote, delete/archive/restore/
+    /// unarchive, importSharedInboxItems) invalidates `allTags` for free,
+    /// without each one needing its own call to a rebuild function — the
+    /// fewest-touch-points option versus threading an explicit
+    /// `rebuildAllTags()` call (or invalidation-flag set) through every one
+    /// of those call sites individually. A plain read is then an O(1)
+    /// stored-property access, so per-keystroke cost is back to a lookup,
+    /// not a rebuild.
+    private(set) var allTags: [String] = []
+
+    private func rebuildAllTags() {
         let tagSets = notes.flatMap(\.tags) + archivedNotes.flatMap(\.tags)
-        return Array(Set(tagSets)).sorted()
+        allTags = Array(Set(tagSets)).sorted()
     }
 
     var selectedNote: DecryptedNote? {
