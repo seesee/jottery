@@ -36,6 +36,18 @@ pub struct Config {
     pub max_note_content_size: usize,
     pub max_tag_length: usize,
     pub max_tags_per_note: usize,
+
+    // Rate limiting on auth/registration endpoints (per-IP).
+    // Uses SmartIpKeyExtractor so deployments behind a reverse proxy with
+    // X-Forwarded-For / X-Real-IP headers rate-limit by the real client IP
+    // rather than by the proxy's IP (which would throttle everyone).
+    //
+    // `period_seconds` is the replenishment period between individual
+    // requests (i.e. the sustained rate is `1 / period_seconds` req/s).
+    // `burst` is the initial / recharged bucket size that lets a user retry
+    // a few times in quick succession before being throttled.
+    pub auth_rate_limit_period_seconds: u64,
+    pub auth_rate_limit_burst: u32,
 }
 
 impl Config {
@@ -140,6 +152,18 @@ impl Config {
                 .unwrap_or_else(|_| "50".to_string())
                 .parse()
                 .unwrap_or(50),
+
+            // Defaults: one request every 2 seconds sustained, burst of 5.
+            // Tight enough to make online password-guessing impractical,
+            // loose enough to cover legitimate retries after typos.
+            auth_rate_limit_period_seconds: env::var("AUTH_RATE_LIMIT_PERIOD_SECONDS")
+                .unwrap_or_else(|_| "2".to_string())
+                .parse()
+                .unwrap_or(2),
+            auth_rate_limit_burst: env::var("AUTH_RATE_LIMIT_BURST")
+                .unwrap_or_else(|_| "5".to_string())
+                .parse()
+                .unwrap_or(5),
         })
     }
 }

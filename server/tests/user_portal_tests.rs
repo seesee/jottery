@@ -61,6 +61,8 @@ async fn create_test_app() -> (Router, SqlitePool) {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        auth_rate_limit_period_seconds: 2,
+        auth_rate_limit_burst: 5,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -521,6 +523,244 @@ async fn test_delete_account_requires_auth() {
     let response = app.oneshot(request).await.unwrap();
 
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+// ============================================================================
+// Phase 0 Auth Hardening Tests
+// ============================================================================
+
+/// Helper: create a second session for an existing user and return its token.
+async fn create_additional_session(pool: &SqlitePool, user_id: &str) -> String {
+    let session_token: String = (0..32)
+        .map(|_| format!("{:02x}", rand::random::<u8>()))
+        .collect();
+    let session_id = uuid::Uuid::new_v4().to_string();
+    let token_hash = format!("{:x}", Sha256::digest(session_token.as_bytes()));
+    let now = chrono::Utc::now().to_rfc3339();
+    let expires_at = (chrono::Utc::now() + chrono::Duration::days(7)).to_rfc3339();
+    sqlx::query!(
+        r#"INSERT INTO sessions (id, user_id, token_hash, expires_at, created_at, last_used_at)
+           VALUES (?, ?, ?, ?, ?, ?)"#,
+        session_id, user_id, token_hash, expires_at, now, now,
+    )
+    .execute(pool)
+    .await
+    .expect("Failed to create additional session");
+    session_token
+}
+
+/// Helper: create a client (device) row for a user and return (client_id, api_key).
+async fn create_device_for_user(pool: &SqlitePool, user_id: &str, name: &str) -> (String, String) {
+    let client_id = uuid::Uuid::new_v4().to_string();
+    let api_key: String = (0..32).map(|_| format!("{:02x}", rand::random::<u8>())).collect();
+    let api_key_hash = format!("{:x}", Sha256::digest(api_key.as_bytes()));
+    let now = chrono::Utc::now().to_rfc3339();
+    sqlx::query!(
+        r#"INSERT INTO clients (id, user_id, api_key, device_name, device_type, created_at, is_active)
+           VALUES (?, ?, ?, ?, 'web', ?, 1)"#,
+        client_id, user_id, api_key_hash, name, now,
+    )
+    .execute(pool)
+    .await
+    .expect("Failed to create client");
+    (client_id, api_key)
+}
+
+#[tokio::test]
+async fn test_change_password_revokes_other_sessions_but_keeps_current() {
+    let (app, pool) = create_test_app().await;
+
+    // A user with two sessions: the one we'll use to call change-password,
+    // and a second one that should be invalidated.
+    let current_token = create_approved_user_with_session(&pool, "two-sessions@example.com", "initialpw12").await;
+
+    // Look up user_id for the account we just created
+    let user_id: String = sqlx::query_scalar!(
+        "SELECT id FROM users WHERE email = ?", "two-sessions@example.com"
+    )
+    .fetch_one(&pool).await.unwrap();
+
+    let other_token = create_additional_session(&pool, &user_id).await;
+
+    // Before: two sessions exist
+    let before: i64 = sqlx::query_scalar!("SELECT COUNT(*) FROM sessions WHERE user_id = ?", user_id)
+        .fetch_one(&pool).await.unwrap();
+    assert_eq!(before, 2);
+
+    // Change password via current session
+    let request = Request::builder()
+        .uri("/api/v1/user/change-password")
+        .method("POST")
+        .header("content-type", "application/json")
+        .header("authorization", format!("Bearer {}", current_token))
+        .body(Body::from(json!({
+            "currentPassword": "initialpw12",
+            "newPassword": "rotatedpw1234",
+        }).to_string()))
+        .unwrap();
+    let response = app.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+
+    // After: current session still valid, other session gone
+    let after: i64 = sqlx::query_scalar!("SELECT COUNT(*) FROM sessions WHERE user_id = ?", user_id)
+        .fetch_one(&pool).await.unwrap();
+    assert_eq!(after, 1, "only the current session should survive");
+
+    // Verify the `other_token` no longer validates (look it up by its hash)
+    let other_hash = format!("{:x}", Sha256::digest(other_token.as_bytes()));
+    let other_still_there: Option<String> = sqlx::query_scalar!(
+        "SELECT id FROM sessions WHERE token_hash = ?", other_hash
+    )
+    .fetch_optional(&pool).await.unwrap();
+    assert!(other_still_there.is_none(), "revoked session must not be in the DB");
+
+    pool.close().await;
+}
+
+#[tokio::test]
+async fn test_change_password_deactivates_device_api_keys() {
+    let (app, pool) = create_test_app().await;
+    let token = create_approved_user_with_session(&pool, "devices@example.com", "initialpw12").await;
+    let user_id: String = sqlx::query_scalar!(
+        "SELECT id FROM users WHERE email = ?", "devices@example.com"
+    )
+    .fetch_one(&pool).await.unwrap();
+
+    // Two active devices
+    let (_, _) = create_device_for_user(&pool, &user_id, "phone").await;
+    let (_, _) = create_device_for_user(&pool, &user_id, "laptop").await;
+
+    let active_before: i64 = sqlx::query_scalar!(
+        "SELECT COUNT(*) FROM clients WHERE user_id = ? AND is_active = 1", user_id
+    )
+    .fetch_one(&pool).await.unwrap();
+    assert_eq!(active_before, 2);
+
+    let request = Request::builder()
+        .uri("/api/v1/user/change-password")
+        .method("POST")
+        .header("content-type", "application/json")
+        .header("authorization", format!("Bearer {}", token))
+        .body(Body::from(json!({
+            "currentPassword": "initialpw12",
+            "newPassword": "rotatedpw1234",
+        }).to_string()))
+        .unwrap();
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+
+    // Both devices must be soft-deactivated
+    let active_after: i64 = sqlx::query_scalar!(
+        "SELECT COUNT(*) FROM clients WHERE user_id = ? AND is_active = 1", user_id
+    )
+    .fetch_one(&pool).await.unwrap();
+    assert_eq!(active_after, 0, "all device api keys should be deactivated after password change");
+
+    pool.close().await;
+}
+
+#[tokio::test]
+async fn test_check_status_requires_password() {
+    let (_, pool) = create_test_app().await;
+    // We need to register the /status route locally because create_test_app
+    // doesn't expose it — build a tiny router around just this handler.
+    let (sync_broadcast, _) = broadcast::channel(100);
+    let sse_tokens = jottery_server::api::sse::create_token_store();
+    let config = jottery_server::config::Config {
+        database_url: "sqlite::memory:".to_string(),
+        port: 3030,
+        max_payload_size: 5_242_880,
+        cors_allowed_origins: None,
+        session_expiry_days: 7,
+        default_admin_email: "admin@localhost".to_string(),
+        default_admin_password: "changeme".to_string(),
+        argon2_m_cost: 19456,
+        argon2_t_cost: 2,
+        argon2_p_cost: 1,
+        default_storage_quota_mb: 1000,
+        default_max_upload_size_mb: 5,
+        default_inbox_max_items: 100,
+        default_inbox_max_size_mb: 10,
+        password_complexity: "none".to_string(),
+        enable_hsts: false,
+        max_device_name_length: 255,
+        max_inbox_content_size: 1_048_576,
+        max_note_content_size: 10_485_760,
+        max_tag_length: 100,
+        max_tags_per_note: 50,
+        auth_rate_limit_period_seconds: 2,
+        auth_rate_limit_burst: 5,
+    };
+    let app_state = Arc::new(jottery_server::AppState {
+        pool: pool.clone(), sync_broadcast, sse_tokens, config,
+    });
+    let status_app = Router::new()
+        .route("/api/v1/user/status", post(jottery_server::api::user::check_status))
+        .with_state(app_state);
+
+    // Create one approved user and one pending user.
+    let _ = create_approved_user_with_session(&pool, "approved@example.com", "secretpw12345").await;
+
+    // Pending user (approved = 0)
+    use jottery_server::utils::password::hash_password_with_params;
+    let pending_id = uuid::Uuid::new_v4().to_string();
+    let pending_hash = hash_password_with_params("pendingpw12345", 19456, 2, 1).unwrap();
+    let now = chrono::Utc::now().to_rfc3339();
+    sqlx::query!(
+        r#"INSERT INTO users (id, email, password_hash, approved, is_admin, is_active, created_at)
+           VALUES (?, ?, ?, 0, 0, 1, ?)"#,
+        pending_id, "pending@example.com", pending_hash, now,
+    ).execute(&pool).await.unwrap();
+
+    // Unknown email → 401
+    let r = status_app.clone().oneshot(
+        Request::builder()
+            .uri("/api/v1/user/status")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(json!({"email": "nobody@example.com", "password": "whatever123"}).to_string()))
+            .unwrap(),
+    ).await.unwrap();
+    assert_eq!(r.status(), StatusCode::UNAUTHORIZED, "unknown email must not reveal non-existence");
+
+    // Wrong password → 401
+    let r = status_app.clone().oneshot(
+        Request::builder()
+            .uri("/api/v1/user/status")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(json!({"email": "approved@example.com", "password": "wrongpw1234567"}).to_string()))
+            .unwrap(),
+    ).await.unwrap();
+    assert_eq!(r.status(), StatusCode::UNAUTHORIZED, "wrong password must not reveal existence");
+
+    // Correct credentials → approved
+    let r = status_app.clone().oneshot(
+        Request::builder()
+            .uri("/api/v1/user/status")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(json!({"email": "approved@example.com", "password": "secretpw12345"}).to_string()))
+            .unwrap(),
+    ).await.unwrap();
+    assert_eq!(r.status(), StatusCode::OK);
+    let body = parse_json_response(r.into_body()).await;
+    assert_eq!(body["status"], "approved");
+
+    // Correct credentials on pending account → pending_approval
+    let r = status_app.oneshot(
+        Request::builder()
+            .uri("/api/v1/user/status")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(json!({"email": "pending@example.com", "password": "pendingpw12345"}).to_string()))
+            .unwrap(),
+    ).await.unwrap();
+    assert_eq!(r.status(), StatusCode::OK);
+    let body = parse_json_response(r.into_body()).await;
+    assert_eq!(body["status"], "pending_approval");
+
+    pool.close().await;
 }
 
 // ============================================================================

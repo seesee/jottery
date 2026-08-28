@@ -346,14 +346,55 @@ pub async fn change_password(
         AppError::InternalServerError
     })?;
 
-    // Update password
+    // Update password, revoke other sessions, deactivate device API keys.
+    // All three happen in a single transaction so a half-applied state can't
+    // leave the account in a surprising position (e.g. password updated but
+    // stale API keys still accepted).
+    let mut tx = state.pool.begin().await.map_err(|e| {
+        tracing::error!("Failed to start transaction: {}", e);
+        AppError::InternalServerError
+    })?;
+
     sqlx::query!(
         r#"UPDATE users SET password_hash = ? WHERE id = ?"#,
         new_password_hash,
         user_id
     )
-    .execute(&state.pool)
+    .execute(&mut *tx)
     .await?;
+
+    // Revoke every session except the one that authenticated this request.
+    // Keeping the current session avoids a jarring auto-logout for the caller;
+    // any other open sessions (other browsers, stolen tokens) are killed.
+    let other_sessions = sqlx::query!(
+        "DELETE FROM sessions WHERE user_id = ? AND id != ?",
+        user_id,
+        session.id,
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    // Soft-revoke all device API keys. The user must re-pair each device
+    // (which uses the new password). This closes the window where a stolen
+    // API key remains valid after a credential reset.
+    let deactivated_clients = sqlx::query!(
+        "UPDATE clients SET is_active = 0 WHERE user_id = ? AND is_active = 1",
+        user_id,
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    tx.commit().await.map_err(|e| {
+        tracing::error!("Failed to commit password change: {}", e);
+        AppError::InternalServerError
+    })?;
+
+    tracing::info!(
+        "Password change for user {}: revoked {} sessions, deactivated {} device api keys",
+        user_id,
+        other_sessions.rows_affected(),
+        deactivated_clients.rows_affected(),
+    );
 
     // If wrapped key blob provided, update it atomically with password change
     if let Some(blob) = &req.wrapped_blob {
@@ -453,48 +494,78 @@ pub async fn delete_account(
     }
 }
 
-/// Check user approval status (no auth required)
-/// GET /api/v1/user/status?email=...
+/// Check user approval status. Requires the user's password so we don't
+/// leak account existence or approval state to unauthenticated callers —
+/// the unauthenticated GET form was a trivial email enumeration oracle.
+///
+/// POST /api/v1/user/status  { email, password }  →  { status }
+///
+/// `status` is one of: "approved" | "pending_approval" | "deactivated".
+/// Wrong credentials (unknown email OR wrong password) return 401 with no
+/// distinguishing detail. A dummy password verify runs on unknown emails
+/// so the response timing doesn't leak existence either.
 #[derive(Debug, Deserialize)]
-pub struct StatusQuery {
+pub struct StatusRequest {
     pub email: String,
+    pub password: String,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserStatusResponse {
-    pub exists: bool,
-    pub is_approved: bool,
-    pub is_active: bool,
+    pub status: String,
 }
+
+/// Argon2id hash of a fixed string, used as a timing-equaliser for unknown
+/// emails. The plaintext never matches any real password so this always
+/// verifies to `false`; its only purpose is to burn the same CPU as a real
+/// verification would.
+const DUMMY_PASSWORD_HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$ZmFrZXNhbHRmYWtlc2FsdA$Yg4DJvzTNNIlyRYsPQOHOaGs8S5c8+n8Wg5Ek3B+bLs";
 
 pub async fn check_status(
     State(state): State<Arc<AppState>>,
-    Query(query): Query<StatusQuery>,
+    Json(req): Json<StatusRequest>,
 ) -> AppResult<Json<UserStatusResponse>> {
-    // Look up user by email
     let user = sqlx::query!(
-        "SELECT approved, is_active FROM users WHERE email = ?",
-        query.email
+        "SELECT password_hash, approved, is_active FROM users WHERE email = ?",
+        req.email
     )
     .fetch_optional(&state.pool)
     .await
     .map_err(|e| {
-        tracing::error!("Database error: {}", e);
+        tracing::error!("Database error in check_status: {}", e);
         AppError::InternalServerError
     })?;
 
-    match user {
-        Some(u) => Ok(Json(UserStatusResponse {
-            exists: true,
-            is_approved: u.approved != 0,
-            is_active: u.is_active != 0,
-        })),
-        None => Ok(Json(UserStatusResponse {
-            exists: false,
-            is_approved: false,
-            is_active: false,
-        })),
+    // Always run password verification — against the real hash if the user
+    // exists, against a dummy hash otherwise — so unknown-email and
+    // wrong-password paths take the same time.
+    let (hash_to_verify, real_user) = match &user {
+        Some(u) => (u.password_hash.as_str(), Some(u)),
+        None => (DUMMY_PASSWORD_HASH, None),
+    };
+
+    let password_valid = crate::utils::password::verify_password(&req.password, hash_to_verify)
+        .map_err(|e| {
+            tracing::error!("Password verification failed in check_status: {}", e);
+            AppError::InternalServerError
+        })?;
+
+    match (password_valid, real_user) {
+        (true, Some(u)) => {
+            let status = if u.is_active == 0 {
+                "deactivated"
+            } else if u.approved != 0 {
+                "approved"
+            } else {
+                "pending_approval"
+            };
+            Ok(Json(UserStatusResponse { status: status.to_string() }))
+        }
+        _ => {
+            tracing::warn!("check_status: failed auth for email={}", req.email);
+            Err(AppError::Unauthorized)
+        }
     }
 }
 

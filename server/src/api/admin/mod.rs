@@ -62,8 +62,12 @@ pub async fn admin_auth_middleware(
         return Err(StatusCode::FORBIDDEN);
     }
 
-    // Add user_id to request extensions for use in handlers
+    // Add user_id (legacy) and the full Session to request extensions.
+    // Handlers that need the session id (e.g. change_password, which only
+    // wants to revoke *other* sessions) extract Extension<Session>; older
+    // handlers extracting Extension<String> still work.
     request.extensions_mut().insert(session.user_id.clone());
+    request.extensions_mut().insert(session.clone());
 
     // Update last_used_at timestamp (fire and forget)
     let pool = state.pool.clone();
