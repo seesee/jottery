@@ -1,237 +1,161 @@
-import { describe, test, expect } from 'vitest';
-import { markdownToHtml, htmlToMarkdown, createTurndownService } from './wysiwygMarkdown';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { Editor } from '@tiptap/core';
+import {
+  createWysiwygExtensions,
+  installMarkdownEscaping,
+  getMarkdownFromEditor,
+  escapeMarkdownText,
+  EMPTY_LINK_PLACEHOLDER,
+} from './wysiwygMarkdown';
 
-describe('wysiwygMarkdown', () => {
-  describe('attachment image roundtrip', () => {
-    test('preserves attachment URL through markdown→HTML→markdown roundtrip', () => {
-      const markdown = '![image](attachment:2ea23510-cef4-47ba-916f-9f91135629a9)';
-      const html = markdownToHtml(markdown);
-      const result = htmlToMarkdown(html);
+let editor: Editor;
 
-      expect(result).toBe(markdown);
-    });
+beforeAll(() => {
+  editor = new Editor({ extensions: createWysiwygExtensions(), content: '' });
+  installMarkdownEscaping(editor);
+});
 
-    test('preserves attachment URL with alt text', () => {
-      const markdown = '![my screenshot](attachment:abc-123-def)';
-      const html = markdownToHtml(markdown);
-      const result = htmlToMarkdown(html);
+afterAll(() => {
+  editor.destroy();
+});
 
-      expect(result).toBe(markdown);
-    });
+/** markdown -> editor -> markdown, as happens on the first keystroke in Visual mode */
+function roundtrip(md: string): string {
+  editor.commands.setContent(md, { contentType: 'markdown' });
+  return getMarkdownFromEditor(editor);
+}
 
-    test('preserves attachment URL with title', () => {
-      const markdown = '![image](attachment:uuid-here "Image Title")';
-      const html = markdownToHtml(markdown);
-      const result = htmlToMarkdown(html);
+/** Cases where the markdown should survive the round trip byte for byte. */
+const identical: Record<string, string> = {
+  'intra-word underscores and spaced asterisks':
+    'Use snake_case_name and 2 * 3 * 4 = 24, also a_b_c',
+  'windows paths, prices, brackets, hashes': 'Path C:\\Users\\chris\\file.txt, price $5, #notaheading, [brackets] and (parens), a + b - c',
+  'bold, italic, strike, code': 'Some **bold**, *em*, ***both***, ~~strike~~, `code with` + `backtick`',
+  'single newlines within a paragraph': 'line one\nline two\nline three\n\nnew paragraph',
+  'atx headings': '# H1\n\n## H2\n\n### H3 with `code` and *em*',
+  'nested bullet and numbered lists':
+    '- one\n- two\n  - two a\n  - two b\n    - two b i\n- three\n\n1. first\n2. second\n   1. nested\n3. third',
+  'ordered list starting at 3': '3. three\n4. four\n5. five',
+  'list item with a continuation line': '- item with\n  continuation line\n- next',
+  'numbered item with a continuation line': '1. item with\n   continuation line\n2. next',
+  'pipe inside a table cell code span': '| a        | b   |\n| -------- | --- |\n| `x \\| y` | z   |',
+  'fenced code block with blank lines': '```python\ndef f():\n    return "hi"\n\n\nprint(f())\n```\n\ntext after',
+  'fenced code block without language': '```\nplain <b>not bold</b> & stuff *and* _this_\n```',
+  'blockquote with paragraphs': '> quoted line one\n> quoted line two\n>\n> second para',
+  'table with inline formatting': '| Name     | Value               |\n| -------- | ------------------- |\n| **bold** | `code`              |\n| a \\| b   | [link](https://x.y) |',
+  'task list': '- [ ] todo\n- [x] done\n  - [ ] nested todo',
+  'links with title, bare url and image': '[text](https://example.com "Title") and https://bare.link\n\n![alt](https://img/x.png "img title")',
+  'note links and attachments': 'See [other note](link:abc-123) and [](link:def-456)\n\n![shot](attachment:att-789)\n\n![](attachment:att-000 "titled")',
+  'horizontal rule': 'above\n\n---\n\nbelow',
+  'code block followed by a table': '```js\nconst x = 1;\n```\n\n| a   | b   |\n| --- | --- |\n| 1   | 2   |\n\nafter',
+  'blank lines inside a code block are kept': '```\na\n\n\n\nb\n```',
+  'inline math-ish text': 'Inline $x^2 + y_1$ and 🎉 emoji and – en dash — em dash … ellipsis',
+  'typography characters': 'Ranges 1--2, arrows -> <-, (c) 2026, 1/2 fraction, "smart" quotes...',
+  'heading directly followed by list': '## Title\n\n- a\n- b\n\nText',
+  'entities and comparison operators': 'AT&T, 5 < 6 > 4, "quotes" and \'single\'',
+  'literal hash and bullet at line start inside a paragraph': 'Note:\n\\# not a heading\n\\- not a bullet',
+  'unmatched emphasis characters': 'file\\*.txt and \\_private and trailing\\_',
+};
 
-      expect(result).toBe(markdown);
-    });
+/** Cases where the round trip normalises syntax but keeps meaning. */
+const normalised: Record<string, [string, string]> = {
+  'two-space and backslash hard breaks become plain newlines': ['two-space  \nnext\\\nlast', 'two-space\nnext\nlast'],
+  'closed atx and setext headings become plain atx': ['## H2 ##\n\nSetext\n======', '## H2\n\n# Setext'],
+  'underscore emphasis becomes asterisk emphasis': ['__strong__ and _em_', '**strong** and *em*'],
+  'indented code becomes fenced': ['para\n\n    indented\n    more\n\nafter', 'para\n\n```\nindented\nmore\n```\n\nafter'],
+  'angle-bracket autolink becomes bare url': ['<https://auto.link>', 'https://auto.link'],
+  'loose list becomes tight': ['- a\n\n- b', '- a\n- b'],
+  'table columns are padded': ['| a | b |\n| --- | --- |\n| longer | x |', '| a      | b   |\n| ------ | --- |\n| longer | x   |'],
+  'trailing blank lines are dropped': ['text\n\n\n', 'text'],
+  // the task-list tokeniser treats an indented continuation as nested content
+  'task item continuation line becomes a second paragraph': ['- [ ] task with\n  continuation line', '- [ ] task with\n\n  continuation line'],
+};
 
-    test('HTML output includes data-attachment-url attribute', () => {
-      const markdown = '![image](attachment:test-uuid)';
-      const html = markdownToHtml(markdown);
-
-      expect(html).toContain('data-attachment-url="attachment:test-uuid"');
-      expect(html).toContain('alt="image"');
-    });
-
-    test('HTML output uses placeholder src for attachment images', () => {
-      const markdown = '![image](attachment:test-uuid)';
-      const html = markdownToHtml(markdown);
-
-      expect(html).toContain('src=""');
-      expect(html).toContain('class="attachment-placeholder"');
-    });
-
-    test('preserves multiple attachment images', () => {
-      const markdown = `Some text
-
-![first](attachment:uuid-1)
-
-More text
-
-![second](attachment:uuid-2)`;
-      const html = markdownToHtml(markdown);
-      const result = htmlToMarkdown(html);
-
-      expect(result).toContain('![first](attachment:uuid-1)');
-      expect(result).toContain('![second](attachment:uuid-2)');
-    });
-
-    test('attachment image with empty alt text uses attachment ref', () => {
-      const markdown = '![](attachment:some-uuid)';
-      const html = markdownToHtml(markdown);
-
-      // Alt should fall back to the attachment reference
-      expect(html).toContain('alt="some-uuid"');
-    });
+describe('wysiwyg markdown round trip', () => {
+  describe('is lossless for', () => {
+    for (const [name, md] of Object.entries(identical)) {
+      it(name, () => {
+        expect(roundtrip(md)).toBe(md);
+      });
+    }
   });
 
-  describe('note link roundtrip', () => {
-    test('preserves note link through roundtrip', () => {
-      const markdown = '[My Note](link:note-uuid-123)';
-      const html = markdownToHtml(markdown);
-      const result = htmlToMarkdown(html);
-
-      expect(result).toBe(markdown);
-    });
-
-    test('preserves empty note link with placeholder', () => {
-      const markdown = '[](link:note-uuid)';
-      const html = markdownToHtml(markdown);
-
-      // Should use placeholder emoji
-      expect(html).toContain('🔗');
-
-      const result = htmlToMarkdown(html);
-      expect(result).toBe(markdown);
-    });
-
-    test('preserves note link text and URL (title is not preserved)', () => {
-      // Note: Turndown's link rule doesn't preserve titles by default
-      // The important thing is that the link: URL and text are preserved
-      const markdown = '[Note Title](link:uuid "Some title")';
-      const html = markdownToHtml(markdown);
-      const result = htmlToMarkdown(html);
-
-      // Title is lost but link URL and text are preserved
-      expect(result).toContain('link:uuid');
-      expect(result).toContain('Note Title');
-    });
+  describe('normalises but preserves meaning for', () => {
+    for (const [name, [md, expected]] of Object.entries(normalised)) {
+      it(name, () => {
+        expect(roundtrip(md)).toBe(expected);
+      });
+    }
   });
 
-  describe('regular images', () => {
-    test('preserves regular image URLs', () => {
-      const markdown = '![alt text](https://example.com/image.png)';
-      const html = markdownToHtml(markdown);
-      const result = htmlToMarkdown(html);
-
-      expect(result).toBe(markdown);
-    });
-
-    test('regular images do not have data-attachment-url', () => {
-      const markdown = '![alt](https://example.com/image.png)';
-      const html = markdownToHtml(markdown);
-
-      expect(html).not.toContain('data-attachment-url');
-      expect(html).toContain('src="https://example.com/image.png"');
-    });
+  it('is idempotent for every case', () => {
+    const all = [...Object.values(identical), ...Object.values(normalised).map(([md]) => md)];
+    for (const md of all) {
+      const once = roundtrip(md);
+      expect(roundtrip(once)).toBe(once);
+    }
   });
 
-  describe('mixed content', () => {
-    test('preserves mixed content with attachments and regular images', () => {
-      const markdown = `# Heading
-
-![attachment](attachment:uuid-1)
-
-Some paragraph text.
-
-![regular](https://example.com/img.png)
-
-[Note link](link:note-123)`;
-
-      const html = markdownToHtml(markdown);
-      const result = htmlToMarkdown(html);
-
-      expect(result).toContain('![attachment](attachment:uuid-1)');
-      expect(result).toContain('![regular](https://example.com/img.png)');
-      expect(result).toContain('[Note link](link:note-123)');
-    });
+  it('shows a placeholder for empty note links inside the editor', () => {
+    editor.commands.setContent('[](link:abc)', { contentType: 'markdown' });
+    expect(editor.getText()).toBe(EMPTY_LINK_PLACEHOLDER);
+    expect(editor.getHTML()).toContain('href="link:abc"');
   });
 
-  describe('createTurndownService', () => {
-    test('creates service with attachment image rule', () => {
-      const service = createTurndownService();
-      const html = '<img src="blob:xxx" alt="test" data-attachment-url="attachment:my-uuid" />';
-      const result = service.turndown(html);
-
-      expect(result).toBe('![test](attachment:my-uuid)');
-    });
-
-    test('creates service with note link rule', () => {
-      const service = createTurndownService();
-      const html = '<a href="link:note-uuid">My Note</a>';
-      const result = service.turndown(html);
-
-      expect(result).toBe('[My Note](link:note-uuid)');
-    });
-
-    test('ignores src attribute when data-attachment-url is present', () => {
-      const service = createTurndownService();
-      // Simulates what Tiptap outputs - blob URL in src, original URL in data attribute
-      const html = '<img src="blob:http://localhost/12345" alt="image" data-attachment-url="attachment:original-uuid" />';
-      const result = service.turndown(html);
-
-      // Should use the data-attachment-url, not the blob URL
-      expect(result).toBe('![image](attachment:original-uuid)');
-      expect(result).not.toContain('blob:');
-    });
+  it('keeps the attachment reference on the image node and leaves src empty for the component to resolve', () => {
+    editor.commands.setContent('![shot](attachment:att-1)', { contentType: 'markdown' });
+    const img = editor.getJSON().content?.[0];
+    expect(img?.type).toBe('image');
+    expect(img?.attrs?.['data-attachment-url']).toBe('attachment:att-1');
+    expect(img?.attrs?.src).toBe('');
+    expect(editor.getHTML()).toContain('data-attachment-url="attachment:att-1"');
   });
 
-  describe('list roundtrip', () => {
-    test('unordered list has no extra blank lines between items', () => {
-      const markdown = '- item 1\n- item 2\n- item 3';
-      const html = markdownToHtml(markdown);
-      const result = htmlToMarkdown(html);
-
-      expect(result).toBe('- item 1\n- item 2\n- item 3');
-    });
-
-    test('ordered list has no extra blank lines between items', () => {
-      const markdown = '1. first\n2. second\n3. third';
-      const html = markdownToHtml(markdown);
-      const result = htmlToMarkdown(html);
-
-      expect(result).toBe('1. first\n2. second\n3. third');
-    });
-
-    test('nested unordered list preserves structure', () => {
-      const markdown = '- parent\n  - child\n- sibling';
-      const html = markdownToHtml(markdown);
-      const result = htmlToMarkdown(html);
-
-      expect(result).toContain('- parent');
-      expect(result).toContain('- child');
-      expect(result).toContain('- sibling');
-      // Should not have double blank lines
-      expect(result).not.toContain('\n\n\n');
-    });
-
-    test('list items do not accumulate whitespace through roundtrips', () => {
-      const markdown = '- alpha\n- beta\n- gamma';
-      // Roundtrip twice
-      const html1 = markdownToHtml(markdown);
-      const md1 = htmlToMarkdown(html1);
-      const html2 = markdownToHtml(md1);
-      const md2 = htmlToMarkdown(html2);
-
-      expect(md2).toBe('- alpha\n- beta\n- gamma');
-    });
+  it('writes the attachment reference even after the component sets a blob src', () => {
+    editor.commands.setContent('![shot](attachment:att-1)', { contentType: 'markdown' });
+    editor.commands.updateAttributes('image', { src: 'blob:http://localhost/xyz' });
+    expect(getMarkdownFromEditor(editor)).toBe('![shot](attachment:att-1)');
   });
 
-  describe('edge cases', () => {
-    test('handles empty markdown', () => {
-      expect(markdownToHtml('')).toBe('');
-      expect(htmlToMarkdown('')).toBe('');
-    });
+  it('returns an empty string for an empty document', () => {
+    expect(roundtrip('')).toBe('');
+  });
+});
 
-    test('handles empty paragraph HTML', () => {
-      expect(htmlToMarkdown('<p></p>')).toBe('');
-    });
+describe('escapeMarkdownText', () => {
+  it('leaves prose alone', () => {
+    expect(escapeMarkdownText('snake_case, 2 * 3, C:\\Users, a [b] c, 50% off!', false)).toBe(
+      'snake_case, 2 * 3, C:\\Users, a [b] c, 50% off!'
+    );
+  });
 
-    test('handles markdown with only whitespace', () => {
-      // Whitespace-only input produces empty output
-      const result = markdownToHtml('   \n\n   ');
-      expect(result).toBe('');
-    });
+  it('escapes emphasis delimiters that touch text', () => {
+    expect(escapeMarkdownText('file*.txt _private trailing_ ~tilde~', false)).toBe(
+      'file\\*.txt \\_private trailing\\_ \\~tilde\\~'
+    );
+  });
 
-    test('handles special characters in alt text', () => {
-      const markdown = '![image with "quotes" & special chars](attachment:uuid)';
-      const html = markdownToHtml(markdown);
-      const result = htmlToMarkdown(html);
+  it('escapes brackets only when they form a link', () => {
+    expect(escapeMarkdownText('see [text](url)', false)).toBe('see \\[text\\](url)');
+  });
 
-      // The roundtrip should preserve the content
-      expect(result).toContain('attachment:uuid');
-    });
+  it('escapes backslashes only before punctuation', () => {
+    expect(escapeMarkdownText('C:\\path and \\* star', false)).toBe('C:\\path and \\\\\\* star');
+  });
+
+  it('escapes block markers only at the start of a line', () => {
+    expect(escapeMarkdownText('# heading', true)).toBe('\\# heading');
+    expect(escapeMarkdownText('# heading', false)).toBe('# heading');
+    expect(escapeMarkdownText('- bullet', true)).toBe('\\- bullet');
+    expect(escapeMarkdownText('1. item', true)).toBe('1\\. item');
+    expect(escapeMarkdownText('> quote', true)).toBe('\\> quote');
+    expect(escapeMarkdownText('---', true)).toBe('\\---');
+    expect(escapeMarkdownText('[ ] task', true)).toBe('\\[ ] task');
+    expect(escapeMarkdownText('#notaheading', true)).toBe('#notaheading');
+    expect(escapeMarkdownText('a - b', true)).toBe('a - b');
+  });
+
+  it('always escapes backticks', () => {
+    expect(escapeMarkdownText('a ` b', false)).toBe('a \\` b');
   });
 });
