@@ -309,6 +309,8 @@ const FENCE = /^\s*(```|~~~)/;
  *   therefore rewritten here instead
  * - the parser appends an empty paragraph after a trailing block so there is
  *   somewhere to type, which would otherwise serialise as blank lines
+ * - the table renderer starts with its own newline, giving three in a row
+ *   after a preceding block
  */
 export function postProcessMarkdown(markdown: string): string {
   let inFence = false;
@@ -322,7 +324,25 @@ export function postProcessMarkdown(markdown: string): string {
       .replace(new RegExp(`\\[${EMPTY_LINK_PLACEHOLDER}\\]\\((${NOTE_LINK_PREFIX}[^)\\s]+)\\)`, 'g'), '[]($1)')
       .replace(/\[(https?:\/\/[^\]\s]+)\]\(\1\)/g, '$1');
   });
-  return lines.join('\n').replace(/^\n+/, '').replace(/\s+$/, '');
+  return collapseBlankLines(lines.join('\n')).replace(/^\n+/, '').replace(/\s+$/, '');
+}
+
+/** Reduce runs of blank lines to one, leaving fenced code blocks alone. */
+function collapseBlankLines(markdown: string): string {
+  let inFence = false;
+  const out: string[] = [];
+  let blank = 0;
+  for (const line of markdown.split('\n')) {
+    if (FENCE.test(line)) inFence = !inFence;
+    if (!inFence && line.trim() === '') {
+      blank++;
+      if (blank > 1) continue;
+    } else {
+      blank = 0;
+    }
+    out.push(line);
+  }
+  return out.join('\n');
 }
 
 /** Serialise the editor document to markdown. Use instead of `editor.getMarkdown()`. */

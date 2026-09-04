@@ -47,6 +47,8 @@ const identical: Record<string, string> = {
   'links with title, bare url and image': '[text](https://example.com "Title") and https://bare.link\n\n![alt](https://img/x.png "img title")',
   'note links and attachments': 'See [other note](link:abc-123) and [](link:def-456)\n\n![shot](attachment:att-789)\n\n![](attachment:att-000 "titled")',
   'horizontal rule': 'above\n\n---\n\nbelow',
+  'code block followed by a table': '```js\nconst x = 1;\n```\n\n| a   | b   |\n| --- | --- |\n| 1   | 2   |\n\nafter',
+  'blank lines inside a code block are kept': '```\na\n\n\n\nb\n```',
   'inline math-ish text': 'Inline $x^2 + y_1$ and 🎉 emoji and – en dash — em dash … ellipsis',
   'typography characters': 'Ranges 1--2, arrows -> <-, (c) 2026, 1/2 fraction, "smart" quotes...',
   'heading directly followed by list': '## Title\n\n- a\n- b\n\nText',

@@ -172,9 +172,11 @@
     }
   }
 
-  // Update readonly state
+  // Update readonly state. The second argument stops Tiptap emitting an
+  // 'update' event, which would otherwise serialise and save the note on
+  // every mode switch even though nothing was edited
   $: if (editor) {
-    editor.setEditable(!readonly);
+    editor.setEditable(!readonly, false);
   }
 
   // Re-render content when attachments change (so images can be resolved)
