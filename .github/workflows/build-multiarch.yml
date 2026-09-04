@@ -19,7 +19,7 @@ jobs:
     name: Build Linux TUI Binaries
     runs-on: ubuntu-latest
     env:
-      VERSION: ${{ github.ref_name }}
+      VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.run_number) }}
 
     # Built with cargo-zigbuild rather than inside an old Debian container. Zig
     # ships its own C toolchain and glibc stubs, so the binaries can target
@@ -72,7 +72,7 @@ jobs:
     name: Build macOS TUI
     runs-on: macos-latest
     env:
-      VERSION: ${{ github.ref_name }}
+      VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.run_number) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -98,7 +98,7 @@ jobs:
     name: Build Windows TUI
     runs-on: windows-latest
     env:
-      VERSION: ${{ github.ref_name }}
+      VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.run_number) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -122,7 +122,7 @@ jobs:
     name: Build Web App (Offline Bundle)
     runs-on: ubuntu-latest
     env:
-      VERSION: ${{ github.ref_name }}
+      VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.run_number) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -171,7 +171,7 @@ jobs:
     needs: [linux-tui, macos-tui, windows-tui]
     runs-on: ubuntu-latest
     env:
-      VERSION: ${{ github.ref_name }}
+      VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.run_number) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -216,7 +216,7 @@ jobs:
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
       SQLX_OFFLINE: "true"
-      VERSION: ${{ github.ref_name }}
+      VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.run_number) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -265,7 +265,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     env:
-      VERSION: ${{ github.ref_name }}
+      VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.run_number) }}
 
     steps:
       - uses: actions/checkout@v4
