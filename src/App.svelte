@@ -478,9 +478,14 @@
       logPhase('counted active notes', ` (${totalCount})`);
 
       // Reliable completion signal from the service — never inferred from note
-      // counts, because undecryptable notes are skipped and counts would never match
+      // counts, because undecryptable notes are skipped and counts would never match.
+      // When every note fits in the first batch the service fires this synchronously,
+      // before getAllNotesBatched() has even returned, so record completion in a flag
+      // that the first-batch code below checks before touching loadingProgress
+      let backgroundLoadDone = false;
       const finishLoading = () => {
         if (generation !== loadGeneration || $isLocked) return;
+        backgroundLoadDone = true;
         logPhase('background decryption complete', ` (${loadedNoteIds.size}/${totalCount} notes loaded)`);
         loadingProgress = { current: 0, total: 0 };
 
@@ -527,7 +532,9 @@
       );
 
       firstBatch.forEach(note => loadedNoteIds.add(note.id));
-      loadingProgress = { current: loadedNoteIds.size, total: totalCount };
+      if (!backgroundLoadDone) {
+        loadingProgress = { current: loadedNoteIds.size, total: totalCount };
+      }
       searchService.indexNotes(firstBatch);
       logPhase('first batch decrypted and indexed', ` (${firstBatch.length} notes)`);
 
