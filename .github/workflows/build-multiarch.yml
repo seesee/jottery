@@ -4,6 +4,9 @@ on:
   push:
     tags:
       - "v*"
+  # Manual runs build the binaries only; the Docker image and GitHub release
+  # jobs are gated on a tag ref below
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -16,55 +19,33 @@ jobs:
     name: Build Linux TUI Binaries
     runs-on: ubuntu-latest
     env:
-      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-      VERSION: ${{ github.ref_name }}
-  
-    container:
-      image: debian:bullseye-slim
-  
+      VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.run_number) }}
+
+    # Built with cargo-zigbuild rather than inside an old Debian container. Zig
+    # ships its own C toolchain and glibc stubs, so the binaries can target
+    # glibc 2.31 (Debian 11 / Ubuntu 20.04 era) from any runner, and the job no
+    # longer depends on a distribution's package archive staying online.
+    # The Linux TUI uses bundled SQLite and rustls, so no C libraries are needed.
     steps:
-      - name: Install base dependencies
-        run: |
-          apt-get update
-          apt-get install -y \
-            curl \
-            build-essential \
-            pkg-config \
-            libssl-dev \
-            sqlcipher \
-            libsqlcipher-dev \
-            gcc-aarch64-linux-gnu \
-            gcc-arm-linux-gnueabihf \
-            qemu-user-static \
-            ca-certificates
-          update-ca-certificates
-  
       - uses: actions/checkout@v4
-  
-      - name: Install Rust
-        run: |
-          curl https://sh.rustup.rs -sSf | sh -s -- -y
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-  
+
       - name: Install Rust targets
         run: |
           rustup target add x86_64-unknown-linux-gnu
           rustup target add aarch64-unknown-linux-gnu
           rustup target add armv7-unknown-linux-gnueabihf
-  
+
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
+      - name: Install cargo-zigbuild
+        run: pipx install cargo-zigbuild==0.23.4
+
       - uses: Swatinem/rust-cache@v2
-  
-      - name: Configure cross toolchains for ring/openssl
-        run: |
-          echo "CC_aarch64_unknown_linux_gnu=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-          echo "AR_aarch64_unknown_linux_gnu=aarch64-linux-gnu-ar" >> $GITHUB_ENV
-          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-  
-          echo "CC_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
-          echo "AR_armv7_unknown_linux_gnueabihf=arm-linux-gnueabihf-ar" >> $GITHUB_ENV
-          echo "CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc" >> $GITHUB_ENV
-  
+        with:
+          workspaces: tui
+
       - name: Build Linux TUI (all arches)
         run: |
           chmod +x ./jottery-tui-build.sh
@@ -74,7 +55,13 @@ jobs:
             base=$(basename "$f")
             cp "$f" "releases-versioned/${base}-${VERSION}"
           done
-  
+
+      - name: Smoke test x64 binary
+        run: |
+          ./releases/jottery-linux-x64 --version
+          echo "glibc symbol versions required:"
+          strings ./releases/jottery-linux-x64 | grep -oE 'GLIBC_[0-9.]+' | sort -Vu | tail -1
+
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -85,7 +72,7 @@ jobs:
     name: Build macOS TUI
     runs-on: macos-latest
     env:
-      VERSION: ${{ github.ref_name }}
+      VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.run_number) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -111,7 +98,7 @@ jobs:
     name: Build Windows TUI
     runs-on: windows-latest
     env:
-      VERSION: ${{ github.ref_name }}
+      VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.run_number) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -135,7 +122,7 @@ jobs:
     name: Build Web App (Offline Bundle)
     runs-on: ubuntu-latest
     env:
-      VERSION: ${{ github.ref_name }}
+      VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.run_number) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -184,7 +171,7 @@ jobs:
     needs: [linux-tui, macos-tui, windows-tui]
     runs-on: ubuntu-latest
     env:
-      VERSION: ${{ github.ref_name }}
+      VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.run_number) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -223,12 +210,13 @@ jobs:
   docker-build:
     name: Build Multi-Arch Docker Image
     needs: collect-tui
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     env:
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
       SQLX_OFFLINE: "true"
-      VERSION: ${{ github.ref_name }}
+      VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.run_number) }}
 
     steps:
       - uses: actions/checkout@v4
@@ -274,9 +262,10 @@ jobs:
   make-release:
     name: Publish GitHub Release
     needs: [collect-tui, docker-build, web-app]
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     env:
-      VERSION: ${{ github.ref_name }}
+      VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.run_number) }}
 
     steps:
       - uses: actions/checkout@v4
