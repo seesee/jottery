@@ -777,6 +777,7 @@ fn main() -> Result<()> {
                     println!("{} {}...", t!("sync.pushing"), metadata.sync_endpoint);
                     match perform_cli_sync(&db, &key, metadata) {
                         Ok(count) => {
+                            // codeql[rust/cleartext-logging] count is a note count; CodeQL taints perform_cli_sync's Result via the `?` on the api_key
                             println!("✓ {}: {}", t!("sync.success"), count);
                         }
                         Err(e) => {
@@ -911,7 +912,7 @@ fn main() -> Result<()> {
                 .context(t!("sync.request_failed"))?;
 
             println!("\n✓ {}", t!("sync.success"));
-            // lgtm[rust/clear-text-logging] - user_id is a non-sensitive UUID identifier
+            // codeql[rust/cleartext-logging] user_id is a non-sensitive UUID identifier
             println!("User ID: {}", response.user_id);
             println!("Email: {}", response.email);
             println!("{}: {}", t!("status.synced"), response.status);
@@ -971,7 +972,7 @@ fn main() -> Result<()> {
 
             println!("\n✓ {}", t!("sync.success"));
             println!("Client ID: {}", response.client_id);
-            // lgtm[rust/clear-text-logging] - user_id is a non-sensitive UUID identifier
+            // codeql[rust/cleartext-logging] user_id is a non-sensitive UUID identifier
             println!("User ID: {}", response.user_id);
             println!("{}: {}", t!("settings.device_name"), response.device_name);
 
@@ -1101,6 +1102,7 @@ fn main() -> Result<()> {
                     // Perform sync using helper function
                     match perform_cli_sync(&db, &key, metadata) {
                         Ok(count) => {
+                            // codeql[rust/cleartext-logging] count is a note count; CodeQL taints perform_cli_sync's Result via the `?` on the api_key
                             println!("✓ {}: {}", t!("sync.success"), count);
                         }
                         Err(e) => {

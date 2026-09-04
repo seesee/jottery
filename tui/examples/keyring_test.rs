@@ -32,7 +32,7 @@ fn main() {
     // Retrieve password
     println!("\n3. Retrieving password...");
     match entry.get_password() {
-        Ok(pwd) => println!("   Retrieved: '{}'", pwd),
+        Ok(pwd) => println!("   Retrieved {} bytes; matches stored value: {}", pwd.len(), pwd == "testpwd123"),
         Err(e) => println!("   Retrieve error: {:?}", e),
     }
 

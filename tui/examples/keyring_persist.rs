@@ -16,7 +16,7 @@ fn main() {
     } else {
         println!("Retrieving password...");
         match entry.get_password() {
-            Ok(pwd) => println!("Found: '{}'", pwd),
+            Ok(pwd) => println!("Found entry ({} bytes)", pwd.len()),
             Err(keyring::Error::NoEntry) => println!("No entry found!"),
             Err(e) => println!("Error: {:?}", e),
         }
