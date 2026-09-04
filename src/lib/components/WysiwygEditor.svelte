@@ -1,40 +1,11 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { Editor } from '@tiptap/core';
-  import { StarterKit } from '@tiptap/starter-kit';
-  import { Link } from '@tiptap/extension-link';
-  import { Image } from '@tiptap/extension-image';
-  import { Table } from '@tiptap/extension-table';
-
-  // Custom Image extension that preserves attachment URL attribute
-  const AttachmentImage = Image.extend({
-    addAttributes() {
-      return {
-        ...this.parent?.(),
-        'data-attachment-url': {
-          default: null,
-          parseHTML: element => element.getAttribute('data-attachment-url'),
-          renderHTML: attributes => {
-            if (!attributes['data-attachment-url']) {
-              return {};
-            }
-            return { 'data-attachment-url': attributes['data-attachment-url'] };
-          },
-        },
-      };
-    },
-  });
-  import { TableRow } from '@tiptap/extension-table-row';
-  import { TableCell } from '@tiptap/extension-table-cell';
-  import { TableHeader } from '@tiptap/extension-table-header';
-  import { TaskList } from '@tiptap/extension-task-list';
-  import { TaskItem } from '@tiptap/extension-task-item';
-  import { Placeholder } from '@tiptap/extension-placeholder';
-  import { Typography } from '@tiptap/extension-typography';
-  import { CodeBlockLowlight } from '@tiptap/extension-code-block-lowlight';
-  import { common, createLowlight } from 'lowlight';
-  import { Marked } from 'marked';
-  import { createTurndownService } from '../utils/wysiwygMarkdown';
+  import {
+    createWysiwygExtensions,
+    installMarkdownEscaping,
+    getMarkdownFromEditor,
+  } from '../utils/wysiwygMarkdown';
   import { settings } from '../stores/appStore';
   import { getFontSize } from '../utils/fontSize';
   import { attachmentService } from '../services';
@@ -50,86 +21,8 @@
   let editor: Editor | null = null;
   let isUpdatingFromProp = false;
 
-  // Create lowlight instance for syntax highlighting
-  const lowlight = createLowlight(common);
-
-  // Create turndown service using shared config (includes list item, task list, code block, etc.)
-  const turndownService = createTurndownService();
-
-  // Custom rule for tables to ensure markdown format (override any issues with gfm plugin)
-  turndownService.addRule('table', {
-    filter: 'table',
-    replacement: (_content, node) => {
-      const table = node as HTMLTableElement;
-      const rows: string[][] = [];
-      const headerRow: string[] = [];
-      let hasHeader = false;
-
-      // Process thead
-      const thead = table.querySelector('thead');
-      if (thead) {
-        const headerCells = thead.querySelectorAll('th, td');
-        headerCells.forEach(cell => {
-          headerRow.push(cell.textContent?.trim() || '');
-        });
-        if (headerRow.length > 0) {
-          hasHeader = true;
-          rows.push(headerRow);
-        }
-      }
-
-      // Process tbody
-      const tbody = table.querySelector('tbody') || table;
-      const bodyRows = tbody.querySelectorAll('tr');
-      bodyRows.forEach((tr, index) => {
-        // Skip if this is in thead
-        if (tr.parentNode === thead) return;
-
-        const cells = tr.querySelectorAll('th, td');
-        const rowData: string[] = [];
-        cells.forEach(cell => {
-          rowData.push(cell.textContent?.trim() || '');
-        });
-
-        // If no header and this is first row with th elements, treat as header
-        if (!hasHeader && index === 0 && tr.querySelector('th')) {
-          hasHeader = true;
-          rows.unshift(rowData);
-        } else if (rowData.length > 0) {
-          rows.push(rowData);
-        }
-      });
-
-      if (rows.length === 0) return '';
-
-      // Determine column count
-      const colCount = Math.max(...rows.map(r => r.length));
-
-      // Build markdown table
-      let result = '\n';
-
-      // Header row (or first row if no explicit header)
-      const header = rows[0] || [];
-      result += '| ' + header.map(cell => cell || ' ').concat(Array(colCount - header.length).fill(' ')).join(' | ') + ' |\n';
-
-      // Separator row
-      result += '| ' + Array(colCount).fill('---').join(' | ') + ' |\n';
-
-      // Data rows
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
-        result += '| ' + row.map(cell => cell || ' ').concat(Array(colCount - row.length).fill(' ')).join(' | ') + ' |\n';
-      }
-
-      return result + '\n';
-    }
-  });
-
   // Compute font size from settings
   $: fontSize = getFontSize($settings.fontSize);
-
-  // Placeholder for empty note links (Tiptap strips empty anchors)
-  const EMPTY_LINK_PLACEHOLDER = '🔗';
 
   // Helper to find attachment by reference (supports id, data field, or stripped id)
   function findAttachment(ref: string): typeof attachments[0] | undefined {
@@ -145,8 +38,11 @@
   // Track blob URLs for cleanup
   let blobUrls: string[] = [];
 
-  // Resolve attachment images in the editor after content is set
-  // This loads the actual blob data from the attachment service
+  // Resolve attachment images in the editor after content is set.
+  // The markdown parser leaves src empty and keeps the reference in
+  // data-attachment-url; this loads the decrypted blob and points src at it.
+  // The DOM is updated directly so the document (and therefore the saved
+  // markdown) is not touched.
   async function resolveAttachmentImages(): Promise<void> {
     if (!editorElement) return;
 
@@ -158,6 +54,7 @@
       const attachmentUrl = img.getAttribute('data-attachment-url');
       if (!attachmentUrl?.startsWith('attachment:')) continue;
 
+      img.classList.add('attachment-placeholder');
       const attachmentRef = attachmentUrl.substring('attachment:'.length);
       const attachment = findAttachment(attachmentRef);
 
@@ -181,98 +78,25 @@
     }
   }
 
-  // Convert markdown to HTML for Tiptap
-  // Uses a local Marked instance with custom renderers for attachments and note links
-  function markdownToHtml(md: string): string {
-    if (!md) return '';
-    try {
-      // Create a new Marked instance with our custom renderers
-      // This ensures we use the current attachments array
-      const marked = new Marked({
-        breaks: true,
-        gfm: true,
-        renderer: {
-          link({ href, title, text }: { href: string; title?: string | null; text: string }) {
-            // Preserve note links with link: protocol
-            const titleAttr = title ? ` title="${title}"` : '';
-            // Add placeholder for empty note links so Tiptap doesn't strip them
-            const displayText = (!text && href.startsWith('link:')) ? EMPTY_LINK_PLACEHOLDER : text;
-            return `<a href="${href}"${titleAttr}>${displayText}</a>`;
-          },
-          image({ href, title, text }: { href: string; title?: string | null; text: string }) {
-            // Handle attachment: URLs - render with placeholder, resolve async
-            if (href && href.startsWith('attachment:')) {
-              const attachmentRef = href.substring('attachment:'.length);
-              const titleAttr = title ? ` title="${title}"` : '';
-              // Store original attachment URL in data attribute for turndown to restore
-              // Actual blob URL will be set async by resolveAttachmentImages
-              return `<img src="" alt="${text || attachmentRef}"${titleAttr} data-attachment-url="${href}" class="attachment-placeholder" />`;
-            }
-            // Default image rendering
-            const titleAttr = title ? ` title="${title}"` : '';
-            return `<img src="${href}" alt="${text || ''}"${titleAttr} />`;
-          }
-        }
-      });
-      return marked.parse(md) as string;
-    } catch (e) {
-      console.error('Failed to parse markdown:', e);
-      return md;
-    }
-  }
-
-  // Convert HTML from Tiptap to markdown
-  function htmlToMarkdown(html: string): string {
-    if (!html || html === '<p></p>') return '';
-    try {
-      return turndownService.turndown(html);
-    } catch (e) {
-      console.error('Failed to convert to markdown:', e);
-      return '';
-    }
+  function setMarkdown(markdown: string): void {
+    if (!editor) return;
+    isUpdatingFromProp = true;
+    editor.commands.setContent(markdown, { contentType: 'markdown' });
+    isUpdatingFromProp = false;
+    resolveAttachmentImages();
   }
 
   // Initialize editor
   onMount(() => {
     editor = new Editor({
       element: editorElement,
-      extensions: [
-        StarterKit.configure({
-          codeBlock: false, // We use CodeBlockLowlight instead
-        }),
-        CodeBlockLowlight.configure({
-          lowlight,
-        }),
-        Link.configure({
-          openOnClick: false,
-          HTMLAttributes: {
-            class: 'text-blue-600 dark:text-blue-400 underline',
-          },
-          // Allow note links with link: protocol
-          protocols: ['http', 'https', 'mailto', 'tel', 'link'],
-          validate: (href) => /^(https?:\/\/|mailto:|tel:|link:)/.test(href),
-        }),
-        AttachmentImage.configure({
-          HTMLAttributes: {
-            class: 'max-w-full h-auto rounded',
-          },
-        }),
-        Table.configure({
-          resizable: true,
-        }),
-        TableRow,
-        TableCell,
-        TableHeader,
-        TaskList,
-        TaskItem.configure({
-          nested: true,
-        }),
-        Placeholder.configure({
-          placeholder: 'Start writing...',
-        }),
-        Typography,
-      ],
-      content: markdownToHtml(value),
+      extensions: createWysiwygExtensions({
+        placeholder: 'Start writing...',
+        linkClass: 'text-blue-600 dark:text-blue-400 underline',
+        imageClass: 'max-w-full h-auto rounded',
+      }),
+      content: value,
+      contentType: 'markdown',
       editable: !readonly,
       editorProps: {
         attributes: {
@@ -330,11 +154,10 @@
       },
       onUpdate: ({ editor }) => {
         if (isUpdatingFromProp) return;
-        const html = editor.getHTML();
-        const markdown = htmlToMarkdown(html);
-        onChange(markdown);
+        onChange(getMarkdownFromEditor(editor));
       },
     });
+    installMarkdownEscaping(editor);
 
     // Resolve attachment images after editor is created
     resolveAttachmentImages();
@@ -342,14 +165,10 @@
 
   // Update content when value prop changes
   $: if (editor && value !== undefined) {
-    const currentMarkdown = htmlToMarkdown(editor.getHTML());
+    const currentMarkdown = getMarkdownFromEditor(editor);
     // Only update if the markdown is actually different (avoid infinite loops)
     if (currentMarkdown !== value && !isUpdatingFromProp) {
-      isUpdatingFromProp = true;
-      editor.commands.setContent(markdownToHtml(value));
-      isUpdatingFromProp = false;
-      // Resolve attachment images after content update
-      resolveAttachmentImages();
+      setMarkdown(value);
     }
   }
 
@@ -365,14 +184,10 @@
     prevAttachmentsLength = attachments.length;
     // Only re-render if we have content that might contain attachment references
     if (value && value.includes('attachment:')) {
-      isUpdatingFromProp = true;
       // Clear old blob URLs before re-rendering
       blobUrls.forEach(url => URL.revokeObjectURL(url));
       blobUrls = [];
-      editor.commands.setContent(markdownToHtml(value));
-      isUpdatingFromProp = false;
-      // Resolve attachment images after re-render
-      resolveAttachmentImages();
+      setMarkdown(value);
     }
   }
 
