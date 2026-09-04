@@ -287,10 +287,9 @@ export function installMarkdownEscaping(editor: Editor): void {
   };
 
   manager.encodeTextForMarkdown = (text, node, parentNode) => {
-    // Backslashes are deliberately not escaped here: outside code they are
+    // Backslashes are deliberately not touched here: outside code they are
     // handled by escapeMarkdownText, and inside code spans they are literal.
-    // codeql[js/incomplete-sanitization]
-    const escapePipes = (value: string) => (tableDepth > 0 ? value.replace(/\|/g, '\\|') : value);
+    const escapePipes = (value: string) => (tableDepth > 0 ? value.split('|').join('\\|') : value);
     if (isInsideCode(manager, node, parentNode)) return escapePipes(text);
     const siblings = parentNode?.content ?? [];
     const index = siblings.indexOf(node);
