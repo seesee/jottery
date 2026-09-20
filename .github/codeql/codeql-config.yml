@@ -8,6 +8,7 @@ paths-ignore:
   - 'e2e/**'                     # E2E test directory
   - 'src/test/**'                # Test utilities
   - 'tui/tests/**'               # TUI test files
+  - 'server/tests/**'            # Server integration tests hash random API keys/tokens with SHA-256, mirroring the server's design
 
 # Note: The following are intentional design choices with user warnings:
 # - src/lib/services/passwordStorageService.ts: Optional "remember password" feature
