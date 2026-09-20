@@ -65,8 +65,8 @@
     "@types/uuid": "^10.0.0",
     "@uiw/codemirror-theme-github": "^4.25.9",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
-    "@vitest/coverage-v8": "^4.0.17",
-    "@vitest/ui": "^4.0.16",
+    "@vitest/coverage-v8": "^4.1.11",
+    "@vitest/ui": "^4.1.11",
     "asciichart": "^1.5.25",
     "autoprefixer": "^10.5.0",
     "better-sqlite3": "^12.9.0",
@@ -96,7 +96,7 @@
     "vite": "^7.3.2",
     "vite-plugin-singlefile": "^2.3.3",
     "vite-plugin-static-copy": "^3.4.0",
-    "vitest": "^4.0.16"
+    "vitest": "^4.1.11"
   },
   "dependencies": {
     "pako": "^2.1.0"
