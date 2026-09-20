@@ -145,6 +145,29 @@ mod tests {
     }
 
     #[test]
+    fn test_file_storage_discards_legacy_file_without_key() {
+        let temp_dir = TempDir::new().unwrap();
+        let storage = FileStorage::new(temp_dir.path().to_path_buf());
+
+        // Simulate a remember file written by an older version with a fixed key
+        let legacy_file = temp_dir.path().join(".jottery_remember");
+        std::fs::write(&legacy_file, "{\"data\":\"AAAA\",\"nonce\":\"AAAA\"}").unwrap();
+
+        // Without a key file it is unreadable, so it is removed and reported as absent
+        assert!(matches!(storage.retrieve(), RetrieveResult::NotFound));
+        assert!(!legacy_file.exists());
+
+        // Storing afterwards creates a key file and works normally
+        let password = test_password();
+        storage.store(&password).unwrap();
+        assert!(temp_dir.path().join(".jottery_remember.key").exists());
+        match storage.retrieve() {
+            RetrieveResult::Found(retrieved) => assert_eq!(retrieved, password),
+            other => panic!("Expected Found, got {:?}", other),
+        }
+    }
+
+    #[test]
     fn test_backend_type() {
         let temp_dir = TempDir::new().unwrap();
         let storage = FileStorage::new(temp_dir.path().to_path_buf());
