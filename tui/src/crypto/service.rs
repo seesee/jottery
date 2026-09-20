@@ -7,7 +7,7 @@ use aes_gcm::{
 };
 use anyhow::{Context, Result};
 use base64::{engine::general_purpose, Engine as _};
-use pbkdf2::pbkdf2_hmac;
+use pbkdf2::pbkdf2_hmac_array;
 use sha2::{Digest, Sha256};
 
 use crate::models::encryption::EncryptedData;
@@ -61,10 +61,11 @@ impl CryptoService {
             iterations
         };
 
-        let mut key = [0u8; KEY_LENGTH];
-        pbkdf2_hmac::<Sha256>(password.as_bytes(), salt, iterations, &mut key);
-
-        Ok(key)
+        Ok(pbkdf2_hmac_array::<Sha256, KEY_LENGTH>(
+            password.as_bytes(),
+            salt,
+            iterations,
+        ))
     }
 
     /// Encrypt text data
@@ -208,9 +209,7 @@ impl CryptoService {
 
     /// Generate a random 256-bit master key
     pub fn generate_master_key(&self) -> [u8; KEY_LENGTH] {
-        let mut key = [0u8; KEY_LENGTH];
-        OsRng.fill_bytes(&mut key);
-        key
+        Aes256Gcm::generate_key(&mut OsRng).into()
     }
 
     /// Derive wrapping key from password + userId (used during onboarding/migration only)
@@ -226,9 +225,11 @@ impl CryptoService {
         if salt.len() < KEY_LENGTH {
             anyhow::bail!("userId must be at least {} bytes when used as salt", KEY_LENGTH);
         }
-        let mut key = [0u8; KEY_LENGTH];
-        pbkdf2_hmac::<Sha256>(password.as_bytes(), salt, WRAPPING_ITERATIONS, &mut key);
-        Ok(key)
+        Ok(pbkdf2_hmac_array::<Sha256, KEY_LENGTH>(
+            password.as_bytes(),
+            salt,
+            WRAPPING_ITERATIONS,
+        ))
     }
 
     /// Wrap (encrypt) master key bytes with a wrapping key using AES-256-GCM
@@ -247,12 +248,13 @@ impl CryptoService {
         wrapped: &EncryptedData,
     ) -> Result<[u8; KEY_LENGTH]> {
         let bytes = self.decrypt_binary(wrapped, wrapping_key)?;
-        if bytes.len() != KEY_LENGTH {
-            anyhow::bail!("Unwrapped master key has invalid length: {} (expected {})", bytes.len(), KEY_LENGTH);
-        }
-        let mut key = [0u8; KEY_LENGTH];
-        key.copy_from_slice(&bytes);
-        Ok(key)
+        <[u8; KEY_LENGTH]>::try_from(bytes.as_slice()).map_err(|_| {
+            anyhow::anyhow!(
+                "Unwrapped master key has invalid length: {} (expected {})",
+                bytes.len(),
+                KEY_LENGTH
+            )
+        })
     }
 
     /// Encrypt JSON data (helper)
