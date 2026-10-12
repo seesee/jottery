@@ -203,6 +203,10 @@ export async function unlock(password: string): Promise<void> {
     await tryMigrateToEnvelope(password, keyBytes);
   }
 
+  // Make sure other devices can onboard: the server needs a copy of the key.
+  // Runs in the background so a slow or offline server never delays unlock.
+  void ensureServerWrappedKey(password);
+
   // Setup auto-lock (disabled if rememberPassword is enabled)
   if (settings.rememberPassword) {
     console.log('[Unlock] ⚠️ Remember Password enabled - auto-lock DISABLED');
@@ -385,8 +389,193 @@ export async function changePassword(
 }
 
 /**
+ * Check whether a password unlocks the vault held in memory.
+ *
+ * The password is checked against the local encryption metadata rather than
+ * against whatever the caller happens to know, so a mistyped or wrong password
+ * (for example the server password) is caught before it is used to wrap
+ * anything.
+ */
+async function passwordUnlocksVault(
+  password: string,
+  metadata: EncryptionMetadata,
+  masterKeyBytes: Uint8Array
+): Promise<boolean> {
+  try {
+    let candidate: Uint8Array;
+
+    if (metadata.envelopeVersion) {
+      const deviceKey = await cryptoService.deriveKey({
+        password,
+        salt: base64ToUint8Array(metadata.deviceSalt!),
+        iterations: CRYPTO_PBKDF2_ITERATIONS,
+        extractable: false,
+      });
+      candidate = await cryptoService.unwrapMasterKey(deviceKey, JSON.parse(metadata.localWrappedMaster!));
+    } else if (metadata.salt) {
+      const legacyKey = await cryptoService.deriveKey({
+        password,
+        salt: base64ToUint8Array(metadata.salt),
+        iterations: metadata.iterations!,
+        algorithm: 'PBKDF2',
+        extractable: true,
+      });
+      candidate = new Uint8Array(await crypto.subtle.exportKey('raw', legacyKey));
+    } else {
+      return false;
+    }
+
+    return candidate.length === masterKeyBytes.length && candidate.every((byte, i) => byte === masterKeyBytes[i]);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Upload the master key to the server, wrapped with a key derived from
+ * `password` and the user ID. Throws if sync is not configured or the upload fails.
+ *
+ * `password` must be the notes password. The server sees the account (server)
+ * password in plaintext at registration and login, so a blob wrapped with it
+ * could be opened by the server operator.
+ */
+async function uploadWrappedKey(password: string, masterKeyBytes: Uint8Array): Promise<void> {
+  const syncMetadata = await syncRepository.getMetadata();
+  if (!syncMetadata?.syncEnabled || !syncMetadata.userId || !syncMetadata.apiKey || !syncMetadata.syncEndpoint) {
+    throw new Error('Sync is not configured');
+  }
+
+  const currentMasterKey = keyManager.getMasterKey();
+  if (!currentMasterKey) {
+    throw new Error('Application is locked');
+  }
+
+  const wrappingKey = await cryptoService.deriveWrappingKey(password, syncMetadata.userId);
+  const serverWrapped = await cryptoService.wrapMasterKey(wrappingKey, masterKeyBytes);
+
+  // Get plaintext API key for auth
+  const encryptedApiKey = JSON.parse(syncMetadata.apiKey);
+  const plaintextApiKey = await cryptoService.decryptText(encryptedApiKey, currentMasterKey.key);
+
+  await authService.putWrappedKey(syncMetadata.syncEndpoint, plaintextApiKey, {
+    blob: JSON.stringify(serverWrapped),
+    kdfVersion: CRYPTO_WRAPPING_KDF_VERSION,
+    kdfIterations: CRYPTO_WRAPPING_ITERATIONS,
+  });
+}
+
+/**
+ * Convert legacy local encryption metadata to the envelope format.
+ * The master key bytes are unchanged; only the way they are stored differs.
+ */
+async function convertLocalToEnvelope(password: string, masterKeyBytes: Uint8Array): Promise<void> {
+  const deviceSalt = cryptoService.generateSalt();
+  const deviceKey = await cryptoService.deriveKey({
+    password,
+    salt: deviceSalt,
+    iterations: CRYPTO_PBKDF2_ITERATIONS,
+    extractable: false,
+  });
+  const localWrapped = await cryptoService.wrapMasterKey(deviceKey, masterKeyBytes);
+
+  await encryptionRepository.setMetadata({
+    envelopeVersion: 1,
+    deviceSalt: arrayBufferToBase64(deviceSalt),
+    localWrappedMaster: JSON.stringify(localWrapped),
+    wrappingKdfVersion: CRYPTO_WRAPPING_KDF_VERSION,
+    createdAt: new Date().toISOString(),
+    algorithm: 'AES-256-GCM',
+  });
+}
+
+/**
+ * Publish this device's master key to the server so other devices can onboard.
+ *
+ * Call this when sync is first set up on a device that already holds the
+ * vault. `notesPassword` must be the password that unlocks this vault; it is
+ * checked first, so the server password cannot be used by mistake. The local
+ * unlock password is never changed. A legacy vault is also converted to the
+ * envelope format.
+ *
+ * Unlike the unlock-time migration, failures are thrown so the caller can show
+ * them: a swallowed failure here leaves the server without a key and every
+ * other device unable to connect.
+ */
+export async function uploadWrappedKeyToServer(notesPassword: string): Promise<void> {
+  const masterKey = keyManager.getMasterKey();
+  if (!masterKey) {
+    throw new Error('Application is locked');
+  }
+
+  const metadata = await encryptionRepository.getMetadata();
+  if (!metadata) {
+    throw new Error('No encryption metadata found');
+  }
+
+  if (!(await passwordUnlocksVault(notesPassword, metadata, masterKey.keyBytes))) {
+    throw new Error('Incorrect password');
+  }
+
+  await uploadWrappedKey(notesPassword, masterKey.keyBytes);
+
+  if (!metadata.envelopeVersion) {
+    await convertLocalToEnvelope(notesPassword, masterKey.keyBytes);
+  }
+}
+
+/**
+ * Check whether a password is the one that unlocks the vault currently in memory.
+ * Used to catch a mistyped notes password (or the server password) up front.
+ */
+export async function verifyUnlockPassword(password: string): Promise<boolean> {
+  const masterKey = keyManager.getMasterKey();
+  const metadata = await encryptionRepository.getMetadata();
+  if (!masterKey || !metadata) {
+    return false;
+  }
+  return passwordUnlocksVault(password, metadata, masterKey.keyBytes);
+}
+
+/**
+ * Make sure the server holds a wrapped copy of the master key, uploading one
+ * if it does not. Runs after unlock, when the notes password is to hand.
+ *
+ * This repairs accounts where the original upload failed or was skipped, which
+ * otherwise leaves every other device unable to connect. An existing server
+ * copy is never overwritten, and all failures (including being offline) are
+ * logged and ignored.
+ */
+export async function ensureServerWrappedKey(notesPassword: string): Promise<void> {
+  try {
+    const syncMetadata = await syncRepository.getMetadata();
+    if (!syncMetadata?.syncEnabled || !syncMetadata.userId || !syncMetadata.apiKey || !syncMetadata.syncEndpoint) {
+      return;
+    }
+
+    const masterKey = keyManager.getMasterKey();
+    if (!masterKey) {
+      return;
+    }
+
+    const plaintextApiKey = await cryptoService.decryptText(JSON.parse(syncMetadata.apiKey), masterKey.key);
+    const existing = await authService.getWrappedKey(syncMetadata.syncEndpoint, plaintextApiKey);
+    if (existing) {
+      return;
+    }
+
+    console.log('[Unlock] Server has no wrapped key for this account, uploading one...');
+    await uploadWrappedKey(notesPassword, masterKey.keyBytes);
+    console.log('[Unlock] ✓ Wrapped key uploaded to server');
+  } catch (error) {
+    console.warn('[Unlock] Could not check or upload the server wrapped key (will retry next unlock):', error);
+  }
+}
+
+/**
  * Migrate from legacy (direct PBKDF2) to envelope encryption.
  * The master key bytes are the same — just stored differently.
+ *
+ * `password` must be the password that unlocks this vault.
  */
 export async function tryMigrateToEnvelope(password: string, masterKeyBytes: Uint8Array): Promise<void> {
   try {
@@ -398,47 +587,17 @@ export async function tryMigrateToEnvelope(password: string, masterKeyBytes: Uin
       return;
     }
 
-    const currentMasterKey = keyManager.getMasterKey();
-    if (!currentMasterKey) {
+    if (!keyManager.getMasterKey()) {
       console.log('[Migration] Skipping: no master key in memory');
       return;
     }
 
     console.log('[Migration] Starting legacy → envelope migration...');
 
-    // Upload wrapped key to server
-    const wrappingKey = await cryptoService.deriveWrappingKey(password, syncMetadata.userId);
-    const serverWrapped = await cryptoService.wrapMasterKey(wrappingKey, masterKeyBytes);
-
-    // Get plaintext API key for auth
-    const encryptedApiKey = JSON.parse(syncMetadata.apiKey);
-    const plaintextApiKey = await cryptoService.decryptText(encryptedApiKey, currentMasterKey.key);
-
-    await authService.putWrappedKey(syncMetadata.syncEndpoint, plaintextApiKey, {
-      blob: JSON.stringify(serverWrapped),
-      kdfVersion: CRYPTO_WRAPPING_KDF_VERSION,
-      kdfIterations: CRYPTO_WRAPPING_ITERATIONS,
-    });
+    await uploadWrappedKey(password, masterKeyBytes);
     console.log('[Migration] ✓ Wrapped key uploaded to server');
 
-    // Convert local storage to envelope format
-    const deviceSalt = cryptoService.generateSalt();
-    const deviceKey = await cryptoService.deriveKey({
-      password,
-      salt: deviceSalt,
-      iterations: CRYPTO_PBKDF2_ITERATIONS,
-      extractable: false,
-    });
-    const localWrapped = await cryptoService.wrapMasterKey(deviceKey, masterKeyBytes);
-
-    await encryptionRepository.setMetadata({
-      envelopeVersion: 1,
-      deviceSalt: arrayBufferToBase64(deviceSalt),
-      localWrappedMaster: JSON.stringify(localWrapped),
-      wrappingKdfVersion: CRYPTO_WRAPPING_KDF_VERSION,
-      createdAt: new Date().toISOString(),
-      algorithm: 'AES-256-GCM',
-    });
+    await convertLocalToEnvelope(password, masterKeyBytes);
 
     console.log('[Migration] ✓ Local metadata migrated to envelope format');
     console.log('[Migration] ✓✓✓ Migration complete!');
@@ -451,13 +610,19 @@ export async function tryMigrateToEnvelope(password: string, masterKeyBytes: Uin
 /**
  * Onboard a new device by downloading the wrapped master key from the server.
  * Called during sync setup when the user provides email + password.
+ *
+ * The blob is wrapped with the notes password, so `password` should be that.
+ * Clients before this fix wrapped it with the server password instead, so
+ * `alternatePassword` (the server password) is tried if the first attempt
+ * fails to unwrap. Nothing is written locally unless one of them works.
  */
 export async function onboardFromServer(
   password: string,
   endpoint: string,
   userId: string,
   apiKey: string,
-  localPassword?: string
+  localPassword?: string,
+  alternatePassword?: string
 ): Promise<void> {
   console.log('[Onboard] Downloading wrapped key from server...');
 
@@ -467,12 +632,31 @@ export async function onboardFromServer(
     throw new Error('No wrapped key found on server. The source device may not have migrated to envelope encryption yet.');
   }
 
-  // Derive wrapping key from password + userId
-  const wrappingKey = await cryptoService.deriveWrappingKey(password, userId);
-
-  // Unwrap the master key
   const serverWrapped: EncryptionResult = JSON.parse(wrappedKeyResponse.blob);
-  const masterKeyBytes = await cryptoService.unwrapMasterKey(wrappingKey, serverWrapped);
+
+  // Try each candidate password; the wrapping key is derived from password + userId
+  const candidates = [password];
+  if (alternatePassword && alternatePassword !== password) {
+    candidates.push(alternatePassword);
+  }
+
+  let masterKeyBytes: Uint8Array | undefined;
+  let unwrapError: unknown;
+  for (const candidate of candidates) {
+    try {
+      const wrappingKey = await cryptoService.deriveWrappingKey(candidate, userId);
+      masterKeyBytes = await cryptoService.unwrapMasterKey(wrappingKey, serverWrapped);
+      if (candidate !== password) {
+        console.log('[Onboard] Server blob was wrapped with the alternate password (older client)');
+      }
+      break;
+    } catch (error) {
+      unwrapError = error;
+    }
+  }
+  if (!masterKeyBytes) {
+    throw unwrapError;
+  }
   console.log('[Onboard] ✓ Master key unwrapped from server blob');
 
   // Import as CryptoKey
