@@ -10,11 +10,13 @@ final class FakeKeyServerProtocol: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var storedBlob: String?
     nonisolated(unsafe) static var putCount = 0
     nonisolated(unsafe) static var failPuts = false
+    nonisolated(unsafe) static var failGets = false
 
     static func reset(blob: String? = nil) {
         storedBlob = blob
         putCount = 0
         failPuts = false
+        failGets = false
     }
 
     override class func canInit(with request: URLRequest) -> Bool { true }
@@ -26,7 +28,10 @@ final class FakeKeyServerProtocol: URLProtocol, @unchecked Sendable {
 
         switch request.httpMethod {
         case "GET":
-            if let blob = Self.storedBlob {
+            if Self.failGets {
+                status = 503
+                body = Data("unavailable".utf8)
+            } else if let blob = Self.storedBlob {
                 status = 200
                 body = (try? JSONEncoder().encode(
                     WrappedKeyResponse(blob: blob, kdfVersion: 1, kdfIterations: 1_000_000)
@@ -311,5 +316,95 @@ struct EnvelopeServiceTests {
                 userId: userId
             )
         }
+    }
+
+    // MARK: - Checking the key before anything is created
+
+    /// The connect flow must know, before it creates a vault, whether the
+    /// entered password opens the account's key. Fetching and unwrapping is
+    /// therefore separate from saving, and a mismatch is its own error.
+
+    @Test func fetchServerKeyReturnsNilWhenTheServerHasNone() async throws {
+        FakeKeyServerProtocol.reset()
+
+        let key = try await EnvelopeService.fetchServerKey(
+            syncClient: makeClient(), userId: userId, password: notesPassword, alternatePassword: serverPassword
+        )
+
+        #expect(key == nil)
+    }
+
+    @Test func fetchServerKeyOpensABlobWrappedWithEitherPassword() async throws {
+        let sharedKey = CryptoService.generateMasterKey()
+
+        FakeKeyServerProtocol.reset(blob: try wrap(sharedKey, with: notesPassword))
+        let viaNotes = try await EnvelopeService.fetchServerKey(
+            syncClient: makeClient(), userId: userId, password: notesPassword, alternatePassword: serverPassword
+        )
+        #expect(viaNotes == sharedKey)
+
+        FakeKeyServerProtocol.reset(blob: try wrap(sharedKey, with: serverPassword))
+        let viaServer = try await EnvelopeService.fetchServerKey(
+            syncClient: makeClient(), userId: userId, password: notesPassword, alternatePassword: serverPassword
+        )
+        #expect(viaServer == sharedKey)
+    }
+
+    @Test func fetchServerKeyIgnoresAnEmptyAlternatePassword() async throws {
+        let sharedKey = CryptoService.generateMasterKey()
+        FakeKeyServerProtocol.reset(blob: try wrap(sharedKey, with: notesPassword))
+
+        let key = try await EnvelopeService.fetchServerKey(
+            syncClient: makeClient(), userId: userId, password: notesPassword, alternatePassword: ""
+        )
+
+        #expect(key == sharedKey)
+    }
+
+    @Test func fetchServerKeyReportsAPasswordMismatchAsItsOwnError() async throws {
+        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: notesPassword))
+
+        await #expect(throws: EnvelopeError.cannotUnwrapServerKey) {
+            _ = try await EnvelopeService.fetchServerKey(
+                syncClient: makeClient(),
+                userId: userId,
+                password: "wrong-notes-password",
+                alternatePassword: "wrong-server-password"
+            )
+        }
+    }
+
+    /// An unreachable server is not the same as "no key" or "wrong password":
+    /// treating it as either would let setup carry on with a different key.
+    @Test func fetchServerKeyPropagatesServerFailures() async throws {
+        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: notesPassword))
+        FakeKeyServerProtocol.failGets = true
+
+        do {
+            _ = try await EnvelopeService.fetchServerKey(
+                syncClient: makeClient(), userId: userId, password: notesPassword, alternatePassword: serverPassword
+            )
+            Issue.record("Expected a server failure to be thrown")
+        } catch let error as EnvelopeError {
+            Issue.record("Server failure was misreported as \(error)")
+        } catch {
+            // Expected: a transport / HTTP error
+        }
+    }
+
+    @Test func adoptServerKeySavesTheKeyUnderTheLocalPassword() async throws {
+        let sharedKey = CryptoService.generateMasterKey()
+        let state = try makeState()
+        try await state.createVault(password: "throwaway-vault-password")
+
+        let key = try EnvelopeService.adoptServerKey(
+            sharedKey,
+            encryptionRepo: try #require(state.encryptionRepo),
+            localPassword: notesPassword
+        )
+
+        #expect(key.withUnsafeBytes { Data($0) } == sharedKey)
+        #expect(await state.verifyVaultPassword(notesPassword) == true)
+        #expect(await state.verifyVaultPassword("throwaway-vault-password") == false)
     }
 }

@@ -321,6 +321,7 @@ enum SyncSetupError: LocalizedError {
     case needsEndpoint
     case wrongPassword
     case wrongVaultPassword
+    case encryptionPasswordMismatch
 
     var errorDescription: String? {
         switch self {
@@ -328,6 +329,7 @@ enum SyncSetupError: LocalizedError {
         case .needsEndpoint: return L.syncSetupErrorNeedsEndpoint
         case .wrongPassword: return L.syncSetupErrorWrongPassword
         case .wrongVaultPassword: return L.syncSetupErrorWrongVaultPassword
+        case .encryptionPasswordMismatch: return L.syncSetupErrorEncryptionPasswordMismatch
         }
     }
 }

@@ -555,6 +555,36 @@ private struct ConnectToServerView: View {
                     registeredEndpoint = normalised
                 }
 
+                // If the account already has a master key on the server, make sure
+                // the encryption password opens it BEFORE anything is created.
+                // Once the vault exists the UI moves on and an error can no longer
+                // be shown, and carrying on with a key of our own would leave this
+                // device unable to read the account's notes (and vice versa).
+                // Server failures are not swallowed either: they stop setup here.
+                var serverKeyData: Data?
+                var onboardingContext: (client: SyncClient, userId: String)?
+                if let syncRepo = appState.syncRepo,
+                   let syncMeta = try? syncRepo.getMetadata(),
+                   let userId = syncMeta.userId, !userId.isEmpty,
+                   let endpoint = appState.settings.syncEndpoint,
+                   let apiKey = registeredApiKey {
+                    let client = SyncClient(endpoint: endpoint, apiKey: apiKey)
+                    onboardingContext = (client, userId)
+                    do {
+                        // The server key is wrapped with the encryption password;
+                        // builds before the fix wrapped it with the server
+                        // password, so that is tried as a fallback.
+                        serverKeyData = try await EnvelopeService.fetchServerKey(
+                            syncClient: client,
+                            userId: userId,
+                            password: encryptionPassword,
+                            alternatePassword: password
+                        )
+                    } catch EnvelopeError.cannotUnwrapServerKey {
+                        throw SyncSetupError.encryptionPasswordMismatch
+                    }
+                }
+
                 syncProgress = L.setupProgressCreatingVault
                 try await appState.createVault(
                     password: encryptionPassword,
@@ -570,50 +600,44 @@ private struct ConnectToServerView: View {
                 appState.isSyncing = true
                 appState.syncStatusMessage = L.setupProgressSettingUp
 
-                // Envelope onboarding: before starting sync, check if the
-                // server already has a wrapped master key (from another device).
-                // If so, fetch and unwrap it so this device uses the same key.
-                // This MUST happen before setupSync, which triggers a background
-                // sync that would race with envelope onboarding.
-                if let encryptionRepo = appState.encryptionRepo,
-                   let syncRepo = appState.syncRepo,
-                   let syncMeta = try? syncRepo.getMetadata(),
-                   let userId = syncMeta.userId, !userId.isEmpty,
-                   let endpoint = appState.settings.syncEndpoint,
-                   let apiKey = registeredApiKey {
-                    let client = SyncClient(endpoint: endpoint, apiKey: apiKey)
-                    do {
-                        // The server key is wrapped with the encryption password;
-                        // builds before this fix wrapped it with the server
-                        // password, so that is tried as a fallback.
-                        let serverKey = try await EnvelopeService.onboardFromServer(
-                            syncClient: client,
-                            encryptionRepo: encryptionRepo,
-                            password: encryptionPassword,
-                            userId: userId,
-                            alternatePassword: password
-                        )
-                        let serverKeyData = serverKey.withUnsafeBytes { Data($0) }
-                        appState.keyManager.unlockWithKeyData(serverKeyData)
-                    } catch EnvelopeError.noWrappedKeyOnServer {
+                // Envelope onboarding, using the key fetched above. This MUST
+                // happen before setupSync, which triggers a background sync that
+                // would race with it. Adopting is purely local, so it cannot
+                // fail for a server reason now.
+                if let context = onboardingContext, let encryptionRepo = appState.encryptionRepo {
+                    if let serverKeyData {
+                        do {
+                            _ = try EnvelopeService.adoptServerKey(
+                                serverKeyData,
+                                encryptionRepo: encryptionRepo,
+                                localPassword: encryptionPassword
+                            )
+                            appState.keyManager.unlockWithKeyData(serverKeyData)
+                        } catch {
+                            // Never sync with a key of our own: stop here.
+                            Log.debug("[Envelope] Adopting server key failed: \(error)")
+                            appState.syncError = SyncEndpoint.describeSyncFailure(error)
+                            appState.syncStatusMessage = nil
+                            appState.isSyncing = false
+                            syncProgress = nil
+                            isWorking = false
+                            return
+                        }
+                    } else if let masterKey = appState.keyManager.masterKey {
                         // First device — no server key yet. Publish this vault's
                         // key, wrapped with the encryption password, so other
                         // devices can connect. Failure is retried on next unlock.
                         Log.debug("[Envelope] No server key — this device is the first, publishing ours")
-                        if let masterKey = appState.keyManager.masterKey {
-                            do {
-                                try await EnvelopeService.uploadWrappedKey(
-                                    syncClient: client,
-                                    userId: userId,
-                                    password: encryptionPassword,
-                                    masterKeyData: masterKey.withUnsafeBytes { Data($0) }
-                                )
-                            } catch {
-                                Log.debug("[Envelope] Publishing key failed (will retry on unlock): \(error)")
-                            }
+                        do {
+                            try await EnvelopeService.uploadWrappedKey(
+                                syncClient: context.client,
+                                userId: context.userId,
+                                password: encryptionPassword,
+                                masterKeyData: masterKey.withUnsafeBytes { Data($0) }
+                            )
+                        } catch {
+                            Log.debug("[Envelope] Publishing key failed (will retry on unlock): \(error)")
                         }
-                    } catch {
-                        Log.debug("[Envelope] Onboarding failed: \(error)")
                     }
                 }
 
