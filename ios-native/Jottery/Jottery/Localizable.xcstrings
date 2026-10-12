@@ -3186,6 +3186,17 @@
         }
       }
     },
+    "syncSetupError.encryptionPasswordMismatch": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That encryption password doesn't open this account's notes key. Use the encryption password from your other devices, not your server password. Nothing has been set up yet, so you can try again."
+          }
+        }
+      }
+    },
     "syncSetupError.invalidCredentials": {
       "extractionState": "manual",
       "localizations": {

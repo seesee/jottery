@@ -157,59 +157,66 @@ enum EnvelopeService {
 
     // MARK: - Onboard From Server
 
-    /// Onboard a new device by downloading the wrapped master key from the server.
-    /// Returns the unwrapped master key as a SymmetricKey.
+    /// Download the account's wrapped master key and unwrap it, without
+    /// changing anything locally. Returns `nil` if the server holds no key.
     ///
     /// The blob is wrapped with the notes password, so `password` should be
     /// that. Builds before this fix could wrap it with the account password,
     /// so `alternatePassword` (the account password) is tried if the first
-    /// attempt fails to unwrap. Nothing is written locally unless one works.
-    static func onboardFromServer(
+    /// attempt fails to unwrap. An empty alternate is ignored.
+    ///
+    /// Throws `EnvelopeError.cannotUnwrapServerKey` when neither password
+    /// opens the key. Any other error (the server being unreachable, say) is
+    /// passed through unchanged, so a caller can tell "no key", "wrong
+    /// password" and "could not ask" apart. Splitting this from
+    /// `adoptServerKey` lets the connect flow check the key BEFORE it creates
+    /// a vault, so a failure never leaves a device on a key of its own.
+    static func fetchServerKey(
         syncClient: SyncClient,
-        encryptionRepo: EncryptionRepository,
-        password: String,
         userId: String,
-        localPassword: String? = nil,
+        password: String,
         alternatePassword: String? = nil
-    ) async throws -> SymmetricKey {
-        // Fetch wrapped key from server
+    ) async throws -> Data? {
         guard let response = try await syncClient.getWrappedKey() else {
-            throw EnvelopeError.noWrappedKeyOnServer
+            return nil
         }
 
         let serverWrapped = try CryptoService.parseEncryptedJSON(response.blob)
 
         // Try each candidate password; the wrapping key derives from password + userId
         var candidates = [password]
-        if let alternatePassword, alternatePassword != password {
+        if let alternatePassword, !alternatePassword.isEmpty, alternatePassword != password {
             candidates.append(alternatePassword)
         }
 
-        var unwrapped: Data?
-        var unwrapError: Error = EnvelopeError.noWrappedKeyOnServer
         for candidate in candidates {
             let wrappingKey = CryptoService.deriveWrappingKey(password: candidate, userId: userId)
-            do {
-                unwrapped = try CryptoService.unwrapMasterKey(serverWrapped, with: wrappingKey)
-                break
-            } catch {
-                unwrapError = error
+            guard let unwrapped = try? CryptoService.unwrapMasterKey(serverWrapped, with: wrappingKey) else {
+                continue
             }
-        }
-        guard let masterKeyData = unwrapped else {
-            throw unwrapError
-        }
-
-        guard masterKeyData.count == CryptoService.keyLength else {
-            throw EnvelopeError.invalidMasterKeyLength
+            guard unwrapped.count == CryptoService.keyLength else {
+                throw EnvelopeError.invalidMasterKeyLength
+            }
+            return unwrapped
         }
 
+        throw EnvelopeError.cannotUnwrapServerKey
+    }
+
+    /// Save an already-unwrapped server master key as this device's vault key,
+    /// wrapped under `localPassword`. Purely local: no network, so once
+    /// `fetchServerKey` has succeeded this cannot fail for a server reason.
+    static func adoptServerKey(
+        _ masterKeyData: Data,
+        encryptionRepo: EncryptionRepository,
+        localPassword: String
+    ) throws -> SymmetricKey {
         let masterKey = SymmetricKey(data: masterKeyData)
 
         // Generate device salt for local storage
         let deviceSalt = CryptoService.generateSalt()
         let deviceKey = CryptoService.deriveKey(
-            password: localPassword ?? password,
+            password: localPassword,
             salt: deviceSalt,
             iterations: CryptoService.defaultIterations
         )
@@ -239,6 +246,33 @@ enum EnvelopeService {
         }
 
         return masterKey
+    }
+
+    /// Onboard a new device by downloading the wrapped master key from the server.
+    /// Returns the unwrapped master key as a SymmetricKey. Nothing is written
+    /// locally unless the key could be opened.
+    static func onboardFromServer(
+        syncClient: SyncClient,
+        encryptionRepo: EncryptionRepository,
+        password: String,
+        userId: String,
+        localPassword: String? = nil,
+        alternatePassword: String? = nil
+    ) async throws -> SymmetricKey {
+        guard let masterKeyData = try await fetchServerKey(
+            syncClient: syncClient,
+            userId: userId,
+            password: password,
+            alternatePassword: alternatePassword
+        ) else {
+            throw EnvelopeError.noWrappedKeyOnServer
+        }
+
+        return try adoptServerKey(
+            masterKeyData,
+            encryptionRepo: encryptionRepo,
+            localPassword: localPassword ?? password
+        )
     }
 
     // MARK: - Envelope Setup (Register / Unlock)
@@ -416,6 +450,7 @@ enum EnvelopeService {
 
 enum EnvelopeError: LocalizedError {
     case noWrappedKeyOnServer
+    case cannotUnwrapServerKey
     case invalidMasterKeyLength
     case notInitialised
 
@@ -423,6 +458,8 @@ enum EnvelopeError: LocalizedError {
         switch self {
         case .noWrappedKeyOnServer:
             return "No wrapped key found on server — the source device may not have migrated yet"
+        case .cannotUnwrapServerKey:
+            return "The account's encryption key could not be opened with the password provided"
         case .invalidMasterKeyLength:
             return "Invalid master key length after unwrapping"
         case .notInitialised:
