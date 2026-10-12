@@ -203,6 +203,44 @@ enum EnvelopeService {
         throw EnvelopeError.cannotUnwrapServerKey
     }
 
+    /// How the account's server key relates to this device's own vault key.
+    enum AccountKeyStatus: Equatable {
+        /// The server holds no key yet: this device can publish its own.
+        case noServerKey
+        /// The server key is the same as this device's key: safe to sync.
+        case matchesLocalKey
+    }
+
+    /// Before a device that already has a vault joins an existing account,
+    /// check that the account's key is the vault's own key. Nothing is changed.
+    ///
+    /// Syncing with a different key makes notes unreadable in both directions,
+    /// and fixing that afterwards means re-encrypting the whole vault. So the
+    /// caller refuses up front instead. Throws `accountKeyDiffers` when the key
+    /// opens but is not this device's, `cannotUnwrapServerKey` when it cannot be
+    /// opened with either password, and passes server failures through.
+    static func checkAccountKey(
+        syncClient: SyncClient,
+        userId: String,
+        password: String,
+        alternatePassword: String? = nil,
+        localMasterKeyData: Data
+    ) async throws -> AccountKeyStatus {
+        guard let serverKey = try await fetchServerKey(
+            syncClient: syncClient,
+            userId: userId,
+            password: password,
+            alternatePassword: alternatePassword
+        ) else {
+            return .noServerKey
+        }
+
+        guard serverKey == localMasterKeyData else {
+            throw EnvelopeError.accountKeyDiffers
+        }
+        return .matchesLocalKey
+    }
+
     /// Save an already-unwrapped server master key as this device's vault key,
     /// wrapped under `localPassword`. Purely local: no network, so once
     /// `fetchServerKey` has succeeded this cannot fail for a server reason.
@@ -451,6 +489,7 @@ enum EnvelopeService {
 enum EnvelopeError: LocalizedError {
     case noWrappedKeyOnServer
     case cannotUnwrapServerKey
+    case accountKeyDiffers
     case invalidMasterKeyLength
     case notInitialised
 
@@ -460,6 +499,8 @@ enum EnvelopeError: LocalizedError {
             return "No wrapped key found on server — the source device may not have migrated yet"
         case .cannotUnwrapServerKey:
             return "The account's encryption key could not be opened with the password provided"
+        case .accountKeyDiffers:
+            return "The account's encryption key differs from this device's key"
         case .invalidMasterKeyLength:
             return "Invalid master key length after unwrapping"
         case .notInitialised:
