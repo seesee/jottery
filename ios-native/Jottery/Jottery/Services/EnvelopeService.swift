@@ -8,6 +8,61 @@ import Foundation
 /// the master key. This makes password changes O(1) instead of O(n).
 enum EnvelopeService {
 
+    // MARK: - Publish Wrapped Key
+
+    /// Wrap `masterKeyData` with a key derived from `password` + `userId` and
+    /// store it on the server so other devices can onboard.
+    ///
+    /// `password` must be the notes (vault) password. The server sees the
+    /// account password in plaintext at registration and login, so a blob
+    /// wrapped with it could be opened by the server operator; the notes
+    /// password never leaves the device.
+    static func uploadWrappedKey(
+        syncClient: SyncClient,
+        userId: String,
+        password: String,
+        masterKeyData: Data
+    ) async throws {
+        // Derive wrapping key from password + userId (1M iterations)
+        let wrappingKey = CryptoService.deriveWrappingKey(password: password, userId: userId)
+
+        let serverWrapped = try CryptoService.wrapMasterKey(masterKeyData, with: wrappingKey)
+        let serverBlob = try CryptoService.serializeEncryptedJSON(serverWrapped)
+
+        let putRequest = PutWrappedKeyRequest(
+            blob: serverBlob,
+            kdfVersion: CryptoService.wrappingKdfVersion,
+            kdfIterations: Int(CryptoService.wrappingIterations)
+        )
+        try await syncClient.putWrappedKey(putRequest)
+    }
+
+    /// Upload the wrapped master key only if the server has none yet.
+    /// An existing server copy is never overwritten. Returns `true` if a key
+    /// was uploaded. Throws if the server cannot be reached or rejects the upload.
+    ///
+    /// New vaults are in envelope format from the start, so nothing else ever
+    /// publishes their key: without this a first device leaves the server with
+    /// no key and every other device fails with "no wrapped key found".
+    @discardableResult
+    static func publishWrappedKeyIfMissing(
+        syncClient: SyncClient,
+        userId: String,
+        password: String,
+        masterKeyData: Data
+    ) async throws -> Bool {
+        if try await syncClient.getWrappedKey() != nil {
+            return false
+        }
+        try await uploadWrappedKey(
+            syncClient: syncClient,
+            userId: userId,
+            password: password,
+            masterKeyData: masterKeyData
+        )
+        return true
+    }
+
     // MARK: - Migrate Legacy → Envelope
 
     /// Attempt to migrate from legacy (direct PBKDF2) to envelope encryption.
@@ -24,7 +79,12 @@ enum EnvelopeService {
         password: String,
         masterKey: SymmetricKey
     ) async -> Bool {
-        guard let syncRepo = appState.syncRepo,
+        // Whether sync is on lives in `appState.settings`. The `syncEnabled`
+        // column of the sync metadata record is never written (it stays false),
+        // so it must not be used as a gate: doing so made every envelope upload
+        // skip silently and left the server without a wrapped key.
+        guard appState.settings.syncEnabled,
+              let syncRepo = appState.syncRepo,
               let encryptionRepo = appState.encryptionRepo,
               let syncClient = appState.syncClient else {
             Log.debug("[Envelope] Migration skipped — sync not configured")
@@ -33,7 +93,6 @@ enum EnvelopeService {
 
         do {
             guard let syncMeta = try syncRepo.getMetadata(),
-                  syncMeta.syncEnabled,
                   let userId = syncMeta.userId,
                   !userId.isEmpty else {
                 Log.debug("[Envelope] Migration skipped — no userId in sync metadata")
@@ -48,20 +107,13 @@ enum EnvelopeService {
 
             let masterKeyData = masterKey.withUnsafeBytes { Data($0) }
 
-            // Derive wrapping key from password + userId (1M iterations)
-            let wrappingKey = CryptoService.deriveWrappingKey(password: password, userId: userId)
-
-            // Wrap master key for server
-            let serverWrapped = try CryptoService.wrapMasterKey(masterKeyData, with: wrappingKey)
-            let serverBlob = try CryptoService.serializeEncryptedJSON(serverWrapped)
-
-            // Upload to server
-            let putRequest = PutWrappedKeyRequest(
-                blob: serverBlob,
-                kdfVersion: CryptoService.wrappingKdfVersion,
-                kdfIterations: Int(CryptoService.wrappingIterations)
+            // Wrap master key for the server with the notes password and upload it
+            try await uploadWrappedKey(
+                syncClient: syncClient,
+                userId: userId,
+                password: password,
+                masterKeyData: masterKeyData
             )
-            try await syncClient.putWrappedKey(putRequest)
 
             // Generate device salt and derive device key for local wrapping
             let deviceSalt = CryptoService.generateSalt()
@@ -107,24 +159,46 @@ enum EnvelopeService {
 
     /// Onboard a new device by downloading the wrapped master key from the server.
     /// Returns the unwrapped master key as a SymmetricKey.
+    ///
+    /// The blob is wrapped with the notes password, so `password` should be
+    /// that. Builds before this fix could wrap it with the account password,
+    /// so `alternatePassword` (the account password) is tried if the first
+    /// attempt fails to unwrap. Nothing is written locally unless one works.
     static func onboardFromServer(
         syncClient: SyncClient,
         encryptionRepo: EncryptionRepository,
         password: String,
         userId: String,
-        localPassword: String? = nil
+        localPassword: String? = nil,
+        alternatePassword: String? = nil
     ) async throws -> SymmetricKey {
         // Fetch wrapped key from server
         guard let response = try await syncClient.getWrappedKey() else {
             throw EnvelopeError.noWrappedKeyOnServer
         }
 
-        // Derive wrapping key from password + userId
-        let wrappingKey = CryptoService.deriveWrappingKey(password: password, userId: userId)
-
-        // Unwrap master key
         let serverWrapped = try CryptoService.parseEncryptedJSON(response.blob)
-        let masterKeyData = try CryptoService.unwrapMasterKey(serverWrapped, with: wrappingKey)
+
+        // Try each candidate password; the wrapping key derives from password + userId
+        var candidates = [password]
+        if let alternatePassword, alternatePassword != password {
+            candidates.append(alternatePassword)
+        }
+
+        var unwrapped: Data?
+        var unwrapError: Error = EnvelopeError.noWrappedKeyOnServer
+        for candidate in candidates {
+            let wrappingKey = CryptoService.deriveWrappingKey(password: candidate, userId: userId)
+            do {
+                unwrapped = try CryptoService.unwrapMasterKey(serverWrapped, with: wrappingKey)
+                break
+            } catch {
+                unwrapError = error
+            }
+        }
+        guard let masterKeyData = unwrapped else {
+            throw unwrapError
+        }
 
         guard masterKeyData.count == CryptoService.keyLength else {
             throw EnvelopeError.invalidMasterKeyLength
@@ -188,7 +262,12 @@ enum EnvelopeService {
         password: String,
         masterKey: SymmetricKey
     ) async -> Bool {
-        guard let syncRepo = appState.syncRepo,
+        // Whether sync is on lives in `appState.settings`. The `syncEnabled`
+        // column of the sync metadata record is never written (it stays false),
+        // so it must not be used as a gate: doing so made every envelope upload
+        // skip silently and left the server without a wrapped key.
+        guard appState.settings.syncEnabled,
+              let syncRepo = appState.syncRepo,
               let encryptionRepo = appState.encryptionRepo,
               let syncClient = appState.syncClient else {
             Log.debug("[Envelope] Setup skipped — sync not configured")
@@ -197,16 +276,26 @@ enum EnvelopeService {
 
         do {
             guard let syncMeta = try syncRepo.getMetadata(),
-                  syncMeta.syncEnabled,
                   let userId = syncMeta.userId,
                   !userId.isEmpty else {
                 Log.debug("[Envelope] Setup skipped — no userId in sync metadata")
                 return true
             }
 
-            // Already migrated — nothing to do
+            // Already in envelope format (every vault created by this build is):
+            // nothing to migrate locally, but the server may still hold no key,
+            // which leaves every other device unable to connect. Publish ours
+            // if it is missing; an existing server key is never overwritten.
             if let metadata = try encryptionRepo.get(), metadata.envelopeVersion != nil {
-                Log.debug("[Envelope] Already migrated — skipping setup")
+                let uploaded = try await publishWrappedKeyIfMissing(
+                    syncClient: syncClient,
+                    userId: userId,
+                    password: password,
+                    masterKeyData: masterKey.withUnsafeBytes { Data($0) }
+                )
+                Log.debug(uploaded
+                    ? "[Envelope] Server had no wrapped key — uploaded ours"
+                    : "[Envelope] Already migrated, server key present — nothing to do")
                 return true
             }
 
@@ -302,23 +391,20 @@ enum EnvelopeService {
         masterKeyData: Data
     ) async {
         do {
+            // The caller only has a sync client when sync is configured, so a
+            // user ID is all that is needed (see the note on `syncEnabled` above).
             guard let syncMeta = try syncRepo.getMetadata(),
-                  syncMeta.syncEnabled,
                   let userId = syncMeta.userId, !userId.isEmpty else {
                 Log.debug("[Envelope] Server re-wrap skipped — no userId")
                 return
             }
 
-            let newWrappingKey = CryptoService.deriveWrappingKey(password: newPassword, userId: userId)
-            let serverWrapped = try CryptoService.wrapMasterKey(masterKeyData, with: newWrappingKey)
-            let serverBlob = try CryptoService.serializeEncryptedJSON(serverWrapped)
-
-            let putRequest = PutWrappedKeyRequest(
-                blob: serverBlob,
-                kdfVersion: CryptoService.wrappingKdfVersion,
-                kdfIterations: Int(CryptoService.wrappingIterations)
+            try await uploadWrappedKey(
+                syncClient: syncClient,
+                userId: userId,
+                password: newPassword,
+                masterKeyData: masterKeyData
             )
-            try await syncClient.putWrappedKey(putRequest)
             Log.debug("[Envelope] Server re-wrap complete")
         } catch {
             Log.debug("[Envelope] Server re-wrap failed (non-fatal): \(error)")
