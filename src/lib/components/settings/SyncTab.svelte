@@ -21,6 +21,7 @@
   export let userEmail: string;
   export let userPassword: string;
   export let userPasswordConfirm: string = '';
+  export let notesPassword: string = '';
   export let registeringUser: boolean;
   export let registeringDevice: boolean;
   export let userRegistrationMessage: string;
@@ -119,6 +120,7 @@
         bind:userEmail
         bind:userPassword
         bind:userPasswordConfirm
+        bind:notesPassword
         bind:registeringUser
         bind:registeringDevice
         bind:userRegistrationMessage

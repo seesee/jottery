@@ -434,7 +434,16 @@
         "comingSoon": "Prochainement",
         "futureUpdate": "La liaison de compte sera activée dans une future mise à jour"
       },
-      "error": "Erreur"
+      "error": "Erreur",
+      "notesPassword": {
+        "label": "Mot de passe des notes",
+        "placeholder": "Le mot de passe avec lequel vous déverrouillez vos notes",
+        "hintNew": "Protège la clé de chiffrement stockée sur le serveur afin que vos autres appareils puissent se connecter. Il n'est jamais envoyé au serveur. Utilisez le mot de passe avec lequel vous déverrouillez cet appareil.",
+        "hintExisting": "Le mot de passe avec lequel vous déverrouillez vos notes sur vos autres appareils. Il n'est jamais envoyé au serveur.",
+        "required": "Veuillez saisir le mot de passe de vos notes.",
+        "incorrect": "Ce n'est pas le mot de passe qui déverrouille vos notes sur cet appareil. Saisissez le mot de passe des notes, pas celui du serveur.",
+        "uploadFailed": "La synchronisation est configurée, mais la clé de chiffrement n'a pas pu être enregistrée sur le serveur, donc les autres appareils ne peuvent pas encore se connecter. Une nouvelle tentative aura lieu au prochain déverrouillage"
+      }
     },
     "editorTab": {
       "vimMode": "Mode éditeur",

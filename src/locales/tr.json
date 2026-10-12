@@ -434,7 +434,16 @@
         "comingSoon": "Yakında",
         "futureUpdate": "Hesap bağlama gelecekteki bir güncellemede etkinleştirilecek"
       },
-      "error": "Hata"
+      "error": "Hata",
+      "notesPassword": {
+        "label": "Not parolası",
+        "placeholder": "Notlarınızın kilidini açtığınız parola",
+        "hintNew": "Sunucuda saklanan şifreleme anahtarını korur, böylece diğer cihazlarınız bağlanabilir. Sunucuya hiçbir zaman gönderilmez. Bu cihazın kilidini açtığınız parolayı kullanın.",
+        "hintExisting": "Diğer cihazlarınızda notlarınızın kilidini açtığınız parola. Sunucuya hiçbir zaman gönderilmez.",
+        "required": "Lütfen not parolanızı girin.",
+        "incorrect": "Bu, notlarınızın bu cihazdaki kilidini açan parola değil. Sunucu parolanızı değil, not parolanızı girin.",
+        "uploadFailed": "Eşitleme kuruldu, ancak şifreleme anahtarı sunucuya kaydedilemedi; bu nedenle diğer cihazlar henüz bağlanamıyor. Bir sonraki kilit açışınızda yeniden denenecek"
+      }
     },
     "editorTab": {
       "vimMode": "Düzenleyici modu",

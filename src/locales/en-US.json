@@ -421,7 +421,16 @@
         "comingSoon": "Coming soon",
         "futureUpdate": "Account linking will be enabled in a future update"
       },
-      "error": "Error"
+      "error": "Error",
+      "notesPassword": {
+        "label": "Notes password",
+        "placeholder": "The password you unlock your notes with",
+        "hintNew": "Protects the encryption key stored on the server so your other devices can connect. It is never sent to the server. Use the password you unlock this device with.",
+        "hintExisting": "The password you unlock your notes with on your other devices. It is never sent to the server.",
+        "required": "Please enter your notes password.",
+        "incorrect": "That is not the password that unlocks your notes on this device. Enter your notes password, not your server password.",
+        "uploadFailed": "Sync is set up, but the encryption key could not be stored on the server, so other devices cannot connect yet. It will be retried the next time you unlock"
+      }
     },
     "editorTab": {
       "vimMode": "Editor mode",

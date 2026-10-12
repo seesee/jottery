@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import { settings, isLocked, notes } from '../stores/appStore';
-  import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, sessionStorageService, noteRepository, createSyncRecoveryNote, onboardFromServer, tryMigrateToEnvelope } from '../services';
+  import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, sessionStorageService, noteRepository, createSyncRecoveryNote, onboardFromServer, uploadWrappedKeyToServer, verifyUnlockPassword } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { createBatchedBackup, downloadBackup } from '../services/backupService';
   import { backupSchedulerService } from '../services/backupSchedulerService';
@@ -72,6 +72,7 @@
   let userEmail = '';
   let userPassword = '';
   let userPasswordConfirm = '';
+  let notesPassword = '';
   let registeringUser = false;
   let registeringDevice = false;
   let registrationStep: 'email' | 'pending' | 'device' | 'complete' = 'email';
@@ -263,6 +264,14 @@
     registeringUser = true;
     syncError = '';
     try {
+      // Check the notes password now, not after the user has waited for approval:
+      // it wraps the encryption key stored on the server, so a wrong one would
+      // lock every other device out.
+      if (!notesPassword || !(await verifyUnlockPassword(notesPassword))) {
+        syncError = $_('settings.syncSetup.notesPassword.incorrect');
+        return;
+      }
+
       const response = await authService.registerUser(syncEndpoint, userEmail, userPassword);
 
       userRegistrationMessage = response.message;
@@ -301,6 +310,11 @@
       return;
     }
 
+    if (!notesPassword) {
+      syncError = $_('settings.syncSetup.notesPassword.required');
+      return;
+    }
+
     registeringDevice = true;
     syncError = '';
     try {
@@ -311,15 +325,29 @@
         deviceName.trim()
       );
 
-      // For existing users: try to onboard from server (download wrapped master key).
+      // For existing users: download the shared master key from the server.
       // This must happen BEFORE encrypting the API key, because onboarding replaces the local master key.
+      // The key is wrapped with the notes password; devices set up by older versions
+      // used the server password, so that is tried as a fallback. A failure must stop
+      // the flow: carrying on would leave this device on a different master key from
+      // the rest of the account, and its notes would be unreadable everywhere else.
       if (registrationMode === 'existingUser') {
         try {
-          await onboardFromServer(userPassword, syncEndpoint, response.userId, response.apiKey);
+          await onboardFromServer(
+            notesPassword,
+            syncEndpoint,
+            response.userId,
+            response.apiKey,
+            notesPassword,
+            userPassword
+          );
           console.log('[SettingsModal] ✓ Onboarded from server via envelope encryption');
         } catch (onboardError) {
-          console.warn('[SettingsModal] Envelope onboarding skipped (server may not have wrapped key yet):', onboardError);
-          // Fall through — will use existing local master key
+          console.error('[SettingsModal] Onboarding from server failed:', onboardError);
+          throw new Error(
+            $_('unlock.connectExisting.errors.onboardingFailed') +
+            (onboardError instanceof Error ? ': ' + onboardError.message : '')
+          );
         }
       }
 
@@ -352,13 +380,20 @@
 
       await settingsRepository.update({ syncEndpoint, syncEnabled: true, deviceName: deviceName.trim() });
 
-      // For new users (first device): migrate local encryption to envelope and upload wrapped key to server
+      // For new users (first device): store the wrapped master key on the server so other
+      // devices can connect. It is wrapped with the notes password, which never leaves this
+      // device. Failure is reported rather than swallowed, and the upload is retried
+      // automatically the next time the app is unlocked.
+      let keyUploadError = '';
       if (registrationMode === 'newUser') {
         try {
-          await tryMigrateToEnvelope(userPassword, masterKey.keyBytes);
-          console.log('[SettingsModal] ✓ Migrated to envelope encryption');
-        } catch (migrateError) {
-          console.warn('[SettingsModal] Envelope migration failed (non-fatal, will retry on next unlock):', migrateError);
+          await uploadWrappedKeyToServer(notesPassword);
+          console.log('[SettingsModal] ✓ Wrapped master key uploaded to server');
+        } catch (uploadError) {
+          console.error('[SettingsModal] Wrapped key upload failed:', uploadError);
+          keyUploadError =
+            $_('settings.syncSetup.notesPassword.uploadFailed') +
+            (uploadError instanceof Error ? ': ' + uploadError.message : '');
         }
       }
 
@@ -373,7 +408,7 @@
       }
 
       registrationStep = 'complete';
-      syncError = '';
+      syncError = keyUploadError;
 
       // Create sync recovery note (non-blocking)
       createSyncRecoveryNote().catch(err =>
@@ -393,6 +428,7 @@
     userEmail = '';
     userPassword = '';
     userPasswordConfirm = '';
+    notesPassword = '';
     userRegistrationMessage = '';
     syncError = '';
   }
@@ -1204,6 +1240,7 @@
             bind:userEmail
             bind:userPassword
             bind:userPasswordConfirm
+            bind:notesPassword
             bind:registeringUser
             bind:registeringDevice
             bind:userRegistrationMessage

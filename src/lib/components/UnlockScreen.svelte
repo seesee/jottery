@@ -343,9 +343,9 @@
       );
 
       // Step 3: Onboard from server — download the shared master key, replace local random key
-      // The server blob is wrapped with the NOTES password (all upload paths —
-      // envelope migration and password change on web and iOS — derive the
-      // wrapping key from it), so the notes password must be used to unwrap.
+      // The server blob should be wrapped with the NOTES password, which never
+      // leaves the client. Devices set up by older versions wrapped it with the
+      // server password instead, so that is tried as a fallback.
       connectStep = $_('unlock.connectExisting.steps.onboarding');
       try {
         await onboardFromServer(
@@ -353,7 +353,8 @@
           connectEndpoint.trim(),
           response.userId,
           response.apiKey,
-          connectNotesPassword
+          connectNotesPassword,
+          connectServerPassword
         );
         console.log('[UnlockScreen] ✓ Onboarded from server via envelope encryption');
       } catch (onboardError) {

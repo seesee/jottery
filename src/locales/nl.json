@@ -434,7 +434,16 @@
         "comingSoon": "Binnenkort beschikbaar",
         "futureUpdate": "Accountkoppeling wordt ingeschakeld in een toekomstige update"
       },
-      "error": "Fout"
+      "error": "Fout",
+      "notesPassword": {
+        "label": "Notitiewachtwoord",
+        "placeholder": "Het wachtwoord waarmee je je notities ontgrendelt",
+        "hintNew": "Beschermt de versleutelingssleutel op de server, zodat je andere apparaten verbinding kunnen maken. Het wordt nooit naar de server verzonden. Gebruik het wachtwoord waarmee je dit apparaat ontgrendelt.",
+        "hintExisting": "Het wachtwoord waarmee je je notities op je andere apparaten ontgrendelt. Het wordt nooit naar de server verzonden.",
+        "required": "Voer je notitiewachtwoord in.",
+        "incorrect": "Dat is niet het wachtwoord dat je notities op dit apparaat ontgrendelt. Voer je notitiewachtwoord in, niet je serverwachtwoord.",
+        "uploadFailed": "Synchronisatie is ingesteld, maar de versleutelingssleutel kon niet op de server worden opgeslagen, dus andere apparaten kunnen nog geen verbinding maken. Bij de volgende ontgrendeling wordt het opnieuw geprobeerd"
+      }
     },
     "editorTab": {
       "vimMode": "Editormodus",
