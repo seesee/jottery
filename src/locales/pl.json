@@ -434,7 +434,16 @@
         "comingSoon": "Wkrótce",
         "futureUpdate": "Łączenie kont zostanie włączone w przyszłej aktualizacji"
       },
-      "error": "Błąd"
+      "error": "Błąd",
+      "notesPassword": {
+        "label": "Hasło do notatek",
+        "placeholder": "Hasło, którym odblokowujesz notatki",
+        "hintNew": "Chroni klucz szyfrowania przechowywany na serwerze, aby inne urządzenia mogły się połączyć. Nigdy nie jest wysyłane na serwer. Użyj hasła, którym odblokowujesz to urządzenie.",
+        "hintExisting": "Hasło, którym odblokowujesz notatki na innych urządzeniach. Nigdy nie jest wysyłane na serwer.",
+        "required": "Wpisz hasło do notatek.",
+        "incorrect": "To nie jest hasło odblokowujące notatki na tym urządzeniu. Wpisz hasło do notatek, a nie hasło do serwera.",
+        "uploadFailed": "Synchronizacja jest skonfigurowana, ale nie udało się zapisać klucza szyfrowania na serwerze, więc inne urządzenia nie mogą jeszcze się połączyć. Ponowna próba nastąpi przy następnym odblokowaniu"
+      }
     },
     "editorTab": {
       "vimMode": "Tryb edytora",

@@ -434,7 +434,16 @@
         "comingSoon": "Em breve",
         "futureUpdate": "A vinculação de conta será ativada em uma atualização futura"
       },
-      "error": "Erro"
+      "error": "Erro",
+      "notesPassword": {
+        "label": "Palavra-passe das notas",
+        "placeholder": "A palavra-passe com que desbloqueia as suas notas",
+        "hintNew": "Protege a chave de encriptação guardada no servidor para que os seus outros dispositivos se possam ligar. Nunca é enviada para o servidor. Use a palavra-passe com que desbloqueia este dispositivo.",
+        "hintExisting": "A palavra-passe com que desbloqueia as suas notas nos seus outros dispositivos. Nunca é enviada para o servidor.",
+        "required": "Introduza a palavra-passe das suas notas.",
+        "incorrect": "Esta não é a palavra-passe que desbloqueia as suas notas neste dispositivo. Introduza a palavra-passe das notas, não a do servidor.",
+        "uploadFailed": "A sincronização está configurada, mas não foi possível guardar a chave de encriptação no servidor, por isso os outros dispositivos ainda não se podem ligar. Será feita nova tentativa no próximo desbloqueio"
+      }
     },
     "editorTab": {
       "vimMode": "Modo do editor",

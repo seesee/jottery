@@ -434,7 +434,16 @@
         "comingSoon": "Demnächst",
         "futureUpdate": "Die Kontoverknüpfung wird in einem zukünftigen Update aktiviert"
       },
-      "error": "Fehler"
+      "error": "Fehler",
+      "notesPassword": {
+        "label": "Notizen-Passwort",
+        "placeholder": "Das Passwort, mit dem Sie Ihre Notizen entsperren",
+        "hintNew": "Schützt den auf dem Server gespeicherten Verschlüsselungsschlüssel, damit sich Ihre anderen Geräte verbinden können. Es wird nie an den Server gesendet. Verwenden Sie das Passwort, mit dem Sie dieses Gerät entsperren.",
+        "hintExisting": "Das Passwort, mit dem Sie Ihre Notizen auf Ihren anderen Geräten entsperren. Es wird nie an den Server gesendet.",
+        "required": "Bitte geben Sie Ihr Notizen-Passwort ein.",
+        "incorrect": "Dies ist nicht das Passwort, mit dem Ihre Notizen auf diesem Gerät entsperrt werden. Geben Sie Ihr Notizen-Passwort ein, nicht Ihr Server-Passwort.",
+        "uploadFailed": "Die Synchronisierung ist eingerichtet, aber der Verschlüsselungsschlüssel konnte nicht auf dem Server gespeichert werden. Andere Geräte können sich daher noch nicht verbinden. Beim nächsten Entsperren wird es erneut versucht"
+      }
     },
     "editorTab": {
       "vimMode": "Editor-Modus",

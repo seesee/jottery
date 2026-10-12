@@ -434,7 +434,16 @@
         "comingSoon": "Próximamente",
         "futureUpdate": "La vinculación de cuentas se habilitará en una actualización futura"
       },
-      "error": "Error"
+      "error": "Error",
+      "notesPassword": {
+        "label": "Contraseña de las notas",
+        "placeholder": "La contraseña con la que desbloqueas tus notas",
+        "hintNew": "Protege la clave de cifrado guardada en el servidor para que tus otros dispositivos puedan conectarse. Nunca se envía al servidor. Usa la contraseña con la que desbloqueas este dispositivo.",
+        "hintExisting": "La contraseña con la que desbloqueas tus notas en tus otros dispositivos. Nunca se envía al servidor.",
+        "required": "Introduce la contraseña de tus notas.",
+        "incorrect": "Esa no es la contraseña que desbloquea tus notas en este dispositivo. Introduce la contraseña de las notas, no la del servidor.",
+        "uploadFailed": "La sincronización está configurada, pero no se pudo guardar la clave de cifrado en el servidor, por lo que otros dispositivos aún no pueden conectarse. Se volverá a intentar la próxima vez que desbloquees"
+      }
     },
     "editorTab": {
       "vimMode": "Modo de editor",

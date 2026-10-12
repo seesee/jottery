@@ -12,6 +12,7 @@
   export let userEmail: string;
   export let userPassword: string;
   export let userPasswordConfirm: string = '';
+  export let notesPassword: string = '';
   export let registeringUser: boolean;
   export let registeringDevice: boolean;
   export let userRegistrationMessage: string;
@@ -187,9 +188,23 @@
                         </p>
                       </div>
                     </div>
+                    <div>
+                      <label for="notes-password-new" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        {$_('settings.syncSetup.notesPassword.label')}
+                      </label>
+                      <PasswordInput
+                        id="notes-password-new"
+                        bind:value={notesPassword}
+                        placeholder={$_('settings.syncSetup.notesPassword.placeholder')}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                        {$_('settings.syncSetup.notesPassword.hintNew')}
+                      </p>
+                    </div>
                     <button
                       on:click={onRegisterUser}
-                      disabled={!syncEndpoint || !userEmail || !userPassword || !userPasswordConfirm || userPassword !== userPasswordConfirm || registeringUser}
+                      disabled={!syncEndpoint || !userEmail || !userPassword || !userPasswordConfirm || !notesPassword || userPassword !== userPasswordConfirm || registeringUser}
                       class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-md transition-colors"
                     >
                       {registeringUser ? $_('settings.syncSetup.registration.registering') : $_('settings.syncSetup.registration.registerButton')}
@@ -307,9 +322,23 @@
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
+                  <div>
+                    <label for="existing-notes-password" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      {$_('settings.syncSetup.notesPassword.label')}
+                    </label>
+                    <PasswordInput
+                      id="existing-notes-password"
+                      bind:value={notesPassword}
+                      placeholder={$_('settings.syncSetup.notesPassword.placeholder')}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      {$_('settings.syncSetup.notesPassword.hintExisting')}
+                    </p>
+                  </div>
                   <button
                     on:click={onRegisterDevice}
-                    disabled={!syncEndpoint || !userEmail || !userPassword || !deviceName || registeringDevice}
+                    disabled={!syncEndpoint || !userEmail || !userPassword || !notesPassword || !deviceName || registeringDevice}
                     class="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white text-sm font-medium rounded-md transition-colors"
                   >
                     {registeringDevice ? $_('settings.syncSetup.existingAccount.connecting') : $_('settings.syncSetup.existingAccount.connectButton')}

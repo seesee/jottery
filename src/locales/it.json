@@ -434,7 +434,16 @@
         "comingSoon": "Prossimamente",
         "futureUpdate": "Il collegamento account verrà abilitato in un futuro aggiornamento"
       },
-      "error": "Errore"
+      "error": "Errore",
+      "notesPassword": {
+        "label": "Password delle note",
+        "placeholder": "La password con cui sblocchi le tue note",
+        "hintNew": "Protegge la chiave di cifratura memorizzata sul server, così gli altri dispositivi possono connettersi. Non viene mai inviata al server. Usa la password con cui sblocchi questo dispositivo.",
+        "hintExisting": "La password con cui sblocchi le tue note sugli altri dispositivi. Non viene mai inviata al server.",
+        "required": "Inserisci la password delle tue note.",
+        "incorrect": "Questa non è la password che sblocca le tue note su questo dispositivo. Inserisci la password delle note, non quella del server.",
+        "uploadFailed": "La sincronizzazione è configurata, ma non è stato possibile salvare la chiave di cifratura sul server, quindi gli altri dispositivi non possono ancora connettersi. Verrà fatto un nuovo tentativo al prossimo sblocco"
+      }
     },
     "editorTab": {
       "vimMode": "Modalità editor",
