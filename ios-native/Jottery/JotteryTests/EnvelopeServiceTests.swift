@@ -407,4 +407,102 @@ struct EnvelopeServiceTests {
         #expect(await state.verifyVaultPassword(notesPassword) == true)
         #expect(await state.verifyVaultPassword("throwaway-vault-password") == false)
     }
+
+    // MARK: - Settings sync setup: don't join an account with a different key
+
+    /// A device that already has a vault (envelope format) and connects to an
+    /// existing account must have the same master key as the account. If it
+    /// does not, syncing would leave notes unreadable in both directions, so
+    /// the check refuses before anything is saved.
+
+    @Test func accountKeyCheckReportsWhenTheServerHasNoKey() async throws {
+        FakeKeyServerProtocol.reset()
+
+        let status = try await EnvelopeService.checkAccountKey(
+            syncClient: makeClient(),
+            userId: userId,
+            password: notesPassword,
+            alternatePassword: serverPassword,
+            localMasterKeyData: CryptoService.generateMasterKey()
+        )
+
+        #expect(status == .noServerKey)
+    }
+
+    @Test func accountKeyCheckAcceptsTheSameKey() async throws {
+        let sharedKey = CryptoService.generateMasterKey()
+        FakeKeyServerProtocol.reset(blob: try wrap(sharedKey, with: notesPassword))
+
+        let status = try await EnvelopeService.checkAccountKey(
+            syncClient: makeClient(),
+            userId: userId,
+            password: notesPassword,
+            alternatePassword: serverPassword,
+            localMasterKeyData: sharedKey
+        )
+
+        #expect(status == .matchesLocalKey)
+    }
+
+    @Test func accountKeyCheckRefusesADifferentKey() async throws {
+        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: notesPassword))
+
+        await #expect(throws: EnvelopeError.accountKeyDiffers) {
+            _ = try await EnvelopeService.checkAccountKey(
+                syncClient: makeClient(),
+                userId: userId,
+                password: notesPassword,
+                alternatePassword: serverPassword,
+                localMasterKeyData: CryptoService.generateMasterKey()
+            )
+        }
+    }
+
+    @Test func accountKeyCheckSeesADifferentKeyWrappedWithTheServerPassword() async throws {
+        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: serverPassword))
+
+        await #expect(throws: EnvelopeError.accountKeyDiffers) {
+            _ = try await EnvelopeService.checkAccountKey(
+                syncClient: makeClient(),
+                userId: userId,
+                password: notesPassword,
+                alternatePassword: serverPassword,
+                localMasterKeyData: CryptoService.generateMasterKey()
+            )
+        }
+    }
+
+    @Test func accountKeyCheckReportsAnUnreadableKeyDistinctly() async throws {
+        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: "some-other-notes-password"))
+
+        await #expect(throws: EnvelopeError.cannotUnwrapServerKey) {
+            _ = try await EnvelopeService.checkAccountKey(
+                syncClient: makeClient(),
+                userId: userId,
+                password: notesPassword,
+                alternatePassword: serverPassword,
+                localMasterKeyData: CryptoService.generateMasterKey()
+            )
+        }
+    }
+
+    @Test func accountKeyCheckPropagatesServerFailures() async throws {
+        FakeKeyServerProtocol.reset()
+        FakeKeyServerProtocol.failGets = true
+
+        do {
+            _ = try await EnvelopeService.checkAccountKey(
+                syncClient: makeClient(),
+                userId: userId,
+                password: notesPassword,
+                alternatePassword: serverPassword,
+                localMasterKeyData: CryptoService.generateMasterKey()
+            )
+            Issue.record("Expected a server failure to be thrown")
+        } catch let error as EnvelopeError {
+            Issue.record("Server failure was misreported as \(error)")
+        } catch {
+            // Expected: a transport / HTTP error
+        }
+    }
 }

@@ -166,6 +166,38 @@ struct SyncSetupView: View {
                     deviceName: deviceName
                 )
 
+                // A device that already has a vault must share the account's master
+                // key, or syncing would leave notes unreadable in both directions
+                // (and undoing that means re-encrypting the whole vault). Check
+                // BEFORE anything is saved locally, and refuse if they differ.
+                // Legacy vaults are not checked here: they migrate to the account's
+                // key during envelope setup below.
+                if let metadata = try? appState.encryptionRepo?.get(),
+                   metadata.envelopeVersion != nil,
+                   let masterKey = appState.keyManager.masterKey {
+                    let probe = SyncClient(endpoint: normalised, apiKey: response.apiKey)
+                    do {
+                        _ = try await EnvelopeService.checkAccountKey(
+                            syncClient: probe,
+                            userId: response.userId,
+                            password: notesPassword,
+                            alternatePassword: password,
+                            localMasterKeyData: masterKey.withUnsafeBytes { Data($0) }
+                        )
+                    } catch {
+                        // Best effort: don't leave an orphaned device on the account.
+                        try? await probe.revokeThisDevice()
+                        switch error {
+                        case EnvelopeError.accountKeyDiffers:
+                            throw SyncSetupError.accountKeyDiffers
+                        case EnvelopeError.cannotUnwrapServerKey:
+                            throw SyncSetupError.accountKeyUnreadable
+                        default:
+                            throw error
+                        }
+                    }
+                }
+
                 try KeychainService.storeAPIKey(response.apiKey)
                 try KeychainService.storeClientId(response.clientId)
                 try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
@@ -322,6 +354,8 @@ enum SyncSetupError: LocalizedError {
     case wrongPassword
     case wrongVaultPassword
     case encryptionPasswordMismatch
+    case accountKeyDiffers
+    case accountKeyUnreadable
 
     var errorDescription: String? {
         switch self {
@@ -330,6 +364,8 @@ enum SyncSetupError: LocalizedError {
         case .wrongPassword: return L.syncSetupErrorWrongPassword
         case .wrongVaultPassword: return L.syncSetupErrorWrongVaultPassword
         case .encryptionPasswordMismatch: return L.syncSetupErrorEncryptionPasswordMismatch
+        case .accountKeyDiffers: return L.syncSetupErrorAccountKeyDiffers
+        case .accountKeyUnreadable: return L.syncSetupErrorAccountKeyUnreadable
         }
     }
 }

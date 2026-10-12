@@ -3186,6 +3186,28 @@
         }
       }
     },
+    "syncSetupError.accountKeyDiffers": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This account already has an encryption key that differs from the one on this device, so syncing would leave notes unreadable on one side. Nothing has been changed. To join this account, export your notes from Settings, delete this vault, set the app up again and connect to the account, then import your notes."
+          }
+        }
+      }
+    },
+    "syncSetupError.accountKeyUnreadable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This account's encryption key can't be opened with this device's notes password. Use the same notes password as on your other devices (you can change it in Settings), then try again. Nothing has been changed."
+          }
+        }
+      }
+    },
     "syncSetupError.encryptionPasswordMismatch": {
       "extractionState": "manual",
       "localizations": {
