@@ -45,8 +45,12 @@ pub fn try_migrate_to_envelope(app: &mut App, password: &str, master_key: &[u8; 
 
     app.debug_log("[Migration] Starting legacy → envelope migration...");
 
-    // Derive wrapping key from password + userId and wrap master key
-    let wrapping_key = app.crypto.derive_wrapping_key(password, user_id)?;
+    // Derive wrapping key from the notes password + userId and wrap master key.
+    // The server sees the account password in plaintext at login, so the blob must
+    // not be wrapped with it. `password` is only the account password when no
+    // separate notes (unlock) password is available.
+    let notes_password = local_password.unwrap_or(password);
+    let wrapping_key = app.crypto.derive_wrapping_key(notes_password, user_id)?;
     let server_wrapped = app.crypto.wrap_master_key(&wrapping_key, master_key)?;
 
     // Get plaintext API key for auth
@@ -67,7 +71,7 @@ pub fn try_migrate_to_envelope(app: &mut App, password: &str, master_key: &[u8; 
 
     // Convert local storage to envelope format
     let device_salt = app.crypto.generate_salt();
-    let device_key = app.crypto.derive_key(local_password.unwrap_or(password), &device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
+    let device_key = app.crypto.derive_key(notes_password, &device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
     let local_wrapped = app.crypto.wrap_master_key(&device_key, master_key)?;
 
     let device_salt_b64 = base64::engine::general_purpose::STANDARD.encode(&device_salt);
@@ -80,6 +84,35 @@ pub fn try_migrate_to_envelope(app: &mut App, password: &str, master_key: &[u8; 
     app.debug_log("[Migration] Migration complete!");
 
     Ok(())
+}
+
+/// Unwrap the server-held master key, trying each candidate password in order.
+///
+/// Duplicate candidates are skipped. If none work, the error from the last
+/// attempt is returned. Nothing is written anywhere, so a failure is harmless.
+fn unwrap_with_passwords(
+    crypto: &crate::crypto::CryptoService,
+    candidates: &[&str],
+    user_id: &str,
+    wrapped: &crate::models::encryption::EncryptedData,
+) -> Result<[u8; 32]> {
+    let mut tried: Vec<&str> = Vec::new();
+    let mut last_error = anyhow::anyhow!("No password supplied to unwrap the master key");
+
+    for &candidate in candidates {
+        if tried.contains(&candidate) {
+            continue;
+        }
+        tried.push(candidate);
+
+        let wrapping_key = crypto.derive_wrapping_key(candidate, user_id)?;
+        match crypto.unwrap_master_key(&wrapping_key, wrapped) {
+            Ok(key) => return Ok(key),
+            Err(e) => last_error = e,
+        }
+    }
+
+    Err(last_error)
 }
 
 /// Onboard a new device by downloading the wrapped master key from the server.
@@ -104,20 +137,19 @@ pub fn onboard_from_server(
             "No wrapped key found on server. The source device may not have migrated to envelope encryption yet."
         ))?;
 
-    // Derive wrapping key from password + userId
-    let wrapping_key = app.crypto.derive_wrapping_key(password, user_id)?;
-
-    // Unwrap the master key
+    // Unwrap the master key. New blobs are wrapped with the notes password; blobs
+    // from older clients were wrapped with the account password, so try that too.
     let server_wrapped: crate::models::encryption::EncryptedData =
         serde_json::from_str(&wrapped_response.blob)
             .context("Invalid wrapped key blob JSON")?;
-    let master_key = app.crypto.unwrap_master_key(&wrapping_key, &server_wrapped)?;
+    let notes_password = local_password.unwrap_or(password);
+    let master_key = unwrap_with_passwords(&app.crypto, &[notes_password, password], user_id, &server_wrapped)?;
     app.debug_log("[Onboard] Master key unwrapped from server blob");
 
     // Create local envelope storage
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
     let device_salt = app.crypto.generate_salt();
-    let device_key = app.crypto.derive_key(local_password.unwrap_or(password), &device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
+    let device_key = app.crypto.derive_key(notes_password, &device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
     let local_wrapped = app.crypto.wrap_master_key(&device_key, &master_key)?;
 
     let device_salt_b64 = base64::engine::general_purpose::STANDARD.encode(&device_salt);
@@ -208,4 +240,64 @@ pub fn change_password(
 
     app.debug_log("[ChangePassword] Password changed successfully (no re-encryption needed)");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::crypto::CryptoService;
+
+    const USER_ID: &str = "b3c1f5a2-8f0e-4c55-9d52-2f6a1c0e7a11";
+    const NOTES: &str = "notes-password-correct-horse";
+    const SERVER: &str = "server-password-battery-staple";
+
+    fn wrap_with(crypto: &CryptoService, password: &str, key: &[u8; 32]) -> crate::models::encryption::EncryptedData {
+        let wrapping_key = crypto.derive_wrapping_key(password, USER_ID).unwrap();
+        crypto.wrap_master_key(&wrapping_key, key).unwrap()
+    }
+
+    #[test]
+    fn unwraps_a_blob_wrapped_with_the_notes_password() {
+        let crypto = CryptoService::new();
+        let key = crypto.generate_master_key();
+        let blob = wrap_with(&crypto, NOTES, &key);
+
+        let unwrapped = unwrap_with_passwords(&crypto, &[NOTES, SERVER], USER_ID, &blob).unwrap();
+
+        assert_eq!(unwrapped, key);
+    }
+
+    #[test]
+    fn falls_back_to_the_server_password_for_older_blobs() {
+        let crypto = CryptoService::new();
+        let key = crypto.generate_master_key();
+        let blob = wrap_with(&crypto, SERVER, &key);
+
+        let unwrapped = unwrap_with_passwords(&crypto, &[NOTES, SERVER], USER_ID, &blob).unwrap();
+
+        assert_eq!(unwrapped, key);
+    }
+
+    #[test]
+    fn fails_when_no_candidate_matches() {
+        let crypto = CryptoService::new();
+        let key = crypto.generate_master_key();
+        let blob = wrap_with(&crypto, NOTES, &key);
+
+        let result = unwrap_with_passwords(&crypto, &["wrong", "also-wrong"], USER_ID, &blob);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn identical_candidates_are_only_tried_once() {
+        let crypto = CryptoService::new();
+        let key = crypto.generate_master_key();
+        let blob = wrap_with(&crypto, NOTES, &key);
+
+        // Same password for notes and account: must still work
+        let unwrapped = unwrap_with_passwords(&crypto, &[NOTES, NOTES], USER_ID, &blob).unwrap();
+
+        assert_eq!(unwrapped, key);
+    }
 }
