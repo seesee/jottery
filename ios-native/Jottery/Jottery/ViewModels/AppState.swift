@@ -552,8 +552,10 @@ final class AppState {
             try? upgradeVaultVerification(key: key)
         }
 
-        // Auto-migrate legacy vaults to envelope in background (non-fatal)
-        if metadata.envelopeVersion == nil, settings.syncEnabled {
+        // Background envelope setup (non-fatal). Legacy vaults are migrated;
+        // envelope vaults have the server key published if it is missing, which
+        // repairs accounts whose first device never uploaded one.
+        if settings.syncEnabled {
             Task {
                 await EnvelopeService.tryEnvelopeSetup(
                     appState: self,

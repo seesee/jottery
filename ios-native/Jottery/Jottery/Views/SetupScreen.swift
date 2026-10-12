@@ -347,14 +347,10 @@ private struct ConnectToServerView: View {
                 appState.settings.syncEnabled = true
                 appState.settings.syncEndpoint = normalised
 
-                // Attempt envelope setup before declaring success.
-                if let masterKey = appState.keyManager.masterKey {
-                    await EnvelopeService.tryEnvelopeSetup(
-                        appState: appState,
-                        password: password,
-                        masterKey: masterKey
-                    )
-                }
+                // No envelope setup here: the vault does not exist yet on first
+                // launch, and `password` is the server password, which must never
+                // wrap the master key. The key is published (or downloaded) after
+                // the vault is created, using the encryption password.
 
                 registeredApiKey = response.apiKey
                 registeredEndpoint = normalised
@@ -587,17 +583,35 @@ private struct ConnectToServerView: View {
                    let apiKey = registeredApiKey {
                     let client = SyncClient(endpoint: endpoint, apiKey: apiKey)
                     do {
+                        // The server key is wrapped with the encryption password;
+                        // builds before this fix wrapped it with the server
+                        // password, so that is tried as a fallback.
                         let serverKey = try await EnvelopeService.onboardFromServer(
                             syncClient: client,
                             encryptionRepo: encryptionRepo,
                             password: encryptionPassword,
-                            userId: userId
+                            userId: userId,
+                            alternatePassword: password
                         )
                         let serverKeyData = serverKey.withUnsafeBytes { Data($0) }
                         appState.keyManager.unlockWithKeyData(serverKeyData)
                     } catch EnvelopeError.noWrappedKeyOnServer {
-                        // First device — no server key yet; local key is fine
-                        Log.debug("[Envelope] No server key — this device is the first")
+                        // First device — no server key yet. Publish this vault's
+                        // key, wrapped with the encryption password, so other
+                        // devices can connect. Failure is retried on next unlock.
+                        Log.debug("[Envelope] No server key — this device is the first, publishing ours")
+                        if let masterKey = appState.keyManager.masterKey {
+                            do {
+                                try await EnvelopeService.uploadWrappedKey(
+                                    syncClient: client,
+                                    userId: userId,
+                                    password: encryptionPassword,
+                                    masterKeyData: masterKey.withUnsafeBytes { Data($0) }
+                                )
+                            } catch {
+                                Log.debug("[Envelope] Publishing key failed (will retry on unlock): \(error)")
+                            }
+                        }
                     } catch {
                         Log.debug("[Envelope] Onboarding failed: \(error)")
                     }
