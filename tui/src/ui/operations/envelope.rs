@@ -248,8 +248,11 @@ mod tests {
     use crate::crypto::CryptoService;
 
     const USER_ID: &str = "b3c1f5a2-8f0e-4c55-9d52-2f6a1c0e7a11";
-    const NOTES: &str = "notes-password-correct-horse";
-    const SERVER: &str = "server-password-battery-staple";
+
+    /// A fresh random password, so no credential-like literals live in the tests
+    fn random_password(crypto: &CryptoService) -> String {
+        base64::engine::general_purpose::STANDARD.encode(crypto.generate_master_key())
+    }
 
     fn wrap_with(crypto: &CryptoService, password: &str, key: &[u8; 32]) -> crate::models::encryption::EncryptedData {
         let wrapping_key = crypto.derive_wrapping_key(password, USER_ID).unwrap();
@@ -259,10 +262,11 @@ mod tests {
     #[test]
     fn unwraps_a_blob_wrapped_with_the_notes_password() {
         let crypto = CryptoService::new();
+        let (notes, server) = (random_password(&crypto), random_password(&crypto));
         let key = crypto.generate_master_key();
-        let blob = wrap_with(&crypto, NOTES, &key);
+        let blob = wrap_with(&crypto, &notes, &key);
 
-        let unwrapped = unwrap_with_passwords(&crypto, &[NOTES, SERVER], USER_ID, &blob).unwrap();
+        let unwrapped = unwrap_with_passwords(&crypto, &[&notes, &server], USER_ID, &blob).unwrap();
 
         assert_eq!(unwrapped, key);
     }
@@ -270,10 +274,11 @@ mod tests {
     #[test]
     fn falls_back_to_the_server_password_for_older_blobs() {
         let crypto = CryptoService::new();
+        let (notes, server) = (random_password(&crypto), random_password(&crypto));
         let key = crypto.generate_master_key();
-        let blob = wrap_with(&crypto, SERVER, &key);
+        let blob = wrap_with(&crypto, &server, &key);
 
-        let unwrapped = unwrap_with_passwords(&crypto, &[NOTES, SERVER], USER_ID, &blob).unwrap();
+        let unwrapped = unwrap_with_passwords(&crypto, &[&notes, &server], USER_ID, &blob).unwrap();
 
         assert_eq!(unwrapped, key);
     }
@@ -281,10 +286,15 @@ mod tests {
     #[test]
     fn fails_when_no_candidate_matches() {
         let crypto = CryptoService::new();
+        let (notes, other_a, other_b) = (
+            random_password(&crypto),
+            random_password(&crypto),
+            random_password(&crypto),
+        );
         let key = crypto.generate_master_key();
-        let blob = wrap_with(&crypto, NOTES, &key);
+        let blob = wrap_with(&crypto, &notes, &key);
 
-        let result = unwrap_with_passwords(&crypto, &["wrong", "also-wrong"], USER_ID, &blob);
+        let result = unwrap_with_passwords(&crypto, &[&other_a, &other_b], USER_ID, &blob);
 
         assert!(result.is_err());
     }
@@ -292,11 +302,12 @@ mod tests {
     #[test]
     fn identical_candidates_are_only_tried_once() {
         let crypto = CryptoService::new();
+        let notes = random_password(&crypto);
         let key = crypto.generate_master_key();
-        let blob = wrap_with(&crypto, NOTES, &key);
+        let blob = wrap_with(&crypto, &notes, &key);
 
         // Same password for notes and account: must still work
-        let unwrapped = unwrap_with_passwords(&crypto, &[NOTES, NOTES], USER_ID, &blob).unwrap();
+        let unwrapped = unwrap_with_passwords(&crypto, &[&notes, &notes], USER_ID, &blob).unwrap();
 
         assert_eq!(unwrapped, key);
     }
