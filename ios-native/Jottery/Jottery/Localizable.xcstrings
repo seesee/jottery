@@ -29,6 +29,72 @@
         }
       }
     },
+    "accountKey.promptMessage": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your other devices can't connect until this device uploads your encryption key. Enter your notes password to protect the key and upload it."
+          }
+        }
+      }
+    },
+    "accountKey.promptNotNow": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not Now"
+          }
+        }
+      }
+    },
+    "accountKey.promptPublish": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upload Key"
+          }
+        }
+      }
+    },
+    "accountKey.promptTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finish Setting Up Sync"
+          }
+        }
+      }
+    },
+    "accountKey.promptWrongPassword": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incorrect notes password. Enter the password you use to unlock your notes, so your other devices can connect."
+          }
+        }
+      }
+    },
+    "accountKey.publishFailed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't upload the encryption key. It will be tried again next time you unlock."
+          }
+        }
+      }
+    },
     "attachments.dataNotAvailable": {
       "extractionState": "manual",
       "localizations": {

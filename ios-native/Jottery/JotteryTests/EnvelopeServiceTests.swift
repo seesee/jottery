@@ -616,4 +616,122 @@ struct EnvelopeServiceTests {
         #expect(status == .noServerKey)
         #expect(FakeKeyServerProtocol.deleteCount == 0)
     }
+
+    // MARK: - Face ID unlock: publish a missing key (jottery-x40w)
+
+    /// Envelope setup publishes a missing server key on password unlock, but a
+    /// Face ID unlock has no password to wrap it with. A device that only ever
+    /// uses Face ID would never publish, so other devices could never connect.
+    /// After Face ID, the app checks the server (no password needed) and asks
+    /// for the notes password once if the key is missing.
+
+    /// An unlocked vault with sync on, as a Face ID unlock leaves it.
+    private func makeSyncedState() async throws -> AppState {
+        let state = try makeState()
+        try await state.createVault(password: notesPassword)
+        state.settings.syncEnabled = true
+        var meta = try #require(try state.syncRepo?.getMetadata())
+        meta.userId = userId
+        try state.syncRepo?.saveMetadata(meta)
+        state.syncClient = makeClient()
+        return state
+    }
+
+    @Test func faceIDUnlockAsksForThePasswordWhenTheServerHasNoKey() async throws {
+        FakeKeyServerProtocol.reset()
+        let state = try await makeSyncedState()
+
+        await state.checkAccountKeyAfterBiometricUnlock()
+
+        #expect(state.needsNotesPasswordForAccountKey)
+        #expect(FakeKeyServerProtocol.putCount == 0)  // nothing published without the password
+    }
+
+    @Test func faceIDUnlockDoesNotAskWhenTheServerHasAKey() async throws {
+        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: notesPassword))
+        let state = try await makeSyncedState()
+
+        await state.checkAccountKeyAfterBiometricUnlock()
+
+        #expect(!state.needsNotesPasswordForAccountKey)
+    }
+
+    @Test func faceIDUnlockDoesNotAskWhenTheServerFails() async throws {
+        FakeKeyServerProtocol.reset()
+        FakeKeyServerProtocol.failGets = true
+        let state = try await makeSyncedState()
+
+        await state.checkAccountKeyAfterBiometricUnlock()
+
+        #expect(!state.needsNotesPasswordForAccountKey)  // offline: try again next unlock
+    }
+
+    @Test func faceIDUnlockDoesNotAskWhenSyncIsOff() async throws {
+        FakeKeyServerProtocol.reset()
+        let state = try await makeSyncedState()
+        state.settings.syncEnabled = false
+
+        await state.checkAccountKeyAfterBiometricUnlock()
+
+        #expect(!state.needsNotesPasswordForAccountKey)
+    }
+
+    @Test func faceIDUnlockDoesNotAskWithoutAUserId() async throws {
+        FakeKeyServerProtocol.reset()
+        let state = try await makeSyncedState()
+        var meta = try #require(try state.syncRepo?.getMetadata())
+        meta.userId = nil
+        try state.syncRepo?.saveMetadata(meta)
+
+        await state.checkAccountKeyAfterBiometricUnlock()
+
+        #expect(!state.needsNotesPasswordForAccountKey)  // the key can't be wrapped without it
+    }
+
+    @Test func publishingWithTheNotesPasswordUploadsTheKey() async throws {
+        FakeKeyServerProtocol.reset()
+        let state = try await makeSyncedState()
+        let masterKey = try #require(state.keyManager.masterKey)
+        state.needsNotesPasswordForAccountKey = true
+
+        let result = await state.publishMissingAccountKey(password: notesPassword)
+
+        #expect(result == .published)
+        #expect(!state.needsNotesPasswordForAccountKey)
+        let blob = try #require(FakeKeyServerProtocol.storedBlob)
+        #expect(unwrap(blob, with: notesPassword) == masterKey.withUnsafeBytes { Data($0) })
+    }
+
+    @Test func publishingWithAWrongPasswordUploadsNothing() async throws {
+        FakeKeyServerProtocol.reset()
+        let state = try await makeSyncedState()
+        state.needsNotesPasswordForAccountKey = true
+
+        let result = await state.publishMissingAccountKey(password: "not-the-notes-password")
+
+        #expect(result == .wrongPassword)
+        #expect(FakeKeyServerProtocol.putCount == 0)
+        #expect(FakeKeyServerProtocol.storedBlob == nil)
+    }
+
+    @Test func publishingReportsAnUploadFailure() async throws {
+        FakeKeyServerProtocol.reset()
+        FakeKeyServerProtocol.failPuts = true
+        let state = try await makeSyncedState()
+
+        let result = await state.publishMissingAccountKey(password: notesPassword)
+
+        #expect(result == .failed)
+        #expect(FakeKeyServerProtocol.storedBlob == nil)
+    }
+
+    @Test func lockingClearsThePendingPasswordPrompt() async throws {
+        FakeKeyServerProtocol.reset()
+        let state = try await makeSyncedState()
+        state.needsNotesPasswordForAccountKey = true
+
+        state.lock()
+
+        #expect(!state.needsNotesPasswordForAccountKey)
+    }
 }
