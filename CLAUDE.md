@@ -519,37 +519,44 @@ git commit -m "i18n: translate VersionHistoryModal component"
 
 **Remember: Commits are cheap. Lost work is expensive. When in doubt, commit.**
 
-### Beads: newly created issues are silently deleted unless you act
+### Beads: the issue manifest travels with your branch
 
-**After creating any issue with `bd create`, get it onto `main`'s manifest in the
-same session — otherwise the next `bd sync` deletes it.**
+`.beads/issues.jsonl` on the checked-out branch is the one copy of the issue
+tracker. There is no sync branch and no daemon (`.beads/config.yaml` has no
+`sync-branch` and sets `no-daemon: true`).
 
-`.beads/config.yaml` sets `sync-branch: beads-sync`, so `bd sync` commits
-`.beads/issues.jsonl` to that branch. But `.beads/issues.jsonl` is *also* tracked
-on `main`, and bd's `git-history-backfill` prunes any issue in the database that
-has no history in the **checked-out branch's** manifest, writing a tombstone to
-`.beads/deletions.jsonl`. An issue created on `main` and synced only to
-`beads-sync` therefore vanishes on the next sync — and a later `bd import`
-silently skips it as "in deletions manifest".
+- **Committing** runs the pre-commit hook, which exports the database to
+  `.beads/issues.jsonl` and stages it. Issue changes ride along with your
+  commits and reach `main` through the PR, like any other file.
+- **Switching branches or pulling** runs the post-checkout / post-merge hooks,
+  which import that branch's manifest. Import only adds and updates: an issue
+  missing from the branch you switch to stays in the database, and comes back
+  into the manifest with your next commit.
+- **Never run a bare `bd sync` on `main`.** Without a sync branch it commits the
+  manifest straight to `main` and pushes it. On `main`, use
+  `bd sync --flush-only`, and make issue changes on a feature branch.
+- If a bd command stops with "Database out of sync with JSONL", run
+  `bd sync --import-only`.
 
-This bit five times in one session (2026-07-25) before the cause was found; the
-issue documenting it was itself deleted twice. `beads-sync` had accumulated 112
-commits since February without ever being merged back.
+**Don't reintroduce a sync branch.** Until November 2026 the repo used
+`sync-branch: beads-sync` with the bd daemon while also committing the manifest
+on `main`. Whenever `.beads/issues.jsonl` changed (checkout, pull, commit), the
+daemon pulled `beads-sync`, copied its JSONL over the working copy and
+re-imported it. `beads-sync` had not been synced since 2026-08-17, so every git
+operation pruned all issues created since then from the working manifest, and
+the file watcher retriggered itself every few seconds (`daemon.log` reached
+33 MB). Before that, `bd sync`'s git-history backfill tombstoned issues absent
+from the checked-out branch's manifest (five lost on 2026-07-25). Two copies of
+the manifest drift apart; keep one.
 
-Either of these prevents it:
-
-```bash
-bd sync --merge                      # merge beads-sync back into main, or
-git add .beads/issues.jsonl && git commit   # commit the manifest yourself
-```
+Nor set the sync branch to `main`: `bd sync` commits through a temporary
+worktree and fails with `fatal: 'main' is already used by worktree`. The
+database keeps its own `sync.branch` setting, used when `config.yaml` has none:
+`bd config get sync.branch` should say "not set" (clear it with
+`bd config unset sync.branch`). `bd sync` can rewrite `.beads/config.yaml` and
+strip its comments, so notes like this belong here. The old `beads-sync` branch
+is no longer used. Tracked in `jottery-anyy`.
 
 To recover a tombstoned issue: delete its line from `.beads/deletions.jsonl`,
-then `git show beads-sync:.beads/issues.jsonl | bd import`, then commit the
-manifest to `main` so it stays.
-
-**Do not "fix" this by setting `sync-branch: main`.** `bd sync` commits through a
-temporary git worktree, and git refuses to check out a branch already checked out
-elsewhere, so sync fails outright while you are on main:
-`fatal: 'main' is already used by worktree`. Note also that `bd sync` rewrites
-`.beads/config.yaml` and strips comments from it, so notes like this one belong
-here rather than in that file. Tracked in `jottery-anyy`.
+re-import it (`git show <ref>:.beads/issues.jsonl | bd import`), then commit
+the manifest.
