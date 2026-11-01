@@ -52,6 +52,8 @@ enum L {
     static var syncSetupErrorWrongPassword: String { String(localized: "syncSetupError.wrongPassword") }
     static var syncSetupErrorWrongVaultPassword: String { String(localized: "syncSetupError.wrongVaultPassword") }
     static var syncSetupErrorEncryptionPasswordMismatch: String { String(localized: "syncSetupError.encryptionPasswordMismatch") }
+    static var syncSetupErrorAccountKeyDiffers: String { String(localized: "syncSetupError.accountKeyDiffers") }
+    static var syncSetupErrorAccountKeyUnreadable: String { String(localized: "syncSetupError.accountKeyUnreadable") }
 
     // MARK: - Delete Account
 

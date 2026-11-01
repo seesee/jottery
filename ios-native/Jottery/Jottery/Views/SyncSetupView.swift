@@ -19,6 +19,11 @@ struct SyncSetupView: View {
     @State private var isWorking = false
     @State private var success = false
     @State private var registeredApiKey: String?
+    @State private var vaultIsEnvelope = false
+
+    private var importNeedsNotesPassword: Bool {
+        Self.importNeedsNotesPassword(importData, vaultIsEnvelope: vaultIsEnvelope)
+    }
 
     var body: some View {
         NavigationStack {
@@ -65,6 +70,7 @@ struct SyncSetupView: View {
                     Button(L.syncSetupCancel) { dismiss() }
                 }
             }
+            .task { vaultIsEnvelope = currentVaultIsEnvelope() }
         }
     }
 
@@ -130,6 +136,14 @@ struct SyncSetupView: View {
 
             TextField(L.syncSetupDeviceName, text: $deviceName)
 
+            if importNeedsNotesPassword {
+                Text(L.syncSetupNotesPasswordHint)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                SecureField(L.syncSetupNotesPassword, text: $notesPassword)
+            }
+
             Button(action: importCredentials) {
                 if isWorking {
                     ProgressView()
@@ -137,7 +151,7 @@ struct SyncSetupView: View {
                     Text(L.syncSetupImportAction)
                 }
             }
-            .disabled(importData.isEmpty || isWorking || success)
+            .disabled(importData.isEmpty || (importNeedsNotesPassword && notesPassword.isEmpty) || isWorking || success)
         }
     }
 
@@ -165,6 +179,14 @@ struct SyncSetupView: View {
                     password: password,
                     deviceName: deviceName
                 )
+                let deviceClient = SyncClient(endpoint: normalised, apiKey: response.apiKey)
+
+                try await checkAccountKeyBeforeJoining(
+                    deviceClient: deviceClient,
+                    userId: response.userId,
+                    notesPassword: notesPassword,
+                    serverPassword: password
+                )
 
                 try KeychainService.storeAPIKey(response.apiKey)
                 try KeychainService.storeClientId(response.clientId)
@@ -181,23 +203,7 @@ struct SyncSetupView: View {
 
                 registeredApiKey = response.apiKey
 
-                // Attempt envelope setup before declaring success.
-                // If another device already uploaded a wrapped key, we onboard
-                // from that key; otherwise we upload ours. Wrapped with the
-                // vault password, verified above — never the server password.
-                if let masterKey = appState.keyManager.masterKey {
-                    let envelopeOK = await EnvelopeService.tryEnvelopeSetup(
-                        appState: appState,
-                        password: notesPassword,
-                        masterKey: masterKey
-                    )
-                    if !envelopeOK {
-                        // Non-fatal: sync itself is set up, but other devices
-                        // can't onboard until the key upload succeeds. It
-                        // retries automatically on the next unlock.
-                        self.error = L.syncSetupEnvelopeUploadFailed
-                    }
-                }
+                await publishAccountKey(deviceClient: deviceClient, notesPassword: notesPassword)
 
                 success = true
                 isWorking = false
@@ -216,28 +222,46 @@ struct SyncSetupView: View {
             do {
                 let trimmed = importData.trimmingCharacters(in: .whitespacesAndNewlines)
 
+                // Only `jottery:v1:` credentials prove anything about the key
+                // (see handleEncryptedCredentials). For the other formats an
+                // envelope vault checks the account's key, which needs the notes
+                // password: verify it before anything is sent to the server.
+                var checkPassword: String?
+                if Self.importNeedsNotesPassword(trimmed, vaultIsEnvelope: currentVaultIsEnvelope()) {
+                    guard await appState.verifyVaultPassword(notesPassword) else {
+                        self.error = SyncSetupError.wrongVaultPassword.localizedDescription
+                        isWorking = false
+                        return
+                    }
+                    checkPassword = notesPassword
+                }
+
                 if trimmed.hasPrefix("jottery:v1:") {
                     // Modern encrypted format — decrypt using current master key
                     try await handleEncryptedCredentials(trimmed)
                 } else if let data = Data(base64Encoded: trimmed),
                           let creds = try? JSONDecoder().decode(LegacyCredentials.self, from: data) {
                     // Legacy format with salt
-                    try await handleCredentials(apiKey: creds.apiKey, endpoint: creds.endpoint)
+                    try await handleCredentials(
+                        apiKey: creds.apiKey, endpoint: creds.endpoint, notesPassword: checkPassword
+                    )
                 } else if let data = Data(base64Encoded: trimmed),
                           let creds = try? JSONDecoder().decode(ImportedCredentials.self, from: data) {
                     // Legacy format without salt
-                    try await handleCredentials(apiKey: creds.apiKey, endpoint: creds.endpoint)
+                    try await handleCredentials(
+                        apiKey: creds.apiKey, endpoint: creds.endpoint, notesPassword: checkPassword
+                    )
                 } else {
-                    // Raw API key
+                    // Raw API key. Cloned like the other formats rather than
+                    // reused as is: that gives this device its own key and
+                    // client ID, and the account's user ID, without which the
+                    // encryption key can be neither checked nor published.
                     guard !endpoint.isEmpty else {
                         throw SyncSetupError.needsEndpoint
                     }
-                    let normalised = try SyncEndpoint.normalise(endpoint)
-                    try KeychainService.storeAPIKey(trimmed)
-                    try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
-                    appState.settings.syncEnabled = true
-                    appState.settings.syncEndpoint = normalised
-                    registeredApiKey = trimmed
+                    try await handleCredentials(
+                        apiKey: trimmed, endpoint: endpoint, notesPassword: checkPassword
+                    )
                 }
 
                 success = true
@@ -250,6 +274,10 @@ struct SyncSetupView: View {
     }
 
     /// Decrypt `jottery:v1:` credentials using the current master key.
+    ///
+    /// The account's key is not checked here: these credentials are encrypted
+    /// with the exporting device's master key, so decrypting them at all shows
+    /// that this vault holds the same key.
     private func handleEncryptedCredentials(_ input: String) async throws {
         guard let masterKey = appState.keyManager.masterKey else {
             throw SyncSetupError.invalidCredentials
@@ -279,13 +307,27 @@ struct SyncSetupView: View {
     }
 
     /// Clone device and store credentials.
-    private func handleCredentials(apiKey: String, endpoint: String) async throws {
+    ///
+    /// With `notesPassword` (already verified), the account's key is checked
+    /// before anything is saved, and this vault's key is published if the
+    /// account has none yet, as when registering.
+    private func handleCredentials(apiKey: String, endpoint: String, notesPassword: String? = nil) async throws {
         let normalised = try SyncEndpoint.normalise(endpoint)
         let client = SyncClient(endpoint: normalised)
         let response = try await client.cloneDevice(
             apiKey: apiKey,
             deviceName: deviceName.isEmpty ? "iOS" : deviceName
         )
+        let deviceClient = SyncClient(endpoint: normalised, apiKey: response.apiKey)
+
+        if let notesPassword {
+            try await checkAccountKeyBeforeJoining(
+                deviceClient: deviceClient,
+                userId: response.userId,
+                notesPassword: notesPassword,
+                serverPassword: nil
+            )
+        }
 
         try KeychainService.storeAPIKey(response.apiKey)
         try KeychainService.storeClientId(response.clientId)
@@ -300,6 +342,77 @@ struct SyncSetupView: View {
         appState.settings.syncEnabled = true
         appState.settings.syncEndpoint = normalised
         registeredApiKey = response.apiKey
+
+        if let notesPassword {
+            await publishAccountKey(deviceClient: deviceClient, notesPassword: notesPassword)
+        }
+    }
+
+    // MARK: - Account key
+
+    private func currentVaultIsEnvelope() -> Bool {
+        (try? appState.encryptionRepo?.get())?.envelopeVersion != nil
+    }
+
+    /// Whether importing `credentials` needs the notes password: an envelope
+    /// vault must check the account's key, and only `jottery:v1:` credentials
+    /// already prove that it matches. Legacy vaults are not checked: they
+    /// migrate to the account's key during envelope setup on unlock.
+    static func importNeedsNotesPassword(_ credentials: String, vaultIsEnvelope: Bool) -> Bool {
+        let trimmed = credentials.trimmingCharacters(in: .whitespacesAndNewlines)
+        return vaultIsEnvelope && !trimmed.isEmpty && !trimmed.hasPrefix("jottery:v1:")
+    }
+
+    /// A device that already has a vault must share the account's master key,
+    /// or syncing would leave notes unreadable in both directions (and undoing
+    /// that means re-encrypting the whole vault). Call straight after the
+    /// device is registered or cloned, BEFORE anything is saved locally: a
+    /// refusal revokes that device again, leaving nothing behind. Legacy vaults
+    /// are not checked: they migrate to the account's key during envelope setup.
+    private func checkAccountKeyBeforeJoining(
+        deviceClient: SyncClient,
+        userId: String,
+        notesPassword: String,
+        serverPassword: String?
+    ) async throws {
+        guard currentVaultIsEnvelope(), let masterKey = appState.keyManager.masterKey else { return }
+        do {
+            _ = try await EnvelopeService.checkAccountKeyForNewDevice(
+                syncClient: deviceClient,
+                userId: userId,
+                password: notesPassword,
+                alternatePassword: serverPassword,
+                localMasterKeyData: masterKey.withUnsafeBytes { Data($0) }
+            )
+        } catch EnvelopeError.accountKeyDiffers {
+            throw SyncSetupError.accountKeyDiffers
+        } catch EnvelopeError.cannotUnwrapServerKey {
+            throw SyncSetupError.accountKeyUnreadable
+        }
+    }
+
+    /// Envelope setup before declaring success: publish this vault's key if the
+    /// account has none (legacy vaults onboard from or migrate to the account's
+    /// key instead). Wrapped with the notes password, which the caller has
+    /// verified, and never with the server password.
+    ///
+    /// Uses the new device's own client: the app's sync client only starts
+    /// once this sheet completes, so `appState.syncClient` is still nil here,
+    /// and setup used to skip silently. The account was then left without a
+    /// key until the next password unlock, which Face ID users may never do.
+    private func publishAccountKey(deviceClient: SyncClient, notesPassword: String) async {
+        guard let masterKey = appState.keyManager.masterKey else { return }
+        let envelopeOK = await EnvelopeService.tryEnvelopeSetup(
+            appState: appState,
+            password: notesPassword,
+            masterKey: masterKey,
+            syncClient: deviceClient
+        )
+        if !envelopeOK {
+            // Non-fatal: sync itself is set up, but other devices can't onboard
+            // until the key upload succeeds. It retries on the next unlock.
+            self.error = L.syncSetupEnvelopeUploadFailed
+        }
     }
 }
 
@@ -322,6 +435,8 @@ enum SyncSetupError: LocalizedError {
     case wrongPassword
     case wrongVaultPassword
     case encryptionPasswordMismatch
+    case accountKeyDiffers
+    case accountKeyUnreadable
 
     var errorDescription: String? {
         switch self {
@@ -330,6 +445,8 @@ enum SyncSetupError: LocalizedError {
         case .wrongPassword: return L.syncSetupErrorWrongPassword
         case .wrongVaultPassword: return L.syncSetupErrorWrongVaultPassword
         case .encryptionPasswordMismatch: return L.syncSetupErrorEncryptionPasswordMismatch
+        case .accountKeyDiffers: return L.syncSetupErrorAccountKeyDiffers
+        case .accountKeyUnreadable: return L.syncSetupErrorAccountKeyUnreadable
         }
     }
 }

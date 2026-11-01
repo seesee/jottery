@@ -72,12 +72,15 @@ enum EnvelopeService {
     /// the failure to a user (e.g. `SyncSetupView`) can check the result;
     /// background/migration callers may discard it and keep the existing
     /// silent-retry-on-next-unlock behaviour.
+    ///
+    /// `syncClient` overrides `appState.syncClient`, as for `tryEnvelopeSetup`.
     @discardableResult
     @MainActor
     static func tryMigrateToEnvelope(
         appState: AppState,
         password: String,
-        masterKey: SymmetricKey
+        masterKey: SymmetricKey,
+        syncClient explicitClient: SyncClient? = nil
     ) async -> Bool {
         // Whether sync is on lives in `appState.settings`. The `syncEnabled`
         // column of the sync metadata record is never written (it stays false),
@@ -86,7 +89,7 @@ enum EnvelopeService {
         guard appState.settings.syncEnabled,
               let syncRepo = appState.syncRepo,
               let encryptionRepo = appState.encryptionRepo,
-              let syncClient = appState.syncClient else {
+              let syncClient = explicitClient ?? appState.syncClient else {
             Log.debug("[Envelope] Migration skipped — sync not configured")
             return true
         }
@@ -203,6 +206,70 @@ enum EnvelopeService {
         throw EnvelopeError.cannotUnwrapServerKey
     }
 
+    /// How the account's server key relates to this device's own vault key.
+    enum AccountKeyStatus: Equatable {
+        /// The server holds no key yet: this device can publish its own.
+        case noServerKey
+        /// The server key is the same as this device's key: safe to sync.
+        case matchesLocalKey
+    }
+
+    /// Before a device that already has a vault joins an existing account,
+    /// check that the account's key is the vault's own key. Nothing is changed.
+    ///
+    /// Syncing with a different key makes notes unreadable in both directions,
+    /// and fixing that afterwards means re-encrypting the whole vault. So the
+    /// caller refuses up front instead. Throws `accountKeyDiffers` when the key
+    /// opens but is not this device's, `cannotUnwrapServerKey` when it cannot be
+    /// opened with either password, and passes server failures through.
+    static func checkAccountKey(
+        syncClient: SyncClient,
+        userId: String,
+        password: String,
+        alternatePassword: String? = nil,
+        localMasterKeyData: Data
+    ) async throws -> AccountKeyStatus {
+        guard let serverKey = try await fetchServerKey(
+            syncClient: syncClient,
+            userId: userId,
+            password: password,
+            alternatePassword: alternatePassword
+        ) else {
+            return .noServerKey
+        }
+
+        guard serverKey == localMasterKeyData else {
+            throw EnvelopeError.accountKeyDiffers
+        }
+        return .matchesLocalKey
+    }
+
+    /// `checkAccountKey` for a device registered (or cloned) on the account
+    /// moments ago, with `syncClient` holding that device's API key. The key
+    /// can only be fetched once the device exists, so on any failure the device
+    /// is revoked again (best effort) before the error is rethrown: a refused
+    /// join must not leave an orphaned device on the account.
+    static func checkAccountKeyForNewDevice(
+        syncClient: SyncClient,
+        userId: String,
+        password: String,
+        alternatePassword: String? = nil,
+        localMasterKeyData: Data
+    ) async throws -> AccountKeyStatus {
+        do {
+            return try await checkAccountKey(
+                syncClient: syncClient,
+                userId: userId,
+                password: password,
+                alternatePassword: alternatePassword,
+                localMasterKeyData: localMasterKeyData
+            )
+        } catch {
+            try? await syncClient.revokeThisDevice()
+            throw error
+        }
+    }
+
     /// Save an already-unwrapped server master key as this device's vault key,
     /// wrapped under `localPassword`. Purely local: no network, so once
     /// `fetchServerKey` has succeeded this cannot fail for a server reason.
@@ -289,12 +356,17 @@ enum EnvelopeService {
     /// unmigrated locally, so the next successful `unlock(password:)`
     /// retries automatically (see the `metadata.envelopeVersion == nil`
     /// check there). Callers that want to tell the user surface it instead.
+    ///
+    /// `syncClient` overrides `appState.syncClient`. Sync setup passes one built
+    /// from the new device's API key, because it runs before the app's sync
+    /// client is started: `appState.syncClient` is still nil at that point.
     @discardableResult
     @MainActor
     static func tryEnvelopeSetup(
         appState: AppState,
         password: String,
-        masterKey: SymmetricKey
+        masterKey: SymmetricKey,
+        syncClient explicitClient: SyncClient? = nil
     ) async -> Bool {
         // Whether sync is on lives in `appState.settings`. The `syncEnabled`
         // column of the sync metadata record is never written (it stays false),
@@ -303,7 +375,7 @@ enum EnvelopeService {
         guard appState.settings.syncEnabled,
               let syncRepo = appState.syncRepo,
               let encryptionRepo = appState.encryptionRepo,
-              let syncClient = appState.syncClient else {
+              let syncClient = explicitClient ?? appState.syncClient else {
             Log.debug("[Envelope] Setup skipped — sync not configured")
             return true
         }
@@ -362,7 +434,8 @@ enum EnvelopeService {
                 return await tryMigrateToEnvelope(
                     appState: appState,
                     password: password,
-                    masterKey: masterKey
+                    masterKey: masterKey,
+                    syncClient: syncClient
                 )
             }
         } catch {
@@ -451,6 +524,7 @@ enum EnvelopeService {
 enum EnvelopeError: LocalizedError {
     case noWrappedKeyOnServer
     case cannotUnwrapServerKey
+    case accountKeyDiffers
     case invalidMasterKeyLength
     case notInitialised
 
@@ -460,6 +534,8 @@ enum EnvelopeError: LocalizedError {
             return "No wrapped key found on server — the source device may not have migrated yet"
         case .cannotUnwrapServerKey:
             return "The account's encryption key could not be opened with the password provided"
+        case .accountKeyDiffers:
+            return "The account's encryption key differs from this device's key"
         case .invalidMasterKeyLength:
             return "Invalid master key length after unwrapping"
         case .notInitialised:
