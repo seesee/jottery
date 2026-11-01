@@ -11,12 +11,15 @@ final class FakeKeyServerProtocol: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var putCount = 0
     nonisolated(unsafe) static var failPuts = false
     nonisolated(unsafe) static var failGets = false
+    /// DELETE requests seen: revoking the calling device (`sync/device`).
+    nonisolated(unsafe) static var deleteCount = 0
 
     static func reset(blob: String? = nil) {
         storedBlob = blob
         putCount = 0
         failPuts = false
         failGets = false
+        deleteCount = 0
     }
 
     override class func canInit(with request: URLRequest) -> Bool { true }
@@ -51,6 +54,9 @@ final class FakeKeyServerProtocol: URLProtocol, @unchecked Sendable {
             } else {
                 status = 400
             }
+        case "DELETE":
+            Self.deleteCount += 1
+            status = 200
         default:
             status = 405
         }
@@ -240,6 +246,31 @@ struct EnvelopeServiceTests {
         #expect(ok == true)
         #expect(FakeKeyServerProtocol.storedBlob == nil)
         #expect(FakeKeyServerProtocol.putCount == 0)
+    }
+
+    /// Settings sync setup runs envelope setup before the app's sync client is
+    /// started, so `appState.syncClient` is still nil at that point. Setup used
+    /// to skip as "sync not configured", leaving the account without a key
+    /// until the next password unlock (never, for Face ID users).
+    @Test func envelopeSetupUsesTheClientItIsGivenBeforeSyncHasStarted() async throws {
+        FakeKeyServerProtocol.reset()
+        let state = try makeState()
+        try await state.createVault(password: notesPassword)
+        let masterKey = try #require(state.keyManager.masterKey)
+
+        state.settings.syncEnabled = true
+        var meta = try #require(try state.syncRepo?.getMetadata())
+        meta.userId = userId
+        try state.syncRepo?.saveMetadata(meta)
+        #expect(state.syncClient == nil)
+
+        let ok = await EnvelopeService.tryEnvelopeSetup(
+            appState: state, password: notesPassword, masterKey: masterKey, syncClient: makeClient()
+        )
+
+        #expect(ok == true)
+        let blob = try #require(FakeKeyServerProtocol.storedBlob)
+        #expect(unwrap(blob, with: notesPassword) == masterKey.withUnsafeBytes { Data($0) })
     }
 
     // MARK: - Second device downloads the key
@@ -504,5 +535,85 @@ struct EnvelopeServiceTests {
         } catch {
             // Expected: a transport / HTTP error
         }
+    }
+
+    // MARK: - A refused join leaves no device behind
+
+    /// The check runs after the device has been registered (or cloned) on the
+    /// account, because the key can only be fetched with the device's API key.
+    /// A refusal must revoke that device again, or every failed attempt leaves
+    /// an orphan on the account.
+
+    @Test func joiningCheckRevokesTheDeviceWhenTheKeyDiffers() async throws {
+        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: notesPassword))
+
+        await #expect(throws: EnvelopeError.accountKeyDiffers) {
+            _ = try await EnvelopeService.checkAccountKeyForNewDevice(
+                syncClient: makeClient(),
+                userId: userId,
+                password: notesPassword,
+                localMasterKeyData: CryptoService.generateMasterKey()
+            )
+        }
+        #expect(FakeKeyServerProtocol.deleteCount == 1)
+    }
+
+    @Test func joiningCheckRevokesTheDeviceWhenTheKeyIsUnreadable() async throws {
+        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: "some-other-notes-password"))
+
+        await #expect(throws: EnvelopeError.cannotUnwrapServerKey) {
+            _ = try await EnvelopeService.checkAccountKeyForNewDevice(
+                syncClient: makeClient(),
+                userId: userId,
+                password: notesPassword,
+                alternatePassword: serverPassword,
+                localMasterKeyData: CryptoService.generateMasterKey()
+            )
+        }
+        #expect(FakeKeyServerProtocol.deleteCount == 1)
+    }
+
+    @Test func joiningCheckRevokesTheDeviceWhenTheServerFails() async throws {
+        FakeKeyServerProtocol.reset()
+        FakeKeyServerProtocol.failGets = true
+
+        await #expect(throws: (any Error).self) {
+            _ = try await EnvelopeService.checkAccountKeyForNewDevice(
+                syncClient: makeClient(),
+                userId: userId,
+                password: notesPassword,
+                localMasterKeyData: CryptoService.generateMasterKey()
+            )
+        }
+        #expect(FakeKeyServerProtocol.deleteCount == 1)
+    }
+
+    @Test func joiningCheckKeepsTheDeviceWhenTheKeyMatches() async throws {
+        let sharedKey = CryptoService.generateMasterKey()
+        FakeKeyServerProtocol.reset(blob: try wrap(sharedKey, with: notesPassword))
+
+        let status = try await EnvelopeService.checkAccountKeyForNewDevice(
+            syncClient: makeClient(),
+            userId: userId,
+            password: notesPassword,
+            localMasterKeyData: sharedKey
+        )
+
+        #expect(status == .matchesLocalKey)
+        #expect(FakeKeyServerProtocol.deleteCount == 0)
+    }
+
+    @Test func joiningCheckKeepsTheDeviceWhenTheServerHasNoKey() async throws {
+        FakeKeyServerProtocol.reset()
+
+        let status = try await EnvelopeService.checkAccountKeyForNewDevice(
+            syncClient: makeClient(),
+            userId: userId,
+            password: notesPassword,
+            localMasterKeyData: CryptoService.generateMasterKey()
+        )
+
+        #expect(status == .noServerKey)
+        #expect(FakeKeyServerProtocol.deleteCount == 0)
     }
 }

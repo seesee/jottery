@@ -72,12 +72,15 @@ enum EnvelopeService {
     /// the failure to a user (e.g. `SyncSetupView`) can check the result;
     /// background/migration callers may discard it and keep the existing
     /// silent-retry-on-next-unlock behaviour.
+    ///
+    /// `syncClient` overrides `appState.syncClient`, as for `tryEnvelopeSetup`.
     @discardableResult
     @MainActor
     static func tryMigrateToEnvelope(
         appState: AppState,
         password: String,
-        masterKey: SymmetricKey
+        masterKey: SymmetricKey,
+        syncClient explicitClient: SyncClient? = nil
     ) async -> Bool {
         // Whether sync is on lives in `appState.settings`. The `syncEnabled`
         // column of the sync metadata record is never written (it stays false),
@@ -86,7 +89,7 @@ enum EnvelopeService {
         guard appState.settings.syncEnabled,
               let syncRepo = appState.syncRepo,
               let encryptionRepo = appState.encryptionRepo,
-              let syncClient = appState.syncClient else {
+              let syncClient = explicitClient ?? appState.syncClient else {
             Log.debug("[Envelope] Migration skipped — sync not configured")
             return true
         }
@@ -241,6 +244,32 @@ enum EnvelopeService {
         return .matchesLocalKey
     }
 
+    /// `checkAccountKey` for a device registered (or cloned) on the account
+    /// moments ago, with `syncClient` holding that device's API key. The key
+    /// can only be fetched once the device exists, so on any failure the device
+    /// is revoked again (best effort) before the error is rethrown: a refused
+    /// join must not leave an orphaned device on the account.
+    static func checkAccountKeyForNewDevice(
+        syncClient: SyncClient,
+        userId: String,
+        password: String,
+        alternatePassword: String? = nil,
+        localMasterKeyData: Data
+    ) async throws -> AccountKeyStatus {
+        do {
+            return try await checkAccountKey(
+                syncClient: syncClient,
+                userId: userId,
+                password: password,
+                alternatePassword: alternatePassword,
+                localMasterKeyData: localMasterKeyData
+            )
+        } catch {
+            try? await syncClient.revokeThisDevice()
+            throw error
+        }
+    }
+
     /// Save an already-unwrapped server master key as this device's vault key,
     /// wrapped under `localPassword`. Purely local: no network, so once
     /// `fetchServerKey` has succeeded this cannot fail for a server reason.
@@ -327,12 +356,17 @@ enum EnvelopeService {
     /// unmigrated locally, so the next successful `unlock(password:)`
     /// retries automatically (see the `metadata.envelopeVersion == nil`
     /// check there). Callers that want to tell the user surface it instead.
+    ///
+    /// `syncClient` overrides `appState.syncClient`. Sync setup passes one built
+    /// from the new device's API key, because it runs before the app's sync
+    /// client is started: `appState.syncClient` is still nil at that point.
     @discardableResult
     @MainActor
     static func tryEnvelopeSetup(
         appState: AppState,
         password: String,
-        masterKey: SymmetricKey
+        masterKey: SymmetricKey,
+        syncClient explicitClient: SyncClient? = nil
     ) async -> Bool {
         // Whether sync is on lives in `appState.settings`. The `syncEnabled`
         // column of the sync metadata record is never written (it stays false),
@@ -341,7 +375,7 @@ enum EnvelopeService {
         guard appState.settings.syncEnabled,
               let syncRepo = appState.syncRepo,
               let encryptionRepo = appState.encryptionRepo,
-              let syncClient = appState.syncClient else {
+              let syncClient = explicitClient ?? appState.syncClient else {
             Log.debug("[Envelope] Setup skipped — sync not configured")
             return true
         }
@@ -400,7 +434,8 @@ enum EnvelopeService {
                 return await tryMigrateToEnvelope(
                     appState: appState,
                     password: password,
-                    masterKey: masterKey
+                    masterKey: masterKey,
+                    syncClient: syncClient
                 )
             }
         } catch {
