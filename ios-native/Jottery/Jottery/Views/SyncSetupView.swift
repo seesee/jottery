@@ -71,9 +71,13 @@ struct SyncSetupView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
+                    // Not while a device is being registered or a merge runs:
+                    // dismissing then would leave the new device on the account.
                     Button(L.syncSetupCancel) { dismiss() }
+                        .disabled(isWorking)
                 }
             }
+            .interactiveDismissDisabled(isWorking)
             .task { vaultIsEnvelope = currentVaultIsEnvelope() }
             .alert(L.syncMergeTitle, isPresented: $showMergePrompt, presenting: pendingMerge) { pending in
                 Button(L.syncMergeConfirm) { mergeAndJoin(pending) }

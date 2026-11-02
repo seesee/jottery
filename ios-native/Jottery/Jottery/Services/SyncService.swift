@@ -42,7 +42,7 @@ actor SyncService {
     /// reloading the whole vault.
     @discardableResult
     func sync() async throws -> SyncChanges {
-        guard !isSyncing else { return .none }
+        guard !isSyncing, !isShutDown else { return .none }
         isSyncing = true
         lastError = nil
 
@@ -1028,7 +1028,7 @@ actor SyncService {
     /// the "force-resync" case from the incremental-refresh contract), so
     /// this discards the per-note change tracking `pull()` does.
     func forceFullSync() async throws {
-        guard !isSyncing else { return }
+        guard !isSyncing, !isShutDown else { return }
         isSyncing = true
         lastError = nil
         defer { isSyncing = false }
@@ -1160,6 +1160,25 @@ actor SyncService {
     /// Stop SSE listener.
     func stopSSE() async {
         await sseClient.stop()
+    }
+
+    /// Set by `shutDown(timeout:)`: no new sync starts on this service.
+    private var isShutDown = false
+
+    /// Stop this service for good and wait for a sync in progress to finish.
+    /// Used before the vault's master key changes: the service encrypts and
+    /// decrypts with the key it was created with, so anything it pushed or
+    /// pulled after the re-key would be under the wrong key. Returns false if
+    /// a sync was still running when `timeout` ran out.
+    func shutDown(timeout: Duration = .seconds(30)) async -> Bool {
+        isShutDown = true
+        await sseClient.stop()
+        let deadline = ContinuousClock.now + timeout
+        while isSyncing {
+            guard ContinuousClock.now < deadline else { return false }
+            try? await Task.sleep(for: .milliseconds(50))
+        }
+        return true
     }
 }
 

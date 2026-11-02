@@ -527,6 +527,13 @@ final class AppState {
 
         let key = SymmetricKey(data: masterKeyData)
 
+        if biometricKeyNeedsRefresh {
+            biometricKeyNeedsRefresh = false
+            if keyManager.isBiometricEnabled {
+                try? keyManager.enableBiometricUnlock()
+            }
+        }
+
         // Retry any edit that failed to flush at lock time now that the key
         // is available again.
         flushPendingEditorNote()
@@ -572,6 +579,22 @@ final class AppState {
 
         return true
     }
+
+    /// Whether the key now loaded is this vault's key, checked against the
+    /// vault's verification token. Face ID keeps its own copy of the master
+    /// key; if the vault moved to a new key and that copy was not refreshed
+    /// (the app killed in between), Face ID would load the old key: the vault
+    /// would look empty and new notes would be saved under the wrong key.
+    /// Vaults too old to have a token cannot be checked, and pass.
+    func loadedKeyMatchesVault() -> Bool {
+        guard let key = keyManager.masterKey else { return false }
+        guard let token = (try? encryptionRepo?.get())?.verification else { return true }
+        return AppState.verifyWithToken(token, key: key)
+    }
+
+    /// Set when Face ID loaded an out-of-date key. The next password unlock
+    /// then stores the current key for Face ID.
+    @ObservationIgnored var biometricKeyNeedsRefresh = false
 
     /// Verify a candidate vault (notes) password against the currently
     /// stored vault metadata, without any side effects — no key is loaded
@@ -1685,10 +1708,11 @@ final class AppState {
             var newMetadata = metadata
             newMetadata.salt = newSalt.base64EncodedString()
             newMetadata.verification = verificationJSON
-            try VaultReKeyService.reKey(
-                database: db, from: currentKey, to: newKey, newMetadata: newMetadata
-            )
-            await didChangeMasterKey(to: newKey)
+            try await performReKey(to: newKey) {
+                try VaultReKeyService.reKey(
+                    database: db, from: currentKey, to: newKey, newMetadata: newMetadata
+                )
+            }
 
             // Try envelope migration after legacy password change
             if settings.syncEnabled {
@@ -1725,27 +1749,58 @@ final class AppState {
         let newMetadata = try EnvelopeService.envelopeMetadata(
             for: newKeyData, localPassword: notesPassword, current: current
         )
-        let summary = try VaultReKeyService.reKey(
-            database: db, from: oldKey, to: newKey, newMetadata: newMetadata
-        )
+        let summary = try await performReKey(to: newKey) {
+            try VaultReKeyService.reKey(database: db, from: oldKey, to: newKey, newMetadata: newMetadata)
+        }
         Log.debug("[ReKey] Vault moved to a new master key: \(summary)")
-        await didChangeMasterKey(to: newKey)
         return summary
     }
 
+    /// Run `reKey` with sync stopped, then switch to `newKey`. A running sync
+    /// service captured the old key, so anything it pushed or pulled after the
+    /// re-key commits would be under the wrong key: pushing old ciphertext and
+    /// clearing the "needs sync" flag the re-key just set, or writing pulled
+    /// tags under the old key. Sync is restarted afterwards on the new key.
+    @discardableResult
+    private func performReKey(
+        to newKey: SymmetricKey,
+        _ reKey: () throws -> VaultReKeyService.Summary
+    ) async throws -> VaultReKeyService.Summary {
+        let syncWasRunning = syncService != nil
+        guard await stopSyncForKeyChange() else {
+            if syncWasRunning { setupSync() }
+            throw AppStateError.syncBusy
+        }
+        let summary: VaultReKeyService.Summary
+        do {
+            summary = try reKey()
+        } catch {
+            if syncWasRunning { setupSync() }
+            throw error
+        }
+        await didChangeMasterKey(to: newKey, restartSync: syncWasRunning)
+        return summary
+    }
+
+    /// Detach the sync service so nothing new can start, and wait for a sync
+    /// in progress to finish. False if one was still running at the deadline.
+    private func stopSyncForKeyChange() async -> Bool {
+        guard let service = syncService else { return true }
+        syncService = nil
+        return await service.shutDown()
+    }
+
     /// After the vault has been re-encrypted under `newKey`: use it from now
-    /// on, refresh Face ID's copy, rebuild a running sync service and reload.
+    /// on, refresh Face ID's copy, restart sync if it was running, and reload.
     ///
     /// Face ID stores the master key itself, so without the refresh the next
-    /// Face ID unlock would load the old key and no note would decrypt. The
-    /// sync service captured the old key when it was created.
-    private func didChangeMasterKey(to newKey: SymmetricKey) async {
+    /// Face ID unlock would load the old key and no note would decrypt.
+    private func didChangeMasterKey(to newKey: SymmetricKey, restartSync: Bool) async {
         keyManager.masterKey = newKey
         if keyManager.isBiometricEnabled {
             try? keyManager.enableBiometricUnlock()
         }
-        if let service = syncService {
-            await service.stopSSE()
+        if restartSync {
             setupSync()
         }
         do {
@@ -1772,6 +1827,8 @@ enum AppStateError: LocalizedError {
     case noVault
     case invalidSalt
     case wrongPassword
+    /// A sync was still running when the vault's key was about to change.
+    case syncBusy
 
     var errorDescription: String? {
         switch self {
@@ -1779,6 +1836,7 @@ enum AppStateError: LocalizedError {
         case .noVault: return "No vault found"
         case .invalidSalt: return "Invalid encryption salt"
         case .wrongPassword: return "Incorrect password"
+        case .syncBusy: return "Sync is still running. Try again in a moment."
         }
     }
 }

@@ -3399,6 +3399,17 @@
         }
       }
     },
+    "unlock.biometricOutOfDate": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Face ID needs updating. Unlock with your password this time and Face ID will work again."
+          }
+        }
+      }
+    },
     "unlock.deleteAndStartOver": {
       "extractionState": "manual",
       "localizations": {

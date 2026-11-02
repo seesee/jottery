@@ -61,6 +61,9 @@ enum L {
     static var syncMergeConfirm: String { String(localized: "syncMerge.confirm") }
     static var syncMergeFailed: String { String(localized: "syncMerge.failed") }
 
+    // MARK: - Unlock (Face ID key check)
+    static var unlockBiometricOutOfDate: String { String(localized: "unlock.biometricOutOfDate") }
+
     // MARK: - Account Key (Face ID unlock)
     static var accountKeyPromptTitle: String { String(localized: "accountKey.promptTitle") }
     static var accountKeyPromptMessage: String { String(localized: "accountKey.promptMessage") }

@@ -142,6 +142,48 @@ struct VaultReKeyServiceTests {
         #expect(try state.attachmentRepo?.getBlob(id: fixture.attachmentId) == Data("raw bytes".utf8))
     }
 
+    /// A vault that joined an account and synced before moving onto the
+    /// account's key holds rows pulled under that key. Those must be left as
+    /// they are, not treated as unreadable, or the move could never finish.
+    @Test func reKeyLeavesValuesAlreadyOnTheNewKeyAlone() async throws {
+        let state = try await makeVault()
+        let fixture = try populate(state)
+        let oldKey = try #require(state.keyManager.masterKey)
+        let newKeyData = CryptoService.generateMasterKey()
+        let newKey = SymmetricKey(data: newKeyData)
+
+        let pulled = try #require(try state.createNote(content: "placeholder", tags: []))
+        let pulledContent = try CryptoService.serializeEncryptedJSON(CryptoService.encryptText("from the account", key: newKey))
+        let pulledTags = try CryptoService.serializeEncryptedJSON(CryptoService.encryptStringArray(["synced"], key: newKey))
+        try TestVaults.execute(
+            state, "UPDATE notes SET content = ?, tags = ? WHERE id = ?", [pulledContent, pulledTags, pulled.id]
+        )
+
+        let summary = try VaultReKeyService.reKey(
+            database: database(state), from: oldKey, to: newKey,
+            newMetadata: metadata(for: newKeyData, in: state)
+        )
+
+        #expect(summary.notes == 1)
+        #expect(summary.alreadyOnNewKey == 1)
+        let untouched = try #require(try state.noteRepo?.getRaw(id: pulled.id))
+        #expect(untouched.content == pulledContent)
+        #expect(text(untouched.content, newKey) == "from the account")
+        let moved = try #require(try state.noteRepo?.getRaw(id: fixture.noteId))
+        #expect(text(moved.content, newKey) == "secret content")
+    }
+
+    // MARK: - Face ID key check
+
+    @Test func theLoadedKeyIsCheckedAgainstTheVault() async throws {
+        let state = try await makeVault()
+        #expect(state.loadedKeyMatchesVault())
+
+        // What a stale Face ID copy of the key would load.
+        state.keyManager.masterKey = SymmetricKey(size: .bits256)
+        #expect(!state.loadedKeyMatchesVault())
+    }
+
     // MARK: - Failure changes nothing
 
     /// A value encrypted under some other key cannot be moved. The whole re-key

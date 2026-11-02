@@ -20,11 +20,16 @@ import GRDB
 /// - `saved_searches`: name and query
 /// - `encryption_metadata`: the verification token (replaced with `newMetadata`)
 ///
-/// Two kinds of value are left alone because they are under no key at all:
-/// attachment filenames that are plaintext (very old attachments) and blobs
-/// that are not encrypted JSON (a backup restore stores those as-is). Content,
-/// tags and saved searches are always encrypted, so anything there that does
-/// not decrypt aborts the re-key.
+/// Values that already open with the new key are left as they are. A vault
+/// that joined an account and synced before moving onto the account's key
+/// holds rows pulled under that key; treating them as unreadable would block
+/// the move for good. AES-GCM authentication makes "opens with this key"
+/// unambiguous. Only a value that opens with neither key aborts the re-key.
+///
+/// Two kinds of value are also left alone because they are under no key at
+/// all: plaintext attachment filenames and blobs that are not encrypted JSON
+/// (a backup restore stores those as-is). Content, tags and saved searches are
+/// always encrypted, so anything there that does not parse aborts the re-key.
 ///
 /// Runs synchronously on the caller's thread. Called from the main actor, that
 /// also keeps any other main-actor write (an editor save with the old key, say)
@@ -36,6 +41,9 @@ enum VaultReKeyService {
         var versions = 0
         var attachments = 0
         var savedSearches = 0
+        /// Rows left untouched because every value already opened with the
+        /// new key.
+        var alreadyOnNewKey = 0
     }
 
     enum ReKeyError: LocalizedError, Equatable {
@@ -67,48 +75,56 @@ enum VaultReKeyService {
 
             for row in try Row.fetchAll(db, sql: "SELECT id, content, tags, attachments FROM notes") {
                 let id: String = row["id"]
+                let old: [String?] = [row["content"], row["tags"], row["attachments"]]
+                let new: [String?] = [
+                    try keys.required(old[0], "notes", id),
+                    try keys.required(old[1], "notes", id),
+                    try keys.attachmentList(old[2], "notes", id),
+                ]
+                guard new != old else { summary.alreadyOnNewKey += 1; continue }
                 try db.execute(
                     sql: "UPDATE notes SET content = ?, tags = ?, attachments = ?, needs_sync = 1 WHERE id = ?",
-                    arguments: [
-                        keys.required(row["content"], "notes", id),
-                        keys.required(row["tags"], "notes", id),
-                        keys.attachmentList(row["attachments"], "notes", id),
-                        id,
-                    ]
+                    arguments: [new[0], new[1], new[2], id]
                 )
                 summary.notes += 1
             }
 
             for row in try Row.fetchAll(db, sql: "SELECT version_key, content, tags, attachments FROM note_versions") {
                 let key: String = row["version_key"]
+                let old: [String?] = [row["content"], row["tags"], row["attachments"]]
+                let new: [String?] = [
+                    try keys.required(old[0], "note_versions", key),
+                    try keys.required(old[1], "note_versions", key),
+                    try keys.attachmentList(old[2], "note_versions", key),
+                ]
+                guard new != old else { summary.alreadyOnNewKey += 1; continue }
                 try db.execute(
                     sql: "UPDATE note_versions SET content = ?, tags = ?, attachments = ? WHERE version_key = ?",
-                    arguments: [
-                        keys.required(row["content"], "note_versions", key),
-                        keys.required(row["tags"], "note_versions", key),
-                        keys.attachmentList(row["attachments"], "note_versions", key),
-                        key,
-                    ]
+                    arguments: [new[0], new[1], new[2], key]
                 )
                 summary.versions += 1
             }
 
-            for row in try Row.fetchAll(db, sql: "SELECT id, data FROM attachments") {
-                let id: String = row["id"]
-                guard let data = try keys.blob(row["data"], "attachments", id) else { continue }
-                try db.execute(sql: "UPDATE attachments SET data = ? WHERE id = ?", arguments: [data, id])
+            // One blob at a time: attachments can be large, so loading them
+            // all at once could exhaust memory mid-transaction.
+            for id in try String.fetchAll(db, sql: "SELECT id FROM attachments") {
+                let data = try Data.fetchOne(db, sql: "SELECT data FROM attachments WHERE id = ?", arguments: [id])
+                guard let reEncrypted = try keys.blob(data, "attachments", id) else { continue }
+                try db.execute(sql: "UPDATE attachments SET data = ? WHERE id = ?", arguments: [reEncrypted, id])
                 summary.attachments += 1
             }
 
             for row in try Row.fetchAll(db, sql: "SELECT id, name, query FROM saved_searches") {
                 let id: String = row["id"]
+                let old: [String?] = [row["name"], row["query"]]
+                let new: [String?] = [
+                    try keys.required(old[0], "saved_searches", id),
+                    try keys.required(old[1], "saved_searches", id),
+                ]
+                guard new != old else { summary.alreadyOnNewKey += 1; continue }
                 try db.execute(
                     sql: "UPDATE saved_searches SET name = ?, query = ?, needs_sync = 1 WHERE id = ?",
-                    arguments: [
-                        keys.required(row["name"], "saved_searches", id),
-                        keys.required(row["query"], "saved_searches", id),
-                        id,
-                    ]
+                    arguments: [new[0], new[1], id]
                 )
                 summary.savedSearches += 1
             }
@@ -125,18 +141,19 @@ private struct ReKeyer {
     let oldKey: SymmetricKey
     let newKey: SymmetricKey
 
-    /// A value that must be encrypted under the old key.
+    /// A value that must be encrypted, under the old key or already the new.
     func required(_ json: String?, _ table: String, _ id: String) throws -> String {
         do {
             guard let json else { throw VaultReKeyService.ReKeyError.unreadable(table: table, id: id) }
-            return try reEncrypt(CryptoService.parseEncryptedJSON(json))
+            return try reEncrypt(CryptoService.parseEncryptedJSON(json)) ?? json
         } catch {
             throw VaultReKeyService.ReKeyError.unreadable(table: table, id: id)
         }
     }
 
     /// An attachments JSON array: each filename is re-encrypted, except
-    /// plaintext ones, which are under no key.
+    /// plaintext ones, which are under no key, and ones already on the new
+    /// key. Returned unchanged when no filename changed.
     func attachmentList(_ json: String?, _ table: String, _ id: String) throws -> String? {
         guard let json else { return nil }
         let trimmed = json.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -144,22 +161,27 @@ private struct ReKeyer {
         guard var refs = try? JSONDecoder().decode([AttachmentRef].self, from: Data(json.utf8)) else {
             throw VaultReKeyService.ReKeyError.unreadable(table: table, id: id)
         }
+        var changed = false
         for index in refs.indices {
             guard let encrypted = try? CryptoService.parseEncryptedJSON(refs[index].filename) else { continue }
             do {
-                refs[index].filename = try reEncrypt(encrypted)
+                if let reEncrypted = try reEncrypt(encrypted) {
+                    refs[index].filename = reEncrypted
+                    changed = true
+                }
             } catch {
                 throw VaultReKeyService.ReKeyError.unreadable(table: table, id: id)
             }
         }
+        guard changed else { return json }
         guard let encoded = try? JSONEncoder().encode(refs) else {
             throw VaultReKeyService.ReKeyError.unreadable(table: table, id: id)
         }
         return String(decoding: encoded, as: UTF8.self)
     }
 
-    /// An attachment blob, or nil to leave it as it is: empty, or not
-    /// encrypted JSON at all.
+    /// An attachment blob, or nil to leave it as it is: empty, not encrypted
+    /// JSON at all, or already on the new key.
     func blob(_ data: Data?, _ table: String, _ id: String) throws -> Data? {
         guard let data, !data.isEmpty,
               let json = String(data: data, encoding: .utf8),
@@ -167,14 +189,20 @@ private struct ReKeyer {
             return nil
         }
         do {
-            return Data(try reEncrypt(encrypted).utf8)
+            return try reEncrypt(encrypted).map { Data($0.utf8) }
         } catch {
             throw VaultReKeyService.ReKeyError.unreadable(table: table, id: id)
         }
     }
 
-    private func reEncrypt(_ encrypted: EncryptedData) throws -> String {
-        let plain = try CryptoService.decrypt(encrypted, key: oldKey)
-        return try CryptoService.serializeEncryptedJSON(CryptoService.encrypt(plain, key: newKey))
+    /// Re-encrypt from the old key to the new one. Nil when the value already
+    /// opens with the new key, so it is left alone. Throws when it opens with
+    /// neither.
+    private func reEncrypt(_ encrypted: EncryptedData) throws -> String? {
+        if let plain = try? CryptoService.decrypt(encrypted, key: oldKey) {
+            return try CryptoService.serializeEncryptedJSON(CryptoService.encrypt(plain, key: newKey))
+        }
+        _ = try CryptoService.decrypt(encrypted, key: newKey)
+        return nil
     }
 }
