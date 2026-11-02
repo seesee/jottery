@@ -1144,16 +1144,25 @@ mod tests {
         let (db, key) = setup_test_db();
         let repo = NoteRepository::new(db.connection());
 
-        let before = Utc::now();
-
         let note = Note::new("Test".to_string());
         repo.create(&note, &key).unwrap();
 
-        // Notes created after 'before' should be returned
-        let modified = repo.get_modified_after(before, &key).unwrap();
+        // Boundaries come from the note's own timestamp, not a second
+        // Utc::now(): on macOS the clock ticks in microseconds, so a
+        // `before = Utc::now()` taken just ahead of Note::new() was often
+        // equal to modified_at, and the strict comparison then (correctly)
+        // left the note out, failing the test intermittently.
+
+        // A note modified after the timestamp is returned...
+        let just_before = note.modified_at - chrono::Duration::microseconds(1);
+        let modified = repo.get_modified_after(just_before, &key).unwrap();
         assert_eq!(modified.len(), 1);
 
-        // Notes created before 'now' (in future) should not be returned
+        // ...but not one modified exactly at it: the comparison is strict.
+        let modified = repo.get_modified_after(note.modified_at, &key).unwrap();
+        assert_eq!(modified.len(), 0);
+
+        // Notes modified before a future timestamp are not returned
         let far_future = Utc::now() + chrono::Duration::hours(1);
         let modified = repo.get_modified_after(far_future, &key).unwrap();
         assert_eq!(modified.len(), 0);
