@@ -212,16 +212,18 @@ enum EnvelopeService {
         case noServerKey
         /// The server key is the same as this device's key: safe to sync.
         case matchesLocalKey
+        /// The account already has a different key, unwrapped here. Syncing as
+        /// things are would leave notes unreadable in both directions, so the
+        /// caller either moves the vault onto this key
+        /// (`AppState.switchVaultToMasterKey`) or refuses to join.
+        case differs(accountKey: Data)
     }
 
     /// Before a device that already has a vault joins an existing account,
-    /// check that the account's key is the vault's own key. Nothing is changed.
+    /// compare the account's key with the vault's own. Nothing is changed.
     ///
-    /// Syncing with a different key makes notes unreadable in both directions,
-    /// and fixing that afterwards means re-encrypting the whole vault. So the
-    /// caller refuses up front instead. Throws `accountKeyDiffers` when the key
-    /// opens but is not this device's, `cannotUnwrapServerKey` when it cannot be
-    /// opened with either password, and passes server failures through.
+    /// Throws `cannotUnwrapServerKey` when the account's key cannot be opened
+    /// with either password, and passes server failures through.
     static func checkAccountKey(
         syncClient: SyncClient,
         userId: String,
@@ -238,17 +240,16 @@ enum EnvelopeService {
             return .noServerKey
         }
 
-        guard serverKey == localMasterKeyData else {
-            throw EnvelopeError.accountKeyDiffers
-        }
-        return .matchesLocalKey
+        return serverKey == localMasterKeyData ? .matchesLocalKey : .differs(accountKey: serverKey)
     }
 
     /// `checkAccountKey` for a device registered (or cloned) on the account
     /// moments ago, with `syncClient` holding that device's API key. The key
-    /// can only be fetched once the device exists, so on any failure the device
-    /// is revoked again (best effort) before the error is rethrown: a refused
-    /// join must not leave an orphaned device on the account.
+    /// can only be fetched once the device exists, so when the check fails the
+    /// device is revoked again (best effort) before the error is rethrown: a
+    /// failed join must not leave an orphaned device on the account. A
+    /// `.differs` result keeps the device, because the caller may still merge;
+    /// it must revoke the device itself if it does not.
     static func checkAccountKeyForNewDevice(
         syncClient: SyncClient,
         userId: String,
@@ -278,41 +279,68 @@ enum EnvelopeService {
         encryptionRepo: EncryptionRepository,
         localPassword: String
     ) throws -> SymmetricKey {
-        let masterKey = SymmetricKey(data: masterKeyData)
+        let local = try localEnvelope(for: masterKeyData, localPassword: localPassword)
 
-        // Generate device salt for local storage
+        // Save envelope metadata
+        try encryptionRepo.saveEnvelope(
+            envelopeVersion: 1,
+            deviceSalt: local.deviceSalt,
+            localWrappedMaster: local.localWrappedMaster,
+            wrappingKdfVersion: CryptoService.wrappingKdfVersion
+        )
+
+        // Update verification token
+        if var metadata = try encryptionRepo.get() {
+            metadata.verification = local.verification
+            try encryptionRepo.store(metadata)
+        }
+
+        return SymmetricKey(data: masterKeyData)
+    }
+
+    /// The envelope metadata that makes `masterKeyData` this device's vault key,
+    /// wrapped locally under `localPassword`, built on `current` (its creation
+    /// date and algorithm are kept). Nothing is saved: `VaultReKeyService`
+    /// stores it in the same transaction as the re-encrypted data.
+    static func envelopeMetadata(
+        for masterKeyData: Data,
+        localPassword: String,
+        current: EncryptionMetadata
+    ) throws -> EncryptionMetadata {
+        let local = try localEnvelope(for: masterKeyData, localPassword: localPassword)
+        var metadata = current
+        metadata.salt = ""
+        metadata.iterations = 0
+        metadata.envelopeVersion = 1
+        metadata.deviceSalt = local.deviceSalt
+        metadata.localWrappedMaster = local.localWrappedMaster
+        metadata.wrappingKdfVersion = CryptoService.wrappingKdfVersion
+        metadata.verification = local.verification
+        return metadata
+    }
+
+    /// The local half of the envelope: a fresh device salt, the master key
+    /// wrapped under a key derived from it and `localPassword`, and a
+    /// verification token encrypted with the master key.
+    private static func localEnvelope(
+        for masterKeyData: Data,
+        localPassword: String
+    ) throws -> (deviceSalt: String, localWrappedMaster: String, verification: String) {
         let deviceSalt = CryptoService.generateSalt()
         let deviceKey = CryptoService.deriveKey(
             password: localPassword,
             salt: deviceSalt,
             iterations: CryptoService.defaultIterations
         )
-
-        // Wrap master key locally
-        let localWrapped = try CryptoService.wrapMasterKey(masterKeyData, with: deviceKey)
-        let localBlob = try CryptoService.serializeEncryptedJSON(localWrapped)
-
-        // Create verification token
-        let verificationEncrypted = try CryptoService.encryptText(
-            EncryptionMetadata.verificationPlaintext, key: masterKey
+        let localWrapped = try CryptoService.serializeEncryptedJSON(
+            CryptoService.wrapMasterKey(masterKeyData, with: deviceKey)
         )
-        let verificationJSON = try CryptoService.serializeEncryptedJSON(verificationEncrypted)
-
-        // Save envelope metadata
-        try encryptionRepo.saveEnvelope(
-            envelopeVersion: 1,
-            deviceSalt: deviceSalt.base64EncodedString(),
-            localWrappedMaster: localBlob,
-            wrappingKdfVersion: CryptoService.wrappingKdfVersion
+        let verification = try CryptoService.serializeEncryptedJSON(
+            CryptoService.encryptText(
+                EncryptionMetadata.verificationPlaintext, key: SymmetricKey(data: masterKeyData)
+            )
         )
-
-        // Update verification token
-        if var metadata = try encryptionRepo.get() {
-            metadata.verification = verificationJSON
-            try encryptionRepo.store(metadata)
-        }
-
-        return masterKey
+        return (deviceSalt.base64EncodedString(), localWrapped, verification)
     }
 
     /// Onboard a new device by downloading the wrapped master key from the server.
@@ -405,27 +433,28 @@ enum EnvelopeService {
                 return true
             }
 
-            // Check server for an existing wrapped key from another device
-            let serverResponse = try? await syncClient.getWrappedKey()
-
-            if serverResponse != nil {
-                // Another device already uploaded — onboard from server
+            // Legacy vault: check for a key another device has already put on
+            // the account. A server failure throws (caught below) rather than
+            // being taken for "no key", which would migrate this vault onto
+            // its own key and leave it diverged from the account's.
+            if let serverKeyData = try await fetchServerKey(
+                syncClient: syncClient,
+                userId: userId,
+                password: password
+            ) {
                 Log.debug("[Envelope] Server has wrapped key — onboarding from server")
-                let serverKey = try await onboardFromServer(
-                    syncClient: syncClient,
-                    encryptionRepo: encryptionRepo,
-                    password: password,
-                    userId: userId
-                )
-
-                // If the server key differs from our local key, re-encrypt all data
                 let localKeyData = masterKey.withUnsafeBytes { Data($0) }
-                let serverKeyData = serverKey.withUnsafeBytes { Data($0) }
-                if localKeyData != serverKeyData {
-                    Log.debug("[Envelope] Server key differs from local — re-encrypting data")
-                    try appState.reEncryptAllData(from: masterKey, to: serverKey)
-                    appState.keyManager.unlockWithKeyData(serverKeyData)
-                    try await appState.loadNotes()
+                if serverKeyData == localKeyData {
+                    _ = try adoptServerKey(
+                        serverKeyData, encryptionRepo: encryptionRepo, localPassword: password
+                    )
+                } else {
+                    // Re-encrypt the whole vault onto the account's key and
+                    // switch to it in one transaction: a failure changes nothing.
+                    // (Saving the server key first, as this used to, left notes
+                    // under the old key whenever re-encryption skipped any.)
+                    Log.debug("[Envelope] Server key differs from local — re-encrypting the vault onto it")
+                    try await appState.switchVaultToMasterKey(serverKeyData, notesPassword: password)
                 }
                 return true
             } else {
@@ -524,7 +553,6 @@ enum EnvelopeService {
 enum EnvelopeError: LocalizedError {
     case noWrappedKeyOnServer
     case cannotUnwrapServerKey
-    case accountKeyDiffers
     case invalidMasterKeyLength
     case notInitialised
 
@@ -534,8 +562,6 @@ enum EnvelopeError: LocalizedError {
             return "No wrapped key found on server — the source device may not have migrated yet"
         case .cannotUnwrapServerKey:
             return "The account's encryption key could not be opened with the password provided"
-        case .accountKeyDiffers:
-            return "The account's encryption key differs from this device's key"
         case .invalidMasterKeyLength:
             return "Invalid master key length after unwrapping"
         case .notInitialised:

@@ -20,6 +20,10 @@ struct SyncSetupView: View {
     @State private var success = false
     @State private var registeredApiKey: String?
     @State private var vaultIsEnvelope = false
+    /// Set while the user is asked whether to merge this device's notes into
+    /// an account that already has a different key.
+    @State private var pendingMerge: PendingMerge?
+    @State private var showMergePrompt = false
 
     private var importNeedsNotesPassword: Bool {
         Self.importNeedsNotesPassword(importData, vaultIsEnvelope: vaultIsEnvelope)
@@ -67,10 +71,26 @@ struct SyncSetupView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
+                    // Not while a device is being registered or a merge runs:
+                    // dismissing then would leave the new device on the account.
                     Button(L.syncSetupCancel) { dismiss() }
+                        .disabled(isWorking)
                 }
             }
+            .interactiveDismissDisabled(isWorking)
             .task { vaultIsEnvelope = currentVaultIsEnvelope() }
+            .alert(L.syncMergeTitle, isPresented: $showMergePrompt, presenting: pendingMerge) { pending in
+                Button(L.syncMergeConfirm) { mergeAndJoin(pending) }
+                Button(L.syncSetupCancel, role: .cancel) { declineMerge(pending) }
+            } message: { _ in
+                Text(L.syncMergeMessage)
+            }
+            .onDisappear {
+                // Never leave a device registered for a join that didn't happen.
+                if let pending = pendingMerge {
+                    Task { try? await pending.device.client.revokeThisDevice() }
+                }
+            }
         }
     }
 
@@ -179,33 +199,8 @@ struct SyncSetupView: View {
                     password: password,
                     deviceName: deviceName
                 )
-                let deviceClient = SyncClient(endpoint: normalised, apiKey: response.apiKey)
-
-                try await checkAccountKeyBeforeJoining(
-                    deviceClient: deviceClient,
-                    userId: response.userId,
-                    notesPassword: notesPassword,
-                    serverPassword: password
-                )
-
-                try KeychainService.storeAPIKey(response.apiKey)
-                try KeychainService.storeClientId(response.clientId)
-                try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
-
-                // Store userId for envelope encryption
-                if var syncMeta = try? appState.syncRepo?.getMetadata() {
-                    syncMeta.userId = response.userId
-                    try? appState.syncRepo?.saveMetadata(syncMeta)
-                }
-
-                appState.settings.syncEnabled = true
-                appState.settings.syncEndpoint = normalised
-
-                registeredApiKey = response.apiKey
-
-                await publishAccountKey(deviceClient: deviceClient, notesPassword: notesPassword)
-
-                success = true
+                let device = NewDevice(endpoint: normalised, response: response)
+                success = try await join(device, notesPassword: notesPassword, serverPassword: password)
                 isWorking = false
             } catch {
                 self.error = error.localizedDescription
@@ -236,19 +231,20 @@ struct SyncSetupView: View {
                     checkPassword = notesPassword
                 }
 
+                let joined: Bool
                 if trimmed.hasPrefix("jottery:v1:") {
                     // Modern encrypted format — decrypt using current master key
-                    try await handleEncryptedCredentials(trimmed)
+                    joined = try await handleEncryptedCredentials(trimmed)
                 } else if let data = Data(base64Encoded: trimmed),
                           let creds = try? JSONDecoder().decode(LegacyCredentials.self, from: data) {
                     // Legacy format with salt
-                    try await handleCredentials(
+                    joined = try await handleCredentials(
                         apiKey: creds.apiKey, endpoint: creds.endpoint, notesPassword: checkPassword
                     )
                 } else if let data = Data(base64Encoded: trimmed),
                           let creds = try? JSONDecoder().decode(ImportedCredentials.self, from: data) {
                     // Legacy format without salt
-                    try await handleCredentials(
+                    joined = try await handleCredentials(
                         apiKey: creds.apiKey, endpoint: creds.endpoint, notesPassword: checkPassword
                     )
                 } else {
@@ -259,12 +255,12 @@ struct SyncSetupView: View {
                     guard !endpoint.isEmpty else {
                         throw SyncSetupError.needsEndpoint
                     }
-                    try await handleCredentials(
+                    joined = try await handleCredentials(
                         apiKey: trimmed, endpoint: endpoint, notesPassword: checkPassword
                     )
                 }
 
-                success = true
+                success = joined
                 isWorking = false
             } catch {
                 self.error = error.localizedDescription
@@ -278,7 +274,7 @@ struct SyncSetupView: View {
     /// The account's key is not checked here: these credentials are encrypted
     /// with the exporting device's master key, so decrypting them at all shows
     /// that this vault holds the same key.
-    private func handleEncryptedCredentials(_ input: String) async throws {
+    private func handleEncryptedCredentials(_ input: String) async throws -> Bool {
         guard let masterKey = appState.keyManager.masterKey else {
             throw SyncSetupError.invalidCredentials
         }
@@ -303,49 +299,109 @@ struct SyncSetupView: View {
         }
         let creds = try JSONDecoder().decode(ImportedCredentials.self, from: credsData)
 
-        try await handleCredentials(apiKey: creds.apiKey, endpoint: creds.endpoint)
+        return try await handleCredentials(apiKey: creds.apiKey, endpoint: creds.endpoint)
     }
 
-    /// Clone device and store credentials.
+    /// Clone the device, then join the account with it (see `join`). Returns
+    /// false while waiting for the user to decide about a merge.
     ///
     /// With `notesPassword` (already verified), the account's key is checked
     /// before anything is saved, and this vault's key is published if the
     /// account has none yet, as when registering.
-    private func handleCredentials(apiKey: String, endpoint: String, notesPassword: String? = nil) async throws {
+    private func handleCredentials(
+        apiKey: String,
+        endpoint: String,
+        notesPassword: String? = nil
+    ) async throws -> Bool {
         let normalised = try SyncEndpoint.normalise(endpoint)
         let client = SyncClient(endpoint: normalised)
         let response = try await client.cloneDevice(
             apiKey: apiKey,
             deviceName: deviceName.isEmpty ? "iOS" : deviceName
         )
-        let deviceClient = SyncClient(endpoint: normalised, apiKey: response.apiKey)
+        let device = NewDevice(endpoint: normalised, response: response)
+        return try await join(device, notesPassword: notesPassword, serverPassword: nil)
+    }
 
-        if let notesPassword {
-            try await checkAccountKeyBeforeJoining(
-                deviceClient: deviceClient,
-                userId: response.userId,
-                notesPassword: notesPassword,
-                serverPassword: nil
-            )
+    // MARK: - Joining
+
+    /// Join the account with a device registered or cloned moments ago: check
+    /// the account's key, then save everything. Returns false instead when the
+    /// account's key differs and the user is being asked whether to merge
+    /// (`mergeAndJoin` / `declineMerge` take it from there).
+    private func join(_ device: NewDevice, notesPassword: String?, serverPassword: String?) async throws -> Bool {
+        if let notesPassword,
+           case .differs(let accountKey) = try await checkAccountKeyBeforeJoining(
+               device, notesPassword: notesPassword, serverPassword: serverPassword
+           ) {
+            pendingMerge = PendingMerge(device: device, accountKey: accountKey, notesPassword: notesPassword)
+            showMergePrompt = true
+            return false
         }
+        try await completeJoin(device, notesPassword: notesPassword)
+        return true
+    }
 
-        try KeychainService.storeAPIKey(response.apiKey)
-        try KeychainService.storeClientId(response.clientId)
-        try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
+    /// Save the new device's credentials and turn sync on. With the notes
+    /// password, this vault's key is also published if the account has none.
+    private func completeJoin(_ device: NewDevice, notesPassword: String?) async throws {
+        try KeychainService.storeAPIKey(device.apiKey)
+        try KeychainService.storeClientId(device.clientId)
+        try appState.settingsRepo?.updateSync(enabled: true, endpoint: device.endpoint)
 
         // Store userId for envelope encryption
         if var syncMeta = try? appState.syncRepo?.getMetadata() {
-            syncMeta.userId = response.userId
+            syncMeta.userId = device.userId
             try? appState.syncRepo?.saveMetadata(syncMeta)
         }
 
         appState.settings.syncEnabled = true
-        appState.settings.syncEndpoint = normalised
-        registeredApiKey = response.apiKey
+        appState.settings.syncEndpoint = device.endpoint
+        registeredApiKey = device.apiKey
 
         if let notesPassword {
-            await publishAccountKey(deviceClient: deviceClient, notesPassword: notesPassword)
+            await publishAccountKey(deviceClient: device.client, notesPassword: notesPassword)
         }
+    }
+
+    /// The user chose to merge: re-encrypt this vault onto the account's key
+    /// (all or nothing), then finish joining. Sync then uploads this device's
+    /// notes, which are all flagged for it, and downloads the account's.
+    private func mergeAndJoin(_ pending: PendingMerge) {
+        pendingMerge = nil
+        error = nil
+        isWorking = true
+        Task {
+            do {
+                try await appState.switchVaultToMasterKey(
+                    pending.accountKey, notesPassword: pending.notesPassword
+                )
+            } catch {
+                // Nothing on this device changed; don't leave the device behind.
+                try? await pending.device.client.revokeThisDevice()
+                self.error = L.syncMergeFailed
+                isWorking = false
+                return
+            }
+            do {
+                try await completeJoin(pending.device, notesPassword: pending.notesPassword)
+                success = true
+            } catch {
+                // The vault is on the account's key now, so trying again simply
+                // finds that the keys match.
+                try? await pending.device.client.revokeThisDevice()
+                self.error = error.localizedDescription
+            }
+            isWorking = false
+        }
+    }
+
+    /// The user declined the merge: revoke the new device and explain the
+    /// manual way to join (export, reset, connect, import).
+    private func declineMerge(_ pending: PendingMerge) {
+        pendingMerge = nil
+        error = SyncSetupError.accountKeyDiffers.localizedDescription
+        Task { try? await pending.device.client.revokeThisDevice() }
     }
 
     // MARK: - Account key
@@ -364,28 +420,25 @@ struct SyncSetupView: View {
     }
 
     /// A device that already has a vault must share the account's master key,
-    /// or syncing would leave notes unreadable in both directions (and undoing
-    /// that means re-encrypting the whole vault). Call straight after the
-    /// device is registered or cloned, BEFORE anything is saved locally: a
-    /// refusal revokes that device again, leaving nothing behind. Legacy vaults
-    /// are not checked: they migrate to the account's key during envelope setup.
+    /// or syncing would leave notes unreadable in both directions. Compare them
+    /// straight after the device is registered or cloned, BEFORE anything is
+    /// saved locally. A failed check revokes the device again; `.differs`
+    /// keeps it, for `join` to offer the merge. Returns nil for a legacy
+    /// vault, which moves onto the account's key during envelope setup.
     private func checkAccountKeyBeforeJoining(
-        deviceClient: SyncClient,
-        userId: String,
+        _ device: NewDevice,
         notesPassword: String,
         serverPassword: String?
-    ) async throws {
-        guard currentVaultIsEnvelope(), let masterKey = appState.keyManager.masterKey else { return }
+    ) async throws -> EnvelopeService.AccountKeyStatus? {
+        guard currentVaultIsEnvelope(), let masterKey = appState.keyManager.masterKey else { return nil }
         do {
-            _ = try await EnvelopeService.checkAccountKeyForNewDevice(
-                syncClient: deviceClient,
-                userId: userId,
+            return try await EnvelopeService.checkAccountKeyForNewDevice(
+                syncClient: device.client,
+                userId: device.userId,
                 password: notesPassword,
                 alternatePassword: serverPassword,
                 localMasterKeyData: masterKey.withUnsafeBytes { Data($0) }
             )
-        } catch EnvelopeError.accountKeyDiffers {
-            throw SyncSetupError.accountKeyDiffers
         } catch EnvelopeError.cannotUnwrapServerKey {
             throw SyncSetupError.accountKeyUnreadable
         }
@@ -414,6 +467,32 @@ struct SyncSetupView: View {
             self.error = L.syncSetupEnvelopeUploadFailed
         }
     }
+}
+
+/// A device registered or cloned on the account moments ago, not yet saved
+/// locally.
+private struct NewDevice {
+    let endpoint: String
+    let apiKey: String
+    let clientId: String
+    let userId: String
+    let client: SyncClient
+
+    init(endpoint: String, response: RegisterDeviceResponse) {
+        self.endpoint = endpoint
+        apiKey = response.apiKey
+        clientId = response.clientId
+        userId = response.userId
+        client = SyncClient(endpoint: endpoint, apiKey: response.apiKey)
+    }
+}
+
+/// The account's key differs from this vault's, and the user is being asked
+/// whether to merge this device's notes into the account.
+private struct PendingMerge {
+    let device: NewDevice
+    let accountKey: Data
+    let notesPassword: String
 }
 
 private struct ImportedCredentials: Codable {

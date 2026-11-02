@@ -475,32 +475,35 @@ struct EnvelopeServiceTests {
         #expect(status == .matchesLocalKey)
     }
 
-    @Test func accountKeyCheckRefusesADifferentKey() async throws {
-        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: notesPassword))
+    @Test func accountKeyCheckReportsADifferentKeyWithTheAccountKey() async throws {
+        let accountKey = CryptoService.generateMasterKey()
+        FakeKeyServerProtocol.reset(blob: try wrap(accountKey, with: notesPassword))
 
-        await #expect(throws: EnvelopeError.accountKeyDiffers) {
-            _ = try await EnvelopeService.checkAccountKey(
-                syncClient: makeClient(),
-                userId: userId,
-                password: notesPassword,
-                alternatePassword: serverPassword,
-                localMasterKeyData: CryptoService.generateMasterKey()
-            )
-        }
+        let status = try await EnvelopeService.checkAccountKey(
+            syncClient: makeClient(),
+            userId: userId,
+            password: notesPassword,
+            alternatePassword: serverPassword,
+            localMasterKeyData: CryptoService.generateMasterKey()
+        )
+
+        // The unwrapped key comes back, so the caller can merge onto it.
+        #expect(status == .differs(accountKey: accountKey))
     }
 
     @Test func accountKeyCheckSeesADifferentKeyWrappedWithTheServerPassword() async throws {
-        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: serverPassword))
+        let accountKey = CryptoService.generateMasterKey()
+        FakeKeyServerProtocol.reset(blob: try wrap(accountKey, with: serverPassword))
 
-        await #expect(throws: EnvelopeError.accountKeyDiffers) {
-            _ = try await EnvelopeService.checkAccountKey(
-                syncClient: makeClient(),
-                userId: userId,
-                password: notesPassword,
-                alternatePassword: serverPassword,
-                localMasterKeyData: CryptoService.generateMasterKey()
-            )
-        }
+        let status = try await EnvelopeService.checkAccountKey(
+            syncClient: makeClient(),
+            userId: userId,
+            password: notesPassword,
+            alternatePassword: serverPassword,
+            localMasterKeyData: CryptoService.generateMasterKey()
+        )
+
+        #expect(status == .differs(accountKey: accountKey))
     }
 
     @Test func accountKeyCheckReportsAnUnreadableKeyDistinctly() async throws {
@@ -544,18 +547,21 @@ struct EnvelopeServiceTests {
     /// A refusal must revoke that device again, or every failed attempt leaves
     /// an orphan on the account.
 
-    @Test func joiningCheckRevokesTheDeviceWhenTheKeyDiffers() async throws {
-        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: notesPassword))
+    @Test func joiningCheckKeepsTheDeviceWhenTheKeyDiffers() async throws {
+        let accountKey = CryptoService.generateMasterKey()
+        FakeKeyServerProtocol.reset(blob: try wrap(accountKey, with: notesPassword))
 
-        await #expect(throws: EnvelopeError.accountKeyDiffers) {
-            _ = try await EnvelopeService.checkAccountKeyForNewDevice(
-                syncClient: makeClient(),
-                userId: userId,
-                password: notesPassword,
-                localMasterKeyData: CryptoService.generateMasterKey()
-            )
-        }
-        #expect(FakeKeyServerProtocol.deleteCount == 1)
+        let status = try await EnvelopeService.checkAccountKeyForNewDevice(
+            syncClient: makeClient(),
+            userId: userId,
+            password: notesPassword,
+            localMasterKeyData: CryptoService.generateMasterKey()
+        )
+
+        // The user may still choose to merge, so the device is not revoked
+        // here; SyncSetupView revokes it if they decline.
+        #expect(status == .differs(accountKey: accountKey))
+        #expect(FakeKeyServerProtocol.deleteCount == 0)
     }
 
     @Test func joiningCheckRevokesTheDeviceWhenTheKeyIsUnreadable() async throws {
@@ -733,5 +739,84 @@ struct EnvelopeServiceTests {
         state.lock()
 
         #expect(!state.needsNotesPasswordForAccountKey)
+    }
+
+    // MARK: - Legacy vault onto an existing account key (jottery-crh5)
+
+    /// A legacy vault joining an account that already has a key must move onto
+    /// that key. This used to save the server key as the vault's key first and
+    /// then re-encrypt with a loop that skipped failures, so any skipped note
+    /// was left under the old key and became unreadable.
+
+    /// A legacy vault with one note, sync on, and a user ID, as unlock leaves it.
+    private func makeSyncedLegacyVault() async throws -> AppState {
+        let state = try await TestVaults.makeLegacyVault(password: notesPassword)
+        _ = try state.createNote(content: "legacy note", tags: ["old"])
+        state.settings.syncEnabled = true
+        var meta = try #require(try state.syncRepo?.getMetadata())
+        meta.userId = userId
+        try state.syncRepo?.saveMetadata(meta)
+        state.syncClient = makeClient()
+        return state
+    }
+
+    @Test func aLegacyVaultMovesOntoTheAccountKey() async throws {
+        let accountKey = CryptoService.generateMasterKey()
+        FakeKeyServerProtocol.reset(blob: try wrap(accountKey, with: notesPassword))
+        let state = try await makeSyncedLegacyVault()
+
+        let ok = await EnvelopeService.tryEnvelopeSetup(
+            appState: state, password: notesPassword, masterKey: try #require(state.keyManager.masterKey)
+        )
+
+        #expect(ok)
+        #expect(TestVaults.keyData(state) == accountKey)
+        #expect(try state.encryptionRepo?.get()?.envelopeVersion == 1)
+        #expect(state.notes.map(\.content) == ["legacy note"])
+        #expect(FakeKeyServerProtocol.putCount == 0)  // the account's key is never replaced
+
+        state.settings.syncEnabled = false
+        state.lock()
+        try await state.unlock(password: notesPassword)
+        #expect(TestVaults.keyData(state) == accountKey)
+        #expect(state.notes.map(\.content) == ["legacy note"])
+    }
+
+    @Test func aLegacyVaultThatCannotBeReEncryptedIsLeftAsItWas() async throws {
+        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: notesPassword))
+        let state = try await makeSyncedLegacyVault()
+        let oldKeyData = try #require(TestVaults.keyData(state))
+        _ = try state.createNote(content: "doomed", tags: [])
+        let doomed = try #require(state.notes.first { $0.content == "doomed" })
+        try TestVaults.execute(
+            state, "UPDATE notes SET tags = ? WHERE id = ?", [try TestVaults.foreignCiphertext(), doomed.id]
+        )
+        let before = try TestVaults.snapshot(state)
+
+        let ok = await EnvelopeService.tryEnvelopeSetup(
+            appState: state, password: notesPassword, masterKey: try #require(state.keyManager.masterKey)
+        )
+
+        #expect(!ok)
+        #expect(TestVaults.keyData(state) == oldKeyData)
+        #expect(try TestVaults.snapshot(state) == before)
+        #expect(try state.encryptionRepo?.get()?.envelopeVersion == nil)
+    }
+
+    @Test func aLegacyVaultIsNotMigratedOntoItsOwnKeyWhenTheServerFails() async throws {
+        FakeKeyServerProtocol.reset()
+        FakeKeyServerProtocol.failGets = true
+        let state = try await makeSyncedLegacyVault()
+        let before = try TestVaults.snapshot(state)
+
+        let ok = await EnvelopeService.tryEnvelopeSetup(
+            appState: state, password: notesPassword, masterKey: try #require(state.keyManager.masterKey)
+        )
+
+        // A failed check used to count as "no key on the server", so the vault
+        // was migrated onto its own key and diverged from the account's.
+        #expect(!ok)
+        #expect(try TestVaults.snapshot(state) == before)
+        #expect(try state.encryptionRepo?.get()?.envelopeVersion == nil)
     }
 }

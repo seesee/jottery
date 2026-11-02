@@ -137,7 +137,14 @@ struct UnlockScreen: View {
 
         Task {
             let success = await appState.keyManager.attemptBiometricUnlock()
-            if success {
+            if success, !appState.loadedKeyMatchesVault() {
+                // Face ID's copy of the master key is out of date: the vault
+                // moved to a new key and the copy was never refreshed. Using it
+                // would show an empty vault and save notes under the wrong key.
+                appState.keyManager.lock()
+                appState.biometricKeyNeedsRefresh = true
+                self.error = L.unlockBiometricOutOfDate
+            } else if success {
                 // Retry any edit that failed to flush at lock time now that
                 // the key is available again.
                 appState.flushPendingEditorNote()
