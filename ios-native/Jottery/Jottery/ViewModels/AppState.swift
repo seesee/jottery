@@ -1583,7 +1583,7 @@ final class AppState {
     /// Change the vault password. With envelope encryption, only re-wraps the master key (fast).
     /// For legacy vaults, re-encrypts all notes, attachments, versions, and the verification token.
     func changePassword(currentPassword: String, newPassword: String) async throws {
-        guard let encryptionRepo, let noteRepo, let versionRepo else {
+        guard let encryptionRepo else {
             throw AppStateError.notInitialised
         }
         guard let metadata = try encryptionRepo.get() else {
@@ -1675,111 +1675,20 @@ final class AppState {
                 iterations: iterations
             )
 
-            // Re-encrypt all active, deleted, and archived notes
-            let allNotes = try noteRepo.listActive(key: currentKey) +
-                            noteRepo.listDeleted(key: currentKey) +
-                            noteRepo.listArchived(key: currentKey)
-
-            for note in allNotes {
-                let encContent = try CryptoService.encryptText(note.content, key: newKey)
-                let encTags = try CryptoService.encryptStringArray(note.tags, key: newKey)
-                let contentJSON = try CryptoService.serializeEncryptedJSON(encContent)
-                let tagsJSON = try CryptoService.serializeEncryptedJSON(encTags)
-
-                // Re-encrypt attachment filenames
-                var reEncryptedAttachments = note.attachments
-                for i in reEncryptedAttachments.indices {
-                    let encFilename = try CryptoService.encryptText(reEncryptedAttachments[i].filename, key: newKey)
-                    reEncryptedAttachments[i].filename = try CryptoService.serializeEncryptedJSON(encFilename)
-                }
-                let attachmentsJSON = try JSONEncoder().encode(reEncryptedAttachments)
-                let attachmentsString = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
-
-                guard var record = try noteRepo.getRaw(id: note.id) else { continue }
-                record.content = contentJSON
-                record.tags = tagsJSON
-                record.attachments = attachmentsString
-                record.needsSync = true
-                try noteRepo.updateRaw(record)
-            }
-
-            // Re-encrypt attachment blobs
-            if let attachmentRepo {
-                let blobIds = try attachmentRepo.listBlobIds()
-                for blobId in blobIds {
-                    guard let blobData = try attachmentRepo.getBlob(id: blobId) else { continue }
-                    let blobStr = String(data: blobData, encoding: .utf8) ?? ""
-                    guard !blobStr.isEmpty else { continue }
-                    do {
-                        let encrypted = try CryptoService.parseEncryptedJSON(blobStr)
-                        let plainData = try CryptoService.decrypt(encrypted, key: currentKey)
-                        let reEncrypted = try CryptoService.encrypt(plainData, key: newKey)
-                        let reEncryptedJSON = try CryptoService.serializeEncryptedJSON(reEncrypted)
-                        try attachmentRepo.updateBlobData(id: blobId, data: Data(reEncryptedJSON.utf8))
-                    } catch {
-                        Log.debug("[ChangePassword] Skipping blob \(blobId): \(error)")
-                    }
-                }
-            }
-
-            // Re-encrypt version snapshots
-            for noteId in Set(allNotes.map(\.id)) {
-                let versions = try versionRepo.getVersions(noteId: noteId)
-                for ver in versions {
-                    do {
-                        let encContent = try CryptoService.parseEncryptedJSON(ver.content)
-                        let plainContent = try CryptoService.decryptText(encContent, key: currentKey)
-                        let newEncContent = try CryptoService.encryptText(plainContent, key: newKey)
-
-                        let encTags = try CryptoService.parseEncryptedJSON(ver.tags)
-                        let plainTagsStr = try CryptoService.decryptText(encTags, key: currentKey)
-                        let newEncTags = try CryptoService.encryptText(plainTagsStr, key: newKey)
-
-                        var updated = ver
-                        updated.content = try CryptoService.serializeEncryptedJSON(newEncContent)
-                        updated.tags = try CryptoService.serializeEncryptedJSON(newEncTags)
-                        try versionRepo.insertOrReplace(updated)
-                    } catch {
-                        Log.debug("[ChangePassword] Skipping version \(ver.versionKey): \(error)")
-                    }
-                }
-            }
-
-            // Re-encrypt saved searches
-            if let savedSearchRepo {
-                let searches = try savedSearchRepo.listAll(key: currentKey)
-                for search in searches {
-                    let encName = try CryptoService.encryptText(search.name, key: newKey)
-                    let encQuery = try CryptoService.encryptText(search.query, key: newKey)
-                    try savedSearchRepo.updateEncrypted(
-                        id: search.id,
-                        name: try CryptoService.serializeEncryptedJSON(encName),
-                        query: try CryptoService.serializeEncryptedJSON(encQuery)
-                    )
-                }
-            }
-
-            // Update encryption metadata with new salt and verification token
-            let verificationEncrypted = try CryptoService.encryptText(
-                EncryptionMetadata.verificationPlaintext, key: newKey
+            // Re-encrypt everything under the new key and store the new salt
+            // and verification token in one transaction. If anything cannot
+            // be re-encrypted, nothing changes and the old password still works.
+            guard let db else { throw AppStateError.notInitialised }
+            let verificationJSON = try CryptoService.serializeEncryptedJSON(
+                CryptoService.encryptText(EncryptionMetadata.verificationPlaintext, key: newKey)
             )
-            let verificationJSON = try CryptoService.serializeEncryptedJSON(verificationEncrypted)
-
             var newMetadata = metadata
             newMetadata.salt = newSalt.base64EncodedString()
             newMetadata.verification = verificationJSON
-            try encryptionRepo.store(newMetadata)
-
-            // Update in-memory master key
-            keyManager.masterKey = newKey
-
-            // Update biometric key if enabled
-            if keyManager.isBiometricEnabled {
-                try? keyManager.enableBiometricUnlock()
-            }
-
-            // Reload notes with new key
-            try await loadNotes()
+            try VaultReKeyService.reKey(
+                database: db, from: currentKey, to: newKey, newMetadata: newMetadata
+            )
+            await didChangeMasterKey(to: newKey)
 
             // Try envelope migration after legacy password change
             if settings.syncEnabled {
@@ -1794,117 +1703,57 @@ final class AppState {
         }
     }
 
-    // MARK: - Re-encryption
+    // MARK: - Re-keying the Vault
 
-    /// Re-encrypt all notes, attachments, versions, and saved searches from one
-    /// key to another. Used when onboarding from the server discovers a different
-    /// master key than the local one.
-    func reEncryptAllData(from oldKey: SymmetricKey, to newKey: SymmetricKey) throws {
-        guard let noteRepo, let versionRepo else {
+    /// Move the whole vault onto `newKeyData` and make it this device's key,
+    /// wrapped locally under `notesPassword`. All or nothing: if anything
+    /// cannot be re-encrypted, nothing changes and this throws
+    /// (`VaultReKeyService.ReKeyError`).
+    ///
+    /// Used to merge this device's notes into an account that already has a
+    /// different key, and when a legacy vault moves onto the account's key.
+    @discardableResult
+    func switchVaultToMasterKey(
+        _ newKeyData: Data,
+        notesPassword: String
+    ) async throws -> VaultReKeyService.Summary {
+        guard let db, let encryptionRepo, let oldKey = keyManager.masterKey,
+              let current = try encryptionRepo.get() else {
             throw AppStateError.notInitialised
         }
+        let newKey = SymmetricKey(data: newKeyData)
+        let newMetadata = try EnvelopeService.envelopeMetadata(
+            for: newKeyData, localPassword: notesPassword, current: current
+        )
+        let summary = try VaultReKeyService.reKey(
+            database: db, from: oldKey, to: newKey, newMetadata: newMetadata
+        )
+        Log.debug("[ReKey] Vault moved to a new master key: \(summary)")
+        await didChangeMasterKey(to: newKey)
+        return summary
+    }
 
-        // Re-encrypt all notes (active, deleted, archived)
-        let allNotes = try noteRepo.listActive(key: oldKey) +
-                        noteRepo.listDeleted(key: oldKey) +
-                        noteRepo.listArchived(key: oldKey)
-
-        for note in allNotes {
-            do {
-                let encContent = try CryptoService.encryptText(note.content, key: newKey)
-                let encTags = try CryptoService.encryptStringArray(note.tags, key: newKey)
-                let contentJSON = try CryptoService.serializeEncryptedJSON(encContent)
-                let tagsJSON = try CryptoService.serializeEncryptedJSON(encTags)
-
-                // Re-encrypt attachment filenames
-                var reEncryptedAttachments = note.attachments
-                for i in reEncryptedAttachments.indices {
-                    let encFilename = try CryptoService.encryptText(reEncryptedAttachments[i].filename, key: newKey)
-                    reEncryptedAttachments[i].filename = try CryptoService.serializeEncryptedJSON(encFilename)
-                }
-                let attachmentsJSON = try JSONEncoder().encode(reEncryptedAttachments)
-                let attachmentsString = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
-
-                guard var record = try noteRepo.getRaw(id: note.id) else { continue }
-                record.content = contentJSON
-                record.tags = tagsJSON
-                record.attachments = attachmentsString
-                record.needsSync = true
-                try noteRepo.updateRaw(record)
-            } catch {
-                Log.debug("[ReEncrypt] Skipping note \(note.id): \(error)")
-            }
+    /// After the vault has been re-encrypted under `newKey`: use it from now
+    /// on, refresh Face ID's copy, rebuild a running sync service and reload.
+    ///
+    /// Face ID stores the master key itself, so without the refresh the next
+    /// Face ID unlock would load the old key and no note would decrypt. The
+    /// sync service captured the old key when it was created.
+    private func didChangeMasterKey(to newKey: SymmetricKey) async {
+        keyManager.masterKey = newKey
+        if keyManager.isBiometricEnabled {
+            try? keyManager.enableBiometricUnlock()
         }
-
-        // Re-encrypt attachment blobs
-        if let attachmentRepo {
-            let blobIds = try attachmentRepo.listBlobIds()
-            for blobId in blobIds {
-                guard let blobData = try attachmentRepo.getBlob(id: blobId) else { continue }
-                let blobStr = String(data: blobData, encoding: .utf8) ?? ""
-                guard !blobStr.isEmpty else { continue }
-                do {
-                    let encrypted = try CryptoService.parseEncryptedJSON(blobStr)
-                    let plainData = try CryptoService.decrypt(encrypted, key: oldKey)
-                    let reEncrypted = try CryptoService.encrypt(plainData, key: newKey)
-                    let reEncryptedJSON = try CryptoService.serializeEncryptedJSON(reEncrypted)
-                    try attachmentRepo.updateBlobData(id: blobId, data: Data(reEncryptedJSON.utf8))
-                } catch {
-                    Log.debug("[ReEncrypt] Skipping blob \(blobId): \(error)")
-                }
-            }
+        if let service = syncService {
+            await service.stopSSE()
+            setupSync()
         }
-
-        // Re-encrypt version snapshots
-        for noteId in Set(allNotes.map(\.id)) {
-            do {
-                let versions = try versionRepo.getVersions(noteId: noteId)
-                for ver in versions {
-                    do {
-                        let encContent = try CryptoService.parseEncryptedJSON(ver.content)
-                        let plainContent = try CryptoService.decryptText(encContent, key: oldKey)
-                        let newEncContent = try CryptoService.encryptText(plainContent, key: newKey)
-
-                        let encTags = try CryptoService.parseEncryptedJSON(ver.tags)
-                        let plainTagsStr = try CryptoService.decryptText(encTags, key: oldKey)
-                        let newEncTags = try CryptoService.encryptText(plainTagsStr, key: newKey)
-
-                        var updated = ver
-                        updated.content = try CryptoService.serializeEncryptedJSON(newEncContent)
-                        updated.tags = try CryptoService.serializeEncryptedJSON(newEncTags)
-                        try versionRepo.insertOrReplace(updated)
-                    } catch {
-                        Log.debug("[ReEncrypt] Skipping version \(ver.versionKey): \(error)")
-                    }
-                }
-            } catch {
-                Log.debug("[ReEncrypt] Skipping versions for note \(noteId): \(error)")
-            }
+        do {
+            try await loadNotes()
+        } catch {
+            // The re-key itself succeeded; the next refresh will catch up.
+            Log.debug("[ReKey] Reload after key change failed: \(error)")
         }
-
-        // Re-encrypt saved searches
-        if let savedSearchRepo {
-            do {
-                let searches = try savedSearchRepo.listAll(key: oldKey)
-                for search in searches {
-                    do {
-                        let encName = try CryptoService.encryptText(search.name, key: newKey)
-                        let encQuery = try CryptoService.encryptText(search.query, key: newKey)
-                        try savedSearchRepo.updateEncrypted(
-                            id: search.id,
-                            name: try CryptoService.serializeEncryptedJSON(encName),
-                            query: try CryptoService.serializeEncryptedJSON(encQuery)
-                        )
-                    } catch {
-                        Log.debug("[ReEncrypt] Skipping saved search \(search.id): \(error)")
-                    }
-                }
-            } catch {
-                Log.debug("[ReEncrypt] Failed to list saved searches: \(error)")
-            }
-        }
-
-        Log.debug("[ReEncrypt] All data re-encrypted successfully")
     }
 
     // MARK: - Settings

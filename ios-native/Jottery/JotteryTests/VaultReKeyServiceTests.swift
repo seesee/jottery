@@ -16,11 +16,7 @@ struct VaultReKeyServiceTests {
     private let password = "notes-password-correct-horse"
 
     private func makeVault() async throws -> AppState {
-        let dir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("jottery-rekey-tests-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let state = AppState()
-        try state.initialise(database: DatabaseManager(path: dir.appendingPathComponent("test.db").path))
+        let state = try TestVaults.makeState()
         try await state.createVault(password: password)
         return state
     }
@@ -54,13 +50,6 @@ struct VaultReKeyServiceTests {
         try #require(state.db)
     }
 
-    /// A raw SQL write, bypassing the repositories. Synchronous, so GRDB's
-    /// blocking `write` is used rather than its async overload.
-    private func execute(_ state: AppState, _ sql: String, _ arguments: StatementArguments) throws {
-        try database(state).dbPool.write { db in
-            try db.execute(sql: sql, arguments: arguments)
-        }
-    }
 
     private func metadata(for key: Data, in state: AppState) throws -> EncryptionMetadata {
         let current = try #require(try state.encryptionRepo?.get())
@@ -74,17 +63,6 @@ struct VaultReKeyServiceTests {
 
     private func text(_ json: String, _ key: SymmetricKey) -> String? {
         decrypt(json, key).map { String(decoding: $0, as: UTF8.self) }
-    }
-
-    /// Every row of every table the re-key touches, for before/after comparison.
-    private func snapshot(_ state: AppState) throws -> [String: [Row]] {
-        try database(state).dbPool.read { db in
-            var tables: [String: [Row]] = [:]
-            for table in ["notes", "note_versions", "attachments", "saved_searches", "encryption_metadata"] {
-                tables[table] = try Row.fetchAll(db, sql: "SELECT * FROM \(table) ORDER BY rowid")
-            }
-            return tables
-        }
     }
 
     // MARK: - Success
@@ -149,8 +127,8 @@ struct VaultReKeyServiceTests {
         )
         refs[0].filename = "plain-name.png"
         let plainRefs = String(decoding: try JSONEncoder().encode(refs), as: UTF8.self)
-        try execute(state, "UPDATE notes SET attachments = ? WHERE id = ?", [plainRefs, fixture.noteId])
-        try execute(state, "UPDATE attachments SET data = ? WHERE id = ?", [Data("raw bytes".utf8), fixture.attachmentId])
+        try TestVaults.execute(state, "UPDATE notes SET attachments = ? WHERE id = ?", [plainRefs, fixture.noteId])
+        try TestVaults.execute(state, "UPDATE attachments SET data = ? WHERE id = ?", [Data("raw bytes".utf8), fixture.attachmentId])
 
         let summary = try VaultReKeyService.reKey(
             database: database(state), from: oldKey, to: SymmetricKey(data: newKeyData),
@@ -173,20 +151,18 @@ struct VaultReKeyServiceTests {
         let state = try await makeVault()
         let fixture = try populate(state)
         let oldKey = try #require(state.keyManager.masterKey)
-        let foreign = try CryptoService.serializeEncryptedJSON(
-            CryptoService.encryptText("under another key", key: SymmetricKey(size: .bits256))
-        )
+        let foreign = try TestVaults.foreignCiphertext()
         let (sql, arguments): (String, StatementArguments) = switch table {
         case "notes": ("UPDATE notes SET content = ? WHERE id = ?", [foreign, fixture.noteId])
         case "note_versions": ("UPDATE note_versions SET tags = ? WHERE version_key = ?", [foreign, fixture.versionKey])
         case "attachments": ("UPDATE attachments SET data = ? WHERE id = ?", [Data(foreign.utf8), fixture.attachmentId])
         default: ("UPDATE saved_searches SET query = ? WHERE id = ?", [foreign, fixture.searchId])
         }
-        try execute(state, sql, arguments)
+        try TestVaults.execute(state, sql, arguments)
         let newKeyData = CryptoService.generateMasterKey()
         let newMetadata = try metadata(for: newKeyData, in: state)
         let db = try database(state)
-        let before = try snapshot(state)
+        let before = try TestVaults.snapshot(state)
 
         #expect(throws: VaultReKeyService.ReKeyError.self) {
             try VaultReKeyService.reKey(
@@ -194,9 +170,96 @@ struct VaultReKeyServiceTests {
             )
         }
 
-        let after = try snapshot(state)
+        let after = try TestVaults.snapshot(state)
         for (name, rows) in before {
             #expect(after[name] == rows, "\(name) changed although the re-key failed")
         }
+    }
+
+    // MARK: - AppState.switchVaultToMasterKey
+
+    @Test func switchingTheVaultKeyKeepsEveryNoteReadable() async throws {
+        let state = try await makeVault()
+        _ = try populate(state)
+        let newKeyData = CryptoService.generateMasterKey()
+
+        let summary = try await state.switchVaultToMasterKey(newKeyData, notesPassword: password)
+
+        #expect(summary.notes == 1)
+        #expect(TestVaults.keyData(state) == newKeyData)
+        #expect(state.notes.map(\.content) == ["secret content"])
+        #expect(await state.verifyVaultPassword(password))
+
+        // The notes password now unwraps the new key.
+        state.lock()
+        try await state.unlock(password: password)
+        #expect(TestVaults.keyData(state) == newKeyData)
+        #expect(state.notes.map(\.content) == ["secret content"])
+    }
+
+    @Test func aFailedKeySwitchKeepsTheOldKey() async throws {
+        let state = try await makeVault()
+        let fixture = try populate(state)
+        let oldKeyData = try #require(TestVaults.keyData(state))
+        try TestVaults.execute(
+            state, "UPDATE saved_searches SET query = ? WHERE id = ?",
+            [try TestVaults.foreignCiphertext(), fixture.searchId]
+        )
+        let before = try TestVaults.snapshot(state)
+
+        await #expect(throws: VaultReKeyService.ReKeyError.self) {
+            try await state.switchVaultToMasterKey(CryptoService.generateMasterKey(), notesPassword: password)
+        }
+
+        #expect(TestVaults.keyData(state) == oldKeyData)
+        #expect(try TestVaults.snapshot(state) == before)
+        state.lock()
+        try await state.unlock(password: password)
+        #expect(TestVaults.keyData(state) == oldKeyData)
+        #expect(state.notes.map(\.content) == ["secret content"])
+    }
+
+    // MARK: - Legacy password change
+
+    /// A legacy vault's key is derived from its password, so changing the
+    /// password re-encrypts everything. That used the same skip-and-log loop.
+
+    @Test func legacyPasswordChangeReEncryptsEverything() async throws {
+        let state = try await TestVaults.makeLegacyVault(password: password)
+        let fixture = try populate(state)
+        let newPassword = "a-new-notes-password"
+
+        try await state.changePassword(currentPassword: password, newPassword: newPassword)
+
+        #expect(await state.verifyVaultPassword(newPassword))
+        #expect(!(await state.verifyVaultPassword(password)))
+        #expect(state.notes.map(\.content) == ["secret content"])
+        let newKey = try #require(state.keyManager.masterKey)
+        let version = try #require(try state.versionRepo?.getVersions(noteId: fixture.noteId).first)
+        #expect(text(version.content, newKey) == "secret content")
+
+        state.lock()
+        try await state.unlock(password: newPassword)
+        #expect(state.notes.map(\.content) == ["secret content"])
+    }
+
+    @Test func aLegacyPasswordChangeThatCannotReEncryptChangesNothing() async throws {
+        let state = try await TestVaults.makeLegacyVault(password: password)
+        let fixture = try populate(state)
+        try TestVaults.execute(
+            state, "UPDATE note_versions SET content = ? WHERE version_key = ?",
+            [try TestVaults.foreignCiphertext(), fixture.versionKey]
+        )
+        let before = try TestVaults.snapshot(state)
+
+        await #expect(throws: VaultReKeyService.ReKeyError.self) {
+            try await state.changePassword(currentPassword: password, newPassword: "a-new-notes-password")
+        }
+
+        #expect(try TestVaults.snapshot(state) == before)
+        #expect(await state.verifyVaultPassword(password))
+        state.lock()
+        try await state.unlock(password: password)
+        #expect(state.notes.map(\.content) == ["secret content"])
     }
 }

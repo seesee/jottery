@@ -734,4 +734,83 @@ struct EnvelopeServiceTests {
 
         #expect(!state.needsNotesPasswordForAccountKey)
     }
+
+    // MARK: - Legacy vault onto an existing account key (jottery-crh5)
+
+    /// A legacy vault joining an account that already has a key must move onto
+    /// that key. This used to save the server key as the vault's key first and
+    /// then re-encrypt with a loop that skipped failures, so any skipped note
+    /// was left under the old key and became unreadable.
+
+    /// A legacy vault with one note, sync on, and a user ID, as unlock leaves it.
+    private func makeSyncedLegacyVault() async throws -> AppState {
+        let state = try await TestVaults.makeLegacyVault(password: notesPassword)
+        _ = try state.createNote(content: "legacy note", tags: ["old"])
+        state.settings.syncEnabled = true
+        var meta = try #require(try state.syncRepo?.getMetadata())
+        meta.userId = userId
+        try state.syncRepo?.saveMetadata(meta)
+        state.syncClient = makeClient()
+        return state
+    }
+
+    @Test func aLegacyVaultMovesOntoTheAccountKey() async throws {
+        let accountKey = CryptoService.generateMasterKey()
+        FakeKeyServerProtocol.reset(blob: try wrap(accountKey, with: notesPassword))
+        let state = try await makeSyncedLegacyVault()
+
+        let ok = await EnvelopeService.tryEnvelopeSetup(
+            appState: state, password: notesPassword, masterKey: try #require(state.keyManager.masterKey)
+        )
+
+        #expect(ok)
+        #expect(TestVaults.keyData(state) == accountKey)
+        #expect(try state.encryptionRepo?.get()?.envelopeVersion == 1)
+        #expect(state.notes.map(\.content) == ["legacy note"])
+        #expect(FakeKeyServerProtocol.putCount == 0)  // the account's key is never replaced
+
+        state.settings.syncEnabled = false
+        state.lock()
+        try await state.unlock(password: notesPassword)
+        #expect(TestVaults.keyData(state) == accountKey)
+        #expect(state.notes.map(\.content) == ["legacy note"])
+    }
+
+    @Test func aLegacyVaultThatCannotBeReEncryptedIsLeftAsItWas() async throws {
+        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: notesPassword))
+        let state = try await makeSyncedLegacyVault()
+        let oldKeyData = try #require(TestVaults.keyData(state))
+        _ = try state.createNote(content: "doomed", tags: [])
+        let doomed = try #require(state.notes.first { $0.content == "doomed" })
+        try TestVaults.execute(
+            state, "UPDATE notes SET tags = ? WHERE id = ?", [try TestVaults.foreignCiphertext(), doomed.id]
+        )
+        let before = try TestVaults.snapshot(state)
+
+        let ok = await EnvelopeService.tryEnvelopeSetup(
+            appState: state, password: notesPassword, masterKey: try #require(state.keyManager.masterKey)
+        )
+
+        #expect(!ok)
+        #expect(TestVaults.keyData(state) == oldKeyData)
+        #expect(try TestVaults.snapshot(state) == before)
+        #expect(try state.encryptionRepo?.get()?.envelopeVersion == nil)
+    }
+
+    @Test func aLegacyVaultIsNotMigratedOntoItsOwnKeyWhenTheServerFails() async throws {
+        FakeKeyServerProtocol.reset()
+        FakeKeyServerProtocol.failGets = true
+        let state = try await makeSyncedLegacyVault()
+        let before = try TestVaults.snapshot(state)
+
+        let ok = await EnvelopeService.tryEnvelopeSetup(
+            appState: state, password: notesPassword, masterKey: try #require(state.keyManager.masterKey)
+        )
+
+        // A failed check used to count as "no key on the server", so the vault
+        // was migrated onto its own key and diverged from the account's.
+        #expect(!ok)
+        #expect(try TestVaults.snapshot(state) == before)
+        #expect(try state.encryptionRepo?.get()?.envelopeVersion == nil)
+    }
 }

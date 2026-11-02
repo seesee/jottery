@@ -432,27 +432,28 @@ enum EnvelopeService {
                 return true
             }
 
-            // Check server for an existing wrapped key from another device
-            let serverResponse = try? await syncClient.getWrappedKey()
-
-            if serverResponse != nil {
-                // Another device already uploaded — onboard from server
+            // Legacy vault: check for a key another device has already put on
+            // the account. A server failure throws (caught below) rather than
+            // being taken for "no key", which would migrate this vault onto
+            // its own key and leave it diverged from the account's.
+            if let serverKeyData = try await fetchServerKey(
+                syncClient: syncClient,
+                userId: userId,
+                password: password
+            ) {
                 Log.debug("[Envelope] Server has wrapped key — onboarding from server")
-                let serverKey = try await onboardFromServer(
-                    syncClient: syncClient,
-                    encryptionRepo: encryptionRepo,
-                    password: password,
-                    userId: userId
-                )
-
-                // If the server key differs from our local key, re-encrypt all data
                 let localKeyData = masterKey.withUnsafeBytes { Data($0) }
-                let serverKeyData = serverKey.withUnsafeBytes { Data($0) }
-                if localKeyData != serverKeyData {
-                    Log.debug("[Envelope] Server key differs from local — re-encrypting data")
-                    try appState.reEncryptAllData(from: masterKey, to: serverKey)
-                    appState.keyManager.unlockWithKeyData(serverKeyData)
-                    try await appState.loadNotes()
+                if serverKeyData == localKeyData {
+                    _ = try adoptServerKey(
+                        serverKeyData, encryptionRepo: encryptionRepo, localPassword: password
+                    )
+                } else {
+                    // Re-encrypt the whole vault onto the account's key and
+                    // switch to it in one transaction: a failure changes nothing.
+                    // (Saving the server key first, as this used to, left notes
+                    // under the old key whenever re-encryption skipped any.)
+                    Log.debug("[Envelope] Server key differs from local — re-encrypting the vault onto it")
+                    try await appState.switchVaultToMasterKey(serverKeyData, notesPassword: password)
                 }
                 return true
             } else {
