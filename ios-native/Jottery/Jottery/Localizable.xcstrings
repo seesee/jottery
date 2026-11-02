@@ -3032,6 +3032,50 @@
         }
       }
     },
+    "syncMerge.confirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge Notes"
+          }
+        }
+      }
+    },
+    "syncMerge.failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't merge: some of this device's notes couldn't be re-encrypted. Nothing on this device has been changed, and it hasn't joined the account."
+          }
+        }
+      }
+    },
+    "syncMerge.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This account already has notes protected by a different encryption key from this device's. Jottery can re-encrypt the notes on this device with the account's key and then sync them, so all your notes end up together. If anything can't be re-encrypted, nothing on this device is changed."
+          }
+        }
+      }
+    },
+    "syncMerge.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge Your Notes?"
+          }
+        }
+      }
+    },
     "syncSetup.cancel": {
       "extractionState": "manual",
       "localizations": {

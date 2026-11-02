@@ -55,6 +55,12 @@ enum L {
     static var syncSetupErrorAccountKeyDiffers: String { String(localized: "syncSetupError.accountKeyDiffers") }
     static var syncSetupErrorAccountKeyUnreadable: String { String(localized: "syncSetupError.accountKeyUnreadable") }
 
+    // MARK: - Sync Merge
+    static var syncMergeTitle: String { String(localized: "syncMerge.title") }
+    static var syncMergeMessage: String { String(localized: "syncMerge.message") }
+    static var syncMergeConfirm: String { String(localized: "syncMerge.confirm") }
+    static var syncMergeFailed: String { String(localized: "syncMerge.failed") }
+
     // MARK: - Account Key (Face ID unlock)
     static var accountKeyPromptTitle: String { String(localized: "accountKey.promptTitle") }
     static var accountKeyPromptMessage: String { String(localized: "accountKey.promptMessage") }

@@ -475,32 +475,35 @@ struct EnvelopeServiceTests {
         #expect(status == .matchesLocalKey)
     }
 
-    @Test func accountKeyCheckRefusesADifferentKey() async throws {
-        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: notesPassword))
+    @Test func accountKeyCheckReportsADifferentKeyWithTheAccountKey() async throws {
+        let accountKey = CryptoService.generateMasterKey()
+        FakeKeyServerProtocol.reset(blob: try wrap(accountKey, with: notesPassword))
 
-        await #expect(throws: EnvelopeError.accountKeyDiffers) {
-            _ = try await EnvelopeService.checkAccountKey(
-                syncClient: makeClient(),
-                userId: userId,
-                password: notesPassword,
-                alternatePassword: serverPassword,
-                localMasterKeyData: CryptoService.generateMasterKey()
-            )
-        }
+        let status = try await EnvelopeService.checkAccountKey(
+            syncClient: makeClient(),
+            userId: userId,
+            password: notesPassword,
+            alternatePassword: serverPassword,
+            localMasterKeyData: CryptoService.generateMasterKey()
+        )
+
+        // The unwrapped key comes back, so the caller can merge onto it.
+        #expect(status == .differs(accountKey: accountKey))
     }
 
     @Test func accountKeyCheckSeesADifferentKeyWrappedWithTheServerPassword() async throws {
-        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: serverPassword))
+        let accountKey = CryptoService.generateMasterKey()
+        FakeKeyServerProtocol.reset(blob: try wrap(accountKey, with: serverPassword))
 
-        await #expect(throws: EnvelopeError.accountKeyDiffers) {
-            _ = try await EnvelopeService.checkAccountKey(
-                syncClient: makeClient(),
-                userId: userId,
-                password: notesPassword,
-                alternatePassword: serverPassword,
-                localMasterKeyData: CryptoService.generateMasterKey()
-            )
-        }
+        let status = try await EnvelopeService.checkAccountKey(
+            syncClient: makeClient(),
+            userId: userId,
+            password: notesPassword,
+            alternatePassword: serverPassword,
+            localMasterKeyData: CryptoService.generateMasterKey()
+        )
+
+        #expect(status == .differs(accountKey: accountKey))
     }
 
     @Test func accountKeyCheckReportsAnUnreadableKeyDistinctly() async throws {
@@ -544,18 +547,21 @@ struct EnvelopeServiceTests {
     /// A refusal must revoke that device again, or every failed attempt leaves
     /// an orphan on the account.
 
-    @Test func joiningCheckRevokesTheDeviceWhenTheKeyDiffers() async throws {
-        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: notesPassword))
+    @Test func joiningCheckKeepsTheDeviceWhenTheKeyDiffers() async throws {
+        let accountKey = CryptoService.generateMasterKey()
+        FakeKeyServerProtocol.reset(blob: try wrap(accountKey, with: notesPassword))
 
-        await #expect(throws: EnvelopeError.accountKeyDiffers) {
-            _ = try await EnvelopeService.checkAccountKeyForNewDevice(
-                syncClient: makeClient(),
-                userId: userId,
-                password: notesPassword,
-                localMasterKeyData: CryptoService.generateMasterKey()
-            )
-        }
-        #expect(FakeKeyServerProtocol.deleteCount == 1)
+        let status = try await EnvelopeService.checkAccountKeyForNewDevice(
+            syncClient: makeClient(),
+            userId: userId,
+            password: notesPassword,
+            localMasterKeyData: CryptoService.generateMasterKey()
+        )
+
+        // The user may still choose to merge, so the device is not revoked
+        // here; SyncSetupView revokes it if they decline.
+        #expect(status == .differs(accountKey: accountKey))
+        #expect(FakeKeyServerProtocol.deleteCount == 0)
     }
 
     @Test func joiningCheckRevokesTheDeviceWhenTheKeyIsUnreadable() async throws {

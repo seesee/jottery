@@ -212,16 +212,18 @@ enum EnvelopeService {
         case noServerKey
         /// The server key is the same as this device's key: safe to sync.
         case matchesLocalKey
+        /// The account already has a different key, unwrapped here. Syncing as
+        /// things are would leave notes unreadable in both directions, so the
+        /// caller either moves the vault onto this key
+        /// (`AppState.switchVaultToMasterKey`) or refuses to join.
+        case differs(accountKey: Data)
     }
 
     /// Before a device that already has a vault joins an existing account,
-    /// check that the account's key is the vault's own key. Nothing is changed.
+    /// compare the account's key with the vault's own. Nothing is changed.
     ///
-    /// Syncing with a different key makes notes unreadable in both directions,
-    /// and fixing that afterwards means re-encrypting the whole vault. So the
-    /// caller refuses up front instead. Throws `accountKeyDiffers` when the key
-    /// opens but is not this device's, `cannotUnwrapServerKey` when it cannot be
-    /// opened with either password, and passes server failures through.
+    /// Throws `cannotUnwrapServerKey` when the account's key cannot be opened
+    /// with either password, and passes server failures through.
     static func checkAccountKey(
         syncClient: SyncClient,
         userId: String,
@@ -238,17 +240,16 @@ enum EnvelopeService {
             return .noServerKey
         }
 
-        guard serverKey == localMasterKeyData else {
-            throw EnvelopeError.accountKeyDiffers
-        }
-        return .matchesLocalKey
+        return serverKey == localMasterKeyData ? .matchesLocalKey : .differs(accountKey: serverKey)
     }
 
     /// `checkAccountKey` for a device registered (or cloned) on the account
     /// moments ago, with `syncClient` holding that device's API key. The key
-    /// can only be fetched once the device exists, so on any failure the device
-    /// is revoked again (best effort) before the error is rethrown: a refused
-    /// join must not leave an orphaned device on the account.
+    /// can only be fetched once the device exists, so when the check fails the
+    /// device is revoked again (best effort) before the error is rethrown: a
+    /// failed join must not leave an orphaned device on the account. A
+    /// `.differs` result keeps the device, because the caller may still merge;
+    /// it must revoke the device itself if it does not.
     static func checkAccountKeyForNewDevice(
         syncClient: SyncClient,
         userId: String,
@@ -552,7 +553,6 @@ enum EnvelopeService {
 enum EnvelopeError: LocalizedError {
     case noWrappedKeyOnServer
     case cannotUnwrapServerKey
-    case accountKeyDiffers
     case invalidMasterKeyLength
     case notInitialised
 
@@ -562,8 +562,6 @@ enum EnvelopeError: LocalizedError {
             return "No wrapped key found on server — the source device may not have migrated yet"
         case .cannotUnwrapServerKey:
             return "The account's encryption key could not be opened with the password provided"
-        case .accountKeyDiffers:
-            return "The account's encryption key differs from this device's key"
         case .invalidMasterKeyLength:
             return "Invalid master key length after unwrapping"
         case .notInitialised:
