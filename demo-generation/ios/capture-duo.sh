@@ -64,15 +64,40 @@ xcrun simctl status_bar "$UDID" override \
 xcrun simctl install "$UDID" "$APP_PATH"
 
 # A display that isn't drawing (the closed device's inner display, say)
-# screenshots as solid black, which compresses to a few kilobytes.
+# screenshots as solid black. File size doesn't tell: a black frame of the
+# inner display is still ~100 KB. So measure the pixels, with a tiny Swift
+# helper compiled once.
+BRIGHTNESS_BIN="$DERIVED/duo-brightness"
+if [ ! -x "$BRIGHTNESS_BIN" ]; then
+  mkdir -p "$DERIVED"
+  cat > "$DERIVED/duo-brightness.swift" <<'SWIFT'
+import AppKit
+// Prints the mean brightness (0...1) of an image, sampled on a grid.
+guard CommandLine.arguments.count > 1,
+      let image = NSImage(contentsOfFile: CommandLine.arguments[1]),
+      let tiff = image.tiffRepresentation,
+      let rep = NSBitmapImageRep(data: tiff) else { print("0"); exit(0) }
+var sum = 0.0, count = 0
+for y in stride(from: 0, to: rep.pixelsHigh, by: 25) {
+    for x in stride(from: 0, to: rep.pixelsWide, by: 25) {
+        if let c = rep.colorAt(x: x, y: y) {
+            sum += Double(c.redComponent + c.greenComponent + c.blueComponent) / 3
+            count += 1
+        }
+    }
+}
+print(sum / Double(max(count, 1)))
+SWIFT
+  swiftc -O "$DERIVED/duo-brightness.swift" -o "$BRIGHTNESS_BIN" >/dev/null
+fi
+
 display_is_lit() {
-  local probe
+  local probe brightness
   probe="$(mktemp -t duo-probe).png"
   xcrun simctl io "$UDID" screenshot --display="$1" "$probe" >/dev/null 2>&1 || { rm -f "$probe"; return 1; }
-  local bytes
-  bytes=$(stat -f%z "$probe")
+  brightness=$("$BRIGHTNESS_BIN" "$probe")
   rm -f "$probe"
-  [ "$bytes" -gt 40000 ]
+  awk -v b="$brightness" 'BEGIN { exit !(b > 0.001) }'
 }
 
 capture_set() {
