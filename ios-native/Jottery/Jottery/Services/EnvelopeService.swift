@@ -278,41 +278,68 @@ enum EnvelopeService {
         encryptionRepo: EncryptionRepository,
         localPassword: String
     ) throws -> SymmetricKey {
-        let masterKey = SymmetricKey(data: masterKeyData)
+        let local = try localEnvelope(for: masterKeyData, localPassword: localPassword)
 
-        // Generate device salt for local storage
+        // Save envelope metadata
+        try encryptionRepo.saveEnvelope(
+            envelopeVersion: 1,
+            deviceSalt: local.deviceSalt,
+            localWrappedMaster: local.localWrappedMaster,
+            wrappingKdfVersion: CryptoService.wrappingKdfVersion
+        )
+
+        // Update verification token
+        if var metadata = try encryptionRepo.get() {
+            metadata.verification = local.verification
+            try encryptionRepo.store(metadata)
+        }
+
+        return SymmetricKey(data: masterKeyData)
+    }
+
+    /// The envelope metadata that makes `masterKeyData` this device's vault key,
+    /// wrapped locally under `localPassword`, built on `current` (its creation
+    /// date and algorithm are kept). Nothing is saved: `VaultReKeyService`
+    /// stores it in the same transaction as the re-encrypted data.
+    static func envelopeMetadata(
+        for masterKeyData: Data,
+        localPassword: String,
+        current: EncryptionMetadata
+    ) throws -> EncryptionMetadata {
+        let local = try localEnvelope(for: masterKeyData, localPassword: localPassword)
+        var metadata = current
+        metadata.salt = ""
+        metadata.iterations = 0
+        metadata.envelopeVersion = 1
+        metadata.deviceSalt = local.deviceSalt
+        metadata.localWrappedMaster = local.localWrappedMaster
+        metadata.wrappingKdfVersion = CryptoService.wrappingKdfVersion
+        metadata.verification = local.verification
+        return metadata
+    }
+
+    /// The local half of the envelope: a fresh device salt, the master key
+    /// wrapped under a key derived from it and `localPassword`, and a
+    /// verification token encrypted with the master key.
+    private static func localEnvelope(
+        for masterKeyData: Data,
+        localPassword: String
+    ) throws -> (deviceSalt: String, localWrappedMaster: String, verification: String) {
         let deviceSalt = CryptoService.generateSalt()
         let deviceKey = CryptoService.deriveKey(
             password: localPassword,
             salt: deviceSalt,
             iterations: CryptoService.defaultIterations
         )
-
-        // Wrap master key locally
-        let localWrapped = try CryptoService.wrapMasterKey(masterKeyData, with: deviceKey)
-        let localBlob = try CryptoService.serializeEncryptedJSON(localWrapped)
-
-        // Create verification token
-        let verificationEncrypted = try CryptoService.encryptText(
-            EncryptionMetadata.verificationPlaintext, key: masterKey
+        let localWrapped = try CryptoService.serializeEncryptedJSON(
+            CryptoService.wrapMasterKey(masterKeyData, with: deviceKey)
         )
-        let verificationJSON = try CryptoService.serializeEncryptedJSON(verificationEncrypted)
-
-        // Save envelope metadata
-        try encryptionRepo.saveEnvelope(
-            envelopeVersion: 1,
-            deviceSalt: deviceSalt.base64EncodedString(),
-            localWrappedMaster: localBlob,
-            wrappingKdfVersion: CryptoService.wrappingKdfVersion
+        let verification = try CryptoService.serializeEncryptedJSON(
+            CryptoService.encryptText(
+                EncryptionMetadata.verificationPlaintext, key: SymmetricKey(data: masterKeyData)
+            )
         )
-
-        // Update verification token
-        if var metadata = try encryptionRepo.get() {
-            metadata.verification = verificationJSON
-            try encryptionRepo.store(metadata)
-        }
-
-        return masterKey
+        return (deviceSalt.base64EncodedString(), localWrapped, verification)
     }
 
     /// Onboard a new device by downloading the wrapped master key from the server.
