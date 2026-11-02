@@ -55,6 +55,14 @@ enum L {
     static var syncSetupErrorAccountKeyDiffers: String { String(localized: "syncSetupError.accountKeyDiffers") }
     static var syncSetupErrorAccountKeyUnreadable: String { String(localized: "syncSetupError.accountKeyUnreadable") }
 
+    // MARK: - Account Key (Face ID unlock)
+    static var accountKeyPromptTitle: String { String(localized: "accountKey.promptTitle") }
+    static var accountKeyPromptMessage: String { String(localized: "accountKey.promptMessage") }
+    static var accountKeyPromptWrongPassword: String { String(localized: "accountKey.promptWrongPassword") }
+    static var accountKeyPromptPublish: String { String(localized: "accountKey.promptPublish") }
+    static var accountKeyPromptNotNow: String { String(localized: "accountKey.promptNotNow") }
+    static var accountKeyPublishFailed: String { String(localized: "accountKey.publishFailed") }
+
     // MARK: - Delete Account
 
     static var deleteAccountTitle: String { String(localized: "deleteAccount.title") }

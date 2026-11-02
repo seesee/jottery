@@ -147,7 +147,10 @@ struct UnlockScreen: View {
                 appState.setupSync()
                 appState.scheduleSearchWarmUp()
                 appState.importSharedInboxItems()
-                Log.debug("[Envelope] Biometric unlock — envelope migration skipped (password unavailable)")
+                // Envelope setup needs the notes password, which Face ID does not
+                // provide. Check instead whether the server is missing the key,
+                // and if so the app asks for the password once (jottery-x40w).
+                Task { await appState.checkAccountKeyAfterBiometricUnlock() }
             } else {
                 Log.debug("[Sync] biometricUnlock: Face ID failed")
             }

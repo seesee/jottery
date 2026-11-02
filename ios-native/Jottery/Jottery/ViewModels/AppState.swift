@@ -34,6 +34,11 @@ final class AppState {
     var syncEnabled: Bool = false
     var syncStatusMessage: String?
 
+    /// Set when a Face ID unlock finds that the account has no wrapped key on
+    /// the server. `MainView` then asks for the notes password once, so the key
+    /// can be published (see `checkAccountKeyAfterBiometricUnlock()`).
+    var needsNotesPasswordForAccountKey = false
+
     // MARK: - User-Facing Errors
 
     /// A transient, localised error message surfaced to the user via a
@@ -705,11 +710,65 @@ final class AppState {
 
         keyManager.lock()
         isLocked = true
+        needsNotesPasswordForAccountKey = false
         notes = []
         archivedNotes = []
         pendingConflicts = []
         inboxItems = []
         selectedNoteId = nil
+    }
+
+    // MARK: - Account Key (Face ID Unlock)
+
+    enum AccountKeyPublishResult: Equatable {
+        case published
+        case wrongPassword
+        case failed
+    }
+
+    /// After a Face ID unlock, check whether the account's wrapped key is
+    /// missing from the server, and if so flag that the notes password is
+    /// needed to publish it.
+    ///
+    /// A password unlock publishes a missing key during envelope setup, but
+    /// Face ID has no password to wrap the key with. A device that only ever
+    /// unlocked with Face ID therefore never published, and other devices could
+    /// not connect (jottery-x40w). The check itself needs no password. Server
+    /// or network errors are ignored: the check runs again on the next unlock.
+    func checkAccountKeyAfterBiometricUnlock() async {
+        guard settings.syncEnabled,
+              let syncClient,
+              let userId = (try? syncRepo?.getMetadata())?.userId,
+              !userId.isEmpty else {
+            return
+        }
+        do {
+            let serverKey = try await syncClient.getWrappedKey()
+            // The user may have locked again while the request was in flight.
+            if serverKey == nil && !isLocked {
+                Log.debug("[Envelope] Face ID unlock: server has no wrapped key — asking for the notes password")
+                needsNotesPasswordForAccountKey = true
+            }
+        } catch {
+            Log.debug("[Envelope] Face ID unlock: wrapped key check failed (will retry next unlock): \(error)")
+        }
+    }
+
+    /// Publish the account key with the notes password the user has just
+    /// entered in response to `needsNotesPasswordForAccountKey`. Runs the same
+    /// envelope setup as a password unlock, so an existing server key is never
+    /// overwritten.
+    func publishMissingAccountKey(password: String) async -> AccountKeyPublishResult {
+        guard await verifyVaultPassword(password) else { return .wrongPassword }
+        guard let masterKey = keyManager.masterKey else { return .failed }
+        let ok = await EnvelopeService.tryEnvelopeSetup(
+            appState: self,
+            password: password,
+            masterKey: masterKey
+        )
+        guard ok else { return .failed }
+        needsNotesPasswordForAccountKey = false
+        return .published
     }
 
     // MARK: - User-Facing Errors

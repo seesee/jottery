@@ -200,6 +200,8 @@ struct ContentView: View {
 
 struct MainView: View {
     @Environment(AppState.self) private var appState
+    @State private var accountKeyPassword = ""
+    @State private var accountKeyPasswordWasWrong = false
 
     var body: some View {
         NavigationSplitView {
@@ -230,6 +232,41 @@ struct MainView: View {
         }
         .overlay {
             ToastView()
+        }
+        // After a Face ID unlock, the account may be missing its server key,
+        // which needs the notes password to publish (jottery-x40w).
+        .alert(L.accountKeyPromptTitle, isPresented: Binding(
+            get: { appState.needsNotesPasswordForAccountKey },
+            set: { appState.needsNotesPasswordForAccountKey = $0 }
+        )) {
+            SecureField(L.syncSetupNotesPassword, text: $accountKeyPassword)
+            Button(L.accountKeyPromptPublish) { publishAccountKey() }
+            Button(L.accountKeyPromptNotNow, role: .cancel) {
+                accountKeyPassword = ""
+                accountKeyPasswordWasWrong = false
+            }
+        } message: {
+            Text(accountKeyPasswordWasWrong ? L.accountKeyPromptWrongPassword : L.accountKeyPromptMessage)
+        }
+    }
+
+    private func publishAccountKey() {
+        let password = accountKeyPassword
+        accountKeyPassword = ""
+        Task {
+            switch await appState.publishMissingAccountKey(password: password) {
+            case .published:
+                accountKeyPasswordWasWrong = false
+            case .wrongPassword:
+                // Ask again, saying why — unless the app locked meanwhile.
+                accountKeyPasswordWasWrong = true
+                if !appState.isLocked {
+                    appState.needsNotesPasswordForAccountKey = true
+                }
+            case .failed:
+                accountKeyPasswordWasWrong = false
+                appState.reportError(L.accountKeyPublishFailed)
+            }
         }
     }
 }
