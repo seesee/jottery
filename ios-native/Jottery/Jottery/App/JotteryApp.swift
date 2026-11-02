@@ -202,10 +202,19 @@ struct MainView: View {
     @Environment(AppState.self) private var appState
     @State private var accountKeyPassword = ""
     @State private var accountKeyPasswordWasWrong = false
+    @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
+    /// Where a foldable display's fold is, if it runs top to bottom (see `FoldLayout`).
+    @State private var foldGeometry = FoldGeometry()
+
+    /// The list column width that puts the divider on the fold, when there is one.
+    private var foldListWidth: CGFloat? {
+        foldGeometry.fold.flatMap { FoldLayout.listWidth(fold: $0, containerWidth: foldGeometry.width) }
+    }
 
     var body: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             NoteListView()
+                .modifier(FoldAlignedColumn(width: foldListWidth))
         } detail: {
             if let noteId = appState.selectedNoteId {
                 if let conflict = appState.pendingConflicts.first(where: { $0.id == noteId }) {
@@ -229,6 +238,18 @@ struct MainView: View {
         }
         .onChange(of: appState.selectedNoteId) { _, _ in
             appState.keyManager.recordActivity()
+        }
+        // iPhone Duo: with a fold running top to bottom, show the list and the
+        // note side by side, one either side of the fold, like a book's pages.
+        .onGeometryChange(for: FoldGeometry.self) { proxy in
+            FoldGeometry(fold: FoldLayout.verticalFold(in: proxy), width: proxy.size.width)
+        } action: { geometry in
+            foldGeometry = geometry
+        }
+        .onChange(of: foldListWidth != nil) { _, splitOnFold in
+            // Only when the fold appears or goes, so a sidebar the user hid
+            // elsewhere (iPad) isn't forced back on every resize.
+            columnVisibility = splitOnFold ? .all : .automatic
         }
         .overlay {
             ToastView()
