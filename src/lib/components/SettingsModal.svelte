@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import { settings, isLocked, notes } from '../stores/appStore';
-  import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, encryptionRepository, lock, passwordStorageService, sessionStorageService, noteRepository, createSyncRecoveryNote, onboardFromServer, uploadWrappedKeyToServer, verifyUnlockPassword } from '../services';
+  import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, lock, passwordStorageService, sessionStorageService, createSyncRecoveryNote, onboardFromServer, uploadWrappedKeyToServer, verifyUnlockPassword } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { createBatchedBackup, downloadBackup } from '../services/backupService';
   import { backupSchedulerService } from '../services/backupSchedulerService';
@@ -780,18 +780,25 @@
     ]);
   }
 
+  // Remember Password and Persist Session only count once their password is
+  // confirmed, and the confirm handlers save them. Auto-saving the switch first
+  // would leave them on with no password behind them: Persist Session would read
+  // as expired and lock the app at the next mouse move.
+  $: confirmingPasswordOption = showRememberPasswordWarning || showPersistSessionConfirm;
+
   // Auto-save: debounced save that fires when settings change
   function scheduleAutoSave() {
     if (!autoSaveReady) return;
     if (autoSaveTimer) clearTimeout(autoSaveTimer);
     autoSaveTimer = setTimeout(async () => {
+      if (confirmingPasswordOption) return;
       await handleSave();
       settingsSnapshot = captureSettingsSnapshot();
     }, 500);
   }
 
   // Watch all auto-saveable settings and trigger debounced save only when dirty
-  $: if (autoSaveReady) {
+  $: if (autoSaveReady && !confirmingPasswordOption) {
     // Reference all tracked variables so Svelte registers dependencies
     const currentSnapshot = JSON.stringify([
       theme, layoutMode, fontSize, autoLockTimeout, sortOrder, language, timezone,
@@ -838,7 +845,9 @@
       // Just enabled (value is now true) - show confirmation to get password
       showPersistSessionConfirm = true;
     } else {
-      // Just disabled (value is now false) - clear session storage
+      // Just disabled (value is now false) - clear session storage. The setting
+      // goes first: while it's on, auto-lock reads a missing session as expired.
+      settings.update(s => ({ ...s, persistSession: false }));
       sessionStorageService.clear();
     }
   }
@@ -852,28 +861,11 @@
     persistSessionError = '';
 
     try {
-      // Verify the password by attempting to derive key and decrypt
-      const metadata = await encryptionRepository.getMetadata();
-      if (!metadata) {
-        throw new Error('Encryption not initialized');
-      }
-
-      if (!metadata.salt) throw new Error('Missing encryption salt — vault may be corrupted');
-      if (!metadata.iterations) throw new Error('Missing encryption iterations — vault may be corrupted');
-      const salt = base64ToUint8Array(metadata.salt);
-      const derivedKey = await cryptoService.deriveKey({
-        password: persistSessionConfirmInput,
-        salt,
-        iterations: metadata.iterations,
-        algorithm: 'PBKDF2',
-      });
-
-      // Try to decrypt a note to verify password is correct
-      const allNotes = await noteRepository.getAllActive();
-      if (allNotes.length > 0) {
-        const testNote = allNotes[0];
-        const encryptedContent = JSON.parse(testNote.content);
-        await cryptoService.decryptText(encryptedContent, derivedKey);
+      if (!(await verifyUnlockPassword(persistSessionConfirmInput))) {
+        persistSessionError = $_('unlock.incorrectPassword');
+        persistSessionConfirmInput = '';
+        persistSession = false;
+        return;
       }
 
       // Password is correct! Store it in session storage
@@ -888,8 +880,8 @@
       persistSessionConfirmInput = '';
       persistSession = true;
     } catch (error) {
-      console.error('Password verification failed:', error);
-      persistSessionError = $_('unlock.incorrectPassword');
+      console.error('Failed to enable Persist Session:', error);
+      persistSessionError = saveFailedMessage(error);
       persistSessionConfirmInput = '';
       persistSession = false;
     }
@@ -904,35 +896,18 @@
 
   async function confirmEnableRememberPassword() {
     if (!rememberPasswordConfirmInput) {
-      rememberPasswordError = 'Please enter your password';
+      rememberPasswordError = $_('settings.rememberPasswordModal.passwordPlaceholder');
       return;
     }
 
     rememberPasswordError = '';
 
     try {
-      // Verify the password by attempting to unlock with it
-      const metadata = await encryptionRepository.getMetadata();
-      if (!metadata) {
-        throw new Error('Encryption not initialized');
-      }
-
-      if (!metadata.salt) throw new Error('Missing encryption salt — vault may be corrupted');
-      if (!metadata.iterations) throw new Error('Missing encryption iterations — vault may be corrupted');
-      const salt = base64ToUint8Array(metadata.salt);
-      const derivedKey = await cryptoService.deriveKey({
-        password: rememberPasswordConfirmInput,
-        salt,
-        iterations: metadata.iterations,
-        algorithm: 'PBKDF2',
-      });
-
-      // Try to decrypt a note to verify password is correct
-      const notes = await noteRepository.getAllActive();
-      if (notes.length > 0) {
-        const testNote = notes[0];
-        const encryptedContent = JSON.parse(testNote.content);
-        await cryptoService.decryptText(encryptedContent, derivedKey);
+      if (!(await verifyUnlockPassword(rememberPasswordConfirmInput))) {
+        rememberPasswordError = $_('unlock.incorrectPassword');
+        rememberPasswordConfirmInput = '';
+        rememberPassword = false;
+        return;
       }
 
       // Password is correct! Store it
@@ -947,8 +922,8 @@
       rememberPasswordConfirmInput = '';
       rememberPassword = true;
     } catch (error) {
-      console.error('Password verification failed:', error);
-      rememberPasswordError = 'Incorrect password';
+      console.error('Failed to enable Remember Password:', error);
+      rememberPasswordError = saveFailedMessage(error);
       rememberPasswordConfirmInput = '';
       rememberPassword = false;
     }
@@ -961,14 +936,9 @@
     rememberPasswordError = '';
   }
 
-  // Helper function to convert base64 to Uint8Array
-  function base64ToUint8Array(base64: string): Uint8Array {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
+  function saveFailedMessage(error: unknown): string {
+    const detail = error instanceof Error ? error.message : String(error);
+    return $_('settings.settingsSaveFailed', { values: { error: detail } });
   }
 
   async function handleDisableRememberPassword() {
