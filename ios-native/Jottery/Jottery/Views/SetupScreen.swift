@@ -52,11 +52,11 @@ private struct NewVaultView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            SecureField(L.setupPassword, text: $password)
+            PasswordField(L.setupPassword, text: $password)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 320)
 
-            SecureField(L.setupConfirmPassword, text: $confirmPassword)
+            PasswordField(L.setupConfirmPassword, text: $confirmPassword)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 320)
 

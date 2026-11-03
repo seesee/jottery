@@ -43,8 +43,7 @@ struct DeleteAccountView: View {
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
 
-                    SecureField(L.setupServerPassword, text: $password)
-                        .textContentType(.password)
+                    PasswordField(L.setupServerPassword, text: $password, contentType: .password)
                 }
 
                 Section {
