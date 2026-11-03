@@ -48,9 +48,15 @@ SCREENS=(
 APP_PATH="$DERIVED/Build/Products/Debug-iphonesimulator/Jottery.app"
 if [ -z "$SKIP_BUILD" ]; then
   echo "→ Building Jottery (Debug, simulator)..."
+  # OBJROOT and SYMROOT keep this build wholly apart from Xcode's. With a custom
+  # build location in Xcode's settings, -derivedDataPath alone still shares
+  # Xcode's intermediates and build database, so Xcode's next build would
+  # rebuild everything and warn about hundreds of "stale" files here.
   xcodebuild -project "$PROJECT_DIR/Jottery.xcodeproj" -scheme Jottery \
     -configuration Debug -destination 'generic/platform=iOS Simulator' \
-    -derivedDataPath "$DERIVED" BUILD_DIR="$DERIVED/Build/Products" build | tail -2
+    -derivedDataPath "$DERIVED" \
+    OBJROOT="$DERIVED/Build/Intermediates.noindex" SYMROOT="$DERIVED/Build/Products" \
+    build | tail -2
 fi
 [ -d "$APP_PATH" ] || { echo "App not found at $APP_PATH" >&2; exit 1; }
 
