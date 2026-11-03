@@ -25,7 +25,7 @@ struct UnlockScreen: View {
                 .foregroundStyle(.secondary)
 
             VStack(spacing: 16) {
-                SecureField(L.unlockPassword, text: $password)
+                PasswordField(L.unlockPassword, text: $password)
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 320)
                     .onSubmit { unlock() }

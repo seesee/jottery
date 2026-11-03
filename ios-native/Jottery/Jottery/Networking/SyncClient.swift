@@ -44,16 +44,6 @@ actor SyncClient {
         return try await post(url: url, body: body, authenticated: false)
     }
 
-    func cloneDevice(apiKey: String, deviceName: String) async throws -> RegisterDeviceResponse {
-        let url = try apiURL("auth/clone-device")
-        let body = CloneDeviceRequest(
-            apiKey: apiKey,
-            deviceName: deviceName,
-            deviceType: "ios"
-        )
-        return try await post(url: url, body: body, authenticated: false)
-    }
-
     // MARK: - Sync Operations
 
     func push(_ request: SyncPushRequest) async throws -> SyncPushResponse {
