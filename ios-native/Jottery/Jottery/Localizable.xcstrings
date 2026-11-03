@@ -2625,17 +2625,6 @@
         }
       }
     },
-    "setup.credentials": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Credentials"
-          }
-        }
-      }
-    },
     "setup.deviceName": {
       "extractionState": "manual",
       "localizations": {
@@ -2676,39 +2665,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enter the same encryption password used on your other devices."
-          }
-        }
-      }
-    },
-    "setup.import": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import"
-          }
-        }
-      }
-    },
-    "setup.importCredentials": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Paste the credentials from another device."
-          }
-        }
-      }
-    },
-    "setup.method": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Method"
           }
         }
       }
@@ -2779,17 +2735,6 @@
         }
       }
     },
-    "setup.progressDecrypting": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Decrypting credentials…"
-          }
-        }
-      }
-    },
     "setup.progressFinishing": {
       "extractionState": "manual",
       "localizations": {
@@ -2823,17 +2768,6 @@
         }
       }
     },
-    "setup.progressRegistering": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Registering device…"
-          }
-        }
-      }
-    },
     "setup.progressSettingUp": {
       "extractionState": "manual",
       "localizations": {
@@ -2841,17 +2775,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Setting up sync…"
-          }
-        }
-      }
-    },
-    "setup.register": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Register"
           }
         }
       }
@@ -3087,17 +3010,6 @@
         }
       }
     },
-    "syncSetup.credentials": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Credentials"
-          }
-        }
-      }
-    },
     "syncSetup.deviceName": {
       "extractionState": "manual",
       "localizations": {
@@ -3142,61 +3054,6 @@
         }
       }
     },
-    "syncSetup.import": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import"
-          }
-        }
-      }
-    },
-    "syncSetup.importAction": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import"
-          }
-        }
-      }
-    },
-    "syncSetup.importCredentials": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Import Credentials"
-          }
-        }
-      }
-    },
-    "syncSetup.importHint": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Paste the credentials from another device."
-          }
-        }
-      }
-    },
-    "syncSetup.method": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Method"
-          }
-        }
-      }
-    },
     "syncSetup.notesPassword": {
       "extractionState": "manual",
       "localizations": {
@@ -3215,17 +3072,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "The password that unlocks your notes — used to protect your encryption key on the server."
-          }
-        }
-      }
-    },
-    "syncSetup.register": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Register"
           }
         }
       }
@@ -3325,39 +3171,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "That encryption password doesn't open this account's notes key. Use the encryption password from your other devices, not your server password. Nothing has been set up yet, so you can try again."
-          }
-        }
-      }
-    },
-    "syncSetupError.invalidCredentials": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Invalid credentials data"
-          }
-        }
-      }
-    },
-    "syncSetupError.needsEndpoint": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Server URL is required when importing a raw API key"
-          }
-        }
-      }
-    },
-    "syncSetupError.wrongPassword": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Incorrect password — could not decrypt credentials"
           }
         }
       }

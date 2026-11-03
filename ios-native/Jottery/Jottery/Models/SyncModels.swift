@@ -16,12 +16,6 @@ struct RegisterDeviceResponse: Codable {
     let deviceName: String
 }
 
-struct CloneDeviceRequest: Codable {
-    let apiKey: String
-    let deviceName: String
-    let deviceType: String  // "ios"
-}
-
 // MARK: - Sync Push
 
 struct SyncPushRequest: Codable {

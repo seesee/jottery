@@ -47,9 +47,6 @@ enum L {
     static var settingsSyncSetUp: String { String(localized: "settings.syncSetUp") }
     static var syncDisconnectServerTooOld: String { String(localized: "syncDisconnect.serverTooOld") }
     static var syncDisconnectStillRegistered: String { String(localized: "syncDisconnect.stillRegistered") }
-    static var syncSetupErrorInvalidCredentials: String { String(localized: "syncSetupError.invalidCredentials") }
-    static var syncSetupErrorNeedsEndpoint: String { String(localized: "syncSetupError.needsEndpoint") }
-    static var syncSetupErrorWrongPassword: String { String(localized: "syncSetupError.wrongPassword") }
     static var syncSetupErrorWrongVaultPassword: String { String(localized: "syncSetupError.wrongVaultPassword") }
     static var syncSetupErrorEncryptionPasswordMismatch: String { String(localized: "syncSetupError.encryptionPasswordMismatch") }
     static var syncSetupErrorAccountKeyDiffers: String { String(localized: "syncSetupError.accountKeyDiffers") }
@@ -188,23 +185,16 @@ enum L {
     static var setupPasswordsDoNotMatch: String { String(localized: "setup.passwordsDoNotMatch") }
     static var setupPasswordWarning: String { String(localized: "setup.passwordWarning") }
     static var setupCreateVault: String { String(localized: "setup.createVault") }
-    static var setupMethod: String { String(localized: "setup.method") }
-    static var setupRegister: String { String(localized: "setup.register") }
-    static var setupImport: String { String(localized: "setup.import") }
     static var setupServerUrl: String { String(localized: "setup.serverUrl") }
     static var setupEmail: String { String(localized: "setup.email") }
     static var setupServerPassword: String { String(localized: "setup.serverPassword") }
     static var setupDeviceName: String { String(localized: "setup.deviceName") }
     static var setupRegisterDevice: String { String(localized: "setup.registerDevice") }
-    static var setupImportCredentials: String { String(localized: "setup.importCredentials") }
-    static var setupCredentials: String { String(localized: "setup.credentials") }
     static var setupConnected: String { String(localized: "setup.connected") }
     static var setupEncryptionPassword: String { String(localized: "setup.encryptionPassword") }
     static var setupEncryptionPasswordHint: String { String(localized: "setup.encryptionPasswordHint") }
     static var setupUnlockAndSync: String { String(localized: "setup.unlockAndSync") }
     static var setupProgressCreatingVault: String { String(localized: "setup.progressCreatingVault") }
-    static var setupProgressDecrypting: String { String(localized: "setup.progressDecrypting") }
-    static var setupProgressRegistering: String { String(localized: "setup.progressRegistering") }
     static var setupProgressSettingUp: String { String(localized: "setup.progressSettingUp") }
     static var setupProgressPushing: String { String(localized: "setup.progressPushing") }
     static var setupProgressPulling: String { String(localized: "setup.progressPulling") }
@@ -225,9 +215,6 @@ enum L {
     // MARK: - Sync Setup
 
     static var syncSetupTitle: String { String(localized: "syncSetup.title") }
-    static var syncSetupMethod: String { String(localized: "syncSetup.method") }
-    static var syncSetupRegister: String { String(localized: "syncSetup.register") }
-    static var syncSetupImport: String { String(localized: "syncSetup.import") }
     static var syncSetupRegisterDevice: String { String(localized: "syncSetup.registerDevice") }
     static var syncSetupServerUrl: String { String(localized: "syncSetup.serverUrl") }
     static var syncSetupEmail: String { String(localized: "syncSetup.email") }
@@ -237,10 +224,6 @@ enum L {
     static var syncSetupNotesPasswordHint: String { String(localized: "syncSetup.notesPasswordHint") }
     static var syncSetupEnvelopeUploadFailed: String { String(localized: "syncSetup.envelopeUploadFailed") }
     static var syncSetupRegisterAction: String { String(localized: "syncSetup.registerAction") }
-    static var syncSetupImportCredentials: String { String(localized: "syncSetup.importCredentials") }
-    static var syncSetupImportHint: String { String(localized: "syncSetup.importHint") }
-    static var syncSetupCredentials: String { String(localized: "syncSetup.credentials") }
-    static var syncSetupImportAction: String { String(localized: "syncSetup.importAction") }
     static var syncSetupSuccess: String { String(localized: "syncSetup.success") }
     static var syncSetupDone: String { String(localized: "syncSetup.done") }
     static var syncSetupCancel: String { String(localized: "syncSetup.cancel") }
