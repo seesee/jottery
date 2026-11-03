@@ -157,7 +157,7 @@ private struct ConnectToServerView: View {
                 Label(L.setupConnected, systemImage: "checkmark.circle.fill")
                     .foregroundStyle(.green)
 
-                SecureField(L.setupEncryptionPassword, text: $encryptionPassword)
+                PasswordField(L.setupEncryptionPassword, text: $encryptionPassword)
                     .textFieldStyle(.roundedBorder)
                     .frame(maxWidth: 320)
                     .disabled(isWorking)
@@ -231,7 +231,7 @@ private struct ConnectToServerView: View {
                 .textInputAutocapitalization(.never)
                 .frame(maxWidth: 320)
 
-            SecureField(L.setupServerPassword, text: $password)
+            PasswordField(L.setupServerPassword, text: $password)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 320)
 

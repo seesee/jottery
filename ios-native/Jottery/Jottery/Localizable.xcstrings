@@ -557,6 +557,28 @@
         }
       }
     },
+    "common.hidePassword": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide password"
+          }
+        }
+      }
+    },
+    "common.showPassword": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show password"
+          }
+        }
+      }
+    },
     "conflict.banner": {
       "extractionState": "manual",
       "localizations": {

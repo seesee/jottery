@@ -87,6 +87,8 @@ enum L {
     // MARK: - Common
 
     static var commonCancel: String { String(localized: "common.cancel") }
+    static var commonShowPassword: String { String(localized: "common.showPassword") }
+    static var commonHidePassword: String { String(localized: "common.hidePassword") }
 
     // MARK: - Note List
 

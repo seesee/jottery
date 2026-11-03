@@ -88,7 +88,7 @@ struct SyncSetupView: View {
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
 
-            SecureField(L.syncSetupServerPassword, text: $password)
+            PasswordField(L.syncSetupServerPassword, text: $password)
 
             TextField(L.syncSetupDeviceName, text: $deviceName)
 
@@ -96,7 +96,7 @@ struct SyncSetupView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            SecureField(L.syncSetupNotesPassword, text: $notesPassword)
+            PasswordField(L.syncSetupNotesPassword, text: $notesPassword)
 
             Button(action: registerDevice) {
                 if isWorking {
