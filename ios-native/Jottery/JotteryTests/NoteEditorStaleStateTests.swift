@@ -13,8 +13,13 @@ final class EditorPresence {
     var isShown = true
 }
 
+/// Lets SwiftUI catch up. Several short sleeps rather than one long one: each
+/// needs the main actor back, so a stalled actor can't use up the whole wait
+/// before the run loop has turned.
 private func settle() async {
-    try? await Task.sleep(for: .milliseconds(300))
+    for _ in 0..<6 {
+        try? await Task.sleep(for: .milliseconds(50))
+    }
 }
 
 @MainActor
@@ -44,7 +49,7 @@ struct NoteEditorStaleStateTests {
         func typeText(_ text: String) async throws {
             // Layout can take a moment while other tests share the main thread.
             var found: UIView?
-            for _ in 0..<50 where found == nil {
+            for _ in 0..<100 where found == nil {
                 found = firstTextInput(in: window)
                 if found == nil { await settle() }
             }

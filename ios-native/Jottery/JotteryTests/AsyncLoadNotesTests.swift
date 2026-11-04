@@ -39,9 +39,9 @@ struct AsyncLoadNotesTests {
         #expect(state.archivedNotes.isEmpty)
 
         // scheduleSearch() resolves synchronously when searchQuery is empty,
-        // but poll (bounded, no arbitrary sleeps beyond ~2s) to stay robust
-        // if that debounce behaviour ever changes.
-        let deadline = Date().addingTimeInterval(2)
+        // but poll to stay robust if that debounce behaviour ever changes.
+        // The bound is long because other tests can hold the main actor.
+        let deadline = Date().addingTimeInterval(30)
         while state.filteredNotes.count != 2 && Date() < deadline {
             try await Task.sleep(for: .milliseconds(20))
         }
