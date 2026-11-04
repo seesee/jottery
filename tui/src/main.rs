@@ -626,12 +626,8 @@ fn perform_cli_sync(db: &Database, key: &[u8; 32], mut metadata: models::sync::S
         sync_repo.update_metadata(&metadata)?;
     }
 
-    // PULL: Simplified - just update sync timestamp
-    // Full pull implementation would fetch from server
-    let now = Utc::now();
-    metadata.last_pull_at = Some(now);
-    sync_repo.update_metadata(&metadata)?;
-
+    // This only pushes. The pull cursor is left alone, so the next full sync
+    // still fetches what other devices changed in the meantime.
     Ok(sync_count)
 }
 

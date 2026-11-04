@@ -254,6 +254,8 @@ pub struct SyncPullRequest {
     pub last_sync_at: Option<DateTime<Utc>>,
     pub known_note_ids: Vec<String>,
     pub known_attachment_ids: Vec<String>,
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
 }
 
 /// Pull response from server
@@ -265,6 +267,9 @@ pub struct SyncPullResponse {
     pub attachments: Vec<SyncAttachment>,
     pub versions: Vec<SyncNoteVersion>,
     pub synced_at: DateTime<Utc>,
+    /// More notes remain: ask again with a larger offset.
+    #[serde(default)]
+    pub has_more: bool,
     #[serde(default)]
     pub inbox_items: Option<Vec<InboxItem>>,
     #[serde(default)]
