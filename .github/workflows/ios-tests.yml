@@ -1,0 +1,44 @@
+name: iOS Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'ios-native/**'
+      - '.github/workflows/ios-tests.yml'
+  push:
+    tags: ['v*']  # Run on release tags
+  workflow_dispatch:  # Manual trigger
+
+permissions:
+  contents: read
+
+jobs:
+  ios-tests:
+    name: iOS Tests
+    # Pinned so that a new default image can't change the SDK unannounced.
+    runs-on: macos-26
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Package.resolved holds the Runestone pin, which the iOS 26 SDK needs,
+      # so resolution must not move it.
+      - name: Run tests
+        working-directory: ios-native/Jottery
+        run: |
+          xcodebuild test \
+            -project Jottery.xcodeproj \
+            -scheme Jottery \
+            -destination 'platform=iOS Simulator,name=iPhone 17' \
+            -disableAutomaticPackageResolution \
+            -resultBundlePath TestResults.xcresult
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ios-test-results
+          path: ios-native/Jottery/TestResults.xcresult
+          retention-days: 7

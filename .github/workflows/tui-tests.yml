@@ -1,0 +1,33 @@
+name: TUI Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tui/**'
+      - '.github/workflows/tui-tests.yml'
+  push:
+    tags: ['v*']  # Run on release tags
+  workflow_dispatch:  # Manual trigger
+
+permissions:
+  contents: read
+
+jobs:
+  tui-tests:
+    name: TUI Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tui
+
+      # --no-fail-fast because cargo otherwise stops at the first failing
+      # target, and the locale tests run after the unit tests.
+      - name: Run tests
+        working-directory: tui
+        run: cargo test --locked --no-fail-fast
