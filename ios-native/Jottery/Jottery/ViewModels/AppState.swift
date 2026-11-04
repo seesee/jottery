@@ -985,6 +985,19 @@ final class AppState {
         scheduleAutoSync()
     }
 
+    /// Save what the editor holds onto the note as it stands now, so a pin, a lock
+    /// or new attachments that landed since the editor loaded it aren't undone.
+    func saveEditorFields(_ fields: NoteEditorFields) throws {
+        guard let latest = displayedNote(id: fields.noteId) else { return }
+        try saveNote(fields.applied(to: latest))
+    }
+
+    /// Put the note as stored into version history, before an edit overwrites it.
+    func keepCurrentVersion(ofNote id: String) throws {
+        guard let noteRepo, let versionRepo, let record = try noteRepo.getRaw(id: id) else { return }
+        try versionRepo.createVersion(from: record, reason: "pre-overwrite")
+    }
+
     func duplicateNote(id: String) throws {
         guard let noteRepo, let key = keyManager.masterKey else { return }
         guard let original = try noteRepo.get(id: id, key: key) else { return }

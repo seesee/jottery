@@ -10,6 +10,11 @@ struct NoteEditorView: View {
     @State private var wordWrap: Bool
     @State private var color: String?
     @State private var showPreview: Bool
+    /// What the editor last loaded or saved. Only a difference from this is an edit.
+    @State private var baseline: NoteEditorFields
+    /// Changes when the text is replaced from outside, for a fresh editor: Runestone
+    /// ignores new text while it has focus, and would type over it.
+    @State private var editorGeneration = 0
     @State private var saveTask: Task<Void, Never>?
     @State private var didSaveDuringSession = false
     @State private var showVersionHistory = false
@@ -28,6 +33,7 @@ struct NoteEditorView: View {
         _wordWrap = State(initialValue: note.wordWrap)
         _color = State(initialValue: note.color)
         _showPreview = State(initialValue: note.showPreview)
+        _baseline = State(initialValue: NoteEditorFields(note: note))
     }
 
     /// Whether the note is read-only (locked or archived).
@@ -71,6 +77,7 @@ struct NoteEditorView: View {
                     )
                 }
             }
+            .id(editorGeneration)
             // Attached once here (not per-branch) so tag/content edits made while in
             // preview mode — which has no editor of its own — still trigger a save.
             .onChange(of: content) { _, _ in
@@ -329,20 +336,16 @@ struct NoteEditorView: View {
                 }
             }
         }
-        .onChange(of: note.id) { oldId, _ in
-            // `note` already reflects the incoming note by the time this closure
-            // runs, so the outgoing note's pending edits must be flushed using the
-            // pre-reset @State values (still present below) against the outgoing
-            // note's own stored record — not against `note`/`hasChanges`.
-            flushOutgoingNote(id: oldId)
-            // Reset state when switching notes
-            content = note.content
-            tags = note.tags
-            syntaxLanguage = note.syntaxLanguage
-            wordWrap = note.wordWrap
-            color = note.color
-            showPreview = note.showPreview
-            didSaveDuringSession = false
+        .onChange(of: NoteEditorFields(note: note)) { previous, incoming in
+            if previous.noteId != incoming.noteId {
+                // Switching notes: the @State values still hold the outgoing note's
+                // edits, so flush those before loading the incoming note.
+                flushOutgoingNote(id: previous.noteId)
+                load(incoming)
+                didSaveDuringSession = false
+            } else {
+                noteChanged(to: incoming)
+            }
         }
         .sheet(isPresented: $showVersionHistory) {
             VersionHistoryView(note: note)
@@ -384,6 +387,12 @@ struct NoteEditorView: View {
         // disabled while read-only, but nothing should ever schedule (or
         // stage a pending) save for a locked/archived note.
         guard !isReadOnly else { return }
+        // Loading a note from outside lands here too, but that isn't an edit.
+        guard hasChanges else {
+            saveTask?.cancel()
+            clearStalePendingNote(id: baseline.noteId)
+            return
+        }
         appState.keyManager.recordActivity()
         // Keep AppState updated with current editor state so lock()
         // can flush pending changes before wiping the encryption key.
@@ -396,32 +405,54 @@ struct NoteEditorView: View {
         }
     }
 
+    /// What's in the editor now.
+    private var fields: NoteEditorFields {
+        var fields = baseline
+        fields.content = content
+        fields.tags = tags
+        fields.syntaxLanguage = syntaxLanguage
+        fields.wordWrap = wordWrap
+        fields.color = color
+        fields.showPreview = showPreview
+        return fields
+    }
+
     private var hasChanges: Bool {
-        content != note.content ||
-        tags != note.tags ||
-        syntaxLanguage != note.syntaxLanguage ||
-        wordWrap != note.wordWrap ||
-        color != note.color ||
-        showPreview != note.showPreview
+        fields != baseline
+    }
+
+    private func load(_ incoming: NoteEditorFields) {
+        content = incoming.content
+        tags = incoming.tags
+        syntaxLanguage = incoming.syntaxLanguage
+        wordWrap = incoming.wordWrap
+        color = incoming.color
+        showPreview = incoming.showPreview
+        baseline = incoming
+        editorGeneration += 1
+    }
+
+    /// The stored note changed while it's open: a sync, a version restore, or the
+    /// editor's own save coming back.
+    private func noteChanged(to incoming: NoteEditorFields) {
+        switch NoteEditorFields.reconcile(editor: fields, baseline: baseline, incoming: incoming) {
+        case .nothing:
+            baseline = incoming
+        case .adopt:
+            load(incoming)
+        case .keepEdits:
+            try? appState.keepCurrentVersion(ofNote: incoming.noteId)
+            baseline = incoming
+        }
     }
 
     private func updatePendingNote() {
-        guard hasChanges else { return }
-        var updated = note
-        updated.content = content
-        updated.tags = tags
-        updated.syntaxLanguage = syntaxLanguage
-        updated.wordWrap = wordWrap
-        updated.color = color
-        updated.showPreview = showPreview
-        appState.pendingEditorNote = updated
+        guard hasChanges, let latest = appState.displayedNote(id: baseline.noteId) else { return }
+        appState.pendingEditorNote = fields.applied(to: latest)
     }
 
     /// Flushes unsaved edits for the note being navigated *away from*, using the
-    /// still-current (pre-reset) @State values, before `.onChange(of: note.id)`
-    /// reseeds state for the incoming note. Cannot reuse `hasChanges`/`saveImmediately`
-    /// because those compare against `note`, which already refers to the incoming
-    /// note by the time this runs.
+    /// still-current (pre-reset) @State values, before the incoming note is loaded.
     ///
     /// Every early return below clears `appState.pendingEditorNote` when it
     /// still refers to the outgoing note (matched by id). That pending
@@ -445,28 +476,15 @@ struct NoteEditorView: View {
             return
         }
 
-        let changed = content != outgoing.content ||
-            tags != outgoing.tags ||
-            syntaxLanguage != outgoing.syntaxLanguage ||
-            wordWrap != outgoing.wordWrap ||
-            color != outgoing.color ||
-            showPreview != outgoing.showPreview
-        guard changed else {
+        guard hasChanges else {
             clearStalePendingNote(id: id)
             return
         }
 
-        var updated = outgoing
-        updated.content = content
-        updated.tags = tags
-        updated.syntaxLanguage = syntaxLanguage
-        updated.wordWrap = wordWrap
-        updated.color = color
-        updated.showPreview = showPreview
-        try? appState.saveNote(updated)
+        try? appState.saveEditorFields(fields)
         appState.pendingEditorNote = nil
         // Note: `didSaveDuringSession` is deliberately not set here — the
-        // caller (`.onChange(of: note.id)`) resets it to false for the
+        // caller resets it to false for the
         // incoming note immediately after this call returns, so any
         // assignment here would be dead (jottery-a3sb review residual).
     }
@@ -484,20 +502,16 @@ struct NoteEditorView: View {
         saveTask?.cancel()
         // Defence in depth: never persist edits to a note that is currently
         // locked/archived, and drop any stale pending snapshot for it so a
-        // later lock() can't replay it either.
-        guard !isReadOnly else {
-            clearStalePendingNote(id: note.id)
+        // later lock() can't replay it either. This looks the note up afresh:
+        // a debounced save holds a copy of this view from when it was scheduled.
+        guard let latest = appState.displayedNote(id: baseline.noteId), !latest.locked, !latest.archived else {
+            clearStalePendingNote(id: baseline.noteId)
             return
         }
         guard hasChanges else { return }
-        var updated = note
-        updated.content = content
-        updated.tags = tags
-        updated.syntaxLanguage = syntaxLanguage
-        updated.wordWrap = wordWrap
-        updated.color = color
-        updated.showPreview = showPreview
-        try? appState.saveNote(updated)
+        let saving = fields
+        try? appState.saveEditorFields(saving)
+        baseline = saving
         appState.pendingEditorNote = nil
         didSaveDuringSession = true
     }
