@@ -135,6 +135,14 @@ fi
 sed -i.bak "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" tui/Cargo.toml && rm tui/Cargo.toml.bak
 echo "✓ Updated tui/Cargo.toml"
 
+# Update Cargo.lock (TUI client). Nothing else builds the TUI after this point,
+# and CI's --locked test run fails if the lock file is out of date.
+if ! (cd tui && cargo update --package jottery-tui --offline); then
+    echo "✗ Failed to update tui/Cargo.lock"
+    exit 1
+fi
+echo "✓ Updated tui/Cargo.lock"
+
 # Update Cargo.toml (server)
 sed -i.bak "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" server/Cargo.toml && rm server/Cargo.toml.bak
 echo "✓ Updated server/Cargo.toml"
@@ -175,7 +183,7 @@ echo ""
 
 echo "Version updated to $VERSION in:"
 echo "  - package.json (web client)"
-echo "  - tui/Cargo.toml (TUI client)"
+echo "  - tui/Cargo.toml and tui/Cargo.lock (TUI client)"
 echo "  - server/Cargo.toml (server)"
 echo "  - admin/package.json (admin dashboard)"
 echo "  - ios-native/Jottery/Jottery.xcodeproj (iOS client)"
