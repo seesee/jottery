@@ -1151,9 +1151,13 @@ mod tests {
     use serde_json::{json, Value};
     use std::io::{Read, Write};
     use std::net::TcpListener;
-    use std::sync::{Arc, Mutex};
+    use std::sync::{Arc, Mutex, OnceLock};
 
-    const KEY: [u8; 32] = [7; 32];
+    /// Generated at runtime, as a key should be, and shared by the helpers below.
+    fn key() -> &'static [u8; 32] {
+        static KEY: OnceLock<[u8; 32]> = OnceLock::new();
+        KEY.get_or_init(|| crate::crypto::CryptoService::new().generate_master_key())
+    }
 
     /// The server's clock: deliberately nowhere near this device's.
     fn server_time(page: i64) -> DateTime<Utc> {
@@ -1243,9 +1247,9 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("jottery-sync-test-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
         let mut app = App::new(dir.join("test.db"), None).unwrap();
-        let db = Database::in_memory("test").unwrap();
+        let db = Database::in_memory(&uuid::Uuid::new_v4().to_string()).unwrap();
 
-        let api_key = app.crypto.encrypt_text("device-api-key", &KEY).unwrap();
+        let api_key = app.crypto.encrypt_text("device-api-key", key()).unwrap();
         let metadata = SyncMetadata {
             api_key: Some(serde_json::to_string(&api_key).unwrap()),
             sync_enabled: true,
@@ -1255,13 +1259,13 @@ mod tests {
         SyncRepository::new(db.connection()).update_metadata(&metadata).unwrap();
 
         app.db = Some(db);
-        app.key = Some(KEY);
+        app.key = Some(*key());
         app
     }
 
     fn encrypted(text: &str) -> String {
         let crypto = crate::crypto::CryptoService::new();
-        serde_json::to_string(&crypto.encrypt_text(text, &KEY).unwrap()).unwrap()
+        serde_json::to_string(&crypto.encrypt_text(text, key()).unwrap()).unwrap()
     }
 
     fn remote_notes(count: usize) -> Vec<Value> {
@@ -1286,7 +1290,7 @@ mod tests {
 
     fn stored_note_count(app: &App) -> usize {
         let db = app.db.as_ref().unwrap();
-        NoteRepository::new(db.connection()).list(true, &KEY).unwrap().len()
+        NoteRepository::new(db.connection()).list(true, key()).unwrap().len()
     }
 
     fn sync_metadata(app: &App) -> SyncMetadata {
