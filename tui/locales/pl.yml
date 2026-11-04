@@ -567,6 +567,7 @@ backup:
   verifying_password: "Weryfikacja hasła..."
   restoring: "Przywracanie danych..."
   restored: "Przywrócono"
+  key_not_in_backup: "Ta kopia zapasowa została utworzona przez starszą wersję Jottery i nie zawiera swojego klucza. Można ją przywrócić tylko do sejfu, z którego pochodzi."
 
 # Progress indicators
 progress:

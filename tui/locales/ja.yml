@@ -567,6 +567,7 @@ backup:
   verifying_password: "パスワードを確認中..."
   restoring: "データを復元中..."
   restored: "復元完了"
+  key_not_in_backup: "このバックアップは古いバージョンの Jottery で作成されたため、鍵が含まれていません。作成元の保管庫にのみ復元できます。"
 
 # Progress indicators
 progress:

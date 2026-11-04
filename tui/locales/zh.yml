@@ -567,6 +567,7 @@ backup:
   verifying_password: "正在验证密码..."
   restoring: "正在恢复数据..."
   restored: "已恢复"
+  key_not_in_backup: "此备份由旧版 Jottery 创建，不包含其密钥。只能恢复到其来源的保险库。"
 
 # Progress indicators
 progress:

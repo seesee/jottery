@@ -567,6 +567,7 @@ backup:
   verifying_password: "Verificando senha..."
   restoring: "Restaurando dados..."
   restored: "Restaurado"
+  key_not_in_backup: "Este backup foi criado por uma versão antiga do Jottery e não contém a sua chave. Só pode ser restaurado no cofre de origem."
 
 # Progress indicators
 progress:
