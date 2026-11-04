@@ -110,4 +110,3 @@ jobs:
 
       - name: Run type check
         run: npm run check
-        continue-on-error: true
