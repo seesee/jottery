@@ -1,7 +1,7 @@
 # Jottery on iPhone Duo
 
-Exploratory branch (`feature/iphone-duo`), not for merging yet. The goal at this
-stage is that Jottery works on iPhone Duo, not that it is optimised for it.
+The goal at this stage is that Jottery works on iPhone Duo, not that it is
+optimised for it.
 
 ## The device, in short
 
@@ -30,7 +30,8 @@ page and its tech talks, and the iOS 27.2 SDK headers.
 ## Plan
 
 1. **Build with the latest SDK (27.2).** This gives full-screen layout on both
-   displays and vertical toolbars. ✅ (no change needed)
+   displays and vertical toolbars. ✅ `FoldLayout` uses iOS 27.1 APIs, so the project
+   needs Xcode 27.1 or later to build.
 2. **Audit for screen assumptions.** I checked for `UIScreen.main`, idiom and
    orientation checks, fixed widths and orientation locks. ✅ None found. The only
    fixed widths are `maxWidth` caps on the setup and unlock forms, which is correct.
