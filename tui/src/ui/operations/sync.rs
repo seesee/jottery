@@ -11,6 +11,9 @@ use crate::{
 
 use super::super::app::App;
 
+/// Notes to ask for per pull request.
+const PULL_PAGE_SIZE: i64 = 100;
+
 /// Trigger manual sync
 pub fn trigger_sync(app: &mut App) {
     app.debug_log("trigger_sync - Called");
@@ -506,393 +509,414 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
             .flat_map(|note| note.attachments.iter().map(|att| att.id.clone()))
             .collect();
 
-        (last_sync, known_ids, known_att_ids)
-    };
-
-    let pull_request = SyncPullRequest {
-        last_sync_at: last_sync_for_pull,
-        known_note_ids,
-        known_attachment_ids,
+        (metadata.last_pull_at.or(last_sync), known_ids, known_att_ids)
     };
 
     let pull_url = format!("{}/api/v1/sync/pull", endpoint);
     let client = reqwest::blocking::Client::new();
 
-    let response = client
-        .post(&pull_url)
-        .header("Authorization", format!("Bearer {}", api_key))
-        .json(&pull_request)
-        .send()
-        .context("Failed to send pull request")?;
-
-    if !response.status().is_success() {
-        let status = response.status();
-        let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
-
-        // Provide user-friendly error messages
-        let error_msg = if status == 403 {
-            "Your account has been deactivated or is pending admin approval. Please contact the administrator."
-        } else if status == 401 {
-            "Invalid API key or authentication failed. Try re-registering your device."
-        } else {
-            &error_body
+    // The server sends one page of notes at a time. Versions, deletions and the
+    // inbox come whole with every page, so they're applied once, from the last
+    // page, when all the notes they refer to exist.
+    let mut offset: i64 = 0;
+    let mut first_page_at = None;
+    loop {
+        let pull_request = SyncPullRequest {
+            last_sync_at: last_sync_for_pull,
+            known_note_ids: known_note_ids.clone(),
+            known_attachment_ids: known_attachment_ids.clone(),
+            limit: Some(PULL_PAGE_SIZE),
+            offset: Some(offset),
         };
 
-        anyhow::bail!("Pull failed: {}", error_msg);
-    }
+        let response = client
+            .post(&pull_url)
+            .header("Authorization", format!("Bearer {}", api_key))
+            .json(&pull_request)
+            .send()
+            .context("Failed to send pull request")?;
 
-    // Parse the JSON response
-    let response_text = response.text()
-        .context("Failed to read pull response text")?;
-    let pull_response: SyncPullResponse = serde_json::from_str(&response_text)
-        .context("Failed to parse pull response")?;
+        if !response.status().is_success() {
+            let status = response.status();
+            let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
 
-    use base64::{Engine as _, engine::general_purpose};
-    let attachment_repo = AttachmentRepository::new(db.connection());
-
-    // Decrypt attachments and build a map for quick lookup
-    let mut attachment_data_map: std::collections::HashMap<String, Vec<u8>> = std::collections::HashMap::new();
-    for sync_attachment in &pull_response.attachments {
-        if let Ok(decoded_data) = general_purpose::STANDARD.decode(&sync_attachment.data) {
-            if let Ok(encrypted_blob) = serde_json::from_slice::<crate::crypto::EncryptedData>(&decoded_data) {
-                if let Ok(decrypted_data) = app.crypto.decrypt_binary(&encrypted_blob, key) {
-                    attachment_data_map.insert(sync_attachment.id.clone(), decrypted_data);
-                }
-            }
-        }
-    }
-
-    for remote_note in pull_response.notes {
-        // Decrypt content and tags from server (they're stored encrypted on server)
-        let encrypted_content: crate::crypto::EncryptedData = serde_json::from_str(&remote_note.content)?;
-        let decrypted_content = app.crypto.decrypt_text(&encrypted_content, key)?;
-
-        let decrypted_tags: Vec<String> = remote_note.tags.iter()
-            .flat_map(|tag_json| {
-                // Parse and decrypt the tag
-                let encrypted_tag: crate::crypto::EncryptedData = serde_json::from_str(tag_json).ok()?;
-                let tag_json_str = app.crypto.decrypt_text(&encrypted_tag, key).ok()?;
-
-                // Try parsing as individual string first (new format)
-                if let Ok(tag) = serde_json::from_str::<String>(&tag_json_str) {
-                    if !tag.trim().is_empty() {
-                        return Some(vec![tag]);
-                    }
-                }
-
-                // Try parsing as array (legacy format)
-                if let Ok(tags) = serde_json::from_str::<Vec<String>>(&tag_json_str) {
-                    let valid_tags: Vec<String> = tags.into_iter()
-                        .filter(|t| !t.trim().is_empty())
-                        .collect();
-                    if !valid_tags.is_empty() {
-                        return Some(valid_tags);
-                    }
-                }
-
-                None
-            })
-            .flatten()
-            .collect();
-
-        // Process attachments for this note
-        let mut note_attachments: Vec<Attachment> = Vec::new();
-        app.debug_log(&format!("Pull - Processing {} attachments for note {}", remote_note.attachments.len(), remote_note.id));
-
-        for attachment_ref in &remote_note.attachments {
-            app.debug_log(&format!("Pull - Processing attachment: {} ({})", attachment_ref.id, attachment_ref.mime_type));
-
-            // Get decrypted binary data from our map
-            if let Some(decrypted_data) = attachment_data_map.get(&attachment_ref.id) {
-                app.debug_log(&format!("Pull - Found attachment data in map, size: {} bytes", decrypted_data.len()));
-
-                // Decrypt the filename
-                let encrypted_filename: crate::crypto::EncryptedData = match serde_json::from_str(&attachment_ref.filename) {
-                    Ok(data) => data,
-                    Err(e) => {
-                        app.debug_log(&format!("Pull - Failed to parse filename as JSON for {}: {}, raw: {:?}", attachment_ref.id, e, &attachment_ref.filename[..100.min(attachment_ref.filename.len())]));
-                        continue;
-                    }
-                };
-
-                let decrypted_filename = match app.crypto.decrypt_text(&encrypted_filename, key) {
-                    Ok(filename) => filename,
-                    Err(e) => {
-                        app.debug_log(&format!("Pull - Failed to decrypt filename for {}: {}", attachment_ref.id, e));
-                        continue;
-                    }
-                };
-
-                // Parse the filename - try JSON first (new format), fall back to plain string (legacy format)
-                let filename: String = serde_json::from_str(&decrypted_filename)
-                    .unwrap_or(decrypted_filename);
-
-                app.debug_log(&format!("Pull - Decrypted filename: {}", filename));
-
-                // Store in database
-                attachment_repo.store(
-                    &attachment_ref.id,
-                    &filename,
-                    &attachment_ref.mime_type,
-                    attachment_ref.size,
-                    decrypted_data,
-                    key
-                )?;
-
-                app.debug_log("Pull - Stored attachment in database");
-
-                // Add to note's attachment array
-                note_attachments.push(Attachment {
-                    id: attachment_ref.id.clone(),
-                    filename: filename.clone(),
-                    mime_type: attachment_ref.mime_type.clone(),
-                    size: attachment_ref.size,
-                    data: attachment_ref.data.clone(),
-                    thumbnail_data: None,
-                });
-
-                app.debug_log("Pull - Added attachment to note_attachments array");
+            // Provide user-friendly error messages
+            let error_msg = if status == 403 {
+                "Your account has been deactivated or is pending admin approval. Please contact the administrator."
+            } else if status == 401 {
+                "Invalid API key or authentication failed. Try re-registering your device."
             } else {
-                app.debug_log(&format!("Pull - Attachment data NOT found in map for {} - will try to preserve from local", attachment_ref.id));
-                // Server didn't send data because we said we had it - mark for local preservation
-            }
-        }
-
-        app.debug_log(&format!("Pull - Total attachments from server: {}", note_attachments.len()));
-
-        // Check if we have this note in the database (not just in-memory list)
-        let existing_note = note_repo.get(&remote_note.id, key)?;
-
-        // If we have fewer attachments than the remote says we should have,
-        // preserve any local attachments that weren't sent by the server
-        if let Some(ref local_note) = existing_note {
-            for attachment_ref in &remote_note.attachments {
-                // If this attachment wasn't in the server data (we already had it)
-                if !note_attachments.iter().any(|a| a.id == attachment_ref.id) {
-                    // Try to find it in local attachments
-                    if let Some(local_att) = local_note.attachments.iter().find(|a| a.id == attachment_ref.id) {
-                        app.debug_log(&format!("Pull - Preserving local attachment: {} ({})", local_att.id, local_att.filename));
-                        note_attachments.push(local_att.clone());
-                    } else {
-                        app.debug_log(&format!("Pull - WARNING: Attachment {} not found locally either!", attachment_ref.id));
-                    }
-                }
-            }
-            app.debug_log(&format!("Pull - Total attachments after preserving local: {}", note_attachments.len()));
-        }
-
-        if let Some(mut local_note) = existing_note {
-            // Note exists in database - check if we should update it
-            app.debug_log(&format!("Pull - Existing note found: {}", remote_note.id));
-            app.debug_log(&format!("  Remote modified_at: {}", remote_note.modified_at));
-            app.debug_log(&format!("  Local modified_at: {}", local_note.modified_at));
-            app.debug_log(&format!("  Remote > Local? {}", remote_note.modified_at > local_note.modified_at));
-            app.debug_log(&format!("  Local attachments: {}, Remote attachments: {}", local_note.attachments.len(), note_attachments.len()));
-
-            // Conflict resolution: Last-Write-Wins, but also update if attachments differ
-            // During force sync, always update to ensure we pull latest from server
-            let should_update = if force {
-                app.debug_log("  -> Force sync mode: will update regardless of timestamps");
-                true
-            } else {
-                remote_note.modified_at > local_note.modified_at
-                    || note_attachments.len() != local_note.attachments.len()
+                &error_body
             };
 
-            if should_update {
-                if force {
-                    app.debug_log("  -> Updating note (force sync)");
-                } else if remote_note.modified_at > local_note.modified_at {
-                    app.debug_log("  -> Updating note (remote is newer)");
+            anyhow::bail!("Pull failed: {}", error_msg);
+        }
+
+        // Parse the JSON response
+        let response_text = response.text()
+            .context("Failed to read pull response text")?;
+        let pull_response: SyncPullResponse = serde_json::from_str(&response_text)
+            .context("Failed to parse pull response")?;
+
+        let page_note_count = pull_response.notes.len() as i64;
+        let is_last_page = !pull_response.has_more || page_note_count == 0;
+        first_page_at.get_or_insert(pull_response.synced_at);
+
+        use base64::{Engine as _, engine::general_purpose};
+        let attachment_repo = AttachmentRepository::new(db.connection());
+
+        // Decrypt attachments and build a map for quick lookup
+        let mut attachment_data_map: std::collections::HashMap<String, Vec<u8>> = std::collections::HashMap::new();
+        for sync_attachment in &pull_response.attachments {
+            if let Ok(decoded_data) = general_purpose::STANDARD.decode(&sync_attachment.data) {
+                if let Ok(encrypted_blob) = serde_json::from_slice::<crate::crypto::EncryptedData>(&decoded_data) {
+                    if let Ok(decrypted_data) = app.crypto.decrypt_binary(&encrypted_blob, key) {
+                        attachment_data_map.insert(sync_attachment.id.clone(), decrypted_data);
+                    }
+                }
+            }
+        }
+
+        for remote_note in pull_response.notes {
+            // Decrypt content and tags from server (they're stored encrypted on server)
+            let encrypted_content: crate::crypto::EncryptedData = serde_json::from_str(&remote_note.content)?;
+            let decrypted_content = app.crypto.decrypt_text(&encrypted_content, key)?;
+
+            let decrypted_tags: Vec<String> = remote_note.tags.iter()
+                .flat_map(|tag_json| {
+                    // Parse and decrypt the tag
+                    let encrypted_tag: crate::crypto::EncryptedData = serde_json::from_str(tag_json).ok()?;
+                    let tag_json_str = app.crypto.decrypt_text(&encrypted_tag, key).ok()?;
+
+                    // Try parsing as individual string first (new format)
+                    if let Ok(tag) = serde_json::from_str::<String>(&tag_json_str) {
+                        if !tag.trim().is_empty() {
+                            return Some(vec![tag]);
+                        }
+                    }
+
+                    // Try parsing as array (legacy format)
+                    if let Ok(tags) = serde_json::from_str::<Vec<String>>(&tag_json_str) {
+                        let valid_tags: Vec<String> = tags.into_iter()
+                            .filter(|t| !t.trim().is_empty())
+                            .collect();
+                        if !valid_tags.is_empty() {
+                            return Some(valid_tags);
+                        }
+                    }
+
+                    None
+                })
+                .flatten()
+                .collect();
+
+            // Process attachments for this note
+            let mut note_attachments: Vec<Attachment> = Vec::new();
+            app.debug_log(&format!("Pull - Processing {} attachments for note {}", remote_note.attachments.len(), remote_note.id));
+
+            for attachment_ref in &remote_note.attachments {
+                app.debug_log(&format!("Pull - Processing attachment: {} ({})", attachment_ref.id, attachment_ref.mime_type));
+
+                // Get decrypted binary data from our map
+                if let Some(decrypted_data) = attachment_data_map.get(&attachment_ref.id) {
+                    app.debug_log(&format!("Pull - Found attachment data in map, size: {} bytes", decrypted_data.len()));
+
+                    // Decrypt the filename
+                    let encrypted_filename: crate::crypto::EncryptedData = match serde_json::from_str(&attachment_ref.filename) {
+                        Ok(data) => data,
+                        Err(e) => {
+                            app.debug_log(&format!("Pull - Failed to parse filename as JSON for {}: {}, raw: {:?}", attachment_ref.id, e, &attachment_ref.filename[..100.min(attachment_ref.filename.len())]));
+                            continue;
+                        }
+                    };
+
+                    let decrypted_filename = match app.crypto.decrypt_text(&encrypted_filename, key) {
+                        Ok(filename) => filename,
+                        Err(e) => {
+                            app.debug_log(&format!("Pull - Failed to decrypt filename for {}: {}", attachment_ref.id, e));
+                            continue;
+                        }
+                    };
+
+                    // Parse the filename - try JSON first (new format), fall back to plain string (legacy format)
+                    let filename: String = serde_json::from_str(&decrypted_filename)
+                        .unwrap_or(decrypted_filename);
+
+                    app.debug_log(&format!("Pull - Decrypted filename: {}", filename));
+
+                    // Store in database
+                    attachment_repo.store(
+                        &attachment_ref.id,
+                        &filename,
+                        &attachment_ref.mime_type,
+                        attachment_ref.size,
+                        decrypted_data,
+                        key
+                    )?;
+
+                    app.debug_log("Pull - Stored attachment in database");
+
+                    // Add to note's attachment array
+                    note_attachments.push(Attachment {
+                        id: attachment_ref.id.clone(),
+                        filename: filename.clone(),
+                        mime_type: attachment_ref.mime_type.clone(),
+                        size: attachment_ref.size,
+                        data: attachment_ref.data.clone(),
+                        thumbnail_data: None,
+                    });
+
+                    app.debug_log("Pull - Added attachment to note_attachments array");
                 } else {
-                    app.debug_log("  -> Updating note (attachments differ even though timestamps match)");
+                    app.debug_log(&format!("Pull - Attachment data NOT found in map for {} - will try to preserve from local", attachment_ref.id));
+                    // Server didn't send data because we said we had it - mark for local preservation
                 }
-                // Capture local version BEFORE overwriting with remote
-                let _ = version_repo.create_version(&local_note, pull_response.synced_at, VersionReason::Sync, key);
+            }
 
-                // Remote is newer, update local with decrypted content
-                local_note.content = decrypted_content;
-                local_note.tags = decrypted_tags;
-                local_note.attachments = note_attachments.clone();
-                local_note.modified_at = remote_note.modified_at;
-                local_note.synced_at = Some(pull_response.synced_at); // Mark as synced
-                local_note.pinned = remote_note.pinned;
-                local_note.archived = remote_note.archived;
-                local_note.archived_at = remote_note.archived_at;
-                local_note.locked = remote_note.locked;
-                local_note.locked_at = remote_note.locked_at;
-                local_note.deleted = remote_note.deleted;
-                local_note.deleted_at = remote_note.deleted_at;
-                local_note.version = remote_note.version;
-                local_note.word_wrap = remote_note.word_wrap.unwrap_or(true);
+            app.debug_log(&format!("Pull - Total attachments from server: {}", note_attachments.len()));
+
+            // Check if we have this note in the database (not just in-memory list)
+            let existing_note = note_repo.get(&remote_note.id, key)?;
+
+            // If we have fewer attachments than the remote says we should have,
+            // preserve any local attachments that weren't sent by the server
+            if let Some(ref local_note) = existing_note {
+                for attachment_ref in &remote_note.attachments {
+                    // If this attachment wasn't in the server data (we already had it)
+                    if !note_attachments.iter().any(|a| a.id == attachment_ref.id) {
+                        // Try to find it in local attachments
+                        if let Some(local_att) = local_note.attachments.iter().find(|a| a.id == attachment_ref.id) {
+                            app.debug_log(&format!("Pull - Preserving local attachment: {} ({})", local_att.id, local_att.filename));
+                            note_attachments.push(local_att.clone());
+                        } else {
+                            app.debug_log(&format!("Pull - WARNING: Attachment {} not found locally either!", attachment_ref.id));
+                        }
+                    }
+                }
+                app.debug_log(&format!("Pull - Total attachments after preserving local: {}", note_attachments.len()));
+            }
+
+            if let Some(mut local_note) = existing_note {
+                // Note exists in database - check if we should update it
+                app.debug_log(&format!("Pull - Existing note found: {}", remote_note.id));
+                app.debug_log(&format!("  Remote modified_at: {}", remote_note.modified_at));
+                app.debug_log(&format!("  Local modified_at: {}", local_note.modified_at));
+                app.debug_log(&format!("  Remote > Local? {}", remote_note.modified_at > local_note.modified_at));
+                app.debug_log(&format!("  Local attachments: {}, Remote attachments: {}", local_note.attachments.len(), note_attachments.len()));
+
+                // Conflict resolution: Last-Write-Wins, but also update if attachments differ
+                // During force sync, always update to ensure we pull latest from server
+                let should_update = if force {
+                    app.debug_log("  -> Force sync mode: will update regardless of timestamps");
+                    true
+                } else {
+                    remote_note.modified_at > local_note.modified_at
+                        || note_attachments.len() != local_note.attachments.len()
+                };
+
+                if should_update {
+                    if force {
+                        app.debug_log("  -> Updating note (force sync)");
+                    } else if remote_note.modified_at > local_note.modified_at {
+                        app.debug_log("  -> Updating note (remote is newer)");
+                    } else {
+                        app.debug_log("  -> Updating note (attachments differ even though timestamps match)");
+                    }
+                    // Capture local version BEFORE overwriting with remote
+                    let _ = version_repo.create_version(&local_note, pull_response.synced_at, VersionReason::Sync, key);
+
+                    // Remote is newer, update local with decrypted content
+                    local_note.content = decrypted_content;
+                    local_note.tags = decrypted_tags;
+                    local_note.attachments = note_attachments.clone();
+                    local_note.modified_at = remote_note.modified_at;
+                    local_note.synced_at = Some(pull_response.synced_at); // Mark as synced
+                    local_note.pinned = remote_note.pinned;
+                    local_note.archived = remote_note.archived;
+                    local_note.archived_at = remote_note.archived_at;
+                    local_note.locked = remote_note.locked;
+                    local_note.locked_at = remote_note.locked_at;
+                    local_note.deleted = remote_note.deleted;
+                    local_note.deleted_at = remote_note.deleted_at;
+                    local_note.version = remote_note.version;
+                    local_note.word_wrap = remote_note.word_wrap.unwrap_or(true);
+                    if let Some(lang_str) = &remote_note.syntax_language {
+                        local_note.syntax_language = lang_str.parse().unwrap_or_default();
+                    }
+                    local_note.color = remote_note.color.clone();
+
+                    note_repo.update(&local_note, key)?;
+
+                    // Also update in-memory list if present
+                    if let Some(mem_note) = app.notes.iter_mut().find(|n| n.id == remote_note.id) {
+                        *mem_note = local_note;
+                    }
+
+                    sync_count += 1;
+                } else {
+                    app.debug_log("  -> NOT updating note (local is same or newer) - ATTACHMENTS WILL BE LOST!");
+                }
+            } else {
+                // New note from server, add it with decrypted content
+                let mut new_note = Note::new(decrypted_content);
+                new_note.id = remote_note.id.clone();
+                new_note.created_at = remote_note.created_at;
+                new_note.modified_at = remote_note.modified_at;
+                new_note.synced_at = Some(pull_response.synced_at); // Mark as synced
+                new_note.tags = decrypted_tags;
+                new_note.attachments = note_attachments;
+                new_note.pinned = remote_note.pinned;
+                new_note.archived = remote_note.archived;
+                new_note.archived_at = remote_note.archived_at;
+                new_note.locked = remote_note.locked;
+                new_note.locked_at = remote_note.locked_at;
+                new_note.deleted = remote_note.deleted;
+                new_note.deleted_at = remote_note.deleted_at;
+                new_note.version = remote_note.version;
+                new_note.word_wrap = remote_note.word_wrap.unwrap_or(true);
                 if let Some(lang_str) = &remote_note.syntax_language {
-                    local_note.syntax_language = lang_str.parse().unwrap_or_default();
+                    new_note.syntax_language = lang_str.parse().unwrap_or_default();
                 }
-                local_note.color = remote_note.color.clone();
+                new_note.color = remote_note.color.clone();
 
-                note_repo.update(&local_note, key)?;
+                note_repo.create(&new_note, key)?;
 
-                // Also update in-memory list if present
-                if let Some(mem_note) = app.notes.iter_mut().find(|n| n.id == remote_note.id) {
-                    *mem_note = local_note;
+                // Add to in-memory list only if not deleted
+                if !new_note.deleted {
+                    app.notes.insert(0, new_note);
                 }
 
                 sync_count += 1;
-            } else {
-                app.debug_log("  -> NOT updating note (local is same or newer) - ATTACHMENTS WILL BE LOST!");
-            }
-        } else {
-            // New note from server, add it with decrypted content
-            let mut new_note = Note::new(decrypted_content);
-            new_note.id = remote_note.id.clone();
-            new_note.created_at = remote_note.created_at;
-            new_note.modified_at = remote_note.modified_at;
-            new_note.synced_at = Some(pull_response.synced_at); // Mark as synced
-            new_note.tags = decrypted_tags;
-            new_note.attachments = note_attachments;
-            new_note.pinned = remote_note.pinned;
-            new_note.archived = remote_note.archived;
-            new_note.archived_at = remote_note.archived_at;
-            new_note.locked = remote_note.locked;
-            new_note.locked_at = remote_note.locked_at;
-            new_note.deleted = remote_note.deleted;
-            new_note.deleted_at = remote_note.deleted_at;
-            new_note.version = remote_note.version;
-            new_note.word_wrap = remote_note.word_wrap.unwrap_or(true);
-            if let Some(lang_str) = &remote_note.syntax_language {
-                new_note.syntax_language = lang_str.parse().unwrap_or_default();
-            }
-            new_note.color = remote_note.color.clone();
-
-            note_repo.create(&new_note, key)?;
-
-            // Add to in-memory list only if not deleted
-            if !new_note.deleted {
-                app.notes.insert(0, new_note);
-            }
-
-            sync_count += 1;
-        }
-    }
-
-    // Process incoming versions from server
-    app.debug_log(&format!("Pull - Received {} versions from server", pull_response.versions.len()));
-
-    for server_version in &pull_response.versions {
-        app.debug_log(&format!("Pull - Processing version: {} (v{})", server_version.version_key, server_version.version));
-
-        // Check if this version already exists
-        let existing_version = version_repo.get_version_by_key(&server_version.version_key)?;
-
-        if existing_version.is_none() {
-            // New version from server - decrypt and store it locally
-
-            // Decrypt content
-            let encrypted_content: crate::crypto::EncryptedData = match serde_json::from_str(&server_version.content) {
-                Ok(data) => data,
-                Err(e) => {
-                    app.debug_log(&format!("Pull - Failed to parse version content: {}, skipping", e));
-                    continue;
-                }
-            };
-
-            let decrypted_content = match app.crypto.decrypt_text(&encrypted_content, key) {
-                Ok(content) => content,
-                Err(e) => {
-                    app.debug_log(&format!("Pull - Failed to decrypt version content: {}, skipping", e));
-                    continue;
-                }
-            };
-
-            // Decrypt tags
-            let decrypted_tags: Vec<String> = server_version.tags.iter()
-                .flat_map(|tag_json| {
-                    let encrypted_tag: crate::crypto::EncryptedData = serde_json::from_str(tag_json).ok()?;
-                    let tag_json_str = app.crypto.decrypt_text(&encrypted_tag, key).ok()?;
-                    serde_json::from_str::<String>(&tag_json_str).ok()
-                })
-                .collect();
-
-            // Convert attachment refs
-            let version_attachments: Vec<Attachment> = server_version.attachments.iter().map(|att_ref| {
-                Attachment {
-                    id: att_ref.id.clone(),
-                    filename: att_ref.filename.clone(),
-                    mime_type: att_ref.mime_type.clone(),
-                    size: att_ref.size,
-                    data: att_ref.data.clone(),
-                    thumbnail_data: None,
-                }
-            }).collect();
-
-            // Parse version reason
-            let reason = if server_version.reason == "manual-sync" {
-                VersionReason::ManualSync
-            } else {
-                VersionReason::Sync
-            };
-
-            // Create local version
-            let local_version = crate::repository::NoteVersion {
-                version_key: server_version.version_key.clone(),
-                note_id: server_version.note_id.clone(),
-                version: server_version.version,
-                created_at: server_version.created_at,
-                synced_at: server_version.synced_at,
-                content: decrypted_content,
-                tags: decrypted_tags,
-                attachments: version_attachments,
-                syntax_language: server_version.syntax_language
-                    .as_ref()
-                    .and_then(|s| s.parse().ok()),
-                word_wrap: Some(server_version.word_wrap.unwrap_or(true)),
-                show_preview: server_version.show_preview,
-                color: server_version.color.clone(),
-                reason,
-                // Hash chain fields from server
-                content_hash: server_version.content_hash.clone(),
-                parent_hash: server_version.parent_hash.clone(),
-            };
-
-            // Store the version
-            if let Err(e) = version_repo.insert_version_from_sync(&local_version, key) {
-                app.debug_log(&format!("Pull - Failed to store version {}: {}", server_version.version_key, e));
-            } else {
-                app.debug_log(&format!("Pull - Stored version from server: {}", server_version.version_key));
             }
         }
-    }
 
-    // Handle hard deletions from server
-    // These are notes that were permanently deleted (trash emptied) on another device
-    for deletion in pull_response.deletions {
-        app.debug_log(&format!("Pull - Processing deletion for note {}", deletion.id));
+        if is_last_page {
+            // Process incoming versions from server
+            app.debug_log(&format!("Pull - Received {} versions from server", pull_response.versions.len()));
 
-        // Apply remote deletion (hard delete without re-syncing back)
-        if note_repo.apply_remote_deletion(&deletion.id)? {
-            app.debug_log(&format!("Pull - Hard deleted note {}", deletion.id));
+            for server_version in &pull_response.versions {
+                app.debug_log(&format!("Pull - Processing version: {} (v{})", server_version.version_key, server_version.version));
 
-            // Remove from in-memory list if present
-            if let Some(pos) = app.notes.iter().position(|n| n.id == deletion.id) {
-                app.notes.remove(pos);
+                // Check if this version already exists
+                let existing_version = version_repo.get_version_by_key(&server_version.version_key)?;
+
+                if existing_version.is_none() {
+                    // New version from server - decrypt and store it locally
+
+                    // Decrypt content
+                    let encrypted_content: crate::crypto::EncryptedData = match serde_json::from_str(&server_version.content) {
+                        Ok(data) => data,
+                        Err(e) => {
+                            app.debug_log(&format!("Pull - Failed to parse version content: {}, skipping", e));
+                            continue;
+                        }
+                    };
+
+                    let decrypted_content = match app.crypto.decrypt_text(&encrypted_content, key) {
+                        Ok(content) => content,
+                        Err(e) => {
+                            app.debug_log(&format!("Pull - Failed to decrypt version content: {}, skipping", e));
+                            continue;
+                        }
+                    };
+
+                    // Decrypt tags
+                    let decrypted_tags: Vec<String> = server_version.tags.iter()
+                        .flat_map(|tag_json| {
+                            let encrypted_tag: crate::crypto::EncryptedData = serde_json::from_str(tag_json).ok()?;
+                            let tag_json_str = app.crypto.decrypt_text(&encrypted_tag, key).ok()?;
+                            serde_json::from_str::<String>(&tag_json_str).ok()
+                        })
+                        .collect();
+
+                    // Convert attachment refs
+                    let version_attachments: Vec<Attachment> = server_version.attachments.iter().map(|att_ref| {
+                        Attachment {
+                            id: att_ref.id.clone(),
+                            filename: att_ref.filename.clone(),
+                            mime_type: att_ref.mime_type.clone(),
+                            size: att_ref.size,
+                            data: att_ref.data.clone(),
+                            thumbnail_data: None,
+                        }
+                    }).collect();
+
+                    // Parse version reason
+                    let reason = if server_version.reason == "manual-sync" {
+                        VersionReason::ManualSync
+                    } else {
+                        VersionReason::Sync
+                    };
+
+                    // Create local version
+                    let local_version = crate::repository::NoteVersion {
+                        version_key: server_version.version_key.clone(),
+                        note_id: server_version.note_id.clone(),
+                        version: server_version.version,
+                        created_at: server_version.created_at,
+                        synced_at: server_version.synced_at,
+                        content: decrypted_content,
+                        tags: decrypted_tags,
+                        attachments: version_attachments,
+                        syntax_language: server_version.syntax_language
+                            .as_ref()
+                            .and_then(|s| s.parse().ok()),
+                        word_wrap: Some(server_version.word_wrap.unwrap_or(true)),
+                        show_preview: server_version.show_preview,
+                        color: server_version.color.clone(),
+                        reason,
+                        // Hash chain fields from server
+                        content_hash: server_version.content_hash.clone(),
+                        parent_hash: server_version.parent_hash.clone(),
+                    };
+
+                    // Store the version
+                    if let Err(e) = version_repo.insert_version_from_sync(&local_version, key) {
+                        app.debug_log(&format!("Pull - Failed to store version {}: {}", server_version.version_key, e));
+                    } else {
+                        app.debug_log(&format!("Pull - Stored version from server: {}", server_version.version_key));
+                    }
+                }
             }
-            sync_count += 1;
-        } else {
-            app.debug_log(&format!("Pull - Note {} not found locally (already deleted)", deletion.id));
+
+            // Handle hard deletions from server
+            // These are notes that were permanently deleted (trash emptied) on another device
+            for deletion in pull_response.deletions {
+                app.debug_log(&format!("Pull - Processing deletion for note {}", deletion.id));
+
+                // Apply remote deletion (hard delete without re-syncing back)
+                if note_repo.apply_remote_deletion(&deletion.id)? {
+                    app.debug_log(&format!("Pull - Hard deleted note {}", deletion.id));
+
+                    // Remove from in-memory list if present
+                    if let Some(pos) = app.notes.iter().position(|n| n.id == deletion.id) {
+                        app.notes.remove(pos);
+                    }
+                    sync_count += 1;
+                } else {
+                    app.debug_log(&format!("Pull - Note {} not found locally (already deleted)", deletion.id));
+                }
+            }
+
+            // Process inbox items from pull response
+            if let Some(inbox_items) = pull_response.inbox_items {
+                app.inbox_items = inbox_items;
+                app.debug_log(&format!("Pull - Received {} inbox items", app.inbox_items.len()));
+            } else {
+                app.inbox_items.clear();
+            }
+            break;
         }
+
+        offset += page_note_count;
     }
 
-    // Process inbox items from pull response
-    if let Some(inbox_items) = pull_response.inbox_items {
-        app.inbox_items = inbox_items;
-        app.debug_log(&format!("Pull - Received {} inbox items", app.inbox_items.len()));
-    } else {
-        app.inbox_items.clear();
-    }
-
-    // Update sync metadata
+    // Update sync metadata. The pull cursor is the server's time at the first page,
+    // so whatever changes during a long pull is fetched next time. last_sync_at
+    // stays on this device's clock: it picks which local notes to push, by comparing
+    // them with modified_at.
     metadata.last_sync_at = Some(Utc::now());
-    metadata.last_pull_at = Some(Utc::now());
+    metadata.last_pull_at = first_page_at;
     sync_repo.update_metadata(&metadata)?;
 
     // Reload notes to ensure UI is up to date
@@ -1117,3 +1141,239 @@ fn clear_conflict_state(app: &mut App) {
     app.view_mode = ViewMode::NoteList;
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::Database;
+    use crate::models::sync::SyncMetadata;
+    use chrono::{DateTime, TimeZone, Utc};
+    use serde_json::{json, Value};
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::sync::{Arc, Mutex};
+
+    const KEY: [u8; 32] = [7; 32];
+
+    /// The server's clock: deliberately nowhere near this device's.
+    fn server_time(page: i64) -> DateTime<Utc> {
+        Utc.with_ymd_and_hms(2031, 1, 1, 12, 0, 0).unwrap() + chrono::Duration::minutes(page)
+    }
+
+    /// Answers pull requests the way the sync server does, one page at a time,
+    /// and records what it was asked for.
+    struct StubServer {
+        endpoint: String,
+        pulls: Arc<Mutex<Vec<Value>>>,
+    }
+
+    impl StubServer {
+        fn start(notes: Vec<Value>, versions: Vec<Value>) -> Self {
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+            let endpoint = format!("http://{}", listener.local_addr().unwrap());
+            let pulls = Arc::new(Mutex::new(Vec::new()));
+            let recorded = pulls.clone();
+
+            std::thread::spawn(move || {
+                for stream in listener.incoming() {
+                    let mut stream = stream.unwrap();
+                    let body = read_body(&mut stream);
+                    let request: Value = serde_json::from_slice(&body).unwrap();
+                    let offset = request["offset"].as_i64().unwrap_or(0);
+                    let limit = request["limit"].as_i64().unwrap_or(100);
+                    recorded.lock().unwrap().push(request);
+
+                    let start = (offset as usize).min(notes.len());
+                    let end = (start + limit as usize).min(notes.len());
+                    let page = offset / limit;
+                    let response = json!({
+                        "notes": notes[start..end],
+                        "deletions": [],
+                        "attachments": [],
+                        "versions": versions,
+                        "syncedAt": server_time(page),
+                        "hasMore": end < notes.len(),
+                    })
+                    .to_string();
+
+                    let reply = format!(
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                        response.len(),
+                        response
+                    );
+                    stream.write_all(reply.as_bytes()).unwrap();
+                }
+            });
+
+            Self { endpoint, pulls }
+        }
+
+        fn offsets(&self) -> Vec<i64> {
+            self.pulls.lock().unwrap().iter().map(|p| p["offset"].as_i64().unwrap()).collect()
+        }
+
+        fn last_sync_at_of_last_pull(&self) -> Value {
+            self.pulls.lock().unwrap().last().unwrap()["lastSyncAt"].clone()
+        }
+    }
+
+    fn read_body(stream: &mut std::net::TcpStream) -> Vec<u8> {
+        let mut received = Vec::new();
+        let mut buffer = [0u8; 8192];
+        loop {
+            let read = stream.read(&mut buffer).unwrap();
+            received.extend_from_slice(&buffer[..read]);
+            let Some(header_end) = received.windows(4).position(|w| w == b"\r\n\r\n") else {
+                continue;
+            };
+            let headers = String::from_utf8_lossy(&received[..header_end]).to_lowercase();
+            let length: usize = headers
+                .lines()
+                .find_map(|line| line.strip_prefix("content-length:"))
+                .map(|value| value.trim().parse().unwrap())
+                .unwrap_or(0);
+            if received.len() >= header_end + 4 + length {
+                return received[header_end + 4..header_end + 4 + length].to_vec();
+            }
+        }
+    }
+
+    /// An unlocked app whose sync settings point at `endpoint`.
+    fn app_connected_to(endpoint: &str) -> App {
+        let dir = std::env::temp_dir().join(format!("jottery-sync-test-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let mut app = App::new(dir.join("test.db"), None).unwrap();
+        let db = Database::in_memory("test").unwrap();
+
+        let api_key = app.crypto.encrypt_text("device-api-key", &KEY).unwrap();
+        let metadata = SyncMetadata {
+            api_key: Some(serde_json::to_string(&api_key).unwrap()),
+            sync_enabled: true,
+            sync_endpoint: endpoint.to_string(),
+            ..Default::default()
+        };
+        SyncRepository::new(db.connection()).update_metadata(&metadata).unwrap();
+
+        app.db = Some(db);
+        app.key = Some(KEY);
+        app
+    }
+
+    fn encrypted(text: &str) -> String {
+        let crypto = crate::crypto::CryptoService::new();
+        serde_json::to_string(&crypto.encrypt_text(text, &KEY).unwrap()).unwrap()
+    }
+
+    fn remote_notes(count: usize) -> Vec<Value> {
+        (0..count)
+            .map(|i| {
+                json!({
+                    "id": format!("note-{i}"),
+                    "createdAt": "2020-01-01T00:00:00Z",
+                    "modifiedAt": "2020-01-01T00:00:00Z",
+                    "content": encrypted(&format!("Note {i}")),
+                    "tags": [],
+                    "attachments": [],
+                    "pinned": false,
+                    "archived": false,
+                    "locked": false,
+                    "deleted": false,
+                    "version": 1,
+                })
+            })
+            .collect()
+    }
+
+    fn stored_note_count(app: &App) -> usize {
+        let db = app.db.as_ref().unwrap();
+        NoteRepository::new(db.connection()).list(true, &KEY).unwrap().len()
+    }
+
+    fn sync_metadata(app: &App) -> SyncMetadata {
+        let db = app.db.as_ref().unwrap();
+        SyncRepository::new(db.connection()).get_metadata().unwrap().unwrap()
+    }
+
+    #[test]
+    fn pull_fetches_every_page() {
+        let server = StubServer::start(remote_notes(250), vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(stored_note_count(&app), 250);
+        assert_eq!(server.offsets(), vec![0, 100, 200]);
+    }
+
+    #[test]
+    fn force_sync_fetches_every_page() {
+        let server = StubServer::start(remote_notes(250), vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, true).unwrap();
+
+        assert_eq!(stored_note_count(&app), 250);
+    }
+
+    #[test]
+    fn an_exact_multiple_of_the_page_size_ends_cleanly() {
+        let server = StubServer::start(remote_notes(200), vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(stored_note_count(&app), 200);
+        assert_eq!(server.offsets(), vec![0, 100]);
+    }
+
+    #[test]
+    fn the_next_pull_starts_from_the_servers_time_at_the_first_page() {
+        let server = StubServer::start(remote_notes(250), vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+        assert_eq!(sync_metadata(&app).last_pull_at, Some(server_time(0)));
+
+        perform_sync(&mut app, false).unwrap();
+        let cursor = server.last_sync_at_of_last_pull();
+        let cursor: DateTime<Utc> = cursor.as_str().unwrap().parse().unwrap();
+        assert_eq!(cursor, server_time(0));
+    }
+
+    #[test]
+    fn choosing_local_notes_to_push_stays_on_this_devices_clock() {
+        let server = StubServer::start(remote_notes(1), vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let before = Utc::now();
+
+        perform_sync(&mut app, false).unwrap();
+
+        // The server's clock is years ahead. A local edit made just after this
+        // sync must still count as newer than last_sync_at, or it'd never be pushed.
+        let last_sync_at = sync_metadata(&app).last_sync_at.unwrap();
+        assert!(last_sync_at >= before && last_sync_at <= Utc::now());
+    }
+
+    #[test]
+    fn a_version_of_a_note_on_a_later_page_is_applied() {
+        let version = json!({
+            "versionKey": "note-150:1",
+            "noteId": "note-150",
+            "version": 1,
+            "createdAt": "2020-01-01T00:00:00Z",
+            "syncedAt": "2020-01-01T00:00:00Z",
+            "content": encrypted("Note 150, earlier"),
+            "tags": [],
+            "attachments": [],
+            "reason": "sync",
+        });
+        let server = StubServer::start(remote_notes(250), vec![version]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let versions = NoteVersionRepository::new(db.connection());
+        assert!(versions.get_version_by_key("note-150:1").unwrap().is_some());
+    }
+}
