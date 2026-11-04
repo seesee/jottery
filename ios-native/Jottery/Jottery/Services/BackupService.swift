@@ -3,8 +3,11 @@ import CryptoKit
 import Foundation
 import GRDB
 
-/// Encrypted backup service — creates and restores JWE v3 backup files
-/// compatible with the web client's `backupService.ts`.
+/// Encrypted backup service — creates and restores JWE v3 backup files.
+///
+/// The `encryption` header is the one the web client's `backupService.ts` uses.
+/// The batches inside aren't compatible with it yet (jottery-ychf): each client
+/// can restore its own backups, but not the other's.
 ///
 /// Format:
 /// ```json
@@ -12,7 +15,7 @@ import GRDB
 ///   "version": "3.0",
 ///   "type": "jottery-encrypted-backup",
 ///   "createdAt": "ISO 8601",
-///   "encryption": { "salt": "base64", "iterations": 600000, "algorithm": "PBKDF2" },
+///   "encryption": { "envelopeVersion": 1, "deviceSalt": "base64", "localWrappedMaster": "json", ... },
 ///   "batches": [ { "type": "notes", "index": 0, "count": N, "data": "JWE compact" } ],
 ///   "summary": { "notes": N, "attachments": N, "versions": N, "savedSearches": N }
 /// }
@@ -38,10 +41,36 @@ enum BackupService {
         let summary: BackupSummary
     }
 
+    /// How to get from the password to the key the contents are encrypted with.
+    /// Web, iOS and the TUI all write and read this, so keep them in step.
+    ///
+    /// An envelope vault encrypts with a random master key, so the backup carries
+    /// it wrapped with the password, as the vault stores it. A legacy vault's key
+    /// comes straight from the password, salt and iterations.
     struct BackupEncryption: Codable {
-        let salt: String
-        let iterations: Int
+        var envelopeVersion: Int?
+        var deviceSalt: String?
+        var localWrappedMaster: String?
+        var wrappingKdfVersion: Int?
+        var salt: String?
+        var iterations: Int?
+        var createdAt: String?
         let algorithm: String
+
+        init(metadata: EncryptionMetadata) {
+            if metadata.envelopeVersion != nil {
+                envelopeVersion = metadata.envelopeVersion
+                deviceSalt = metadata.deviceSalt
+                localWrappedMaster = metadata.localWrappedMaster
+                wrappingKdfVersion = metadata.wrappingKdfVersion
+                algorithm = metadata.algorithm
+            } else {
+                salt = metadata.salt
+                iterations = metadata.iterations
+                algorithm = "PBKDF2"
+            }
+            createdAt = metadata.createdAt
+        }
     }
 
     struct BatchRecord: Codable {
@@ -282,11 +311,7 @@ enum BackupService {
             version: "3.0",
             type: "jottery-encrypted-backup",
             createdAt: Date().iso8601,
-            encryption: BackupEncryption(
-                salt: metadata.salt,
-                iterations: metadata.iterations,
-                algorithm: "PBKDF2"
-            ),
+            encryption: BackupEncryption(metadata: metadata),
             batches: batches,
             summary: BackupSummary(
                 notes: allRecords.count,
@@ -323,15 +348,8 @@ enum BackupService {
             throw BackupError.unsupportedVersion(backup.version)
         }
 
-        // Derive key from backup's salt and password
-        guard let saltData = Data(base64Encoded: backup.encryption.salt) else {
-            throw BackupError.invalidSalt
-        }
-        let backupKey = CryptoService.deriveKey(
-            password: password,
-            salt: saltData,
-            iterations: UInt32(backup.encryption.iterations)
-        )
+        let namedKey = try keyNamedByHeader(backup.encryption, password: password)
+        let backupKey = namedKey ?? currentKey
 
         // Verify key by trying to decrypt first batch
         guard let firstBatch = backup.batches.first else {
@@ -340,7 +358,7 @@ enum BackupService {
         do {
             let _ = try decryptBatchRaw(firstBatch.data, key: backupKey)
         } catch {
-            throw BackupError.wrongPassword
+            throw namedKey == nil ? BackupError.keyNotInBackup : BackupError.wrongPassword
         }
 
         var notesRestored = 0
@@ -439,6 +457,38 @@ enum BackupService {
         }
 
         return notesRestored
+    }
+
+    /// The key the header leads to from `password`, or nil if it leads nowhere.
+    ///
+    /// Backups of envelope vaults made before the header carried the wrapped key
+    /// have an empty salt, and only open with the vault's own master key.
+    private static func keyNamedByHeader(_ encryption: BackupEncryption, password: String) throws -> SymmetricKey? {
+        if encryption.envelopeVersion != nil {
+            guard let deviceSalt = encryption.deviceSalt.flatMap({ Data(base64Encoded: $0) }),
+                  let wrappedJSON = encryption.localWrappedMaster else {
+                throw BackupError.invalidSalt
+            }
+            let deviceKey = CryptoService.deriveKey(
+                password: password,
+                salt: deviceSalt,
+                iterations: CryptoService.defaultIterations
+            )
+            let wrapped = try CryptoService.parseEncryptedJSON(wrappedJSON)
+            guard let masterKey = try? CryptoService.unwrapMasterKey(wrapped, with: deviceKey) else {
+                throw BackupError.wrongPassword
+            }
+            return SymmetricKey(data: masterKey)
+        }
+
+        guard let salt = encryption.salt, !salt.isEmpty,
+              let iterations = encryption.iterations, iterations > 0 else {
+            return nil
+        }
+        guard let saltData = Data(base64Encoded: salt) else {
+            throw BackupError.invalidSalt
+        }
+        return CryptoService.deriveKey(password: password, salt: saltData, iterations: UInt32(iterations))
     }
 
     // MARK: - JWE Compact Encryption
@@ -596,12 +646,13 @@ enum BackupService {
 
 // MARK: - Errors
 
-enum BackupError: LocalizedError {
+enum BackupError: LocalizedError, Equatable {
     case noVault
     case invalidFormat
     case unsupportedVersion(String)
     case invalidSalt
     case wrongPassword
+    case keyNotInBackup
     case invalidJWE
     case compressionFailed
     case decompressionFailed
@@ -613,6 +664,7 @@ enum BackupError: LocalizedError {
         case .unsupportedVersion(let v): return "Unsupported backup version: \(v)"
         case .invalidSalt: return "Invalid encryption salt in backup"
         case .wrongPassword: return "Incorrect password for this backup"
+        case .keyNotInBackup: return L.backupErrorKeyNotInBackup
         case .invalidJWE: return "Invalid encrypted data in backup"
         case .compressionFailed: return "Failed to compress backup data"
         case .decompressionFailed: return "Failed to decompress backup data"
