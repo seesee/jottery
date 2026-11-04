@@ -4,7 +4,7 @@
   import { addNoteToStoreAndSearch } from './lib/stores/storeHelpers';
   import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, AVAILABLE_LOCALES, syncService, syncRepository, appUpdateService, versionRepository } from './lib/services';
   import { startAutoLock, stopAutoLock } from './lib/services/autoLockService';
-  import { keyManager } from './lib/services/keyManager';
+  import { keyManager, setupActivityListeners } from './lib/services/keyManager';
   import { resetVaultHealth, undecryptableNotes } from './lib/services/vaultHealthService';
   import { toast } from './lib/utils/toast.svelte';
   import { get } from 'svelte/store';
@@ -418,6 +418,15 @@
       // Remember password disabled - enable auto-lock
       startAutoLock($settings.autoLockTimeout);
     }
+  }
+
+  // keyManager runs its own idle timer alongside autoLockService, started at
+  // unlock. Keep it on the current timeout, or a change only takes effect from
+  // the next unlock. This depends on the value alone, so unrelated settings
+  // changes don't restart the timer. Zero turns it off.
+  $: keyManagerLockMinutes = $settings.rememberPassword ? 0 : $settings.autoLockTimeout;
+  $: if (!$isLocked && initialized) {
+    setupActivityListeners(keyManagerLockMinutes);
   }
 
   /**

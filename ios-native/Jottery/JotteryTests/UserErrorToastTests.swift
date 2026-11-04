@@ -12,6 +12,16 @@ import Testing
 @MainActor
 struct UserErrorToastTests {
 
+    /// Waits for the message to clear. A fixed sleep can't do this, however
+    /// long: `reportError` starts its timer from a main-actor task, so while
+    /// another test holds the main actor, that timer hasn't begun.
+    private func waitForMessageToClear(in state: AppState) async {
+        let deadline = ContinuousClock.now + .seconds(30)
+        while state.userErrorMessage != nil, ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+    }
+
     @Test func reportErrorPublishesMessage() {
         let state = AppState()
         #expect(state.userErrorMessage == nil)
@@ -24,15 +34,10 @@ struct UserErrorToastTests {
     @Test func reportErrorAutoClearsAfterDuration() async {
         let state = AppState()
 
-        // Generous margin (10x the clear duration) — this suite runs
-        // alongside ~130 other tests under Swift Testing's parallel
-        // executor, so wall-clock delays of a few hundred ms under load are
-        // expected; only the relative ordering (clear fires before the
-        // assertion, not exact timing) matters here.
         state.reportError("Couldn't delete note", duration: .milliseconds(100))
         #expect(state.userErrorMessage == "Couldn't delete note")
 
-        try? await Task.sleep(for: .seconds(1))
+        await waitForMessageToClear(in: state)
 
         #expect(state.userErrorMessage == nil)
     }
@@ -50,9 +55,7 @@ struct UserErrorToastTests {
         try? await Task.sleep(for: .milliseconds(200))
         #expect(state.userErrorMessage == "second failure")
 
-        // Generous margin past the second timer's 400ms — see the
-        // reportErrorAutoClearsAfterDuration comment above.
-        try? await Task.sleep(for: .seconds(2))
+        await waitForMessageToClear(in: state)
         #expect(state.userErrorMessage == nil)
     }
 }

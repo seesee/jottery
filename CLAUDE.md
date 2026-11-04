@@ -516,6 +516,7 @@ git commit -m "i18n: translate VersionHistoryModal component"
 - Direct pushes to main → No CI (should not happen)
 - Tags (`v*`) → CI runs (release validation)
 - Manual trigger available via GitHub Actions UI
+- The TUI and iOS test workflows only run on PRs that touch `tui/` or `ios-native/`
 
 **Remember: Commits are cheap. Lost work is expensive. When in doubt, commit.**
 

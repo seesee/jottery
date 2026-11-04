@@ -15,15 +15,12 @@ struct ChangePasswordView: View {
         NavigationStack {
             Form {
                 Section {
-                    SecureField(L.changePasswordCurrent, text: $currentPassword)
-                        .textContentType(.password)
+                    PasswordField(L.changePasswordCurrent, text: $currentPassword, contentType: .password)
                 }
 
                 Section {
-                    SecureField(L.changePasswordNew, text: $newPassword)
-                        .textContentType(.newPassword)
-                    SecureField(L.changePasswordConfirm, text: $confirmPassword)
-                        .textContentType(.newPassword)
+                    PasswordField(L.changePasswordNew, text: $newPassword, contentType: .newPassword)
+                    PasswordField(L.changePasswordConfirm, text: $confirmPassword, contentType: .newPassword)
                 } footer: {
                     Text(L.changePasswordWarning)
                         .foregroundStyle(.secondary)

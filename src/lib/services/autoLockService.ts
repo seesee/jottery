@@ -11,7 +11,8 @@
  *   the UI locks the moment the window has closed.
  */
 
-import { isLocked } from '../stores/appStore';
+import { get } from 'svelte/store';
+import { isLocked, settings as settingsStore } from '../stores/appStore';
 import { lock } from './initService';
 import { settingsRepository } from './settingsRepository';
 import { hasValidSession } from './sessionStorageService';
@@ -21,11 +22,6 @@ let lastActivityTime: number = Date.now();
 let autoLockTimeout: number = 15 * 60 * 1000; // 15 minutes in milliseconds
 let checkInterval: number | null = null;
 
-// Cached at startAutoLock() so every synchronous activity handler can decide
-// without an async settings read.
-let persistSessionEnabled = false;
-let persistSessionTimeoutMinutes = 30;
-
 const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'] as const;
 
 /**
@@ -34,8 +30,9 @@ const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchs
  * password isn't relevant, so there's nothing to expire.
  */
 function isPersistSessionExpired(): boolean {
-  if (!persistSessionEnabled) return false;
-  return !hasValidSession(persistSessionTimeoutMinutes);
+  const { persistSession, persistSessionTimeout } = get(settingsStore);
+  if (!persistSession) return false;
+  return !hasValidSession(persistSessionTimeout ?? 30);
 }
 
 /**
@@ -117,20 +114,6 @@ export function startAutoLock(timeoutMinutes: number = 15): void {
   // Set timeout in milliseconds
   autoLockTimeout = timeoutMinutes * 60 * 1000;
   lastActivityTime = Date.now();
-
-  // Cache persist-session settings so the activity handler can run synchronously.
-  // Any subsequent changes (toggle in settings, timeout bump) re-enter via
-  // App.svelte's reactive block, which calls startAutoLock() again.
-  settingsRepository
-    .get()
-    .then((settings) => {
-      persistSessionEnabled = !!settings.persistSession;
-      persistSessionTimeoutMinutes = settings.persistSessionTimeout ?? 30;
-    })
-    .catch((error) => {
-      console.warn('[AutoLock] Failed to cache persist-session settings:', error);
-      persistSessionEnabled = false;
-    });
 
   // Set up activity listeners
   ACTIVITY_EVENTS.forEach((event) => {

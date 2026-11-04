@@ -55,6 +55,7 @@ import { getDB, STORES } from './db';
 import { cryptoService } from './crypto';
 import { keyManager } from './keyManager';
 import { base64ToUint8Array } from '../utils/base64';
+import { CRYPTO_PBKDF2_ITERATIONS } from '../constants';
 
 const BACKUP_VERSION_LEGACY = '2.1';
 const BACKUP_VERSION = '3.0';
@@ -912,7 +913,10 @@ export async function validateBackup(
       };
     }
 
-    if (!backup.encryption.salt || !backup.encryption.iterations || !backup.encryption.algorithm) {
+    const { encryption } = backup;
+    const hasEnvelopeKey = encryption.envelopeVersion && encryption.deviceSalt && encryption.localWrappedMaster;
+    const hasLegacyKey = encryption.salt && encryption.iterations;
+    if (!encryption.algorithm || !(hasEnvelopeKey || hasLegacyKey)) {
       return {
         valid: false,
         error: 'Invalid backup file. Incomplete encryption metadata.',
@@ -1027,6 +1031,59 @@ export async function validateBackup(
 }
 
 /**
+ * The key a backup's contents are encrypted with, from the password that was
+ * set when it was made. Returns null when an envelope backup's password is wrong.
+ *
+ * An envelope vault encrypts everything with a random master key, which the
+ * backup carries wrapped with the password, as the vault stores it. A legacy
+ * vault's key comes straight from the password. Every client writes and reads
+ * this same format, so keep them in step.
+ */
+async function keyFromBackupPassword(
+  encryption: EncryptionMetadata,
+  password: string
+): Promise<{ key: CryptoKey; keyBytes: Uint8Array } | null> {
+  if (encryption.envelopeVersion) {
+    if (!encryption.deviceSalt || !encryption.localWrappedMaster) {
+      throw new Error('Missing wrapped key in backup — file may be corrupted');
+    }
+    const deviceKey = await cryptoService.deriveKey({
+      password,
+      salt: base64ToUint8Array(encryption.deviceSalt),
+      iterations: CRYPTO_PBKDF2_ITERATIONS,
+      extractable: false,
+    });
+
+    let keyBytes: Uint8Array;
+    try {
+      keyBytes = await cryptoService.unwrapMasterKey(deviceKey, JSON.parse(encryption.localWrappedMaster));
+    } catch {
+      return null;
+    }
+
+    const key = await crypto.subtle.importKey(
+      'raw',
+      keyBytes as Uint8Array<ArrayBuffer>,
+      { name: 'AES-GCM', length: 256 },
+      true,
+      ['encrypt', 'decrypt']
+    );
+    return { key, keyBytes };
+  }
+
+  if (!encryption.salt) throw new Error('Missing encryption salt in backup — file may be corrupted');
+  if (!encryption.iterations) throw new Error('Missing encryption iterations in backup — file may be corrupted');
+  const key = await cryptoService.deriveKey({
+    password,
+    salt: base64ToUint8Array(encryption.salt),
+    iterations: encryption.iterations,
+    algorithm: 'PBKDF2',
+    extractable: true,
+  });
+  return { key, keyBytes: await exportKeyAsBytes(key) };
+}
+
+/**
  * Verify password against a backup
  *
  * Derives the key using the backup's encryption metadata and attempts
@@ -1038,22 +1095,11 @@ export async function verifyBackupPassword(
   password: string
 ): Promise<{ valid: boolean; key?: CryptoKey; keyBytes?: Uint8Array; error?: string }> {
   try {
-    // Derive key using backup's salt and iterations (extractable for JWE)
-    const backupSalt = backup.encryption.salt;
-    if (!backupSalt) throw new Error('Missing encryption salt in backup — file may be corrupted');
-    const backupIterations = backup.encryption.iterations;
-    if (!backupIterations) throw new Error('Missing encryption iterations in backup — file may be corrupted');
-    const salt = base64ToUint8Array(backupSalt);
-    const key = await cryptoService.deriveKey({
-      password,
-      salt,
-      iterations: backupIterations,
-      algorithm: 'PBKDF2',
-      extractable: true,
-    });
-
-    // Export key as raw bytes for jose
-    const keyBytes = await exportKeyAsBytes(key);
+    const backupKey = await keyFromBackupPassword(backup.encryption, password);
+    if (!backupKey) {
+      return { valid: false, error: 'Incorrect password' };
+    }
+    const { key, keyBytes } = backupKey;
 
     // Verify by attempting to decrypt the first record/batch
     if (isBackupV3(backup)) {
@@ -1506,6 +1552,29 @@ export function downloadBackup(backup: BackupData): void {
 }
 
 /**
+ * The JSON object that starts at `start`, or null if it doesn't end in `text`.
+ * A regex can't find its end: a value can hold '}', as localWrappedMaster does.
+ */
+function jsonObjectAt(text: string, start: number): string | null {
+  let depth = 0;
+  let inString = false;
+  for (let i = start; i < text.length; i++) {
+    const char = text[i];
+    if (inString) {
+      if (char === '\\') i++;
+      else if (char === '"') inString = false;
+    } else if (char === '"') {
+      inString = true;
+    } else if (char === '{') {
+      depth++;
+    } else if (char === '}' && --depth === 0) {
+      return text.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
+/**
  * Parse backup header from the beginning of a file
  * This avoids loading the entire file into memory
  */
@@ -1527,7 +1596,10 @@ async function parseBackupHeader(file: File): Promise<{
     const createdAtMatch = headerText.match(/"createdAt"\s*:\s*"([^"]+)"/);
 
     // Extract encryption object (it's relatively small and near the start)
-    const encryptionMatch = headerText.match(/"encryption"\s*:\s*(\{[^}]+\})/);
+    const encryptionKey = headerText.match(/"encryption"\s*:\s*/);
+    const encryptionJson = encryptionKey
+      ? jsonObjectAt(headerText, encryptionKey.index! + encryptionKey[0].length)
+      : null;
 
     if (!versionMatch || !typeMatch) {
       return null;
@@ -1537,7 +1609,7 @@ async function parseBackupHeader(file: File): Promise<{
       version: versionMatch[1],
       type: typeMatch[1],
       createdAt: createdAtMatch?.[1],
-      encryption: encryptionMatch ? JSON.parse(encryptionMatch[1]) : undefined,
+      encryption: encryptionJson ? JSON.parse(encryptionJson) : undefined,
     };
   } catch {
     return null;
