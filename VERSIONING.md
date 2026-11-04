@@ -31,7 +31,7 @@ Use the provided script to update all version numbers consistently:
 
 This updates:
 - `package.json` (web client)
-- `tui/Cargo.toml` (TUI client)
+- `tui/Cargo.toml` and `tui/Cargo.lock` (TUI client)
 
 ### 2. Review Changes
 
@@ -39,12 +39,12 @@ This updates:
 git diff
 ```
 
-Verify both files have been updated correctly.
+Verify the files have been updated correctly.
 
 ### 3. Commit Version Bump
 
 ```bash
-git add package.json tui/Cargo.toml
+git add package.json tui/Cargo.toml tui/Cargo.lock
 git commit -m "Bump version to v0.5.0"
 ```
 
