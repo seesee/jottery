@@ -293,6 +293,17 @@
         }
       }
     },
+    "backupError.keyNotInBackup": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This backup was made by an older version of Jottery, and it can only be opened on a vault with the same encryption key. To restore it here, first connect this device to the sync account the backup came from."
+          }
+        }
+      }
+    },
     "bulk.addTags": {
       "extractionState": "manual",
       "localizations": {

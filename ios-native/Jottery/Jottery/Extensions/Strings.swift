@@ -84,6 +84,10 @@ enum L {
     static var deleteAccountWrongCredentials: String { String(localized: "deleteAccount.wrongCredentials") }
     static var deleteAccountNoServer: String { String(localized: "deleteAccount.noServer") }
 
+    // MARK: - Backup
+
+    static var backupErrorKeyNotInBackup: String { String(localized: "backupError.keyNotInBackup") }
+
     // MARK: - Common
 
     static var commonCancel: String { String(localized: "common.cancel") }
