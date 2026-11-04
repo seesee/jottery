@@ -192,6 +192,11 @@ Svelte error: lifecycle_function_unavailable
    - Catches type errors before merge
    - Runs on: push to main, pull requests
 
+**Native clients:**
+- `.github/workflows/tui-tests.yml` runs `cargo test` on Linux
+- `.github/workflows/ios-tests.yml` runs `xcodebuild test` on macOS
+- Each runs on pull requests that touch that client, on `v*` tags and on manual trigger
+
 **Triggers:**
 - Push to `main` branch
 - Pull requests to `main` branch
