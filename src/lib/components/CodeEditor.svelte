@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { EditorView } from 'codemirror';
-  import { EditorState, Compartment } from '@codemirror/state';
+  import { EditorState, Compartment, Transaction } from '@codemirror/state';
   import { javascript } from '@codemirror/lang-javascript';
   import { python } from '@codemirror/lang-python';
   import { markdown, markdownLanguage, deleteMarkupBackward, insertNewlineContinueMarkupCommand } from '@codemirror/lang-markdown';
@@ -31,6 +31,8 @@
   import { getFontSize } from '../utils/fontSize';
 
   export let value: string = '';
+  /** Which document this is. The editor is reused, and undo must not cross documents. */
+  export let documentId: string | undefined = undefined;
   export let onChange: (value: string) => void = () => {};
   export let language: string | undefined = 'plain';
   export let readonly: boolean = false;
@@ -62,6 +64,8 @@
   let editorContainer: HTMLDivElement;
   let editorWrapper: HTMLDivElement;
   let editorView: EditorView | null = null;
+  const historyCompartment = new Compartment();
+  let historyDocumentId = documentId;
   let languageCompartment = new Compartment();
   let wrapCompartment = new Compartment();
   let themeCompartment = new Compartment();
@@ -223,7 +227,7 @@
       lineNumbers(),
       highlightActiveLine(),
       highlightSpecialChars(),
-      history(),
+      historyCompartment.of(history()),
       bracketMatching(),
       highlightSelectionMatches(),
       keymap.of([
@@ -344,7 +348,17 @@
         to: editorView.state.doc.length,
         insert: value,
       },
+      // Not the user's edit, so not something undo should reverse.
+      annotations: Transaction.addToHistory.of(false),
     });
+  }
+
+  // A new document starts with an empty history. Removing the extension drops
+  // its state, so the previous note's edits can't be undone into this one.
+  $: if (editorView && documentId !== historyDocumentId) {
+    historyDocumentId = documentId;
+    editorView.dispatch({ effects: historyCompartment.reconfigure([]) });
+    editorView.dispatch({ effects: historyCompartment.reconfigure(history()) });
   }
 
   // Update language when language prop changes
