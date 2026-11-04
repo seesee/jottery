@@ -567,6 +567,7 @@ backup:
   verifying_password: "Şifre doğrulanıyor..."
   restoring: "Veriler geri yükleniyor..."
   restored: "Geri yüklendi"
+  key_not_in_backup: "Bu yedek, Jottery'nin eski bir sürümüyle oluşturuldu ve anahtarını içermiyor. Yalnızca oluşturulduğu kasaya geri yüklenebilir."
 
 # Progress indicators
 progress:

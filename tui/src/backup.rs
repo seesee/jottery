@@ -41,12 +41,38 @@ pub struct BackupData {
     pub data: Vec<String>, // JWE compact serialization strings
 }
 
-/// Encryption metadata in backup
+/// How to get from the password to the key the records are encrypted with.
+/// Web, iOS and the TUI all write and read this header, so keep them in step.
+///
+/// An envelope vault encrypts with a random master key, so the backup carries it
+/// wrapped with the password, as the vault stores it. A legacy vault's key comes
+/// straight from the password, salt and iterations.
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct BackupEncryption {
-    pub salt: String,
-    pub iterations: i64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub envelope_version: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub device_salt: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub local_wrapped_master: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wrapping_kdf_version: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub salt: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub iterations: Option<i64>,
     pub algorithm: String,
+}
+
+impl BackupEncryption {
+    /// Whether the header leads from a password to the key. Backups of envelope
+    /// vaults made before it carried the wrapped key have an empty salt, and
+    /// only open with the vault's own master key.
+    pub fn names_its_key(&self) -> bool {
+        self.envelope_version.is_some()
+            || self.salt.as_deref().is_some_and(|salt| !salt.is_empty())
+    }
 }
 
 /// Record types in backup
@@ -301,10 +327,27 @@ pub fn create_backup(
         version: BACKUP_VERSION.to_string(),
         backup_type: BACKUP_TYPE.to_string(),
         created_at: Utc::now().to_rfc3339(),
-        encryption: BackupEncryption {
-            salt: base64::engine::general_purpose::STANDARD.encode(encryption_meta.salt.as_deref().unwrap_or(&[])),
-            iterations: encryption_meta.iterations.unwrap_or(600_000) as i64,
-            algorithm: "PBKDF2".to_string(),
+        encryption: if encryption_meta.envelope_version.is_some() {
+            BackupEncryption {
+                envelope_version: encryption_meta.envelope_version,
+                device_salt: encryption_meta.device_salt.clone(),
+                local_wrapped_master: encryption_meta.local_wrapped_master.clone(),
+                wrapping_kdf_version: encryption_meta.wrapping_kdf_version,
+                salt: None,
+                iterations: None,
+                algorithm: encryption_meta.algorithm.clone(),
+            }
+        } else {
+            BackupEncryption {
+                envelope_version: None,
+                device_salt: None,
+                local_wrapped_master: None,
+                wrapping_kdf_version: None,
+                salt: encryption_meta.salt.as_deref()
+                    .map(|salt| base64::engine::general_purpose::STANDARD.encode(salt)),
+                iterations: Some(encryption_meta.iterations.unwrap_or(600_000) as i64),
+                algorithm: "PBKDF2".to_string(),
+            }
         },
         data: jwe_records,
     };
@@ -382,21 +425,41 @@ pub fn validate_backup<P: AsRef<Path>>(path: P) -> Result<BackupData> {
 /// Verify password against a backup by trying to decrypt first record
 pub fn verify_backup_password(backup: &BackupData, password: &str) -> Result<[u8; 32]> {
     let crypto = CryptoService::new();
+    let encryption = &backup.encryption;
 
-    // Decode salt from backup
-    let salt = base64::engine::general_purpose::STANDARD.decode(&backup.encryption.salt)
-        .context("Failed to decode salt from backup")?;
+    let key = if encryption.envelope_version.is_some() {
+        let device_salt = encryption.device_salt.as_deref()
+            .ok_or_else(|| anyhow!("Backup is missing its device salt"))?;
+        let device_salt = base64::engine::general_purpose::STANDARD.decode(device_salt)
+            .context("Failed to decode device salt from backup")?;
+        let wrapped = encryption.local_wrapped_master.as_deref()
+            .ok_or_else(|| anyhow!("Backup is missing its wrapped key"))?;
+        let wrapped: EncryptedData = serde_json::from_str(wrapped)
+            .context("Failed to read wrapped key from backup")?;
 
-    // Derive key using backup's encryption parameters
-    let key = crypto.derive_key(password, &salt, backup.encryption.iterations as u32)?;
+        let device_key = crypto.derive_key(password, &device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
+        crypto.unwrap_master_key(&device_key, &wrapped)
+            .context("Incorrect password")?
+    } else {
+        let salt = encryption.salt.as_deref()
+            .ok_or_else(|| anyhow!("Backup is missing its salt"))?;
+        let salt = base64::engine::general_purpose::STANDARD.decode(salt)
+            .context("Failed to decode salt from backup")?;
+        let iterations = encryption.iterations
+            .ok_or_else(|| anyhow!("Backup is missing its iteration count"))?;
+        crypto.derive_key(password, &salt, iterations as u32)?
+    };
 
-    // Try to decrypt first record to verify password
-    if !backup.data.is_empty() {
-        decrypt_jwe(&backup.data[0], &key)
-            .context("Incorrect password")?;
-    }
-
+    verify_backup_key(backup, &key).context("Incorrect password")?;
     Ok(key)
+}
+
+/// Check a key against a backup by decrypting its first record.
+pub fn verify_backup_key(backup: &BackupData, key: &[u8; 32]) -> Result<()> {
+    if let Some(first) = backup.data.first() {
+        decrypt_jwe(first, key)?;
+    }
+    Ok(())
 }
 
 /// Restore data from a backup
@@ -411,9 +474,22 @@ pub fn restore_backup(
     let settings_repo = SettingsRepository::new(db.connection());
     let crypto = CryptoService::new();
 
-    // First, restore encryption metadata
-    let salt = base64::engine::general_purpose::STANDARD.decode(&backup.encryption.salt)?;
-    encryption_repo.save(&salt, backup.encryption.iterations as u32)?;
+    // First, restore encryption metadata, so the vault unlocks with the backup's
+    // password. A backup that names no key is being restored onto its own vault,
+    // whose metadata stays as it is.
+    let encryption = &backup.encryption;
+    if let (Some(version), Some(device_salt), Some(wrapped)) = (
+        encryption.envelope_version,
+        encryption.device_salt.as_deref(),
+        encryption.local_wrapped_master.as_deref(),
+    ) {
+        encryption_repo.save_envelope(version, device_salt, wrapped, encryption.wrapping_kdf_version.unwrap_or(1))?;
+    } else if let (true, Some(salt), Some(iterations)) =
+        (encryption.names_its_key(), encryption.salt.as_deref(), encryption.iterations)
+    {
+        let salt = base64::engine::general_purpose::STANDARD.decode(salt)?;
+        encryption_repo.save(&salt, iterations as u32)?;
+    }
 
     let total = backup.data.len();
     let mut restored = 0;
@@ -535,6 +611,97 @@ mod tests {
     fn test_password() -> String {
         std::env::var("JOTTERY_TEST_PASSWORD")
             .unwrap_or_else(|_| "test_password_placeholder".to_string())
+    }
+
+    /// A vault whose notes use a random master key, wrapped with the password.
+    /// Returns it with that key and password, both generated at runtime.
+    fn envelope_vault() -> (Database, [u8; 32], String) {
+        let crypto = CryptoService::new();
+        let master_key = crypto.generate_master_key();
+        let password = uuid::Uuid::new_v4().to_string();
+        let db = Database::in_memory(&password).unwrap();
+        let device_salt = crypto.generate_salt();
+        let device_key = crypto
+            .derive_key(&password, &device_salt, crate::crypto::DEFAULT_ITERATIONS)
+            .unwrap();
+        let wrapped = crypto.wrap_master_key(&device_key, &master_key).unwrap();
+        EncryptionRepository::new(db.connection())
+            .save_envelope(
+                1,
+                &base64::engine::general_purpose::STANDARD.encode(device_salt),
+                &serde_json::to_string(&wrapped).unwrap(),
+                1,
+            )
+            .unwrap();
+        NoteRepository::new(db.connection())
+            .create(&Note::new("Kept safe in a backup".to_string()), &master_key)
+            .unwrap();
+        (db, master_key, password)
+    }
+
+    #[test]
+    fn an_envelope_backup_restores_onto_an_empty_database() {
+        let (db, master_key, password) = envelope_vault();
+        let backup = create_backup(&db, &master_key, None).unwrap();
+
+        let key = verify_backup_password(&backup, &password).unwrap();
+        assert_eq!(key, master_key);
+
+        let restored = Database::in_memory(&password).unwrap();
+        assert_eq!(restore_backup(&restored, &backup, &key, None).unwrap(), 1);
+
+        let notes = NoteRepository::new(restored.connection()).list(false, &key).unwrap();
+        assert_eq!(notes[0].content, "Kept safe in a backup");
+
+        // Unlocking from now on goes through the restored metadata.
+        let metadata = EncryptionRepository::new(restored.connection()).get().unwrap().unwrap();
+        assert_eq!(metadata.envelope_version, Some(1));
+        let crypto = CryptoService::new();
+        let device_salt = base64::engine::general_purpose::STANDARD
+            .decode(metadata.device_salt.unwrap())
+            .unwrap();
+        let device_key = crypto
+            .derive_key(&password, &device_salt, crate::crypto::DEFAULT_ITERATIONS)
+            .unwrap();
+        let wrapped: EncryptedData = serde_json::from_str(&metadata.local_wrapped_master.unwrap()).unwrap();
+        assert_eq!(crypto.unwrap_master_key(&device_key, &wrapped).unwrap(), master_key);
+    }
+
+    #[test]
+    fn an_envelope_backup_refuses_the_wrong_password() {
+        let (db, master_key, _) = envelope_vault();
+        let backup = create_backup(&db, &master_key, None).unwrap();
+        let wrong_password = uuid::Uuid::new_v4().to_string();
+        let error = verify_backup_password(&backup, &wrong_password).unwrap_err();
+        assert_eq!(error.to_string(), "Incorrect password");
+    }
+
+    #[test]
+    fn the_header_uses_the_fields_the_other_clients_read() {
+        let (db, master_key, _) = envelope_vault();
+        let backup = create_backup(&db, &master_key, None).unwrap();
+        let header = serde_json::to_value(&backup.encryption).unwrap();
+        assert_eq!(header["envelopeVersion"], 1);
+        assert!(header["deviceSalt"].is_string());
+        assert!(header["localWrappedMaster"].is_string());
+        assert!(header.get("salt").is_none());
+    }
+
+    #[test]
+    fn an_older_backup_opens_with_its_vaults_key_and_leaves_the_metadata_alone() {
+        let (db, master_key, _) = envelope_vault();
+        let mut backup = create_backup(&db, &master_key, None).unwrap();
+        backup.encryption = serde_json::from_str(r#"{"salt":"","iterations":600000,"algorithm":"PBKDF2"}"#).unwrap();
+        let before = EncryptionRepository::new(db.connection()).get().unwrap().unwrap();
+        let other_key = CryptoService::new().generate_master_key();
+
+        assert!(!backup.encryption.names_its_key());
+        assert!(verify_backup_key(&backup, &master_key).is_ok());
+        assert!(verify_backup_key(&backup, &other_key).is_err());
+
+        restore_backup(&db, &backup, &master_key, None).unwrap();
+        let after = EncryptionRepository::new(db.connection()).get().unwrap().unwrap();
+        assert_eq!(after.local_wrapped_master, before.local_wrapped_master);
     }
 
     #[test]

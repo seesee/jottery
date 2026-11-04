@@ -1181,17 +1181,27 @@ fn main() -> Result<()> {
                 t!("backup.records")
             );
 
-            // Verify password
-            println!("{}", t!("backup.verifying_password"));
-            let key = backup::verify_backup_password(&backup, &password)?;
-            println!("✓ {}", t!("password.correct"));
-
             // Use key_password for local database if provided, otherwise use backup password
             let local_password = key_password.as_ref().unwrap_or(&password);
 
             // Open or create database
             let db = Database::open(&db_path, local_password)
                 .context(t!("password.unlock_failed", error = ""))?;
+
+            // Verify password. An older backup names no key, so only the vault
+            // it came from can open it.
+            println!("{}", t!("backup.verifying_password"));
+            let key = if backup.encryption.names_its_key() {
+                backup::verify_backup_password(&backup, &password)?
+            } else {
+                let has_vault = EncryptionRepository::new(db.connection()).get()?.is_some();
+                let key = if has_vault { derive_key_from_db(&db, local_password).ok() } else { None };
+                match key.filter(|key| backup::verify_backup_key(&backup, key).is_ok()) {
+                    Some(key) => key,
+                    None => anyhow::bail!("{}", t!("backup.key_not_in_backup")),
+                }
+            };
+            println!("✓ {}", t!("password.correct"));
 
             println!("{}", t!("backup.restoring"));
 
