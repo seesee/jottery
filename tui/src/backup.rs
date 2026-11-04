@@ -613,18 +613,17 @@ mod tests {
             .unwrap_or_else(|_| "test_password_placeholder".to_string())
     }
 
-    const ENVELOPE_PASSWORD: &str = "notes-password-correct-horse";
-    const MASTER_KEY: [u8; 32] = [9; 32];
-
     /// A vault whose notes use a random master key, wrapped with the password.
-    fn envelope_vault() -> Database {
+    /// Returns it with that key.
+    fn envelope_vault() -> (Database, [u8; 32]) {
         let crypto = CryptoService::new();
-        let db = Database::in_memory("db-password").unwrap();
+        let master_key = crypto.generate_master_key();
+        let db = Database::in_memory(&test_password()).unwrap();
         let device_salt = crypto.generate_salt();
         let device_key = crypto
-            .derive_key(ENVELOPE_PASSWORD, &device_salt, crate::crypto::DEFAULT_ITERATIONS)
+            .derive_key(&test_password(), &device_salt, crate::crypto::DEFAULT_ITERATIONS)
             .unwrap();
-        let wrapped = crypto.wrap_master_key(&device_key, &MASTER_KEY).unwrap();
+        let wrapped = crypto.wrap_master_key(&device_key, &master_key).unwrap();
         EncryptionRepository::new(db.connection())
             .save_envelope(
                 1,
@@ -634,19 +633,20 @@ mod tests {
             )
             .unwrap();
         NoteRepository::new(db.connection())
-            .create(&Note::new("Kept safe in a backup".to_string()), &MASTER_KEY)
+            .create(&Note::new("Kept safe in a backup".to_string()), &master_key)
             .unwrap();
-        db
+        (db, master_key)
     }
 
     #[test]
     fn an_envelope_backup_restores_onto_an_empty_database() {
-        let backup = create_backup(&envelope_vault(), &MASTER_KEY, None).unwrap();
+        let (db, master_key) = envelope_vault();
+        let backup = create_backup(&db, &master_key, None).unwrap();
 
-        let key = verify_backup_password(&backup, ENVELOPE_PASSWORD).unwrap();
-        assert_eq!(key, MASTER_KEY);
+        let key = verify_backup_password(&backup, &test_password()).unwrap();
+        assert_eq!(key, master_key);
 
-        let restored = Database::in_memory("db-password").unwrap();
+        let restored = Database::in_memory(&test_password()).unwrap();
         assert_eq!(restore_backup(&restored, &backup, &key, None).unwrap(), 1);
 
         let notes = NoteRepository::new(restored.connection()).list(false, &key).unwrap();
@@ -660,22 +660,25 @@ mod tests {
             .decode(metadata.device_salt.unwrap())
             .unwrap();
         let device_key = crypto
-            .derive_key(ENVELOPE_PASSWORD, &device_salt, crate::crypto::DEFAULT_ITERATIONS)
+            .derive_key(&test_password(), &device_salt, crate::crypto::DEFAULT_ITERATIONS)
             .unwrap();
         let wrapped: EncryptedData = serde_json::from_str(&metadata.local_wrapped_master.unwrap()).unwrap();
-        assert_eq!(crypto.unwrap_master_key(&device_key, &wrapped).unwrap(), MASTER_KEY);
+        assert_eq!(crypto.unwrap_master_key(&device_key, &wrapped).unwrap(), master_key);
     }
 
     #[test]
     fn an_envelope_backup_refuses_the_wrong_password() {
-        let backup = create_backup(&envelope_vault(), &MASTER_KEY, None).unwrap();
-        let error = verify_backup_password(&backup, "not-the-password").unwrap_err();
+        let (db, master_key) = envelope_vault();
+        let backup = create_backup(&db, &master_key, None).unwrap();
+        let wrong_password = format!("{}-wrong", test_password());
+        let error = verify_backup_password(&backup, &wrong_password).unwrap_err();
         assert_eq!(error.to_string(), "Incorrect password");
     }
 
     #[test]
     fn the_header_uses_the_fields_the_other_clients_read() {
-        let backup = create_backup(&envelope_vault(), &MASTER_KEY, None).unwrap();
+        let (db, master_key) = envelope_vault();
+        let backup = create_backup(&db, &master_key, None).unwrap();
         let header = serde_json::to_value(&backup.encryption).unwrap();
         assert_eq!(header["envelopeVersion"], 1);
         assert!(header["deviceSalt"].is_string());
@@ -685,16 +688,17 @@ mod tests {
 
     #[test]
     fn an_older_backup_opens_with_its_vaults_key_and_leaves_the_metadata_alone() {
-        let db = envelope_vault();
-        let mut backup = create_backup(&db, &MASTER_KEY, None).unwrap();
+        let (db, master_key) = envelope_vault();
+        let mut backup = create_backup(&db, &master_key, None).unwrap();
         backup.encryption = serde_json::from_str(r#"{"salt":"","iterations":600000,"algorithm":"PBKDF2"}"#).unwrap();
         let before = EncryptionRepository::new(db.connection()).get().unwrap().unwrap();
+        let other_key = CryptoService::new().generate_master_key();
 
         assert!(!backup.encryption.names_its_key());
-        assert!(verify_backup_key(&backup, &MASTER_KEY).is_ok());
-        assert!(verify_backup_key(&backup, &[1; 32]).is_err());
+        assert!(verify_backup_key(&backup, &master_key).is_ok());
+        assert!(verify_backup_key(&backup, &other_key).is_err());
 
-        restore_backup(&db, &backup, &MASTER_KEY, None).unwrap();
+        restore_backup(&db, &backup, &master_key, None).unwrap();
         let after = EncryptionRepository::new(db.connection()).get().unwrap().unwrap();
         assert_eq!(after.local_wrapped_master, before.local_wrapped_master);
     }
