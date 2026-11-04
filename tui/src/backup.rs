@@ -606,11 +606,10 @@ mod tests {
     use super::*;
     use tempfile::NamedTempFile;
 
-    /// Get test password from environment variable or use default.
+    /// Get test password from environment variable or generate one.
     /// Set JOTTERY_TEST_PASSWORD env var to override.
     fn test_password() -> String {
-        std::env::var("JOTTERY_TEST_PASSWORD")
-            .unwrap_or_else(|_| "test_password_placeholder".to_string())
+        std::env::var("JOTTERY_TEST_PASSWORD").unwrap_or_else(|_| uuid::Uuid::new_v4().to_string())
     }
 
     /// A vault whose notes use a random master key, wrapped with the password.
