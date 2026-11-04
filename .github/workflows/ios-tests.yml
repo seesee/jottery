@@ -16,8 +16,9 @@ permissions:
 jobs:
   ios-tests:
     name: iOS Tests
-    # Pinned so that a new default image can't change the SDK unannounced.
-    runs-on: macos-26
+    # The iPhone Duo code uses iOS 27.1 APIs, so it needs Xcode 27.1 or later.
+    # Named rather than macos-latest so the SDK can't change unannounced.
+    runs-on: xcode-27
     timeout-minutes: 45
 
     steps:
