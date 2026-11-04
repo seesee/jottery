@@ -10,6 +10,7 @@
   // State props
   export let showPreview: boolean;
   export let canPreview: boolean;
+  export let noteId: string | undefined = undefined;
   export let content: string;
   export let tags: string[];
   export let language: string;
@@ -190,6 +191,7 @@
         <CodeEditor
           bind:this={codeEditor}
           value={content}
+          documentId={noteId}
           onChange={handleContentChange}
           {language}
           {wordWrap}

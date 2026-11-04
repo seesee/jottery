@@ -985,15 +985,17 @@
     const shortcuts = $settings.keyboardShortcuts;
     if (!shortcuts) return;
 
-    // Undo
+    // Undo and redo: inside the editor CodeMirror has already done it, and
+    // doing it again here would undo twice.
     if (matchesShortcut(event, shortcuts.undo)) {
+      if (event.defaultPrevented) return;
       event.preventDefault();
       handleUndo();
       return;
     }
 
-    // Redo
     if (matchesShortcut(event, shortcuts.redo)) {
+      if (event.defaultPrevented) return;
       event.preventDefault();
       handleRedo();
       return;
@@ -1165,6 +1167,7 @@
 
     <!-- Tags Input + Content Editor/Preview -->
     <EditorContent
+      noteId={$selectedNote?.id}
       {showPreview}
       {canPreview}
       bind:content
