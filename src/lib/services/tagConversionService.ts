@@ -18,11 +18,39 @@ function isValidTag(tag: unknown): tag is string {
 }
 
 /**
+ * Read tags in either format. Clients have written both to version history, and
+ * one tag in the sync format looks exactly like the storage format, so the only
+ * way to tell them apart is by what they decrypt to. A tag that won't decrypt is
+ * skipped.
+ */
+export async function decryptTags(tags: string[] | undefined, key: CryptoKey): Promise<string[]> {
+  const decrypted: string[] = [];
+
+  for (const encryptedTagJson of tags ?? []) {
+    try {
+      const value: unknown = await decryptJSON(JSON.parse(encryptedTagJson), key);
+      for (const tag of Array.isArray(value) ? value : [value]) {
+        if (isValidTag(tag)) {
+          decrypted.push(tag);
+        } else {
+          console.warn('[TagConversion] Skipping invalid tag');
+        }
+      }
+    } catch (error) {
+      console.error('[TagConversion] Failed to decrypt tag:', error);
+    }
+  }
+
+  return decrypted;
+}
+
+/**
  * Convert tags from storage format (single encrypted blob) to sync format (individually encrypted tags)
  *
  * @param storageTags - Tags in storage format (array with single JSON-stringified encrypted blob)
  * @param key - Encryption key
  * @returns Tags in sync format (array of JSON-stringified encrypted strings)
+ * @throws if the tags can't be read. An empty list would erase them on the server.
  */
 export async function storageToSync(
   storageTags: string[] | undefined,
@@ -33,44 +61,24 @@ export async function storageToSync(
     return [];
   }
 
-  // Single-blob format: tags[0] is a JSON string containing encrypted array
-  if (storageTags.length === 1) {
-    try {
-      const encryptedTagsBlob = JSON.parse(storageTags[0]);
-      const decryptedTagsArray = await decryptJSON<string[]>(encryptedTagsBlob, key);
-
-      // Filter out invalid tags (empty strings, non-strings, etc.)
-      const validTags = decryptedTagsArray.filter(tag => {
-        if (!isValidTag(tag)) {
-          console.warn('[TagConversion] Skipping invalid tag:', tag);
-          return false;
-        }
-        return true;
-      });
-
-      // Encrypt each valid tag individually with JSON encoding (as required by sync protocol)
-      return Promise.all(
-        validTags.map(async tag => {
-          const tagJson = JSON.stringify(tag); // JSON-encode the tag
-          const encrypted = await cryptoService.encryptText(tagJson, key);
-          return JSON.stringify(encrypted); // Stringify the EncryptionResult
-        })
-      );
-    } catch (error) {
-      console.error('[TagConversion] Failed to parse storage tags:', error);
-      return [];
-    }
+  // Multiple entries are already in the sync format
+  if (storageTags.length > 1) {
+    return storageTags;
   }
 
-  // Multiple entries (legacy/unexpected format) - pass through as-is
-  console.warn('[TagConversion] Unexpected multiple tag entries, using as-is');
-  return storageTags;
+  const decrypted: unknown = await decryptJSON(JSON.parse(storageTags[0]), key);
+  const validTags = (Array.isArray(decrypted) ? decrypted : [decrypted]).filter(isValidTag);
+
+  // Encrypt each valid tag individually with JSON encoding (as required by sync protocol)
+  return Promise.all(
+    validTags.map(async tag => JSON.stringify(await cryptoService.encryptText(JSON.stringify(tag), key)))
+  );
 }
 
 /**
- * Convert tags from sync format (individually encrypted tags) to storage format (single encrypted blob)
+ * Convert tags to storage format (a single encrypted blob). Accepts either format.
  *
- * @param syncTags - Tags in sync format (array of JSON-stringified encrypted strings)
+ * @param syncTags - Tags, normally in sync format (array of JSON-stringified encrypted strings)
  * @param key - Encryption key
  * @returns Tags in storage format (array with single JSON-stringified encrypted blob)
  */
@@ -78,41 +86,7 @@ export async function syncToStorage(
   syncTags: string[] | undefined,
   key: CryptoKey
 ): Promise<string[]> {
-  // Handle empty/missing tags
-  if (!syncTags || syncTags.length === 0) {
-    return [];
-  }
-
-  // Decrypt each individually encrypted tag
-  const decryptedTags: string[] = [];
-
-  for (const encryptedTagJson of syncTags) {
-    try {
-      const encryptedTag = JSON.parse(encryptedTagJson);
-      const tagJson = await cryptoService.decryptText(encryptedTag, key);
-      const tag = JSON.parse(tagJson); // Parse the JSON-encoded tag
-
-      // Handle legacy format: if tag is an array, extract individual tags
-      if (Array.isArray(tag)) {
-        console.warn('[TagConversion] Found legacy array tag format, extracting individual tags');
-        for (const individualTag of tag) {
-          if (isValidTag(individualTag)) {
-            decryptedTags.push(individualTag);
-          }
-        }
-        continue;
-      }
-
-      // Validate and add single tag
-      if (isValidTag(tag)) {
-        decryptedTags.push(tag);
-      } else {
-        console.warn('[TagConversion] Skipping invalid tag:', tag);
-      }
-    } catch (error) {
-      console.error('[TagConversion] Failed to decrypt tag:', error);
-    }
-  }
+  const decryptedTags = await decryptTags(syncTags, key);
 
   // Re-encrypt as a single blob for storage
   if (decryptedTags.length === 0) {
@@ -124,6 +98,7 @@ export async function syncToStorage(
 }
 
 export const tagConversionService = {
+  decryptTags,
   storageToSync,
   syncToStorage,
 };

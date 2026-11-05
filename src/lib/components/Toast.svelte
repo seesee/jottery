@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
   import { toast } from '../utils/toast.svelte';
   import type { Toast } from '../utils/toast.svelte';
 
@@ -48,6 +49,7 @@
         </div>
         <button
           onclick={() => toast.remove(item.id)}
+          aria-label={$_('common.close')}
           class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 flex-shrink-0"
         >
           ✕

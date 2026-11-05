@@ -11,6 +11,23 @@ import { get } from 'svelte/store';
 import { normaliseForComparison } from '../utils/stringUtils';
 import { compareTimestamps } from '../utils/timestamps';
 
+function notesById(): Map<string, DecryptedNote> {
+  return new Map(get(notes).map(note => [note.id, note]));
+}
+
+/**
+ * Update the store once for a whole operation. Every update re-runs search, sorting
+ * and the tag scan over all notes, so doing it per note took tens of seconds.
+ */
+function applyToStore(updates: Map<string, DecryptedNote>): void {
+  if (updates.size === 0) return;
+
+  notes.update(all => all.map(note => updates.get(note.id) ?? note));
+  for (const note of updates.values()) {
+    searchService.updateNote(note);
+  }
+}
+
 export interface BulkProgress {
   current: number;
   total: number;
@@ -29,15 +46,16 @@ export async function addTagsToNotes(
   tagsToAdd: string[],
   onProgress?: ProgressCallback
 ): Promise<void> {
-  const allNotes = get(notes);
+  const allNotes = notesById();
   const total = noteIds.length;
+  const updates = new Map<string, DecryptedNote>();
 
   for (let i = 0; i < noteIds.length; i++) {
     const noteId = noteIds[i];
-    const note = allNotes.find((n) => n.id === noteId);
+    const note = allNotes.get(noteId);
 
-    // Skip locked notes - they cannot be modified
-    if (note && !note.locked) {
+    // Skip read-only notes - they cannot be modified
+    if (note && !note.locked && !note.archived) {
       // Add tags that aren't already present
       const newTags = [...new Set([...note.tags, ...tagsToAdd])];
 
@@ -45,18 +63,7 @@ export async function addTagsToNotes(
         // Update note with new tags (properly encrypts via noteService)
         await noteService.updateNote(noteId, { tags: newTags });
 
-        // Update store with decrypted version
-        const updated: DecryptedNote = {
-          ...note,
-          tags: newTags,
-          modifiedAt: new Date().toISOString(),
-        };
-        notes.update((n) =>
-          n.map((existingNote) => (existingNote.id === noteId ? updated : existingNote))
-        );
-
-        // Update search index
-        searchService.updateNote(updated);
+        updates.set(noteId, { ...note, tags: newTags, modifiedAt: new Date().toISOString() });
       }
     }
 
@@ -66,6 +73,8 @@ export async function addTagsToNotes(
       status: 'running',
     });
   }
+
+  applyToStore(updates);
 
   onProgress?.({
     current: total,
@@ -83,16 +92,17 @@ export async function removeTagsFromNotes(
   tagsToRemove: string[],
   onProgress?: ProgressCallback
 ): Promise<void> {
-  const allNotes = get(notes);
+  const allNotes = notesById();
   const total = noteIds.length;
   const tagsLower = tagsToRemove.map(normaliseForComparison);
+  const updates = new Map<string, DecryptedNote>();
 
   for (let i = 0; i < noteIds.length; i++) {
     const noteId = noteIds[i];
-    const note = allNotes.find((n) => n.id === noteId);
+    const note = allNotes.get(noteId);
 
-    // Skip locked notes - they cannot be modified
-    if (note && !note.locked) {
+    // Skip read-only notes - they cannot be modified
+    if (note && !note.locked && !note.archived) {
       // Remove matching tags (case-insensitive)
       const newTags = note.tags.filter(
         (tag) => !tagsLower.includes(normaliseForComparison(tag))
@@ -102,18 +112,7 @@ export async function removeTagsFromNotes(
         // Update note with new tags (properly encrypts via noteService)
         await noteService.updateNote(noteId, { tags: newTags });
 
-        // Update store with decrypted version
-        const updated: DecryptedNote = {
-          ...note,
-          tags: newTags,
-          modifiedAt: new Date().toISOString(),
-        };
-        notes.update((n) =>
-          n.map((existingNote) => (existingNote.id === noteId ? updated : existingNote))
-        );
-
-        // Update search index
-        searchService.updateNote(updated);
+        updates.set(noteId, { ...note, tags: newTags, modifiedAt: new Date().toISOString() });
       }
     }
 
@@ -123,6 +122,8 @@ export async function removeTagsFromNotes(
       status: 'running',
     });
   }
+
+  applyToStore(updates);
 
   onProgress?.({
     current: total,
@@ -187,18 +188,16 @@ export async function archiveNotes(
 ): Promise<void> {
   const total = noteIds.length;
 
+  const updates = new Map<string, DecryptedNote>();
+
   for (let i = 0; i < noteIds.length; i++) {
     const noteId = noteIds[i];
 
     await noteService.archiveNote(noteId);
 
-    // Get updated note and update store
     const updatedNote = await noteService.getNote(noteId);
     if (updatedNote) {
-      notes.update((allNotes) =>
-        allNotes.map((n) => (n.id === noteId ? updatedNote : n))
-      );
-      searchService.updateNote(updatedNote);
+      updates.set(noteId, updatedNote);
     }
 
     onProgress?.({
@@ -207,6 +206,8 @@ export async function archiveNotes(
       status: 'running',
     });
   }
+
+  applyToStore(updates);
 
   // Clear multi-selection after archive
   clearMultiSelection();
@@ -306,30 +307,20 @@ export async function setColorForNotes(
   color: string | undefined,
   onProgress?: ProgressCallback
 ): Promise<void> {
-  const allNotes = get(notes);
+  const allNotes = notesById();
   const total = noteIds.length;
+  const updates = new Map<string, DecryptedNote>();
 
   for (let i = 0; i < noteIds.length; i++) {
     const noteId = noteIds[i];
-    const note = allNotes.find((n) => n.id === noteId);
+    const note = allNotes.get(noteId);
 
     // Skip locked notes - they cannot be modified
     if (note && !note.locked) {
       // Update note with new color (properly persists via noteService)
       await noteService.updateNote(noteId, { color });
 
-      // Update store with decrypted version
-      const updated: DecryptedNote = {
-        ...note,
-        color,
-        modifiedAt: new Date().toISOString(),
-      };
-      notes.update((n) =>
-        n.map((existingNote) => (existingNote.id === noteId ? updated : existingNote))
-      );
-
-      // Update search index
-      searchService.updateNote(updated);
+      updates.set(noteId, { ...note, color, modifiedAt: new Date().toISOString() });
     }
 
     onProgress?.({
@@ -338,6 +329,8 @@ export async function setColorForNotes(
       status: 'running',
     });
   }
+
+  applyToStore(updates);
 
   onProgress?.({
     current: total,

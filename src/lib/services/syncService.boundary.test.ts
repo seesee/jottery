@@ -117,7 +117,7 @@ describe('sync boundary', () => {
     });
 
     it('leaves the local copy alone when an update is bad', async () => {
-      const local = createTestNote({ id: BAD_ID, content: 'local', contentHash: 'aaaaaaaaaaaaaaaaaaaaaaaa' });
+      const local = createTestNote({ tags: [], id: BAD_ID, content: 'local', contentHash: 'aaaaaaaaaaaaaaaaaaaaaaaa' });
       await noteRepository.create(local);
 
       serve({
@@ -154,7 +154,7 @@ describe('sync boundary', () => {
     });
 
     it('does not let a pull turn preview on', async () => {
-      const local = createTestNote({ id: GOOD_ID, showPreview: false, contentHash: 'aaaaaaaaaaaaaaaaaaaaaaaa' });
+      const local = createTestNote({ tags: [], id: GOOD_ID, showPreview: false, contentHash: 'aaaaaaaaaaaaaaaaaaaaaaaa' });
       await noteRepository.create(local);
 
       serve({ notes: [await remoteNote(GOOD_ID, { showPreview: true, contentHash: 'bbbbbbbbbbbbbbbbbbbbbbbb', parentHash: local.contentHash })] });
@@ -166,7 +166,7 @@ describe('sync boundary', () => {
     });
 
     it('does not let a pull turn preview off', async () => {
-      const local = createTestNote({ id: GOOD_ID, showPreview: true, contentHash: 'aaaaaaaaaaaaaaaaaaaaaaaa' });
+      const local = createTestNote({ tags: [], id: GOOD_ID, showPreview: true, contentHash: 'aaaaaaaaaaaaaaaaaaaaaaaa' });
       await noteRepository.create(local);
 
       serve({ notes: [await remoteNote(GOOD_ID, { showPreview: false, contentHash: 'bbbbbbbbbbbbbbbbbbbbbbbb', parentHash: local.contentHash })] });
@@ -255,7 +255,7 @@ describe('sync boundary', () => {
     });
 
     it('ignores a deletion with a hostile id', async () => {
-      await noteRepository.create(createTestNote({ id: GOOD_ID }));
+      await noteRepository.create(createTestNote({ tags: [], id: GOOD_ID }));
       serve({ deletions: [{ id: HOSTILE, deletedAt: NOW }] });
 
       const result = await syncService.syncNow();
@@ -277,7 +277,7 @@ describe('sync boundary', () => {
     });
 
     it('does not store a conflict with hostile attachment metadata', async () => {
-      await noteRepository.create(createTestNote({ id: GOOD_ID, needsSync: true }));
+      await noteRepository.create(createTestNote({ tags: [], id: GOOD_ID, needsSync: true }));
       serve({}, {
         rejected: [{
           id: GOOD_ID, reason: 'conflict', serverModifiedAt: NOW, serverContent: 'x', serverTags: [], serverVersion: 2,

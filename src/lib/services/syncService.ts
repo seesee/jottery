@@ -12,6 +12,7 @@ import type {
   SyncNote,
   SyncRejected,
   SyncAccepted,
+  SyncDeletion,
 } from '../types';
 import type { AttachmentWarning, InboxItem } from '../types';
 import { syncRepository } from './syncRepository';
@@ -36,25 +37,102 @@ import {
   isUuid,
   validateConflict,
   validateInboxItem,
+  validatePullResponse,
+  validatePushResponse,
   validateRemoteNote,
   validateRemoteVersion,
   validateSavedSearch,
 } from './syncValidation';
 import { isDBAvailable, wasDBTerminated } from './db';
-import { SYNC_PUSH_BATCH_SIZE, SYNC_PULL_BATCH_SIZE, SYNC_AUTO_INTERVAL_MINUTES } from '../constants';
+import { SYNC_PUSH_BATCH_SIZE, SYNC_PUSH_MAX_BYTES, SYNC_PULL_BATCH_SIZE, SYNC_AUTO_INTERVAL_MINUTES } from '../constants';
 import {
   normalizeEndpoint,
   registerDevice as registerDeviceApi,
   pushToServer,
   pullFromServer,
   getServerStatus,
+  revokeDevice,
+  SyncApiError,
 } from './syncClient';
+import { get } from 'svelte/store';
+import { _ } from 'svelte-i18n';
 
 // Debounce delay for background sync (30 seconds of inactivity)
 const BACKGROUND_SYNC_DEBOUNCE_MS = 30000;
 
-// Maximum time a sync can run before we consider it stuck (2 minutes)
+// How long a sync can go without finishing a page or batch before we consider it stuck
 const SYNC_STUCK_TIMEOUT_MS = 120000;
+
+// How far before the last sync an older server is asked to look. It stamps a push
+// before committing it, so a slow one can land behind a timestamp. Anything sent
+// twice is harmless, because applying a pulled note is idempotent.
+const PULL_OVERLAP_MS = 2 * 60 * 1000;
+
+// The server refuses these for what the request holds, so a smaller one can succeed
+const REFUSED_PUSH_STATUSES = new Set([400, 413]);
+
+// The request took too long. Sending the same push twice is safe, and less of it
+// is likelier to finish, but a single note that times out hasn't been refused.
+const TIMED_OUT_STATUS = 408;
+
+// How long to wait when a refusal doesn't say
+const DEFAULT_RETRY_SECONDS = 60;
+const TIMED_OUT_RETRY_SECONDS = 15;
+
+// A timer can fire a moment before the time it was set for
+const RETRY_MARGIN_MS = 100;
+
+// A pull that deletes more live notes than this is held for the user to look at.
+// Nothing authenticates the deletions list, so without this a compromised server
+// could wipe every device. Emptying a bin elsewhere doesn't count: those notes are in
+// the bin here too.
+const MASS_DELETION_MINIMUM = 10;
+const MASS_DELETION_SHARE = 0.25;
+
+// How often to repeat that the account is full: this comes back on every sync
+const QUOTA_NOTICE_INTERVAL_MS = 60 * 60 * 1000;
+
+/** Live notes deleted so far in one pull, and how many that may reach */
+interface DeletionBudget {
+  limit: number | null;
+  used: number;
+}
+
+interface PushOutcome {
+  accepted: number;
+  rejected: number;
+  warnings: AttachmentWarning[];
+  refused: number;
+}
+
+/** Group items so each group stays within a size and a count. An oversized item goes alone. */
+function chunkBySize<T>(items: T[], sizeOf: (item: T) => number, maxBytes: number, maxItems = Infinity): T[][] {
+  const chunks: T[][] = [];
+  let current: T[] = [];
+  let bytes = 0;
+
+  for (const item of items) {
+    const size = sizeOf(item);
+    if (current.length > 0 && (current.length >= maxItems || bytes + size > maxBytes)) {
+      chunks.push(current);
+      current = [];
+      bytes = 0;
+    }
+    current.push(item);
+    bytes += size;
+  }
+
+  if (current.length > 0) {
+    chunks.push(current);
+  }
+  return chunks;
+}
+
+function withOverlap(lastSyncAt: string | undefined): string | undefined {
+  if (!lastSyncAt) return undefined;
+  const time = Date.parse(lastSyncAt);
+  return Number.isNaN(time) ? lastSyncAt : new Date(time - PULL_OVERLAP_MS).toISOString();
+}
 
 class SyncService {
   private isSyncing = false;
@@ -72,6 +150,9 @@ class SyncService {
   private sseFailedOver = false; // True when SSE failed and we're using periodic sync as fallback
   private networkListenersAttached = false;
   private restoreInProgress = false; // True during backup restore to prevent sync
+  private retryNotBefore = 0; // Set when the server asks for a wait: no sync before this time
+  private retryTimer?: number;
+  private quotaNoticeAt = 0;
 
   /**
    * Set restore-in-progress flag to disable sync during backup restore
@@ -94,8 +175,13 @@ class SyncService {
     return this.restoreInProgress;
   }
 
+  /** A sync is only stuck if it stops doing anything. A big vault can take minutes. */
+  private noteSyncActivity(): void {
+    this.syncStartTime = Date.now();
+  }
+
   /**
-   * Check if a sync appears to be stuck (running for too long)
+   * Check if a sync appears to be stuck (nothing done for too long)
    * and reset the state if needed
    */
   private checkAndResetStuckSync(): boolean {
@@ -267,6 +353,11 @@ class SyncService {
       return { success: false, error: 'Restore in progress' };
     }
 
+    if (Date.now() < this.retryNotBefore) {
+      console.log('[SyncService] Skipping sync - rate limited');
+      return { success: false, error: 'Rate limited' };
+    }
+
     // Check network availability before attempting sync
     if (!this.isOnline()) {
       console.log('[SyncService] Skipping sync - network offline');
@@ -293,6 +384,7 @@ class SyncService {
     }
 
     console.log('[SyncService] Starting sync', forceFullSync ? '(force full)' : '');
+    const startedAt = new Date().toISOString();
     this.isSyncing = true;
     this.syncStartTime = Date.now();
     isSyncingStore.set(true);
@@ -321,15 +413,24 @@ class SyncService {
         // Continue anyway - server might be slow but still functional
       }
 
-      // 2. Push local changes (force full sync if requested)
-      const pushedCount = await this.push(metadata.syncEndpoint, apiKey, forceFullSync);
+      // 2. Push local changes (force full sync if requested). A push that fails must
+      // not stop this device hearing about changes made elsewhere.
+      let pushedCount = 0;
+      let pushError: unknown;
+      try {
+        pushedCount = await this.push(metadata.syncEndpoint, apiKey, forceFullSync);
+      } catch (error) {
+        console.warn('[SyncService] Push failed, pulling anyway:', error);
+        pushError = error;
+      }
 
       // 3. Pull remote changes
-      const pulledCount = await this.pull(metadata.syncEndpoint, apiKey);
+      const { pulledCount, serverTime } = await this.pull(metadata.syncEndpoint, apiKey);
 
-      // 4. Update last sync timestamp
+      // 4. Update last sync timestamp. The server filters on its own clock, and on
+      // when the pull began: a push landing during a long pull must not be skipped.
       await syncRepository.updateMetadata({
-        lastSyncAt: new Date().toISOString(),
+        lastSyncAt: serverTime ?? startedAt,
       });
 
       // 5. Only reload notes if we PULLED remote changes
@@ -381,11 +482,18 @@ class SyncService {
         toast.info(message);
       }
 
+      if (pushError !== undefined) {
+        throw pushError;
+      }
+
       return { success: true };
     } catch (error) {
       console.error('[SyncService] Sync failed:', error);
       // Clear refresh flag immediately on error (no batches loading)
       isSyncRefreshing.set(false);
+      if (error instanceof SyncApiError) {
+        this.handleServerRefusal(error);
+      }
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -396,6 +504,50 @@ class SyncService {
       isSyncingStore.set(false);
       // Reset progress after sync completes
       syncProgress.set({ total: 0, completed: 0 });
+    }
+  }
+
+  /** Wait as asked, then sync. With live updates on, nothing else would start one. */
+  private retryIn(seconds: number): void {
+    this.retryNotBefore = Date.now() + seconds * 1000;
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+    }
+    this.retryTimer = window.setTimeout(() => {
+      this.retryTimer = undefined;
+      void this.executeBackgroundSync();
+    }, seconds * 1000 + RETRY_MARGIN_MS);
+  }
+
+  /**
+   * A 403 means the account is deactivated or not approved, not that the device was
+   * removed. The key is still valid and reactivating the account restores it, so the
+   * credentials stay. Background sync stops until the app next starts, or a manual
+   * sync succeeds.
+   *
+   * A 507 means the account is full. Nothing was written, and pulling and deleting
+   * still work, so sync carries on and the user is told to make room.
+   */
+  private handleServerRefusal(error: SyncApiError): void {
+    switch (error.status) {
+      case 403:
+        this.disableAutoSync();
+        this.disconnectFromSyncEvents();
+        toast.error(get(_)('sync.accountDisabled'));
+        break;
+      case TIMED_OUT_STATUS:
+        this.retryIn(error.retryAfterSeconds ?? TIMED_OUT_RETRY_SECONDS);
+        break;
+      case 429:
+      case 503:
+        this.retryIn(error.retryAfterSeconds ?? DEFAULT_RETRY_SECONDS);
+        break;
+      case 507:
+        if (Date.now() - this.quotaNoticeAt >= QUOTA_NOTICE_INTERVAL_MS) {
+          this.quotaNoticeAt = Date.now();
+          toast.error(get(_)('sync.storageQuotaExceeded'));
+        }
+        break;
     }
   }
 
@@ -454,6 +606,10 @@ class SyncService {
       clearTimeout(this.backgroundSyncTimer);
       this.backgroundSyncTimer = undefined;
     }
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = undefined;
+    }
   }
 
   /**
@@ -480,12 +636,26 @@ class SyncService {
   // Push Helper Methods
   // ===========================================================================
 
-  /** Collect attachment blobs for a batch of notes */
-  private async collectAttachmentsForBatch(batchNotes: Note[]): Promise<Map<string, string>> {
+  /** Attachments of a note the server already has. A forced push sends everything again. */
+  private async attachmentsOnServer(note: Note, forceAll: boolean): Promise<Set<string>> {
+    if (forceAll || note.attachments.length === 0) {
+      return new Set();
+    }
+    const metadata = await syncRepository.getNoteSyncMetadata(note.id);
+    return new Set(metadata?.uploadedAttachmentIds ?? []);
+  }
+
+  /**
+   * Collect the blobs a batch of notes needs to send. Most edits don't touch an
+   * attachment, and re-sending them on every save could by itself exceed the upload
+   * limit. If the server has lost one, it says so in attachmentWarnings.
+   */
+  private async collectAttachmentsForBatch(batchNotes: Note[], forceAll: boolean): Promise<Map<string, string>> {
     const attachmentMap = new Map<string, string>();
     for (const note of batchNotes) {
+      const onServer = await this.attachmentsOnServer(note, forceAll);
       for (const attachment of note.attachments) {
-        if (!attachmentMap.has(attachment.id)) {
+        if (!attachmentMap.has(attachment.id) && !onServer.has(attachment.id)) {
           const blob = await attachmentRepository.getBlob(attachment.data);
           if (blob) {
             const base64 = arrayBufferToBase64(blob);
@@ -499,6 +669,14 @@ class SyncService {
       }
     }
     return attachmentMap;
+  }
+
+  /** About what a note adds to a push, counted the way the server counts it */
+  private async estimatePushBytes(note: Note, forceAll: boolean): Promise<number> {
+    const onServer = await this.attachmentsOnServer(note, forceAll);
+    return note.attachments
+      .filter(attachment => !onServer.has(attachment.id))
+      .reduce((bytes, attachment) => bytes + Math.ceil(attachment.size / 3) * 4, note.content.length);
   }
 
   /** Collect saved searches that need syncing */
@@ -528,17 +706,31 @@ class SyncService {
   }
 
   /** Process notes accepted by server during push */
-  private async processAcceptedNotes(accepted: SyncAccepted[], pushedNotes: Map<string, Note>): Promise<void> {
+  private async processAcceptedNotes(
+    accepted: SyncAccepted[],
+    pushedNotes: Map<string, Note>,
+    sentBlobs: Set<string>
+  ): Promise<void> {
     for (const item of accepted) {
       if (!isUuid(item?.id)) continue;
       const syncedAt = isTimestamp(item.syncedAt) ? item.syncedAt : new Date().toISOString();
       const serverVersion = typeof item.serverVersion === 'number' ? item.serverVersion : 1;
+
+      // A blob only counts once its note is accepted: the server ignores one with no
+      // reference, which is what happens to a note refused as a conflict
+      const previous = await syncRepository.getNoteSyncMetadata(item.id);
+      const alreadyThere = new Set(previous?.uploadedAttachmentIds ?? []);
+      const uploadedAttachmentIds = (pushedNotes.get(item.id)?.attachments ?? [])
+        .map(attachment => attachment.id)
+        .filter(id => sentBlobs.has(id) || alreadyThere.has(id));
 
       await syncRepository.updateNoteSyncMetadata(item.id, {
         noteId: item.id,
         syncedAt,
         serverVersion,
         lastSyncStatus: 'synced',
+        errorMessage: undefined,
+        uploadedAttachmentIds,
       });
 
       const note = await noteRepository.getById(item.id);
@@ -611,6 +803,9 @@ class SyncService {
       pinned: note.pinned,
       archived: note.archived,
       archivedAt: note.archivedAt,
+      // The server defaults a missing lock to false, which would clear one set elsewhere
+      locked: note.locked ?? false,
+      lockedAt: note.lockedAt,
       deleted: note.deleted,
       deletedAt: note.deletedAt,
       version: note.version,
@@ -625,57 +820,152 @@ class SyncService {
     };
   }
 
+  /**
+   * Whether this device can vouch for every attachment list in a push. A note with no
+   * hash can be accepted on its timestamp alone, even if another device has since
+   * added an attachment, and the flag would then remove that attachment.
+   */
+  private canVouchForAttachments(batchNotes: Note[]): boolean {
+    return batchNotes.length > 0 && batchNotes.every(note => !!note.contentHash);
+  }
+
   /** Process a single batch of notes for pushing */
   private async processPushBatch(
     batchNotes: Note[],
-    batchIndex: number,
-    totalBatches: number,
     endpoint: string,
     apiKey: string,
-    masterKey: CryptoKey
-  ): Promise<{ accepted: number; rejected: number; warnings: AttachmentWarning[] }> {
-    if (totalBatches > 1) {
-      console.log(`[SyncService] Pushing batch ${batchIndex + 1}/${totalBatches} (${batchNotes.length} notes)`);
+    masterKey: CryptoKey,
+    forceAll: boolean
+  ): Promise<PushOutcome> {
+    this.noteSyncActivity();
+
+    // A note that can't be converted is set aside. Sending it without its tags would
+    // erase them on the server, and it mustn't hold back the rest of the batch.
+    const converted: SyncPushRequest['notes'] = [];
+    const sendable: Note[] = [];
+    for (const note of batchNotes) {
+      try {
+        converted.push(await this.convertNoteToSyncFormat(note, masterKey));
+        sendable.push(note);
+      } catch (error) {
+        console.error(`[SyncService] Could not prepare note ${note.id} for sync:`, error);
+        await syncRepository.updateNoteSyncMetadata(note.id, {
+          noteId: note.id,
+          lastSyncStatus: 'error',
+          errorMessage: 'Tags could not be read',
+        });
+      }
+    }
+
+    if (sendable.length === 0) {
+      return { accepted: 0, rejected: 0, warnings: [], refused: 0 };
     }
 
     // Collect attachments and build request
-    const attachmentMap = await this.collectAttachmentsForBatch(batchNotes);
-    const savedSearchesForPush = batchIndex === 0 ? await this.collectSavedSearchesForPush() : [];
-    const pendingDeletions = batchIndex === 0 ? await noteRepository.getPendingDeletions() : [];
+    const attachmentMap = await this.collectAttachmentsForBatch(sendable, forceAll);
 
     const pushRequest: SyncPushRequest = {
-      notes: await Promise.all(batchNotes.map(note => this.convertNoteToSyncFormat(note, masterKey))),
+      notes: converted,
       attachments: Array.from(attachmentMap.entries()).map(([id, data]) => ({ id, data })),
-      versions: await this.collectVersionsForPush(batchNotes),
-      savedSearches: savedSearchesForPush.length > 0 ? savedSearchesForPush : undefined,
-      deletions: pendingDeletions.length > 0 ? pendingDeletions : undefined,
+      versions: await this.collectVersionsForPush(sendable, masterKey),
+      attachmentsAuthoritative: this.canVouchForAttachments(sendable) ? true : undefined,
     };
 
     // Send to server and process results
-    const result = await pushToServer(endpoint, apiKey, pushRequest);
-    const pushedNotes = new Map(batchNotes.map(note => [note.id, note]));
-    await this.processAcceptedNotes(result.accepted, pushedNotes);
+    const result = validatePushResponse(await pushToServer(endpoint, apiKey, pushRequest));
+    const pushedNotes = new Map(sendable.map(note => [note.id, note]));
+    await this.processAcceptedNotes(result.accepted, pushedNotes, new Set(attachmentMap.keys()));
     await this.processRejectedNotes(result.rejected, pushedNotes);
     const warnings = result.attachmentWarnings ?? [];
 
     // Update progress
     syncProgress.update(p => ({ ...p, completed: p.completed + batchNotes.length }));
 
-    // Mark saved searches and deletions as synced (only in first batch)
-    if (batchIndex === 0) {
-      if (savedSearchesForPush.length > 0) {
-        for (const search of savedSearchesForPush) {
-          await savedSearchRepository.markSynced(search.id, search.version);
-        }
-        console.log(`[SyncService] Marked ${savedSearchesForPush.length} saved searches as synced`);
-      }
-      if (pendingDeletions.length > 0) {
-        await noteRepository.markDeletionsSynced(pendingDeletions.map(d => d.id));
-        console.log(`[SyncService] Marked ${pendingDeletions.length} deletions as synced`);
-      }
-    }
+    return { accepted: result.accepted.length, rejected: result.rejected.length, warnings, refused: 0 };
+  }
 
-    return { accepted: result.accepted.length, rejected: result.rejected.length, warnings };
+  /**
+   * Push a batch, splitting it if the server refuses what it holds. A push over the
+   * limit fails entirely, so one oversized note would otherwise hold back every note
+   * pushed with it, on every sync, for good. A single note that is still refused is
+   * set aside and stays marked for the next sync.
+   */
+  private async pushNotes(
+    batchNotes: Note[],
+    endpoint: string,
+    apiKey: string,
+    masterKey: CryptoKey,
+    forceAll: boolean
+  ): Promise<PushOutcome> {
+    try {
+      return await this.processPushBatch(batchNotes, endpoint, apiKey, masterKey, forceAll);
+    } catch (error) {
+      if (!(error instanceof SyncApiError)) {
+        throw error;
+      }
+
+      const refused = REFUSED_PUSH_STATUSES.has(error.status);
+      const canSplit = batchNotes.length > 1 && (refused || error.status === TIMED_OUT_STATUS);
+      if (!refused && !canSplit) {
+        throw error;
+      }
+
+      if (batchNotes.length === 1) {
+        console.warn(`[SyncService] Server refused note ${batchNotes[0].id}:`, error.message);
+        await syncRepository.updateNoteSyncMetadata(batchNotes[0].id, {
+          noteId: batchNotes[0].id,
+          lastSyncStatus: 'error',
+          errorMessage: error.message,
+        });
+        return { accepted: 0, rejected: 0, warnings: [], refused: 1 };
+      }
+
+      const middle = Math.ceil(batchNotes.length / 2);
+      const first = await this.pushNotes(batchNotes.slice(0, middle), endpoint, apiKey, masterKey, forceAll);
+      const second = await this.pushNotes(batchNotes.slice(middle), endpoint, apiKey, masterKey, forceAll);
+      return {
+        accepted: first.accepted + second.accepted,
+        rejected: first.rejected + second.rejected,
+        warnings: [...first.warnings, ...second.warnings],
+        refused: first.refused + second.refused,
+      };
+    }
+  }
+
+  /**
+   * Send permanent deletions. They go in a request of their own, so they don't wait
+   * for a note to change, and nothing else can hold them back: after the server's
+   * 30-day cleanup, a deletion that never left this device would leave that note
+   * alive on every other one. An account at its quota can still delete, and has to
+   * be able to, so nothing that adds data rides along.
+   */
+  private async pushDeletions(endpoint: string, apiKey: string, deletions: SyncDeletion[]): Promise<void> {
+    const result = validatePushResponse(await pushToServer(endpoint, apiKey, {
+      notes: [],
+      attachments: [],
+      versions: [],
+      deletions,
+    }));
+
+    // Refused means the note has a newer edit. Sending it again would only make the
+    // server re-announce the note to every device, on every push.
+    const refused = new Set(result.rejectedDeletions ?? []);
+    const sent = deletions.map(deletion => deletion.id);
+    await noteRepository.markDeletionsSynced(sent.filter(id => !refused.has(id)));
+    await noteRepository.forgetDeletions(sent.filter(id => refused.has(id)));
+    await noteRepository.cleanupOldDeletions();
+
+    console.log(`[SyncService] Pushed ${deletions.length} deletions (${refused.size} refused)`);
+  }
+
+  /** Send saved searches, which also shouldn't have to wait for a note to change */
+  private async pushSavedSearches(endpoint: string, apiKey: string, savedSearches: SyncSavedSearch[]): Promise<void> {
+    validatePushResponse(await pushToServer(endpoint, apiKey, { notes: [], attachments: [], versions: [], savedSearches }));
+
+    for (const search of savedSearches) {
+      await savedSearchRepository.markSynced(search.id, search.version);
+    }
+    console.log(`[SyncService] Marked ${savedSearches.length} saved searches as synced`);
   }
 
   /**
@@ -688,8 +978,10 @@ class SyncService {
     const modifiedNotes = forceAll
       ? await noteRepository.getAll()
       : await noteRepository.getNotesNeedingSync();
+    const savedSearches = await this.collectSavedSearchesForPush();
+    const deletions = await noteRepository.getPendingDeletions();
 
-    if (modifiedNotes.length === 0) {
+    if (modifiedNotes.length === 0 && savedSearches.length === 0 && deletions.length === 0) {
       return 0;
     }
 
@@ -698,25 +990,40 @@ class SyncService {
       throw new Error('Application is locked');
     }
 
+    if (deletions.length > 0) {
+      await this.pushDeletions(endpoint, apiKey, deletions);
+    }
+    if (savedSearches.length > 0) {
+      await this.pushSavedSearches(endpoint, apiKey, savedSearches);
+    }
+
     syncProgress.update(p => ({ ...p, total: p.total + modifiedNotes.length }));
 
-    const totalBatches = Math.ceil(modifiedNotes.length / SYNC_PUSH_BATCH_SIZE);
+    const pushSizes = new Map<string, number>();
+    for (const note of modifiedNotes) {
+      pushSizes.set(note.id, await this.estimatePushBytes(note, forceAll));
+    }
+    const batches = chunkBySize(modifiedNotes, note => pushSizes.get(note.id) ?? 0, SYNC_PUSH_MAX_BYTES, SYNC_PUSH_BATCH_SIZE);
+
     let totalAccepted = 0;
     let totalRejected = 0;
+    let totalRefused = 0;
     const allWarnings: AttachmentWarning[] = [];
 
-    console.log(`[SyncService] Pushing ${modifiedNotes.length} notes in ${totalBatches} batch${totalBatches > 1 ? 'es' : ''}${forceAll ? ' (force)' : ''}`);
+    console.log(`[SyncService] Pushing ${modifiedNotes.length} notes in ${batches.length} batch${batches.length > 1 ? 'es' : ''}${forceAll ? ' (force)' : ''}`);
 
-    for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-      const start = batchIndex * SYNC_PUSH_BATCH_SIZE;
-      const batchNotes = modifiedNotes.slice(start, start + SYNC_PUSH_BATCH_SIZE);
-
-      const { accepted, rejected, warnings } = await this.processPushBatch(
-        batchNotes, batchIndex, totalBatches, endpoint, apiKey, masterKey.key
+    for (const batchNotes of batches) {
+      const { accepted, rejected, warnings, refused } = await this.pushNotes(
+        batchNotes, endpoint, apiKey, masterKey.key, forceAll
       );
       totalAccepted += accepted;
       totalRejected += rejected;
+      totalRefused += refused;
       allWarnings.push(...warnings);
+    }
+
+    if (totalRefused > 0) {
+      toast.error(get(_)('sync.notesRefused'));
     }
 
     if (allWarnings.length > 0) {
@@ -760,10 +1067,10 @@ class SyncService {
       }
     }
 
-    if (repairAttachments.length > 0) {
+    for (const attachments of chunkBySize(repairAttachments, item => item.data.length, SYNC_PUSH_MAX_BYTES)) {
       try {
-        await pushToServer(endpoint, apiKey, { notes: [], attachments: repairAttachments, versions: [] });
-        console.log(`[SyncService] Re-uploaded ${repairAttachments.length} attachment(s) the server was missing`);
+        await pushToServer(endpoint, apiKey, { notes: [], attachments, versions: [] });
+        console.log(`[SyncService] Re-uploaded ${attachments.length} attachment(s) the server was missing`);
       } catch (error) {
         console.error('[SyncService] Attachment repair push failed:', error);
       }
@@ -841,52 +1148,47 @@ class SyncService {
         syncedAt,
         serverVersion: remoteNote.version,
         lastSyncStatus: 'synced',
+        uploadedAttachmentIds: remoteNote.attachments.map(attachment => attachment.id),
       });
       return true;
     }
 
-    // Hash-based conflict detection (like git)
+    // What a re-delivered note means comes from the hashes, as set out under "Applying
+    // a pulled note" in docs/sync-protocol.md. A refused push clears needsSync, so a
+    // conflict waiting to be resolved counts as an edit: the note here is the only
+    // copy of that side of it.
+    const syncState = await syncRepository.getNoteSyncMetadata(remoteNote.id);
+    const hasUnsentEdit = !!localNote.needsSync || syncState?.lastSyncStatus === 'conflict';
+
     let isConflict = false;
     let isFastForward = false;
 
-    // If both have hash chains, use hash-based detection
     if (remoteNote.contentHash && localNote.contentHash) {
-      // Case 1: Local hash == remote parent hash -> can fast-forward (remote is newer)
-      if (localNote.contentHash === remoteNote.parentHash) {
-        isFastForward = true;
-      }
-      // Case 2: Same content hash. The text is the same, but state can still differ:
-      // deleted isn't part of the hash, and not every client recomputes it for a pin
-      // or an attachment. A note with unsent changes pushes its own state instead.
-      else if (localNote.contentHash === remoteNote.contentHash) {
-        if (localNote.needsSync || !this.hasRemoteStateChange(localNote, remoteNote)) {
+      if (localNote.contentHash === remoteNote.contentHash) {
+        // The text is the same, but state can still differ: deleted isn't part of the
+        // hash, and not every client recomputes it for a pin or an attachment. A note
+        // with unsent changes pushes its own state instead.
+        if (hasUnsentEdit || !this.hasRemoteStateChange(localNote, remoteNote)) {
           return false;
         }
         noteForStorage.attachments = this.mergedAttachments(localNote, remoteNote);
         isFastForward = true;
-      }
-      // Case 3: Local has unsaved changes and hashes diverged
-      else if (localNote.needsSync) {
-        // Check if local parent exists in remote chain (remote includes local's history)
-        if (localNote.parentHash && remoteNote.hashChain?.includes(localNote.parentHash)) {
-          isFastForward = true; // Remote has our ancestor, safe to update
-        } else {
-          isConflict = true;
-        }
-      }
-      // Case 4: Check if remote parent exists in local chain (local is ahead)
-      else if (remoteNote.parentHash && localNote.hashChain?.includes(remoteNote.parentHash)) {
-        return false; // Local is ahead, no update needed
-      }
-      // Case 5: The histories can't be related, typically because the local hash has
-      // aged out of a long remote chain. Nothing here is unsent (that's case 3), so
-      // the server's copy is the newer one.
-      else {
+      } else if (!hasUnsentEdit) {
+        // Nothing here is unsent, so the server's copy is the current one. That holds
+        // even if it matches an older hash: a restore or an undo can return to one.
         isFastForward = true;
+      } else if (remoteNote.contentHash === localNote.parentHash || localNote.hashChain?.includes(remoteNote.contentHash)) {
+        return false; // Already seen, and older than the edit, which will be pushed
+      } else if (remoteNote.parentHash === localNote.contentHash || remoteNote.hashChain?.includes(localNote.contentHash)) {
+        isFastForward = true; // Newer, and it already includes the edit
+      } else {
+        // Sharing a parent proves nothing here: every chain starts with its own hash,
+        // so two sides of a divergence both hold their common ancestor.
+        isConflict = true;
       }
     } else {
       // Fallback to timestamp-based detection for legacy notes
-      if (remoteNote.modifiedAt > localNote.modifiedAt && localNote.needsSync) {
+      if (remoteNote.modifiedAt > localNote.modifiedAt && hasUnsentEdit) {
         isConflict = true;
       } else if (remoteNote.modifiedAt > localNote.modifiedAt) {
         isFastForward = true;
@@ -894,6 +1196,12 @@ class SyncService {
     }
 
     if (isConflict) {
+      // A refused push already stored this server copy, with the ancestor for a
+      // three-way merge, which a pull can't supply
+      if (remoteNote.contentHash && syncState?.conflictData?.serverContentHash === remoteNote.contentHash) {
+        return false;
+      }
+
       console.warn(`[SyncService] Conflict detected during pull for note ${remoteNote.id}`);
 
       // Find common ancestor for 3-way merge
@@ -929,6 +1237,7 @@ class SyncService {
         syncedAt,
         serverVersion: remoteNote.version,
         lastSyncStatus: 'synced',
+        uploadedAttachmentIds: remoteNote.attachments.map(attachment => attachment.id),
       });
       return true;
     }
@@ -982,7 +1291,7 @@ class SyncService {
   }
 
   /** Merge note versions from server */
-  private async mergeVersionsFromServer(versions: SyncNoteVersion[]): Promise<void> {
+  private async mergeVersionsFromServer(versions: SyncNoteVersion[], masterKey: CryptoKey): Promise<void> {
     for (const candidate of versions) {
       const validated = validateRemoteVersion(candidate);
       if (!validated.ok) {
@@ -1001,7 +1310,8 @@ class SyncService {
           {
             id: serverVersion.noteId,
             content: serverVersion.content,
-            tags: serverVersion.tags,
+            // Older rows on the server are in either format, depending on the client
+            tags: await syncToStorage(serverVersion.tags, masterKey),
             attachments: serverVersion.attachments,
             version: serverVersion.version,
             syntaxLanguage: serverVersion.syntaxLanguage,
@@ -1081,29 +1391,61 @@ class SyncService {
     return valid;
   }
 
-  /** Process hard deletions from server */
-  private async processRemoteDeletions(deletions: Array<{ id: string }>): Promise<void> {
-    for (const deletion of deletions) {
-      if (!isUuid(deletion?.id)) {
-        recordRejectedRemoteRecord('deletion', deletion?.id, 'invalid id');
-        continue;
-      }
+  /**
+   * Process hard deletions from server. Past the limit, a note goes to the recycle bin
+   * instead, so that a pull like that can be undone.
+   *
+   * @returns How many notes were held in the bin
+   */
+  private async processRemoteDeletions(deletions: Array<{ id: string }>, budget: DeletionBudget): Promise<number> {
+    const valid = deletions.filter(deletion => {
+      if (isUuid(deletion?.id)) return true;
+      recordRejectedRemoteRecord('deletion', deletion?.id, 'invalid id');
+      return false;
+    });
 
-      const wasDeleted = await noteRepository.applyRemoteDeletion(deletion.id);
-      if (wasDeleted) {
+    const live: Note[] = [];
+    for (const deletion of valid) {
+      const note = await noteRepository.getById(deletion.id);
+      if (note && !note.deleted) live.push(note);
+    }
+
+    if (budget.limit === null && live.length > 0) {
+      const notes = await noteRepository.getAllNonDeleted();
+      budget.limit = Math.max(MASS_DELETION_MINIMUM, Math.floor(notes.length * MASS_DELETION_SHARE));
+    }
+
+    // Judged by the page, so one that is suspicious as a whole is held as a whole
+    budget.used += live.length;
+    const held = budget.limit !== null && budget.used > budget.limit ? new Set(live.map(note => note.id)) : new Set<string>();
+
+    for (const note of live) {
+      if (held.has(note.id)) {
+        await noteRepository.update({ ...note, deleted: true, deletedAt: new Date().toISOString(), needsSync: false }, false, true);
+      }
+    }
+
+    for (const deletion of valid) {
+      if (!held.has(deletion.id) && await noteService.applyRemoteDeletion(deletion.id)) {
         console.log(`[SyncService] Hard deleted note ${deletion.id} (from server)`);
       }
     }
+
+    return held.size;
   }
 
   /**
-   * Pull remote changes from server (with pagination for large datasets)
-   * @returns Number of notes received from server
+   * Pull remote changes, following the loop in docs/sync-protocol.md. It works
+   * against both kinds of server: an old one ignores `cursor` and a new one ignores
+   * `offset`, so every response is checked rather than remembering what the last
+   * one said. The cursor is saved only after its page is applied. A page repeated
+   * after a crash is harmless, whereas saving first could lose one.
+   *
+   * @returns How many notes changed, and the server's time when the pull began
    */
-  private async pull(endpoint: string, apiKey: string): Promise<number> {
+  private async pull(endpoint: string, apiKey: string): Promise<{ pulledCount: number; serverTime?: string }> {
     endpoint = normalizeEndpoint(endpoint);
     const metadata = await syncRepository.getMetadata();
-    const allNotes = await noteRepository.getAll();
 
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
@@ -1112,46 +1454,42 @@ class SyncService {
 
     this.pulledNoteIds = [];
 
-    let offset = 0;
     let hasMore = true;
+    let serverTime: string | undefined;
+    let progressStarted = false;
     let totalNotes = 0;
     let totalAttachments = 0;
     let totalDeletions = 0;
-    let totalCount = 0;
+    let heldDeletions = 0;
+    const deletionBudget: DeletionBudget = { limit: null, used: 0 };
+    let fullPullDone = metadata?.cursorFullPullDone ?? false;
+    let storedCursor = metadata?.pullCursor;
 
-    // Computed once per pull, not per page
-    const knownNoteIds = allNotes.map(n => n.id);
-    const knownAttachmentIds = await this.getKnownAttachmentIds();
+    const request: SyncPullRequest = {
+      cursor: metadata?.pullCursor ?? '',
+      lastSyncAt: withOverlap(metadata?.lastSyncAt),
+      // Older servers require this field, and no server has ever used its contents
+      knownNoteIds: [],
+      knownAttachmentIds: await this.getKnownAttachmentIds(),
+      limit: SYNC_PULL_BATCH_SIZE,
+      offset: 0,
+    };
 
     while (hasMore) {
-      const pullRequest: SyncPullRequest = {
-        lastSyncAt: metadata?.lastSyncAt,
-        knownNoteIds,
-        knownAttachmentIds,
-        limit: SYNC_PULL_BATCH_SIZE,
-        offset,
-      };
-
-      const result = await pullFromServer(endpoint, apiKey, pullRequest);
-      const syncedAt = isTimestamp(result.syncedAt) ? result.syncedAt : new Date().toISOString();
-
-      // Update pagination state
+      const result = validatePullResponse(await pullFromServer(endpoint, apiKey, request));
+      this.noteSyncActivity();
+      const syncedAt = result.syncedAt ?? new Date().toISOString();
+      serverTime ??= result.syncedAt;
       hasMore = result.hasMore ?? false;
-      const previousTotalCount = totalCount;
-      totalCount = result.totalCount ?? result.notes.length;
-      offset += result.notes.length;
 
-      if (previousTotalCount === 0 && totalCount > 0) {
+      const totalCount = result.totalCount ?? result.notes.length;
+      if (!progressStarted && totalCount > 0) {
+        progressStarted = true;
         syncProgress.update(p => ({ ...p, total: p.total + totalCount }));
       }
 
       totalAttachments += result.attachments.length;
       totalDeletions += result.deletions?.length || 0;
-
-      if (totalCount > SYNC_PULL_BATCH_SIZE) {
-        const page = Math.floor((offset - result.notes.length) / SYNC_PULL_BATCH_SIZE) + 1;
-        console.log(`[SyncService] Pulling page ${page}/${Math.ceil(totalCount / SYNC_PULL_BATCH_SIZE)} (${result.notes.length} notes)`);
-      }
 
       // Process notes with incremental progress updates
       let processedInBatch = 0;
@@ -1177,27 +1515,62 @@ class SyncService {
 
       // Process other data
       await this.downloadAttachments(result.attachments);
-      await this.mergeVersionsFromServer(result.versions);
+      await this.mergeVersionsFromServer(result.versions, masterKey.key);
       if (result.savedSearches) {
         await this.processSavedSearchesFromServer(result.savedSearches, syncedAt);
       }
       if (result.deletions) {
-        await this.processRemoteDeletions(result.deletions);
+        heldDeletions += await this.processRemoteDeletions(result.deletions, deletionBudget);
       }
 
-      // Update inbox items from pull response
-      if (result.inboxItems && result.inboxItems.length > 0) {
-        inboxItems.set(this.validInboxItems(result.inboxItems));
-      } else if (offset === 0) {
-        // Only clear on first page (full sync) — subsequent pages don't repeat inbox
-        inboxItems.set([]);
+      // The server sends the whole inbox on every page, or nothing if it's empty
+      inboxItems.set(this.validInboxItems(result.inboxItems ?? []));
+
+      if (result.nextCursor !== undefined) {
+        // Timestamp mode can have silently skipped changes, and nothing can detect
+        // that afterwards, so a device moving to the cursor reads everything once.
+        // What this page held was applied, and arrives again, which is harmless.
+        if (!fullPullDone && !request.cursor && request.lastSyncAt) {
+          console.log('[SyncService] Server supports the pull cursor, doing one full pull');
+          request.lastSyncAt = undefined;
+          progressStarted = false;
+          hasMore = true;
+          continue;
+        }
+
+        fullPullDone = true;
+        storedCursor = result.nextCursor;
+        await syncRepository.updateMetadata({ pullCursor: result.nextCursor, cursorFullPullDone: true });
+
+        if (hasMore && result.nextCursor === request.cursor) {
+          console.warn('[SyncService] Server reported more to pull without moving on, stopping');
+          break;
+        }
+        request.cursor = result.nextCursor;
+      } else {
+        // An older server, or one that has lost the cursor
+        if (storedCursor !== undefined) {
+          storedCursor = undefined;
+          await syncRepository.updateMetadata({ pullCursor: undefined });
+        }
+
+        if (hasMore && result.notes.length === 0) {
+          console.warn('[SyncService] Server reported more to pull without sending any, stopping');
+          break;
+        }
+        request.offset = (request.offset ?? 0) + result.notes.length;
       }
+    }
+
+    if (heldDeletions > 0) {
+      toast.error(get(_)('sync.massDeletionHeld', { values: { count: String(heldDeletions) } }));
+      totalNotes += heldDeletions; // So the list refreshes
     }
 
     console.log(`[SyncService] Pulled ${totalNotes} notes, ${totalAttachments} attachments, ${totalDeletions} deletions`);
     await syncRepository.updateMetadata({ lastPullAt: new Date().toISOString() });
 
-    return totalNotes;
+    return { pulledCount: totalNotes, serverTime };
   }
 
   /**
@@ -1447,14 +1820,38 @@ class SyncService {
     return this.eventSource !== null && this.eventSource.readyState === EventSource.OPEN;
   }
 
+  /** Revoke this device on the server. A device that can't be revoked keeps a working key. */
+  private async revokeThisDevice(): Promise<boolean> {
+    try {
+      const metadata = await syncRepository.getMetadata();
+      const masterKey = keyManager.getMasterKey();
+      if (!metadata?.apiKey || !metadata.syncEndpoint || !masterKey) {
+        return false;
+      }
+
+      const apiKey = await cryptoService.decryptText(JSON.parse(metadata.apiKey), masterKey.key);
+      await revokeDevice(metadata.syncEndpoint, apiKey);
+      return true;
+    } catch (error) {
+      console.warn('[SyncService] Could not revoke this device:', error);
+      return false;
+    }
+  }
+
   /**
    * Disconnect from sync server
    * Clears all sync credentials and metadata, but preserves local notes
+   *
+   * @returns Whether the server revoked this device. Disconnecting goes ahead either
+   * way, but if it didn't, the device stays registered and its key stays valid.
    */
-  async disconnect(): Promise<void> {
+  async disconnect(): Promise<{ revoked: boolean }> {
     // Disable auto-sync and SSE first
     this.disableAutoSync();
     this.disconnectFromSyncEvents();
+
+    // Before the credentials go, because this needs them
+    const revoked = await this.revokeThisDevice();
 
     // Delete recovery note (non-blocking)
     deleteSyncRecoveryNote().catch(err =>
@@ -1471,12 +1868,13 @@ class SyncService {
     });
 
     console.log('[SyncService] Disconnected from sync server');
+    return { revoked };
   }
 
   /**
    * Collect all versions for notes being pushed
    */
-  private async collectVersionsForPush(notes: Note[]): Promise<SyncNoteVersion[]> {
+  private async collectVersionsForPush(notes: Note[], masterKey: CryptoKey): Promise<SyncNoteVersion[]> {
     const versions: SyncNoteVersion[] = [];
 
     for (const note of notes) {
@@ -1485,6 +1883,16 @@ class SyncService {
 
       // Convert to SyncNoteVersion format (versions are already encrypted in storage)
       for (const version of noteVersions) {
+        // The sync format, as for notes. A version that can't be read stays on this
+        // device: history isn't worth holding back the note it belongs to.
+        let tags: string[];
+        try {
+          tags = await storageToSync(version.tags, masterKey);
+        } catch (error) {
+          console.warn(`[SyncService] Skipping version ${version.versionKey}, its tags can't be read:`, error);
+          continue;
+        }
+
         versions.push({
           versionKey: version.versionKey,
           noteId: version.noteId,
@@ -1492,7 +1900,7 @@ class SyncService {
           createdAt: version.createdAt,
           syncedAt: version.syncedAt,
           content: version.content,
-          tags: version.tags,
+          tags,
           attachments: version.attachments,
           syntaxLanguage: version.syntaxLanguage,
           wordWrap: version.wordWrap,

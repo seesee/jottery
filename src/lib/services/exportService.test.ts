@@ -4,8 +4,10 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { exportAllNotes, exportNotes, downloadExport, type ExportProgressCallback } from './exportService';
+import { exportAllNotes, exportNotes, downloadExport, importNotes, type ExportProgressCallback } from './exportService';
 import { noteService } from './noteService';
+import { noteRepository } from './noteRepository';
+import type { Note } from '../types';
 import { keyManager } from './keyManager';
 import { initTestDB, cleanupTestDB } from '../../test/db-utils';
 
@@ -27,6 +29,53 @@ describe('exportService', () => {
   afterEach(async () => {
     keyManager.clearMasterKey();
     await cleanupTestDB();
+  });
+
+  describe('exportAllNotes, for someone moving away', () => {
+    it('includes archived notes', async () => {
+      const note = await noteService.createNote('in the archive');
+      await noteRepository.archive(note.id);
+
+      const data = await exportAllNotes();
+
+      expect(data.notes.map(n => n.id)).toContain(note.id);
+      expect(data.notes.find(n => n.id === note.id)?.archived).toBe(true);
+    });
+
+    it('leaves out what is in the recycle bin', async () => {
+      const note = await noteService.createNote('binned');
+      await noteRepository.softDelete(note.id);
+
+      expect((await exportAllNotes()).notes.map(n => n.id)).not.toContain(note.id);
+    });
+
+    it('says when an attachment could not be read', async () => {
+      const note = await noteService.createNote('with a lost file');
+      const stored = await noteRepository.getById(note.id) as Note;
+      await noteRepository.update({
+        ...stored,
+        attachments: [{ id: 'gone', filename: 'name', mimeType: 'text/plain', size: 1, data: 'gone' }],
+      }, false, true);
+
+      expect((await exportAllNotes()).skipped).toEqual({ notes: 0, attachments: 1 });
+    });
+
+    it('says nothing when nothing was left out', async () => {
+      await noteService.createNote('fine');
+
+      expect((await exportAllNotes()).skipped).toBeUndefined();
+    });
+
+    it('brings an archived note back archived', async () => {
+      const note = await noteService.createNote('archived', [], { id: 'a0000000-0000-4000-8000-000000000099' });
+      await noteRepository.archive(note.id);
+      const data = await exportAllNotes();
+      await noteRepository.delete(note.id);
+
+      await importNotes(data);
+
+      expect((await noteRepository.getById(note.id))?.archived).toBe(true);
+    });
   });
 
   describe('exportAllNotes', () => {

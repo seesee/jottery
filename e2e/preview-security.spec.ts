@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { JotteryPage } from './page-objects';
+import { FORBIDDEN_ELEMENTS, HOSTILE_HTML } from '../src/test/hostileHtml';
 
 /**
  * Real browser checks for the things happy-dom can't show: whether script actually
@@ -101,6 +102,89 @@ test.describe('Content Security Policy', () => {
       link.click();
     }, SET_FLAG);
     expect(await pwned(page)).toBeUndefined();
+  });
+});
+
+test.describe('The sanitiser in a real browser', () => {
+  type Sanitise = (html: string) => string;
+
+  /** Runs the app's own module here, because happy-dom can't show any of this. */
+  async function runInBrowser<T>(page: Page, inputs: string[], forbidden: string): Promise<T> {
+    return page.evaluate(async ({ inputs, forbidden, path }) => {
+      const { sanitiseHtml } = await import(/* @vite-ignore */ path) as { sanitiseHtml: Sanitise };
+      const host = document.createElement('div');
+      document.body.appendChild(host);
+
+      const results = [];
+      for (const input of inputs) {
+        const output = sanitiseHtml(input);
+        // Mounted live, so anything left would really parse and load
+        host.innerHTML = output;
+        const elements = Array.from(host.querySelectorAll('*'));
+        results.push({
+          input,
+          output,
+          stable: sanitiseHtml(output) === output,
+          forbidden: host.querySelectorAll(forbidden).length,
+          handlers: elements.flatMap(el => Array.from(el.attributes).map(a => a.name).filter(n => n.startsWith('on'))),
+          urls: elements.flatMap(el => ['href', 'src'].map(n => el.getAttribute(n) ?? '').filter(Boolean)),
+        });
+      }
+      host.remove();
+      return results;
+    }, { inputs, forbidden, path: '/src/lib/utils/htmlSanitiser.ts' }) as Promise<T>;
+  }
+
+  test.beforeEach(async ({ page }) => {
+    await new JotteryPage(page).setup(PASSWORD);
+  });
+
+  test('leaves nothing active in any hostile markup', async ({ page }) => {
+    const results = await runInBrowser<Array<{
+      input: string; output: string; stable: boolean; forbidden: number; handlers: string[]; urls: string[];
+    }>>(page, HOSTILE_HTML, FORBIDDEN_ELEMENTS);
+
+    expect(results).toHaveLength(HOSTILE_HTML.length);
+    for (const result of results) {
+      expect(result.handlers, result.input).toEqual([]);
+      expect(result.forbidden, result.input).toBe(0);
+      expect(result.stable, result.input).toBe(true);
+      for (const url of result.urls) {
+        expect(url, result.input).not.toMatch(/^[\s\u0000-\u001f]*(javascript|vbscript|data:text)/i);
+      }
+    }
+    expect(await pwned(page)).toBeUndefined();
+  });
+
+  test('keeps everything the preview depends on', async ({ page }) => {
+    const samples = [
+      '<h1 id="title">x</h1>',
+      '<a href="note:abc" data-note-id="Plans: 2026" class="note-link">y</a>',
+      '<a href="https://example.com" target="_blank">z</a>',
+      '<img src="data:image/png;base64,AAAA" alt="a: b" data-attachment-id="x" data-loaded="false">',
+      '<img src="blob:http://localhost:5173/abc">',
+      '<ul><li><input type="checkbox" checked=""> done</li></ul>',
+      '<table><thead><tr><th scope="col">a</th></tr></thead><tbody><tr><td colspan="2">b</td></tr></tbody></table>',
+      '<pre><code class="hljs language-ts"><span class="hljs-keyword">const</span></code></pre>',
+      '<code>&lt;img src=x&gt;</code>',
+    ];
+    const results = await runInBrowser<Array<{ output: string }>>(page, samples, FORBIDDEN_ELEMENTS);
+    const output = results.map(r => r.output);
+
+    expect(output[0]).toBe('<h1 id="title">x</h1>');
+    expect(output[1]).toContain('data-note-id="Plans: 2026"');
+    expect(output[1]).toContain('href="note:abc"');
+    expect(output[2]).toContain('rel="noopener noreferrer"');
+    expect(output[3]).toContain('src="data:image/png;base64,AAAA"');
+    expect(output[3]).toContain('alt="a: b"');
+    expect(output[3]).toContain('data-attachment-id="x"');
+    expect(output[4]).toBe(samples[4]);
+    expect(output[5]).toContain('disabled');
+    expect(output[5]).toContain('checked');
+    expect(output[6]).toContain('<th scope="col">a</th>');
+    expect(output[6]).toContain('colspan="2"');
+    expect(output[7]).toBe(samples[7]);
+    expect(output[8]).toBe(samples[8]);
   });
 });
 

@@ -3,6 +3,9 @@ import { mount } from 'svelte';
 import App from './App.svelte';
 import { getCurrentNotebook, isNotebookPath } from './lib/utils/notebookPath';
 import { setDatabaseName } from './lib/services/db';
+import { clearDashboardSessions } from './lib/utils/dashboardSession';
+
+clearDashboardSessions();
 
 // Early notebook detection - configure database before app initialization
 const currentPath = window.location.pathname;

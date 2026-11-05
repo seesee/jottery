@@ -76,7 +76,6 @@
     "chalk": "^4.1.2",
     "codemirror": "^6.0.2",
     "fake-indexeddb": "^6.2.5",
-    "flexsearch": "^0.7.43",
     "happy-dom": "^21.0.4",
     "highlight.js": "^11.11.1",
     "idb": "^8.0.3",
@@ -102,6 +101,7 @@
     "vitest": "^4.1.12"
   },
   "dependencies": {
+    "dompurify": "^3.4.17",
     "pako": "^2.1.0"
   }
 }

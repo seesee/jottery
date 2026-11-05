@@ -6,15 +6,19 @@
  * ciphertext. Anything rendered as live HTML in the app's origin goes through
  * sanitiseHtml as the last step, over the final string.
  *
- * Why this is safe to serialise and hand back to the browser:
- * - The input is parsed in a DOMParser document, which runs no script and loads
- *   nothing, so the walk itself cannot trigger anything.
+ * DOMPurify does the parsing and the walking, because that is where the hard
+ * problems are: mutation XSS, DOM clobbering, namespace confusion. The lists here
+ * only narrow what it allows, and it runs on a private instance so that nothing
+ * else in the page can add hooks to this one, or inherit ours.
+ *
  * - Everything is allowed by name. An element or attribute nobody thought about
  *   is removed, not kept.
  * - Foreign content (svg, math) and raw-text elements (style, noscript, textarea
  *   and friends) never survive. Those are what let a string parse differently
  *   the second time, so without them attribute values stay attribute values.
  */
+
+import DOMPurify from 'dompurify';
 
 const XHTML_NAMESPACE = 'http://www.w3.org/1999/xhtml';
 
@@ -113,76 +117,73 @@ function isAttributeValueSafe(tag: string, name: string, value: string): boolean
   return !(tag === 'input' && name === 'type' && value.toLowerCase() !== 'checkbox');
 }
 
-function cleanAttributes(element: Element, tag: string): void {
-  for (const attribute of Array.from(element.attributes)) {
-    const name = attribute.name.toLowerCase();
-    if (!isAttributeAllowed(tag, name) || !isAttributeValueSafe(tag, name, attribute.value)) {
-      element.removeAttribute(attribute.name);
+/** DOMPurify only needs to check URLs in the attributes that hold them. */
+const URL_ATTRIBUTES = new Set(['href', 'src']);
+
+const ALLOWED_ATTRIBUTES = [...GLOBAL_ATTRIBUTES, ...Object.values(TAG_ATTRIBUTES).flatMap(names => [...names])];
+
+/**
+ * Its own scheme check, run as well as isSafeHref and isSafeImageSource. The
+ * tail is DOMPurify's: anything that isn't a scheme at all, so relative URLs.
+ */
+const ALLOWED_URI = new RegExp(
+  `^(?:(?:${[...LINK_PROTOCOLS, ...IMAGE_PROTOCOLS].map(protocol => protocol.slice(0, -1)).join('|')}):`
+  + '|data:image/|[^a-z]|[a-z+.\\-]+(?:[^a-z+.\\-:]|$))',
+  'i',
+);
+
+const PURIFY_CONFIG = {
+  ALLOWED_TAGS: [...ALLOWED_TAGS],
+  ALLOWED_ATTR: ALLOWED_ATTRIBUTES,
+  ALLOWED_NAMESPACES: [XHTML_NAMESPACE],
+  ALLOWED_URI_REGEXP: ALLOWED_URI,
+  FORBID_CONTENTS: [...DROP_WITH_CONTENT],
+  ADD_URI_SAFE_ATTR: ALLOWED_ATTRIBUTES.filter(name => !URL_ATTRIBUTES.has(name)),
+  // On by default in DOMPurify, which would widen the lists above
+  ALLOW_DATA_ATTR: false,
+  ALLOW_ARIA_ATTR: false,
+  // This drops any id or name that is also a property of document, which covers
+  // headings such as `# Title` and `# Links` and breaks their anchors. It isn't
+  // needed here: only a name can clobber document, and name is never allowed.
+  SANITIZE_DOM: false,
+};
+
+function createPurifier() {
+  // Calling it with a window gives a new instance with its own hooks
+  const purifier = DOMPurify(globalThis.window);
+
+  purifier.addHook('uponSanitizeElement', (node, data) => {
+    if (data.tagName === 'input' && ((node as Element).getAttribute('type') ?? '').toLowerCase() !== 'checkbox') {
+      node.parentNode?.removeChild(node);
     }
-  }
+  });
 
-  if (tag === 'a' && element.hasAttribute('target')) {
-    element.setAttribute('rel', 'noopener noreferrer');
-  }
+  purifier.addHook('uponSanitizeAttribute', (node, data) => {
+    const tag = node.nodeName.toLowerCase();
+    if (!isAttributeAllowed(tag, data.attrName) || !isAttributeValueSafe(tag, data.attrName, data.attrValue)) {
+      data.keepAttr = false;
+    }
+  });
 
-  if (tag === 'input') {
-    // Only task list checkboxes survive, and a preview can't change anything
-    element.setAttribute('disabled', '');
-  }
+  purifier.addHook('afterSanitizeAttributes', node => {
+    if (node.nodeType !== 1) return;
+    const element = node as Element;
+    const tag = element.nodeName.toLowerCase();
+
+    if (tag === 'a' && element.hasAttribute('target')) {
+      element.setAttribute('rel', 'noopener noreferrer');
+    }
+
+    if (tag === 'input') {
+      // Only task list checkboxes survive, and a preview can't change anything
+      element.setAttribute('disabled', '');
+    }
+  });
+
+  return purifier;
 }
 
-function cleanTree(root: Element): void {
-  const pending: Node[] = [root];
-
-  while (pending.length > 0) {
-    const parent = pending.pop() as Node;
-    let unwrapped = false;
-
-    for (const node of Array.from(parent.childNodes)) {
-      if (node.nodeType === 3) {
-        continue;
-      }
-
-      if (node.nodeType !== 1) {
-        parent.removeChild(node);
-        continue;
-      }
-
-      const element = node as Element;
-      // A form can shadow its own properties with a named control, which is why
-      // the type is checked and why nothing else is read before it is removed.
-      const tag = typeof element.localName === 'string' ? element.localName.toLowerCase() : '';
-
-      if (!tag || element.namespaceURI !== XHTML_NAMESPACE || DROP_WITH_CONTENT.has(tag)) {
-        parent.removeChild(node);
-        continue;
-      }
-
-      if (tag === 'input' && (element.getAttribute('type') ?? '').toLowerCase() !== 'checkbox') {
-        parent.removeChild(node);
-        continue;
-      }
-
-      if (!ALLOWED_TAGS.has(tag)) {
-        while (element.firstChild) {
-          parent.insertBefore(element.firstChild, element);
-        }
-        parent.removeChild(element);
-        unwrapped = true;
-        continue;
-      }
-
-      cleanAttributes(element, tag);
-      pending.push(element);
-    }
-
-    // Hoisted children haven't been looked at yet. Cleaning is idempotent, so
-    // scanning the whole parent again is simplest. It stops once nothing moves.
-    if (unwrapped) {
-      pending.push(parent);
-    }
-  }
-}
+const purifier = createPurifier();
 
 /**
  * Reduce an HTML string to the allowed subset. This must be the final step before
@@ -190,9 +191,11 @@ function cleanTree(root: Element): void {
  * whatever is interpolated afterwards.
  */
 export function sanitiseHtml(html: string): string {
-  const doc = new DOMParser().parseFromString(html, 'text/html');
-  cleanTree(doc.body);
-  return doc.body.innerHTML;
+  // Without a DOM, DOMPurify hands back its input. Fail closed instead.
+  if (!purifier.isSupported) {
+    return escapeHtml(html);
+  }
+  return purifier.sanitize(html, PURIFY_CONFIG);
 }
 
 /** Escape text for an HTML text position. */

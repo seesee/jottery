@@ -59,8 +59,12 @@
 
     changingPassword = true;
     try {
-      await changePassword(currentPasswordInput, newPasswordInput);
-      toast.success($_('settings.syncTab.changePassword.success'));
+      const { serverKeyUpdated } = await changePassword(currentPasswordInput, newPasswordInput);
+      if (serverKeyUpdated) {
+        toast.success($_('settings.syncTab.changePassword.success'));
+      } else {
+        toast.error($_('settings.syncTab.changePassword.serverKeyFailed'));
+      }
       // Reset form
       currentPasswordInput = '';
       newPasswordInput = '';

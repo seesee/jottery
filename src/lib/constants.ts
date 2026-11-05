@@ -58,6 +58,12 @@ export const SEARCH_MAX_RESULTS_FOR_CROSS_MODE_HINT = 10;
 /** Number of notes to push per batch to avoid memory limits */
 export const SYNC_PUSH_BATCH_SIZE = 100;
 
+/**
+ * Target size of one push, counting note content and attachment data as the server
+ * does. The default account limit is 5 MB, and a push over it fails entirely.
+ */
+export const SYNC_PUSH_MAX_BYTES = 4 * 1024 * 1024;
+
 /** Number of notes to pull per batch (pagination) */
 export const SYNC_PULL_BATCH_SIZE = 100;
 
@@ -90,6 +96,9 @@ export const CRYPTO_WRAPPING_ITERATIONS = 1_000_000;
  * 1 = PBKDF2-HMAC-SHA256, 2 = Argon2id (future)
  */
 export const CRYPTO_WRAPPING_KDF_VERSION = 1;
+
+/** The most iterations a blob may ask for: enough to cover a real increase, not to hang the app */
+export const CRYPTO_WRAPPING_MAX_ITERATIONS = 20_000_000;
 
 // =============================================================================
 // Security Constants

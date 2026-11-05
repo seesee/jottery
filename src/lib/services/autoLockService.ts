@@ -79,16 +79,16 @@ async function checkAutoLock() {
  */
 async function performLock() {
   try {
-    // Check if remember password is enabled - would auto-unlock immediately
-    const hasPassword = await hasStoredPassword();
-    if (hasPassword) {
+    // Check if remember password is enabled - would auto-unlock immediately. A stored
+    // password alone isn't enough: one left behind must not switch auto-lock off.
+    const settings = await settingsRepository.get();
+    if (settings.rememberPassword && await hasStoredPassword()) {
       // Reset activity timer instead of locking - no point locking if we'd unlock immediately
       lastActivityTime = Date.now();
       return;
     }
 
     // Check if persist session is enabled with a valid session - would auto-unlock immediately
-    const settings = await settingsRepository.get();
     if (settings.persistSession) {
       const sessionTimeout = settings.persistSessionTimeout ?? 30;
       if (hasValidSession(sessionTimeout)) {
