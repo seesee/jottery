@@ -574,7 +574,8 @@
         "button": "Modifier le mot de passe",
         "success": "Mot de passe modifié avec succès",
         "error": "Échec de la modification du mot de passe : {error}",
-        "serverKeyFailed": "Votre mot de passe a été modifié sur cet appareil, mais le serveur n'a pas pu être mis à jour. Une nouvelle tentative aura lieu au prochain déverrouillage. D'ici là, un nouvel appareil aurait besoin de votre ancien mot de passe."
+        "serverKeyFailed": "Votre mot de passe a été modifié sur cet appareil, mais le serveur n'a pas pu être mis à jour. Une nouvelle tentative aura lieu au prochain déverrouillage. D'ici là, un nouvel appareil aurait besoin de votre ancien mot de passe.",
+        "keyStaysTheSame": "Votre clé de chiffrement reste la même : les anciennes sauvegardes s'ouvrent donc toujours avec votre ancien mot de passe. Conservez-les en lieu sûr."
       },
       "connectionDetails": {
         "title": "Détails de connexion",

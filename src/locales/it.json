@@ -574,7 +574,8 @@
         "button": "Cambia password",
         "success": "Password modificata con successo",
         "error": "Impossibile modificare la password: {error}",
-        "serverKeyFailed": "La password è stata cambiata su questo dispositivo, ma non è stato possibile aggiornare il server. Verrà riprovato al prossimo sblocco. Fino ad allora, un nuovo dispositivo avrebbe bisogno della vecchia password."
+        "serverKeyFailed": "La password è stata cambiata su questo dispositivo, ma non è stato possibile aggiornare il server. Verrà riprovato al prossimo sblocco. Fino ad allora, un nuovo dispositivo avrebbe bisogno della vecchia password.",
+        "keyStaysTheSame": "La tua chiave di crittografia resta la stessa, quindi i vecchi backup si aprono ancora con la vecchia password. Conservali al sicuro."
       },
       "connectionDetails": {
         "title": "Dettagli connessione",

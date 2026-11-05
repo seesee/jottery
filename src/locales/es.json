@@ -574,7 +574,8 @@
         "button": "Cambiar contraseña",
         "success": "Contraseña cambiada correctamente",
         "error": "Error al cambiar la contraseña: {error}",
-        "serverKeyFailed": "Tu contraseña se cambió en este dispositivo, pero no se pudo actualizar el servidor. Se volverá a intentar la próxima vez que desbloquees. Hasta entonces, un dispositivo nuevo necesitaría tu contraseña antigua."
+        "serverKeyFailed": "Tu contraseña se cambió en este dispositivo, pero no se pudo actualizar el servidor. Se volverá a intentar la próxima vez que desbloquees. Hasta entonces, un dispositivo nuevo necesitaría tu contraseña antigua.",
+        "keyStaysTheSame": "Tu clave de cifrado sigue siendo la misma, así que las copias de seguridad antiguas se abren aún con tu contraseña anterior. Guárdalas en un lugar seguro."
       },
       "connectionDetails": {
         "title": "Detalles de conexión",

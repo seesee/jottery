@@ -574,7 +574,8 @@
         "button": "Şifre Değiştir",
         "success": "Şifre başarıyla değiştirildi",
         "error": "Şifre değiştirilemedi: {error}",
-        "serverKeyFailed": "Parolanız bu cihazda değiştirildi ancak sunucu güncellenemedi. Bir sonraki kilit açışınızda yeniden denenecek. O zamana kadar yeni bir cihaz eski parolanıza ihtiyaç duyar."
+        "serverKeyFailed": "Parolanız bu cihazda değiştirildi ancak sunucu güncellenemedi. Bir sonraki kilit açışınızda yeniden denenecek. O zamana kadar yeni bir cihaz eski parolanıza ihtiyaç duyar.",
+        "keyStaysTheSame": "Şifreleme anahtarınız aynı kalır, bu yüzden eski yedekler eski parolanızla açılmaya devam eder. Onları güvenle saklayın."
       },
       "connectionDetails": {
         "title": "Bağlantı Detayları",

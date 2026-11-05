@@ -251,6 +251,7 @@
     <div class="border-t border-gray-200 dark:border-gray-700 p-3 space-y-3">
       <p class="text-xs text-gray-600 dark:text-gray-400">
         {$_('settings.syncTab.changePassword.description')}
+        {$_('settings.syncTab.changePassword.keyStaysTheSame')}
       </p>
 
       <div>

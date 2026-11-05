@@ -574,7 +574,8 @@
         "button": "Passwort ändern",
         "success": "Passwort erfolgreich geändert",
         "error": "Passwort konnte nicht geändert werden: {error}",
-        "serverKeyFailed": "Ihr Passwort wurde auf diesem Gerät geändert, aber der Server konnte nicht aktualisiert werden. Beim nächsten Entsperren wird es erneut versucht. Bis dahin bräuchte ein neues Gerät Ihr altes Passwort."
+        "serverKeyFailed": "Ihr Passwort wurde auf diesem Gerät geändert, aber der Server konnte nicht aktualisiert werden. Beim nächsten Entsperren wird es erneut versucht. Bis dahin bräuchte ein neues Gerät Ihr altes Passwort.",
+        "keyStaysTheSame": "Ihr Verschlüsselungsschlüssel bleibt gleich, daher lassen sich alte Backups weiterhin mit Ihrem alten Passwort öffnen. Bewahren Sie sie sicher auf."
       },
       "connectionDetails": {
         "title": "Verbindungsdetails",

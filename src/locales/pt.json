@@ -574,7 +574,8 @@
         "button": "Alterar palavra-passe",
         "success": "Palavra-passe alterada com sucesso",
         "error": "Falha ao alterar a palavra-passe: {error}",
-        "serverKeyFailed": "A sua palavra-passe foi alterada neste dispositivo, mas não foi possível atualizar o servidor. Será tentado novamente no próximo desbloqueio. Até lá, um novo dispositivo precisaria da palavra-passe antiga."
+        "serverKeyFailed": "A sua palavra-passe foi alterada neste dispositivo, mas não foi possível atualizar o servidor. Será tentado novamente no próximo desbloqueio. Até lá, um novo dispositivo precisaria da palavra-passe antiga.",
+        "keyStaysTheSame": "A sua chave de encriptação mantém-se, por isso as cópias de segurança antigas continuam a abrir com a palavra-passe antiga. Guarde-as em segurança."
       },
       "connectionDetails": {
         "title": "Detalhes da conexão",

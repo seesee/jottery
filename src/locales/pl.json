@@ -574,7 +574,8 @@
         "button": "Zmień hasło",
         "success": "Hasło zostało pomyślnie zmienione",
         "error": "Nie udało się zmienić hasła: {error}",
-        "serverKeyFailed": "Hasło zostało zmienione na tym urządzeniu, ale nie udało się zaktualizować serwera. Ponowna próba nastąpi przy kolejnym odblokowaniu. Do tego czasu nowe urządzenie będzie wymagać starego hasła."
+        "serverKeyFailed": "Hasło zostało zmienione na tym urządzeniu, ale nie udało się zaktualizować serwera. Ponowna próba nastąpi przy kolejnym odblokowaniu. Do tego czasu nowe urządzenie będzie wymagać starego hasła.",
+        "keyStaysTheSame": "Twój klucz szyfrowania pozostaje ten sam, więc stare kopie zapasowe nadal otwierają się starym hasłem. Przechowuj je w bezpiecznym miejscu."
       },
       "connectionDetails": {
         "title": "Szczegóły połączenia",

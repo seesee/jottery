@@ -547,7 +547,8 @@
         "button": "Change Password",
         "success": "Password changed successfully",
         "error": "Failed to change password: {error}",
-        "serverKeyFailed": "Your password was changed on this device, but the server couldn't be updated. It will try again the next time you unlock. Until then, a new device would need your old password."
+        "serverKeyFailed": "Your password was changed on this device, but the server couldn't be updated. It will try again the next time you unlock. Until then, a new device would need your old password.",
+        "keyStaysTheSame": "Your encryption key stays the same, so old backups still open with your old password. Keep them safe."
       },
       "connectionDetails": {
         "title": "Connection Details",

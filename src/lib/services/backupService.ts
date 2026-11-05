@@ -1337,7 +1337,7 @@ export async function restoreBackup(
           break;
 
         case 'settings':
-          await settingsRepository.update(record.data as UserSettings);
+          await settingsRepository.update(withoutDeviceSettings(record.data as UserSettings));
           break;
 
         case 'sync_metadata': {
@@ -1366,6 +1366,16 @@ export async function restoreBackup(
   }
 
   onProgress?.({ phase: 'complete' });
+}
+
+/**
+ * Settings to bring from a backup. These three are security choices about one device,
+ * made with a warning and the password. A restore on a shared computer mustn't make
+ * them without either.
+ */
+function withoutDeviceSettings(settings: UserSettings): Partial<UserSettings> {
+  const { rememberPassword: _remember, persistSession: _persist, persistSessionTimeout: _timeout, ...rest } = settings;
+  return rest;
 }
 
 /**
@@ -1499,7 +1509,7 @@ export async function restoreBatchedBackup(
         case 'settings':
           // Settings batch contains a single item
           if (items.length > 0) {
-            await settingsRepository.update(items[0] as UserSettings);
+            await settingsRepository.update(withoutDeviceSettings(items[0] as UserSettings));
           }
           break;
 

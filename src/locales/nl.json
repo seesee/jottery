@@ -574,7 +574,8 @@
         "button": "Wachtwoord wijzigen",
         "success": "Wachtwoord succesvol gewijzigd",
         "error": "Kan wachtwoord niet wijzigen: {error}",
-        "serverKeyFailed": "Je wachtwoord is op dit apparaat gewijzigd, maar de server kon niet worden bijgewerkt. Dit wordt opnieuw geprobeerd wanneer je de volgende keer ontgrendelt. Tot die tijd heeft een nieuw apparaat je oude wachtwoord nodig."
+        "serverKeyFailed": "Je wachtwoord is op dit apparaat gewijzigd, maar de server kon niet worden bijgewerkt. Dit wordt opnieuw geprobeerd wanneer je de volgende keer ontgrendelt. Tot die tijd heeft een nieuw apparaat je oude wachtwoord nodig.",
+        "keyStaysTheSame": "Je encryptiesleutel blijft hetzelfde, dus oude back-ups gaan nog steeds open met je oude wachtwoord. Bewaar ze op een veilige plek."
       },
       "connectionDetails": {
         "title": "Verbindingsdetails",
