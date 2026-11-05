@@ -23,7 +23,7 @@ fn the_defaults_are_the_documented_ones() {
     assert_eq!(config.database_url, "sqlite:jottery.db");
     assert_eq!(config.port, 3030);
     assert_eq!(config.max_payload_size, 104_857_600);
-    assert_eq!(config.session_expiry_days, 7);
+    assert_eq!(config.session_expiry_days, 1);
     assert_eq!(config.default_admin_email, "admin@localhost");
     assert_eq!(config.default_admin_password, None);
     assert_eq!(config.password_complexity, "standard");
@@ -75,7 +75,7 @@ fn a_value_that_does_not_parse_falls_back_to_the_default() {
     ]);
 
     assert_eq!(config.port, 3030);
-    assert_eq!(config.session_expiry_days, 7);
+    assert_eq!(config.session_expiry_days, 1);
     assert_eq!(config.rate_limit.trusted_proxy_hops, 0);
     assert!(!config.enforce_storage_quota);
 }

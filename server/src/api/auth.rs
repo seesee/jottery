@@ -365,7 +365,7 @@ pub async fn login(
     // Generate session token
     let session_token = generate_session_token();
 
-    // Calculate expiry (configurable, default 7 days)
+    // Calculate expiry (configurable, default 1 day)
     let expires_at = chrono::Utc::now() + chrono::Duration::days(state.config.session_expiry_days);
     let expires_at_str = expires_at.to_rfc3339();
 

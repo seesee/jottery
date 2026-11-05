@@ -95,7 +95,7 @@ You can configure the server using environment variables:
 | `DEFAULT_ADMIN_PASSWORD` | *(none)* | Admin account password. If unset, or too weak for `PASSWORD_COMPLEXITY`, a random one is generated and logged once |
 | `DATABASE_URL` | `sqlite:jottery.db` | Database file path |
 | `PORT` | `3030` | Internal server port |
-| `SESSION_EXPIRY_DAYS` | `7` | Admin session expiry in days |
+| `SESSION_EXPIRY_DAYS` | `1` | How long a dashboard session lasts, in days. Device keys don't expire, so sync isn't affected |
 | `DEFAULT_STORAGE_QUOTA_MB` | `1000` | Storage quota in MB that new users get |
 | `DEFAULT_MAX_UPLOAD_SIZE_MB` | `5` | Largest push in MB that new users can send |
 | `DEFAULT_INBOX_MAX_ITEMS` | `100` | Inbox items that new users can hold |

@@ -119,9 +119,9 @@ impl Config {
 
             // Security settings
             session_expiry_days: var("SESSION_EXPIRY_DAYS")
-                .unwrap_or_else(|_| "7".to_string())
+                .unwrap_or_else(|_| "1".to_string())
                 .parse()
-                .unwrap_or(7),
+                .unwrap_or(1),
             default_admin_email: var("DEFAULT_ADMIN_EMAIL")
                 .unwrap_or_else(|_| "admin@localhost".to_string()),
             default_admin_password: var("DEFAULT_ADMIN_PASSWORD")
