@@ -13,7 +13,7 @@ use crate::{
     models::{CreateSessionParams, Session},
     services::AdminService,
     utils::{
-        crypto::hash_sha256,
+        crypto::{hash_sha256, log_id},
         password::{hash_for_storage, validate_password_strength, verify_sign_in, verify_stored},
     },
     AppState,
@@ -80,8 +80,6 @@ pub async fn login(
     State(state): State<Arc<AppState>>,
     Json(req): Json<LoginRequest>,
 ) -> AppResult<(StatusCode, HeaderMap, Json<LoginResponse>)> {
-    tracing::info!("User login request: email={}", req.email);
-
     state.login_throttle.check(&req.email)?;
 
     // Get user by email
@@ -105,7 +103,7 @@ pub async fn login(
     })?;
 
     let Some(user) = user.filter(|_| password_valid) else {
-        tracing::warn!("Login failed: bad credentials for {}", req.email);
+        tracing::warn!("Login failed: bad credentials for {}", log_id(&req.email));
         state.login_throttle.record_failure(&req.email);
         return Err(AppError::Unauthorized);
     };
@@ -114,12 +112,12 @@ pub async fn login(
     // Registration is open, so a session must wait for an admin's approval.
     // These come after the password check so they reveal nothing to strangers.
     if user.approved == 0 {
-        tracing::warn!("Login failed: user not approved: {}", req.email);
+        tracing::warn!("Login failed: user not approved: {}", user.id);
         return Err(AppError::Forbidden("Account pending admin approval".to_string()));
     }
 
     if user.is_active == 0 {
-        tracing::warn!("Login failed: user deactivated: {}", req.email);
+        tracing::warn!("Login failed: user deactivated: {}", user.id);
         return Err(AppError::Forbidden("Account deactivated".to_string()));
     }
 
@@ -159,7 +157,7 @@ pub async fn login(
         AppError::InternalServerError
     })?;
 
-    tracing::info!("User logged in successfully: {}", req.email);
+    tracing::info!("User logged in successfully: {}", user.id);
 
     let grant = grant_session(&state.config, CookieScope::User, req.cookie_session, session_token);
 

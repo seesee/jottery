@@ -276,7 +276,7 @@ pub async fn push(
         match base64::engine::general_purpose::STANDARD.decode(&attachment.data) {
             Ok(data) => blobs.push((attachment.id, data)),
             Err(e) => {
-                tracing::warn!("Invalid base64 for attachment {}: {} (skipping)", attachment.id, e);
+                tracing::warn!("Invalid base64 for attachment {:?}: {} (skipping)", attachment.id, e);
                 errors.push(format!("Attachment {} skipped: invalid base64", attachment.id));
             }
         }
@@ -335,7 +335,7 @@ pub async fn push(
                 .await?;
 
                 tracing::info!(
-                    "Resurrecting note {} - pushed edit ({}) postdates tombstone ({})",
+                    "Resurrecting note {:?} - pushed edit ({:?}) postdates tombstone ({:?})",
                     note.id,
                     note.modified_at,
                     tombstone.deleted_at
@@ -349,7 +349,7 @@ pub async fn push(
                 // this as an explicit skip. The client will re-learn the
                 // note is gone from the `deletions` list on its next pull.
                 tracing::info!(
-                    "Ignoring push for note {} - was hard-deleted by another device (edit {} does not postdate tombstone {})",
+                    "Ignoring push for note {:?} - was hard-deleted by another device (edit {:?} does not postdate tombstone {:?})",
                     note.id,
                     note.modified_at,
                     tombstone.deleted_at
@@ -714,7 +714,7 @@ pub async fn push(
             Err(e) => {
                 // Log and skip on FK or other errors (graceful degradation)
                 tracing::warn!(
-                    "Failed to store version {} for note {}: {} (skipping)",
+                    "Failed to store version {:?} for note {:?}: {} (skipping)",
                     version.version_key,
                     version.note_id,
                     e
@@ -740,7 +740,7 @@ pub async fn push(
             BlobStored::NoMetadata => {
                 // Expected when the note was rejected: its metadata was never stored.
                 tracing::warn!(
-                    "Skipping attachment data {} from client {}: no matching metadata for user {}",
+                    "Skipping attachment data {:?} from client {}: no matching metadata for user {}",
                     attachment_id,
                     client_info.client_id,
                     client_info.user_id
@@ -850,7 +850,7 @@ pub async fn push(
         if let Some(modified_at) = existing {
             if edit_wins_over_deletion(&modified_at, &deletion.deleted_at) {
                 tracing::info!(
-                    "Refusing deletion of note {} - edit ({}) postdates deletion ({})",
+                    "Refusing deletion of note {:?} - edit ({:?}) postdates deletion ({:?})",
                     deletion.id,
                     modified_at,
                     deletion.deleted_at
@@ -883,7 +883,7 @@ pub async fn push(
             .await?;
 
             deletions_applied = true;
-            tracing::info!("Recorded hard deletion for note {} (user {})", deletion.id, client_info.user_id);
+            tracing::info!("Recorded hard deletion for note {:?} (user {})", deletion.id, client_info.user_id);
         }
     }
 
@@ -938,7 +938,7 @@ pub async fn push(
                 let mut by_note: std::collections::BTreeMap<String, Vec<String>> = Default::default();
                 for (note_id, att_id) in rows {
                     tracing::warn!(
-                        "Note {} (user {}) references attachment {} with no stored data",
+                        "Note {:?} (user {}) references attachment {:?} with no stored data",
                         note_id,
                         client_info.user_id,
                         att_id
@@ -1625,7 +1625,7 @@ pub async fn delete_note(
     tx.commit().await?;
 
     tracing::info!(
-        "Deleted note: {} for user: {} (client: {})",
+        "Deleted note: {:?} for user: {} (client: {})",
         note_id,
         client_info.user_id,
         client_info.client_id
@@ -1656,7 +1656,7 @@ pub async fn get_attachment(
     match blob {
         Some((_, data)) => {
             tracing::info!(
-                "Serving attachment {} ({} bytes) to user {} (client {})",
+                "Serving attachment {:?} ({} bytes) to user {} (client {})",
                 attachment_id,
                 data.len(),
                 client_info.user_id,

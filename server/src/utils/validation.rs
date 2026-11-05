@@ -63,8 +63,8 @@ fn contains_html_injection(s: &str) -> bool {
 
 /// Validate and sanitize device name
 ///
-/// Device names are displayed in admin interfaces and logs, so we apply
-/// strict validation to prevent XSS and log injection attacks.
+/// Device names are displayed in admin interfaces, so we apply strict validation to
+/// prevent XSS. Newlines are allowed, so anything logging a name must use `{:?}`.
 pub fn validate_device_name(name: &str, config: &Config) -> Result<(), AppError> {
     // Check for empty/whitespace-only
     if name.trim().is_empty() {
@@ -79,7 +79,7 @@ pub fn validate_device_name(name: &str, config: &Config) -> Result<(), AppError>
         )));
     }
 
-    // Reject control characters (log injection prevention)
+    // Reject control characters
     if contains_forbidden_chars(name) {
         return Err(AppError::BadRequest(
             "Device name contains invalid characters".to_string()
