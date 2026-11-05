@@ -1183,9 +1183,11 @@ final class AppState {
         guard let original = try noteRepo.get(id: id, key: key) else { return }
 
         var attachments: [AttachmentRef] = []
+        var newIds: [String: String] = [:]
         for ref in original.attachments {
             guard let blob = try attachmentRepo.getBlob(id: ref.data) else { continue }
             let newId = CryptoService.generateUUID()
+            newIds[ref.id] = newId
             try attachmentRepo.storeBlob(id: newId, mimeType: ref.mimeType, size: ref.size, data: blob)
             attachments.append(AttachmentRef(
                 id: newId,
@@ -1198,7 +1200,8 @@ final class AppState {
         }
 
         let duplicate = try noteRepo.create(
-            content: original.content, tags: original.tags, copying: original, attachments: attachments, key: key
+            content: NoteCombining.content(original.content, followingCopies: newIds),
+            tags: original.tags, copying: original, attachments: attachments, key: key
         )
         changeLists { notes.insert(duplicate, at: 0) }
         selectedNoteId = duplicate.id

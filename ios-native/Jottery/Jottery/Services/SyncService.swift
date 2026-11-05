@@ -1045,8 +1045,19 @@ actor SyncService {
             let record = try recreateRecordIfMissing(noteId: noteId, conflict: conflict)
             let serverRecord = try Self.applyingServerCopy(from: conflict, to: record, syncedAt: now, key: key)
 
-            // Create a duplicate note with the local content
-            let encContent = try CryptoService.encryptText(conflict.localContent, key: key)
+            // Copy attachment blobs under new ids rather than sharing them with
+            // the original — see copyAttachments' doc comment for why sharing
+            // ids is unsafe (single-attachment removal deletes by explicit id).
+            let duplicateAttachments = try copyAttachments(conflict.localAttachments)
+            let newIds = Dictionary(
+                zip(conflict.localAttachments.map(\.id), duplicateAttachments.map(\.id)),
+                uniquingKeysWith: { first, _ in first }
+            )
+
+            // Create a duplicate note with the local content, whose references
+            // have to name its own attachments.
+            let localContent = NoteCombining.content(conflict.localContent, followingCopies: newIds)
+            let encContent = try CryptoService.encryptText(localContent, key: key)
             let encTags = try CryptoService.encryptStringArray(conflict.localTags, key: key)
             let contentJSON = try CryptoService.serializeEncryptedJSON(encContent)
             let tagsJSON = try CryptoService.serializeEncryptedJSON(encTags)
@@ -1056,10 +1067,6 @@ actor SyncService {
             duplicate.wordWrap = record.wordWrap
             duplicate.showPreview = record.showPreview
             duplicate.color = record.color
-            // Copy attachment blobs under new ids rather than sharing them with
-            // the original — see copyAttachments' doc comment for why sharing
-            // ids is unsafe (single-attachment removal deletes by explicit id).
-            let duplicateAttachments = try copyAttachments(conflict.localAttachments)
             duplicate.attachments = Self.encodeAttachments(duplicateAttachments)
             // Together, or stopping between them would lose the local side:
             // the original overwritten, and no copy made. A copied blob left

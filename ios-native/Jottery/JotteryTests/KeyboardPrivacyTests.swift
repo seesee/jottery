@@ -39,7 +39,7 @@ struct KeyboardPrivacyTests {
     @Test func theSearchFieldLearnsNothing() async throws {
         let state = try TestVaults.makeState()
         try await state.createVault(password: "notes-password-correct-horse")
-        let window = try makeWindow(NavigationStack { NoteListView() }.environment(state))
+        let window = try makeWindow(NavigationStack { NoteListView(showsTagsInList: false) }.environment(state))
         defer { window.isHidden = true }
 
         await waitUntil { !all(UISearchTextField.self, in: window).isEmpty }

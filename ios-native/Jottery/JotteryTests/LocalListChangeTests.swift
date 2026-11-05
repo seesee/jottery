@@ -174,6 +174,23 @@ struct DuplicateNoteTests {
         #expect(String(decoding: try CryptoService.decrypt(stored, key: key), as: UTF8.self) == "the file")
     }
 
+    /// An image in the text names its attachment, so it has to name the copy, or
+    /// it breaks as soon as the original is removed.
+    @Test func aCopysTextPointsAtItsOwnAttachments() async throws {
+        let state = try await makeState()
+        let note = try #require(try state.createNote(content: "placeholder"))
+        try state.addAttachment(to: note.id, data: Data("picture".utf8), filename: "a.png", mimeType: "image/png")
+        var original = try #require(state.notes.first { $0.id == note.id })
+        let ref = try #require(original.attachments.first)
+        original.content = "![a](attachment:\(ref.id))"
+        try state.saveNote(original)
+
+        let copy = try duplicate(of: original, in: state)
+
+        let copied = try #require(copy.attachments.first)
+        #expect(copy.content == "![a](attachment:\(copied.id))")
+    }
+
     @Test func aCopyHoldsWhatsInTheEditorNow() async throws {
         let state = try await makeState()
         var note = try #require(try state.createNote(content: "as saved"))
