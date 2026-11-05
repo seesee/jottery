@@ -12,37 +12,26 @@ use super::super::app::App;
 use super::super::state::{AppState, InputMode};
 
 /// Load notes from database, preserving current selection via persisted ID
+///
+/// Archived notes come too. The list shows one group or the other, and sync needs
+/// to know about both.
 pub fn load_notes(app: &mut App) -> Result<()> {
     if let (Some(db), Some(key)) = (&app.db, &app.key) {
         let repo = NoteRepository::new(db.connection());
-        app.notes = repo.list(false, key)?;
+        let list = repo.list_not_deleted(key)?;
+        app.notes = list.notes;
 
-        // Restore selection to the same note if it still exists (using persisted ID)
-        // NOTE: We need to find position in the sorted view (pinned first, then by modified_at)
-        // because selected_note is an index into filtered_notes(), not app.notes
-        if let Some(note_id) = &app.selected_note_id.clone() {
-            // Build sorted view like filtered_notes() does
-            let mut sorted_notes: Vec<&Note> = app.notes.iter().collect();
-            App::sort_notes_by_pinned_and_date(&mut sorted_notes);
-
-            if let Some(index) = sorted_notes.iter().position(|n| &n.id == note_id) {
-                app.selected_note = index;
-            } else {
-                // Note was deleted, select first note and update ID
-                app.selected_note = 0;
-                app.selected_note_id = sorted_notes.first().map(|n| n.id.clone());
-            }
-        } else {
-            app.selected_note = 0;
-            // Get first note from sorted view
-            let mut sorted_notes: Vec<&Note> = app.notes.iter().collect();
-            App::sort_notes_by_pinned_and_date(&mut sorted_notes);
-            app.selected_note_id = sorted_notes.first().map(|n| n.id.clone());
+        // A count that grew is news. One that stays the same is on the list's title.
+        if list.unreadable > app.unreadable_notes {
+            app.error = Some(t!("note.unreadable", count = list.unreadable).to_string());
         }
+        app.unreadable_notes = list.unreadable;
 
         // Refresh caches
         app.refresh_all_tags_cache();
         app.invalidate_filter_cache();
+
+        app.keep_selection_on_note();
     }
     Ok(())
 }
@@ -191,6 +180,50 @@ pub fn restore_version(app: &mut App, version_number: i32) -> Result<()> {
     Ok(())
 }
 
+/// Move a note in or out of the archive.
+pub fn set_archived(app: &mut App, note_id: &str, archived: bool) -> Result<()> {
+    let db = app.db.as_ref().context("Database not available")?;
+    let key = app.key.as_ref().context("Key not available")?;
+
+    let note = app.notes.iter_mut()
+        .find(|n| n.id == note_id)
+        .context("Note not found in memory")?;
+
+    note.archived = archived;
+    note.archived_at = archived.then(chrono::Utc::now);
+    note.touch();
+    NoteRepository::new(db.connection()).update(note, key)?;
+
+    app.invalidate_filter_cache();
+    app.keep_selection_on_note();
+
+    // Trigger sync to push the change to the server
+    if app.settings.sync_enabled {
+        app.trigger_sync();
+    }
+    Ok(())
+}
+
+/// Archive the selected note, or bring it back if the archive is showing.
+pub fn toggle_archive_selected(app: &mut App) {
+    let filtered = app.filtered_notes();
+    let Some(note) = filtered.get(app.selected_note) else {
+        return;
+    };
+    let (note_id, locked, archived) = (note.id.clone(), note.locked, note.archived);
+
+    if locked {
+        app.notify(t!("note.locked_cannot_archive").to_string());
+        return;
+    }
+
+    match set_archived(app, &note_id, !archived) {
+        Ok(()) if archived => app.notify(t!("archive.unarchived").to_string()),
+        Ok(()) => app.notify(t!("archive.archived").to_string()),
+        Err(e) => app.error = Some(t!("archive.failed", error = e.to_string()).to_string()),
+    }
+}
+
 /// Delete a note (soft delete)
 pub fn delete_note(app: &mut App) -> Result<()> {
     if let Some(db) = &app.db {
@@ -314,6 +347,87 @@ mod tests {
 
     fn press(app: &mut App, code: KeyCode) {
         handle_note_view_key(app, KeyEvent::new(code, KeyModifiers::NONE)).unwrap();
+    }
+
+    fn stored_note(app: &App, id: &str) -> Note {
+        let db = app.db.as_ref().unwrap();
+        NoteRepository::new(db.connection()).get(id, app.key.as_ref().unwrap()).unwrap().unwrap()
+    }
+
+    #[test]
+    fn archiving_keeps_the_note_and_moves_it_out_of_the_list() {
+        let mut app = unlocked_app();
+        let id = app.notes[0].id.clone();
+
+        toggle_archive_selected(&mut app);
+
+        assert!(app.filtered_notes().is_empty());
+        let stored = stored_note(&app, &id);
+        assert!(stored.archived);
+        assert!(stored.archived_at.is_some());
+    }
+
+    #[test]
+    fn archived_notes_show_in_archive_mode_after_a_reload() {
+        let mut app = unlocked_app();
+        toggle_archive_selected(&mut app);
+
+        load_notes(&mut app).unwrap();
+        assert!(app.filtered_notes().is_empty());
+
+        app.archive_mode = true;
+        app.invalidate_filter_cache();
+        assert_eq!(app.filtered_notes().len(), 1);
+    }
+
+    #[test]
+    fn a_note_comes_back_out_of_the_archive() {
+        let mut app = unlocked_app();
+        let id = app.notes[0].id.clone();
+        toggle_archive_selected(&mut app);
+        app.archive_mode = true;
+        app.invalidate_filter_cache();
+
+        toggle_archive_selected(&mut app);
+
+        let stored = stored_note(&app, &id);
+        assert!(!stored.archived);
+        assert!(stored.archived_at.is_none());
+    }
+
+    #[test]
+    fn a_locked_note_stays_where_it_is() {
+        let mut app = unlocked_app();
+        app.notes[0].locked = true;
+        let id = app.notes[0].id.clone();
+
+        toggle_archive_selected(&mut app);
+
+        assert!(!stored_note(&app, &id).archived);
+    }
+
+    #[test]
+    fn archiving_a_note_changes_what_gets_pushed() {
+        let mut app = unlocked_app();
+        let before = app.notes[0].modified_at;
+        let id = app.notes[0].id.clone();
+
+        toggle_archive_selected(&mut app);
+
+        assert!(stored_note(&app, &id).modified_at > before);
+    }
+
+    #[test]
+    fn notes_that_cannot_be_read_are_mentioned() {
+        let mut app = unlocked_app();
+        let other_key = crate::crypto::CryptoService::new().generate_master_key();
+        let db = app.db.as_ref().unwrap();
+        NoteRepository::new(db.connection()).create(&Note::new("Elsewhere".to_string()), &other_key).unwrap();
+
+        load_notes(&mut app).unwrap();
+
+        assert_eq!(app.unreadable_notes, 1);
+        assert!(app.error.is_some());
     }
 
     #[test]

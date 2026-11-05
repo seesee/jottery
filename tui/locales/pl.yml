@@ -87,6 +87,8 @@ note:
   empty_bin_confirm: "Trwale usunąć notatki z kosza (%{count})?"
   empty_bin_warning: "Zostaną też usunięte z serwera i innych urządzeń. Tego nie można cofnąć."
   bin_emptied: "Trwale usunięte notatki: %{count}"
+  locked_cannot_archive: "Nie można zarchiwizować zablokowanej notatki"
+  unreadable: "Nie można odczytać notatek w tym sejfie: %{count}"
 archive:
   view: "Wyświetl archiwum"
   title: "Archiwum"
@@ -477,6 +479,10 @@ help:
   ctrl_l_lock_desc: "Zablokuj Jottery"
   S_save_attachment_key: "S"
   S_save_attachment_desc: "Zapisz wybrany załącznik do pliku"
+  z_archive_key: "z"
+  z_archive_desc: "Zarchiwizuj wybraną notatkę (lub przywróć w trybie archiwum)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Zarchiwizuj wybrane notatki"
 cli:
   # Alternatywne (używane w niektórych miejscach)
   list: Wyświetl notatki
@@ -561,6 +567,7 @@ bulk:
   enter_export_path: "Ścieżka eksportu:"
   add_tags_to: Dodaj tagi do
   export_notes_to: Eksportuj
+  archived: "Zarchiwizowane notatki: %{count}"
 time:
   just_now: przed chwilą
   minutes_ago: "%{count} minut temu"

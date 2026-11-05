@@ -53,6 +53,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     app.debug_log("Calling filtered_notes()");
     let filtered = app.filtered_notes();
     app.debug_log(&format!("filtered_notes() returned {} notes", filtered.len()));
+    let notes_in_this_view = app.notes.iter().filter(|n| n.archived == app.archive_mode).count();
     let title = match app.view_mode {
         ViewMode::RecycleBin => t!("ui.recycle_bin").to_string(),
         ViewMode::AttachmentViewer => t!("ui.attachment_viewer").to_string(),
@@ -62,16 +63,23 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         ViewMode::NoteList => {
             if app.archive_mode {
                 if app.search_active && !app.search_input.is_empty() {
-                    format!("Jottery v{} - {} ({}/{})", env!("CARGO_PKG_VERSION"), t!("ui.archive"), filtered.len(), app.notes.len())
+                    format!("Jottery v{} - {} ({}/{})", env!("CARGO_PKG_VERSION"), t!("ui.archive"), filtered.len(), notes_in_this_view)
                 } else {
                     format!("Jottery v{} - {}", env!("CARGO_PKG_VERSION"), t!("ui.archive"))
                 }
             } else if app.search_active && !app.search_input.is_empty() {
-                format!("Jottery v{} - {} ({}/{})", env!("CARGO_PKG_VERSION"), t!("ui.notes"), filtered.len(), app.notes.len())
+                format!("Jottery v{} - {} ({}/{})", env!("CARGO_PKG_VERSION"), t!("ui.notes"), filtered.len(), notes_in_this_view)
             } else {
                 format!("Jottery v{} - {}", env!("CARGO_PKG_VERSION"), t!("ui.notes"))
             }
         }
+    };
+
+    // Notes the vault can't read would otherwise just be missing from the list
+    let title = if app.unreadable_notes > 0 {
+        format!("{} ⚠ {}", title, app.unreadable_notes)
+    } else {
+        title
     };
 
     let left_constraints = if app.search_active {
@@ -383,16 +391,16 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             }
             ViewMode::NoteList => {
                 if app.archive_mode {
-                    format!("A: {} | Shift+A: {} | ↑/↓: {} | /: {} | Esc: {}",
+                    format!("a: {} | Shift+A: {} | ↑/↓: {} | /: {} | Esc: {}",
                         t!("status_bar.unarchive"), t!("status_bar.toggle_mode"),
                         t!("status_bar.navigate"), t!("status_bar.search"), t!("status_bar.exit_archive"))
                 } else if app.is_multi_select_mode {
-                    format!("Space: {} | Esc: {} | t: {} | d: {} | c: {} | e: {} ({} {})",
+                    format!("Space: {} | Esc: {} | t: {} | d: {} | z: {} | c: {} | e: {} ({} {})",
                         t!("status_bar.toggle"), t!("status_bar.clear"), t!("status_bar.add_tags"),
-                        t!("status_bar.delete"), t!("status_bar.combine"), t!("status_bar.export"),
-                        app.selected_note_ids.len(), t!("status_bar.selected"))
+                        t!("status_bar.delete"), t!("status_bar.archive"), t!("status_bar.combine"),
+                        t!("status_bar.export"), app.selected_note_ids.len(), t!("status_bar.selected"))
                 } else {
-                    format!("?: {} | /: {} | Space: {} | p: {} | t: {} | []: {} | r: {} | Shift+A: {} | v: {} | n: {}",
+                    format!("?: {} | /: {} | Space: {} | p: {} | t: {} | []: {} | r: {} | z: {} | v: {} | n: {}",
                         t!("status_bar.help"), t!("status_bar.search"), t!("status_bar.select"),
                         t!("status_bar.pin"), t!("status_bar.tags"), t!("status_bar.type"),
                         t!("status_bar.bin"), t!("status_bar.archive"), t!("status_bar.ver"), t!("status_bar.new"))

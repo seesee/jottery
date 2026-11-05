@@ -304,6 +304,12 @@ impl<'a> NoteRepository<'a> {
         Ok(self.query_notes(filter, [], key)?.notes)
     }
 
+    /// Every note that isn't deleted, archived ones included, and a count of rows
+    /// that couldn't be read.
+    pub fn list_not_deleted(&self, key: &[u8; 32]) -> Result<NoteList> {
+        self.query_notes("WHERE deleted = 0 ORDER BY modified_at DESC", [], key)
+    }
+
     /// Every note in the vault, deleted or not, and a count of rows that couldn't
     /// be read. Whatever copies the whole vault needs that count.
     pub fn list_everything(&self, key: &[u8; 32]) -> Result<NoteList> {

@@ -324,7 +324,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 if matches!(app.view_mode, ViewMode::NoteList) {
                     // Check for existing blank note first
                     let existing_blank = app.notes.iter()
-                        .find(|n| !n.deleted && n.is_blank())
+                        .find(|n| !n.deleted && !n.archived && n.is_blank())
                         .map(|n| n.id.clone());
 
                     if let Some(blank_id) = existing_blank {
@@ -758,20 +758,19 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
             KeyCode::Char('a') if app.archive_mode && key.modifiers.is_empty() => {
                 // 'a' in archive mode: Unarchive selected note (only in note list view)
                 if matches!(app.view_mode, ViewMode::NoteList) {
-                    let filtered = app.filtered_notes();
-                    if !filtered.is_empty() && app.selected_note < filtered.len() {
-                        let note_id = filtered[app.selected_note].id.clone();
-                        if let Some(note) = app.notes.iter_mut().find(|n| n.id == note_id) {
-                            note.archived = false;
-                            note.touch();
-                            // Save to database
-                            if let (Some(db), Some(key)) = (&app.db, &app.key) {
-                                let repo = NoteRepository::new(db.connection());
-                                if let Err(e) = repo.update(note, key) {
-                                    app.error = Some(t!("archive.failed", error = e.to_string()).to_string());
-                                }
-                            }
+                    operations::notes::toggle_archive_selected(app);
+                }
+            }
+            KeyCode::Char('z') => {
+                // Archive the selected notes, or bring one back in archive mode
+                if matches!(app.view_mode, ViewMode::NoteList) {
+                    if app.is_multi_select_mode {
+                        match operations::bulk::archive_selected(app) {
+                            Ok(count) => app.notify(t!("bulk.archived", count = count).to_string()),
+                            Err(e) => app.error = Some(t!("bulk.operation_failed", error = e.to_string()).to_string()),
                         }
+                    } else {
+                        operations::notes::toggle_archive_selected(app);
                     }
                 }
             }

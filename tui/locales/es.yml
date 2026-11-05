@@ -87,6 +87,8 @@ note:
   empty_bin_confirm: "¿Eliminar definitivamente %{count} notas de la papelera?"
   empty_bin_warning: "También se eliminarán del servidor y de tus otros dispositivos. No se puede deshacer."
   bin_emptied: "%{count} notas eliminadas definitivamente"
+  locked_cannot_archive: "No se puede archivar una nota bloqueada"
+  unreadable: "%{count} notas de este almacén no se pueden leer"
 archive:
   view: "Ver archivo"
   title: "Archivo"
@@ -477,6 +479,10 @@ help:
   ctrl_l_lock_desc: "Bloquear Jottery"
   S_save_attachment_key: "S"
   S_save_attachment_desc: "Guardar el adjunto seleccionado en un archivo"
+  z_archive_key: "z"
+  z_archive_desc: "Archivar la nota seleccionada (o recuperarla en modo archivo)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Archivar las notas seleccionadas"
 cli:
   # Alt (usado en algunos lugares)
   list: Listar notas
@@ -561,6 +567,7 @@ bulk:
   enter_export_path: "Ruta de exportación:"
   add_tags_to: Añadir etiquetas a
   export_notes_to: Exportar
+  archived: "%{count} notas archivadas"
 time:
   just_now: justo ahora
   minutes_ago: hace %{count} minutos

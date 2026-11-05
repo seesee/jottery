@@ -87,6 +87,8 @@ note:
   empty_bin_confirm: "Eliminare definitivamente %{count} note nel cestino?"
   empty_bin_warning: "Verranno eliminate anche dal server e dagli altri dispositivi. Non si può annullare."
   bin_emptied: "%{count} note eliminate definitivamente"
+  locked_cannot_archive: "Impossibile archiviare una nota bloccata"
+  unreadable: "%{count} note di questo archivio non sono leggibili"
 archive:
   view: "Visualizza archivio"
   title: "Archivio"
@@ -477,6 +479,10 @@ help:
   ctrl_l_lock_desc: "Blocca Jottery"
   S_save_attachment_key: "S"
   S_save_attachment_desc: "Salva l'allegato selezionato in un file"
+  z_archive_key: "z"
+  z_archive_desc: "Archivia la nota selezionata (o ripristinala in modalità archivio)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Archivia le note selezionate"
 cli:
   # Alt (usato in alcuni contesti)
   list: Elenca note
@@ -561,6 +567,7 @@ bulk:
   enter_export_path: "Percorso di esportazione:"
   add_tags_to: Aggiungi tag a
   export_notes_to: Esporta
+  archived: "%{count} note archiviate"
 time:
   just_now: proprio ora
   minutes_ago: "%{count} minuti fa"

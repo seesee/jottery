@@ -40,7 +40,7 @@ use crate::{
     db::Database,
     models::{Note, UserSettings, sync::ConflictData},
     password_storage::{self, PasswordStorage, RetrieveResult, StorageBackendType},
-    repository::{NoteRepository, SettingsRepository, sync::SyncRepository},
+    repository::{SettingsRepository, sync::SyncRepository},
 };
 
 
@@ -225,6 +225,8 @@ pub struct App {
     pub(crate) crypto: CryptoService,
     /// Loaded notes
     pub(crate) notes: Vec<Note>,
+    /// How many notes in the vault couldn't be read at the last load
+    pub(crate) unreadable_notes: usize,
     /// Selected note index
     pub selected_note: usize,
     /// Selected note ID (persists through reloads/syncs)
@@ -419,6 +421,7 @@ impl App {
             key_manager: KeyManager::new(),
             crypto: CryptoService::new(),
             notes: Vec::new(),
+            unreadable_notes: 0,
             selected_note: 0,
             selected_note_id: None,
             selected_note_ids: HashSet::new(),
@@ -578,6 +581,7 @@ impl App {
         self.conflict_note_id = None;
 
         self.notes.clear();
+        self.unreadable_notes = 0;
         self.loaded_versions.clear();
         self.versions_note_id = None;
         self.inbox_items.clear();
@@ -792,46 +796,18 @@ impl App {
         Ok(())
     }
 
-    /// Load notes from database
-    #[allow(dead_code)]
-    fn load_notes(&mut self) -> Result<()> {
-        if let (Some(db), Some(key)) = (&self.db, &self.key) {
-            let old_selected_note = self.selected_note;
-            let old_selected_note_id = self.selected_note_id.clone();
+    /// Point `selected_note`, an index into the visible list, at the note that was
+    /// selected, or the nearest one if that note has left the list.
+    pub(crate) fn keep_selection_on_note(&mut self) {
+        let position = {
+            let filtered = self.filtered_notes();
+            self.selected_note_id.as_ref()
+                .and_then(|id| filtered.iter().position(|note| &note.id == id))
+                .unwrap_or_else(|| self.selected_note.min(filtered.len().saturating_sub(1)))
+        };
 
-            let repo = NoteRepository::new(db.connection());
-            self.notes = repo.list(false, key)?;
-
-            self.debug_log(&format!("load_notes: old_selected_note={}, old_selected_note_id={:?}, notes_count={}",
-                old_selected_note, old_selected_note_id, self.notes.len()));
-
-            // Restore selection to the same note if it still exists (using persisted ID)
-            // NOTE: We need to find position in the sorted view (pinned first, then by modified_at)
-            // because selected_note is an index into filtered_notes(), not self.notes
-            if let Some(note_id) = &self.selected_note_id.clone() {
-                // Build sorted view like filtered_notes() does
-                let mut sorted_notes: Vec<&Note> = self.notes.iter().collect();
-                Self::sort_notes_by_pinned_and_date(&mut sorted_notes);
-
-                if let Some(index) = sorted_notes.iter().position(|n| &n.id == note_id) {
-                    self.selected_note = index;
-                    self.debug_log(&format!("load_notes: found note {} at sorted index {}", note_id, index));
-                } else {
-                    // Note was deleted, select first note and update ID
-                    self.selected_note = 0;
-                    self.selected_note_id = sorted_notes.first().map(|n| n.id.clone());
-                    self.debug_log(&format!("load_notes: note {} NOT FOUND, defaulting to 0", note_id));
-                }
-            } else {
-                self.selected_note = 0;
-                // Get first note from sorted view
-                let mut sorted_notes: Vec<&Note> = self.notes.iter().collect();
-                Self::sort_notes_by_pinned_and_date(&mut sorted_notes);
-                self.selected_note_id = sorted_notes.first().map(|n| n.id.clone());
-                self.debug_log("load_notes: no selected_note_id, defaulting to 0");
-            }
-        }
-        Ok(())
+        self.selected_note = position;
+        self.selected_note_id = self.filtered_notes().get(position).map(|note| note.id.clone());
     }
 
     /// Refresh the conflict note IDs cache from database

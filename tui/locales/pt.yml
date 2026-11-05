@@ -87,6 +87,8 @@ note:
   empty_bin_confirm: "Eliminar definitivamente %{count} notas da reciclagem?"
   empty_bin_warning: "Também serão eliminadas do servidor e dos seus outros dispositivos. Não é possível anular."
   bin_emptied: "%{count} notas eliminadas definitivamente"
+  locked_cannot_archive: "Não é possível arquivar uma nota bloqueada"
+  unreadable: "%{count} notas deste cofre não podem ser lidas"
 archive:
   view: "Ver arquivo"
   title: "Arquivo"
@@ -477,6 +479,10 @@ help:
   ctrl_l_lock_desc: "Bloquear o Jottery"
   S_save_attachment_key: "S"
   S_save_attachment_desc: "Guardar o anexo selecionado num ficheiro"
+  z_archive_key: "z"
+  z_archive_desc: "Arquivar a nota selecionada (ou recuperá-la no modo de arquivo)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Arquivar as notas selecionadas"
 cli:
   # Alternativo (usado em alguns lugares)
   list: Listar notas
@@ -561,6 +567,7 @@ bulk:
   enter_export_path: "Caminho de exportação:"
   add_tags_to: Adicionar etiquetas a
   export_notes_to: Exportar
+  archived: "%{count} notas arquivadas"
 time:
   just_now: agora mesmo
   minutes_ago: "%{count} minutos atrás"

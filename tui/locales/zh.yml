@@ -87,6 +87,8 @@ note:
   empty_bin_confirm: "要永久删除回收站中的 %{count} 条笔记吗？"
   empty_bin_warning: "这也会将它们从服务器和您的其他设备中删除，且无法撤销。"
   bin_emptied: "已永久删除 %{count} 条笔记"
+  locked_cannot_archive: "无法归档已锁定的笔记"
+  unreadable: "此保险库中有 %{count} 条笔记无法读取"
 archive:
   view: "查看归档"
   title: "归档"
@@ -477,6 +479,10 @@ help:
   ctrl_l_lock_desc: "锁定 Jottery"
   S_save_attachment_key: "S"
   S_save_attachment_desc: "将所选附件保存到文件"
+  z_archive_key: "z"
+  z_archive_desc: "归档所选笔记（在归档模式下恢复）"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "归档所选笔记"
 cli:
   # 简短命令描述（用于旧版/备用）
   list: 列出笔记
@@ -561,6 +567,7 @@ bulk:
   enter_export_path: "导出路径:"
   add_tags_to: 添加标签到
   export_notes_to: 导出
+  archived: "已归档 %{count} 条笔记"
 time:
   just_now: 刚刚
   minutes_ago: "%{count} 分钟前"

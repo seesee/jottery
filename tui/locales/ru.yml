@@ -87,6 +87,8 @@ note:
   empty_bin_confirm: "Удалить навсегда заметки в корзине (%{count})?"
   empty_bin_warning: "Они также будут удалены с сервера и других устройств. Это нельзя отменить."
   bin_emptied: "Удалено навсегда заметок: %{count}"
+  locked_cannot_archive: "Нельзя архивировать заблокированную заметку"
+  unreadable: "Не удаётся прочитать заметки в этом хранилище: %{count}"
 archive:
   view: "Просмотр архива"
   title: "Архив"
@@ -477,6 +479,10 @@ help:
   ctrl_l_lock_desc: "Заблокировать Jottery"
   S_save_attachment_key: "S"
   S_save_attachment_desc: "Сохранить выбранное вложение в файл"
+  z_archive_key: "z"
+  z_archive_desc: "Архивировать выбранную заметку (или вернуть в режиме архива)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Архивировать выбранные заметки"
 cli:
   # Альтернативные (используются в некоторых местах)
   list: Список заметок
@@ -561,6 +567,7 @@ bulk:
   enter_export_path: "Путь экспорта:"
   add_tags_to: Добавить теги к
   export_notes_to: Экспорт
+  archived: "Заметок в архиве: %{count}"
 time:
   just_now: только что
   minutes_ago: "%{count} минут назад"

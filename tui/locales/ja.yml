@@ -87,6 +87,8 @@ note:
   empty_bin_confirm: "ごみ箱の %{count} 件のノートを完全に削除しますか？"
   empty_bin_warning: "サーバーと他のデバイスからも削除されます。元に戻すことはできません。"
   bin_emptied: "%{count} 件のノートを完全に削除しました"
+  locked_cannot_archive: "ロックされたノートはアーカイブできません"
+  unreadable: "この保管庫の %{count} 件のノートを読み取れません"
 archive:
   view: "アーカイブを表示"
   title: "アーカイブ"
@@ -477,6 +479,10 @@ help:
   ctrl_l_lock_desc: "Jottery をロック"
   S_save_attachment_key: "S"
   S_save_attachment_desc: "選択した添付ファイルをファイルに保存"
+  z_archive_key: "z"
+  z_archive_desc: "選択したノートをアーカイブ（アーカイブモードでは元に戻す）"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "選択したノートをアーカイブ"
 cli:
   # 代替 (一部で使用)
   list: ノートを一覧表示
@@ -561,6 +567,7 @@ bulk:
   enter_export_path: "エクスポートパス:"
   add_tags_to: タグを追加
   export_notes_to: エクスポート
+  archived: "%{count} 件のノートをアーカイブしました"
 time:
   just_now: たった今
   minutes_ago: "%{count} 分前"

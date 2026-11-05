@@ -87,6 +87,8 @@ note:
   empty_bin_confirm: "Supprimer définitivement %{count} notes de la corbeille ?"
   empty_bin_warning: "Elles seront aussi supprimées du serveur et de vos autres appareils. Cette action est irréversible."
   bin_emptied: "%{count} notes supprimées définitivement"
+  locked_cannot_archive: "Impossible d'archiver une note verrouillée"
+  unreadable: "%{count} notes de ce coffre sont illisibles"
 archive:
   view: "Voir les archives"
   title: "Archives"
@@ -477,6 +479,10 @@ help:
   ctrl_l_lock_desc: "Verrouiller Jottery"
   S_save_attachment_key: "S"
   S_save_attachment_desc: "Enregistrer la pièce jointe sélectionnée dans un fichier"
+  z_archive_key: "z"
+  z_archive_desc: "Archiver la note sélectionnée (ou la restaurer en mode archive)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Archiver les notes sélectionnées"
 cli:
   # Alt (utilisé à certains endroits)
   list: Lister les notes
@@ -561,6 +567,7 @@ bulk:
   enter_export_path: "Chemin d'exportation :"
   add_tags_to: Ajouter des étiquettes à
   export_notes_to: Exporter
+  archived: "%{count} notes archivées"
 time:
   just_now: à l'instant
   minutes_ago: il y a %{count} minutes

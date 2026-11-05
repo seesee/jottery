@@ -87,6 +87,8 @@ note:
   empty_bin_confirm: "휴지통의 노트 %{count}개를 영구적으로 삭제할까요?"
   empty_bin_warning: "서버와 다른 기기에서도 삭제됩니다. 되돌릴 수 없습니다."
   bin_emptied: "노트 %{count}개를 영구적으로 삭제했습니다"
+  locked_cannot_archive: "잠긴 노트는 보관할 수 없습니다"
+  unreadable: "이 보관함의 노트 %{count}개를 읽을 수 없습니다"
 archive:
   view: "보관함 보기"
   title: "보관함"
@@ -477,6 +479,10 @@ help:
   ctrl_l_lock_desc: "Jottery 잠금"
   S_save_attachment_key: "S"
   S_save_attachment_desc: "선택한 첨부 파일을 파일로 저장"
+  z_archive_key: "z"
+  z_archive_desc: "선택한 노트 보관 (보관 모드에서는 되돌리기)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "선택한 노트 보관"
 cli:
   # 기존 (일부 위치에서 사용됨)
   list: "노트 목록"
@@ -561,6 +567,7 @@ bulk:
   enter_export_path: "내보내기 경로:"
   add_tags_to: "태그 추가"
   export_notes_to: "내보내기"
+  archived: "노트 %{count}개를 보관했습니다"
 time:
   just_now: "방금"
   minutes_ago: "%{count}분 전"

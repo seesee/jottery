@@ -87,6 +87,8 @@ note:
   empty_bin_confirm: "Çöp kutusundaki %{count} not kalıcı olarak silinsin mi?"
   empty_bin_warning: "Sunucudan ve diğer cihazlarınızdan da silinirler. Bu geri alınamaz."
   bin_emptied: "%{count} not kalıcı olarak silindi"
+  locked_cannot_archive: "Kilitli not arşivlenemez"
+  unreadable: "Bu kasadaki %{count} not okunamıyor"
 archive:
   view: "Arşivi görüntüle"
   title: "Arşiv"
@@ -477,6 +479,10 @@ help:
   ctrl_l_lock_desc: "Jottery uygulamasını kilitle"
   S_save_attachment_key: "S"
   S_save_attachment_desc: "Seçili eki bir dosyaya kaydet"
+  z_archive_key: "z"
+  z_archive_desc: "Seçili notu arşivle (arşiv modunda geri getir)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Seçili notları arşivle"
 cli:
   # Eski (bazı yerlerde kullanılıyor)
   list: Notları listele
@@ -561,6 +567,7 @@ bulk:
   enter_export_path: "Dışa aktarma yolu:"
   add_tags_to: Etiket ekle
   export_notes_to: Dışa aktar
+  archived: "%{count} not arşivlendi"
 time:
   just_now: az önce
   minutes_ago: "%{count} dakika önce"

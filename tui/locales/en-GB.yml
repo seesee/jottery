@@ -96,6 +96,8 @@ note:
   empty_bin_confirm: "Permanently delete %{count} notes in the bin?"
   empty_bin_warning: "This also deletes them from the server and your other devices. It cannot be undone."
   bin_emptied: "Permanently deleted %{count} notes"
+  locked_cannot_archive: "Cannot archive locked note"
+  unreadable: "%{count} notes in this vault can't be read"
 
 # Archive operations
 archive:
@@ -524,6 +526,10 @@ help:
   ctrl_l_lock_desc: "Lock Jottery"
   S_save_attachment_key: "S"
   S_save_attachment_desc: "Save selected attachment to a file"
+  z_archive_key: "z"
+  z_archive_desc: "Archive selected note (or bring it back in archive mode)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Archive selected notes"
 
 # CLI commands and help text
 cli:
@@ -614,6 +620,7 @@ bulk:
   enter_export_path: "Export path:"
   add_tags_to: "Add tags to"
   export_notes_to: "Export"
+  archived: "%{count} notes archived"
 
 # Date and time formatting
 time:

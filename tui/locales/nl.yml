@@ -87,6 +87,8 @@ note:
   empty_bin_confirm: "%{count} notities in de prullenbak definitief verwijderen?"
   empty_bin_warning: "Ze worden ook van de server en je andere apparaten verwijderd. Dit kan niet ongedaan worden gemaakt."
   bin_emptied: "%{count} notities definitief verwijderd"
+  locked_cannot_archive: "Vergrendelde notitie kan niet worden gearchiveerd"
+  unreadable: "%{count} notities in deze kluis kunnen niet worden gelezen"
 archive:
   view: "Archief bekijken"
   title: "Archief"
@@ -477,6 +479,10 @@ help:
   ctrl_l_lock_desc: "Jottery vergrendelen"
   S_save_attachment_key: "S"
   S_save_attachment_desc: "Geselecteerde bijlage in een bestand opslaan"
+  z_archive_key: "z"
+  z_archive_desc: "Geselecteerde notitie archiveren (of terughalen in archiefmodus)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Geselecteerde notities archiveren"
 cli:
   # Basis (op sommige plaatsen gebruikt)
   list: Notities weergeven
@@ -561,6 +567,7 @@ bulk:
   enter_export_path: "Exportpad:"
   add_tags_to: Labels toevoegen aan
   export_notes_to: Exporteren
+  archived: "%{count} notities gearchiveerd"
 time:
   just_now: zojuist
   minutes_ago: "%{count} minuten geleden"

@@ -116,6 +116,36 @@ pub fn delete_selected(app: &mut App) -> Result<usize> {
     Ok(deleted_count)
 }
 
+/// Archive all selected notes, leaving locked ones where they are, and return how
+/// many moved.
+pub fn archive_selected(app: &mut App) -> Result<usize> {
+    let db = app.db.as_ref().context("Database not available")?;
+    let key = app.key.as_ref().context("Key not available")?;
+    let repo = NoteRepository::new(db.connection());
+
+    let mut archived_count = 0;
+    for note in app.notes.iter_mut() {
+        if app.selected_note_ids.contains(&note.id) && !note.locked && !note.archived {
+            note.archived = true;
+            note.archived_at = Some(Utc::now());
+            note.touch();
+            repo.update(note, key)?;
+            archived_count += 1;
+        }
+    }
+
+    app.clear_multi_selection();
+    app.invalidate_filter_cache();
+    app.keep_selection_on_note();
+
+    // Trigger sync to push the change to the server
+    if archived_count > 0 && app.settings.sync_enabled {
+        app.trigger_sync();
+    }
+
+    Ok(archived_count)
+}
+
 /// Export selected notes to a JSON file
 pub fn export_selected(app: &App, path: &Path) -> Result<usize> {
     if app.selected_note_ids.is_empty() {
@@ -243,6 +273,31 @@ pub fn combine_selected(app: &mut App) -> Result<usize> {
 mod tests {
     use super::*;
     use crate::models::Note;
+
+    #[test]
+    fn archiving_a_selection_skips_locked_notes() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut app = App::new(dir.path().join("test.db"), None).unwrap();
+        let key = crate::crypto::CryptoService::new().generate_master_key();
+        let db = crate::db::Database::in_memory(&uuid::Uuid::new_v4().to_string()).unwrap();
+
+        let open = Note::new("Open".to_string());
+        let mut locked = Note::new("Locked".to_string());
+        locked.locked = true;
+        for note in [&open, &locked] {
+            NoteRepository::new(db.connection()).create(note, &key).unwrap();
+        }
+        app.selected_note_ids.extend([open.id.clone(), locked.id.clone()]);
+        app.notes = vec![open.clone(), locked.clone()];
+        app.db = Some(db);
+        app.key = Some(key);
+
+        assert_eq!(archive_selected(&mut app).unwrap(), 1);
+
+        let conn = app.db.as_ref().unwrap().connection();
+        assert!(NoteRepository::new(conn).get(&open.id, &key).unwrap().unwrap().archived);
+        assert!(!NoteRepository::new(conn).get(&locked.id, &key).unwrap().unwrap().archived);
+    }
 
     #[test]
     fn test_build_combined_content_two_notes() {

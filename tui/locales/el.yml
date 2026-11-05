@@ -87,6 +87,8 @@ note:
   empty_bin_confirm: "Οριστική διαγραφή %{count} σημειώσεων στον κάδο;"
   empty_bin_warning: "Διαγράφονται επίσης από τον διακομιστή και τις άλλες συσκευές σας. Δεν αναιρείται."
   bin_emptied: "Διαγράφηκαν οριστικά %{count} σημειώσεις"
+  locked_cannot_archive: "Δεν είναι δυνατή η αρχειοθέτηση κλειδωμένης σημείωσης"
+  unreadable: "%{count} σημειώσεις σε αυτό το θησαυροφυλάκιο δεν διαβάζονται"
 archive:
   view: "Προβολή αρχείου"
   title: "Αρχείο"
@@ -477,6 +479,10 @@ help:
   ctrl_l_lock_desc: "Κλείδωμα του Jottery"
   S_save_attachment_key: "S"
   S_save_attachment_desc: "Αποθήκευση επιλεγμένου συνημμένου σε αρχείο"
+  z_archive_key: "z"
+  z_archive_desc: "Αρχειοθέτηση επιλεγμένης σημείωσης (ή επαναφορά στη λειτουργία αρχείου)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Αρχειοθέτηση επιλεγμένων σημειώσεων"
 cli:
   # Εναλλακτικό (χρησιμοποιείται σε ορισμένα σημεία)
   list: Λίστα σημειώσεων
@@ -561,6 +567,7 @@ bulk:
   enter_export_path: "Διαδρομή εξαγωγής:"
   add_tags_to: Προσθήκη ετικετών σε
   export_notes_to: Εξαγωγή
+  archived: "%{count} σημειώσεις αρχειοθετήθηκαν"
 time:
   just_now: μόλις τώρα
   minutes_ago: πριν από %{count} λεπτά

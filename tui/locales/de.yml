@@ -87,6 +87,8 @@ note:
   empty_bin_confirm: "%{count} Notizen im Papierkorb endgültig löschen?"
   empty_bin_warning: "Sie werden auch vom Server und deinen anderen Geräten gelöscht. Das lässt sich nicht rückgängig machen."
   bin_emptied: "%{count} Notizen endgültig gelöscht"
+  locked_cannot_archive: "Gesperrte Notiz kann nicht archiviert werden"
+  unreadable: "%{count} Notizen in diesem Tresor können nicht gelesen werden"
 archive:
   view: "Archiv anzeigen"
   title: "Archiv"
@@ -477,6 +479,10 @@ help:
   ctrl_l_lock_desc: "Jottery sperren"
   S_save_attachment_key: "S"
   S_save_attachment_desc: "Ausgewählten Anhang in einer Datei speichern"
+  z_archive_key: "z"
+  z_archive_desc: "Ausgewählte Notiz archivieren (im Archiv: zurückholen)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Ausgewählte Notizen archivieren"
 cli:
   # Alt (an einigen Stellen verwendet)
   list: Notizen auflisten
@@ -561,6 +567,7 @@ bulk:
   enter_export_path: "Exportpfad:"
   add_tags_to: Tags hinzufügen zu
   export_notes_to: Exportieren
+  archived: "%{count} Notizen archiviert"
 time:
   just_now: gerade eben
   minutes_ago: vor %{count} Minuten
