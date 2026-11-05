@@ -328,6 +328,18 @@ Set the admin credentials with `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD
 - View audit logs of sync operations
 - Monitor server statistics
 
+#### Recovering access
+
+If the dashboard can't help, because the only admin was deactivated or their password is lost, the image includes `jottery-admin`. It works on the database directly, so nobody needs to sign in. With a container named `jottery`:
+
+```bash
+docker exec --user jottery jottery jottery-admin users list
+docker exec --user jottery jottery jottery-admin users activate admin@example.com
+docker exec --user jottery -it jottery jottery-admin users reset-password admin@example.com
+```
+
+Keep `--user jottery`. Without it the command runs as root, and any database file it creates can't be written by the server afterwards.
+
 ### Security
 
 For detailed information about Jottery's security architecture, deployment best practices, and threat model, see [SECURITY.md](SECURITY.md).
