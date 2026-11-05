@@ -272,6 +272,7 @@ register:
   cleared: Kayıt temizlendi. Yeniden başlayabilirsiniz.
   pending_status: Onay bekleniyor
   password_differs: "Not parolanızdan farklı olmalıdır."
+  insecure_endpoint: "Bu adres şifresiz HTTP kullanıyor, bu yüzden hesap parolanız ve cihaz anahtarınız yolda okunabilir. https:// kullanın veya bunu kabul etmek için bu adresi yeniden girin."
 color_scheme:
   default_dark: Varsayılan koyu
   default_light: Varsayılan açık
@@ -589,6 +590,8 @@ cli:
   import_summary: "%{created} eklendi, %{updated} güncellendi, %{skipped} zaten güncel"
   import_failed: "Dosyadaki %{count} öğe içe aktarılamadı"
   password_change_required: "Bu hesabın önce parolasını değiştirmesi gerekiyor. Bunun için web uygulamasında oturum açın ve yeniden deneyin."
+  insecure_endpoint: "%{endpoint} şifresiz HTTP kullanıyor, bu yüzden parola yolda okunabilir. https:// kullanın veya bunu kabul etmek için --allow-insecure-http verin."
+  allow_insecure_http_help: "Parolanın şifresiz HTTP ile herkese açık bir sunucuya gönderilmesine izin ver"
 status:
   locked: Kilitli
   unlocked: Kilitsiz

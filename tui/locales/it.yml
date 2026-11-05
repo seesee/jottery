@@ -272,6 +272,7 @@ register:
   cleared: Registrazione cancellata. Puoi ricominciare.
   pending_status: In attesa di approvazione
   password_differs: "Deve essere diversa dalla password delle note."
+  insecure_endpoint: "Questo indirizzo usa HTTP non cifrato, quindi la password dell'account e la chiave del dispositivo potrebbero essere lette lungo il percorso. Usa https:// o inserisci di nuovo questo indirizzo per accettare."
 color_scheme:
   default_dark: Scuro predefinito
   default_light: Chiaro predefinito
@@ -589,6 +590,8 @@ cli:
   import_summary: "%{created} aggiunte, %{updated} aggiornate, %{skipped} già aggiornate"
   import_failed: "Non è stato possibile importare %{count} elementi del file"
   password_change_required: "Questo account deve prima cambiare la password. Accedi all'app web per farlo, poi riprova."
+  insecure_endpoint: "%{endpoint} usa HTTP non cifrato, quindi la password potrebbe essere letta lungo il percorso. Usa https:// o passa --allow-insecure-http per accettare."
+  allow_insecure_http_help: "Consenti l'invio di una password via HTTP non cifrato a un host pubblico"
 status:
   locked: Bloccato
   unlocked: Sbloccato

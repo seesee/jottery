@@ -272,6 +272,7 @@ register:
   cleared: 登録がクリアされました。最初からやり直せます。
   pending_status: 承認待ち
   password_differs: "ノートのパスワードとは別のものにしてください。"
+  insecure_endpoint: "このアドレスは暗号化されていない HTTP を使うため、アカウントのパスワードとデバイスキーが途中で読み取られる可能性があります。https:// を使うか、承知のうえでこのアドレスをもう一度入力してください。"
 color_scheme:
   default_dark: デフォルトダーク
   default_light: デフォルトライト
@@ -589,6 +590,8 @@ cli:
   import_summary: "%{created} 件追加、%{updated} 件更新、%{skipped} 件は最新です"
   import_failed: "ファイル内の %{count} 件をインポートできませんでした"
   password_change_required: "このアカウントは先にパスワードを変更する必要があります。Web アプリにサインインして変更してから、もう一度お試しください。"
+  insecure_endpoint: "%{endpoint} は暗号化されていない HTTP を使うため、パスワードが途中で読み取られる可能性があります。https:// を使うか、承知のうえで --allow-insecure-http を指定してください。"
+  allow_insecure_http_help: "パスワードを暗号化されていない HTTP で公開ホストに送信することを許可"
 status:
   locked: ロック中
   unlocked: ロック解除

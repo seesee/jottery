@@ -319,6 +319,26 @@ fn connecting_an_existing_vault_with_one_password_for_both_jobs_only_warns() {
     assert!(!stderr.contains("Use different passwords"), "should not refuse: {stderr}");
 }
 
+/// Nothing listens on these, so the refusal has to come before any request is tried.
+#[test]
+fn a_password_does_not_go_over_plain_http_to_a_public_host_without_the_flag() {
+    let (_temp_dir, db) = create_test_env();
+    let password = uuid::Uuid::new_v4().to_string();
+
+    let (ok, _, stderr) = run_on(&db, &[
+        "register-user", "-s", "http://notes.invalid", "-e", "someone@example.com", "-p", &password,
+    ]);
+    assert!(!ok);
+    assert!(stderr.contains("--allow-insecure-http"), "{stderr}");
+
+    let (ok, _, stderr) = run_on(&db, &[
+        "--allow-insecure-http", "register-user", "-s", "http://notes.invalid",
+        "-e", "someone@example.com", "-p", &password,
+    ]);
+    assert!(!ok);
+    assert!(!stderr.contains("--allow-insecure-http"), "should get as far as the network: {stderr}");
+}
+
 #[test]
 fn a_wrong_password_is_refused_rather_than_showing_an_empty_vault() {
     let (dir, _) = create_test_env();

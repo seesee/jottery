@@ -272,6 +272,7 @@ register:
   cleared: Inscription effacée. Vous pouvez recommencer.
   pending_status: En attente d'approbation
   password_differs: "Il doit être différent du mot de passe de vos notes."
+  insecure_endpoint: "Cette adresse utilise HTTP en clair : votre mot de passe de compte et la clé de l'appareil pourraient être lus en chemin. Utilisez https://, ou saisissez à nouveau cette adresse pour l'accepter."
 color_scheme:
   default_dark: Sombre par défaut
   default_light: Clair par défaut
@@ -589,6 +590,8 @@ cli:
   import_summary: "%{created} ajoutées, %{updated} mises à jour, %{skipped} déjà à jour"
   import_failed: "%{count} éléments du fichier n'ont pas pu être importés"
   password_change_required: "Ce compte doit d'abord changer son mot de passe. Connectez-vous à l'application web pour le faire, puis réessayez."
+  insecure_endpoint: "%{endpoint} utilise HTTP en clair : le mot de passe pourrait être lu en chemin. Utilisez https://, ou passez --allow-insecure-http pour l'accepter."
+  allow_insecure_http_help: "Autoriser l'envoi d'un mot de passe en HTTP clair vers un hôte public"
 status:
   locked: Verrouillé
   unlocked: Déverrouillé

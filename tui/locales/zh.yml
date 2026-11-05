@@ -272,6 +272,7 @@ register:
   cleared: 注册已清除。您可以重新开始。
   pending_status: 等待审批
   password_differs: "必须与笔记密码不同。"
+  insecure_endpoint: "此地址使用未加密的 HTTP，您的账户密码和设备密钥可能在传输途中被读取。请使用 https://，或再次输入此地址以接受此风险。"
 color_scheme:
   default_dark: 默认深色
   default_light: 默认浅色
@@ -589,6 +590,8 @@ cli:
   import_summary: "已添加 %{created} 条，已更新 %{updated} 条，%{skipped} 条已是最新"
   import_failed: "文件中有 %{count} 项无法导入"
   password_change_required: "此账户需要先更改密码。请登录 Web 应用进行更改，然后重试。"
+  insecure_endpoint: "%{endpoint} 使用未加密的 HTTP，密码可能在传输途中被读取。请使用 https://，或指定 --allow-insecure-http 接受此风险。"
+  allow_insecure_http_help: "允许通过未加密的 HTTP 将密码发送到公共主机"
 status:
   locked: 已锁定
   unlocked: 已解锁

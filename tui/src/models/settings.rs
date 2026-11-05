@@ -277,10 +277,10 @@ impl UserSettings {
             return Err("Sync endpoint is required when sync is enabled".to_string());
         }
 
+        // Whether plain HTTP is acceptable was settled when this was set, so only
+        // whether it's an address at all is checked here
         if let Some(endpoint) = &self.sync_endpoint {
-            if !endpoint.starts_with("http://") && !endpoint.starts_with("https://") {
-                return Err("Sync endpoint must start with http:// or https://".to_string());
-            }
+            crate::api::is_safe_endpoint(endpoint).map_err(|e| e.to_string())?;
         }
 
         Ok(())

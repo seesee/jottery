@@ -69,6 +69,7 @@ fn build_translated_cli() -> clap::Command {
     cmd = cmd.mut_arg("debug", |a| a.help(t!("cli.debug_help").to_string()));
     cmd = cmd.mut_arg("debug_log", |a| a.help(t!("cli.debug_log_help").to_string()));
     cmd = cmd.mut_arg("reset", |a| a.help(t!("cli.reset_help").to_string()));
+    cmd = cmd.mut_arg("allow_insecure_http", |a| a.help(t!("cli.allow_insecure_http_help").to_string()));
 
     // Update subcommands
     cmd = cmd.mut_subcommand("note", |sub| {
@@ -223,6 +224,10 @@ struct Cli {
     /// Reset: delete the database and start fresh
     #[arg(long)]
     reset: bool,
+
+    /// Allow sending a password over plain HTTP to a public host
+    #[arg(long, global = true)]
+    allow_insecure_http: bool,
 
     #[command(subcommand)]
     command: Option<Commands>,
@@ -738,6 +743,8 @@ fn run() -> Result<()> {
         errln!("⚠ {}", t!("password.no_file_encryption"));
     }
 
+    let allow_insecure_http = cli.allow_insecure_http;
+
     // Handle subcommands
     match cli.command {
         Some(Commands::Note { password, tags }) => {
@@ -929,6 +936,8 @@ fn run() -> Result<()> {
         Some(Commands::RegisterUser { server, email, password }) => {
             use api::AuthClient;
 
+            api::require_safe_endpoint(&server, allow_insecure_http)?;
+
             // Get password
             let password = match password {
                 Some(pwd) => pwd,
@@ -979,6 +988,8 @@ fn run() -> Result<()> {
         }
         Some(Commands::RegisterDevice { server, email, password, device_name, key_password }) => {
             use api::AuthClient;
+
+            api::require_safe_endpoint(&server, allow_insecure_http)?;
 
             // Get user password
             let password = match password {
@@ -1119,6 +1130,7 @@ fn run() -> Result<()> {
                     }
                 }
             };
+            api::require_safe_endpoint(&server, allow_insecure_http)?;
 
             let password = match password {
                 Some(pwd) => pwd,

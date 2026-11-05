@@ -272,6 +272,7 @@ register:
   cleared: "등록이 지워졌습니다. 새로 시작할 수 있습니다."
   pending_status: "승인 대기 중"
   password_differs: "노트 비밀번호와 달라야 합니다."
+  insecure_endpoint: "이 주소는 암호화되지 않은 HTTP를 사용하므로 계정 비밀번호와 기기 키가 전송 중에 읽힐 수 있습니다. https://를 사용하거나 이를 감수하려면 이 주소를 다시 입력하세요."
 color_scheme:
   default_dark: "기본 다크"
   default_light: "기본 라이트"
@@ -589,6 +590,8 @@ cli:
   import_summary: "%{created}개 추가, %{updated}개 업데이트, %{skipped}개는 이미 최신"
   import_failed: "파일의 항목 %{count}개를 가져오지 못했습니다"
   password_change_required: "이 계정은 먼저 비밀번호를 변경해야 합니다. 웹 앱에 로그인해 변경한 후 다시 시도하세요."
+  insecure_endpoint: "%{endpoint}은(는) 암호화되지 않은 HTTP를 사용하므로 비밀번호가 전송 중에 읽힐 수 있습니다. https://를 사용하거나 이를 감수하려면 --allow-insecure-http를 지정하세요."
+  allow_insecure_http_help: "공개 호스트로 암호화되지 않은 HTTP를 통해 비밀번호 전송 허용"
 status:
   locked: "잠김"
   unlocked: "잠금 해제됨"

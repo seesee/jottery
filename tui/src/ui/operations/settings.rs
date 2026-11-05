@@ -7,6 +7,8 @@ use std::time::Instant;
 use crate::{
     repository::{SettingsRepository, sync::SyncRepository},
 };
+#[cfg(test)]
+use crate::db::Database;
 
 use super::super::app::App;
 use super::super::state::InputMode;
@@ -133,6 +135,23 @@ pub fn start_editing_setting_backward(app: &mut App) {
     }
 }
 
+/// Whether an address can be used as it stands. Plain HTTP to a public host would put the
+/// account password and API key where anyone on the way can read them, so the first
+/// attempt only warns. Entering the same address again means the user accepts that.
+pub fn endpoint_confirmed(app: &mut App, endpoint: &str) -> bool {
+    if crate::api::is_safe_endpoint(endpoint).unwrap_or(true) {
+        return true;
+    }
+
+    if app.insecure_endpoint_warned.as_deref() == Some(endpoint) {
+        return true;
+    }
+
+    app.insecure_endpoint_warned = Some(endpoint.to_string());
+    app.error = Some(t!("register.insecure_endpoint").to_string());
+    false
+}
+
 /// Save edited setting value
 pub fn save_setting_value(app: &mut App) -> Result<()> {
     match app.selected_setting {
@@ -158,10 +177,9 @@ pub fn save_setting_value(app: &mut App) -> Result<()> {
             if app.setting_input.is_empty() {
                 app.settings.sync_endpoint = None;
             } else {
-                if !app.setting_input.starts_with("http://") && !app.setting_input.starts_with("https://") {
-                    anyhow::bail!("Sync endpoint must start with http:// or https://");
-                }
+                crate::api::is_safe_endpoint(&app.setting_input)?;
                 app.settings.sync_endpoint = Some(app.setting_input.clone());
+                point_sync_at(app, &app.setting_input.clone())?;
             }
         }
         6 => {
@@ -180,6 +198,25 @@ pub fn save_setting_value(app: &mut App) -> Result<()> {
     }
 
     save_settings(app)
+}
+
+/// Sync reads its address from the stored metadata, so a new one has to go there too. The
+/// pull position belongs to the old address.
+fn point_sync_at(app: &mut App, endpoint: &str) -> Result<()> {
+    let Some(db) = &app.db else {
+        return Ok(());
+    };
+
+    let sync_repo = SyncRepository::new(db.connection());
+    if let Some(mut metadata) = sync_repo.get_metadata()? {
+        if metadata.sync_endpoint != endpoint {
+            metadata.sync_endpoint = endpoint.to_string();
+            metadata.pull_cursor = None;
+            metadata.last_pull_at = None;
+            sync_repo.update_metadata(&metadata)?;
+        }
+    }
+    Ok(())
 }
 
 /// Cycle forward through color scheme options
@@ -300,7 +337,12 @@ pub fn account_exists(endpoint: &str, email: &str) -> Result<bool> {
 
 /// Register a new user account
 /// Returns true if the user needs approval, false if already approved
-pub fn register_user(_app: &mut App, endpoint: &str, email: &str, password: &str) -> Result<bool> {
+pub fn register_user(app: &mut App, endpoint: &str, email: &str, password: &str) -> Result<bool> {
+    // This is the first time the password would leave this device
+    if !endpoint_confirmed(app, endpoint) {
+        anyhow::bail!("{}", t!("register.insecure_endpoint"));
+    }
+
     let client = crate::api::AuthClient::new(endpoint.to_string());
 
     // Try to register the user
@@ -480,4 +522,77 @@ pub fn is_sync_fully_configured(app: &mut App) -> bool {
         }
     }
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn app() -> App {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.db");
+        std::mem::forget(dir);
+        App::new(path, None).unwrap()
+    }
+
+    #[test]
+    fn plain_http_to_a_public_host_has_to_be_entered_twice() {
+        let mut app = app();
+
+        assert!(!endpoint_confirmed(&mut app, "http://notes.example.com"));
+        assert_eq!(app.error, Some(t!("register.insecure_endpoint").to_string()));
+
+        assert!(endpoint_confirmed(&mut app, "http://notes.example.com"));
+    }
+
+    #[test]
+    fn another_address_needs_its_own_confirmation() {
+        let mut app = app();
+
+        assert!(!endpoint_confirmed(&mut app, "http://first.example.com"));
+        assert!(!endpoint_confirmed(&mut app, "http://second.example.com"));
+    }
+
+    #[test]
+    fn a_safe_address_is_never_questioned() {
+        let mut app = app();
+
+        assert!(endpoint_confirmed(&mut app, "https://notes.example.com"));
+        assert!(endpoint_confirmed(&mut app, "http://192.168.1.20:3030"));
+        assert!(app.error.is_none());
+    }
+
+    /// The first attempt has to stop before the password goes anywhere. Nothing listens
+    /// on this address, so a request would fail with a different message.
+    #[test]
+    fn registering_over_plain_http_warns_before_sending_the_password() {
+        let mut app = app();
+        let password = uuid::Uuid::new_v4().to_string();
+
+        let error = register_user(&mut app, "http://notes.invalid", "someone@example.com", &password).unwrap_err();
+
+        assert_eq!(error.to_string(), t!("register.insecure_endpoint"));
+    }
+
+    #[test]
+    fn a_new_address_in_settings_reaches_sync_and_drops_the_pull_position() {
+        let mut app = app();
+        let db = Database::in_memory(&uuid::Uuid::new_v4().to_string()).unwrap();
+        SyncRepository::new(db.connection()).update_metadata(&crate::models::sync::SyncMetadata {
+            sync_endpoint: "https://old.example.com".to_string(),
+            pull_cursor: Some("c9".to_string()),
+            last_pull_at: Some(chrono::Utc::now()),
+            ..Default::default()
+        }).unwrap();
+        app.db = Some(db);
+        app.selected_setting = 5;
+        app.setting_input = "https://new.example.com".to_string();
+
+        save_setting_value(&mut app).unwrap();
+
+        let metadata = app.sync_metadata().unwrap();
+        assert_eq!(metadata.sync_endpoint, "https://new.example.com");
+        assert_eq!(metadata.pull_cursor, None);
+        assert_eq!(metadata.last_pull_at, None);
+    }
 }

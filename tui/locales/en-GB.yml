@@ -295,6 +295,7 @@ register:
   cleared: "Registration cleared. You can start fresh."
   pending_status: "Pending approval"
   password_differs: "This must be different from your notes password."
+  insecure_endpoint: "This address uses plain HTTP, so your account password and device key could be read on the way. Use https://, or enter this address again to accept that."
 
 # Conflict resolution
 conflict:
@@ -638,6 +639,8 @@ cli:
   import_summary: "%{created} added, %{updated} updated, %{skipped} already up to date"
   import_failed: "%{count} items in the file couldn't be imported"
   password_change_required: "This account has to change its password first. Sign in to the web app to do that, then try again."
+  insecure_endpoint: "%{endpoint} uses plain HTTP, so the password could be read on the way. Use https://, or pass --allow-insecure-http to accept that."
+  allow_insecure_http_help: "Allow sending a password over plain HTTP to a public host"
 
 # Status messages
 status:

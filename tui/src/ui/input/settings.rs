@@ -159,6 +159,14 @@ pub fn handle_settings_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     app.input_mode = InputMode::Normal;
                 }
                 KeyCode::Enter => {
+                    // The address stays in the field until the warning has been answered
+                    if app.selected_setting == 5 {
+                        let endpoint = app.setting_input.clone();
+                        if !endpoint.is_empty() && !operations::settings::endpoint_confirmed(app, &endpoint) {
+                            return Ok(());
+                        }
+                    }
+
                     // Save edited value
                     if let Err(e) = operations::settings::save_setting_value(app) {
                         app.error = Some(format!("Failed to save setting: {}", e));

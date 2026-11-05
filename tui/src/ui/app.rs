@@ -224,6 +224,8 @@ pub struct App {
     pub show_empty_bin_confirm: bool,
     /// Notes the server says to delete, waiting for an answer. Above zero, it asks.
     pub held_deletions: usize,
+    /// The plain HTTP address the user has been warned about. Entering it again accepts that.
+    pub insecure_endpoint_warned: Option<String>,
     /// Show note info modal
     pub show_note_info: bool,
     /// Rendered area for note list (for mouse click detection)
@@ -379,6 +381,7 @@ impl App {
             show_bulk_combine_confirm: false,
             show_empty_bin_confirm: false,
             held_deletions: 0,
+            insecure_endpoint_warned: None,
             show_note_info: false,
             note_list_area: None,
             note_list_offset: 0,

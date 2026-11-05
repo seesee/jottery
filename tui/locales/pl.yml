@@ -272,6 +272,7 @@ register:
   cleared: Rejestracja wyczyszczona. Możesz zacząć od nowa.
   pending_status: Oczekuje na zatwierdzenie
   password_differs: "Musi się różnić od hasła notatek."
+  insecure_endpoint: "Ten adres używa niezaszyfrowanego HTTP, więc hasło do konta i klucz urządzenia mogą zostać odczytane po drodze. Użyj https:// albo wpisz ten adres ponownie, aby to zaakceptować."
 color_scheme:
   default_dark: Domyślny ciemny
   default_light: Domyślny jasny
@@ -589,6 +590,8 @@ cli:
   import_summary: "Dodano: %{created}, zaktualizowano: %{updated}, już aktualne: %{skipped}"
   import_failed: "Nie udało się zaimportować elementów z pliku: %{count}"
   password_change_required: "To konto musi najpierw zmienić hasło. Zaloguj się w aplikacji internetowej, aby to zrobić, i spróbuj ponownie."
+  insecure_endpoint: "%{endpoint} używa niezaszyfrowanego HTTP, więc hasło może zostać odczytane po drodze. Użyj https:// albo podaj --allow-insecure-http, aby to zaakceptować."
+  allow_insecure_http_help: "Zezwól na wysłanie hasła przez niezaszyfrowane HTTP do publicznego hosta"
 status:
   locked: Zablokowane
   unlocked: Odblokowane

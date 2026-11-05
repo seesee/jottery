@@ -4,6 +4,47 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
+/// Whether a password and an API key can go to this server without anyone on the way
+/// reading them: HTTPS, or plain HTTP to something that isn't reached over the internet.
+/// An address that can't be parsed is an error.
+pub fn is_safe_endpoint(endpoint: &str) -> Result<bool> {
+    let url = reqwest::Url::parse(endpoint).with_context(|| format!("Not a valid address: {endpoint}"))?;
+
+    match url.scheme() {
+        "https" => return Ok(true),
+        "http" => {}
+        _ => anyhow::bail!("Sync endpoint must start with http:// or https://"),
+    }
+
+    let host = url.host_str().unwrap_or("").trim_matches(['[', ']']).to_lowercase();
+
+    Ok(match host.parse::<std::net::IpAddr>() {
+        Ok(std::net::IpAddr::V4(ip)) => is_local_ipv4(ip),
+        Ok(std::net::IpAddr::V6(ip)) => match ip.to_ipv4_mapped() {
+            Some(ip) => is_local_ipv4(ip),
+            None => {
+                let first = ip.segments()[0];
+                ip.is_loopback() || first & 0xfe00 == 0xfc00 || first & 0xffc0 == 0xfe80
+            }
+        },
+        // A single label or a .local name only resolves on the local network
+        Err(_) => !host.is_empty() && (!host.contains('.') || host.ends_with(".local")),
+    })
+}
+
+fn is_local_ipv4(ip: std::net::Ipv4Addr) -> bool {
+    ip.is_loopback() || ip.is_private() || ip.is_link_local()
+}
+
+/// Refuse an address that would expose a password, unless the user has said they accept
+/// that. For commands, which can't stop and ask.
+pub fn require_safe_endpoint(endpoint: &str, allow_insecure: bool) -> Result<()> {
+    if !is_safe_endpoint(endpoint)? && !allow_insecure {
+        anyhow::bail!("{}", rust_i18n::t!("cli.insecure_endpoint", endpoint = endpoint));
+    }
+    Ok(())
+}
+
 /// User registration request
 #[derive(Debug, Serialize)]
 pub struct RegisterUserRequest {
@@ -579,6 +620,59 @@ mod tests {
         });
 
         (endpoint, receiver)
+    }
+
+    #[test]
+    fn https_is_always_safe() {
+        assert!(is_safe_endpoint("https://notes.example.com").unwrap());
+        assert!(is_safe_endpoint("https://203.0.113.5:8443/").unwrap());
+    }
+
+    #[test]
+    fn plain_http_is_safe_only_off_the_internet() {
+        for local in [
+            "http://localhost:3030",
+            "http://127.0.0.1:3030",
+            "http://[::1]:3030",
+            "http://10.1.2.3",
+            "http://172.16.0.9",
+            "http://192.168.1.20:8080",
+            "http://169.254.10.1",
+            "http://[fd12:3456::1]",
+            "http://[fe80::1]",
+            "http://[::ffff:192.168.1.20]",
+            "http://nas",
+            "http://notes.local",
+            "http://NOTES.LOCAL:3030",
+        ] {
+            assert!(is_safe_endpoint(local).unwrap(), "{local}");
+        }
+
+        for public in [
+            "http://notes.example.com",
+            "http://example.com:3030",
+            "http://203.0.113.5",
+            "http://172.32.0.1",
+            "http://[2001:db8::1]",
+            "http://[::ffff:203.0.113.5]",
+            "http://notes.local.example.com",
+        ] {
+            assert!(!is_safe_endpoint(public).unwrap(), "{public}");
+        }
+    }
+
+    #[test]
+    fn anything_else_is_not_an_address() {
+        assert!(is_safe_endpoint("notes.example.com").is_err());
+        assert!(is_safe_endpoint("ftp://notes.example.com").is_err());
+        assert!(is_safe_endpoint("").is_err());
+    }
+
+    #[test]
+    fn a_command_needs_the_flag_for_plain_http_to_a_public_host() {
+        assert!(require_safe_endpoint("http://notes.example.com", false).is_err());
+        assert!(require_safe_endpoint("http://notes.example.com", true).is_ok());
+        assert!(require_safe_endpoint("http://localhost:3030", false).is_ok());
     }
 
     /// The admin route refuses non-admins, so an ordinary account could never sign in.

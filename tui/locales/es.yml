@@ -272,6 +272,7 @@ register:
   cleared: Registro eliminado. Puede comenzar de nuevo.
   pending_status: Pendiente de aprobación
   password_differs: "Debe ser distinta de la contraseña de tus notas."
+  insecure_endpoint: "Esta dirección usa HTTP sin cifrar, así que tu contraseña de cuenta y la clave del dispositivo podrían leerse por el camino. Usa https:// o vuelve a introducir esta dirección para aceptarlo."
 color_scheme:
   default_dark: Oscuro predeterminado
   default_light: Claro predeterminado
@@ -589,6 +590,8 @@ cli:
   import_summary: "%{created} añadidas, %{updated} actualizadas, %{skipped} ya al día"
   import_failed: "No se han podido importar %{count} elementos del archivo"
   password_change_required: "Esta cuenta debe cambiar antes su contraseña. Inicia sesión en la aplicación web para hacerlo y vuelve a intentarlo."
+  insecure_endpoint: "%{endpoint} usa HTTP sin cifrar, así que la contraseña podría leerse por el camino. Usa https:// o añade --allow-insecure-http para aceptarlo."
+  allow_insecure_http_help: "Permitir enviar una contraseña por HTTP sin cifrar a un host público"
 status:
   locked: Bloqueado
   unlocked: Desbloqueado

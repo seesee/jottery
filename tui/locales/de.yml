@@ -272,6 +272,7 @@ register:
   cleared: Registrierung gelöscht. Sie können neu beginnen.
   pending_status: Ausstehende Genehmigung
   password_differs: "Es muss sich von deinem Notizenpasswort unterscheiden."
+  insecure_endpoint: "Diese Adresse nutzt unverschlüsseltes HTTP, daher könnten Kontopasswort und Geräteschlüssel unterwegs mitgelesen werden. Verwenden Sie https:// oder geben Sie diese Adresse erneut ein, um das zu akzeptieren."
 color_scheme:
   default_dark: Standard Dunkel
   default_light: Standard Hell
@@ -589,6 +590,8 @@ cli:
   import_summary: "%{created} hinzugefügt, %{updated} aktualisiert, %{skipped} bereits aktuell"
   import_failed: "%{count} Einträge in der Datei konnten nicht importiert werden"
   password_change_required: "Dieses Konto muss zuerst sein Passwort ändern. Melden Sie sich dazu in der Web-App an und versuchen Sie es dann erneut."
+  insecure_endpoint: "%{endpoint} nutzt unverschlüsseltes HTTP, daher könnte das Passwort unterwegs mitgelesen werden. Verwenden Sie https:// oder akzeptieren Sie das mit --allow-insecure-http."
+  allow_insecure_http_help: "Passwort per unverschlüsseltem HTTP an einen öffentlichen Host erlauben"
 status:
   locked: Gesperrt
   unlocked: Entsperrt
