@@ -41,6 +41,9 @@ async fn main() {
         .await
         .expect("Failed to prepare the admin account");
 
+    // Housekeeping runs in the background, not during requests
+    jottery_server::maintenance::spawn(pool.clone());
+
     // Create broadcast channel for SSE sync notifications
     // Capacity of 100 is sufficient - notifications are small and ephemeral
     let (sync_broadcast, _) = broadcast::channel::<SyncNotification>(100);

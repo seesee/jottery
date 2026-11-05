@@ -101,10 +101,6 @@ pub async fn push(
         )));
     }
 
-    let mut accepted = Vec::new();
-    let mut rejected = Vec::new();
-    let errors = Vec::new();
-
     tracing::info!(
         "Push from user {} (client {}): {} notes, {} attachments (~{}KB)",
         client_info.user_id,
@@ -114,12 +110,37 @@ pub async fn push(
         estimated_size / 1024
     );
 
-    // Clean up notes that have been deleted for more than 30 days
-    // This prevents deleted notes from accumulating indefinitely
-    if let Err(e) = cleanup_old_deleted_notes(&state.pool).await {
-        tracing::warn!("Failed to cleanup old deleted notes: {}", e);
+    // Everything that can fail on the input alone happens before the first
+    // write, so a bad request leaves no trace.
+    for note in &push_req.notes {
+        validation::validate_note_content(&note.content, &state.config)?;
     }
 
+    let mut errors = Vec::new();
+
+    // Decoding happens outside the transaction so the write lock is held for
+    // database work only.
+    let mut blobs = Vec::with_capacity(push_req.attachments.len());
+    for attachment in push_req.attachments {
+        match base64::engine::general_purpose::STANDARD.decode(&attachment.data) {
+            Ok(data) => blobs.push((attachment.id, data)),
+            Err(e) => {
+                tracing::warn!("Invalid base64 for attachment {}: {} (skipping)", attachment.id, e);
+                errors.push(format!("Attachment {} skipped: invalid base64", attachment.id));
+            }
+        }
+    }
+
+    let mut accepted = Vec::new();
+    let mut rejected = Vec::new();
+
+    // The whole push is one transaction. BEGIN IMMEDIATE takes the write lock
+    // up front, so reading a note and acting on what was read can't interleave
+    // with another push, and a pull can never see half of this one. A deferred
+    // transaction could also fail on the upgrade from read to write.
+    let mut tx = state.pool.begin_with("BEGIN IMMEDIATE").await?;
+
+    // Stamped inside the lock, so timestamps follow commit order
     let now = chrono::Utc::now().to_rfc3339();
 
     for note in push_req.notes {
@@ -134,7 +155,7 @@ pub async fn push(
             note.id,
             client_info.user_id
         )
-        .fetch_optional(&state.pool)
+        .fetch_optional(&mut *tx)
         .await?;
 
         if let Some(tombstone) = tombstone {
@@ -149,7 +170,7 @@ pub async fn push(
                     note.id,
                     client_info.user_id
                 )
-                .execute(&state.pool)
+                .execute(&mut *tx)
                 .await?;
 
                 tracing::info!(
@@ -176,16 +197,13 @@ pub async fn push(
             }
         }
 
-        // Validate note content size
-        validation::validate_note_content(&note.content, &state.config)?;
-
         // Check if note exists for this user (across all their devices)
         let existing = sqlx::query!(
             "SELECT modified_at, server_version, content_hash, parent_hash, hash_chain FROM notes WHERE id = ? AND user_id = ?",
             note.id,
             client_info.user_id
         )
-        .fetch_optional(&state.pool)
+        .fetch_optional(&mut *tx)
         .await?;
 
         // Hash-based conflict detection (like git)
@@ -307,7 +325,7 @@ pub async fn push(
                 note.parent_hash,
                 hash_chain_json
             )
-            .execute(&state.pool)
+            .execute(&mut *tx)
             .await?;
 
             accepted.push(SyncAccepted {
@@ -317,10 +335,9 @@ pub async fn push(
             });
 
             // Store attachment metadata for this note
-            let mut conn = state.pool.acquire().await?;
             for attachment_ref in &note.attachments {
                 AttachmentRepository::link_to_note(
-                    &mut conn,
+                    &mut tx,
                     &client_info.user_id,
                     &note.id,
                     attachment_ref,
@@ -341,13 +358,12 @@ pub async fn push(
                 note.id,
                 client_info.user_id
             )
-            .fetch_one(&state.pool)
+            .fetch_one(&mut *tx)
             .await?;
 
             // Fetch this user's attachments for the note
-            let mut conn = state.pool.acquire().await?;
             let server_attachments: Vec<AttachmentRef> = AttachmentRepository::refs_for_notes(
-                &mut conn,
+                &mut tx,
                 &client_info.user_id,
                 &[note.id.as_str()],
             )
@@ -355,7 +371,6 @@ pub async fn push(
             .into_iter()
             .map(|(_, attachment)| attachment)
             .collect();
-            drop(conn);
 
             // Parse server tags from JSON
             let server_tags: Vec<String> = serde_json::from_str(&server_note.tags)
@@ -394,7 +409,7 @@ pub async fn push(
                         client_info.user_id,
                         anc_hash
                     )
-                    .fetch_optional(&state.pool)
+                    .fetch_optional(&mut *tx)
                     .await
                     {
                         ancestor_content = Some(version_row.content);
@@ -459,8 +474,6 @@ pub async fn push(
             continue;
         }
 
-        let now_for_version = chrono::Utc::now().to_rfc3339();
-
         // Serialize tags and attachments as JSON
         let tags_json = serde_json::to_string(&version.tags)
             .map_err(|e| AppError::InternalError(format!("Failed to serialize version tags: {}", e)))?;
@@ -494,7 +507,7 @@ pub async fn push(
             version.version,
             version.created_at,
             version.synced_at,
-            now_for_version,
+            now,
             version.content,
             tags_json,
             attachments_json,
@@ -506,7 +519,7 @@ pub async fn push(
             version.content_hash,
             version.parent_hash
         )
-        .execute(&state.pool)
+        .execute(&mut *tx)
         .await;
 
         match result {
@@ -521,45 +534,35 @@ pub async fn push(
                     version.note_id,
                     e
                 );
+                errors.push(format!("Version {} skipped", version.version_key));
             }
         }
     }
 
     // Store attachment data (binary blobs). A blob is only stored against
     // this user's own metadata, so one user can't reach another's attachment.
-    let mut conn = state.pool.acquire().await?;
-    for attachment in push_req.attachments {
-        // Decode base64
-        let data = match base64::engine::general_purpose::STANDARD.decode(&attachment.data) {
-            Ok(d) => d,
-            Err(e) => {
-                tracing::warn!("Invalid base64 for attachment {}: {} (skipping)", attachment.id, e);
-                continue;
-            }
-        };
-
+    for (attachment_id, data) in &blobs {
         let stored = AttachmentRepository::store_blob(
-            &mut conn,
+            &mut tx,
             &client_info.user_id,
-            &attachment.id,
-            &data,
+            attachment_id,
+            data,
             &now,
         )
         .await?;
 
         if stored {
-            tracing::debug!("Stored attachment: {}", attachment.id);
+            tracing::debug!("Stored attachment: {}", attachment_id);
         } else {
             // Expected when the note was rejected: its metadata was never stored.
             tracing::warn!(
                 "Skipping attachment data {} from client {}: no matching metadata for user {}",
-                attachment.id,
+                attachment_id,
                 client_info.client_id,
                 client_info.user_id
             );
         }
     }
-    drop(conn);
 
     // Store saved searches (similar to notes, with last-write-wins conflict resolution)
     for search in push_req.saved_searches {
@@ -569,7 +572,7 @@ pub async fn push(
             search.id,
             client_info.user_id
         )
-        .fetch_optional(&state.pool)
+        .fetch_optional(&mut *tx)
         .await?;
 
         let should_accept = match &existing {
@@ -613,7 +616,7 @@ pub async fn push(
                 search.deleted_at,
                 search.version
             )
-            .execute(&state.pool)
+            .execute(&mut *tx)
             .await?;
 
             tracing::debug!("Stored saved search: {}", search.id);
@@ -628,7 +631,7 @@ pub async fn push(
             deletion.id,
             client_info.user_id
         )
-        .execute(&state.pool)
+        .execute(&mut *tx)
         .await?;
 
         if delete_result.rows_affected() > 0 {
@@ -650,12 +653,14 @@ pub async fn push(
                 client_info.client_id,
                 expires_at
             )
-            .execute(&state.pool)
+            .execute(&mut *tx)
             .await?;
 
             tracing::info!("Recorded hard deletion for note {} (user {})", deletion.id, client_info.user_id);
         }
     }
+
+    tx.commit().await?;
 
     // Broadcast sync notification to other connected devices of this user
     // This triggers real-time sync via SSE for any other connected clients
@@ -1167,34 +1172,6 @@ pub async fn get_attachment(
         }
         None => Err(AppError::NotFound("Attachment not found".to_string())),
     }
-}
-
-/// Delete notes that have been marked as deleted for more than 30 days
-/// This is called automatically during sync operations to prevent deleted notes
-/// from accumulating indefinitely on the server
-async fn cleanup_old_deleted_notes(pool: &sqlx::SqlitePool) -> Result<u64, sqlx::Error> {
-    // Calculate 30 days ago
-    let thirty_days_ago = chrono::Utc::now() - chrono::Duration::days(30);
-    let cutoff_date = thirty_days_ago.to_rfc3339();
-
-    // Delete notes that were marked deleted more than 30 days ago
-    let result = sqlx::query!(
-        r#"
-        DELETE FROM notes
-        WHERE deleted = 1 AND deleted_at IS NOT NULL AND deleted_at < ?
-        "#,
-        cutoff_date
-    )
-    .execute(pool)
-    .await?;
-
-    let deleted_count = result.rows_affected();
-
-    if deleted_count > 0 {
-        tracing::info!("Cleaned up {} notes that were deleted more than 30 days ago", deleted_count);
-    }
-
-    Ok(deleted_count)
 }
 
 /// Revoke the calling device.

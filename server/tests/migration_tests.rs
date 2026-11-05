@@ -169,7 +169,7 @@ async fn note_snapshot(pool: &SqlitePool) -> Vec<String> {
 async fn rebuild_keeps_every_row_of_a_populated_database() {
     let db = empty_db().await;
     migrate_to(&db.pool, 15).await;
-    let seeded = seed_v15(&db.pool).await;
+    seed_v15(&db.pool).await;
     let notes_before = note_snapshot(&db.pool).await;
 
     run_migrations(&db.pool).await.expect("migrate");
