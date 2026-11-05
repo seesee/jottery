@@ -691,6 +691,10 @@ enum BackupService {
     ///
     /// Backups of envelope vaults made before the header carried the wrapped key
     /// have an empty salt, and only open with the vault's own master key.
+    /// The PBKDF2 rounds a backup may ask for. Every client has used at least the
+    /// bottom of this range, and the top takes seconds, not hours.
+    static let backupIterations = 100_000...10_000_000
+
     private static func keyNamedByHeader(_ encryption: BackupEncryption, password: String) throws -> SymmetricKey? {
         if encryption.envelopeVersion != nil {
             guard let deviceSalt = encryption.deviceSalt.flatMap({ Data(base64Encoded: $0) }),
@@ -713,10 +717,15 @@ enum BackupService {
               let iterations = encryption.iterations, iterations > 0 else {
             return nil
         }
+        // The file chooses this, before any password is tried. A value above
+        // UInt32's range would crash, and one just below would run for hours.
+        guard backupIterations.contains(iterations), let rounds = UInt32(exactly: iterations) else {
+            throw BackupError.invalidFormat
+        }
         guard let saltData = Data(base64Encoded: salt) else {
             throw BackupError.invalidSalt
         }
-        return try CryptoService.deriveKey(password: password, salt: saltData, iterations: UInt32(iterations))
+        return try CryptoService.deriveKey(password: password, salt: saltData, iterations: rounds)
     }
 
     // MARK: - JWE Compact Encryption

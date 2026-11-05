@@ -437,6 +437,22 @@ struct BackupFormatTests {
         }
     }
 
+    /// The file chooses the rounds, before any password is tried (R2-106). Above
+    /// UInt32's range it crashed the app, and just below it froze for hours.
+    @Test(arguments: [99_999, 10_000_001, 4_294_967_295, 4_294_967_296, 9_007_199_254_740_991])
+    func anAbsurdIterationCountIsRefused(iterations: Int) async throws {
+        let state = try await makeVault()
+        let header = #"{"version":"3.0","type":"jottery-encrypted-backup","createdAt":"2026-11-05T00:00:00Z","#
+            + #""encryption":{"salt":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=","iterations":\#(iterations),"algorithm":"AES-256-GCM"},"#
+            + #""batches":[{"type":"notes","index":0,"count":1,"data":"x.y.z.a.b"}],"#
+            + #""summary":{"notes":1,"attachments":0,"versions":0,"savedSearches":0}}"#
+        let url = try temporaryFile(Data(header.utf8))
+
+        #expect(throws: BackupError.invalidFormat) {
+            try restore(url, into: state)
+        }
+    }
+
     @Test func aNoteThatCantBeReadIsCountedAndTheRestRestore() async throws {
         let source = try await makeVault()
         let good = try #require(try source.createNote(content: "good"))
