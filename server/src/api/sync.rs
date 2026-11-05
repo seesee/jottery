@@ -4,6 +4,7 @@ use axum::{
     Json,
 };
 use base64::Engine;
+use chrono::{DateTime, Utc};
 use sqlx::SqliteConnection;
 use std::{
     collections::{HashMap, HashSet},
@@ -48,15 +49,73 @@ const LAST_SYNC_OVERLAP_MINUTES: i64 = 2;
 
 const CURSOR_PREFIX: &str = "v1.";
 
+/// How far ahead of the server a client's clock can plausibly be. It allows for any
+/// time zone mistake. Past this a time isn't believed, because the latest time wins
+/// a conflict, and a device a year ahead would otherwise win all of them.
+const MAX_CLOCK_SKEW_HOURS: i64 = 24;
+
+fn read_time(time: &str) -> Option<DateTime<Utc>> {
+    DateTime::parse_from_rfc3339(time)
+        .ok()
+        .map(|time| time.with_timezone(&Utc))
+}
+
+fn is_implausibly_future(time: DateTime<Utc>) -> bool {
+    time > Utc::now() + chrono::Duration::hours(MAX_CLOCK_SKEW_HOURS)
+}
+
+/// Why a time from a client can't be used, if it can't.
+fn time_problem(name: &str, time: &str) -> Option<String> {
+    match read_time(time) {
+        None => Some(format!("{name} can't be read")),
+        Some(time) if is_implausibly_future(time) => {
+            Some(format!("{name} is more than {MAX_CLOCK_SKEW_HOURS} hours ahead"))
+        }
+        Some(_) => None,
+    }
+}
+
+/// Why a pushed note's times can't be used, if they can't. An optional time that's
+/// empty counts as absent.
+fn note_time_problem(note: &SyncNote) -> Option<String> {
+    let required = [("createdAt", &note.created_at), ("modifiedAt", &note.modified_at)];
+    let optional = [
+        ("deletedAt", &note.deleted_at),
+        ("archivedAt", &note.archived_at),
+        ("lockedAt", &note.locked_at),
+    ];
+
+    required
+        .into_iter()
+        .filter_map(|(name, time)| time_problem(name, time))
+        .chain(optional.into_iter().filter_map(|(name, time)| {
+            time.as_deref()
+                .filter(|time| !time.is_empty())
+                .and_then(|time| time_problem(name, time))
+        }))
+        .next()
+}
+
+/// Whether a pushed time is at least as late as a stored one. Clients format times
+/// differently, so these are compared as instants. A stored time from before they
+/// were checked may not be readable, and is compared as text, as it always was.
+fn is_not_older(pushed: &str, stored: &str) -> bool {
+    match (read_time(pushed), read_time(stored)) {
+        (Some(pushed), Some(stored)) => pushed >= stored,
+        _ => pushed >= stored,
+    }
+}
+
 /// Whether an edit made at `edit` wins over a deletion made at `deletion`.
 ///
 /// The same rule applies whichever arrives first, so devices agree. Clients
 /// format times differently, so these must be compared as instants, not as
 /// text. A time that can't be read can't prove the edit is older, so the edit
-/// wins: keeping a note can be undone, deleting it can't.
+/// wins: keeping a note can be undone, deleting it can't. A deletion dated far in
+/// the future can't be believed either, or it would beat every edit there will be.
 fn edit_wins_over_deletion(edit: &str, deletion: &str) -> bool {
-    let parse = |time: &str| chrono::DateTime::parse_from_rfc3339(time).ok();
-    match (parse(edit), parse(deletion)) {
+    match (read_time(edit), read_time(deletion)) {
+        (Some(_), Some(deletion)) if is_implausibly_future(deletion) => true,
         (Some(edit), Some(deletion)) => edit > deletion,
         _ => true,
     }
@@ -305,6 +364,14 @@ pub async fn push(
     .await?;
 
     for note in push_req.notes {
+        // A time that can't be trusted can't be allowed to decide anything. The
+        // note stays on the device, which sends it again once its clock is right.
+        if let Some(problem) = note_time_problem(&note) {
+            tracing::warn!("Skipping note {:?}: {}", note.id, problem);
+            errors.push(format!("Note {} skipped: {}", note.id, problem));
+            continue;
+        }
+
         // Check if this note was hard-deleted by another device. A pushed
         // edit made *after* the tombstone wins (edit-wins-over-delete,
         // matching the client's own conflict semantics): clear the
@@ -394,12 +461,12 @@ pub async fn push(
                         }
                     } else {
                         // Server has no hash yet (legacy note) - use timestamp fallback
-                        note.modified_at >= existing_note.modified_at
+                        is_not_older(&note.modified_at, &existing_note.modified_at)
                     }
                 } else {
                     // Client doesn't have hash fields (legacy client) - use timestamp fallback
-                    // Use >= to avoid false conflicts when timestamps are identical
-                    note.modified_at >= existing_note.modified_at
+                    // Not older, to avoid false conflicts when timestamps are identical
+                    is_not_older(&note.modified_at, &existing_note.modified_at)
                 }
             }
         };
@@ -771,6 +838,12 @@ pub async fn push(
     // Store saved searches (similar to notes, with last-write-wins conflict resolution)
     let mut searches_changed = false;
     for search in push_req.saved_searches {
+        if let Some(problem) = time_problem("modifiedAt", &search.modified_at) {
+            tracing::warn!("Skipping saved search {:?}: {}", search.id, problem);
+            errors.push(format!("Saved search {} skipped: {}", search.id, problem));
+            continue;
+        }
+
         // Check if saved search exists for this user
         let existing = sqlx::query!(
             "SELECT modified_at FROM saved_searches WHERE id = ? AND user_id = ?",
@@ -784,7 +857,7 @@ pub async fn push(
             None => true, // New saved search
             Some(existing_search) => {
                 // Last-Write-Wins: compare modifiedAt
-                search.modified_at >= existing_search.modified_at
+                is_not_older(&search.modified_at, &existing_search.modified_at)
             }
         };
 

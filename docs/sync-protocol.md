@@ -82,6 +82,10 @@ The size of `attachments[].data` plus note content must fit the account's upload
 
 ### How a note is accepted
 
+A note's times are checked first. If `createdAt` or `modifiedAt`, or `deletedAt`, `archivedAt` or `lockedAt` when present, can't be read as RFC 3339, or is more than 24 hours ahead of the server's clock, the note is skipped. It's in neither `accepted` nor `rejected`, the reason is in `errors`, and nothing else in the push is affected. A saved search's `modifiedAt` is checked the same way. The note stays on the device, and can be sent again once the device's clock is right.
+
+Times are stored as they were sent, and compared as instants.
+
 For each note, in order:
 
 1. **A tombstone exists.** If the edit is later than the tombstone's `deletedAt`, the tombstone is cleared and the note is stored, resurrecting it. Otherwise the note is **skipped**: it appears in neither `accepted` nor `rejected`, and the client learns it is gone from `deletions` on a pull.
@@ -258,7 +262,7 @@ There are two kinds of deletion.
 
 ### An edit beats an older deletion
 
-One rule applies whichever reaches the server first: **the note survives if its `modifiedAt` is later than the deletion's `deletedAt`.** Times are compared as instants, so their formatting doesn't matter. A time that can't be parsed keeps the note, because keeping one can be undone and deleting one can't.
+One rule applies whichever reaches the server first: **the note survives if its `modifiedAt` is later than the deletion's `deletedAt`.** Times are compared as instants, so their formatting doesn't matter. A time that can't be parsed keeps the note, because keeping one can be undone and deleting one can't, and so does a `deletedAt` more than 24 hours ahead of the server's clock.
 
 If a deletion loses, the server:
 
