@@ -488,8 +488,11 @@
         "hintExisting": "The password you unlock your notes with on your other devices. It is never sent to the server.",
         "required": "Please enter your notes password.",
         "incorrect": "That is not the password that unlocks your notes on this device. Enter your notes password, not your server password.",
-        "uploadFailed": "Sync is set up, but the encryption key could not be stored on the server, so other devices cannot connect yet. It will be retried the next time you unlock"
-      }
+        "uploadFailed": "Sync is set up, but the encryption key could not be stored on the server, so other devices cannot connect yet. It will be retried the next time you unlock",
+        "mustDiffer": "Your notes password and account password must be different. The sync server sees your account password, so if they match it could read your notes. If they're the same on your other devices, change your notes password there first.",
+        "matchesAccountWarning": "Your notes password is the same as your account password, so the sync server could read your notes. Change your notes password to fix this."
+      },
+      "existingAccountDetected": "This email already has an account, so this device will connect to it. Enter the notes password you use on your other devices."
     },
     "editorTab": {
       "vimMode": "Editor mode",
@@ -951,7 +954,9 @@
         "emailRequired": "Email address is required.",
         "serverPasswordRequired": "Server password is required.",
         "notesPasswordMinLength": "Notes password must be at least 8 characters.",
-        "onboardingFailed": "Failed to download encryption keys from server. Ensure your notes password matches the one used on your other devices and the source device has synced"
+        "onboardingFailed": "Failed to download encryption keys from server. Ensure your notes password matches the one used on your other devices and the source device has synced",
+        "accountKeyUnreadable": "This notes password can't open your account's key. Check the password. If it's right, the key may have been saved by an older version of Jottery: unlocking Jottery on a device that's already connected will fix it. Then try again.",
+        "localNotesOrphaned": "Notes on this device use a different key from your account, so connecting would make them unreadable. Nothing has changed. To keep them, export your notes, delete this device's data, connect, and then import them."
       },
       "steps": {
         "initialising": "Initialising local encryption…",

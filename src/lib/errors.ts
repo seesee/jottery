@@ -189,3 +189,38 @@ export function getErrorMessage(error: unknown): string {
   }
   return 'An unknown error occurred';
 }
+
+/**
+ * The notes password could not open the account key the server holds. Either the
+ * password is wrong, or an older client wrapped the key with the account password.
+ * The account password is deliberately not tried: the server sees it, so it could
+ * use it to wrap a key of its own choosing.
+ */
+export class AccountKeyUnreadableError extends AppError {
+  constructor(cause?: Error) {
+    super('Could not unwrap the account key with the notes password', cause);
+    this.name = 'AccountKeyUnreadableError';
+  }
+}
+
+/**
+ * The account already has a key, so this device isn't the first one. Uploading
+ * this device's key would replace the account's real key.
+ */
+export class AccountKeyExistsError extends AppError {
+  constructor() {
+    super('This account already has an encryption key');
+    this.name = 'AccountKeyExistsError';
+  }
+}
+
+/**
+ * Adopting the account's key would leave this device's notes unreadable, and the
+ * first sync would then push them to the account as junk.
+ */
+export class LocalNotesOrphanedError extends AppError {
+  constructor() {
+    super('Notes on this device are encrypted with a different key');
+    this.name = 'LocalNotesOrphanedError';
+  }
+}

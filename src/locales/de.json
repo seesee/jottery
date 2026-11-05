@@ -442,8 +442,11 @@
         "hintExisting": "Das Passwort, mit dem Sie Ihre Notizen auf Ihren anderen Geräten entsperren. Es wird nie an den Server gesendet.",
         "required": "Bitte geben Sie Ihr Notizen-Passwort ein.",
         "incorrect": "Dies ist nicht das Passwort, mit dem Ihre Notizen auf diesem Gerät entsperrt werden. Geben Sie Ihr Notizen-Passwort ein, nicht Ihr Server-Passwort.",
-        "uploadFailed": "Die Synchronisierung ist eingerichtet, aber der Verschlüsselungsschlüssel konnte nicht auf dem Server gespeichert werden. Andere Geräte können sich daher noch nicht verbinden. Beim nächsten Entsperren wird es erneut versucht"
-      }
+        "uploadFailed": "Die Synchronisierung ist eingerichtet, aber der Verschlüsselungsschlüssel konnte nicht auf dem Server gespeichert werden. Andere Geräte können sich daher noch nicht verbinden. Beim nächsten Entsperren wird es erneut versucht",
+        "mustDiffer": "Ihr Notizen-Passwort und Ihr Kontopasswort müssen sich unterscheiden. Der Sync-Server sieht Ihr Kontopasswort. Stimmen beide überein, könnte er Ihre Notizen lesen. Falls sie auf Ihren anderen Geräten gleich sind, ändern Sie dort zuerst Ihr Notizen-Passwort.",
+        "matchesAccountWarning": "Ihr Notizen-Passwort entspricht Ihrem Kontopasswort, daher könnte der Sync-Server Ihre Notizen lesen. Ändern Sie Ihr Notizen-Passwort, um das zu beheben."
+      },
+      "existingAccountDetected": "Für diese E-Mail-Adresse existiert bereits ein Konto, daher wird dieses Gerät damit verbunden. Geben Sie das Notizen-Passwort ein, das Sie auf Ihren anderen Geräten verwenden."
     },
     "editorTab": {
       "vimMode": "Editor-Modus",
@@ -919,7 +922,9 @@
         "emailRequired": "E-Mail-Adresse ist erforderlich.",
         "serverPasswordRequired": "Server-Passwort ist erforderlich.",
         "notesPasswordMinLength": "Das Notizen-Passwort muss mindestens 8 Zeichen lang sein.",
-        "onboardingFailed": "Herunterladen der Verschlüsselungsschlüssel vom Server fehlgeschlagen. Stellen Sie sicher, dass Ihr Notizen-Passwort mit dem Ihrer anderen Geräte übereinstimmt und das Quellgerät synchronisiert wurde"
+        "onboardingFailed": "Herunterladen der Verschlüsselungsschlüssel vom Server fehlgeschlagen. Stellen Sie sicher, dass Ihr Notizen-Passwort mit dem Ihrer anderen Geräte übereinstimmt und das Quellgerät synchronisiert wurde",
+        "accountKeyUnreadable": "Dieses Notizen-Passwort kann den Schlüssel Ihres Kontos nicht öffnen. Prüfen Sie das Passwort. Falls es stimmt, wurde der Schlüssel möglicherweise von einer älteren Jottery-Version gespeichert: Entsperren Sie Jottery auf einem bereits verbundenen Gerät, um das zu beheben. Versuchen Sie es dann erneut.",
+        "localNotesOrphaned": "Notizen auf diesem Gerät verwenden einen anderen Schlüssel als Ihr Konto, daher wären sie nach dem Verbinden unlesbar. Es wurde nichts geändert. Um sie zu behalten, exportieren Sie Ihre Notizen, löschen die Daten dieses Geräts, verbinden sich und importieren sie dann."
       },
       "steps": {
         "initialising": "Lokale Verschlüsselung wird initialisiert…",

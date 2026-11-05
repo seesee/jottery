@@ -17,6 +17,8 @@
   import TabContainer from './TabContainer.svelte';
   import { GeneralTab, EditorTab, KeyboardTab, SyncTab, AdvancedTab, AboutTab, ColorsTab } from './settings';
   import { toast } from '../utils/toast.svelte';
+  import { isSamePassword } from '../utils/passwordRules';
+  import { onboardingErrorKey } from '../utils/onboardingErrors';
 
   export let show = false;
   export let onClose: () => void = () => {};
@@ -261,6 +263,11 @@
       return;
     }
 
+    if (isSamePassword(notesPassword, userPassword)) {
+      syncError = $_('settings.syncSetup.notesPassword.mustDiffer');
+      return;
+    }
+
     registeringUser = true;
     syncError = '';
     try {
@@ -286,11 +293,12 @@
       console.error('User registration failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'User registration failed';
 
-      // Handle "Email already registered" - allow resuming registration
+      // The account exists, so this device is joining it, not creating it: it must
+      // take the account's key rather than upload its own over the top.
       if (errorMessage.includes('Email already registered')) {
-        // Assume they might be approved and let device registration handle the auth check
-        registrationStep = 'device';
-        syncError = ''; // Clear error, let device registration validate approval status
+        registrationMode = 'existingUser';
+        registrationStep = 'email';
+        syncError = $_('settings.syncSetup.existingAccountDetected');
       } else {
         syncError = errorMessage;
       }
@@ -315,6 +323,11 @@
       return;
     }
 
+    if (isSamePassword(notesPassword, userPassword)) {
+      syncError = $_('settings.syncSetup.notesPassword.mustDiffer');
+      return;
+    }
+
     registeringDevice = true;
     syncError = '';
     try {
@@ -325,12 +338,18 @@
         deviceName.trim()
       );
 
+      // A key on the account means this isn't the first device, whichever option was
+      // picked. This runs before anything is saved, because uploading over that key
+      // would lose it and the full sync below would push notes the account can't read.
+      if (registrationMode === 'newUser' && await authService.getWrappedKey(syncEndpoint, response.apiKey)) {
+        registrationMode = 'existingUser';
+      }
+
       // For existing users: download the shared master key from the server.
       // This must happen BEFORE encrypting the API key, because onboarding replaces the local master key.
-      // The key is wrapped with the notes password; devices set up by older versions
-      // used the server password, so that is tried as a fallback. A failure must stop
-      // the flow: carrying on would leave this device on a different master key from
-      // the rest of the account, and its notes would be unreadable everywhere else.
+      // Only the notes password may open it. A failure must stop the flow: carrying on
+      // would leave this device on a different master key from the rest of the
+      // account, and its notes would be unreadable everywhere else.
       if (registrationMode === 'existingUser') {
         try {
           await onboardFromServer(
@@ -338,15 +357,17 @@
             syncEndpoint,
             response.userId,
             response.apiKey,
-            notesPassword,
-            userPassword
+            notesPassword
           );
           console.log('[SettingsModal] ✓ Onboarded from server via envelope encryption');
         } catch (onboardError) {
           console.error('[SettingsModal] Onboarding from server failed:', onboardError);
+          const specificError = onboardingErrorKey(onboardError);
           throw new Error(
-            $_('unlock.connectExisting.errors.onboardingFailed') +
-            (onboardError instanceof Error ? ': ' + onboardError.message : '')
+            specificError
+              ? $_(specificError)
+              : $_('unlock.connectExisting.errors.onboardingFailed') +
+                (onboardError instanceof Error ? ': ' + onboardError.message : '')
           );
         }
       }
@@ -479,6 +500,11 @@
         isAdmin: data.user.isAdmin,
       };
 
+      // Older clients never stopped these matching. Warn, but don't block: the vault
+      // is still usable, and a password change on this device fixes it.
+      if (await verifyUnlockPassword(accountPassword)) {
+        toast.error($_('settings.syncSetup.notesPassword.matchesAccountWarning'));
+      }
 
       // Fetch account info
       await fetchAccountInfo();

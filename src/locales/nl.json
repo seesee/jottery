@@ -442,8 +442,11 @@
         "hintExisting": "Het wachtwoord waarmee je je notities op je andere apparaten ontgrendelt. Het wordt nooit naar de server verzonden.",
         "required": "Voer je notitiewachtwoord in.",
         "incorrect": "Dat is niet het wachtwoord dat je notities op dit apparaat ontgrendelt. Voer je notitiewachtwoord in, niet je serverwachtwoord.",
-        "uploadFailed": "Synchronisatie is ingesteld, maar de versleutelingssleutel kon niet op de server worden opgeslagen, dus andere apparaten kunnen nog geen verbinding maken. Bij de volgende ontgrendeling wordt het opnieuw geprobeerd"
-      }
+        "uploadFailed": "Synchronisatie is ingesteld, maar de versleutelingssleutel kon niet op de server worden opgeslagen, dus andere apparaten kunnen nog geen verbinding maken. Bij de volgende ontgrendeling wordt het opnieuw geprobeerd",
+        "mustDiffer": "Je notitiewachtwoord en accountwachtwoord moeten verschillen. De synchronisatieserver ziet je accountwachtwoord, dus als ze gelijk zijn, kan de server je notities lezen. Zijn ze gelijk op je andere apparaten, wijzig dan eerst daar je notitiewachtwoord.",
+        "matchesAccountWarning": "Je notitiewachtwoord is gelijk aan je accountwachtwoord, dus de synchronisatieserver kan je notities lezen. Wijzig je notitiewachtwoord om dit op te lossen."
+      },
+      "existingAccountDetected": "Dit e-mailadres heeft al een account, dus dit apparaat maakt daarmee verbinding. Voer het notitiewachtwoord in dat je op je andere apparaten gebruikt."
     },
     "editorTab": {
       "vimMode": "Editormodus",
@@ -919,7 +922,9 @@
         "emailRequired": "E-mailadres is vereist.",
         "serverPasswordRequired": "Serverwachtwoord is vereist.",
         "notesPasswordMinLength": "Notitiewachtwoord moet minimaal 8 tekens bevatten.",
-        "onboardingFailed": "Downloaden van versleutelingssleutels van de server is mislukt. Controleer of je notitiewachtwoord overeenkomt met dat van je andere apparaten en of het bronapparaat is gesynchroniseerd"
+        "onboardingFailed": "Downloaden van versleutelingssleutels van de server is mislukt. Controleer of je notitiewachtwoord overeenkomt met dat van je andere apparaten en of het bronapparaat is gesynchroniseerd",
+        "accountKeyUnreadable": "Dit notitiewachtwoord kan de sleutel van je account niet openen. Controleer het wachtwoord. Klopt het, dan is de sleutel mogelijk opgeslagen door een oudere versie van Jottery: ontgrendel Jottery op een apparaat dat al verbonden is om dit op te lossen. Probeer het daarna opnieuw.",
+        "localNotesOrphaned": "Notities op dit apparaat gebruiken een andere sleutel dan je account, dus verbinden zou ze onleesbaar maken. Er is niets gewijzigd. Om ze te behouden: exporteer je notities, verwijder de gegevens van dit apparaat, maak verbinding en importeer ze daarna."
       },
       "steps": {
         "initialising": "Lokale versleuteling initialiseren…",

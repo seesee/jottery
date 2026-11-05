@@ -442,8 +442,11 @@
         "hintExisting": "Le mot de passe avec lequel vous déverrouillez vos notes sur vos autres appareils. Il n'est jamais envoyé au serveur.",
         "required": "Veuillez saisir le mot de passe de vos notes.",
         "incorrect": "Ce n'est pas le mot de passe qui déverrouille vos notes sur cet appareil. Saisissez le mot de passe des notes, pas celui du serveur.",
-        "uploadFailed": "La synchronisation est configurée, mais la clé de chiffrement n'a pas pu être enregistrée sur le serveur, donc les autres appareils ne peuvent pas encore se connecter. Une nouvelle tentative aura lieu au prochain déverrouillage"
-      }
+        "uploadFailed": "La synchronisation est configurée, mais la clé de chiffrement n'a pas pu être enregistrée sur le serveur, donc les autres appareils ne peuvent pas encore se connecter. Une nouvelle tentative aura lieu au prochain déverrouillage",
+        "mustDiffer": "Votre mot de passe des notes et celui de votre compte doivent être différents. Le serveur de synchronisation voit le mot de passe de votre compte : s'ils sont identiques, il pourrait lire vos notes. S'ils sont identiques sur vos autres appareils, changez d'abord le mot de passe des notes sur ceux-ci.",
+        "matchesAccountWarning": "Votre mot de passe des notes est identique à celui de votre compte : le serveur de synchronisation pourrait donc lire vos notes. Changez votre mot de passe des notes pour corriger cela."
+      },
+      "existingAccountDetected": "Cette adresse e-mail a déjà un compte : cet appareil va donc s'y connecter. Saisissez le mot de passe des notes que vous utilisez sur vos autres appareils."
     },
     "editorTab": {
       "vimMode": "Mode éditeur",
@@ -919,7 +922,9 @@
         "emailRequired": "L'adresse e-mail est requise.",
         "serverPasswordRequired": "Le mot de passe du serveur est requis.",
         "notesPasswordMinLength": "Le mot de passe des notes doit comporter au moins 8 caractères.",
-        "onboardingFailed": "Échec du téléchargement des clés de chiffrement depuis le serveur. Vérifiez que votre mot de passe des notes correspond à celui de vos autres appareils et que l'appareil source a été synchronisé"
+        "onboardingFailed": "Échec du téléchargement des clés de chiffrement depuis le serveur. Vérifiez que votre mot de passe des notes correspond à celui de vos autres appareils et que l'appareil source a été synchronisé",
+        "accountKeyUnreadable": "Ce mot de passe des notes ne peut pas ouvrir la clé de votre compte. Vérifiez le mot de passe. S'il est correct, la clé a peut-être été enregistrée par une ancienne version de Jottery : déverrouiller Jottery sur un appareil déjà connecté corrigera cela. Réessayez ensuite.",
+        "localNotesOrphaned": "Les notes de cet appareil utilisent une clé différente de celle de votre compte : la connexion les rendrait illisibles. Rien n'a été modifié. Pour les conserver, exportez vos notes, supprimez les données de cet appareil, connectez-vous, puis importez-les."
       },
       "steps": {
         "initialising": "Initialisation du chiffrement local…",

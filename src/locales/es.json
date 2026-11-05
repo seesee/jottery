@@ -442,8 +442,11 @@
         "hintExisting": "La contraseña con la que desbloqueas tus notas en tus otros dispositivos. Nunca se envía al servidor.",
         "required": "Introduce la contraseña de tus notas.",
         "incorrect": "Esa no es la contraseña que desbloquea tus notas en este dispositivo. Introduce la contraseña de las notas, no la del servidor.",
-        "uploadFailed": "La sincronización está configurada, pero no se pudo guardar la clave de cifrado en el servidor, por lo que otros dispositivos aún no pueden conectarse. Se volverá a intentar la próxima vez que desbloquees"
-      }
+        "uploadFailed": "La sincronización está configurada, pero no se pudo guardar la clave de cifrado en el servidor, por lo que otros dispositivos aún no pueden conectarse. Se volverá a intentar la próxima vez que desbloquees",
+        "mustDiffer": "Tu contraseña de notas y la de tu cuenta deben ser distintas. El servidor de sincronización ve la contraseña de tu cuenta, así que si coinciden podría leer tus notas. Si son iguales en tus otros dispositivos, cambia primero allí la contraseña de notas.",
+        "matchesAccountWarning": "Tu contraseña de notas es la misma que la de tu cuenta, por lo que el servidor de sincronización podría leer tus notas. Cambia tu contraseña de notas para solucionarlo."
+      },
+      "existingAccountDetected": "Este correo ya tiene una cuenta, así que este dispositivo se conectará a ella. Introduce la contraseña de notas que usas en tus otros dispositivos."
     },
     "editorTab": {
       "vimMode": "Modo de editor",
@@ -919,7 +922,9 @@
         "emailRequired": "La dirección de correo electrónico es obligatoria.",
         "serverPasswordRequired": "La contraseña del servidor es obligatoria.",
         "notesPasswordMinLength": "La contraseña de notas debe tener al menos 8 caracteres.",
-        "onboardingFailed": "No se pudieron descargar las claves de cifrado del servidor. Asegúrese de que su contraseña de notas coincida con la de sus otros dispositivos y de que el dispositivo de origen se haya sincronizado"
+        "onboardingFailed": "No se pudieron descargar las claves de cifrado del servidor. Asegúrese de que su contraseña de notas coincida con la de sus otros dispositivos y de que el dispositivo de origen se haya sincronizado",
+        "accountKeyUnreadable": "Esta contraseña de notas no puede abrir la clave de tu cuenta. Comprueba la contraseña. Si es correcta, puede que la clave la guardara una versión anterior de Jottery: desbloquear Jottery en un dispositivo ya conectado lo solucionará. Después, vuelve a intentarlo.",
+        "localNotesOrphaned": "Las notas de este dispositivo usan una clave distinta a la de tu cuenta, así que conectarse las haría ilegibles. No se ha cambiado nada. Para conservarlas, exporta tus notas, borra los datos de este dispositivo, conéctate y luego impórtalas."
       },
       "steps": {
         "initialising": "Inicializando cifrado local…",

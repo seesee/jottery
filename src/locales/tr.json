@@ -442,8 +442,11 @@
         "hintExisting": "Diğer cihazlarınızda notlarınızın kilidini açtığınız parola. Sunucuya hiçbir zaman gönderilmez.",
         "required": "Lütfen not parolanızı girin.",
         "incorrect": "Bu, notlarınızın bu cihazdaki kilidini açan parola değil. Sunucu parolanızı değil, not parolanızı girin.",
-        "uploadFailed": "Eşitleme kuruldu, ancak şifreleme anahtarı sunucuya kaydedilemedi; bu nedenle diğer cihazlar henüz bağlanamıyor. Bir sonraki kilit açışınızda yeniden denenecek"
-      }
+        "uploadFailed": "Eşitleme kuruldu, ancak şifreleme anahtarı sunucuya kaydedilemedi; bu nedenle diğer cihazlar henüz bağlanamıyor. Bir sonraki kilit açışınızda yeniden denenecek",
+        "mustDiffer": "Not parolanız ile hesap parolanız farklı olmalıdır. Eşitleme sunucusu hesap parolanızı görür, bu yüzden aynı olurlarsa notlarınızı okuyabilir. Diğer cihazlarınızda aynıysa önce orada not parolanızı değiştirin.",
+        "matchesAccountWarning": "Not parolanız hesap parolanızla aynı, bu yüzden eşitleme sunucusu notlarınızı okuyabilir. Bunu düzeltmek için not parolanızı değiştirin."
+      },
+      "existingAccountDetected": "Bu e-postanın zaten bir hesabı var, bu yüzden bu cihaz ona bağlanacak. Diğer cihazlarınızda kullandığınız not parolasını girin."
     },
     "editorTab": {
       "vimMode": "Düzenleyici modu",
@@ -919,7 +922,9 @@
         "emailRequired": "E-posta adresi gereklidir.",
         "serverPasswordRequired": "Sunucu şifresi gereklidir.",
         "notesPasswordMinLength": "Not şifresi en az 8 karakter olmalıdır.",
-        "onboardingFailed": "Şifreleme anahtarları sunucudan indirilemedi. Not şifrenizin diğer cihazlarınızdakiyle aynı olduğundan ve kaynak cihazın senkronize edildiğinden emin olun"
+        "onboardingFailed": "Şifreleme anahtarları sunucudan indirilemedi. Not şifrenizin diğer cihazlarınızdakiyle aynı olduğundan ve kaynak cihazın senkronize edildiğinden emin olun",
+        "accountKeyUnreadable": "Bu not parolası hesabınızın anahtarını açamıyor. Parolayı kontrol edin. Doğruysa anahtar Jottery'nin eski bir sürümüyle kaydedilmiş olabilir: zaten bağlı bir cihazda Jottery'nin kilidini açmak bunu düzeltir. Ardından yeniden deneyin.",
+        "localNotesOrphaned": "Bu cihazdaki notlar hesabınızdan farklı bir anahtar kullanıyor, bu yüzden bağlanmak onları okunamaz hale getirir. Hiçbir şey değiştirilmedi. Korumak için notlarınızı dışa aktarın, bu cihazın verilerini silin, bağlanın ve ardından içe aktarın."
       },
       "steps": {
         "initialising": "Yerel şifreleme başlatılıyor…",

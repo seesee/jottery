@@ -5,7 +5,9 @@
  * from a password and the user ID. A second device downloads it and unwraps it.
  * The server receives the account (server) password in plaintext at login, so
  * the blob must be wrapped with the notes password, which never leaves the client.
- * Older clients wrapped it with the server password, so downloads must still cope.
+ * Older clients wrapped it with the server password. That password is never tried
+ * when adopting a key, because the server could use it to plant one it chose.
+ * Those accounts are repaired from a device that already holds the real key.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
@@ -16,13 +18,20 @@ import {
   uploadWrappedKeyToServer,
   verifyUnlockPassword,
   ensureServerWrappedKey,
+  changePassword,
+  isLocked,
+  lock,
+  unlock,
 } from './initService';
 import { authService } from './authService';
 import { cryptoService } from './crypto';
 import { keyManager } from './keyManager';
 import { encryptionRepository } from './encryptionRepository';
 import { syncRepository } from './syncRepository';
+import { noteRepository } from './noteRepository';
 import { closeDB, deleteDB, initDB } from './db';
+import { createTestNote } from '../../test/db-utils';
+import { AccountKeyExistsError, AccountKeyUnreadableError, LocalNotesOrphanedError, ValidationError } from '../errors';
 import { base64ToUint8Array } from '../utils/base64';
 import { CRYPTO_PBKDF2_ITERATIONS } from '../constants';
 import type { PutWrappedKeyRequest, WrappedKeyResponse } from './authService';
@@ -57,6 +66,26 @@ async function setUpFirstDevice(): Promise<Uint8Array> {
     userEmail: 'user@example.test',
   });
   return new Uint8Array(masterKey.keyBytes);
+}
+
+/** Put a blob on the fake server, wrapped however the test needs */
+async function wrapOnServer(password: string, keyBytes: Uint8Array): Promise<void> {
+  const wrappingKey = await cryptoService.deriveWrappingKey(password, USER_ID);
+  const wrapped = await cryptoService.wrapMasterKey(wrappingKey, keyBytes);
+  serverBlob = { blob: JSON.stringify(wrapped), kdfVersion: 2, kdfIterations: 1_000_000 };
+}
+
+/** Record that this device has completed a sync, so it must hold the account's key */
+async function markSynced(): Promise<void> {
+  await syncRepository.updateMetadata({ lastSyncAt: '2026-11-05T01:02:03.000Z' });
+}
+
+/** Store a note on this device, encrypted with its current key */
+async function addLocalNote(text: string): Promise<string> {
+  const key = keyManager.getMasterKey()!.key;
+  const note = createTestNote({ content: JSON.stringify(await cryptoService.encryptText(text, key)) });
+  await noteRepository.create(note);
+  return note.id;
 }
 
 /** Start from an empty database, as on a brand new device */
@@ -135,6 +164,17 @@ describe('server-wrapped master key', () => {
       expect(serverBlob).toBeNull();
     }, 60_000);
 
+    it('refuses to replace a key the account already has', async () => {
+      await setUpFirstDevice();
+      await wrapOnServer(NOTES_PASSWORD, crypto.getRandomValues(new Uint8Array(32)));
+      const before = serverBlob;
+
+      await expect(uploadWrappedKeyToServer(NOTES_PASSWORD)).rejects.toBeInstanceOf(AccountKeyExistsError);
+
+      expect(putSpy).not.toHaveBeenCalled();
+      expect(serverBlob).toBe(before);
+    }, 60_000);
+
     it('reports upload failures instead of swallowing them', async () => {
       await setUpFirstDevice();
       putSpy.mockRejectedValueOnce(new Error('Failed to store wrapped key: 500'));
@@ -144,27 +184,47 @@ describe('server-wrapped master key', () => {
   });
 
   describe('second device download', () => {
-    it('falls back to the server password for keys uploaded by older clients', async () => {
+    it('refuses a key wrapped with the account password', async () => {
       const firstDeviceKey = await setUpFirstDevice();
-
-      // Older clients wrapped the blob with the server password
-      await tryMigrateToEnvelope(SERVER_PASSWORD, firstDeviceKey);
-      expect(serverBlob).not.toBeNull();
+      await wrapOnServer(SERVER_PASSWORD, firstDeviceKey);
       await becomeSecondDevice();
-
       await initialize(NOTES_PASSWORD);
-      await onboardFromServer(NOTES_PASSWORD, ENDPOINT, USER_ID, API_KEY, NOTES_PASSWORD, SERVER_PASSWORD);
+      const before = await encryptionRepository.getMetadata();
+      const keyBefore = Array.from(bytesOf());
 
-      expect(Array.from(bytesOf())).toEqual(Array.from(firstDeviceKey));
+      await expect(
+        onboardFromServer(NOTES_PASSWORD, ENDPOINT, USER_ID, API_KEY, NOTES_PASSWORD)
+      ).rejects.toBeInstanceOf(AccountKeyUnreadableError);
+
+      expect(await encryptionRepository.getMetadata()).toEqual(before);
+      expect(Array.from(bytesOf())).toEqual(keyBefore);
     }, 60_000);
 
-    it('keeps the notes password as the local unlock password after a fallback', async () => {
+    it('cannot be made to adopt a key the server planted', async () => {
+      // The server sees the account password at register-device, so it can wrap a
+      // key of its own under it. Nothing may try that password when adopting a key,
+      // however a caller passes it.
+      const plantedKey = crypto.getRandomValues(new Uint8Array(32));
+      await wrapOnServer(SERVER_PASSWORD, plantedKey);
+      await initialize(NOTES_PASSWORD);
+      const keyBefore = Array.from(bytesOf());
+      const adopt = onboardFromServer as unknown as (...args: unknown[]) => Promise<void>;
+
+      await expect(
+        adopt(NOTES_PASSWORD, ENDPOINT, USER_ID, API_KEY, NOTES_PASSWORD, SERVER_PASSWORD)
+      ).rejects.toBeInstanceOf(AccountKeyUnreadableError);
+
+      expect(Array.from(bytesOf())).toEqual(keyBefore);
+      expect(Array.from(bytesOf())).not.toEqual(Array.from(plantedKey));
+    }, 60_000);
+
+    it('keeps the notes password as the local unlock password', async () => {
       const firstDeviceKey = await setUpFirstDevice();
-      await tryMigrateToEnvelope(SERVER_PASSWORD, firstDeviceKey);
+      await uploadWrappedKeyToServer(NOTES_PASSWORD);
       await becomeSecondDevice();
       await initialize(NOTES_PASSWORD);
 
-      await onboardFromServer(NOTES_PASSWORD, ENDPOINT, USER_ID, API_KEY, NOTES_PASSWORD, SERVER_PASSWORD);
+      await onboardFromServer(NOTES_PASSWORD, ENDPOINT, USER_ID, API_KEY, NOTES_PASSWORD);
 
       // The local blob must unwrap with the notes password, not the server password
       const metadata = await encryptionRepository.getMetadata();
@@ -180,7 +240,7 @@ describe('server-wrapped master key', () => {
       expect(Array.from(unwrapped)).toEqual(Array.from(firstDeviceKey));
     }, 60_000);
 
-    it('fails with a clear error and changes nothing when neither password matches', async () => {
+    it('fails with a clear error and changes nothing when the password is wrong', async () => {
       await setUpFirstDevice();
       await uploadWrappedKeyToServer(NOTES_PASSWORD);
       await becomeSecondDevice();
@@ -189,8 +249,8 @@ describe('server-wrapped master key', () => {
       const keyBefore = Array.from(bytesOf());
 
       await expect(
-        onboardFromServer('wrong-notes-password', ENDPOINT, USER_ID, API_KEY, NOTES_PASSWORD, 'wrong-server-password')
-      ).rejects.toThrow(/unwrap/i);
+        onboardFromServer('wrong-notes-password', ENDPOINT, USER_ID, API_KEY, NOTES_PASSWORD)
+      ).rejects.toBeInstanceOf(AccountKeyUnreadableError);
 
       expect(await encryptionRepository.getMetadata()).toEqual(before);
       expect(Array.from(bytesOf())).toEqual(keyBefore);
@@ -200,8 +260,119 @@ describe('server-wrapped master key', () => {
       await initialize(NOTES_PASSWORD);
 
       await expect(
-        onboardFromServer(NOTES_PASSWORD, ENDPOINT, USER_ID, API_KEY, NOTES_PASSWORD, SERVER_PASSWORD)
+        onboardFromServer(NOTES_PASSWORD, ENDPOINT, USER_ID, API_KEY, NOTES_PASSWORD)
       ).rejects.toThrow(/no wrapped key found/i);
+    }, 60_000);
+  });
+
+  describe('connecting a device that already has notes', () => {
+    it('refuses when the account key would orphan local notes, and changes nothing', async () => {
+      await wrapOnServer(NOTES_PASSWORD, crypto.getRandomValues(new Uint8Array(32)));
+      await initialize(NOTES_PASSWORD);
+      const noteId = await addLocalNote('only copy');
+      const before = await encryptionRepository.getMetadata();
+      const keyBefore = Array.from(bytesOf());
+
+      await expect(
+        onboardFromServer(NOTES_PASSWORD, ENDPOINT, USER_ID, API_KEY, NOTES_PASSWORD)
+      ).rejects.toBeInstanceOf(LocalNotesOrphanedError);
+
+      expect(await encryptionRepository.getMetadata()).toEqual(before);
+      expect(Array.from(bytesOf())).toEqual(keyBefore);
+
+      const stored = await noteRepository.getById(noteId);
+      const key = keyManager.getMasterKey()!.key;
+      expect(await cryptoService.decryptText(JSON.parse(stored!.content), key)).toBe('only copy');
+    }, 60_000);
+
+    it('counts notes in the recycle bin too', async () => {
+      await wrapOnServer(NOTES_PASSWORD, crypto.getRandomValues(new Uint8Array(32)));
+      await initialize(NOTES_PASSWORD);
+      const noteId = await addLocalNote('binned');
+      const stored = await noteRepository.getById(noteId);
+      await noteRepository.update({ ...stored!, deleted: true }, false, true);
+
+      await expect(
+        onboardFromServer(NOTES_PASSWORD, ENDPOINT, USER_ID, API_KEY, NOTES_PASSWORD)
+      ).rejects.toBeInstanceOf(LocalNotesOrphanedError);
+    }, 60_000);
+
+    it('connects when local notes already use the account key', async () => {
+      const key = await setUpFirstDevice();
+      await addLocalNote('shared');
+      await wrapOnServer(NOTES_PASSWORD, key);
+
+      await onboardFromServer(NOTES_PASSWORD, ENDPOINT, USER_ID, API_KEY, NOTES_PASSWORD);
+
+      expect(Array.from(bytesOf())).toEqual(Array.from(key));
+    }, 60_000);
+
+    it('connects when the local vault is empty', async () => {
+      const accountKey = crypto.getRandomValues(new Uint8Array(32));
+      await wrapOnServer(NOTES_PASSWORD, accountKey);
+      await initialize(NOTES_PASSWORD);
+
+      await onboardFromServer(NOTES_PASSWORD, ENDPOINT, USER_ID, API_KEY, NOTES_PASSWORD);
+
+      expect(Array.from(bytesOf())).toEqual(Array.from(accountKey));
+    }, 60_000);
+
+    it('is not blocked by a note that no key can open', async () => {
+      const accountKey = crypto.getRandomValues(new Uint8Array(32));
+      await wrapOnServer(NOTES_PASSWORD, accountKey);
+      await initialize(NOTES_PASSWORD);
+      await noteRepository.create(createTestNote({ content: 'already unreadable' }));
+
+      await onboardFromServer(NOTES_PASSWORD, ENDPOINT, USER_ID, API_KEY, NOTES_PASSWORD);
+
+      expect(Array.from(bytesOf())).toEqual(Array.from(accountKey));
+    }, 60_000);
+  });
+
+  describe('legacy migration', () => {
+    it('does not replace a key the account already has', async () => {
+      const key = await setUpFirstDevice();
+      await wrapOnServer(NOTES_PASSWORD, crypto.getRandomValues(new Uint8Array(32)));
+      const before = serverBlob;
+
+      await tryMigrateToEnvelope(NOTES_PASSWORD, key);
+
+      expect(putSpy).not.toHaveBeenCalled();
+      expect(serverBlob).toBe(before);
+    }, 60_000);
+
+    it('uploads when the account has no key yet', async () => {
+      const key = await setUpFirstDevice();
+
+      await tryMigrateToEnvelope(NOTES_PASSWORD, key);
+
+      expect(putSpy).toHaveBeenCalledTimes(1);
+    }, 60_000);
+  });
+
+  describe('changePassword', () => {
+    it('refuses a new password that is too short', async () => {
+      await initialize(NOTES_PASSWORD);
+      const before = await encryptionRepository.getMetadata();
+
+      await expect(changePassword(NOTES_PASSWORD, 'short')).rejects.toBeInstanceOf(ValidationError);
+
+      expect(await encryptionRepository.getMetadata()).toEqual(before);
+    }, 60_000);
+
+    it('accepts a new password of the minimum length', async () => {
+      await initialize(NOTES_PASSWORD);
+      await changePassword(NOTES_PASSWORD, '12345678');
+      lock();
+      await unlock('12345678');
+      expect(isLocked()).toBe(false);
+    }, 60_000);
+
+    it('never applies the minimum at unlock, so existing short passwords keep working', async () => {
+      await initialize('short');
+      lock();
+      await unlock('short');
+      expect(isLocked()).toBe(false);
     }, 60_000);
   });
 
@@ -243,6 +414,63 @@ describe('server-wrapped master key', () => {
 
       expect(putSpy).not.toHaveBeenCalled();
     }, 60_000);
+
+    describe('repairing a key an older client wrapped with the account password', () => {
+      it('re-wraps once this device has synced, so a new device can onboard', async () => {
+        const key = await setUpFirstDevice();
+        await wrapOnServer(SERVER_PASSWORD, key);
+        await markSynced();
+
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+        expect(putSpy).toHaveBeenCalledTimes(1);
+
+        await becomeSecondDevice();
+        await initialize(NOTES_PASSWORD);
+        await onboardFromServer(NOTES_PASSWORD, ENDPOINT, USER_ID, API_KEY, NOTES_PASSWORD);
+        expect(Array.from(bytesOf())).toEqual(Array.from(key));
+      }, 60_000);
+
+      it('leaves it alone if this device has never synced', async () => {
+        const key = await setUpFirstDevice();
+        await wrapOnServer(SERVER_PASSWORD, key);
+
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        expect(putSpy).not.toHaveBeenCalled();
+      }, 60_000);
+
+      it('replaces a blob that cannot be parsed, once synced', async () => {
+        await setUpFirstDevice();
+        await markSynced();
+        serverBlob = { blob: 'not json', kdfVersion: 1, kdfIterations: 1 };
+
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        expect(putSpy).toHaveBeenCalledTimes(1);
+      }, 60_000);
+
+      it('never overwrites a blob that unwraps, even to a different key', async () => {
+        // That means this device has diverged from the account. The account's key
+        // is the one to keep: replacing it would damage every other device.
+        await setUpFirstDevice();
+        await markSynced();
+        await wrapOnServer(NOTES_PASSWORD, crypto.getRandomValues(new Uint8Array(32)));
+
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        expect(putSpy).not.toHaveBeenCalled();
+      }, 60_000);
+
+      it('never overwrites a blob that already unwraps to this key', async () => {
+        const key = await setUpFirstDevice();
+        await markSynced();
+        await wrapOnServer(NOTES_PASSWORD, key);
+
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        expect(putSpy).not.toHaveBeenCalled();
+      }, 60_000);
+    });
 
     it('does nothing when sync is not configured', async () => {
       await initialize(NOTES_PASSWORD);
