@@ -64,12 +64,12 @@ function optionalTimestamp(value: unknown): string | undefined {
   return isTimestamp(value) ? value : undefined;
 }
 
-function safeLanguage(value: unknown): string | undefined {
+export function safeLanguage(value: unknown): string | undefined {
   // `in` also catches inherited names, which are unsafe as lookup keys
   return typeof value === 'string' && LANGUAGE_PATTERN.test(value) && !(value in {}) ? value : undefined;
 }
 
-function safeColour(value: unknown): string | undefined {
+export function safeColour(value: unknown): string | undefined {
   return typeof value === 'string' && COLOUR_PATTERN.test(value) && !(value in {}) ? value : undefined;
 }
 
@@ -87,6 +87,10 @@ function safeHashChain(value: unknown): string[] | undefined {
   return value.filter((hash): hash is string => safeHash(hash) !== undefined);
 }
 
+export function safeMimeType(value: unknown): string {
+  return typeof value === 'string' && MIME_PATTERN.test(value) ? value : FALLBACK_MIME_TYPE;
+}
+
 /** Returns a clean copy of an attachment reference, or null if it can't be used. */
 export function validateAttachmentRef(value: unknown): AttachmentRef | null {
   if (!isRecord(value) || !isUuid(value.id) || !isUuid(value.data) || typeof value.filename !== 'string') {
@@ -98,7 +102,7 @@ export function validateAttachmentRef(value: unknown): AttachmentRef | null {
     id,
     data,
     filename,
-    mimeType: typeof mimeType === 'string' && MIME_PATTERN.test(mimeType) ? mimeType : FALLBACK_MIME_TYPE,
+    mimeType: safeMimeType(mimeType),
     size: typeof size === 'number' && Number.isFinite(size) && size >= 0 ? size : 0,
   };
 }

@@ -7,6 +7,7 @@ import type { Note } from '../types';
 import { getDB, STORES } from './db';
 import { advanceContentHash } from './crypto';
 import { NotFoundError } from '../errors';
+import { compareTimestamps } from '../utils/timestamps';
 
 class IndexedDBNoteRepository implements NoteRepository {
   /**
@@ -347,7 +348,7 @@ class IndexedDBNoteRepository implements NoteRepository {
     const notes = await db.getAll(STORES.NOTES);
     return notes
       .filter((note) => !note.deleted)
-      .sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+      .sort((a, b) => compareTimestamps(b.modifiedAt, a.modifiedAt));
   }
 
   /**

@@ -10,6 +10,7 @@
 import type { DecryptedNote, SearchQuery, SearchTerm, SortOrder } from '../types';
 import { getTagColor, getColorKeyByDisplayName } from './colorService';
 import { getNoteTitle } from '../utils/noteTitle';
+import { compareTimestamps } from '../utils/timestamps';
 import { normaliseForComparison, localeIncludes, localeSort } from '../utils/stringUtils';
 
 /** A note's text, normalised once so a search doesn't redo it for every keystroke. */
@@ -462,19 +463,19 @@ function sortNotes(notes: DecryptedNote[], sortOrder: SortOrder): DecryptedNote[
   let sortFn: (a: DecryptedNote, b: DecryptedNote) => number;
   switch (sortOrder) {
     case 'recent':
-      sortFn = (a, b) => b.modifiedAt.localeCompare(a.modifiedAt);
+      sortFn = (a, b) => compareTimestamps(b.modifiedAt, a.modifiedAt);
       break;
     case 'oldest':
-      sortFn = (a, b) => a.modifiedAt.localeCompare(b.modifiedAt);
+      sortFn = (a, b) => compareTimestamps(a.modifiedAt, b.modifiedAt);
       break;
     case 'created':
-      sortFn = (a, b) => b.createdAt.localeCompare(a.createdAt);
+      sortFn = (a, b) => compareTimestamps(b.createdAt, a.createdAt);
       break;
     case 'alpha':
       sortFn = (a, b) => localeSort(getNoteTitle(a), getNoteTitle(b));
       break;
     default:
-      sortFn = (a, b) => b.modifiedAt.localeCompare(a.modifiedAt);
+      sortFn = (a, b) => compareTimestamps(b.modifiedAt, a.modifiedAt);
   }
 
   // Sort each group

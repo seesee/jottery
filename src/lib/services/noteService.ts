@@ -15,6 +15,7 @@ import { ApplicationLockedError, NotFoundError, CryptoError } from '../errors';
 import { backupSchedulerService } from './backupSchedulerService';
 import { getNoteTitle } from '../utils/noteTitle';
 import { localeIncludes, localeSort } from '../utils/stringUtils';
+import { asTimestampString, compareTimestamps } from '../utils/timestamps';
 
 /**
  * Note service class
@@ -263,17 +264,17 @@ class NoteService {
   private getEncryptedSortFunction(sortOrder: SortOrder) {
     switch (sortOrder) {
       case 'recent':
-        return (a: Note, b: Note) => b.modifiedAt.localeCompare(a.modifiedAt);
+        return (a: Note, b: Note) => compareTimestamps(b.modifiedAt, a.modifiedAt);
       case 'oldest':
-        return (a: Note, b: Note) => a.modifiedAt.localeCompare(b.modifiedAt);
+        return (a: Note, b: Note) => compareTimestamps(a.modifiedAt, b.modifiedAt);
       case 'created':
-        return (a: Note, b: Note) => b.createdAt.localeCompare(a.createdAt);
+        return (a: Note, b: Note) => compareTimestamps(b.createdAt, a.createdAt);
       case 'alpha':
         // For alpha sort, we need decrypted content, so just use modified for now
         // The final sort will happen after all notes are decrypted
-        return (a: Note, b: Note) => b.modifiedAt.localeCompare(a.modifiedAt);
+        return (a: Note, b: Note) => compareTimestamps(b.modifiedAt, a.modifiedAt);
       default:
-        return (a: Note, b: Note) => b.modifiedAt.localeCompare(a.modifiedAt);
+        return (a: Note, b: Note) => compareTimestamps(b.modifiedAt, a.modifiedAt);
     }
   }
 
@@ -764,10 +765,14 @@ class NoteService {
         }
       }
 
+      // A bad value in a stored note must not break the list, which is the only way
+      // to reach the note. Tags and dates from older imports can be anything.
       return {
         ...note,
         content,
-        tags,
+        tags: tags.filter(tag => typeof tag === 'string' && tag.trim().length > 0),
+        createdAt: asTimestampString(note.createdAt),
+        modifiedAt: asTimestampString(note.modifiedAt),
         decryptedAt: Date.now(),
       };
     } catch (error) {
@@ -801,15 +806,15 @@ class NoteService {
     switch (sortOrder) {
       case 'recent':
         return (a: DecryptedNote, b: DecryptedNote) =>
-          b.modifiedAt.localeCompare(a.modifiedAt);
+          compareTimestamps(b.modifiedAt, a.modifiedAt);
 
       case 'oldest':
         return (a: DecryptedNote, b: DecryptedNote) =>
-          a.modifiedAt.localeCompare(b.modifiedAt);
+          compareTimestamps(a.modifiedAt, b.modifiedAt);
 
       case 'created':
         return (a: DecryptedNote, b: DecryptedNote) =>
-          b.createdAt.localeCompare(a.createdAt);
+          compareTimestamps(b.createdAt, a.createdAt);
 
       case 'alpha':
         // Sort alphabetically by title (custom t: tag or first line)
@@ -818,7 +823,7 @@ class NoteService {
 
       default:
         return (a: DecryptedNote, b: DecryptedNote) =>
-          b.modifiedAt.localeCompare(a.modifiedAt);
+          compareTimestamps(b.modifiedAt, a.modifiedAt);
     }
   }
 }
