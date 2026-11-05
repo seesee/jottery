@@ -189,6 +189,7 @@
             style="width: {Math.min(100, (accountInfo.storageUsedBytes / (accountInfo.storageQuotaMb * 1024 * 1024)) * 100)}%"
           ></div>
         </div>
+        <p class="text-xs text-gray-500 mt-2">{$_('userPortal.account.storageUsedNote')}</p>
       </div>
 
       <!-- Last Sync -->

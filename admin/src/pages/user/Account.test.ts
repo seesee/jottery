@@ -72,6 +72,11 @@ describe('Account inbox token', () => {
     cleanup();
   });
 
+  it('says what counts towards storage', async () => {
+    render(Account);
+    expect(await screen.findByText(en.userPortal.account.storageUsedNote)).toBeTruthy();
+  });
+
   it('confirms a new token', async () => {
     render(Account);
     await generate();

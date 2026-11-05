@@ -6,11 +6,12 @@
   import Dashboard from './pages/Dashboard.svelte';
   import Users from './pages/Users.svelte';
   import Settings from './pages/Settings.svelte';
+  import Audit from './pages/Audit.svelte';
   import Toast from './components/Toast.svelte';
   import ConfirmModal from './components/ConfirmModal.svelte';
   import { _ } from 'svelte-i18n';
 
-  type Page = 'dashboard' | 'users' | 'settings';
+  type Page = 'dashboard' | 'users' | 'audit' | 'settings';
   let currentPage = $state<Page>('dashboard');
   let showLogoutConfirm = $state(false);
 
@@ -78,6 +79,18 @@
         </button>
 
         <button
+          onclick={() => navigateTo('audit')}
+          class="flex-shrink-0 md:w-full text-left px-4 md:px-6 py-3 hover:bg-gray-700 transition-colors {currentPage === 'audit' ? 'bg-gray-700 border-l-4 border-blue-500' : ''}"
+        >
+          <div class="flex items-center space-x-3">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            <span>{$_('nav.audit')}</span>
+          </div>
+        </button>
+
+        <button
           onclick={() => navigateTo('settings')}
           class="flex-shrink-0 md:w-full text-left px-4 md:px-6 py-3 hover:bg-gray-700 transition-colors {currentPage === 'settings' ? 'bg-gray-700 border-l-4 border-blue-500' : ''}"
         >
@@ -111,6 +124,8 @@
           <Dashboard />
         {:else if currentPage === 'users'}
           <Users />
+        {:else if currentPage === 'audit'}
+          <Audit />
         {:else if currentPage === 'settings'}
           <Settings />
         {/if}
