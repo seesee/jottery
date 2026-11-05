@@ -3,9 +3,9 @@
 //! This module provides the core business logic for administrative operations
 //! that can be used by both CLI tools and web APIs.
 
-use crate::db::UserRepository;
+use crate::db::{SessionRepository, UserRepository};
 use crate::models::User;
-use crate::utils::password::hash_password_with_params;
+use crate::utils::password::{hash_password_with_params, validate_password_strength};
 use sqlx::SqlitePool;
 
 /// Device information returned by admin service
@@ -67,8 +67,8 @@ pub enum AdminError {
     #[error("User is already {0}")]
     AlreadyInState(String),
 
-    #[error("Password must be at least 12 characters")]
-    PasswordTooShort,
+    #[error("{0}")]
+    WeakPassword(String),
 
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
@@ -194,24 +194,21 @@ impl AdminService {
         identifier: &str,
         new_password: &str,
         argon2_params: (u32, u32, u32), // (m_cost, t_cost, p_cost)
+        password_complexity: &str,
     ) -> Result<User> {
         let user = Self::find_user(pool, identifier).await?;
 
-        if new_password.len() < 12 {
-            return Err(AdminError::PasswordTooShort);
-        }
+        validate_password_strength(new_password, password_complexity)
+            .map_err(AdminError::WeakPassword)?;
 
         let (m_cost, t_cost, p_cost) = argon2_params;
         let password_hash = hash_password_with_params(new_password, m_cost, t_cost, p_cost)
             .map_err(|e| AdminError::PasswordHash(e.to_string()))?;
 
-        sqlx::query!(
-            "UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?",
-            password_hash,
-            user.id
-        )
-        .execute(pool)
-        .await?;
+        let mut tx = pool.begin().await?;
+        UserRepository::set_password(&mut tx, &user.id, &password_hash).await?;
+        SessionRepository::delete_all_for_user(&mut tx, &user.id).await?;
+        tx.commit().await?;
 
         Ok(user)
     }

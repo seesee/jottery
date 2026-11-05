@@ -13,6 +13,7 @@ use crate::{
     db::{SessionRepository, UserRepository},
     error::AppResult,
     models::{Session, UserInfo},
+    utils::password::validate_password_strength,
     AppState,
 };
 
@@ -558,14 +559,15 @@ pub struct ChangePasswordRequest {
 
 pub async fn change_password(
     State(state): State<Arc<AppState>>,
-    axum::Extension(user_id): axum::Extension<String>,
+    axum::Extension(session): axum::Extension<Session>,
     Json(req): Json<ChangePasswordRequest>,
 ) -> AppResult<StatusCode> {
     use crate::utils::password::{hash_password_with_params, verify_password};
-    use crate::db::UserRepository;
+
+    let user_id = &session.user_id;
 
     // Get current user
-    let user = UserRepository::get_by_id(&state.pool, &user_id)
+    let user = UserRepository::get_by_id(&state.pool, user_id)
         .await
         .map_err(|_| crate::error::AppError::Unauthorized)?;
 
@@ -581,12 +583,9 @@ pub async fn change_password(
         return Err(crate::error::AppError::Unauthorized);
     }
 
-    // Validate new password strength
-    if req.new_password.len() < 12 {
-        return Err(crate::error::AppError::BadRequest(
-            "New password must be at least 12 characters".to_string(),
-        ));
-    }
+    // Validate new password strength based on configured complexity
+    validate_password_strength(&req.new_password, &state.config.password_complexity)
+        .map_err(crate::error::AppError::BadRequest)?;
 
     // "Changing" to the same password would satisfy a forced change
     if verify_password(&req.new_password, &user.password_hash).unwrap_or(false) {
@@ -607,14 +606,10 @@ pub async fn change_password(
         crate::error::AppError::InternalServerError
     })?;
 
-    // Update password
-    sqlx::query!(
-        r#"UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?"#,
-        new_password_hash,
-        user_id
-    )
-    .execute(&state.pool)
-    .await?;
+    let mut tx = state.pool.begin().await?;
+    UserRepository::set_password(&mut tx, user_id, &new_password_hash).await?;
+    SessionRepository::delete_others_for_user(&mut tx, user_id, &session.id).await?;
+    tx.commit().await?;
 
     tracing::info!("Password changed successfully for user: {}", user_id);
     Ok(StatusCode::NO_CONTENT)
@@ -625,6 +620,10 @@ pub async fn change_password(
 #[derive(Debug, serde::Deserialize)]
 pub struct ResetPasswordRequest {
     pub new_password: String,
+    /// Also revoke the user's device keys, for an account that may be compromised.
+    /// A key isn't tied to the password, so a reset alone leaves them working.
+    #[serde(rename = "revokeDevices", default)]
+    pub revoke_devices: bool,
 }
 
 pub async fn reset_user_password(
@@ -643,12 +642,9 @@ pub async fn reset_user_password(
     .await?
     .ok_or_else(|| crate::error::AppError::NotFound("User not found".to_string()))?;
 
-    // Validate new password strength
-    if req.new_password.len() < 12 {
-        return Err(crate::error::AppError::BadRequest(
-            "New password must be at least 12 characters".to_string(),
-        ));
-    }
+    // Validate new password strength based on configured complexity
+    validate_password_strength(&req.new_password, &state.config.password_complexity)
+        .map_err(crate::error::AppError::BadRequest)?;
 
     // Hash new password with configured Argon2 parameters
     let new_password_hash = hash_password_with_params(
@@ -662,14 +658,15 @@ pub async fn reset_user_password(
         crate::error::AppError::InternalServerError
     })?;
 
-    // Update password
-    sqlx::query!(
-        r#"UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?"#,
-        new_password_hash,
-        user_id
-    )
-    .execute(&state.pool)
-    .await?;
+    let mut tx = state.pool.begin().await?;
+    UserRepository::set_password(&mut tx, &user_id, &new_password_hash).await?;
+    SessionRepository::delete_all_for_user(&mut tx, &user_id).await?;
+    if req.revoke_devices {
+        sqlx::query!("UPDATE clients SET is_active = 0 WHERE user_id = ?", user_id)
+            .execute(&mut *tx)
+            .await?;
+    }
+    tx.commit().await?;
 
     tracing::info!("Admin reset password for user: {}", user_id);
     Ok(StatusCode::NO_CONTENT)

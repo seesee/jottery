@@ -336,12 +336,18 @@ async fn handle_users(
 
             let argon2_params = (config.argon2_m_cost, config.argon2_t_cost, config.argon2_p_cost);
 
-            match AdminService::reset_password(pool, &info.user.id, &new_password, argon2_params)
-                .await
+            match AdminService::reset_password(
+                pool,
+                &info.user.id,
+                &new_password,
+                argon2_params,
+                &config.password_complexity,
+            )
+            .await
             {
                 Ok(_) => println!("✓ Password reset for user: {}", info.user.email),
-                Err(jottery_server::services::AdminError::PasswordTooShort) => {
-                    eprintln!("Error: Password must be at least 12 characters.");
+                Err(jottery_server::services::AdminError::WeakPassword(reason)) => {
+                    eprintln!("Error: {reason}.");
                     std::process::exit(1);
                 }
                 Err(e) => return Err(e.into()),

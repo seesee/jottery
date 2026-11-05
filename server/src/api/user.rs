@@ -370,8 +370,10 @@ pub async fn change_password(
         return Err(AppError::Unauthorized);
     }
 
+    let kdf_version = req.kdf_version.unwrap_or(1);
+    let kdf_iterations = req.kdf_iterations.unwrap_or(1_000_000);
     if let Some(blob) = &req.wrapped_blob {
-        crate::api::auth::validate_wrapped_blob(blob)?;
+        crate::api::auth::validate_wrapped_key(blob, kdf_version, kdf_iterations)?;
     }
 
     // Validate new password strength based on configured complexity
@@ -399,19 +401,14 @@ pub async fn change_password(
         AppError::InternalServerError
     })?;
 
-    // Update password
-    sqlx::query!(
-        r#"UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?"#,
-        new_password_hash,
-        user_id
-    )
-    .execute(&state.pool)
-    .await?;
+    // All or nothing: a new password with the old blob would strand other devices,
+    // and sessions from before the change are what it's meant to end.
+    let mut tx = state.pool.begin().await?;
 
-    // If wrapped key blob provided, update it atomically with password change
+    UserRepository::set_password(&mut tx, user_id, &new_password_hash).await?;
+    SessionRepository::delete_others_for_user(&mut tx, user_id, &session.id).await?;
+
     if let Some(blob) = &req.wrapped_blob {
-        let kdf_version = req.kdf_version.unwrap_or(1);
-        let kdf_iterations = req.kdf_iterations.unwrap_or(1_000_000);
         let now = chrono::Utc::now().to_rfc3339();
 
         sqlx::query!(
@@ -429,11 +426,13 @@ pub async fn change_password(
             now,
             now,
         )
-        .execute(&state.pool)
+        .execute(&mut *tx)
         .await?;
 
         tracing::info!("Wrapped key updated during password change for user: {}", user_id);
     }
+
+    tx.commit().await?;
 
     tracing::info!("Password changed successfully for user: {}", user_id);
     Ok(StatusCode::NO_CONTENT)

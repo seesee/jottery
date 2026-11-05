@@ -1,4 +1,4 @@
-use sqlx::{Sqlite, SqlitePool, Transaction};
+use sqlx::{Sqlite, SqliteConnection, SqlitePool, Transaction};
 use uuid::Uuid;
 
 use crate::models::User;
@@ -108,6 +108,23 @@ impl UserRepository {
             user_id
         )
         .execute(pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Set a user's password, which also satisfies a forced change.
+    pub async fn set_password(
+        conn: &mut SqliteConnection,
+        user_id: &str,
+        password_hash: &str,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            r#"UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?"#,
+            password_hash,
+            user_id
+        )
+        .execute(conn)
         .await?;
 
         Ok(())

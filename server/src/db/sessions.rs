@@ -1,4 +1,4 @@
-use sqlx::SqlitePool;
+use sqlx::{SqliteConnection, SqlitePool};
 use uuid::Uuid;
 
 use crate::{models::{CreateSessionParams, Session}, utils::crypto::hash_sha256};
@@ -119,16 +119,33 @@ impl SessionRepository {
     }
 
     /// Delete all sessions for a user
-    #[allow(dead_code)]
     pub async fn delete_all_for_user(
-        pool: &SqlitePool,
+        conn: &mut SqliteConnection,
         user_id: &str,
     ) -> Result<(), sqlx::Error> {
         sqlx::query!(
             r#"DELETE FROM sessions WHERE user_id = ?"#,
             user_id
         )
-        .execute(pool)
+        .execute(conn)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Delete all of a user's sessions but one. A password change ends every other
+    /// way into the account without signing out the person making it.
+    pub async fn delete_others_for_user(
+        conn: &mut SqliteConnection,
+        user_id: &str,
+        keep_session_id: &str,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            r#"DELETE FROM sessions WHERE user_id = ? AND id != ?"#,
+            user_id,
+            keep_session_id
+        )
+        .execute(conn)
         .await?;
 
         Ok(())

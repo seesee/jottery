@@ -501,8 +501,9 @@ pub async fn put_wrapped_key_session(
 /// near this size isn't one, and accounts mustn't be free storage.
 const MAX_WRAPPED_BLOB_BYTES: usize = 8 * 1024;
 
-/// Reject a wrapped key blob of an impossible size.
-pub fn validate_wrapped_blob(blob: &str) -> AppResult<()> {
+/// Reject a wrapped key no client could have produced, or that no client could
+/// open: it would stop every new device from onboarding.
+pub fn validate_wrapped_key(blob: &str, kdf_version: i32, kdf_iterations: i32) -> AppResult<()> {
     if blob.is_empty() {
         return Err(crate::error::AppError::BadRequest(
             "Wrapped key blob cannot be empty".to_string(),
@@ -514,6 +515,18 @@ pub fn validate_wrapped_blob(blob: &str) -> AppResult<()> {
             "Wrapped key blob exceeds maximum size of {} bytes",
             MAX_WRAPPED_BLOB_BYTES
         )));
+    }
+
+    if kdf_version < 1 {
+        return Err(crate::error::AppError::BadRequest(
+            "Invalid KDF version".to_string(),
+        ));
+    }
+
+    if kdf_iterations < 100_000 {
+        return Err(crate::error::AppError::BadRequest(
+            "KDF iterations must be at least 100,000".to_string(),
+        ));
     }
 
     Ok(())
@@ -555,19 +568,7 @@ async fn put_wrapped_key_for_user(
     headers: &axum::http::HeaderMap,
     req: crate::models::PutWrappedKeyRequest,
 ) -> AppResult<StatusCode> {
-    validate_wrapped_blob(&req.blob)?;
-
-    if req.kdf_version < 1 {
-        return Err(crate::error::AppError::BadRequest(
-            "Invalid KDF version".to_string(),
-        ));
-    }
-
-    if req.kdf_iterations < 100_000 {
-        return Err(crate::error::AppError::BadRequest(
-            "KDF iterations must be at least 100,000".to_string(),
-        ));
-    }
+    validate_wrapped_key(&req.blob, req.kdf_version, req.kdf_iterations)?;
 
     let now = chrono::Utc::now().to_rfc3339();
 
