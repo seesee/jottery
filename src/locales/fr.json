@@ -1420,6 +1420,17 @@
     "openNote": "Ouvrir cette note",
     "repairNotOnServer": "Absente du serveur également — ouvrez la note et supprimez la pièce jointe",
     "serverMissingTitle": "Absent du serveur",
-    "serverMissingHint": "Le serveur de synchronisation n'a aucune copie de ces pièces jointes, ni cet appareil. Ouvrez la note et supprimez la pièce jointe, ou synchronisez depuis un appareil qui possède encore le fichier."
+    "serverMissingHint": "Le serveur de synchronisation n'a aucune copie de ces pièces jointes, ni cet appareil. Ouvrez la note et supprimez la pièce jointe, ou synchronisez depuis un appareil qui possède encore le fichier.",
+    "rejectedTitle": "Rejeté depuis le serveur de synchronisation",
+    "rejectedHint": "Le serveur de synchronisation les a envoyés sous une forme non fiable, ils n'ont donc pas été enregistrés. Vos notes existantes ne sont pas affectées. Si cela se reproduit, vérifiez qui contrôle le serveur.",
+    "rejectedKind": {
+      "note": "Note",
+      "version": "Version de note",
+      "conflict": "Conflit de synchronisation",
+      "savedSearch": "Recherche enregistrée",
+      "attachment": "Pièce jointe",
+      "inboxItem": "Élément de la boîte de réception",
+      "deletion": "Suppression"
+    }
   }
 }

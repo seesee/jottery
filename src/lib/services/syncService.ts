@@ -13,7 +13,7 @@ import type {
   SyncRejected,
   SyncAccepted,
 } from '../types';
-import type { AttachmentWarning } from '../types';
+import type { AttachmentWarning, InboxItem } from '../types';
 import { syncRepository } from './syncRepository';
 import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
@@ -30,7 +30,16 @@ import { searchService } from './searchService';
 import { notes, settings, isSyncRefreshing, isSyncing as isSyncingStore, syncProgress, inboxItems } from '../stores/appStore';
 import { toast } from '../utils/toast.svelte';
 import { createSyncRecoveryNote, deleteSyncRecoveryNote } from './syncRecoveryService';
-import { reportServerMissingAttachments } from './vaultHealthService';
+import { recordRejectedRemoteRecord, reportServerMissingAttachments } from './vaultHealthService';
+import {
+  isTimestamp,
+  isUuid,
+  validateConflict,
+  validateInboxItem,
+  validateRemoteNote,
+  validateRemoteVersion,
+  validateSavedSearch,
+} from './syncValidation';
 import { isDBAvailable, wasDBTerminated } from './db';
 import { SYNC_PUSH_BATCH_SIZE, SYNC_PULL_BATCH_SIZE, SYNC_AUTO_INTERVAL_MINUTES } from '../constants';
 import {
@@ -506,8 +515,9 @@ class SyncService {
   /** Process notes accepted by server during push */
   private async processAcceptedNotes(accepted: SyncAccepted[]): Promise<void> {
     for (const item of accepted) {
-      const syncedAt = item.syncedAt ?? new Date().toISOString();
-      const serverVersion = item.serverVersion ?? 1;
+      if (!isUuid(item?.id)) continue;
+      const syncedAt = isTimestamp(item.syncedAt) ? item.syncedAt : new Date().toISOString();
+      const serverVersion = typeof item.serverVersion === 'number' ? item.serverVersion : 1;
 
       await syncRepository.updateNoteSyncMetadata(item.id, {
         noteId: item.id,
@@ -527,8 +537,16 @@ class SyncService {
 
   /** Process notes rejected by server during push (conflicts) */
   private async processRejectedNotes(rejected: SyncRejected[]): Promise<void> {
-    for (const item of rejected) {
-      console.warn(`[SyncService] Note ${item.id} rejected: ${item.reason}`);
+    for (const candidate of rejected) {
+      const validated = validateConflict(candidate);
+      if (!validated.ok) {
+        // needsSync stays set, so the note is offered again on the next sync
+        recordRejectedRemoteRecord('conflict', candidate?.id, validated.reason);
+        continue;
+      }
+
+      const item = validated.value;
+      console.warn(`[SyncService] Note ${item.id} rejected by the server`);
       await storeConflict(item.id, {
         serverContent: item.serverContent,
         serverTags: item.serverTags,
@@ -709,7 +727,7 @@ class SyncService {
 
     for (const warning of warnings) {
       const missingHere: string[] = [];
-      for (const attachmentId of warning.attachmentIds) {
+      for (const attachmentId of warning.attachmentIds.filter(isUuid)) {
         const blob = await attachmentRepository.getBlob(attachmentId);
         if (blob) {
           repairAttachments.push({ id: attachmentId, data: arrayBufferToBase64(blob) });
@@ -719,7 +737,7 @@ class SyncService {
           console.warn(`[SyncService] Server is missing attachment ${attachmentId} (note ${warning.noteId}) and it is not on this device`);
         }
       }
-      if (missingHere.length > 0) {
+      if (missingHere.length > 0 && isUuid(warning.noteId)) {
         unhealable.push({ noteId: warning.noteId, attachmentIds: missingHere });
       }
     }
@@ -754,10 +772,18 @@ class SyncService {
 
   /** Process a single remote note during pull (handles conflicts) */
   private async processRemoteNote(
-    remoteNote: SyncNote,
+    candidate: SyncNote,
     masterKey: CryptoKey,
     syncedAt: string
   ): Promise<boolean> {
+    const validated = validateRemoteNote(candidate);
+    if (!validated.ok) {
+      recordRejectedRemoteRecord('note', candidate?.id, validated.reason);
+      return false;
+    }
+
+    const remoteNote = validated.value;
+    const localNote = await noteRepository.getById(remoteNote.id);
     const tagsForStorage = await syncToStorage(remoteNote.tags, masterKey);
     const noteForStorage: Note = {
       id: remoteNote.id,
@@ -776,7 +802,10 @@ class SyncService {
       version: remoteNote.version,
       wordWrap: remoteNote.wordWrap,
       syntaxLanguage: remoteNote.syntaxLanguage,
-      showPreview: remoteNote.showPreview,
+      // Whether a note opens in preview stays with this device. The field is
+      // plaintext, so taking it from the server would let the server choose to
+      // render a note the moment it is selected.
+      showPreview: localNote?.showPreview ?? false,
       color: remoteNote.color,
       syncedAt,
       needsSync: false,
@@ -785,8 +814,6 @@ class SyncService {
       parentHash: remoteNote.parentHash,
       hashChain: remoteNote.hashChain,
     };
-
-    const localNote = await noteRepository.getById(remoteNote.id);
 
     if (!localNote) {
       // New note from server
@@ -886,6 +913,11 @@ class SyncService {
   /** Download attachments from server */
   private async downloadAttachments(attachments: Array<{ id: string; data: string }>): Promise<void> {
     for (const attachment of attachments) {
+      if (!isUuid(attachment?.id) || typeof attachment.data !== 'string') {
+        recordRejectedRemoteRecord('attachment', attachment?.id, 'invalid attachment');
+        continue;
+      }
+
       try {
         const blob = base64ToArrayBuffer(attachment.data);
         await attachmentRepository.storeBlob(attachment.id, blob);
@@ -897,7 +929,14 @@ class SyncService {
 
   /** Merge note versions from server */
   private async mergeVersionsFromServer(versions: SyncNoteVersion[]): Promise<void> {
-    for (const serverVersion of versions) {
+    for (const candidate of versions) {
+      const validated = validateRemoteVersion(candidate);
+      if (!validated.ok) {
+        recordRejectedRemoteRecord('version', candidate?.noteId, validated.reason);
+        continue;
+      }
+
+      const serverVersion = validated.value;
       const existingVersion = await versionRepository.getVersion(
         serverVersion.noteId,
         serverVersion.version
@@ -913,7 +952,6 @@ class SyncService {
             version: serverVersion.version,
             syntaxLanguage: serverVersion.syntaxLanguage,
             wordWrap: serverVersion.wordWrap,
-            showPreview: serverVersion.showPreview,
             createdAt: serverVersion.createdAt,
             modifiedAt: serverVersion.createdAt,
             pinned: false,
@@ -939,7 +977,14 @@ class SyncService {
     const { getDB, STORES } = await import('./db');
     const db = getDB();
 
-    for (const remoteSearch of savedSearches) {
+    for (const candidate of savedSearches) {
+      const validated = validateSavedSearch(candidate);
+      if (!validated.ok) {
+        recordRejectedRemoteRecord('savedSearch', candidate?.id, validated.reason);
+        continue;
+      }
+
+      const remoteSearch = validated.value;
       const localSearch = await savedSearchRepository.getById(remoteSearch.id);
 
       if (!localSearch || remoteSearch.modifiedAt > localSearch.modifiedAt) {
@@ -961,9 +1006,28 @@ class SyncService {
     console.log(`[SyncService] Processed ${savedSearches.length} saved searches from server`);
   }
 
+  /** Inbox items that are safe to show, reporting any that are not */
+  private validInboxItems(items: InboxItem[]): InboxItem[] {
+    const valid: InboxItem[] = [];
+    for (const item of items) {
+      const checked = validateInboxItem(item);
+      if (checked) {
+        valid.push(checked);
+      } else {
+        recordRejectedRemoteRecord('inboxItem', item?.id, 'invalid inbox item');
+      }
+    }
+    return valid;
+  }
+
   /** Process hard deletions from server */
   private async processRemoteDeletions(deletions: Array<{ id: string }>): Promise<void> {
     for (const deletion of deletions) {
+      if (!isUuid(deletion?.id)) {
+        recordRejectedRemoteRecord('deletion', deletion?.id, 'invalid id');
+        continue;
+      }
+
       const wasDeleted = await noteRepository.applyRemoteDeletion(deletion.id);
       if (wasDeleted) {
         console.log(`[SyncService] Hard deleted note ${deletion.id} (from server)`);
@@ -1006,7 +1070,7 @@ class SyncService {
       };
 
       const result = await pullFromServer(endpoint, apiKey, pullRequest);
-      const syncedAt = result.syncedAt ?? new Date().toISOString();
+      const syncedAt = isTimestamp(result.syncedAt) ? result.syncedAt : new Date().toISOString();
 
       // Update pagination state
       hasMore = result.hasMore ?? false;
@@ -1057,7 +1121,7 @@ class SyncService {
 
       // Update inbox items from pull response
       if (result.inboxItems && result.inboxItems.length > 0) {
-        inboxItems.set(result.inboxItems);
+        inboxItems.set(this.validInboxItems(result.inboxItems));
       } else if (offset === 0) {
         // Only clear on first page (full sync) — subsequent pages don't repeat inbox
         inboxItems.set([]);

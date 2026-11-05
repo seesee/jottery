@@ -1406,6 +1406,17 @@
     "openNote": "Open this note",
     "repairNotOnServer": "Not on the server either — open the note and remove the attachment",
     "serverMissingTitle": "Missing on the server",
-    "serverMissingHint": "The sync server has no copy of these attachments and neither does this device. Open the note and remove the attachment, or sync from a device that still has the file."
+    "serverMissingHint": "The sync server has no copy of these attachments and neither does this device. Open the note and remove the attachment, or sync from a device that still has the file.",
+    "rejectedTitle": "Rejected from the sync server",
+    "rejectedHint": "The sync server sent these in a form that can't be trusted, so they weren't saved. Your existing notes are unaffected. If this keeps happening, check who controls the server.",
+    "rejectedKind": {
+      "note": "Note",
+      "version": "Note version",
+      "conflict": "Sync conflict",
+      "savedSearch": "Saved search",
+      "attachment": "Attachment",
+      "inboxItem": "Inbox item",
+      "deletion": "Deletion"
+    }
   }
 }

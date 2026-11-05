@@ -1420,6 +1420,17 @@
     "openNote": "Abrir esta nota",
     "repairNotOnServer": "Tampoco está en el servidor — abre la nota y elimina el adjunto",
     "serverMissingTitle": "Ausente en el servidor",
-    "serverMissingHint": "El servidor de sincronización no tiene copia de estos adjuntos y este dispositivo tampoco. Abre la nota y elimina el adjunto, o sincroniza desde un dispositivo que aún tenga el archivo."
+    "serverMissingHint": "El servidor de sincronización no tiene copia de estos adjuntos y este dispositivo tampoco. Abre la nota y elimina el adjunto, o sincroniza desde un dispositivo que aún tenga el archivo.",
+    "rejectedTitle": "Rechazado del servidor de sincronización",
+    "rejectedHint": "El servidor de sincronización los envió en un formato que no es de confianza, por lo que no se guardaron. Tus notas existentes no se han visto afectadas. Si esto sigue ocurriendo, comprueba quién controla el servidor.",
+    "rejectedKind": {
+      "note": "Nota",
+      "version": "Versión de nota",
+      "conflict": "Conflicto de sincronización",
+      "savedSearch": "Búsqueda guardada",
+      "attachment": "Adjunto",
+      "inboxItem": "Elemento de la bandeja de entrada",
+      "deletion": "Eliminación"
+    }
   }
 }

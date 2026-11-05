@@ -1420,6 +1420,17 @@
     "openNote": "이 노트 열기",
     "repairNotOnServer": "서버에도 없습니다 — 노트를 열어 첨부 파일을 제거하세요",
     "serverMissingTitle": "서버에 없음",
-    "serverMissingHint": "동기화 서버에도 이 기기에도 이 첨부 파일의 사본이 없습니다. 노트를 열어 첨부 파일을 제거하거나, 파일이 남아 있는 기기에서 동기화하세요."
+    "serverMissingHint": "동기화 서버에도 이 기기에도 이 첨부 파일의 사본이 없습니다. 노트를 열어 첨부 파일을 제거하거나, 파일이 남아 있는 기기에서 동기화하세요.",
+    "rejectedTitle": "동기화 서버에서 거부된 항목",
+    "rejectedHint": "동기화 서버가 신뢰할 수 없는 형식으로 보내서 저장하지 않았습니다. 기존 메모에는 영향이 없습니다. 계속 발생하면 서버를 누가 관리하는지 확인하세요.",
+    "rejectedKind": {
+      "note": "메모",
+      "version": "메모 버전",
+      "conflict": "동기화 충돌",
+      "savedSearch": "저장된 검색",
+      "attachment": "첨부 파일",
+      "inboxItem": "받은편지함 항목",
+      "deletion": "삭제"
+    }
   }
 }

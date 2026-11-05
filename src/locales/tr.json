@@ -1420,6 +1420,17 @@
     "openNote": "Bu notu aç",
     "repairNotOnServer": "Sunucuda da yok — notu açın ve eki kaldırın",
     "serverMissingTitle": "Sunucuda eksik",
-    "serverMissingHint": "Senkronizasyon sunucusunda bu eklerin kopyası yok, bu cihazda da yok. Notu açıp eki kaldırın veya dosyaya hâlâ sahip bir cihazdan senkronize edin."
+    "serverMissingHint": "Senkronizasyon sunucusunda bu eklerin kopyası yok, bu cihazda da yok. Notu açıp eki kaldırın veya dosyaya hâlâ sahip bir cihazdan senkronize edin.",
+    "rejectedTitle": "Eşitleme sunucusundan reddedilenler",
+    "rejectedHint": "Eşitleme sunucusu bunları güvenilemeyecek bir biçimde gönderdi, bu yüzden kaydedilmediler. Mevcut notlarınız etkilenmedi. Bu tekrarlanırsa sunucuyu kimin yönettiğini kontrol edin.",
+    "rejectedKind": {
+      "note": "Not",
+      "version": "Not sürümü",
+      "conflict": "Eşitleme çakışması",
+      "savedSearch": "Kayıtlı arama",
+      "attachment": "Ek",
+      "inboxItem": "Gelen kutusu öğesi",
+      "deletion": "Silme"
+    }
   }
 }

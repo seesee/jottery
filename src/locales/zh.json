@@ -1420,6 +1420,17 @@
     "openNote": "打开此笔记",
     "repairNotOnServer": "服务器上也不存在 — 请打开笔记并移除该附件",
     "serverMissingTitle": "服务器上缺失",
-    "serverMissingHint": "同步服务器和本设备都没有这些附件的副本。请打开笔记移除附件，或从仍保有该文件的设备进行同步。"
+    "serverMissingHint": "同步服务器和本设备都没有这些附件的副本。请打开笔记移除附件，或从仍保有该文件的设备进行同步。",
+    "rejectedTitle": "来自同步服务器的已拒绝数据",
+    "rejectedHint": "同步服务器发送的这些数据格式不可信，因此未保存。您现有的笔记不受影响。如果反复出现，请确认服务器由谁控制。",
+    "rejectedKind": {
+      "note": "笔记",
+      "version": "笔记版本",
+      "conflict": "同步冲突",
+      "savedSearch": "已保存的搜索",
+      "attachment": "附件",
+      "inboxItem": "收件箱项目",
+      "deletion": "删除"
+    }
   }
 }

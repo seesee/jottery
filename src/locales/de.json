@@ -1420,6 +1420,17 @@
     "openNote": "Diese Notiz öffnen",
     "repairNotOnServer": "Auch nicht auf dem Server — Notiz öffnen und den Anhang entfernen",
     "serverMissingTitle": "Auf dem Server fehlend",
-    "serverMissingHint": "Der Sync-Server hat keine Kopie dieser Anhänge und dieses Gerät auch nicht. Öffnen Sie die Notiz und entfernen Sie den Anhang, oder synchronisieren Sie von einem Gerät, das die Datei noch hat."
+    "serverMissingHint": "Der Sync-Server hat keine Kopie dieser Anhänge und dieses Gerät auch nicht. Öffnen Sie die Notiz und entfernen Sie den Anhang, oder synchronisieren Sie von einem Gerät, das die Datei noch hat.",
+    "rejectedTitle": "Vom Sync-Server abgelehnt",
+    "rejectedHint": "Der Sync-Server hat diese Daten in einer Form gesendet, der nicht vertraut werden kann, daher wurden sie nicht gespeichert. Ihre vorhandenen Notizen sind nicht betroffen. Falls das wiederholt auftritt, prüfen Sie, wer den Server kontrolliert.",
+    "rejectedKind": {
+      "note": "Notiz",
+      "version": "Notizversion",
+      "conflict": "Sync-Konflikt",
+      "savedSearch": "Gespeicherte Suche",
+      "attachment": "Anhang",
+      "inboxItem": "Posteingangselement",
+      "deletion": "Löschung"
+    }
   }
 }

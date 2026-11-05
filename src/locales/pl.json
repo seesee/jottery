@@ -1420,6 +1420,17 @@
     "openNote": "Otwórz tę notatkę",
     "repairNotOnServer": "Brak także na serwerze — otwórz notatkę i usuń załącznik",
     "serverMissingTitle": "Brak na serwerze",
-    "serverMissingHint": "Serwer synchronizacji nie ma kopii tych załączników, to urządzenie również nie. Otwórz notatkę i usuń załącznik lub zsynchronizuj z urządzenia, które nadal ma ten plik."
+    "serverMissingHint": "Serwer synchronizacji nie ma kopii tych załączników, to urządzenie również nie. Otwórz notatkę i usuń załącznik lub zsynchronizuj z urządzenia, które nadal ma ten plik.",
+    "rejectedTitle": "Odrzucone z serwera synchronizacji",
+    "rejectedHint": "Serwer synchronizacji przesłał te dane w formie, której nie można zaufać, więc nie zostały zapisane. Istniejące notatki nie zostały naruszone. Jeśli to się powtarza, sprawdź, kto kontroluje serwer.",
+    "rejectedKind": {
+      "note": "Notatka",
+      "version": "Wersja notatki",
+      "conflict": "Konflikt synchronizacji",
+      "savedSearch": "Zapisane wyszukiwanie",
+      "attachment": "Załącznik",
+      "inboxItem": "Element skrzynki odbiorczej",
+      "deletion": "Usunięcie"
+    }
   }
 }

@@ -1420,6 +1420,17 @@
     "openNote": "Apri questa nota",
     "repairNotOnServer": "Assente anche dal server — apri la nota e rimuovi l'allegato",
     "serverMissingTitle": "Assente sul server",
-    "serverMissingHint": "Il server di sincronizzazione non ha alcuna copia di questi allegati e nemmeno questo dispositivo. Apri la nota e rimuovi l'allegato, oppure sincronizza da un dispositivo che possiede ancora il file."
+    "serverMissingHint": "Il server di sincronizzazione non ha alcuna copia di questi allegati e nemmeno questo dispositivo. Apri la nota e rimuovi l'allegato, oppure sincronizza da un dispositivo che possiede ancora il file.",
+    "rejectedTitle": "Rifiutati dal server di sincronizzazione",
+    "rejectedHint": "Il server di sincronizzazione li ha inviati in una forma non attendibile, quindi non sono stati salvati. Le note esistenti non sono interessate. Se continua a succedere, verifica chi controlla il server.",
+    "rejectedKind": {
+      "note": "Nota",
+      "version": "Versione della nota",
+      "conflict": "Conflitto di sincronizzazione",
+      "savedSearch": "Ricerca salvata",
+      "attachment": "Allegato",
+      "inboxItem": "Elemento della posta in arrivo",
+      "deletion": "Eliminazione"
+    }
   }
 }
