@@ -620,7 +620,11 @@ pub async fn push(
 
         let change_seq = next_seq(&mut tx, &client_info.user_id).await?;
 
-        // Upsert version (insert or replace if exists)
+        // Insert the version, or re-announce it if it's the one we have. Two devices
+        // that diverge from one version produce the same key with different content.
+        // The first stays: updating only the hash would label one device's content
+        // with the other's, and a later 3-way merge would use it as a wrong base.
+        // The loser's version stays on that device.
         // Use match to handle potential FK errors gracefully
         let result = sqlx::query!(
             r#"
@@ -633,9 +637,8 @@ pub async fn push(
             ON CONFLICT(user_id, version_key) DO UPDATE SET
                 synced_at = excluded.synced_at,
                 server_synced_at = excluded.server_synced_at,
-                content_hash = excluded.content_hash,
-                parent_hash = excluded.parent_hash,
                 change_seq = excluded.change_seq
+            WHERE note_versions.content_hash IS excluded.content_hash
             "#,
             version.version_key,
             version.note_id,
