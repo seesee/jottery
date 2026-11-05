@@ -9,8 +9,6 @@
 use axum::{
     body::Body,
     http::{Request, StatusCode},
-    middleware,
-    routing::{delete, get, post},
     Router,
 };
 use http_body_util::BodyExt;
@@ -62,6 +60,7 @@ async fn create_test_app() -> (Router, SqlitePool) {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -71,25 +70,12 @@ async fn create_test_app() -> (Router, SqlitePool) {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
     // Build router with user routes (both public and protected)
-    let protected_user_routes = Router::new()
-        .route("/api/v1/user/account", get(jottery_server::api::user::get_account_info).delete(jottery_server::api::user::delete_account))
-        .route("/api/v1/user/change-password", post(jottery_server::api::user::change_password))
-        .route("/api/v1/user/logout", post(jottery_server::api::user::logout))
-        .route("/api/v1/user/notes", delete(jottery_server::api::user::delete_all_notes))
-        .layer(middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::user_auth_middleware,
-        ));
-
-    let app = Router::new()
-        .route("/api/v1/user/login", post(jottery_server::api::user::login))
-        .route("/api/v1/auth/register-user", post(jottery_server::api::auth::register_user))
-        .merge(protected_user_routes)
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     (app, pool)
 }

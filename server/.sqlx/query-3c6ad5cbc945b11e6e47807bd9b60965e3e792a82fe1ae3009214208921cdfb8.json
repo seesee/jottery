@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT max_upload_size_mb, storage_quota_mb, storage_used_bytes FROM users WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "max_upload_size_mb",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "storage_quota_mb",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "storage_used_bytes",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "3c6ad5cbc945b11e6e47807bd9b60965e3e792a82fe1ae3009214208921cdfb8"
+}
