@@ -465,6 +465,8 @@ help:
   click_tags_desc: Etiket düzenleme moduna gir
   scroll_key: Kaydırma tekerleği
   scroll_desc: Önizlemeyi yukarı/aşağı kaydır
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Jottery uygulamasını kilitle"
 cli:
   # Eski (bazı yerlerde kullanılıyor)
   list: Notları listele

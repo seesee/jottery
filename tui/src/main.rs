@@ -1188,6 +1188,7 @@ fn run() -> Result<()> {
         // Handle events
         match events.next()? {
             ui::Event::Key(key) => {
+                app.register_activity();
                 // A failed action is the user's to see, not a reason to quit
                 if let Err(e) = app.handle_key(key) {
                     app.error = Some(e.to_string());
@@ -1197,12 +1198,15 @@ fn run() -> Result<()> {
                 // Terminal resized, will redraw on next iteration
             }
             ui::Event::Tick => {
+                app.check_auto_lock();
                 // Check if auto-sync should run
                 app.check_auto_sync();
             }
             ui::Event::Mouse(mouse) => {
                 use crossterm::event::{MouseEventKind, MouseButton};
                 use ui::state::{AppState, ViewMode, InputMode, FocusedPanel};
+
+                app.register_activity();
 
                 match mouse.kind {
                     MouseEventKind::ScrollUp => {

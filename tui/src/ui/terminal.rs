@@ -68,6 +68,8 @@ impl Drop for SuspendedTerminal {
 pub fn with_terminal_suspended<T>(app: &mut App, task: impl FnOnce() -> Result<T>) -> Result<T> {
     let result = SuspendedTerminal::new().and_then(|_suspended| task());
     app.need_redraw = true;
+    // Time in another program counts as use, or finishing a long edit would lock
+    app.register_activity();
     result
 }
 

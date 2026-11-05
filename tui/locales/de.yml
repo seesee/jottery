@@ -465,6 +465,8 @@ help:
   click_tags_desc: Tag-Bearbeitungsmodus aktivieren
   scroll_key: Mausrad
   scroll_desc: Vorschau hoch/runter scrollen
+  ctrl_l_lock_key: "Strg+L"
+  ctrl_l_lock_desc: "Jottery sperren"
 cli:
   # Alt (an einigen Stellen verwendet)
   list: Notizen auflisten

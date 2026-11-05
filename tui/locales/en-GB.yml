@@ -512,6 +512,8 @@ help:
   click_tags_desc: "Enter tag editing mode"
   scroll_key: "Scroll wheel"
   scroll_desc: "Scroll preview up/down"
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Lock Jottery"
 
 # CLI commands and help text
 cli:

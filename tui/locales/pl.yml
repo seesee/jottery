@@ -465,6 +465,8 @@ help:
   click_tags_desc: Wejdź w tryb edycji tagów
   scroll_key: Kółko przewijania
   scroll_desc: Przewiń podgląd w górę/w dół
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Zablokuj Jottery"
 cli:
   # Alternatywne (używane w niektórych miejscach)
   list: Wyświetl notatki

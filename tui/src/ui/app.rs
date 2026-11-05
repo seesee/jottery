@@ -21,12 +21,10 @@
 //! All functionality has been preserved with no logic changes.
 
 use anyhow::{Context, Result};
-use crossterm::{
-    event::KeyEvent,
-};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use rust_i18n::t;
 use ratatui::Frame;
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 use std::{
     cell::RefCell,
     collections::HashSet,
@@ -184,7 +182,7 @@ pub struct App {
     /// Password confirmation buffer (for new databases)
     pub password_confirm: String,
     /// Saved unlock password (for envelope encryption when server password differs from notes password)
-    pub unlock_password: Option<String>,
+    pub unlock_password: Option<Zeroizing<String>>,
     /// Whether database is being created (vs unlocked)
     pub is_new_database: bool,
     /// Which password field is active (false = password, true = confirm)
@@ -491,8 +489,142 @@ impl App {
         self.sync_status_set_at = Some(Instant::now());
     }
 
+    /// Whether the vault is open
+    pub fn is_unlocked(&self) -> bool {
+        self.key.is_some()
+    }
+
+    /// Note that the user did something, which holds off the auto-lock
+    pub fn register_activity(&self) {
+        self.key_manager.register_activity();
+    }
+
+    /// Take the auto-lock timeout from the settings
+    pub(crate) fn apply_auto_lock_setting(&self) {
+        self.key_manager.set_auto_lock(self.settings.auto_lock_timeout.max(0) as u64);
+    }
+
+    /// Lock the vault if the user has been away for the auto-lock timeout
+    pub fn check_auto_lock(&mut self) {
+        if self.is_unlocked() && self.key_manager.should_lock() {
+            self.debug_log("Auto-lock: timed out");
+            self.lock();
+        }
+    }
+
+    /// Lock the vault, keeping nothing of it in memory.
+    ///
+    /// Text that hasn't been saved yet is saved first, or the lock would lose it.
+    /// Anything held as a plain String is wiped, since dropping it would leave the
+    /// bytes behind. Unlocking starts over from the database.
+    pub fn lock(&mut self) {
+        if matches!(self.state, AppState::NoteView) {
+            if let Err(e) = crate::ui::operations::notes::save_note(self) {
+                self.debug_log(&format!("Lock - Could not save the open note: {}", e));
+            }
+        }
+
+        self.stop_sse();
+        self.key_manager.clear_master_key();
+        if let Some(key) = self.key.as_mut() {
+            key.zeroize();
+        }
+        self.key = None;
+        self.unlock_password = None;
+        self.db = None;
+
+        for buffer in [
+            &mut self.password_input,
+            &mut self.password_confirm,
+            &mut self.credential_input,
+            &mut self.setting_input,
+            &mut self.note_input,
+            &mut self.tag_input,
+            &mut self.search_input,
+            &mut self.bulk_tags_input,
+            &mut self.bulk_export_path_input,
+            &mut self.attachment_path_input,
+            &mut self.conflict_local_content,
+            &mut self.conflict_server_content,
+        ] {
+            buffer.zeroize();
+        }
+        for note in &mut self.notes {
+            note.content.zeroize();
+            note.tags.zeroize();
+        }
+        for version in &mut self.loaded_versions {
+            version.content.zeroize();
+            version.tags.zeroize();
+        }
+        if let Some(content) = self.conflict_ancestor_content.as_mut() {
+            content.zeroize();
+        }
+        self.current_tags.zeroize();
+        self.conflict_local_tags.zeroize();
+        self.conflict_server_tags.zeroize();
+        self.conflict_ancestor_tags = None;
+        self.conflict_ancestor_content = None;
+        self.conflict_data = None;
+        self.conflict_note_id = None;
+
+        self.notes.clear();
+        self.loaded_versions.clear();
+        self.versions_note_id = None;
+        self.inbox_items.clear();
+        self.selected_note_ids.clear();
+        self.conflict_note_ids.clear();
+        self.all_tags_cache.clear();
+        self.tag_completions.clear();
+        self.search_tag_completions.clear();
+        self.path_completions.clear();
+        self.tag_positions.clear();
+        self.note_link_positions.clear();
+        self.syntax_highlighter.clear_cache();
+        self.invalidate_filter_cache();
+
+        // What's on screen should go too, except the theme the lock screen is drawn in
+        let theme = self.settings.theme.clone();
+        self.settings = UserSettings { theme, ..UserSettings::default() };
+        self.sync_status = None;
+        self.sync_status_set_at = None;
+        self.error = None;
+        self.editing_note_id = None;
+        self.selected_note = 0;
+        self.selected_note_id = None;
+        self.selected_attachment = 0;
+        self.preview_scroll_offset = 0;
+        self.search_active = false;
+        self.archive_mode = false;
+        self.is_multi_select_mode = false;
+        self.last_selected_index = None;
+        self.focused_panel = super::state::FocusedPanel::default();
+        self.view_mode = ViewMode::NoteList;
+        self.input_mode = InputMode::Normal;
+        self.show_force_sync_confirm = false;
+        self.show_empty_bin_confirm = false;
+        self.show_bulk_delete_confirm = false;
+        self.show_bulk_combine_confirm = false;
+        self.show_note_info = false;
+        self.show_inbox_delete_confirm = false;
+        self.show_inbox_delete_all_confirm = false;
+        self.last_auto_sync = None;
+
+        // Dropping the old state wipes any password held in it
+        self.state = AppState::Locked;
+        self.need_redraw = true;
+    }
+
     /// Handle key events
     pub fn handle_key(&mut self, key: KeyEvent) -> Result<()> {
+        if key.code == KeyCode::Char('l')
+            && key.modifiers.contains(KeyModifiers::CONTROL)
+            && self.is_unlocked()
+        {
+            self.lock();
+            return Ok(());
+        }
+
         // Handle help and settings screens separately to avoid borrow issues
         if let AppState::Help { .. } = &self.state {
             return input::help::handle_help_key(self, key);
@@ -1346,17 +1478,9 @@ impl App {
 
     /// Render the UI
     pub fn render(&mut self, frame: &mut Frame) {
-        self.debug_log(&format!("render() called, state={:?}", self.state));
         match &self.state {
-            AppState::Locked => {
-                self.debug_log("Rendering locked screen");
-                rendering::locked::render_locked(self, frame)
-            },
-            AppState::NoteList => {
-                self.debug_log("Rendering note list");
-                rendering::note_list::render_note_list(self, frame);
-                self.debug_log("Note list rendered successfully");
-            },
+            AppState::Locked => rendering::locked::render_locked(self, frame),
+            AppState::NoteList => rendering::note_list::render_note_list(self, frame),
             AppState::NoteView => rendering::note_view::render_note_view(self, frame),
             AppState::Settings { .. } => rendering::settings::render_settings(self, frame),
             AppState::Help { .. } => rendering::help::render_help(self, frame),
@@ -1396,6 +1520,141 @@ impl App {
     /// Check if app should quit
     pub fn should_quit(&self) -> bool {
         matches!(self.state, AppState::Quit)
+    }
+}
+
+#[cfg(test)]
+mod lock_tests {
+    use super::*;
+    use crate::ui::operations::auth;
+    use crossterm::event::KeyEvent;
+
+    /// An app unlocked with a vault on disk, holding one note.
+    fn unlocked_app() -> (App, String) {
+        let dir = tempfile::tempdir().unwrap();
+        let mut app = App::new(dir.path().join("test.db"), None).unwrap();
+        std::mem::forget(dir);
+
+        let password = uuid::Uuid::new_v4().to_string();
+        app.password_input = password.clone();
+        auth::unlock(&mut app).unwrap();
+
+        let note = Note::new("Private".to_string());
+        let repo = NoteRepository::new(app.db.as_ref().unwrap().connection());
+        repo.create(&note, app.key.as_ref().unwrap()).unwrap();
+        crate::ui::operations::notes::load_notes(&mut app).unwrap();
+        (app, password)
+    }
+
+    fn ctrl_l() -> KeyEvent {
+        KeyEvent::new(KeyCode::Char('l'), KeyModifiers::CONTROL)
+    }
+
+    #[test]
+    fn locking_leaves_nothing_of_the_vault_behind() {
+        let (mut app, _) = unlocked_app();
+        app.note_input = "A draft".to_string();
+        app.credential_input = "typed".to_string();
+        app.search_input = "private".to_string();
+
+        app.lock();
+
+        assert!(matches!(app.state, AppState::Locked));
+        assert!(app.key.is_none());
+        assert!(app.key_manager.is_locked());
+        assert!(app.unlock_password.is_none());
+        assert!(app.db.is_none());
+        assert!(app.notes.is_empty());
+        assert!(app.note_input.is_empty());
+        assert!(app.credential_input.is_empty());
+        assert!(app.search_input.is_empty());
+    }
+
+    #[test]
+    fn unlocking_again_brings_everything_back() {
+        let (mut app, password) = unlocked_app();
+        app.lock();
+
+        app.password_input = password;
+        auth::unlock(&mut app).unwrap();
+
+        assert!(matches!(app.state, AppState::NoteList));
+        assert_eq!(app.notes.len(), 1);
+        assert_eq!(app.notes[0].content, "Private");
+    }
+
+    #[test]
+    fn the_wrong_password_does_not_get_back_in() {
+        let (mut app, _) = unlocked_app();
+        app.lock();
+
+        app.password_input = uuid::Uuid::new_v4().to_string();
+
+        assert!(auth::unlock(&mut app).is_err());
+        assert!(app.key.is_none());
+    }
+
+    #[test]
+    fn ctrl_l_locks() {
+        let (mut app, _) = unlocked_app();
+
+        app.handle_key(ctrl_l()).unwrap();
+
+        assert!(matches!(app.state, AppState::Locked));
+    }
+
+    #[test]
+    fn ctrl_l_locks_from_any_screen() {
+        let (mut app, _) = unlocked_app();
+        app.state = AppState::ChangePasswordNew {
+            current_password: Zeroizing::new("in memory".to_string()),
+            previous: Box::new(AppState::NoteList),
+        };
+
+        app.handle_key(ctrl_l()).unwrap();
+
+        assert!(matches!(app.state, AppState::Locked));
+    }
+
+    #[test]
+    fn the_app_locks_itself_after_the_timeout() {
+        let (mut app, _) = unlocked_app();
+        app.settings.auto_lock_timeout = 5;
+        app.apply_auto_lock_setting();
+
+        app.check_auto_lock();
+        assert!(app.is_unlocked());
+
+        app.key_manager.pretend_idle_for(std::time::Duration::from_secs(6 * 60));
+        app.check_auto_lock();
+        assert!(!app.is_unlocked());
+    }
+
+    #[test]
+    fn activity_holds_off_the_auto_lock() {
+        let (mut app, _) = unlocked_app();
+        app.settings.auto_lock_timeout = 5;
+        app.apply_auto_lock_setting();
+
+        app.key_manager.pretend_idle_for(std::time::Duration::from_secs(6 * 60));
+        app.register_activity();
+        app.check_auto_lock();
+
+        assert!(app.is_unlocked());
+    }
+
+    #[test]
+    fn locking_saves_what_is_open_in_the_note_view() {
+        let (mut app, password) = unlocked_app();
+        app.editing_note_id = Some(app.notes[0].id.clone());
+        app.note_input = "Edited before the lock".to_string();
+        app.state = AppState::NoteView;
+
+        app.lock();
+
+        app.password_input = password;
+        auth::unlock(&mut app).unwrap();
+        assert_eq!(app.notes[0].content, "Edited before the lock");
     }
 }
 

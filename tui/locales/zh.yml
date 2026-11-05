@@ -465,6 +465,8 @@ help:
   click_tags_desc: 进入标签编辑模式
   scroll_key: 滚轮
   scroll_desc: 上下滚动预览
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "锁定 Jottery"
 cli:
   # 简短命令描述（用于旧版/备用）
   list: 列出笔记

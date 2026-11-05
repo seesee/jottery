@@ -465,6 +465,8 @@ help:
   click_tags_desc: Entrar no modo de edição de tags
   scroll_key: Roda do rato
   scroll_desc: Rolar visualização para cima/baixo
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Bloquear o Jottery"
 cli:
   # Alternativo (usado em alguns lugares)
   list: Listar notas

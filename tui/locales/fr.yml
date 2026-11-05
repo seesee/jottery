@@ -465,6 +465,8 @@ help:
   click_tags_desc: Entrer en mode édition d'étiquettes
   scroll_key: Molette de défilement
   scroll_desc: Faire défiler l'aperçu haut/bas
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Verrouiller Jottery"
 cli:
   # Alt (utilisé à certains endroits)
   list: Lister les notes

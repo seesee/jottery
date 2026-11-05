@@ -465,6 +465,8 @@ help:
   click_tags_desc: タグ編集モードに入る
   scroll_key: スクロールホイール
   scroll_desc: プレビューを上下にスクロール
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Jottery をロック"
 cli:
   # 代替 (一部で使用)
   list: ノートを一覧表示

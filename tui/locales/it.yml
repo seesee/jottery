@@ -465,6 +465,8 @@ help:
   click_tags_desc: Entra in modalità modifica tag
   scroll_key: Rotella del mouse
   scroll_desc: Scorri anteprima su/giù
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Blocca Jottery"
 cli:
   # Alt (usato in alcuni contesti)
   list: Elenca note

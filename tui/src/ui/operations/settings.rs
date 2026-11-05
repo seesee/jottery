@@ -145,6 +145,7 @@ pub fn save_setting_value(app: &mut App) -> Result<()> {
             if let Ok(timeout) = app.setting_input.parse::<i32>() {
                 if (1..=1440).contains(&timeout) {
                     app.settings.auto_lock_timeout = timeout;
+                    app.apply_auto_lock_setting();
                 } else {
                     anyhow::bail!("Auto-lock timeout must be between 1 and 1440 minutes");
                 }

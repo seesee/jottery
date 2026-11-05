@@ -465,6 +465,8 @@ help:
   click_tags_desc: Labelbewerkmodus activeren
   scroll_key: Scrollwiel
   scroll_desc: Voorbeeld omhoog/omlaag scrollen
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Jottery vergrendelen"
 cli:
   # Basis (op sommige plaatsen gebruikt)
   list: Notities weergeven

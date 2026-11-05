@@ -465,6 +465,8 @@ help:
   click_tags_desc: "태그 편집 모드 진입"
   scroll_key: "스크롤 휠"
   scroll_desc: "미리보기 위/아래 스크롤"
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Jottery 잠금"
 cli:
   # 기존 (일부 위치에서 사용됨)
   list: "노트 목록"

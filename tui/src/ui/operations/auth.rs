@@ -3,7 +3,7 @@
 use anyhow::{Context, Result};
 use rust_i18n::t;
 use std::time::Instant;
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 
 use crate::{
     db::Database,
@@ -196,6 +196,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
         app.color_scheme = crate::ui::ColorScheme::by_name(app.settings.theme.scheme_name());
         app.debug_log("Unlock - Color scheme updated");
     }
+    app.apply_auto_lock_setting();
 
     // Store password if remember checkbox was enabled
     if app.remember_password_checkbox {
@@ -216,7 +217,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
     }
 
     // Save unlock password for envelope encryption (server password may differ from notes password)
-    app.unlock_password = Some(app.password_input.clone());
+    app.unlock_password = Some(Zeroizing::new(app.password_input.clone()));
 
     // Clear password fields and reset flags
     app.password_input.zeroize();
