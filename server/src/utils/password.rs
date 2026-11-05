@@ -44,6 +44,7 @@ impl std::error::Error for PasswordError {}
 /// Character classes: uppercase, lowercase, digit, special
 pub fn validate_password_strength(password: &str, complexity: &str) -> Result<(), String> {
     const MIN_LENGTH: usize = 12;
+    const MAX_BYTES: usize = 1024;
 
     // Always check minimum length
     if password.len() < MIN_LENGTH {
@@ -51,6 +52,12 @@ pub fn validate_password_strength(password: &str, complexity: &str) -> Result<()
             "Password must be at least {} characters",
             MIN_LENGTH
         ));
+    }
+
+    // This is for new passwords only. Sign-in has to keep accepting a long one that
+    // was set before this rule existed.
+    if password.len() > MAX_BYTES {
+        return Err(format!("Password must be at most {} bytes", MAX_BYTES));
     }
 
     // If complexity is "none", only length matters

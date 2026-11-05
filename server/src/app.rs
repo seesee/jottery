@@ -16,11 +16,26 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 
-use crate::{api, config::Config, rate_limit, AppState};
+use crate::{
+    api,
+    config::Config,
+    rate_limit,
+    request_limits::{self, RequestLimits},
+    AppState,
+};
 
-/// Body limit for routes that take small JSON, including every route open to
-/// anonymous callers. Only `/sync/push` needs the large global limit.
+/// Body limit for every route that doesn't set its own, which includes all those
+/// open to anonymous callers. A JSON body is held in memory whole before it's read.
 const SMALL_BODY_LIMIT: usize = 64 * 1024;
+
+/// Body limit for a pull, which lists the attachments a client already holds.
+const PULL_BODY_LIMIT: usize = 16 * 1024 * 1024;
+
+/// What an inbox submission of `max_content` bytes can take as JSON, where escaping
+/// can double it.
+fn inbox_body_limit(max_content: usize) -> usize {
+    max_content * 2 + SMALL_BODY_LIMIT
+}
 
 /// Build CORS layer based on configuration
 ///
@@ -71,16 +86,20 @@ pub fn build_app(state: Arc<AppState>) -> Router {
     // Build protected sync routes with API key auth middleware
     let sync_routes = Router::new()
         .route("/api/v1/sync/status", get(api::sync::get_status))
-        .route("/api/v1/sync/push", post(api::sync::push))
-        .route("/api/v1/sync/pull", post(api::sync::pull))
+        .route(
+            "/api/v1/sync/push",
+            post(api::sync::push).layer(DefaultBodyLimit::max(config.max_payload_size)),
+        )
+        .route(
+            "/api/v1/sync/pull",
+            post(api::sync::pull).layer(DefaultBodyLimit::max(PULL_BODY_LIMIT)),
+        )
         .route("/api/v1/sync/attachments/:id", get(api::sync::get_attachment))
         .route("/api/v1/sync/notes/:id", delete(api::sync::delete_note))
         .route("/api/v1/sync/device", delete(api::sync::revoke_self))
         .route(
             "/api/v1/auth/wrapped-key",
-            get(api::auth::get_wrapped_key)
-                .put(api::auth::put_wrapped_key)
-                .layer(DefaultBodyLimit::max(SMALL_BODY_LIMIT)),
+            get(api::auth::get_wrapped_key).put(api::auth::put_wrapped_key),
         )
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
@@ -110,8 +129,7 @@ pub fn build_app(state: Arc<AppState>) -> Router {
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             api::middleware::user_auth_middleware,
-        ))
-        .layer(DefaultBodyLimit::max(SMALL_BODY_LIMIT));
+        ));
 
     // Build protected admin routes with session auth middleware
     let admin_routes = Router::new()
@@ -149,7 +167,11 @@ pub fn build_app(state: Arc<AppState>) -> Router {
 
     // Inbox submission routes (inbox token auth — limited scope)
     let inbox_submit_routes = Router::new()
-        .route("/api/v1/inbox", post(api::inbox::create_item))
+        .route(
+            "/api/v1/inbox",
+            post(api::inbox::create_item)
+                .layer(DefaultBodyLimit::max(inbox_body_limit(config.max_inbox_content_size))),
+        )
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             api::middleware::inbox_auth_middleware,
@@ -173,16 +195,13 @@ pub fn build_app(state: Arc<AppState>) -> Router {
             .route("/api/v1/user/login", post(api::user::login))
             .route("/api/v1/user/status", post(api::user::check_own_status))
             .route("/api/v1/auth/register-device", post(api::auth::register_device))
-            .route("/api/v1/auth/clone-device", post(api::auth::clone_device))
-            .layer(DefaultBodyLimit::max(SMALL_BODY_LIMIT)),
+            .route("/api/v1/auth/clone-device", post(api::auth::clone_device)),
         &config.rate_limit,
     );
 
     // Account creation, which lands in the admin's pending list
     let registration_routes = rate_limit::limit_registration(
-        Router::new()
-            .route("/api/v1/auth/register-user", post(api::auth::register_user))
-            .layer(DefaultBodyLimit::max(SMALL_BODY_LIMIT)),
+        Router::new().route("/api/v1/auth/register-user", post(api::auth::register_user)),
         &config.rate_limit,
     );
 
@@ -214,7 +233,11 @@ pub fn build_app(state: Arc<AppState>) -> Router {
         // Add state
         .with_state(state.clone())
         // Add middleware
-        .layer(DefaultBodyLimit::max(config.max_payload_size))
+        .layer(DefaultBodyLimit::max(SMALL_BODY_LIMIT))
+        .layer(axum::middleware::from_fn_with_state(
+            RequestLimits::default(),
+            request_limits::enforce,
+        ))
         .layer(CompressionLayer::new())
         .layer(build_cors_layer(config))
         // Security headers (OWASP recommended)

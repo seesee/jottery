@@ -9,6 +9,7 @@ pub mod error;
 pub mod maintenance;
 pub mod models;
 pub mod rate_limit;
+pub mod request_limits;
 pub mod services;
 pub mod shutdown;
 pub mod utils;
