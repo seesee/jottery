@@ -54,6 +54,17 @@ impl UserRepository {
         .await
     }
 
+    /// Find a user by email, if there is one
+    pub async fn find_by_email(pool: &SqlitePool, email: &str) -> Result<Option<User>, sqlx::Error> {
+        sqlx::query_as!(
+            User,
+            r#"SELECT * FROM users WHERE email = ?"#,
+            email
+        )
+        .fetch_optional(pool)
+        .await
+    }
+
     /// Check if email exists
     pub async fn email_exists(pool: &SqlitePool, email: &str) -> Result<bool, sqlx::Error> {
         let result = sqlx::query!(

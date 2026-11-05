@@ -18,7 +18,7 @@ use crate::{
     },
     utils::{
         crypto::hash_sha256,
-        password::{hash_password_with_params, validate_password_strength, verify_password},
+        password::{hash_for_storage, validate_password_strength, verify_sign_in},
         validation,
     },
     AppState,
@@ -55,16 +55,12 @@ pub async fn register_user(
     }
 
     // Hash password with configured Argon2 parameters
-    let password_hash = hash_password_with_params(
-        &req.password,
-        state.config.argon2_m_cost,
-        state.config.argon2_t_cost,
-        state.config.argon2_p_cost,
-    )
-    .map_err(|e| {
-        tracing::error!("Password hashing failed: {}", e);
-        crate::error::AppError::InternalServerError
-    })?;
+    let password_hash = hash_for_storage(&state.config, &req.password)
+        .await
+        .map_err(|e| {
+            tracing::error!("Password hashing failed: {}", e);
+            crate::error::AppError::InternalServerError
+        })?;
 
     // Create user (approved=false by default)
     let user = UserRepository::create(&state.pool, &req.email, &password_hash).await?;
@@ -103,25 +99,25 @@ pub async fn register_device(
     state.login_throttle.check(&req.email)?;
 
     // Get user by email
-    let user = UserRepository::get_by_email(&state.pool, &req.email)
-        .await
-        .map_err(|_| {
-            tracing::warn!("Device registration failed: user not found: {}", req.email);
-            state.login_throttle.record_failure(&req.email);
-            crate::error::AppError::Unauthorized
-        })?;
+    let user = UserRepository::find_by_email(&state.pool, &req.email).await?;
 
     // Verify password
-    let password_valid = verify_password(&req.password, &user.password_hash).map_err(|e| {
+    let password_valid = verify_sign_in(
+        &state.config,
+        &req.password,
+        user.as_ref().map(|user| user.password_hash.as_str()),
+    )
+    .await
+    .map_err(|e| {
         tracing::error!("Password verification failed: {}", e);
         crate::error::AppError::InternalServerError
     })?;
 
-    if !password_valid {
-        tracing::warn!("Device registration failed: invalid password for {}", req.email);
+    let Some(user) = user.filter(|_| password_valid) else {
+        tracing::warn!("Device registration failed: bad credentials for {}", req.email);
         state.login_throttle.record_failure(&req.email);
         return Err(crate::error::AppError::Unauthorized);
-    }
+    };
     state.login_throttle.record_success(&req.email);
 
     // Check if user is approved
@@ -340,25 +336,25 @@ pub async fn login(
     state.login_throttle.check(&req.email)?;
 
     // Get user by email
-    let user = UserRepository::get_by_email(&state.pool, &req.email)
-        .await
-        .map_err(|_| {
-            tracing::warn!("Login failed: user not found: {}", req.email);
-            state.login_throttle.record_failure(&req.email);
-            crate::error::AppError::Unauthorized
-        })?;
+    let user = UserRepository::find_by_email(&state.pool, &req.email).await?;
 
     // Verify password
-    let password_valid = verify_password(&req.password, &user.password_hash).map_err(|e| {
+    let password_valid = verify_sign_in(
+        &state.config,
+        &req.password,
+        user.as_ref().map(|user| user.password_hash.as_str()),
+    )
+    .await
+    .map_err(|e| {
         tracing::error!("Password verification failed: {}", e);
         crate::error::AppError::InternalServerError
     })?;
 
-    if !password_valid {
-        tracing::warn!("Login failed: invalid password for {}", req.email);
+    let Some(user) = user.filter(|_| password_valid) else {
+        tracing::warn!("Login failed: bad credentials for {}", req.email);
         state.login_throttle.record_failure(&req.email);
         return Err(crate::error::AppError::Unauthorized);
-    }
+    };
     state.login_throttle.record_success(&req.email);
 
     // Check if user is admin

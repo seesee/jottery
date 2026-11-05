@@ -14,7 +14,7 @@ use crate::{
     services::AdminService,
     utils::{
         crypto::hash_sha256,
-        password::{hash_password_with_params, validate_password_strength, verify_password},
+        password::{hash_for_storage, validate_password_strength, verify_sign_in, verify_stored},
     },
     AppState,
 };
@@ -85,34 +85,30 @@ pub async fn login(
     state.login_throttle.check(&req.email)?;
 
     // Get user by email
-    let user = sqlx::query!(
-        "SELECT id, email, password_hash, is_admin, approved, is_active, must_change_password FROM users WHERE email = ?",
-        req.email
-    )
-    .fetch_optional(&state.pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Database error: {}", e);
-        AppError::InternalServerError
-    })?
-    .ok_or_else(|| {
-        tracing::warn!("Login failed: user not found: {}", req.email);
-        state.login_throttle.record_failure(&req.email);
-        AppError::Unauthorized
-    })?;
-
-    // Verify password
-    let password_valid = crate::utils::password::verify_password(&req.password, &user.password_hash)
+    let user = UserRepository::find_by_email(&state.pool, &req.email)
+        .await
         .map_err(|e| {
-            tracing::error!("Password verification failed: {}", e);
+            tracing::error!("Database error: {}", e);
             AppError::InternalServerError
         })?;
 
-    if !password_valid {
-        tracing::warn!("Login failed: invalid password for {}", req.email);
+    // Verify password
+    let password_valid = verify_sign_in(
+        &state.config,
+        &req.password,
+        user.as_ref().map(|user| user.password_hash.as_str()),
+    )
+    .await
+    .map_err(|e| {
+        tracing::error!("Password verification failed: {}", e);
+        AppError::InternalServerError
+    })?;
+
+    let Some(user) = user.filter(|_| password_valid) else {
+        tracing::warn!("Login failed: bad credentials for {}", req.email);
         state.login_throttle.record_failure(&req.email);
         return Err(AppError::Unauthorized);
-    }
+    };
     state.login_throttle.record_success(&req.email);
 
     // Registration is open, so a session must wait for an admin's approval.
@@ -360,7 +356,8 @@ pub async fn change_password(
         })?;
 
     // Verify current password
-    let password_valid = verify_password(&req.current_password, &user.password_hash)
+    let password_valid = verify_stored(&req.current_password, &user.password_hash)
+        .await
         .map_err(|e| {
             tracing::error!("Password verification failed: {}", e);
             AppError::InternalServerError
@@ -384,23 +381,19 @@ pub async fn change_password(
     }
 
     // "Changing" to the same password would satisfy a forced change
-    if verify_password(&req.new_password, &user.password_hash).unwrap_or(false) {
+    if verify_stored(&req.new_password, &user.password_hash).await.unwrap_or(false) {
         return Err(AppError::BadRequest(
             "New password must be different from the current one".to_string(),
         ));
     }
 
     // Hash new password with configured Argon2 parameters
-    let new_password_hash = hash_password_with_params(
-        &req.new_password,
-        state.config.argon2_m_cost,
-        state.config.argon2_t_cost,
-        state.config.argon2_p_cost,
-    )
-    .map_err(|e| {
-        tracing::error!("Password hashing failed: {}", e);
-        AppError::InternalServerError
-    })?;
+    let new_password_hash = hash_for_storage(&state.config, &req.new_password)
+        .await
+        .map_err(|e| {
+            tracing::error!("Password hashing failed: {}", e);
+            AppError::InternalServerError
+        })?;
 
     // All or nothing: a new password with the old blob would strand other devices,
     // and sessions from before the change are what it's meant to end.
@@ -520,6 +513,50 @@ pub async fn check_status(
             is_active: false,
         })),
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct StatusCheckRequest {
+    pub email: String,
+    pub password: String,
+}
+
+/// Check where an account stands, for someone who holds its password
+/// POST /api/v1/user/status
+///
+/// The GET above answers for any address, which tells anyone who has an account.
+/// It stays for released clients. This one gives a stranger the same 401 whether
+/// the address has an account or not, and counts as a password guess.
+pub async fn check_own_status(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<StatusCheckRequest>,
+) -> AppResult<Json<UserStatusResponse>> {
+    state.login_throttle.check(&req.email)?;
+
+    let user = UserRepository::find_by_email(&state.pool, &req.email).await?;
+
+    let password_valid = verify_sign_in(
+        &state.config,
+        &req.password,
+        user.as_ref().map(|user| user.password_hash.as_str()),
+    )
+    .await
+    .map_err(|e| {
+        tracing::error!("Password verification failed: {}", e);
+        AppError::InternalServerError
+    })?;
+
+    let Some(user) = user.filter(|_| password_valid) else {
+        state.login_throttle.record_failure(&req.email);
+        return Err(AppError::Unauthorized);
+    };
+    state.login_throttle.record_success(&req.email);
+
+    Ok(Json(UserStatusResponse {
+        exists: true,
+        is_approved: user.approved != 0,
+        is_active: user.is_active != 0,
+    }))
 }
 
 /// Logout - invalidate current session

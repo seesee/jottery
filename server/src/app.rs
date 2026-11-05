@@ -171,6 +171,7 @@ pub fn build_app(state: Arc<AppState>) -> Router {
         Router::new()
             .route("/api/v1/auth/login", post(api::auth::login))
             .route("/api/v1/user/login", post(api::user::login))
+            .route("/api/v1/user/status", post(api::user::check_own_status))
             .route("/api/v1/auth/register-device", post(api::auth::register_device))
             .route("/api/v1/auth/clone-device", post(api::auth::clone_device))
             .layer(DefaultBodyLimit::max(SMALL_BODY_LIMIT)),

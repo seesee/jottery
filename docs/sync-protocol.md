@@ -327,9 +327,9 @@ A PUT with neither overwrites whatever is stored. That's only there because rele
 
 Device sync isn't rate limited. These apply to the anonymous routes that clients use to sign in and register:
 
-- Sign-in, device registration and device cloning are limited per client address.
+- Sign-in, `POST /user/status`, device registration and device cloning are limited per client address.
 - Account registration and `GET /api/v1/user/status` have their own per-address limits.
-- Wrong passwords are counted per email address across `POST /auth/login`, `POST /user/login` and `POST /auth/register-device`. After five, each attempt waits, doubling from one second up to 15 minutes. A correct password is refused during a wait.
+- Wrong passwords are counted per email address across `POST /auth/login`, `POST /user/login`, `POST /user/status` and `POST /auth/register-device`. After five, each attempt waits, doubling from one second up to 15 minutes. A correct password is refused during a wait.
 
 A refused request gets 429 with a `Retry-After` header in seconds, and the body:
 
@@ -344,6 +344,7 @@ Show the message and don't retry until the wait is over.
 These affect clients that sign in, not device sync.
 
 - `POST /user/login` and `POST /auth/login` return 403 for an account that isn't approved (`Account pending admin approval`) or is deactivated (`Account deactivated`), after checking the password. Show the `error` text. Poll `GET /user/status` for approval rather than retrying sign-in.
+- `POST /user/status` with `{ email, password }` returns the same `{ exists, isApproved, isActive }` as the GET, but only for the right password. Anything else gets the 401 that sign-in gives, and counts as a wrong password. Prefer it where the client has the password: the GET tells anyone whether an address has an account, and stays only for released clients. Fall back to the GET on 404 or 405, which mean an older server.
 - Both login responses include `mustChangePassword`. When it is true the account has to change its password first: every other account or admin route, and `POST /auth/register-device`, returns 403 with `code: "password_change_required"`. The routes that stay open are `POST /admin/change-password`, `POST /user/change-password`, `POST /user/logout` and `POST /admin/logout`. Existing device keys keep syncing.
 
 ## Dashboard sessions

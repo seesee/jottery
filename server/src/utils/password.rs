@@ -2,6 +2,18 @@ use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2, ParamsBuilder,
 };
+use tokio::sync::{OnceCell, Semaphore};
+
+use crate::config::Config;
+
+/// How many hashes run at once. Each holds a core and ARGON2_M_COST of memory for
+/// its whole run, so this bounds both, whatever a flood of sign-ins asks for.
+const MAX_CONCURRENT_HASHES: usize = 4;
+
+static HASHING: Semaphore = Semaphore::const_new(MAX_CONCURRENT_HASHES);
+
+/// A hash of nothing anyone knows, to verify against when there's no account.
+static DUMMY_HASH: OnceCell<String> = OnceCell::const_new();
 
 /// Password hashing error
 #[derive(Debug)]
@@ -154,6 +166,58 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, PasswordError
         Ok(()) => Ok(true),
         Err(argon2::password_hash::Error::Password) => Ok(false),
         Err(e) => Err(PasswordError::VerifyError(e.to_string())),
+    }
+}
+
+/// Run password work off the async runtime. Argon2 takes a core for tens of
+/// milliseconds at a time, and a handful of sign-ins on the runtime's own threads
+/// would stall sync, event streams and health checks until they finished.
+async fn off_the_runtime<T: Send + 'static>(
+    work: impl FnOnce() -> Result<T, PasswordError> + Send + 'static,
+) -> Result<T, PasswordError> {
+    let _permit = HASHING
+        .acquire()
+        .await
+        .map_err(|e| PasswordError::HashError(e.to_string()))?;
+
+    tokio::task::spawn_blocking(work)
+        .await
+        .map_err(|e| PasswordError::HashError(e.to_string()))?
+}
+
+/// Hash a password with the configured parameters, from async code.
+pub async fn hash_for_storage(config: &Config, password: &str) -> Result<String, PasswordError> {
+    let password = password.to_string();
+    let (m_cost, t_cost, p_cost) = (config.argon2_m_cost, config.argon2_t_cost, config.argon2_p_cost);
+
+    off_the_runtime(move || hash_password_with_params(&password, m_cost, t_cost, p_cost)).await
+}
+
+/// Verify a password against its hash, from async code.
+pub async fn verify_stored(password: &str, hash: &str) -> Result<bool, PasswordError> {
+    let (password, hash) = (password.to_string(), hash.to_string());
+
+    off_the_runtime(move || verify_password(&password, &hash)).await
+}
+
+/// Verify a sign-in, whether or not the account exists. An unknown address does
+/// the same work as a wrong password, so the time taken doesn't say which it was.
+pub async fn verify_sign_in(
+    config: &Config,
+    password: &str,
+    stored_hash: Option<&str>,
+) -> Result<bool, PasswordError> {
+    match stored_hash {
+        Some(hash) => verify_stored(password, hash).await,
+        None => {
+            let dummy = DUMMY_HASH
+                .get_or_try_init(|| async {
+                    hash_for_storage(config, &uuid::Uuid::new_v4().to_string()).await
+                })
+                .await?;
+            verify_stored(password, dummy).await?;
+            Ok(false)
+        }
     }
 }
 

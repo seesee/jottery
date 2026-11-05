@@ -15,7 +15,7 @@ use crate::{
     error::{AppError, AppResult},
     models::{Session, User, UserInfo},
     services::{AdminError, AdminService},
-    utils::password::validate_password_strength,
+    utils::password::{hash_for_storage, validate_password_strength, verify_stored},
     AppState,
 };
 
@@ -569,8 +569,6 @@ pub async fn change_password(
     axum::Extension(actor): axum::Extension<AuditActor>,
     Json(req): Json<ChangePasswordRequest>,
 ) -> AppResult<StatusCode> {
-    use crate::utils::password::{hash_password_with_params, verify_password};
-
     let user_id = &session.user_id;
 
     // Get current user
@@ -579,7 +577,8 @@ pub async fn change_password(
         .map_err(|_| crate::error::AppError::Unauthorized)?;
 
     // Verify current password
-    let password_valid = verify_password(&req.current_password, &user.password_hash)
+    let password_valid = verify_stored(&req.current_password, &user.password_hash)
+        .await
         .map_err(|e| {
             tracing::error!("Password verification failed: {}", e);
             crate::error::AppError::InternalServerError
@@ -595,23 +594,19 @@ pub async fn change_password(
         .map_err(crate::error::AppError::BadRequest)?;
 
     // "Changing" to the same password would satisfy a forced change
-    if verify_password(&req.new_password, &user.password_hash).unwrap_or(false) {
+    if verify_stored(&req.new_password, &user.password_hash).await.unwrap_or(false) {
         return Err(crate::error::AppError::BadRequest(
             "New password must be different from the current one".to_string(),
         ));
     }
 
     // Hash new password with configured Argon2 parameters
-    let new_password_hash = hash_password_with_params(
-        &req.new_password,
-        state.config.argon2_m_cost,
-        state.config.argon2_t_cost,
-        state.config.argon2_p_cost,
-    )
-    .map_err(|e| {
-        tracing::error!("Password hashing failed: {}", e);
-        crate::error::AppError::InternalServerError
-    })?;
+    let new_password_hash = hash_for_storage(&state.config, &req.new_password)
+        .await
+        .map_err(|e| {
+            tracing::error!("Password hashing failed: {}", e);
+            crate::error::AppError::InternalServerError
+        })?;
 
     let mut tx = state.pool.begin().await?;
     UserRepository::set_password(&mut tx, user_id, &new_password_hash).await?;
@@ -641,8 +636,6 @@ pub async fn reset_user_password(
     axum::Extension(actor): axum::Extension<AuditActor>,
     Json(req): Json<ResetPasswordRequest>,
 ) -> AppResult<StatusCode> {
-    use crate::utils::password::hash_password_with_params;
-
     // Check user exists
     let _user = sqlx::query!(
         "SELECT id FROM users WHERE id = ?",
@@ -657,16 +650,12 @@ pub async fn reset_user_password(
         .map_err(crate::error::AppError::BadRequest)?;
 
     // Hash new password with configured Argon2 parameters
-    let new_password_hash = hash_password_with_params(
-        &req.new_password,
-        state.config.argon2_m_cost,
-        state.config.argon2_t_cost,
-        state.config.argon2_p_cost,
-    )
-    .map_err(|e| {
-        tracing::error!("Password hashing failed: {}", e);
-        crate::error::AppError::InternalServerError
-    })?;
+    let new_password_hash = hash_for_storage(&state.config, &req.new_password)
+        .await
+        .map_err(|e| {
+            tracing::error!("Password hashing failed: {}", e);
+            crate::error::AppError::InternalServerError
+        })?;
 
     let mut tx = state.pool.begin().await?;
     UserRepository::set_password(&mut tx, &user_id, &new_password_hash).await?;
