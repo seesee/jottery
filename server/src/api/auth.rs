@@ -30,8 +30,11 @@ pub async fn register_user(
     State(state): State<Arc<AppState>>,
     Json(req): Json<RegisterUserRequest>,
 ) -> AppResult<(StatusCode, Json<RegisterUserResponse>)> {
+    // Tidied before anything else sees it, so that one mailbox is one account
+    let email = req.email.trim().to_ascii_lowercase();
+
     // Validate email format
-    if !is_valid_email(&req.email) {
+    if !is_valid_email(&email) {
         tracing::warn!("Registration refused: invalid email format");
         return Err(crate::error::AppError::BadRequest(
             "Invalid email format".to_string(),
@@ -45,11 +48,13 @@ pub async fn register_user(
     }
 
     // Check if email already exists
-    if UserRepository::email_exists(&state.pool, &req.email).await? {
-        tracing::warn!("Registration refused: address {} is taken", log_id(&req.email));
-        return Err(crate::error::AppError::Conflict(
-            "Email already registered".to_string(),
-        ));
+    let email_taken = || {
+        tracing::warn!("Registration refused: address {} is taken", log_id(&email));
+        crate::error::AppError::Conflict("Email already registered".to_string())
+    };
+
+    if UserRepository::email_exists(&state.pool, &email).await? {
+        return Err(email_taken());
     }
 
     // Hash password with configured Argon2 parameters
@@ -61,7 +66,9 @@ pub async fn register_user(
         })?;
 
     // Create user (approved=false by default)
-    let user = UserRepository::create(&state.pool, &req.email, &password_hash, &state.config).await?;
+    let user = UserRepository::create(&state.pool, &email, &password_hash, &state.config)
+        .await?
+        .ok_or_else(email_taken)?;
 
     tracing::info!("User registered: id={}, pending approval", user.id);
 

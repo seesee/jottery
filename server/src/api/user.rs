@@ -538,16 +538,12 @@ pub async fn check_status(
     Query(query): Query<StatusQuery>,
 ) -> AppResult<Json<UserStatusResponse>> {
     // Look up user by email
-    let user = sqlx::query!(
-        "SELECT approved, is_active FROM users WHERE email = ?",
-        query.email
-    )
-    .fetch_optional(&state.pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Database error: {}", e);
-        AppError::InternalServerError
-    })?;
+    let user = UserRepository::find_by_email(&state.pool, &query.email)
+        .await
+        .map_err(|e| {
+            tracing::error!("Database error: {}", e);
+            AppError::InternalServerError
+        })?;
 
     match user {
         Some(u) => Ok(Json(UserStatusResponse {
