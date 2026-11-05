@@ -413,8 +413,9 @@ mod tests {
     use super::*;
     use crate::models::{sync::SyncMetadata, Note};
     use crate::repository::{EncryptionRepository, NoteRepository};
+    use crate::test_support::read_request;
     use serde_json::{json, Value};
-    use std::io::{Read, Write};
+    use std::io::Write;
     use std::net::TcpListener;
     use std::path::PathBuf;
     use std::sync::{Arc, Mutex};
@@ -473,7 +474,11 @@ mod tests {
                 let mut revision = 0;
                 for stream in listener.incoming() {
                     let mut stream = stream.unwrap();
-                    let (method, if_match, body) = read_request(&mut stream);
+                    let Some(request) = read_request(&mut stream) else {
+                        continue;
+                    };
+                    let if_match = request.header("if-match").map(String::from);
+                    let (method, body) = (request.method, request.body);
                     let is_older = *server_older.lock().unwrap();
 
                     let (status, reply) = if method == "PUT" && *server_refusing.lock().unwrap() {
@@ -551,29 +556,6 @@ mod tests {
 
         fn put_count(&self) -> usize {
             *self.puts.lock().unwrap()
-        }
-    }
-
-    /// A request's method, its If-Match header, and its body.
-    fn read_request(stream: &mut std::net::TcpStream) -> (String, Option<String>, Vec<u8>) {
-        let mut received = Vec::new();
-        let mut buffer = [0u8; 8192];
-        loop {
-            let read = stream.read(&mut buffer).unwrap();
-            received.extend_from_slice(&buffer[..read]);
-            let Some(header_end) = received.windows(4).position(|w| w == b"\r\n\r\n") else {
-                continue;
-            };
-            let headers = String::from_utf8_lossy(&received[..header_end]).to_string();
-            let header = |name: &str| headers.lines().find_map(|line| {
-                let (key, value) = line.split_once(':')?;
-                key.eq_ignore_ascii_case(name).then(|| value.trim().to_string())
-            });
-            let length: usize = header("content-length").map(|value| value.parse().unwrap()).unwrap_or(0);
-            if received.len() >= header_end + 4 + length {
-                let method = headers.split_whitespace().next().unwrap_or("").to_uppercase();
-                return (method, header("if-match"), received[header_end + 4..header_end + 4 + length].to_vec());
-            }
         }
     }
 

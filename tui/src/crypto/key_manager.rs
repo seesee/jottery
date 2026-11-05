@@ -177,7 +177,6 @@ impl Default for KeyManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::thread;
 
     #[test]
     fn test_key_manager_lock_unlock() {
@@ -205,42 +204,32 @@ mod tests {
         assert!(!manager.is_locked());
 
         // With auto-lock disabled, should not lock
-        thread::sleep(Duration::from_millis(100));
+        manager.pretend_idle_for(Duration::from_secs(3600));
         assert!(!manager.is_locked());
 
-        // Enable auto-lock with very short timeout (for testing)
-        manager.set_auto_lock(0); // Reset
-        {
-            let mut inner = manager.inner.lock().unwrap();
-            inner.auto_lock_duration = Some(Duration::from_millis(100));
-        }
-
         // Should lock after timeout
-        thread::sleep(Duration::from_millis(150));
+        manager.set_auto_lock(1);
+        manager.pretend_idle_for(Duration::from_secs(61));
         assert!(manager.is_locked());
     }
 
     #[test]
     fn test_register_activity() {
         let manager = KeyManager::new();
-        {
-            let mut inner = manager.inner.lock().unwrap();
-            inner.auto_lock_duration = Some(Duration::from_millis(100));
-        }
+        manager.set_auto_lock(1);
 
         let key = [1u8; KEY_LENGTH];
         manager.set_master_key(key);
 
         // Register activity before timeout
-        thread::sleep(Duration::from_millis(50));
+        manager.pretend_idle_for(Duration::from_secs(59));
         manager.register_activity();
-        thread::sleep(Duration::from_millis(50));
 
         // Should not be locked (activity was registered)
         assert!(!manager.is_locked());
 
         // Wait for timeout without activity
-        thread::sleep(Duration::from_millis(150));
+        manager.pretend_idle_for(Duration::from_secs(61));
         assert!(manager.is_locked());
     }
 
@@ -260,17 +249,14 @@ mod tests {
     #[test]
     fn test_should_lock() {
         let manager = KeyManager::new();
-        {
-            let mut inner = manager.inner.lock().unwrap();
-            inner.auto_lock_duration = Some(Duration::from_millis(50));
-        }
+        manager.set_auto_lock(1);
 
         let key = [1u8; KEY_LENGTH];
         manager.set_master_key(key);
 
         assert!(!manager.should_lock());
 
-        thread::sleep(Duration::from_millis(100));
+        manager.pretend_idle_for(Duration::from_secs(61));
         assert!(manager.should_lock());
     }
 }

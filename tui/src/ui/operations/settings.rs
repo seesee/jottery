@@ -640,7 +640,7 @@ mod tests {
 
     /// The server's answer to a device being revoked, and how many times it was asked.
     fn revoke_server(status: &'static str) -> (String, std::sync::Arc<std::sync::atomic::AtomicUsize>) {
-        use std::io::{Read, Write};
+        use std::io::Write;
         use std::sync::atomic::{AtomicUsize, Ordering};
 
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
@@ -651,9 +651,10 @@ mod tests {
         std::thread::spawn(move || {
             for stream in listener.incoming() {
                 let mut stream = stream.unwrap();
-                let mut request = [0u8; 4096];
-                let read = stream.read(&mut request).unwrap();
-                if String::from_utf8_lossy(&request[..read]).starts_with("DELETE /api/v1/sync/device ") {
+                let Some(request) = crate::test_support::read_request(&mut stream) else {
+                    continue;
+                };
+                if request.method == "DELETE" && request.path == "/api/v1/sync/device" {
                     counted.fetch_add(1, Ordering::SeqCst);
                 }
                 let response = format!("HTTP/1.1 {status}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");

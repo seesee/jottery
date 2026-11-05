@@ -299,7 +299,8 @@ mod tests {
             stopped.send(()).unwrap();
         });
 
-        assert!(finished.recv_timeout(Duration::from_secs(10)).is_ok());
+        // Only a stop that waits for the thread runs into this, so it can be generous
+        assert!(finished.recv_timeout(Duration::from_secs(120)).is_ok());
         assert!(stop_flag.load(Ordering::SeqCst));
         release.send(()).unwrap();
     }

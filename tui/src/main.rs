@@ -10,6 +10,8 @@ mod search;
 mod secure_temp;
 mod sse;
 mod terminal_text;
+#[cfg(test)]
+mod test_support;
 mod ui;
 mod vault;
 

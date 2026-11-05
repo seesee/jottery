@@ -1646,8 +1646,9 @@ mod tests {
     use crate::db::Database;
     use crate::models::sync::SyncMetadata;
     use chrono::{DateTime, TimeZone, Utc};
+    use crate::test_support::{read_request, Request};
     use serde_json::{json, Value};
-    use std::io::{Read, Write};
+    use std::io::Write;
     use std::net::TcpListener;
     use std::sync::{Arc, Mutex, OnceLock};
 
@@ -1662,6 +1663,13 @@ mod tests {
         Utc.with_ymd_and_hms(2031, 1, 1, 12, 0, 0).unwrap() + chrono::Duration::minutes(page)
     }
 
+    /// What a scripted pull gets. A failure sits in the sequence with the pages, so it
+    /// lands on an exact request with nothing having to win a race to set it up.
+    enum Scripted {
+        Page(Value),
+        Failure(&'static str),
+    }
+
     /// Answers pull requests the way the sync server does, one page at a time,
     /// and records what it was asked for.
     struct StubServer {
@@ -1670,7 +1678,7 @@ mod tests {
         pushes: Arc<Mutex<Vec<Value>>>,
         refuse: Arc<Mutex<std::collections::HashSet<String>>>,
         /// Responses to give to the next pulls, in order, instead of the usual pages
-        script: Arc<Mutex<std::collections::VecDeque<Value>>>,
+        script: Arc<Mutex<std::collections::VecDeque<Scripted>>>,
         /// Merged into every push response
         push_reply: Arc<Mutex<Value>>,
         /// The next response's status line and extra headers, instead of 200
@@ -1713,7 +1721,7 @@ mod tests {
             let refuse = Arc::new(Mutex::new(std::collections::HashSet::new()));
             let rejecting = refuse.clone();
             let script = Arc::new(Mutex::new(std::collections::VecDeque::new()));
-            let scripted: Arc<Mutex<std::collections::VecDeque<Value>>> = script.clone();
+            let scripted: Arc<Mutex<std::collections::VecDeque<Scripted>>> = script.clone();
             let push_reply = Arc::new(Mutex::new(json!({})));
             let push_extras = push_reply.clone();
             let fail_next: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
@@ -1726,7 +1734,9 @@ mod tests {
             std::thread::spawn(move || {
                 for stream in listener.incoming() {
                     let mut stream = stream.unwrap();
-                    let (method, path, body) = read_request(&mut stream);
+                    let Some(Request { method, path, body, .. }) = read_request(&mut stream) else {
+                        continue;
+                    };
 
                     if let Some(status) = failing.lock().unwrap().take() {
                         reply_with(&mut stream, &status, r#"{"error":"refused"}"#);
@@ -1797,9 +1807,13 @@ mod tests {
                         continue;
                     }
 
-                    if let Some(page) = scripted.lock().unwrap().pop_front() {
+                    let next = scripted.lock().unwrap().pop_front();
+                    if let Some(next) = next {
                         recorded.lock().unwrap().push(request);
-                        reply(&mut stream, &page.to_string());
+                        match next {
+                            Scripted::Page(page) => reply(&mut stream, &page.to_string()),
+                            Scripted::Failure(status) => reply_with(&mut stream, status, r#"{"error":"refused"}"#),
+                        }
                         continue;
                     }
 
@@ -1829,7 +1843,12 @@ mod tests {
 
         /// Give these pull responses next, in order.
         fn script(&self, pages: Vec<Value>) {
-            self.script.lock().unwrap().extend(pages);
+            self.script.lock().unwrap().extend(pages.into_iter().map(Scripted::Page));
+        }
+
+        /// Fail the pull after those already scripted, with this status line.
+        fn script_failure(&self, status: &'static str) {
+            self.script.lock().unwrap().push_back(Scripted::Failure(status));
         }
 
         /// Add these fields to every push response from now on.
@@ -1865,31 +1884,6 @@ mod tests {
 
         fn last_sync_at_of_last_pull(&self) -> Value {
             self.pulls.lock().unwrap().last().unwrap()["lastSyncAt"].clone()
-        }
-    }
-
-    /// A request's method, path and body.
-    fn read_request(stream: &mut std::net::TcpStream) -> (String, String, Vec<u8>) {
-        let mut received = Vec::new();
-        let mut buffer = [0u8; 8192];
-        loop {
-            let read = stream.read(&mut buffer).unwrap();
-            received.extend_from_slice(&buffer[..read]);
-            let Some(header_end) = received.windows(4).position(|w| w == b"\r\n\r\n") else {
-                continue;
-            };
-            let headers = String::from_utf8_lossy(&received[..header_end]).to_string();
-            let length: usize = headers
-                .to_lowercase()
-                .lines()
-                .find_map(|line| line.strip_prefix("content-length:").map(|value| value.trim().parse().unwrap()))
-                .unwrap_or(0);
-            if received.len() >= header_end + 4 + length {
-                let mut request_line = headers.split_whitespace();
-                let method = request_line.next().unwrap_or("").to_string();
-                let path = request_line.next().unwrap_or("").to_string();
-                return (method, path, received[header_end + 4..header_end + 4 + length].to_vec());
-            }
         }
     }
 
@@ -2343,24 +2337,13 @@ mod tests {
     fn a_failed_page_leaves_the_cursor_on_the_last_page_applied() {
         let server = StubServer::start(vec![], vec![]);
         server.script(vec![cursor_page(remote_notes(1), "c1", true)]);
+        server.script_failure("500 Internal Server Error");
         let mut app = app_connected_to(&server.endpoint);
 
-        // The stub's next unscripted pull has no cursor, so make it fail instead
         let db = app.db.as_ref().unwrap();
         NoteRepository::new(db.connection()).create(&Note::new("Local".to_string()), key()).unwrap();
 
-        let outcome = {
-            let failing = server.fail_next.clone();
-            let observed = server.script.clone();
-            std::thread::spawn(move || {
-                // Once the first page has been taken, the next request fails
-                while !observed.lock().unwrap().is_empty() {
-                    std::thread::yield_now();
-                }
-                *failing.lock().unwrap() = Some("500 Internal Server Error".to_string());
-            });
-            perform_sync(&mut app, false)
-        };
+        let outcome = perform_sync(&mut app, false);
 
         assert!(outcome.is_err());
         assert_eq!(sync_metadata(&app).pull_cursor.as_deref(), Some("c1"));
@@ -2434,17 +2417,9 @@ mod tests {
 
         let server = StubServer::start(vec![], vec![]);
         server.script(vec![first]);
-        let mut app = app_connected_to(&server.endpoint);
-
         // The note's page never arrives
-        let failing = server.fail_next.clone();
-        let observed = server.script.clone();
-        std::thread::spawn(move || {
-            while !observed.lock().unwrap().is_empty() {
-                std::thread::yield_now();
-            }
-            *failing.lock().unwrap() = Some("500 Internal Server Error".to_string());
-        });
+        server.script_failure("500 Internal Server Error");
+        let mut app = app_connected_to(&server.endpoint);
 
         assert!(perform_sync(&mut app, false).is_err());
 

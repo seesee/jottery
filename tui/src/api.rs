@@ -619,7 +619,7 @@ mod tests {
 
     /// Answers one request, and hands back the path it was asked for.
     fn serve_once(body: &'static str) -> (String, std::sync::mpsc::Receiver<String>) {
-        use std::io::{Read, Write};
+        use std::io::Write;
 
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let endpoint = format!("http://{}", listener.local_addr().unwrap());
@@ -627,10 +627,7 @@ mod tests {
 
         std::thread::spawn(move || {
             let (mut stream, _) = listener.accept().unwrap();
-            let mut request = [0u8; 4096];
-            let read = stream.read(&mut request).unwrap();
-            let path = String::from_utf8_lossy(&request[..read])
-                .split_whitespace().nth(1).unwrap_or("").to_string();
+            let path = crate::test_support::read_request(&mut stream).map(|request| request.path).unwrap_or_default();
             let response = format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
                 body.len(),
@@ -720,7 +717,7 @@ mod tests {
 
     /// Answers one request per reply given, in order, and hands back each request line.
     fn serve(replies: Vec<(&'static str, &'static str)>) -> (String, std::sync::mpsc::Receiver<String>) {
-        use std::io::{Read, Write};
+        use std::io::Write;
 
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let endpoint = format!("http://{}", listener.local_addr().unwrap());
@@ -729,9 +726,7 @@ mod tests {
         std::thread::spawn(move || {
             for (status, body) in replies {
                 let (mut stream, _) = listener.accept().unwrap();
-                let mut request = [0u8; 4096];
-                let read = stream.read(&mut request).unwrap();
-                let line = String::from_utf8_lossy(&request[..read]).lines().next().unwrap_or("").to_string();
+                let line = crate::test_support::read_request(&mut stream).map(|request| request.line()).unwrap_or_default();
                 let response = format!(
                     "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
                     body.len(),
