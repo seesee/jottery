@@ -125,6 +125,22 @@ pub fn validate_note_content(content: &str, config: &Config) -> Result<(), AppEr
     Ok(())
 }
 
+/// Longest `source` label on an inbox item, in bytes.
+const MAX_INBOX_SOURCE_BYTES: usize = 255;
+
+/// Validate an inbox item's `source`. It's a short label such as an app's name, and
+/// a leaked inbox token must not be able to use it to store whatever it likes.
+pub fn validate_inbox_source(source: &str) -> Result<(), AppError> {
+    if source.len() > MAX_INBOX_SOURCE_BYTES {
+        return Err(AppError::BadRequest(format!(
+            "Source exceeds maximum length of {} bytes",
+            MAX_INBOX_SOURCE_BYTES
+        )));
+    }
+
+    Ok(())
+}
+
 /// Validate tags (individual length and count)
 pub fn validate_tags(tags: &[String], config: &Config) -> Result<(), AppError> {
     if tags.len() > config.max_tags_per_note {
