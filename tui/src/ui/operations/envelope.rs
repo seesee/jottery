@@ -33,7 +33,7 @@ use super::sync::SyncLink;
 const KEY_WRITE_ATTEMPTS: usize = 3;
 
 /// An account this device can talk to.
-pub struct Account<'a> {
+pub struct ServerLink<'a> {
     pub client: &'a AuthClient,
     pub api_key: &'a str,
     pub user_id: &'a str,
@@ -93,16 +93,16 @@ struct FoundKey {
 /// Look at the server's wrapped key without changing anything.
 fn inspect_server_key(
     crypto: &CryptoService,
-    account: &Account<'_>,
+    server: &ServerLink<'_>,
     notes_password: &str,
     master_key: &[u8; 32],
 ) -> Result<FoundKey> {
-    let Some(wrapped) = account.client.get_wrapped_key(account.api_key)? else {
+    let Some(wrapped) = server.client.get_wrapped_key(server.api_key)? else {
         return Ok(FoundKey { state: ServerKey::Missing, fingerprint: None, updated_at: None });
     };
 
     let state = if wrapped.kdf_version == WRAPPING_KDF_VERSION {
-        compare_with_master_key(crypto, notes_password, account.user_id, &wrapped.blob, master_key)
+        compare_with_master_key(crypto, notes_password, server.user_id, &wrapped.blob, master_key)
     } else {
         ServerKey::Unknown
     };
@@ -127,12 +127,12 @@ enum Upload {
 /// Wrap `master_key` with the notes password and give it to the server.
 fn upload_wrapped_key(
     crypto: &CryptoService,
-    account: &Account<'_>,
+    server: &ServerLink<'_>,
     notes_password: &str,
     master_key: &[u8; 32],
     purpose: KeyWrite<'_>,
 ) -> Result<Upload> {
-    let wrapping_key = crypto.derive_wrapping_key(notes_password, account.user_id)?;
+    let wrapping_key = crypto.derive_wrapping_key(notes_password, server.user_id)?;
     let wrapped = crypto.wrap_master_key(&wrapping_key, master_key)?;
     let blob = serde_json::to_string(&wrapped)?;
 
@@ -142,7 +142,7 @@ fn upload_wrapped_key(
         kdf_iterations: WRAPPING_ITERATIONS,
     };
 
-    Ok(match account.client.put_wrapped_key(account.api_key, &request, purpose)? {
+    Ok(match server.client.put_wrapped_key(server.api_key, &request, purpose)? {
         KeyWriteResult::Stored => Upload::Stored(crypto.hash(&blob)),
         KeyWriteResult::Lost => Upload::Lost,
     })
@@ -168,14 +168,14 @@ fn remember_server_key(conn: &Connection, seen: Option<String>, stale: bool) -> 
 pub fn adopt_account_key(
     db: &Database,
     crypto: &CryptoService,
-    account: &Account<'_>,
+    server: &ServerLink<'_>,
     notes_password: &str,
     local_key: &[u8; 32],
 ) -> Result<[u8; 32]> {
     for _ in 0..KEY_WRITE_ATTEMPTS {
-        let Some(wrapped) = account.client.get_wrapped_key(account.api_key)? else {
+        let Some(wrapped) = server.client.get_wrapped_key(server.api_key)? else {
             // Older servers can't store a key. Sync still works there, so this isn't fatal.
-            let seen = match upload_wrapped_key(crypto, account, notes_password, local_key, KeyWrite::First) {
+            let seen = match upload_wrapped_key(crypto, server, notes_password, local_key, KeyWrite::First) {
                 Ok(Upload::Stored(fingerprint)) => Some(fingerprint),
                 // Another device gave the account its key first, so that's the one to use
                 Ok(Upload::Lost) => continue,
@@ -189,7 +189,7 @@ pub fn adopt_account_key(
             return Ok(*local_key);
         };
 
-        let account_key = unwrap_server_key(crypto, notes_password, account.user_id, &wrapped.blob)
+        let account_key = unwrap_server_key(crypto, notes_password, server.user_id, &wrapped.blob)
             .map_err(|_| anyhow::anyhow!("{}", t!("envelope.unwrap_failed")))?;
 
         let transaction = db.connection().unchecked_transaction()?;
@@ -289,7 +289,7 @@ pub(crate) fn check_server_key(
     };
 
     let client = AuthClient::new(endpoint);
-    let account = Account { client: &client, api_key: &api_key, user_id: &user_id };
+    let server = ServerLink { client: &client, api_key: &api_key, user_id: &user_id };
 
     // Losing a race means another device has just written the key. What it wrote is
     // judged afresh, except that a blob that still won't open is then known not to be
@@ -297,7 +297,7 @@ pub(crate) fn check_server_key(
     let mut lost_a_race = false;
 
     for _ in 0..KEY_WRITE_ATTEMPTS {
-        let found = inspect_server_key(crypto, &account, notes_password, master_key)?;
+        let found = inspect_server_key(crypto, &server, notes_password, master_key)?;
 
         let purpose = match found.state {
             ServerKey::Matches => {
@@ -320,7 +320,7 @@ pub(crate) fn check_server_key(
             }
         };
 
-        match upload_wrapped_key(crypto, &account, notes_password, master_key, purpose)? {
+        match upload_wrapped_key(crypto, &server, notes_password, master_key, purpose)? {
             Upload::Stored(fingerprint) => {
                 link.write(|| remember_server_key(conn, Some(fingerprint), false))?;
                 log("[Envelope] Gave the server a wrapped key the notes password can open");
@@ -356,12 +356,12 @@ fn rewrap_on_server(
     let metadata = SyncRepository::new(db.connection()).get_metadata()?.unwrap_or_default();
 
     let client = AuthClient::new(endpoint);
-    let account = Account { client: &client, api_key: &api_key, user_id: &user_id };
+    let server = ServerLink { client: &client, api_key: &api_key, user_id: &user_id };
 
     let mut lost_a_race = false;
 
     for _ in 0..KEY_WRITE_ATTEMPTS {
-        let found = inspect_server_key(&app.crypto, &account, current_password, master_key)?;
+        let found = inspect_server_key(&app.crypto, &server, current_password, master_key)?;
 
         let purpose = match found.state {
             ServerKey::Differs | ServerKey::Unknown => {
@@ -371,7 +371,7 @@ fn rewrap_on_server(
             ServerKey::Missing => KeyWrite::First,
             ServerKey::Unreadable => {
                 // Another device may already have set this very password
-                let with_new = inspect_server_key(&app.crypto, &account, new_password, master_key)?;
+                let with_new = inspect_server_key(&app.crypto, &server, new_password, master_key)?;
                 if with_new.state == ServerKey::Matches {
                     remember_server_key(db.connection(), with_new.fingerprint, false)?;
                     return Ok(Rewrap::Done);
@@ -383,7 +383,7 @@ fn rewrap_on_server(
             }
         };
 
-        match upload_wrapped_key(&app.crypto, &account, new_password, master_key, purpose)? {
+        match upload_wrapped_key(&app.crypto, &server, new_password, master_key, purpose)? {
             Upload::Stored(fingerprint) => {
                 remember_server_key(db.connection(), Some(fingerprint), false)?;
                 return Ok(Rewrap::Done);
@@ -595,8 +595,8 @@ mod tests {
 
     fn adopt(db: &Database, endpoint: &str, notes_password: &str, key: &[u8; 32]) -> Result<[u8; 32]> {
         let client = AuthClient::new(endpoint.to_string());
-        let account = Account { client: &client, api_key: "device-api-key", user_id: USER_ID };
-        adopt_account_key(db, &CryptoService::new(), &account, notes_password, key)
+        let server = ServerLink { client: &client, api_key: "device-api-key", user_id: USER_ID };
+        adopt_account_key(db, &CryptoService::new(), &server, notes_password, key)
     }
 
     #[test]

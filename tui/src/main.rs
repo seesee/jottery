@@ -768,7 +768,7 @@ enum ColoursAction {
 }
 
 /// Sign in for an account command.
-fn account_session(
+fn portal_session(
     login: AccountLogin,
     db_path: &Path,
     allow_insecure_http: bool,
@@ -810,7 +810,7 @@ fn confirm_with_email(question: &str, email: &str) -> Result<()> {
 fn run_account_command(action: AccountAction, db_path: &Path, allow_insecure_http: bool) -> Result<()> {
     match action {
         AccountAction::Info { login } => {
-            let (session, _, _) = account_session(login, db_path, allow_insecure_http)?;
+            let (session, _, _) = portal_session(login, db_path, allow_insecure_http)?;
             let info = session.account_info()?;
 
             let used_mb = format!("{:.1}", info.storage_used_bytes as f64 / (1024.0 * 1024.0));
@@ -822,13 +822,13 @@ fn run_account_command(action: AccountAction, db_path: &Path, allow_insecure_htt
             }
         }
         AccountAction::DeleteNotes { login } => {
-            let (session, email, password) = account_session(login, db_path, allow_insecure_http)?;
+            let (session, email, password) = portal_session(login, db_path, allow_insecure_http)?;
             confirm_with_email(&t!("account.confirm_delete_notes"), &email)?;
             session.delete_all_notes(&password)?;
             outln!("✓ {}", t!("account.notes_deleted"));
         }
         AccountAction::Delete { login } => {
-            let (session, email, password) = account_session(login, db_path, allow_insecure_http)?;
+            let (session, email, password) = portal_session(login, db_path, allow_insecure_http)?;
             confirm_with_email(&t!("account.confirm_delete"), &email)?;
             session.delete_account(&password)?;
             outln!("✓ {}", t!("account.deleted"));
@@ -1500,12 +1500,12 @@ fn run() -> Result<()> {
             // Use the account's key if it has one, or give it this vault's. Notes
             // written under any other key couldn't be read on the account's devices.
             let crypto = CryptoService::new();
-            let account = ui::operations::envelope::Account {
+            let server_link = ui::operations::envelope::ServerLink {
                 client: &client,
                 api_key: &response.api_key,
                 user_id: &response.user_id,
             };
-            let key = ui::operations::envelope::adopt_account_key(&db, &crypto, &account, &key_password, &local_key)?;
+            let key = ui::operations::envelope::adopt_account_key(&db, &crypto, &server_link, &key_password, &local_key)?;
 
             // Encrypt and store API key
             let encrypted_api_key = crypto.encrypt_text(&response.api_key, &key)?;

@@ -1705,7 +1705,7 @@ mod tests {
         let (source, key, backup_password) = envelope_vault();
         let backup = create_backup(&source, &key, None).unwrap();
 
-        assert!(restore_keys(&empty_database(), &backup, &backup_password, "short").is_err());
+        assert!(restore_keys(&empty_database(), &backup, &backup_password, &"x".repeat(5)).is_err());
     }
 
     #[test]

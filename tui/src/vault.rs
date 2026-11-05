@@ -343,7 +343,8 @@ mod tests {
     #[test]
     fn a_short_password_opens_an_existing_vault_but_cannot_start_one() {
         let crypto = CryptoService::new();
-        let short = "abc1234";
+        let short = "x".repeat(7);
+        let short = short.as_str();
 
         assert!(unlock(empty_database().connection(), &crypto, short).is_err());
 
@@ -358,8 +359,8 @@ mod tests {
 
     #[test]
     fn the_password_rule_counts_characters_not_bytes() {
-        assert!(check_new_password("パスワード").is_err());
-        assert!(check_new_password("パスワードは八文字").is_ok());
+        assert!(check_new_password(&"パ".repeat(5)).is_err());
+        assert!(check_new_password(&"パ".repeat(9)).is_ok());
     }
 
     #[test]

@@ -330,7 +330,7 @@ pub async fn push(
 
     // Decoding happens outside the transaction so the write lock is held for
     // database work only.
-    let mut blobs = Vec::with_capacity(push_req.attachments.len());
+    let mut blobs = Vec::new();
     for attachment in push_req.attachments {
         match base64::engine::general_purpose::STANDARD.decode(&attachment.data) {
             Ok(data) => blobs.push((attachment.id, data)),

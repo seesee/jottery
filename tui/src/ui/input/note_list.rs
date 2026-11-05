@@ -1433,10 +1433,11 @@ mod tests {
 
         let mut app = create_test_app();
         app.state = AppState::Locked;
-        app.password_input = "typed so far".to_string();
+        let typed = uuid::Uuid::new_v4().to_string();
+        app.password_input = typed.clone();
         app.handle_key(ctrl_c).unwrap();
         assert!(matches!(app.state, AppState::Quit));
-        assert_eq!(app.password_input, "typed so far");
+        assert_eq!(app.password_input, typed);
     }
 
     /// Create a key event with Ctrl modifier

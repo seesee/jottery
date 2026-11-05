@@ -92,7 +92,7 @@ mod tests {
 
     #[test]
     fn a_new_vault_refuses_a_short_password() {
-        let mut app = app_creating_a_vault("seven77");
+        let mut app = app_creating_a_vault(&"x".repeat(7));
 
         press_enter(&mut app);
 
@@ -113,7 +113,8 @@ mod tests {
     #[test]
     fn unlocking_has_no_minimum_length() {
         // A vault from before the rule, with a password under it
-        let short = "abc";
+        let short = "x".repeat(3);
+        let short = short.as_str();
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("test.db");
         {

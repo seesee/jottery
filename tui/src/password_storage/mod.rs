@@ -115,8 +115,13 @@ mod tests {
     /// Get test password from environment variable or use default.
     /// Set JOTTERY_TEST_PASSWORD env var to override.
     fn test_password() -> String {
-        std::env::var("JOTTERY_TEST_PASSWORD")
-            .unwrap_or_else(|_| "test_password_placeholder".to_string())
+        static PASSWORD: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+        PASSWORD
+            .get_or_init(|| {
+                std::env::var("JOTTERY_TEST_PASSWORD")
+                    .unwrap_or_else(|_| uuid::Uuid::new_v4().to_string())
+            })
+            .clone()
     }
 
     #[test]

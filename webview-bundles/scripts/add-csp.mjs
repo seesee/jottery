@@ -7,7 +7,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 const file = process.argv[2] ?? 'dist/preview.html';
 const html = readFileSync(file, 'utf8');
 
-const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)];
+const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)];
 if (scripts.length !== 1) {
   throw new Error(`Expected one inline script in ${file}, found ${scripts.length}`);
 }

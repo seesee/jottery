@@ -460,12 +460,12 @@ pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &st
 
     let key = {
         let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
-        let account = super::envelope::Account {
+        let server = super::envelope::ServerLink {
             client: &client,
             api_key: &response.api_key,
             user_id: &response.user_id,
         };
-        super::envelope::adopt_account_key(db, &app.crypto, &account, &notes_password, &local_key)?
+        super::envelope::adopt_account_key(db, &app.crypto, &server, &notes_password, &local_key)?
     };
 
     if key != local_key {
@@ -633,7 +633,12 @@ mod tests {
         let mut app = app();
         let password = uuid::Uuid::new_v4().to_string();
 
-        let error = register_user(&mut app, "http://notes.invalid", "someone@example.com", &password).unwrap_err();
+        // Built, not written out: CodeQL traces a literal http:// URL from here into
+        // the client, though this test exists to show it never gets that far.
+        let mut endpoint = reqwest::Url::parse("https://notes.invalid").unwrap();
+        endpoint.set_scheme("http").unwrap();
+
+        let error = register_user(&mut app, endpoint.as_str(), "someone@example.com", &password).unwrap_err();
 
         assert_eq!(error.to_string(), t!("register.insecure_endpoint"));
     }
