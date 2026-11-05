@@ -1,5 +1,7 @@
 <script lang="ts">
   import { auth } from './lib/auth.svelte';
+  import { onMount } from 'svelte';
+  import ForcedPasswordChange from './components/ForcedPasswordChange.svelte';
   import Login from './pages/Login.svelte';
   import Dashboard from './pages/Dashboard.svelte';
   import Users from './pages/Users.svelte';
@@ -11,6 +13,11 @@
   type Page = 'dashboard' | 'users' | 'settings';
   let currentPage = $state<Page>('dashboard');
   let showLogoutConfirm = $state(false);
+
+  // Finds out whether a session from before a reload still works, and whose it is
+  onMount(() => {
+    auth.restore();
+  });
 
   function navigateTo(page: Page) {
     currentPage = page;
@@ -26,8 +33,14 @@
   }
 </script>
 
-{#if !auth.isAuthenticated}
+{#if auth.restoring}
+  <div class="min-h-screen flex items-center justify-center bg-gray-100" role="status">
+    <span class="text-gray-500">{$_('common.loading')}</span>
+  </div>
+{:else if !auth.isAuthenticated}
   <Login />
+{:else if auth.mustChangePassword}
+  <ForcedPasswordChange auth={auth} />
 {:else}
   <div class="min-h-screen flex">
     <!-- Sidebar -->

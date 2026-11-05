@@ -46,6 +46,23 @@
     "confirmTitle": "Çıkışı onayla",
     "confirmMessage": "Çıkış yapmak istediğinizden emin misiniz?"
   },
+  "errors": {
+    "unknown": "Bir sorun oluştu. Lütfen tekrar deneyin.",
+    "network": "Sunucuya ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.",
+    "forbidden": "Bunu yapma izniniz yok.",
+    "wrongPassword": "Mevcut parola yanlış",
+    "rateLimited": "Çok fazla deneme yapıldı. {seconds} saniye sonra tekrar deneyin.",
+    "tooManyAttempts": "Çok fazla deneme yapıldı. Lütfen bekleyip tekrar deneyin.",
+    "passwordTooShort": "Yeni parola en az 12 karakter uzunluğunda olmalıdır",
+    "passwordSameAsCurrent": "Yeni parola mevcut paroladan farklı olmalıdır"
+  },
+  "session": {
+    "expired": "Oturumunuzun süresi doldu. Lütfen tekrar oturum açın."
+  },
+  "forcedPasswordChange": {
+    "title": "Parolanızı değiştirin",
+    "description": "Devam etmeden önce yeni bir parola seçmelisiniz. Parola en az 12 karakter uzunluğunda olmalıdır."
+  },
   "dashboard": {
     "title": "Panel",
     "loadingStats": "İstatistikler yükleniyor...",
@@ -248,6 +265,7 @@
       "errors": {
         "invalidCredentials": "Geçersiz e-posta veya parola",
         "accountInactive": "Hesabınız etkin değil. Lütfen yönetici ile iletişime geçin.",
+        "accountPending": "Hesabınız bir yöneticinin onayını bekliyor.",
         "unexpected": "Beklenmeyen bir hata oluştu",
         "statusCheckFailed": "Failed to check status. Please try again."
       },

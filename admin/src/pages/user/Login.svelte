@@ -1,6 +1,7 @@
 <script lang="ts">
   import { userAuth } from '../../lib/userAuth.svelte';
   import { userApi, ApiError } from '../../lib/userApi';
+  import { describeError } from '../../lib/apiErrors';
   import { _ } from 'svelte-i18n';
 
   let email = $state('');
@@ -28,12 +29,14 @@
         if (err.status === 401) {
           error = $_('userPortal.login.errors.invalidCredentials');
         } else if (err.status === 403) {
-          error = $_('userPortal.login.errors.accountInactive');
+          error = err.message === 'Account pending admin approval'
+            ? $_('userPortal.login.errors.accountPending')
+            : $_('userPortal.login.errors.accountInactive');
         } else {
-          error = err.message;
+          error = describeError(err, $_, 'userPortal.login.errors.unexpected');
         }
       } else {
-        error = $_('userPortal.login.errors.unexpected');
+        error = describeError(err, $_, 'userPortal.login.errors.unexpected');
       }
     } finally {
       loading = false;
@@ -64,6 +67,12 @@
     </div>
 
     <form onsubmit={handleSubmit} class="space-y-6">
+      {#if userAuth.sessionExpired && !error}
+        <div role="status" class="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded">
+          {$_('session.expired')}
+        </div>
+      {/if}
+
       {#if error}
         <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}

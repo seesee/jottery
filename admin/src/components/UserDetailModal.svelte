@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api, ApiError } from '../lib/api';
+  import { describeError } from '../lib/apiErrors';
   import type { UserDetail, Device } from '../lib/api';
   import { toast } from '../lib/toast.svelte';
   import { _ } from 'svelte-i18n';
@@ -42,7 +43,7 @@
       error = null;
       user = await api.getUser(userId);
     } catch (err) {
-      error = err instanceof Error ? err.message : $_('users.failedToLoad');
+      error = describeError(err, $_, 'users.failedToLoad');
     } finally {
       loading = false;
     }
@@ -60,7 +61,7 @@
       await loadUser();
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error($_('devices.toast.revokeFailed', { values: { error: err.message } }));
+        toast.error($_('devices.toast.revokeFailed', { values: { error: describeError(err, $_) } }));
       } else {
         toast.error($_('devices.toast.revokeFailedGeneric'));
       }
@@ -79,7 +80,7 @@
       await loadUser();
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error($_('devices.toast.deleteFailed', { values: { error: err.message } }));
+        toast.error($_('devices.toast.deleteFailed', { values: { error: describeError(err, $_) } }));
       } else {
         toast.error($_('devices.toast.deleteFailedGeneric'));
       }
@@ -103,7 +104,7 @@
       await loadUser();
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error($_('devices.toast.renameFailed', { values: { error: err.message } }));
+        toast.error($_('devices.toast.renameFailed', { values: { error: describeError(err, $_) } }));
       } else {
         toast.error($_('devices.toast.renameFailedGeneric'));
       }
@@ -137,7 +138,7 @@
       await loadUser();
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error($_('users.detail.settingsSaveFailed', { values: { error: err.message } }));
+        toast.error($_('users.detail.settingsSaveFailed', { values: { error: describeError(err, $_) } }));
       } else {
         toast.error($_('users.detail.settingsSaveFailedGeneric'));
       }
@@ -169,7 +170,7 @@
       confirmPassword = '';
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error($_('users.detail.passwordResetFailed', { values: { error: err.message } }));
+        toast.error($_('users.detail.passwordResetFailed', { values: { error: describeError(err, $_) } }));
       } else {
         toast.error($_('users.detail.passwordResetFailedGeneric'));
       }

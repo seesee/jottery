@@ -1,6 +1,25 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ApiError, DashboardClient } from './dashboardClient';
 
+function memoryStorage() {
+  let items: Record<string, string> = {};
+  return {
+    getItem: (key: string) => items[key] ?? null,
+    setItem: (key: string, value: string) => {
+      items[key] = value;
+    },
+    removeItem: (key: string) => {
+      delete items[key];
+    },
+    clear: () => {
+      items = {};
+    },
+  };
+}
+
+vi.stubGlobal('sessionStorage', memoryStorage());
+vi.stubGlobal('localStorage', memoryStorage());
+
 const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 

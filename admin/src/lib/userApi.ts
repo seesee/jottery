@@ -1,6 +1,7 @@
 // API client for Jottery User Portal
 
-import { DashboardSession } from './session';
+import { ApiError, DashboardClient } from './dashboardClient';
+import type { RequestOptions } from './dashboardClient';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
@@ -19,6 +20,8 @@ interface LoginResponse {
     email: string;
     isAdmin: boolean;
   };
+  // Older servers don't send this
+  mustChangePassword?: boolean;
 }
 
 interface InboxAccountInfo {
@@ -59,48 +62,24 @@ interface UserStatusResponse {
   isActive: boolean;
 }
 
-class ApiError extends Error {
-  constructor(
-    public status: number,
-    public message: string,
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
-
 class UserApiClient {
   // Separate from the admin session
-  private session = new DashboardSession('user_session_token');
+  private client = new DashboardClient('user_session_token');
 
-  private async request<T>(
-    method: string,
-    path: string,
-    body?: unknown,
-  ): Promise<T> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...this.session.authHeaders(),
-    };
+  private get session() {
+    return this.client.session;
+  }
 
-    const response = await fetch(`${API_BASE}${path}`, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-      credentials: 'include', // Include cookies
-    });
+  private request<T>(method: string, path: string, body?: unknown, options?: RequestOptions): Promise<T> {
+    return this.client.request<T>(method, path, body, options);
+  }
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new ApiError(response.status, errorData.error || `HTTP ${response.status}`);
-    }
+  onSessionExpired(listener: () => void): void {
+    this.client.onSessionExpired(listener);
+  }
 
-    // Handle 204 No Content
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    return response.json();
+  onPasswordChangeRequired(listener: () => void): void {
+    this.client.onPasswordChangeRequired(listener);
   }
 
   // Authentication
@@ -110,7 +89,7 @@ class UserApiClient {
       password,
       // Servers without cookie sessions ignore this and return a token
       cookieSession: true,
-    });
+    }, { checksPassword: true });
 
     this.session.start(response);
 
@@ -136,12 +115,17 @@ class UserApiClient {
     return this.request('GET', '/api/v1/user/account');
   }
 
+  /** Who is signed in, which also shows whether the session still works. */
+  async currentUser(): Promise<{ email: string }> {
+    return this.getAccountInfo();
+  }
+
   // Change password
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     return this.request('POST', '/api/v1/user/change-password', {
       currentPassword,
       newPassword,
-    });
+    }, { checksPassword: true });
   }
 
   // Delete all notes (keep account)
@@ -195,8 +179,8 @@ class UserApiClient {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new ApiError(response.status, errorData.error || `HTTP ${response.status}`);
+      const errorData = await response.json().catch(() => null);
+      throw new ApiError(response.status, errorData?.error ?? '');
     }
 
     return response.json();
