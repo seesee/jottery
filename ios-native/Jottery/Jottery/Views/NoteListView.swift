@@ -3,8 +3,6 @@ import SwiftUI
 struct NoteListView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var colorScheme
-    @State private var showSettings = false
-    @State private var showRecycleBin = false
     @State private var isSelectMode = false
     @State private var selectedIds: Set<String> = []
     @State private var showBulkTagSheet = false
@@ -103,13 +101,13 @@ struct NoteListView: View {
                 }
 
                 Button {
-                    showRecycleBin = true
+                    appState.presentedSheet = .recycleBin
                 } label: {
                     Label(L.noteListRecycleBin, systemImage: "trash")
                 }
 
                 Button {
-                    showSettings = true
+                    appState.presentedSheet = .settings
                 } label: {
                     Label(L.noteListSettings, systemImage: "gear")
                 }
@@ -148,12 +146,6 @@ struct NoteListView: View {
         .sheet(isPresented: $showSavedSearches) {
             SavedSearchesView()
         }
-        .sheet(isPresented: $showSettings) {
-            SettingsView()
-        }
-        .sheet(isPresented: $showRecycleBin) {
-            RecycleBinView()
-        }
         .sheet(isPresented: $showBulkTagSheet) {
             BulkAddTagsSheet(noteIds: selectedIds) {
                 isSelectMode = false
@@ -178,6 +170,7 @@ struct NoteListView: View {
                 selectedIds.removeAll()
             }
         }
+        .background { findShortcut }
         .shareTemporaryFile($bulkExportFile)
         .shareTemporaryFile($noteShareFile)
         .onDisappear {
@@ -257,6 +250,24 @@ struct NoteListView: View {
                     description: Text(L.noteListNoNotesDescription)
                 )
             }
+        }
+    }
+
+    // MARK: - Find
+
+    /// ⌘F finds in the open note, and the editor owns that. With no note open
+    /// there's nothing to find in, so it goes to the search field. This is here and
+    /// not in the menus so that it can't exist at the same time as the editor's.
+    @ViewBuilder
+    private var findShortcut: some View {
+        if appState.selectedNoteId == nil {
+            Button(L.commandsSearch) {
+                searchIsActive = true
+            }
+            .keyboardShortcut("f", modifiers: .command)
+            .frame(width: 0, height: 0)
+            .opacity(0)
+            .accessibilityHidden(true)
         }
     }
 

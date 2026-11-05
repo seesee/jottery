@@ -369,6 +369,7 @@ struct NoteEditorView: View {
             }
         }
         .shareTemporaryFile($shareFile)
+        .focusedSceneValue(\.noteEditorCommands, editorCommands)
         .sheet(isPresented: $showVersionHistory) {
             VersionHistoryView(note: note)
         }
@@ -401,6 +402,23 @@ struct NoteEditorView: View {
                 Task { await appState.triggerSync() }
             }
         }
+    }
+
+    /// For the menus and their shortcuts, which do what this view's own menu does.
+    private var editorCommands: NoteEditorCommands? {
+        guard !isReadOnly else { return nil }
+        return NoteEditorCommands(
+            isPreviewing: showPreview,
+            wrapsWords: wordWrap,
+            togglePreview: {
+                showPreview.toggle()
+                scheduleSave()
+            },
+            toggleWordWrap: {
+                wordWrap.toggle()
+                scheduleSave()
+            }
+        )
     }
 
     // MARK: - Auto-Save

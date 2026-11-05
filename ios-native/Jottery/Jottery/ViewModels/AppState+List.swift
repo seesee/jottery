@@ -80,4 +80,25 @@ extension AppState {
         showArchive.toggle()
         selectedNoteId = nil
     }
+
+    // MARK: - Keyboard Commands
+
+    /// Whether there's a vault open to act on.
+    var acceptsCommands: Bool {
+        !isLocked && !isFirstLaunch
+    }
+
+    /// The note a keyboard command acts on: the open one.
+    var commandNote: DecryptedNote? {
+        guard acceptsCommands else { return nil }
+        return selectedNoteId.flatMap(displayedNote(id:))
+    }
+
+    /// Go to the search field, from wherever the user is. The list holds it, and
+    /// isn't on screen while a phone shows a note or an iPad hides the sidebar.
+    func focusSearch() {
+        guard acceptsCommands else { return }
+        listRevealRequests += 1
+        searchFocused = true
+    }
 }

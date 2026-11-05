@@ -91,6 +91,11 @@ final class AppState {
     /// How many notes match the search in the view that isn't showing, counted
     /// when the one that is showing has none.
     var matchesInOtherView = 0
+    /// Opened from the toolbar or a keyboard command, and presented by `MainView`.
+    var presentedSheet: AppSheet?
+    /// Goes up when something needs the list on screen, as it may not be: see
+    /// `focusSearch()`.
+    var listRevealRequests = 0
 
     // MARK: - Lifecycle
 
@@ -810,6 +815,7 @@ final class AppState {
         inboxItems = []
         selectedNoteId = nil
         recentSearches.clear()
+        presentedSheet = nil
     }
 
     /// Stop everything that talks to the server and let go of the sync objects,
@@ -1931,6 +1937,7 @@ final class AppState {
         selectedNoteId = nil
         searchQuery = ""
         recentSearches.clear()
+        presentedSheet = nil
         isSyncing = false
         lastSyncAt = nil
         syncError = nil

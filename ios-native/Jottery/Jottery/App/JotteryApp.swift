@@ -18,18 +18,7 @@ struct JotteryApp: App {
                 .environment(appState)
         }
         .commands {
-            CommandGroup(after: .newItem) {
-                Button(L.noteListNewNote) {
-                    guard !appState.isLocked else { return }
-                    let _ = try? appState.createNote()
-                }
-                .keyboardShortcut("n", modifiers: .command)
-
-                Button(L.noteListLock) {
-                    appState.lock()
-                }
-                .keyboardShortcut("l", modifiers: .command)
-            }
+            JotteryCommands(appState: appState)
         }
     }
 }
@@ -190,6 +179,7 @@ struct ContentView: View {
 
 struct MainView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var accountKeyPassword = ""
     @State private var accountKeyPasswordWasWrong = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
@@ -202,6 +192,8 @@ struct MainView: View {
     }
 
     var body: some View {
+        @Bindable var state = appState
+
         NavigationSplitView(columnVisibility: $columnVisibility) {
             NoteListView()
                 .modifier(FoldAlignedColumn(width: foldListWidth))
@@ -229,6 +221,14 @@ struct MainView: View {
         .onChange(of: appState.selectedNoteId) { _, _ in
             appState.keyManager.recordActivity()
         }
+        .onChange(of: appState.listRevealRequests) { _, _ in
+            if horizontalSizeClass == .compact {
+                appState.selectedNoteId = nil
+            } else {
+                columnVisibility = .all
+            }
+        }
+        .sheet(item: $state.presentedSheet) { AppSheetView(sheet: $0) }
         // iPhone Duo: with a fold running top to bottom, show the list and the
         // note side by side, one either side of the fold, like a book's pages.
         .onGeometryChange(for: FoldGeometry.self) { proxy in

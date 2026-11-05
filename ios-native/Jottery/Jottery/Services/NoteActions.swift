@@ -1,4 +1,4 @@
-import Foundation
+import UIKit
 
 /// What can be done to a note from outside its editor: a row's swipe actions and
 /// menu, and the keyboard commands. Failures go to the user as a toast, because
@@ -36,6 +36,12 @@ struct NoteActions {
         } catch {
             appState.reportError(L.errorCouldntSetColor(1))
         }
+    }
+
+    /// What's in the editor, which may be newer than what's in the list.
+    func copy(_ note: DecryptedNote, to pasteboard: UIPasteboard = .general) {
+        guard appState.saveEditorEdits(toNotes: [note.id]) else { return }
+        pasteboard.string = appState.displayedNote(id: note.id)?.content ?? note.content
     }
 
     func archive(_ note: DecryptedNote) {

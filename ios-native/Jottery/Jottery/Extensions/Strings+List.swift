@@ -50,4 +50,9 @@ extension L {
     static func searchMatchesInNotes(_ count: Int) -> String {
         String(localized: "search.matchesInNotes \(count)")
     }
+
+    // MARK: - Keyboard Commands
+
+    static var commandsNoteMenu: String { String(localized: "commands.noteMenu") }
+    static var commandsSearch: String { String(localized: "commands.search") }
 }
