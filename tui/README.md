@@ -496,7 +496,6 @@ Images, PDFs and plain text open in a viewer. Anything else could run code from 
 | `k`/`↑` | Move to previous setting |
 | `Enter`/`i`/`Space` | Edit setting (cycle for theme/sort order) |
 | `I`/`Shift+Enter` | Cycle backward (theme/sort order) |
-| `p` | Paste sync credentials from clipboard |
 | `Esc`/`q` | Close settings |
 
 ### Version History
