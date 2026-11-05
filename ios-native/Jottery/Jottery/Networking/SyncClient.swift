@@ -186,12 +186,16 @@ actor SyncClient {
 
     /// Delete or deactivate the account this device syncs with.
     ///
-    /// Uses a session token from `logIn`, not the device API key.
-    func deleteAccount(sessionId: String, mode: AccountDeletionMode) async throws {
+    /// Uses a session token from `logIn`, not the device API key. Sending the
+    /// password means this doesn't depend on having signed in a moment ago. An
+    /// older server ignores it.
+    func deleteAccount(sessionId: String, mode: AccountDeletionMode, currentPassword: String) async throws {
         let url = try apiURL("user/account?mode=\(mode.rawValue)")
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         request.setValue("Bearer \(sessionId)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(DeleteAccountRequest(currentPassword: currentPassword))
 
         let (data, response) = try await session.data(for: request)
         try validateResponse(response, data: data)

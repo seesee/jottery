@@ -9,6 +9,8 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
         var method: String
         var url: String
         var authorization: String?
+        var contentType: String?
+        var body: Data
     }
 
     nonisolated(unsafe) static var status: Int = 204
@@ -29,7 +31,9 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
             Recorded(
                 method: request.httpMethod ?? "?",
                 url: request.url?.absoluteString ?? "?",
-                authorization: request.value(forHTTPHeaderField: "Authorization")
+                authorization: request.value(forHTTPHeaderField: "Authorization"),
+                contentType: request.value(forHTTPHeaderField: "Content-Type"),
+                body: request.httpBody ?? Self.read(request.httpBodyStream)
             )
         )
 
@@ -45,6 +49,20 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
     }
 
     override func stopLoading() {}
+
+    private static func read(_ stream: InputStream?) -> Data {
+        guard let stream else { return Data() }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            if count <= 0 { break }
+            data.append(buffer, count: count)
+        }
+        return data
+    }
 }
 
 private func makeStubbedClient(status: Int, body: String = "", apiKey: String) -> SyncClient {
@@ -185,7 +203,7 @@ struct SyncClientTransportTests {
         @Test func deleteAccountUsesSessionTokenNotApiKey() async throws {
             let client = makeClient(status: 204)
 
-            try await client.deleteAccount(sessionId: "sess-123", mode: .delete)
+            try await client.deleteAccount(sessionId: "sess-123", mode: .delete, currentPassword: "the-password")
 
             let call = StubURLProtocol.recorded.first
             #expect(call?.method == "DELETE")
@@ -195,19 +213,31 @@ struct SyncClientTransportTests {
 
         @Test func deleteAccountSendsRequestedMode() async throws {
             let client = makeClient(status: 204)
-            try await client.deleteAccount(sessionId: "s", mode: .delete)
+            try await client.deleteAccount(sessionId: "s", mode: .delete, currentPassword: "the-password")
             #expect(StubURLProtocol.recorded.first?.url.hasSuffix("/api/v1/user/account?mode=delete") == true)
 
             let client2 = makeClient(status: 204)
-            try await client2.deleteAccount(sessionId: "s", mode: .deactivate)
+            try await client2.deleteAccount(sessionId: "s", mode: .deactivate, currentPassword: "the-password")
             #expect(StubURLProtocol.recorded.first?.url.hasSuffix("/api/v1/user/account?mode=deactivate") == true)
+        }
+
+        /// Without it, this only works within five minutes of signing in.
+        @Test func deleteAccountSendsThePassword() async throws {
+            let client = makeStubbedClient(status: 204, apiKey: "device-key")
+
+            try await client.deleteAccount(sessionId: "s", mode: .delete, currentPassword: "the-password")
+
+            let request = try #require(StubURLProtocol.recorded.first)
+            #expect(request.contentType == "application/json")
+            let sent = try JSONDecoder().decode(DeleteAccountRequest.self, from: request.body)
+            #expect(sent.currentPassword == "the-password")
         }
 
         @Test func deleteAccountPropagatesFailure() async throws {
             let client = makeClient(status: 500, body: "boom")
 
             do {
-                try await client.deleteAccount(sessionId: "s", mode: .delete)
+                try await client.deleteAccount(sessionId: "s", mode: .delete, currentPassword: "the-password")
                 Issue.record("expected deleteAccount to throw")
             } catch SyncClientError.httpError(let status, _) {
                 #expect(status == 500)
