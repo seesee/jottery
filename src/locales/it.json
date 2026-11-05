@@ -519,7 +519,8 @@
       "pressKey": "Premi un tasto...",
       "notSet": "Non impostato",
       "needsModifier": "Questa scorciatoia funziona mentre scrivi, quindi richiede Ctrl, Cmd o Alt. Premi un altro tasto, o Esc per annullare.",
-      "reserved": "Questo tasto è riservato. Premi un altro tasto, o Esc per annullare."
+      "reserved": "Questo tasto è riservato. Premi un altro tasto, o Esc per annullare.",
+      "toggleCollapse": "Comprimi o espandi"
     },
     "syncTab": {
       "enableSync": "Abilita sincronizzazione",

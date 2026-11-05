@@ -565,7 +565,8 @@
       "pressKey": "Press a key...",
       "notSet": "Not set",
       "needsModifier": "This shortcut works while you type, so it needs Ctrl, Cmd or Alt. Press another key, or Esc to cancel.",
-      "reserved": "That key is reserved. Press another key, or Esc to cancel."
+      "reserved": "That key is reserved. Press another key, or Esc to cancel.",
+      "toggleCollapse": "Collapse or expand"
     },
     "syncTab": {
       "enableSync": "Enable Sync",

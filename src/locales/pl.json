@@ -519,7 +519,8 @@
       "pressKey": "Naciśnij klawisz...",
       "notSet": "Nie ustawiono",
       "needsModifier": "Ten skrót działa podczas pisania, więc wymaga klawisza Ctrl, Cmd lub Alt. Naciśnij inny klawisz lub Esc, aby anulować.",
-      "reserved": "Ten klawisz jest zarezerwowany. Naciśnij inny klawisz lub Esc, aby anulować."
+      "reserved": "Ten klawisz jest zarezerwowany. Naciśnij inny klawisz lub Esc, aby anulować.",
+      "toggleCollapse": "Zwiń lub rozwiń"
     },
     "syncTab": {
       "enableSync": "Włącz synchronizację",

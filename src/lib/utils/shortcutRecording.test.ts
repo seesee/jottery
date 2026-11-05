@@ -22,6 +22,20 @@ describe('shortcutProblem', () => {
     expect(shortcutProblem('lockApp', { key: 'l', alt: true })).toBeNull();
   });
 
+  it('lets the outliner have Tab, as every outliner does, and needs no modifier for it', () => {
+    expect(shortcutProblem('outlinerIndent', { key: 'Tab' })).toBeNull();
+    expect(shortcutProblem('outlinerOutdent', { key: 'Tab', shift: true })).toBeNull();
+    expect(shortcutProblem('outlinerMoveUp', { key: 'Tab', ctrl: true })).toBeNull();
+  });
+
+  it('holds the outliner to the other rules, because it fires while typing', () => {
+    expect(shortcutProblem('outlinerIndent', { key: 'Escape' })).toBe('reserved');
+    expect(shortcutProblem('outlinerIndent', { key: 'i' })).toBe('needsModifier');
+    expect(shortcutProblem('outlinerMoveUp', { key: 'ArrowUp' })).toBe('needsModifier');
+    expect(shortcutProblem('outlinerToggleCollapse', { key: 'Enter' })).toBe('needsModifier');
+    expect(shortcutProblem('outlinerMoveUp', { key: 'ArrowUp', alt: true })).toBeNull();
+  });
+
   it('allows a bare key in the note list, which only fires outside text fields', () => {
     expect(shortcutProblem('pinNote', { key: 'p' })).toBeNull();
     expect(shortcutProblem('deleteNote', { key: 'Delete' })).toBeNull();

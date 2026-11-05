@@ -519,7 +519,8 @@
       "pressKey": "Presione una tecla...",
       "notSet": "No establecido",
       "needsModifier": "Este atajo funciona mientras escribes, así que necesita Ctrl, Cmd o Alt. Pulsa otra tecla, o Esc para cancelar.",
-      "reserved": "Esa tecla está reservada. Pulsa otra tecla, o Esc para cancelar."
+      "reserved": "Esa tecla está reservada. Pulsa otra tecla, o Esc para cancelar.",
+      "toggleCollapse": "Contraer o expandir"
     },
     "syncTab": {
       "enableSync": "Habilitar sincronización",

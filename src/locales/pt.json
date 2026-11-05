@@ -519,7 +519,8 @@
       "pressKey": "Pressione uma tecla...",
       "notSet": "Não definido",
       "needsModifier": "Este atalho funciona enquanto escreve, por isso precisa de Ctrl, Cmd ou Alt. Prima outra tecla, ou Esc para cancelar.",
-      "reserved": "Essa tecla está reservada. Prima outra tecla, ou Esc para cancelar."
+      "reserved": "Essa tecla está reservada. Prima outra tecla, ou Esc para cancelar.",
+      "toggleCollapse": "Recolher ou expandir"
     },
     "syncTab": {
       "enableSync": "Ativar sincronização",

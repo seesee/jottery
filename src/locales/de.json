@@ -519,7 +519,8 @@
       "pressKey": "Taste drücken...",
       "notSet": "Nicht festgelegt",
       "needsModifier": "Dieses Kürzel funktioniert auch beim Tippen und benötigt daher Strg, Cmd oder Alt. Drücken Sie eine andere Taste oder Esc zum Abbrechen.",
-      "reserved": "Diese Taste ist reserviert. Drücken Sie eine andere Taste oder Esc zum Abbrechen."
+      "reserved": "Diese Taste ist reserviert. Drücken Sie eine andere Taste oder Esc zum Abbrechen.",
+      "toggleCollapse": "Einklappen oder ausklappen"
     },
     "syncTab": {
       "enableSync": "Synchronisation aktivieren",

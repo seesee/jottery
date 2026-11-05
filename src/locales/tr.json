@@ -519,7 +519,8 @@
       "pressKey": "Bir tuşa basın...",
       "notSet": "Ayarlanmadı",
       "needsModifier": "Bu kısayol yazarken de çalışır, bu yüzden Ctrl, Cmd veya Alt gerekir. Başka bir tuşa basın ya da iptal etmek için Esc'ye basın.",
-      "reserved": "Bu tuş ayrılmıştır. Başka bir tuşa basın ya da iptal etmek için Esc'ye basın."
+      "reserved": "Bu tuş ayrılmıştır. Başka bir tuşa basın ya da iptal etmek için Esc'ye basın.",
+      "toggleCollapse": "Daralt veya genişlet"
     },
     "syncTab": {
       "enableSync": "Senkronizasyonu Etkinleştir",

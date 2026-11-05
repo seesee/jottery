@@ -519,7 +519,8 @@
       "pressKey": "按下按键...",
       "notSet": "未设置",
       "needsModifier": "此快捷键在输入时也会生效，因此需要 Ctrl、Cmd 或 Alt。请按其他键，或按 Esc 取消。",
-      "reserved": "该键已被保留。请按其他键，或按 Esc 取消。"
+      "reserved": "该键已被保留。请按其他键，或按 Esc 取消。",
+      "toggleCollapse": "折叠或展开"
     },
     "syncTab": {
       "enableSync": "启用同步",

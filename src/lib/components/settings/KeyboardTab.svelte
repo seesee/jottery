@@ -52,6 +52,14 @@
     { name: 'duplicateNote' as const, label: $_('settings.keyboardTab.duplicateNote') },
     { name: 'exportNote' as const, label: $_('settings.keyboardTab.exportNote') },
   ];
+
+  $: outlinerShortcuts = [
+    { name: 'outlinerIndent' as const, label: $_('outliner.indent') },
+    { name: 'outlinerOutdent' as const, label: $_('outliner.outdent') },
+    { name: 'outlinerMoveUp' as const, label: $_('outliner.moveUp') },
+    { name: 'outlinerMoveDown' as const, label: $_('outliner.moveDown') },
+    { name: 'outlinerToggleCollapse' as const, label: $_('settings.keyboardTab.toggleCollapse') },
+  ];
 </script>
 
 <div class="space-y-4">
@@ -103,6 +111,24 @@
     <h4 class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">{$_('settings.keyboardTab.editorShortcuts')}</h4>
     <div class="space-y-1">
       {#each editorShortcuts as { name, label }}
+        <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+          <span class="text-sm text-gray-700 dark:text-gray-300">{label}</span>
+          <button
+            on:click={() => onStartRecording(name)}
+            class="px-3 py-1 text-xs font-mono {recordingShortcut === name ? 'bg-blue-100 dark:bg-blue-900 border-blue-500' : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'} border border-gray-300 dark:border-gray-600 rounded transition-colors"
+          >
+            {recordingShortcut === name ? $_('settings.keyboardTab.pressKey') : formatShortcutDisplay(tempShortcuts[name])}
+          </button>
+        </div>
+      {/each}
+    </div>
+  </div>
+
+  <!-- Outliner Shortcuts -->
+  <div>
+    <h4 class="text-sm font-medium text-gray-800 dark:text-gray-200 mb-2">{$_('outliner.name')}</h4>
+    <div class="space-y-1">
+      {#each outlinerShortcuts as { name, label }}
         <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
           <span class="text-sm text-gray-700 dark:text-gray-300">{label}</span>
           <button
