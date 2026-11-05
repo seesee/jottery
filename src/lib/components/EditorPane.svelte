@@ -978,6 +978,31 @@
     return event.key.toLowerCase() === shortcut.key.toLowerCase();
   }
 
+  // Palette commands that act on the open note. The palette only offers them while a
+  // note is open.
+  const commandPaletteActions: Record<string, () => void> = {
+    togglePreview: handlePreviewToggle,
+    toggleWordWrap: handleWordWrapToggle,
+    copyContent: handleCopy,
+    copyLink: handleCopyLink,
+    duplicateNote: handleDuplicate,
+    exportNote: handleExport,
+    printNote: handlePrintPdf,
+    noteInfo: handleShowInfo,
+    versionHistory: handleShowVersionHistory,
+    deleteNote: requestDelete,
+    lockNote: handleLock,
+    setColor: handleSetColor,
+    archiveNote: handleArchive,
+  };
+
+  function handleCommandPaletteAction(event: Event) {
+    const action = commandPaletteActions[(event as CustomEvent<string>).detail];
+    if (action && $selectedNote) {
+      action();
+    }
+  }
+
   function handleEditorKeydown(event: KeyboardEvent) {
     // Only handle shortcuts when a note is selected
     if (!$selectedNote) return;
@@ -1048,6 +1073,7 @@
 
   onMount(() => {
     window.addEventListener('keydown', handleEditorKeydown);
+    window.addEventListener('command-palette-action', handleCommandPaletteAction);
 
     // Set up theme observer to watch for dark mode changes
     const updateTheme = () => {
@@ -1080,6 +1106,7 @@
     }
 
     window.removeEventListener('keydown', handleEditorKeydown);
+    window.removeEventListener('command-palette-action', handleCommandPaletteAction);
 
     // Disconnect theme observer
     if (themeObserver) {
