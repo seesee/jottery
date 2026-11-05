@@ -22,6 +22,7 @@ import com.jottery.android.ui.screen.SetupScreen
 import com.jottery.android.ui.screen.SyncAccountScreen
 import com.jottery.android.ui.screen.SyncSetupScreen
 import com.jottery.android.ui.screen.TagsScreen
+import com.jottery.android.ui.screen.VaultHealthScreen
 import com.jottery.android.ui.screen.UnlockScreen
 import com.jottery.android.viewmodel.AppState
 
@@ -39,6 +40,7 @@ object Routes {
     const val SAVED_SEARCHES = "saved_searches"
     const val TAGS = "tags"
     const val COLOURS = "colours"
+    const val VAULT_HEALTH = "vault_health"
     const val CONFLICT_RESOLUTION = "conflict_resolution"
     const val INBOX = "inbox"
 }
@@ -168,6 +170,18 @@ fun JotteryNavigation(
             BackupScreen(
                 appState = appState,
                 onBack = { navController.popBackStack() },
+                onOpenVaultHealth = { navController.navigate(Routes.VAULT_HEALTH) },
+            )
+        }
+
+        composable(Routes.VAULT_HEALTH) {
+            VaultHealthScreen(
+                appState = appState,
+                onBack = { navController.popBackStack() },
+                onOpenNote = { id ->
+                    appState.setSelectedNoteId(id)
+                    navController.popBackStack(Routes.MAIN, inclusive = false)
+                },
             )
         }
 

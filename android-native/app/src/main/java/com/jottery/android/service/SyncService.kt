@@ -29,6 +29,9 @@ enum class SyncPhase { PUSHING, PULLING }
 /**
  * Sync orchestrator — push local changes, pull remote changes, handle conflicts.
  */
+/** What came of asking the server for a blob. */
+enum class BlobRepair { REPAIRED, NOT_ON_SERVER, FAILED }
+
 class SyncService(
     private val syncClient: SyncClient,
     private val sseClient: SSEClient,
@@ -748,6 +751,30 @@ class SyncService(
                 Log.w(TAG, "Couldn't fetch a blob: ${e.javaClass.simpleName}")
                 return
             }
+        }
+    }
+
+    /** Fetch one blob on request. Never throws, because the result is shown to the user. */
+    suspend fun repairBlob(id: String): BlobRepair {
+        if (!SyncValidator.isUuid(id)) return BlobRepair.NOT_ON_SERVER
+        return try {
+            val attachment = syncClient.getAttachment(id)
+            val data = SyncValidator.decodeBlob(attachment)?.takeIf { attachment.id == id }
+                ?: return BlobRepair.NOT_ON_SERVER
+            attachmentRepo.insertOrReplace(
+                com.jottery.android.model.AttachmentRecord(
+                    id = id, filename = "", mimeType = "", size = data.size, data = data, uploaded = true,
+                )
+            )
+            unavailableBlobs -= id
+            BlobRepair.REPAIRED
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: SyncClientException) {
+            if (e.statusCode == HTTP_NOT_FOUND) BlobRepair.NOT_ON_SERVER else BlobRepair.FAILED
+        } catch (e: Exception) {
+            Log.w(TAG, "Couldn't fetch a blob: ${e.javaClass.simpleName}")
+            BlobRepair.FAILED
         }
     }
 

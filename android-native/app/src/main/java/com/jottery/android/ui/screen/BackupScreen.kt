@@ -1,7 +1,10 @@
 package com.jottery.android.ui.screen
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -18,7 +21,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.jottery.android.R
+import com.jottery.android.service.BackupReminder
 import com.jottery.android.service.backup.BackupException
 import com.jottery.android.service.backup.BackupSource
 import com.jottery.android.service.backup.RestorePlan
@@ -27,7 +32,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileNotFoundException
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 /** The message for a failed restore. */
 fun Context.backupErrorText(error: Throwable): String = when (error) {
@@ -48,9 +57,20 @@ private fun Context.sourceFor(uri: Uri) = BackupSource {
 fun BackupScreen(
     appState: AppState,
     onBack: () -> Unit,
+    onOpenVaultHealth: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    var lastBackup by remember { mutableStateOf(BackupReminder.lastBackupAt(context)) }
+    var remindersOn by remember { mutableStateOf(BackupReminder.isEnabled(context)) }
+    val deniedMessage = stringResource(R.string.backup_reminders_denied)
+    val notificationPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        remindersOn = granted
+        BackupReminder.setEnabled(context, granted)
+        if (!granted) appState.showMessage(deniedMessage)
+    }
     var isBusy by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -73,6 +93,7 @@ fun BackupScreen(
                     stream.use { appState.createBackup(it) }
                 }
                 statusMessage = context.getString(R.string.backup_created, summary.notes, summary.attachments)
+                lastBackup = BackupReminder.lastBackupAt(context)
             } catch (e: Exception) {
                 errorMessage = context.getString(R.string.backup_failed, e.message ?: e.javaClass.simpleName)
             } finally {
@@ -116,6 +137,15 @@ fun BackupScreen(
         ) {
             Text(stringResource(R.string.backup_intro), style = MaterialTheme.typography.bodyMedium)
 
+            Text(
+                stringResource(
+                    R.string.backup_last,
+                    lastBackup?.let(::backupDate) ?: stringResource(R.string.backup_never),
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
             Button(
                 onClick = { createLauncher.launch("jottery-backup-${LocalDate.now()}.jottery-backup") },
                 modifier = Modifier.fillMaxWidth(),
@@ -130,6 +160,31 @@ fun BackupScreen(
                 enabled = !isBusy,
             ) {
                 Text(stringResource(R.string.backup_restore))
+            }
+
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.backup_reminders)) },
+                supportingContent = { Text(stringResource(R.string.backup_reminders_detail)) },
+                trailingContent = {
+                    Switch(
+                        checked = remindersOn,
+                        onCheckedChange = { on ->
+                            val needsAsking = on && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                                PackageManager.PERMISSION_GRANTED
+                            if (needsAsking) {
+                                notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                remindersOn = on
+                                BackupReminder.setEnabled(context, on)
+                            }
+                        },
+                    )
+                },
+            )
+
+            OutlinedButton(onClick = onOpenVaultHealth, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.health_title))
             }
 
             if (isBusy) {
@@ -285,3 +340,6 @@ private fun RestoreConfirmDialog(
         },
     )
 }
+
+private fun backupDate(at: Instant): String =
+    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).format(at.atZone(ZoneId.systemDefault()))

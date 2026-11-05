@@ -53,7 +53,10 @@ import com.jottery.android.service.VaultReKeyService
 import com.jottery.android.service.ExportService
 import com.jottery.android.service.ImportService
 import com.jottery.android.service.ImportStrategy
+import com.jottery.android.service.BackupReminder
+import com.jottery.android.service.BlobRepair
 import com.jottery.android.service.NotePurger
+import com.jottery.android.service.VaultHealthService
 import com.jottery.android.service.SearchService
 import com.jottery.android.service.SyncPhase
 import com.jottery.android.service.SyncRetryPolicy
@@ -1435,6 +1438,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
      */
     fun wipeAllData() {
         val context = getApplication<Application>()
+        BackupReminder.forget(context)
 
         // Clear secure storage. Failing here can't be allowed to stop a wipe.
         try {
@@ -2651,8 +2655,22 @@ class AppState(application: Application) : AndroidViewModel(application) {
     /** Write an encrypted backup of the whole vault to [out]. */
     suspend fun createBackup(out: java.io.OutputStream): BackupService.Summary {
         val key = keyManager.masterKey ?: throw AppStateError.NotInitialised
-        return withContext(Dispatchers.IO) { backupService().write(out, key) }
+        val summary = withContext(Dispatchers.IO) { backupService().write(out, key) }
+        BackupReminder.recordBackup(getApplication())
+        return summary
     }
+
+    /** Look for what can't be read, or isn't here. */
+    suspend fun scanVaultHealth(): VaultHealthService.Report {
+        val notes = noteRepo ?: return VaultHealthService.Report()
+        val attachments = attachmentRepo ?: return VaultHealthService.Report()
+        val key = keyManager.masterKey ?: return VaultHealthService.Report()
+        return withContext(Dispatchers.Default) { VaultHealthService(notes, attachments).scan(key) }
+    }
+
+    /** Ask the server for a blob this device doesn't have. */
+    suspend fun repairAttachment(blobId: String): BlobRepair =
+        syncServiceInstance?.repairBlob(blobId) ?: BlobRepair.FAILED
 
     /**
      * Establish a backup's key from [password] and check the whole file, changing

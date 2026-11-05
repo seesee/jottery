@@ -113,6 +113,7 @@ dependencies {
     implementation(libs.webkit)
 
     // Room
+    implementation(libs.work.runtime)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
@@ -133,6 +134,7 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.runner)
     testImplementation(libs.room.testing)
+    testImplementation(libs.work.testing)
     testImplementation(libs.okhttp.mockwebserver)
     androidTestImplementation(libs.junit.ext)
     androidTestImplementation(libs.androidx.test.core)
