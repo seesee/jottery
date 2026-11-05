@@ -95,6 +95,7 @@ note:
   copy_too_large: "このノートは長すぎるため、端末で確実にコピーできません"
   word_wrap_on: "折り返しオン"
   word_wrap_off: "折り返しオフ"
+  no_links: "画面にリンクはありません"
 archive:
   view: "アーカイブを表示"
   title: "アーカイブ"
@@ -546,6 +547,10 @@ help:
   o_copy_desc: "ノートの本文をクリップボードにコピー"
   w_wrap_key: "w"
   w_wrap_desc: "折り返しのオン・オフ"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "前後の検索"
+  l_link_key: "l, Enter"
+  l_link_desc: "リンクを移動し、開く"
 cli:
   # 代替 (一部で使用)
   list: ノートを一覧表示

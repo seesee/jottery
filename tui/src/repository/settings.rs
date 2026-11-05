@@ -112,8 +112,6 @@ impl<'a> SettingsRepository<'a> {
     pub fn update_with_key(&self, settings: &UserSettings, key: Option<&[u8; 32]>) -> Result<()> {
         settings.validate().map_err(|e| anyhow::anyhow!("{}", e))?;
 
-        // Encode password if present
-
         // Encrypt and serialize color_palette to JSON if present
         let color_palette_json = if let Some(palette) = &settings.color_palette {
             // Encrypt displayNames if key is provided

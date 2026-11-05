@@ -116,27 +116,7 @@ pub fn handle_mouse(app: &mut App, mouse: MouseEvent) {
                 }
 
                 if let Some(target_note_id) = found_link {
-                    // Navigate to the linked note
-                    // Find the note in the full notes list and update selection
-                    let notes = app.filtered_notes();
-                    if let Some(idx) = notes.iter().position(|n| n.id == target_note_id) {
-                        app.selected_note = idx;
-                        app.selected_note_id = Some(target_note_id);
-                        app.preview_scroll_offset = 0;
-                        app.focused_panel = FocusedPanel::NoteContent;
-                    } else {
-                        // Note not in current filter, clear search and try again
-                        app.search_input.clear();
-                        app.invalidate_filter_cache();
-                        app.search_active = false;
-                        let all_notes = app.filtered_notes();
-                        if let Some(idx) = all_notes.iter().position(|n| n.id == target_note_id) {
-                            app.selected_note = idx;
-                            app.selected_note_id = Some(target_note_id);
-                            app.preview_scroll_offset = 0;
-                            app.focused_panel = FocusedPanel::NoteContent;
-                        }
-                    }
+                    crate::ui::operations::notes::follow_link(app, target_note_id);
                 }
             }
         }

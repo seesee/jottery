@@ -95,6 +95,7 @@ note:
   copy_too_large: "Esta nota es demasiado larga para que un terminal la copie de forma fiable"
   word_wrap_on: "Ajuste de línea activado"
   word_wrap_off: "Ajuste de línea desactivado"
+  no_links: "No hay enlaces en pantalla"
 archive:
   view: "Ver archivo"
   title: "Archivo"
@@ -546,6 +547,10 @@ help:
   o_copy_desc: "Copiar el texto de la nota al portapapeles"
   w_wrap_key: "w"
   w_wrap_desc: "Activar o desactivar el ajuste de línea"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "Búsquedas anteriores y posteriores"
+  l_link_key: "l, Intro"
+  l_link_desc: "Recorrer los enlaces y seguir uno"
 cli:
   # Alt (usado en algunos lugares)
   list: Listar notas

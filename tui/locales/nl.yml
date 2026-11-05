@@ -95,6 +95,7 @@ note:
   copy_too_large: "Deze notitie is te lang om betrouwbaar via een terminal te kopiëren"
   word_wrap_on: "Regelafbreking aan"
   word_wrap_off: "Regelafbreking uit"
+  no_links: "Geen koppelingen op het scherm"
 archive:
   view: "Archief bekijken"
   title: "Archief"
@@ -546,6 +547,10 @@ help:
   o_copy_desc: "Notitietekst naar het klembord kopiëren"
   w_wrap_key: "w"
   w_wrap_desc: "Regelafbreking aan- of uitzetten"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "Eerdere en latere zoekopdrachten"
+  l_link_key: "l, Enter"
+  l_link_desc: "Door koppelingen gaan en er een volgen"
 cli:
   # Basis (op sommige plaatsen gebruikt)
   list: Notities weergeven

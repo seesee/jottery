@@ -95,6 +95,7 @@ note:
   copy_too_large: "Questa nota è troppo lunga perché un terminale la copi in modo affidabile"
   word_wrap_on: "A capo automatico attivo"
   word_wrap_off: "A capo automatico disattivo"
+  no_links: "Nessun link sullo schermo"
 archive:
   view: "Visualizza archivio"
   title: "Archivio"
@@ -546,6 +547,10 @@ help:
   o_copy_desc: "Copia il testo della nota negli appunti"
   w_wrap_key: "w"
   w_wrap_desc: "Attiva o disattiva l'a capo automatico"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "Ricerche precedenti e successive"
+  l_link_key: "l, Invio"
+  l_link_desc: "Scorri i link e seguine uno"
 cli:
   # Alt (usato in alcuni contesti)
   list: Elenca note

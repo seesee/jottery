@@ -95,6 +95,7 @@ note:
   copy_too_large: "이 노트는 너무 길어 터미널에서 안정적으로 복사할 수 없습니다"
   word_wrap_on: "자동 줄 바꿈 켜짐"
   word_wrap_off: "자동 줄 바꿈 꺼짐"
+  no_links: "화면에 링크가 없습니다"
 archive:
   view: "보관함 보기"
   title: "보관함"
@@ -546,6 +547,10 @@ help:
   o_copy_desc: "노트 내용을 클립보드에 복사"
   w_wrap_key: "w"
   w_wrap_desc: "자동 줄 바꿈 켜기/끄기"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "이전 및 이후 검색"
+  l_link_key: "l, Enter"
+  l_link_desc: "링크를 이동하고 열기"
 cli:
   # 기존 (일부 위치에서 사용됨)
   list: "노트 목록"

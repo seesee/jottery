@@ -256,6 +256,8 @@ pub struct App {
     pub tag_positions: Vec<(String, u16, u16)>,
     /// Note link positions for click detection: (note_id, y_line, x_start, x_end)
     pub note_link_positions: Vec<(String, u16, u16, u16)>,
+    /// Which of the links on screen the keyboard is on
+    pub selected_link: Option<usize>,
     /// Rendered area for preview pane (for link click detection)
     pub preview_area: Option<ratatui::layout::Rect>,
     /// Tag completions for Tab cycling in tag input mode
@@ -284,6 +286,10 @@ pub struct App {
     pub show_inbox_delete_all_confirm: bool,
     /// A file an export would replace, waiting for an answer
     pub export_overwrite_path: Option<PathBuf>,
+    /// Earlier searches this session, the latest last
+    pub search_history: Vec<String>,
+    /// How far back Ctrl+P has gone, and what was typed before it started
+    pub search_history_position: Option<(usize, String)>,
     /// The list of saved searches, when it's showing
     pub saved_searches: Vec<crate::repository::SavedSearch>,
     /// Selected index in the list of saved searches
@@ -433,6 +439,7 @@ impl App {
             tags_line_area: None,
             tag_positions: Vec::new(),
             note_link_positions: Vec::new(),
+            selected_link: None,
             preview_area: None,
             tag_completions: Vec::new(),
             tag_completion_index: 0,
@@ -447,6 +454,8 @@ impl App {
             show_inbox_delete_confirm: false,
             show_inbox_delete_all_confirm: false,
             export_overwrite_path: None,
+            search_history: Vec::new(),
+            search_history_position: None,
             saved_searches: Vec::new(),
             selected_saved_search: 0,
             show_saved_search_delete_confirm: false,
@@ -562,6 +571,8 @@ impl App {
         self.loaded_versions.clear();
         self.versions_note_id = None;
         self.inbox_items.clear();
+        self.search_history.zeroize();
+        self.search_history_position = None;
         for search in &mut self.saved_searches {
             search.name.zeroize();
             search.query.zeroize();
@@ -577,6 +588,7 @@ impl App {
         self.path_completions.clear();
         self.tag_positions.clear();
         self.note_link_positions.clear();
+        self.selected_link = None;
         self.note_list_rows.clear();
         self.note_list_offset = 0;
         self.syntax_highlighter.clear_cache();

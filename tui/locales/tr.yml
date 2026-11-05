@@ -95,6 +95,7 @@ note:
   copy_too_large: "Bu not, terminalin güvenilir biçimde kopyalaması için çok uzun"
   word_wrap_on: "Sözcük kaydırma açık"
   word_wrap_off: "Sözcük kaydırma kapalı"
+  no_links: "Ekranda bağlantı yok"
 archive:
   view: "Arşivi görüntüle"
   title: "Arşiv"
@@ -546,6 +547,10 @@ help:
   o_copy_desc: "Not metnini panoya kopyala"
   w_wrap_key: "w"
   w_wrap_desc: "Sözcük kaydırmayı aç veya kapat"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "Önceki ve sonraki aramalar"
+  l_link_key: "l, Enter"
+  l_link_desc: "Bağlantılar arasında gez ve birini aç"
 cli:
   # Eski (bazı yerlerde kullanılıyor)
   list: Notları listele

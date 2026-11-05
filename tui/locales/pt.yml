@@ -95,6 +95,7 @@ note:
   copy_too_large: "Esta nota é demasiado longa para um terminal a copiar de forma fiável"
   word_wrap_on: "Quebra de linha ativada"
   word_wrap_off: "Quebra de linha desativada"
+  no_links: "Sem ligações no ecrã"
 archive:
   view: "Ver arquivo"
   title: "Arquivo"
@@ -546,6 +547,10 @@ help:
   o_copy_desc: "Copiar o texto da nota para a área de transferência"
   w_wrap_key: "w"
   w_wrap_desc: "Ativar ou desativar a quebra de linha"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "Pesquisas anteriores e seguintes"
+  l_link_key: "l, Enter"
+  l_link_desc: "Percorrer as ligações e seguir uma"
 cli:
   # Alternativo (usado em alguns lugares)
   list: Listar notas

@@ -95,6 +95,7 @@ note:
   copy_too_large: "Cette note est trop longue pour qu'un terminal la copie de façon fiable"
   word_wrap_on: "Retour à la ligne activé"
   word_wrap_off: "Retour à la ligne désactivé"
+  no_links: "Aucun lien à l'écran"
 archive:
   view: "Voir les archives"
   title: "Archives"
@@ -546,6 +547,10 @@ help:
   o_copy_desc: "Copier le texte de la note dans le presse-papiers"
   w_wrap_key: "w"
   w_wrap_desc: "Activer ou désactiver le retour à la ligne"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "Recherches précédentes et suivantes"
+  l_link_key: "l, Entrée"
+  l_link_desc: "Parcourir les liens et en suivre un"
 cli:
   # Alt (utilisé à certains endroits)
   list: Lister les notes

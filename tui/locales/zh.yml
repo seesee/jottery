@@ -95,6 +95,7 @@ note:
   copy_too_large: "此笔记过长,终端无法可靠地复制"
   word_wrap_on: "自动换行已开启"
   word_wrap_off: "自动换行已关闭"
+  no_links: "屏幕上没有链接"
 archive:
   view: "查看归档"
   title: "归档"
@@ -546,6 +547,10 @@ help:
   o_copy_desc: "将笔记文本复制到剪贴板"
   w_wrap_key: "w"
   w_wrap_desc: "开启或关闭自动换行"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "上一个和下一个搜索"
+  l_link_key: "l, Enter"
+  l_link_desc: "在链接间移动并打开"
 cli:
   # 简短命令描述（用于旧版/备用）
   list: 列出笔记

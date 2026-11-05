@@ -106,6 +106,7 @@ note:
   copy_too_large: "This note is too long for a terminal to copy reliably"
   word_wrap_on: "Word wrap on"
   word_wrap_off: "Word wrap off"
+  no_links: "No links on screen"
 archive:
   view: "View archive"
   title: "Archive"
@@ -595,6 +596,10 @@ help:
   o_copy_desc: "Copy note text to the clipboard"
   w_wrap_key: "w"
   w_wrap_desc: "Turn word wrap on or off"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "Earlier and later searches"
+  l_link_key: "l, Enter"
+  l_link_desc: "Move through links, and follow one"
 cli:
   # Legacy (used in some places)
   list: "List notes"

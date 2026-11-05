@@ -95,6 +95,7 @@ note:
   copy_too_large: "Diese Notiz ist zu lang, um vom Terminal zuverlässig kopiert zu werden"
   word_wrap_on: "Zeilenumbruch ein"
   word_wrap_off: "Zeilenumbruch aus"
+  no_links: "Keine Links auf dem Bildschirm"
 archive:
   view: "Archiv anzeigen"
   title: "Archiv"
@@ -546,6 +547,10 @@ help:
   o_copy_desc: "Notiztext in die Zwischenablage kopieren"
   w_wrap_key: "w"
   w_wrap_desc: "Zeilenumbruch ein- oder ausschalten"
+  ctrl_p_history_key: "Strg+P/N"
+  ctrl_p_history_desc: "Frühere und spätere Suchen"
+  l_link_key: "l, Enter"
+  l_link_desc: "Durch Links gehen und einem folgen"
 cli:
   # Alt (an einigen Stellen verwendet)
   list: Notizen auflisten

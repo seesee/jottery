@@ -75,6 +75,7 @@ pub fn render_help(app: &mut App, frame: &mut Frame) {
                 HelpEntry::new("help.D_duplicate_key", "help.D_duplicate_desc"),
                 HelpEntry::new("help.o_copy_key", "help.o_copy_desc"),
                 HelpEntry::new("help.w_wrap_key", "help.w_wrap_desc"),
+                HelpEntry::new("help.l_link_key", "help.l_link_desc"),
                 HelpEntry::new("help.bracket_cycle_key", "help.bracket_cycle_desc"),
                 HelpEntry::new("help.color_cycle_key", "help.color_cycle_desc"),
                 HelpEntry::new("help.j_down_key", "help.j_down_desc"),
@@ -111,6 +112,7 @@ pub fn render_help(app: &mut App, frame: &mut Frame) {
                 HelpEntry::new("help.arrows_navigate_key", "help.arrows_navigate_desc"),
                 HelpEntry::new("help.tab_search_key", "help.tab_search_desc"),
                 HelpEntry::new("help.ctrl_s_save_search_key", "help.ctrl_s_save_search_desc"),
+                HelpEntry::new("help.ctrl_p_history_key", "help.ctrl_p_history_desc"),
             ],
         ),
         (

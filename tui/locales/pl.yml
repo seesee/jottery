@@ -95,6 +95,7 @@ note:
   copy_too_large: "Ta notatka jest zbyt długa, by terminal mógł ją niezawodnie skopiować"
   word_wrap_on: "Zawijanie wierszy włączone"
   word_wrap_off: "Zawijanie wierszy wyłączone"
+  no_links: "Brak linków na ekranie"
 archive:
   view: "Wyświetl archiwum"
   title: "Archiwum"
@@ -546,6 +547,10 @@ help:
   o_copy_desc: "Kopiuj tekst notatki do schowka"
   w_wrap_key: "w"
   w_wrap_desc: "Włącz lub wyłącz zawijanie wierszy"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "Wcześniejsze i późniejsze wyszukiwania"
+  l_link_key: "l, Enter"
+  l_link_desc: "Przechodź przez linki i otwórz jeden"
 cli:
   # Alternatywne (używane w niektórych miejscach)
   list: Wyświetl notatki

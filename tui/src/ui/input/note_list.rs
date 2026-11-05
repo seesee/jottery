@@ -100,6 +100,11 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
     // An error stays on screen until the next key
     app.error = None;
 
+    // The keyboard's place among the links lasts until it's used or another key is pressed
+    if !matches!(key.code, KeyCode::Char('l') | KeyCode::Enter) {
+        app.selected_link = None;
+    }
+
     // Naming a search, whichever list is underneath
     if matches!(app.input_mode, InputMode::SaveSearchName) {
         match handle_text_input(&key, &mut app.saved_search_name_input) {
@@ -448,6 +453,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     operations::notes::edit_and_save(app);
                 }
             }
+            KeyCode::Enter if app.selected_link.is_some() && operations::notes::follow_focused_link(app) => {}
             KeyCode::Char('i') | KeyCode::Enter => {
                 // In version history: restore selected version
                 if matches!(app.view_mode, ViewMode::VersionHistory) {
@@ -926,6 +932,9 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 if let Err(e) = operations::notes::toggle_word_wrap(app) {
                     app.error = Some(e.to_string());
                 }
+            }
+            KeyCode::Char('l') if matches!(app.view_mode, ViewMode::NoteList) => {
+                operations::notes::focus_next_link(app);
             }
             KeyCode::Char('g') if matches!(app.view_mode, ViewMode::NoteList) => {
                 if let Err(e) = operations::saved_searches::open_picker(app) {

@@ -581,6 +581,12 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
         // The terminal cell a tab lands on depends on where it is, and a paragraph drops them
         let content = crate::ui::helpers::expand_tabs(&note.content);
+        let content = crate::ui::helpers::resolve_wiki_links(&content, &|reference: &str| {
+            app.notes.iter()
+                .find(|other| other.id == reference
+                    || crate::models::get_note_title(&other.content, &other.tags).eq_ignore_ascii_case(reference))
+                .map(|other| (other.id.clone(), crate::models::get_note_title(&other.content, &other.tags)))
+        }).into_owned();
 
         // For markdown, render it cleanly; for other types, use syntax highlighting
         if note.syntax_language == SyntaxLanguage::Markdown {
@@ -703,6 +709,12 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         let scroll = app.preview_scroll_offset.min(super::furthest_scroll(&preview, preview_area));
         preview_scroll = Some(scroll);
         frame.render_widget(preview.scroll((super::scroll_rows(scroll), 0)), preview_area);
+
+        // The link the keyboard is on
+        if let Some((_, y, x_start, x_end)) = app.selected_link.and_then(|index| note_link_positions_local.get(index)) {
+            let area = Rect::new(*x_start, *y, x_end.saturating_sub(*x_start), 1).intersection(frame.area());
+            frame.buffer_mut().set_style(area, Style::default().add_modifier(Modifier::REVERSED));
+        }
 
         // Render footer with left-aligned Version + sync indicator and right-aligned Modified
         let modified_str = format_datetime_full(&note.modified_at);

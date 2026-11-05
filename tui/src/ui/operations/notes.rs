@@ -113,6 +113,50 @@ pub fn save_note(app: &mut App) -> Result<()> {
     Ok(())
 }
 
+/// Go to the note a link points at. If the search hides it, the search goes.
+pub fn follow_link(app: &mut App, target_note_id: String) {
+    let position = |app: &App| app.filtered_notes().iter().position(|note| note.id == target_note_id);
+
+    if position(app).is_none() {
+        app.search_input.clear();
+        app.invalidate_filter_cache();
+        app.search_active = false;
+    }
+
+    if let Some(index) = position(app) {
+        app.selected_note = index;
+        app.selected_note_id = Some(target_note_id);
+        app.preview_scroll_offset = 0;
+        app.focused_panel = super::super::state::FocusedPanel::NoteContent;
+    }
+}
+
+/// Move the keyboard to the next link on screen, coming back round to the first.
+pub fn focus_next_link(app: &mut App) {
+    let count = app.note_link_positions.len();
+    if count == 0 {
+        app.notify(t!("note.no_links").to_string());
+        return;
+    }
+
+    app.selected_link = Some(app.selected_link.map_or(0, |index| (index + 1) % count));
+}
+
+/// Follow the link the keyboard is on, if it's on one.
+pub fn follow_focused_link(app: &mut App) -> bool {
+    let target = app.selected_link.take()
+        .and_then(|index| app.note_link_positions.get(index))
+        .map(|(note_id, ..)| note_id.clone());
+
+    match target {
+        Some(note_id) => {
+            follow_link(app, note_id);
+            true
+        }
+        None => false,
+    }
+}
+
 /// What a terminal will reliably take through OSC 52, in bytes of text.
 const MAX_CLIPBOARD_BYTES: usize = 100_000;
 
@@ -563,6 +607,30 @@ mod tests {
         assert!(save_note(&mut app).is_err());
 
         assert_eq!(stored_note(&app, &id).content, before);
+    }
+
+    #[test]
+    fn the_keyboard_can_reach_and_follow_a_link() {
+        let mut app = unlocked_app();
+        let target = Note::new("The target".to_string());
+        app.notes.push(target.clone());
+        app.invalidate_filter_cache();
+        app.note_link_positions = vec![
+            ("elsewhere".to_string(), 2, 1, 5),
+            (target.id.clone(), 3, 1, 5),
+        ];
+
+        focus_next_link(&mut app);
+        assert_eq!(app.selected_link, Some(0));
+        focus_next_link(&mut app);
+        assert_eq!(app.selected_link, Some(1));
+
+        assert!(follow_focused_link(&mut app));
+        assert_eq!(app.selected_note_id.as_deref(), Some(target.id.as_str()));
+        assert_eq!(app.selected_link, None);
+
+        // Round again, then nothing to follow once it's been cleared
+        assert!(!follow_focused_link(&mut app));
     }
 
     #[test]
