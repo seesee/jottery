@@ -222,6 +222,8 @@ pub struct App {
     pub show_bulk_combine_confirm: bool,
     /// Show the confirmation for permanently emptying the recycle bin
     pub show_empty_bin_confirm: bool,
+    /// Notes the server says to delete, waiting for an answer. Above zero, it asks.
+    pub held_deletions: usize,
     /// Show note info modal
     pub show_note_info: bool,
     /// Rendered area for note list (for mouse click detection)
@@ -376,6 +378,7 @@ impl App {
             show_bulk_delete_confirm: false,
             show_bulk_combine_confirm: false,
             show_empty_bin_confirm: false,
+            held_deletions: 0,
             show_note_info: false,
             note_list_area: None,
             note_list_offset: 0,
@@ -539,6 +542,7 @@ impl App {
         self.attachment_to_confirm = None;
         self.show_force_sync_confirm = false;
         self.show_empty_bin_confirm = false;
+        self.held_deletions = 0;
         self.show_bulk_delete_confirm = false;
         self.show_bulk_combine_confirm = false;
         self.show_note_info = false;

@@ -604,6 +604,9 @@ fn report_sync(outcome: &ui::operations::sync::SyncOutcome) {
     if outcome.quota_exceeded {
         errln!("⚠ {}", t!("sync.quota_exceeded"));
     }
+    if outcome.deletions_held > 0 {
+        errln!("⚠ {}", t!("sync.deletions_held_cli", count = outcome.deletions_held));
+    }
 }
 
 /// Format a note for display

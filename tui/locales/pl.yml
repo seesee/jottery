@@ -217,6 +217,14 @@ sync:
   key_refused: "Serwer nie zaakceptował klucza API tego urządzenia. Zarejestruj urządzenie ponownie."
   server_busy: "Serwer jest zajęty. Jottery spróbuje ponownie za %{seconds} s."
   quota_exceeded: "Konto osiągnęło limit miejsca, więc nie udało się wysłać zmian. Są bezpieczne na tym urządzeniu. Opróżnij kosz lub usuń załączniki, aby zwolnić miejsce."
+  deletions_held_title: "Usunięto wiele notatek"
+  deletions_held: "Według serwera %{count} notatek trwale usunięto gdzie indziej. Czy to Ty?"
+  deletions_held_warning: "y: przenieś je tutaj do kosza. n: zachowaj je i przywróć na serwer."
+  deletions_held_cli: "Według serwera %{count} notatek usunięto gdzie indziej. Nadal tu są: otwórz Jottery, aby zdecydować."
+  deletions_applied: "Przeniesiono do kosza notatek: %{count}"
+  force_title: "Wymuś pełną resynchronizację"
+  force_confirm: "Pobrać WSZYSTKIE notatki i załączniki z serwera?"
+  force_note: "Niewysłane zmiany lokalne zostaną zachowane."
 
 # Skrzynka odbiorcza
 inbox:

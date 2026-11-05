@@ -305,7 +305,8 @@ impl<'a> NoteRepository<'a> {
                 deleted = ?11, deleted_at = ?12, sync_hash = ?13, version = ?14,
                 word_wrap = ?15, syntax_language = ?16, color = ?17,
                 content_hash = ?18, parent_hash = ?19, hash_chain = ?20,
-                show_preview = ?21, needs_sync = ?22, attachments_complete = ?23
+                show_preview = ?21, needs_sync = ?22, attachments_complete = ?23,
+                remote_deleted_at = CASE WHEN ?11 = 0 THEN NULL ELSE remote_deleted_at END
              WHERE id = ?24",
             params![
                 note.modified_at.to_rfc3339(),
@@ -559,26 +560,73 @@ impl<'a> NoteRepository<'a> {
         Ok(())
     }
 
-    /// Apply a remote deletion (from server pull)
-    /// This hard-deletes the note locally without recording it for sync
-    /// (since we received it from the server, it's already synced)
-    pub fn apply_remote_deletion(&self, id: &str) -> Result<bool> {
-        // Check if note exists
-        let exists: bool = self.conn.query_row(
-            "SELECT 1 FROM notes WHERE id = ?1",
-            params![id],
-            |_| Ok(true),
-        ).unwrap_or(false);
+    /// Note that the server says this note was permanently deleted. Nothing happens to
+    /// it yet: `apply_held_deletions` or `refuse_held_deletions` settles that.
+    pub fn hold_deletion(&self, id: &str) -> Result<()> {
+        self.conn.execute("INSERT OR IGNORE INTO held_deletions (id) VALUES (?1)", params![id])?;
+        Ok(())
+    }
 
-        if exists {
-            // Delete the note without recording in note_deletions
-            // (the deletion came from server, no need to sync back)
-            self.conn.execute("DELETE FROM notes WHERE id = ?1", params![id])?;
-            Ok(true)
-        } else {
-            // Note doesn't exist locally - might have been already deleted
-            Ok(false)
-        }
+    /// How many notes still visible here the held deletions would take away.
+    pub fn count_held_deletions(&self) -> Result<usize> {
+        let count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM held_deletions
+             JOIN notes ON notes.id = held_deletions.id
+             WHERE notes.deleted = 0",
+            [],
+            |row| row.get(0),
+        )?;
+        Ok(count as usize)
+    }
+
+    /// Move held deletions into the bin, returning how many notes went there.
+    ///
+    /// The server's word isn't proof that one of this user's devices asked for this, so
+    /// these stay restorable. The time is this device's, so the server can't say the
+    /// note has been there for months. No deletion is recorded: it came from the server.
+    pub fn apply_held_deletions(&self) -> Result<usize> {
+        let now = Utc::now().to_rfc3339();
+
+        let moved = self.conn.execute(
+            "UPDATE notes SET deleted = 1, deleted_at = COALESCE(deleted_at, ?1), needs_sync = 0
+             WHERE deleted = 0 AND id IN (SELECT id FROM held_deletions)",
+            params![now],
+        )?;
+        self.conn.execute(
+            "UPDATE notes SET remote_deleted_at = ?1
+             WHERE remote_deleted_at IS NULL AND id IN (SELECT id FROM held_deletions)",
+            params![now],
+        )?;
+        self.conn.execute("DELETE FROM held_deletions", [])?;
+
+        Ok(moved)
+    }
+
+    /// Keep what the held deletions named, and push those notes back to the server. An
+    /// edit later than a deletion beats it, so they return to every device.
+    pub fn refuse_held_deletions(&self) -> Result<usize> {
+        let kept = self.conn.execute(
+            "UPDATE notes SET modified_at = ?1, needs_sync = 1
+             WHERE id IN (SELECT id FROM held_deletions)",
+            params![Utc::now().to_rfc3339()],
+        )?;
+        self.conn.execute("DELETE FROM held_deletions", [])?;
+
+        Ok(kept)
+    }
+
+    /// Permanently remove notes deleted elsewhere that have been in the bin long enough.
+    /// Their versions go too, as a database without foreign keys wouldn't take them.
+    pub fn purge_remote_deletions(&self, older_than: DateTime<Utc>) -> Result<usize> {
+        let cutoff = older_than.to_rfc3339();
+
+        self.conn.execute(
+            "DELETE FROM note_versions WHERE note_id IN (
+                SELECT id FROM notes WHERE remote_deleted_at < ?1
+             )",
+            params![&cutoff],
+        )?;
+        Ok(self.conn.execute("DELETE FROM notes WHERE remote_deleted_at < ?1", params![&cutoff])?)
     }
 
     /// Clean up old synced deletions (older than 30 days)
@@ -1139,29 +1187,54 @@ mod tests {
     // ===== Sync Operations =====
 
     #[test]
-    fn test_apply_remote_deletion() {
+    fn a_held_deletion_moves_a_note_to_the_bin_with_this_devices_time() {
         let (db, key) = setup_test_db();
         let repo = NoteRepository::new(db.connection());
 
         let note = Note::new("Test".to_string());
         repo.create(&note, &key).unwrap();
 
-        // Apply remote deletion
-        let deleted = repo.apply_remote_deletion(&note.id).unwrap();
-        assert!(deleted);
+        repo.hold_deletion(&note.id).unwrap();
+        assert_eq!(repo.count_held_deletions().unwrap(), 1);
+        assert_eq!(repo.apply_held_deletions().unwrap(), 1);
 
-        // Note should be completely gone
-        assert!(repo.get(&note.id, &key).unwrap().is_none());
+        let binned = repo.get(&note.id, &key).unwrap().unwrap();
+        assert!(binned.deleted);
+        assert!(!binned.needs_sync);
+        assert_eq!(repo.count_held_deletions().unwrap(), 0);
     }
 
     #[test]
-    fn test_apply_remote_deletion_nonexistent() {
-        let (db, _key) = setup_test_db();
+    fn a_note_already_in_the_bin_is_not_counted_as_a_loss() {
+        let (db, key) = setup_test_db();
         let repo = NoteRepository::new(db.connection());
 
-        // Should return false for nonexistent note
-        let deleted = repo.apply_remote_deletion("nonexistent").unwrap();
-        assert!(!deleted);
+        let note = Note::new("Test".to_string());
+        repo.create(&note, &key).unwrap();
+        repo.delete(&note.id).unwrap();
+        repo.hold_deletion(&note.id).unwrap();
+
+        assert_eq!(repo.count_held_deletions().unwrap(), 0);
+        assert_eq!(repo.apply_held_deletions().unwrap(), 0);
+
+        // It still leaves in time, because the server says it's gone
+        assert_eq!(repo.purge_remote_deletions(Utc::now() + chrono::Duration::days(1)).unwrap(), 1);
+    }
+
+    #[test]
+    fn a_purge_takes_the_versions_with_the_note() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+        let note = Note::new("Test".to_string());
+        repo.create(&note, &key).unwrap();
+        let versions = crate::repository::NoteVersionRepository::new(db.connection());
+        versions.create_version(&note, Utc::now(), crate::repository::VersionReason::Sync, &key).unwrap();
+
+        repo.hold_deletion(&note.id).unwrap();
+        repo.apply_held_deletions().unwrap();
+        repo.purge_remote_deletions(Utc::now() + chrono::Duration::days(1)).unwrap();
+
+        assert_eq!(versions.count_versions_for_note(&note.id).unwrap(), 0);
     }
 
     // ===== Locked Notes (via update) =====

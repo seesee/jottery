@@ -217,6 +217,14 @@ sync:
   key_refused: "Il server non ha accettato la chiave API di questo dispositivo. Registra di nuovo il dispositivo."
   server_busy: "Il server è occupato. Jottery riproverà tra %{seconds} secondi."
   quota_exceeded: "L'account ha raggiunto il limite di spazio, quindi le modifiche non sono state caricate. Sono al sicuro su questo dispositivo. Svuota il cestino o rimuovi degli allegati per fare spazio."
+  deletions_held_title: "Molte note eliminate"
+  deletions_held: "Il server indica che %{count} note sono state eliminate definitivamente altrove. Sei stato tu?"
+  deletions_held_warning: "y: spostale nel cestino qui. n: conservale e rimettile sul server."
+  deletions_held_cli: "Il server indica che %{count} note sono state eliminate altrove. Sono ancora qui: apri Jottery per decidere."
+  deletions_applied: "%{count} note spostate nel cestino"
+  force_title: "Forza risincronizzazione completa"
+  force_confirm: "Scaricare TUTTE le note e gli allegati dal server?"
+  force_note: "Le modifiche locali non inviate vengono mantenute."
 
 # Posta in arrivo
 inbox:

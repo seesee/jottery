@@ -217,6 +217,14 @@ sync:
   key_refused: "服务器未接受此设备的 API 密钥。请重新注册设备。"
   server_busy: "服务器繁忙。Jottery 将在 %{seconds} 秒后重试。"
   quota_exceeded: "您的账户已达到存储上限，因此无法上传更改。更改已安全保存在此设备上。请清空回收站或移除附件以腾出空间。"
+  deletions_held_title: "大量笔记被删除"
+  deletions_held: "服务器称有 %{count} 条笔记已在别处被永久删除。这是您的操作吗？"
+  deletions_held_warning: "y：在此移至回收站。n：保留并放回服务器。"
+  deletions_held_cli: "服务器称有 %{count} 条笔记已在别处被删除。它们仍在这里：请打开 Jottery 决定。"
+  deletions_applied: "已将 %{count} 条笔记移至回收站"
+  force_title: "强制完全重新同步"
+  force_confirm: "要从服务器拉取所有笔记和附件吗？"
+  force_note: "尚未推送的本地更改将被保留。"
 
 # 收件箱
 inbox:

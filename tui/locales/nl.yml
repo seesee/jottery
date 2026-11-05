@@ -217,6 +217,14 @@ sync:
   key_refused: "De server heeft de API-sleutel van dit apparaat niet geaccepteerd. Registreer het apparaat opnieuw."
   server_busy: "De server is bezet. Jottery probeert het over %{seconds} seconden opnieuw."
   quota_exceeded: "Je account heeft de opslaglimiet bereikt, dus wijzigingen konden niet worden geüpload. Ze staan veilig op dit apparaat. Leeg de prullenbak of verwijder bijlagen om ruimte te maken."
+  deletions_held_title: "Veel notities verwijderd"
+  deletions_held: "Volgens de server zijn %{count} notities elders definitief verwijderd. Heb jij dit gedaan?"
+  deletions_held_warning: "y: hier naar de prullenbak verplaatsen. n: bewaren en terugzetten op de server."
+  deletions_held_cli: "Volgens de server zijn %{count} notities elders verwijderd. Ze staan hier nog: open Jottery om te beslissen."
+  deletions_applied: "%{count} notities naar de prullenbak verplaatst"
+  force_title: "Volledige hersynchronisatie forceren"
+  force_confirm: "ALLE notities en bijlagen van de server ophalen?"
+  force_note: "Lokale wijzigingen die nog niet zijn verzonden, blijven behouden."
 
 # Postvak IN
 inbox:

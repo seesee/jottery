@@ -217,6 +217,14 @@ sync:
   key_refused: "Sunucu bu cihazın API anahtarını kabul etmedi. Cihazı yeniden kaydedin."
   server_busy: "Sunucu meşgul. Jottery %{seconds} saniye sonra yeniden deneyecek."
   quota_exceeded: "Hesabınız depolama sınırına ulaştı, bu yüzden değişiklikler yüklenemedi. Bu cihazda güvendeler. Yer açmak için çöp kutusunu boşaltın veya ekleri kaldırın."
+  deletions_held_title: "Çok sayıda not silindi"
+  deletions_held: "Sunucuya göre %{count} not başka bir yerde kalıcı olarak silindi. Bunu siz mi yaptınız?"
+  deletions_held_warning: "y: burada çöp kutusuna taşı. n: sakla ve sunucuya geri koy."
+  deletions_held_cli: "Sunucuya göre %{count} not başka bir yerde silindi. Hâlâ buradalar: karar vermek için Jottery'yi açın."
+  deletions_applied: "%{count} not çöp kutusuna taşındı"
+  force_title: "Tam yeniden eşitlemeyi zorla"
+  force_confirm: "TÜM notlar ve ekler sunucudan çekilsin mi?"
+  force_note: "Gönderilmemiş yerel değişiklikler korunur."
 
 # Gelen Kutusu
 inbox:

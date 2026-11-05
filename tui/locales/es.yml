@@ -217,6 +217,14 @@ sync:
   key_refused: "El servidor no ha aceptado la clave API de este dispositivo. Vuelve a registrarlo."
   server_busy: "El servidor está ocupado. Jottery volverá a intentarlo en %{seconds} segundos."
   quota_exceeded: "Tu cuenta ha alcanzado su límite de almacenamiento, así que no se han podido subir los cambios. Están a salvo en este dispositivo. Vacía la papelera o elimina adjuntos para hacer sitio."
+  deletions_held_title: "Muchas notas eliminadas"
+  deletions_held: "El servidor indica que %{count} notas se han eliminado definitivamente en otro lugar. ¿Has sido tú?"
+  deletions_held_warning: "y: moverlas a la papelera aquí. n: conservarlas y devolverlas al servidor."
+  deletions_held_cli: "El servidor indica que %{count} notas se han eliminado en otro lugar. Siguen aquí: abre Jottery para decidir."
+  deletions_applied: "%{count} notas movidas a la papelera"
+  force_title: "Forzar resincronización completa"
+  force_confirm: "¿Descargar TODAS las notas y adjuntos del servidor?"
+  force_note: "Los cambios locales sin enviar se conservan."
 
 # Bandeja de entrada
 inbox:

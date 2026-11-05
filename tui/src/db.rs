@@ -146,6 +146,7 @@ impl Database {
             (17, include_str!("../migrations/017_add_user_id.sql")),
             (18, include_str!("../migrations/018_add_server_key_state.sql")),
             (19, include_str!("../migrations/019_add_sync_state.sql")),
+            (20, include_str!("../migrations/020_add_held_deletions.sql")),
         ];
 
         // Run pending migrations
@@ -365,7 +366,7 @@ mod tests {
     fn test_in_memory_database() {
         let db = Database::in_memory(&test_password()).unwrap();
         assert!(db.is_initialized().unwrap() == false);
-        assert_eq!(db.schema_version().unwrap(), 19);
+        assert_eq!(db.schema_version().unwrap(), 20);
         assert_eq!(db.count_notes(false).unwrap(), 0);
     }
 
@@ -428,13 +429,13 @@ mod tests {
         // Create and close database
         {
             let db = Database::open(&db_path, &password).unwrap();
-            assert_eq!(db.schema_version().unwrap(), 19);
+            assert_eq!(db.schema_version().unwrap(), 20);
         }
 
         // Reopen and verify
         {
             let db = Database::open(&db_path, &password).unwrap();
-            assert_eq!(db.schema_version().unwrap(), 19);
+            assert_eq!(db.schema_version().unwrap(), 20);
         }
     }
 }

@@ -217,6 +217,14 @@ sync:
   key_refused: "Le serveur n'a pas accepté la clé API de cet appareil. Enregistrez à nouveau l'appareil."
   server_busy: "Le serveur est occupé. Jottery réessaiera dans %{seconds} secondes."
   quota_exceeded: "Votre compte a atteint sa limite de stockage, les modifications n'ont donc pas pu être envoyées. Elles sont en sécurité sur cet appareil. Videz la corbeille ou retirez des pièces jointes pour faire de la place."
+  deletions_held_title: "Beaucoup de notes supprimées"
+  deletions_held: "Le serveur indique que %{count} notes ont été supprimées définitivement ailleurs. Est-ce vous ?"
+  deletions_held_warning: "y : les déplacer dans la corbeille ici. n : les garder et les remettre sur le serveur."
+  deletions_held_cli: "Le serveur indique que %{count} notes ont été supprimées ailleurs. Elles sont toujours ici : ouvrez Jottery pour décider."
+  deletions_applied: "%{count} notes déplacées dans la corbeille"
+  force_title: "Forcer une resynchronisation complète"
+  force_confirm: "Récupérer TOUTES les notes et pièces jointes du serveur ?"
+  force_note: "Les modifications locales non envoyées sont conservées."
 
 # Boîte de réception
 inbox:

@@ -217,6 +217,14 @@ sync:
   key_refused: "サーバーがこのデバイスの API キーを受け付けませんでした。デバイスを登録し直してください。"
   server_busy: "サーバーが混み合っています。Jottery は %{seconds} 秒後に再試行します。"
   quota_exceeded: "アカウントの保存容量が上限に達したため、変更をアップロードできませんでした。変更はこのデバイスに安全に保存されています。ごみ箱を空にするか添付ファイルを削除して空きを作ってください。"
+  deletions_held_title: "多数のノートが削除されました"
+  deletions_held: "サーバーによると、%{count} 件のノートが別の場所で完全に削除されました。心当たりはありますか?"
+  deletions_held_warning: "y: ここでごみ箱に移動。n: 保持してサーバーに戻す。"
+  deletions_held_cli: "サーバーによると、%{count} 件のノートが別の場所で削除されました。ここにはまだあります。Jottery を開いて判断してください。"
+  deletions_applied: "%{count} 件のノートをごみ箱に移動しました"
+  force_title: "完全再同期を強制"
+  force_confirm: "すべてのノートと添付ファイルをサーバーから取得しますか?"
+  force_note: "送信していないローカルの変更は保持されます。"
 
 # 受信トレイ
 inbox:

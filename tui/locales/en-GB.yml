@@ -239,6 +239,14 @@ sync:
   key_refused: "The server didn't accept this device's API key. Register the device again."
   server_busy: "The server is busy. Jottery will try again in %{seconds} seconds."
   quota_exceeded: "Your account is at its storage limit, so changes here couldn't be uploaded. They're safe on this device. Empty the bin or remove attachments to make room."
+  deletions_held_title: "Many Notes Deleted"
+  deletions_held: "The server says %{count} notes were permanently deleted elsewhere. Did you do this?"
+  deletions_held_warning: "y: move them to the bin here. n: keep them and put them back on the server."
+  deletions_held_cli: "The server says %{count} notes were deleted elsewhere. They're still here: open Jottery to decide."
+  deletions_applied: "%{count} notes moved to the bin"
+  force_title: "Force Full Resync"
+  force_confirm: "Pull ALL notes and attachments from the server?"
+  force_note: "Local changes that haven't been pushed are kept."
 
 # Inbox
 inbox:

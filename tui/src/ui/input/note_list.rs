@@ -122,6 +122,24 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
         return Ok(());
     }
 
+    // The server wants a lot of notes gone. Nothing else gets through until that's
+    // answered, and leaving it unanswered keeps the notes where they are.
+    if app.held_deletions > 0 {
+        let answered = match key.code {
+            KeyCode::Char('y') => Some(operations::sync::apply_held_deletions(app)),
+            KeyCode::Char('n') => Some(operations::sync::refuse_held_deletions(app)),
+            KeyCode::Char('q') | KeyCode::Esc => {
+                app.held_deletions = 0;
+                None
+            }
+            _ => None,
+        };
+        if let Some(Err(e)) = answered {
+            app.error = Some(t!("note.delete_failed", error = e.to_string()).to_string());
+        }
+        return Ok(());
+    }
+
     // An attachment that won't be opened: the only offer is to save it
     if app.attachment_to_confirm.is_some() {
         match key.code {

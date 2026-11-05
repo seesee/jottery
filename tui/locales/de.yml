@@ -217,6 +217,14 @@ sync:
   key_refused: "Der Server hat den API-Schlüssel dieses Geräts nicht akzeptiert. Registrieren Sie das Gerät erneut."
   server_busy: "Der Server ist ausgelastet. Jottery versucht es in %{seconds} Sekunden erneut."
   quota_exceeded: "Ihr Konto hat sein Speicherlimit erreicht, daher konnten Änderungen nicht hochgeladen werden. Sie sind auf diesem Gerät sicher. Leeren Sie den Papierkorb oder entfernen Sie Anhänge, um Platz zu schaffen."
+  deletions_held_title: "Viele Notizen gelöscht"
+  deletions_held: "Laut Server wurden %{count} Notizen anderswo endgültig gelöscht. Waren Sie das?"
+  deletions_held_warning: "y: hier in den Papierkorb verschieben. n: behalten und wieder auf den Server stellen."
+  deletions_held_cli: "Laut Server wurden %{count} Notizen anderswo gelöscht. Sie sind noch hier: Öffnen Sie Jottery, um zu entscheiden."
+  deletions_applied: "%{count} Notizen in den Papierkorb verschoben"
+  force_title: "Vollständige Neusynchronisierung erzwingen"
+  force_confirm: "ALLE Notizen und Anhänge vom Server abrufen?"
+  force_note: "Noch nicht übertragene lokale Änderungen bleiben erhalten."
 
 # Posteingang
 inbox:

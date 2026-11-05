@@ -837,11 +837,11 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         render_confirmation_modal(
             frame,
             size,
-            "Force Full Resync",
+            &t!("sync.force_title"),
             vec![
-                Line::from("Pull ALL notes and attachments from server?")
+                Line::from(t!("sync.force_confirm").to_string())
                     .style(Style::default().fg(app.color_scheme.foreground)),
-                Line::from("This will overwrite local changes if server is newer.")
+                Line::from(t!("sync.force_note").to_string())
                     .style(Style::default().fg(app.color_scheme.muted)),
             ],
             app.color_scheme.accent,
@@ -871,6 +871,24 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     }
 
     // Render empty bin confirmation modal if showing
+    if app.held_deletions > 0 {
+        render_confirmation_modal(
+            frame,
+            size,
+            &t!("sync.deletions_held_title"),
+            vec![
+                Line::from(t!("sync.deletions_held", count = app.held_deletions).to_string())
+                    .style(Style::default().fg(app.color_scheme.foreground)),
+                Line::from(t!("sync.deletions_held_warning").to_string())
+                    .style(Style::default().fg(app.color_scheme.muted)),
+            ],
+            app.color_scheme.error,
+            &app.color_scheme,
+            96,
+            7,
+        );
+    }
+
     if app.show_empty_bin_confirm {
         render_confirmation_modal(
             frame,

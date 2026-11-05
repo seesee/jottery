@@ -50,6 +50,12 @@ const MAX_PULL_PAGES: usize = 100_000;
 /// The longest a server can ask this device to wait.
 const MAX_RETRY_AFTER_SECONDS: u64 = 3600;
 
+/// A sync that would remove this many notes asks first.
+const MASS_DELETION_THRESHOLD: usize = 10;
+
+/// How long a note deleted elsewhere stays restorable in the bin here.
+const REMOTE_DELETION_RETENTION_DAYS: i64 = 30;
+
 /// What a sync achieved.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct SyncOutcome {
@@ -61,6 +67,8 @@ pub struct SyncOutcome {
     pub skipped: usize,
     /// The account is at its storage quota, so local changes are still waiting to go
     pub quota_exceeded: bool,
+    /// Notes the server says to delete, waiting for the user to confirm
+    pub deletions_held: usize,
 }
 
 /// The server turned this device away, and retrying at once won't help.
@@ -952,23 +960,42 @@ fn apply_remote_versions(run: &Run<'_>, versions: Vec<SyncNoteVersion>) -> Resul
     Ok(waiting)
 }
 
-/// Apply notes permanently deleted elsewhere. An edit made after the deletion beats it,
-/// as it does on the server, so that note stays and the next push brings it back.
-fn apply_remote_deletions(run: &Run<'_>, deletions: Vec<SyncDeletion>, outcome: &mut SyncOutcome) -> Result<()> {
+/// Queue notes the server says were permanently deleted. An edit made after the deletion
+/// beats it, as it does on the server, so that note stays and the next push brings it
+/// back. Nothing is removed until the whole pull is in: see `settle_remote_deletions`.
+fn hold_remote_deletions(run: &Run<'_>, deletions: Vec<SyncDeletion>) -> Result<()> {
     let note_repo = run.note_repo();
 
     for deletion in deletions {
+        if !note_repo.exists(&deletion.id)? {
+            continue;
+        }
         if note_repo.has_edit_after(&deletion.id, deletion.deleted_at)? {
             (run.log)(&format!("Pull - Keeping note {}: edited after it was deleted", deletion.id));
             continue;
         }
-
-        if note_repo.apply_remote_deletion(&deletion.id)? {
-            (run.log)(&format!("Pull - Hard deleted note {}", deletion.id));
-            outcome.synced += 1;
-        }
+        note_repo.hold_deletion(&deletion.id)?;
     }
 
+    Ok(())
+}
+
+/// Act on the deletions a pull found.
+///
+/// Nothing authenticates these, so a compromised server could list every note. What it
+/// gets is bounded: notes only ever go to the bin, and a pull that would take away a lot
+/// waits for the user to say whether that's expected.
+fn settle_remote_deletions(run: &Run<'_>, outcome: &mut SyncOutcome) -> Result<()> {
+    let note_repo = run.note_repo();
+
+    let held = note_repo.count_held_deletions()?;
+    if held >= MASS_DELETION_THRESHOLD {
+        outcome.deletions_held = held;
+    } else {
+        outcome.synced += note_repo.apply_held_deletions()?;
+    }
+
+    note_repo.purge_remote_deletions(Utc::now() - chrono::Duration::days(REMOTE_DELETION_RETENTION_DAYS))?;
     Ok(())
 }
 
@@ -1058,7 +1085,7 @@ fn pull_changes(run: &Run<'_>, metadata: &mut SyncMetadata, force: bool, outcome
         if cursor_mode || is_last_page {
             versions_waiting.extend(response.versions);
             versions_waiting = apply_remote_versions(run, versions_waiting)?;
-            apply_remote_deletions(run, response.deletions, outcome)?;
+            hold_remote_deletions(run, response.deletions)?;
         }
 
         if is_last_page {
@@ -1125,6 +1152,7 @@ fn sync_vault(
 
     push_changes(&run, &mut metadata, &mut outcome)?;
     let pulled = pull_changes(&run, &mut metadata, force, &mut outcome)?;
+    settle_remote_deletions(&run, &mut outcome)?;
 
     // last_sync_at stays on this device's clock. The pull position in last_pull_at
     // is the server's.
@@ -1229,6 +1257,30 @@ fn report_skipped(app: &mut App, outcome: &SyncOutcome) {
     if outcome.quota_exceeded {
         app.error = Some(t!("sync.quota_exceeded").to_string());
     }
+    app.held_deletions = outcome.deletions_held;
+}
+
+/// Accept what the server said about a large number of deletions: they go to the bin.
+pub fn apply_held_deletions(app: &mut App) -> Result<()> {
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not available"))?;
+    let moved = NoteRepository::new(db.connection()).apply_held_deletions()?;
+
+    app.held_deletions = 0;
+    super::notes::load_notes(app)?;
+    app.notify(t!("sync.deletions_applied", count = moved).to_string());
+    Ok(())
+}
+
+/// Refuse a large number of deletions: the notes stay, and go back to the server.
+pub fn refuse_held_deletions(app: &mut App) -> Result<()> {
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not available"))?;
+    NoteRepository::new(db.connection()).refuse_held_deletions()?;
+
+    app.held_deletions = 0;
+    if app.settings.sync_enabled {
+        app.trigger_sync();
+    }
+    Ok(())
 }
 
 /// A failed pull rolls back its database changes but not the list in memory.
@@ -2357,7 +2409,7 @@ mod tests {
         perform_sync(&mut app, false).unwrap();
 
         let db = app.db.as_ref().unwrap();
-        assert!(NoteRepository::new(db.connection()).get(&doomed.id, key()).unwrap().is_none());
+        assert!(NoteRepository::new(db.connection()).get(&doomed.id, key()).unwrap().unwrap().deleted);
         let versions = NoteVersionRepository::new(db.connection());
         assert!(versions.get_version_by_key(&format!("{}:1", note_id(0))).unwrap().is_some());
     }
@@ -3245,5 +3297,146 @@ mod tests {
         let db = app.db.as_ref().unwrap();
         assert!(NoteRepository::new(db.connection()).get(&waiting.id, key()).unwrap().unwrap().needs_sync);
         assert!(NoteRepository::new(db.connection()).get_pending_deletions().unwrap().is_empty());
+    }
+
+    /// `count` notes this device has, all synced, and a server listing them as deleted.
+    fn app_with_deletions_from_the_server(count: usize) -> (App, StubServer, Vec<Note>) {
+        let notes: Vec<Note> = (0..count).map(|i| {
+            let mut note = Note::new(format!("Note {i}"));
+            note.needs_sync = false;
+            note
+        }).collect();
+
+        let mut page = cursor_page(vec![], "c1", false);
+        page["deletions"] = json!(notes.iter()
+            .map(|note| json!({ "id": note.id, "deletedAt": "2031-01-01T00:00:00Z" }))
+            .collect::<Vec<_>>());
+
+        let server = StubServer::start(vec![], vec![]);
+        server.script(vec![page]);
+        let mut app = app_connected_to(&server.endpoint);
+        app.settings.sync_enabled = true;
+        app.settings.sync_endpoint = Some(server.endpoint.clone());
+
+        let db = app.db.as_ref().unwrap();
+        for note in &notes {
+            NoteRepository::new(db.connection()).create(note, key()).unwrap();
+        }
+        SyncRepository::new(db.connection()).update_last_sync(Utc::now()).unwrap();
+
+        (app, server, notes)
+    }
+
+    fn bin_count(app: &App) -> usize {
+        let db = app.db.as_ref().unwrap();
+        NoteRepository::new(db.connection()).get_deleted(key()).unwrap().len()
+    }
+
+    /// Nothing proves a deletion came from one of the user's devices, so a compromised
+    /// server must not be able to destroy this device's copy.
+    #[test]
+    fn a_deletion_from_the_server_only_reaches_the_bin() {
+        let (mut app, _server, notes) = app_with_deletions_from_the_server(2);
+
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(outcome.deletions_held, 0);
+        assert_eq!(bin_count(&app), 2);
+
+        let db = app.db.as_ref().unwrap();
+        let stored = NoteRepository::new(db.connection()).get(&notes[0].id, key()).unwrap().unwrap();
+        assert_eq!(stored.content, "Note 0");
+        assert!(!stored.needs_sync);
+    }
+
+    #[test]
+    fn a_note_deleted_elsewhere_can_be_restored_and_goes_back_to_the_server() {
+        let (mut app, server, notes) = app_with_deletions_from_the_server(1);
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        let mut note = note_repo.get(&notes[0].id, key()).unwrap().unwrap();
+        note.restore();
+        note_repo.update(&note, key()).unwrap();
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(server.last_push()["notes"][0]["id"], json!(notes[0].id));
+        assert_eq!(server.last_push()["notes"][0]["deleted"], json!(false));
+    }
+
+    #[test]
+    fn a_pull_that_deletes_a_lot_waits_to_be_asked() {
+        let (mut app, _server, _notes) = app_with_deletions_from_the_server(MASS_DELETION_THRESHOLD);
+
+        trigger_sync(&mut app);
+
+        assert_eq!(app.held_deletions, MASS_DELETION_THRESHOLD);
+        assert_eq!(bin_count(&app), 0);
+        assert_eq!(stored_note_count(&app), MASS_DELETION_THRESHOLD);
+    }
+
+    #[test]
+    fn saying_yes_to_a_large_deletion_moves_the_notes_to_the_bin() {
+        let (mut app, _server, _notes) = app_with_deletions_from_the_server(MASS_DELETION_THRESHOLD);
+        trigger_sync(&mut app);
+
+        apply_held_deletions(&mut app).unwrap();
+
+        assert_eq!(app.held_deletions, 0);
+        assert_eq!(bin_count(&app), MASS_DELETION_THRESHOLD);
+    }
+
+    #[test]
+    fn saying_no_to_a_large_deletion_keeps_the_notes_and_pushes_them_back() {
+        let (mut app, server, notes) = app_with_deletions_from_the_server(MASS_DELETION_THRESHOLD);
+        trigger_sync(&mut app);
+
+        refuse_held_deletions(&mut app).unwrap();
+
+        assert_eq!(app.held_deletions, 0);
+        assert_eq!(bin_count(&app), 0);
+        assert_eq!(server.last_push()["notes"].as_array().unwrap().len(), notes.len());
+    }
+
+    /// The question doesn't go away by being ignored.
+    #[test]
+    fn an_unanswered_deletion_is_asked_again_after_the_next_sync() {
+        let (mut app, server, _notes) = app_with_deletions_from_the_server(MASS_DELETION_THRESHOLD);
+        trigger_sync(&mut app);
+
+        server.script(vec![cursor_page(vec![], "c1", false)]);
+        app.held_deletions = 0;
+        trigger_sync(&mut app);
+
+        assert_eq!(app.held_deletions, MASS_DELETION_THRESHOLD);
+    }
+
+    #[test]
+    fn a_note_deleted_elsewhere_leaves_the_bin_after_the_retention_period() {
+        let (mut app, _server, notes) = app_with_deletions_from_the_server(1);
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        assert_eq!(note_repo.purge_remote_deletions(Utc::now() - chrono::Duration::days(1)).unwrap(), 0);
+
+        assert_eq!(note_repo.purge_remote_deletions(Utc::now() + chrono::Duration::days(1)).unwrap(), 1);
+        assert!(note_repo.get(&notes[0].id, key()).unwrap().is_none());
+    }
+
+    /// A note restored from the bin isn't deleted any more, whatever the old mark said.
+    #[test]
+    fn a_restored_note_is_not_purged() {
+        let (mut app, _server, notes) = app_with_deletions_from_the_server(1);
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        let mut note = note_repo.get(&notes[0].id, key()).unwrap().unwrap();
+        note.restore();
+        note_repo.update(&note, key()).unwrap();
+
+        assert_eq!(note_repo.purge_remote_deletions(Utc::now() + chrono::Duration::days(1)).unwrap(), 0);
     }
 }
