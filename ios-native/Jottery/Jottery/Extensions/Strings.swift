@@ -420,6 +420,9 @@ enum L {
     static func restoreProgress(_ completed: Int, _ total: Int) -> String {
         String(format: String(localized: "backup.restoreProgress"), completed, total)
     }
+    static func backupRestoreKeptNewer(_ count: Int) -> String {
+        String(format: String(localized: "backup.restoreKeptNewer"), count)
+    }
     static func backupRestoreSkipped(_ count: Int) -> String {
         String(format: String(localized: "backup.restoreSkipped"), count)
     }

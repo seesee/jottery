@@ -520,6 +520,26 @@ struct NoteRepository: Sendable {
         }
     }
 
+    /// Write a batch of restored notes in one transaction. A note here that's
+    /// at least as new as the backup's copy stays as it is: it holds edits the
+    /// backup doesn't, and they'd otherwise be overwritten and synced everywhere.
+    func restore(_ records: [NoteRecord]) throws -> (restored: Int, keptNewer: Int) {
+        try db.dbPool.write { db in
+            var restored = 0
+            var keptNewer = 0
+            for record in records {
+                if let existing = try NoteRecord.fetchOne(db, key: record.id),
+                   !Date.isLater(record.modifiedAt, than: existing.modifiedAt) {
+                    keptNewer += 1
+                } else {
+                    try record.save(db)
+                    restored += 1
+                }
+            }
+            return (restored, keptNewer)
+        }
+    }
+
     // MARK: - Purge
 
     /// Permanently delete notes that have been in the recycle bin longer than

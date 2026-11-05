@@ -854,7 +854,7 @@ actor SyncService {
         guard let remoteHash = remote.contentHash, let localHash = local.contentHash else {
             // Notes from before hash chains: only the timestamps can say.
             guard local.needsSync else { return .take }
-            return isLater(remote.modifiedAt, than: local.modifiedAt) ? .conflict : .keepLocal
+            return Date.isLater(remote.modifiedAt, than: local.modifiedAt) ? .conflict : .keepLocal
         }
 
         // Same hash. The notes usually match, but not always: see
@@ -878,14 +878,6 @@ actor SyncService {
 
         // Diverged, even if the chains share an ancestor.
         return .conflict
-    }
-
-    /// Timestamps from other devices don't all look alike, so compare instants.
-    private static func isLater(_ first: String, than second: String) -> Bool {
-        guard let firstDate = Date(iso8601: first), let secondDate = Date(iso8601: second) else {
-            return first > second
-        }
-        return firstDate > secondDate
     }
 
     private static func decodeHashChain(_ json: String?) -> [String] {

@@ -282,6 +282,17 @@
         }
       }
     },
+    "backup.restoreKeptNewer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld notes on this device are at least as new as the backup, so they were kept."
+          }
+        }
+      }
+    },
     "backup.restoreProgress": {
       "extractionState": "manual",
       "localizations": {
