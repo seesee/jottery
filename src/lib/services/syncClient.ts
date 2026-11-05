@@ -47,7 +47,7 @@ export class SyncApiError extends Error {
     message: string,
     public readonly status: number,
     public readonly responseText: string,
-    /** From Retry-After on a 429 */
+    /** From Retry-After, which a 429 and a 503 can carry */
     public readonly retryAfterSeconds?: number
   ) {
     super(message);
@@ -81,7 +81,7 @@ function handleHttpError(response: Response, errorText: string, operation: strin
     `${operation} failed: ${response.statusText} - ${errorText}`,
     response.status,
     errorText,
-    response.status === 429 ? retryAfterSeconds(response) : undefined
+    retryAfterSeconds(response)
   );
 }
 

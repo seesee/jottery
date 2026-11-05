@@ -1200,7 +1200,8 @@
     "syncing": "Synchronizacja...",
     "syncProgress": "Synchronizacja: {percentage}% ukończono",
     "notesRefused": "Niektóre notatki przekraczają limit przesyłania Twojego konta i nie zostały zsynchronizowane. Cała reszta tak.",
-    "accountDisabled": "Twoje konto jest dezaktywowane lub oczekuje na zatwierdzenie, więc synchronizacja została zatrzymana. Twoje notatki na tym urządzeniu są bezpieczne. Skontaktuj się z administratorem."
+    "accountDisabled": "Twoje konto jest dezaktywowane lub oczekuje na zatwierdzenie, więc synchronizacja została zatrzymana. Twoje notatki na tym urządzeniu są bezpieczne. Skontaktuj się z administratorem.",
+    "storageQuotaExceeded": "Twoje konto osiągnęło limit miejsca, więc zmian z tego urządzenia nie można przesłać. Trwale usuń niektóre notatki lub załączniki, aby zwolnić miejsce."
   },
   "inbox": {
     "title": "Skrzynka odbiorcza",

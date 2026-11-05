@@ -70,6 +70,20 @@ const PULL_OVERLAP_MS = 2 * 60 * 1000;
 // The server refuses these for what the request holds, so a smaller one can succeed
 const REFUSED_PUSH_STATUSES = new Set([400, 413]);
 
+// The request took too long. Sending the same push twice is safe, and less of it
+// is likelier to finish, but a single note that times out hasn't been refused.
+const TIMED_OUT_STATUS = 408;
+
+// How long to wait when a refusal doesn't say
+const DEFAULT_RETRY_SECONDS = 60;
+const TIMED_OUT_RETRY_SECONDS = 15;
+
+// A timer can fire a moment before the time it was set for
+const RETRY_MARGIN_MS = 100;
+
+// How often to repeat that the account is full: this comes back on every sync
+const QUOTA_NOTICE_INTERVAL_MS = 60 * 60 * 1000;
+
 interface PushOutcome {
   accepted: number;
   rejected: number;
@@ -122,7 +136,9 @@ class SyncService {
   private sseFailedOver = false; // True when SSE failed and we're using periodic sync as fallback
   private networkListenersAttached = false;
   private restoreInProgress = false; // True during backup restore to prevent sync
-  private retryNotBefore = 0; // Set by a 429: no sync before this time
+  private retryNotBefore = 0; // Set when the server asks for a wait: no sync before this time
+  private retryTimer?: number;
+  private quotaNoticeAt = 0;
 
   /**
    * Set restore-in-progress flag to disable sync during backup restore
@@ -477,19 +493,47 @@ class SyncService {
     }
   }
 
+  /** Wait as asked, then sync. With live updates on, nothing else would start one. */
+  private retryIn(seconds: number): void {
+    this.retryNotBefore = Date.now() + seconds * 1000;
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+    }
+    this.retryTimer = window.setTimeout(() => {
+      this.retryTimer = undefined;
+      void this.executeBackgroundSync();
+    }, seconds * 1000 + RETRY_MARGIN_MS);
+  }
+
   /**
    * A 403 means the account is deactivated or not approved, not that the device was
    * removed. The key is still valid and reactivating the account restores it, so the
    * credentials stay. Background sync stops until the app next starts, or a manual
    * sync succeeds.
+   *
+   * A 507 means the account is full. Nothing was written, and pulling and deleting
+   * still work, so sync carries on and the user is told to make room.
    */
   private handleServerRefusal(error: SyncApiError): void {
-    if (error.status === 403) {
-      this.disableAutoSync();
-      this.disconnectFromSyncEvents();
-      toast.error(get(_)('sync.accountDisabled'));
-    } else if (error.status === 429) {
-      this.retryNotBefore = Date.now() + (error.retryAfterSeconds ?? 60) * 1000;
+    switch (error.status) {
+      case 403:
+        this.disableAutoSync();
+        this.disconnectFromSyncEvents();
+        toast.error(get(_)('sync.accountDisabled'));
+        break;
+      case TIMED_OUT_STATUS:
+        this.retryIn(error.retryAfterSeconds ?? TIMED_OUT_RETRY_SECONDS);
+        break;
+      case 429:
+      case 503:
+        this.retryIn(error.retryAfterSeconds ?? DEFAULT_RETRY_SECONDS);
+        break;
+      case 507:
+        if (Date.now() - this.quotaNoticeAt >= QUOTA_NOTICE_INTERVAL_MS) {
+          this.quotaNoticeAt = Date.now();
+          toast.error(get(_)('sync.storageQuotaExceeded'));
+        }
+        break;
     }
   }
 
@@ -547,6 +591,10 @@ class SyncService {
     if (this.backgroundSyncTimer) {
       clearTimeout(this.backgroundSyncTimer);
       this.backgroundSyncTimer = undefined;
+    }
+    if (this.retryTimer) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = undefined;
     }
   }
 
@@ -816,7 +864,13 @@ class SyncService {
     try {
       return await this.processPushBatch(batchNotes, endpoint, apiKey, masterKey, forceAll);
     } catch (error) {
-      if (!(error instanceof SyncApiError) || !REFUSED_PUSH_STATUSES.has(error.status)) {
+      if (!(error instanceof SyncApiError)) {
+        throw error;
+      }
+
+      const refused = REFUSED_PUSH_STATUSES.has(error.status);
+      const canSplit = batchNotes.length > 1 && (refused || error.status === TIMED_OUT_STATUS);
+      if (!refused && !canSplit) {
         throw error;
       }
 
@@ -843,28 +897,19 @@ class SyncService {
   }
 
   /**
-   * Send saved searches and permanent deletions. They go in a request of their own,
-   * so they don't wait for a note to change, and a note the server refuses can't
-   * hold them back. After the server's 30-day cleanup, a deletion that never left
-   * this device would leave that note alive on every other one.
+   * Send permanent deletions. They go in a request of their own, so they don't wait
+   * for a note to change, and nothing else can hold them back: after the server's
+   * 30-day cleanup, a deletion that never left this device would leave that note
+   * alive on every other one. An account at its quota can still delete, and has to
+   * be able to, so nothing that adds data rides along.
    */
-  private async pushSearchesAndDeletions(
-    endpoint: string,
-    apiKey: string,
-    savedSearches: SyncSavedSearch[],
-    deletions: SyncDeletion[]
-  ): Promise<void> {
+  private async pushDeletions(endpoint: string, apiKey: string, deletions: SyncDeletion[]): Promise<void> {
     const result = validatePushResponse(await pushToServer(endpoint, apiKey, {
       notes: [],
       attachments: [],
       versions: [],
-      savedSearches: savedSearches.length > 0 ? savedSearches : undefined,
-      deletions: deletions.length > 0 ? deletions : undefined,
+      deletions,
     }));
-
-    for (const search of savedSearches) {
-      await savedSearchRepository.markSynced(search.id, search.version);
-    }
 
     // Refused means the note has a newer edit. Sending it again would only make the
     // server re-announce the note to every device, on every push.
@@ -873,7 +918,17 @@ class SyncService {
     await noteRepository.markDeletionsSynced(sent.filter(id => !refused.has(id)));
     await noteRepository.forgetDeletions(sent.filter(id => refused.has(id)));
 
-    console.log(`[SyncService] Pushed ${savedSearches.length} saved searches and ${deletions.length} deletions (${refused.size} refused)`);
+    console.log(`[SyncService] Pushed ${deletions.length} deletions (${refused.size} refused)`);
+  }
+
+  /** Send saved searches, which also shouldn't have to wait for a note to change */
+  private async pushSavedSearches(endpoint: string, apiKey: string, savedSearches: SyncSavedSearch[]): Promise<void> {
+    validatePushResponse(await pushToServer(endpoint, apiKey, { notes: [], attachments: [], versions: [], savedSearches }));
+
+    for (const search of savedSearches) {
+      await savedSearchRepository.markSynced(search.id, search.version);
+    }
+    console.log(`[SyncService] Marked ${savedSearches.length} saved searches as synced`);
   }
 
   /**
@@ -898,8 +953,11 @@ class SyncService {
       throw new Error('Application is locked');
     }
 
-    if (savedSearches.length > 0 || deletions.length > 0) {
-      await this.pushSearchesAndDeletions(endpoint, apiKey, savedSearches, deletions);
+    if (deletions.length > 0) {
+      await this.pushDeletions(endpoint, apiKey, deletions);
+    }
+    if (savedSearches.length > 0) {
+      await this.pushSavedSearches(endpoint, apiKey, savedSearches);
     }
 
     syncProgress.update(p => ({ ...p, total: p.total + modifiedNotes.length }));

@@ -1200,7 +1200,8 @@
     "syncing": "Sincronizando...",
     "syncProgress": "Sincronizando: {percentage}% concluído",
     "notesRefused": "Algumas notas excedem o limite de envio da sua conta e não foram sincronizadas. Tudo o resto foi.",
-    "accountDisabled": "A sua conta está desativada ou a aguardar aprovação, pelo que a sincronização parou. As suas notas neste dispositivo estão seguras. Contacte o seu administrador."
+    "accountDisabled": "A sua conta está desativada ou a aguardar aprovação, pelo que a sincronização parou. As suas notas neste dispositivo estão seguras. Contacte o seu administrador.",
+    "storageQuotaExceeded": "A sua conta atingiu o limite de armazenamento, pelo que as alterações neste dispositivo não podem ser enviadas. Elimine permanentemente algumas notas ou anexos para libertar espaço."
   },
   "inbox": {
     "title": "Caixa de entrada",

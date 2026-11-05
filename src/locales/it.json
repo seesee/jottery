@@ -1200,7 +1200,8 @@
     "syncing": "Sincronizzazione...",
     "syncProgress": "Sincronizzazione: {percentage}% completato",
     "notesRefused": "Alcune note superano il limite di caricamento del tuo account e non sono state sincronizzate. Tutto il resto sì.",
-    "accountDisabled": "Il tuo account è disattivato o in attesa di approvazione, quindi la sincronizzazione si è interrotta. Le tue note su questo dispositivo sono al sicuro. Contatta il tuo amministratore."
+    "accountDisabled": "Il tuo account è disattivato o in attesa di approvazione, quindi la sincronizzazione si è interrotta. Le tue note su questo dispositivo sono al sicuro. Contatta il tuo amministratore.",
+    "storageQuotaExceeded": "Il tuo account ha raggiunto il limite di archiviazione, quindi le modifiche su questo dispositivo non possono essere caricate. Elimina definitivamente alcune note o allegati per fare spazio."
   },
   "inbox": {
     "title": "Posta in arrivo",

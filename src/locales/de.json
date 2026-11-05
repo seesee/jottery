@@ -1200,7 +1200,8 @@
     "syncing": "Synchronisiere...",
     "syncProgress": "Synchronisierung: {percentage}% abgeschlossen",
     "notesRefused": "Einige Notizen überschreiten das Upload-Limit Ihres Kontos und wurden nicht synchronisiert. Alles andere wurde synchronisiert.",
-    "accountDisabled": "Ihr Konto ist deaktiviert oder wartet auf Freigabe, daher wurde die Synchronisierung angehalten. Ihre Notizen auf diesem Gerät sind sicher. Wenden Sie sich an Ihren Administrator."
+    "accountDisabled": "Ihr Konto ist deaktiviert oder wartet auf Freigabe, daher wurde die Synchronisierung angehalten. Ihre Notizen auf diesem Gerät sind sicher. Wenden Sie sich an Ihren Administrator.",
+    "storageQuotaExceeded": "Ihr Konto hat sein Speicherlimit erreicht, daher können Änderungen auf diesem Gerät nicht hochgeladen werden. Löschen Sie einige Notizen oder Anhänge endgültig, um Platz zu schaffen."
   },
   "inbox": {
     "title": "Posteingang",

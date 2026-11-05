@@ -1200,7 +1200,8 @@
     "syncing": "Senkronize ediliyor...",
     "syncProgress": "Senkronizasyon: %{percentage} tamamlandı",
     "notesRefused": "Bazı notlar hesabınızın yükleme sınırını aşıyor ve eşitlenmedi. Geri kalan her şey eşitlendi.",
-    "accountDisabled": "Hesabınız devre dışı veya onay bekliyor, bu yüzden eşitleme durduruldu. Bu cihazdaki notlarınız güvende. Yöneticinizle iletişime geçin."
+    "accountDisabled": "Hesabınız devre dışı veya onay bekliyor, bu yüzden eşitleme durduruldu. Bu cihazdaki notlarınız güvende. Yöneticinizle iletişime geçin.",
+    "storageQuotaExceeded": "Hesabınız depolama sınırına ulaştı, bu yüzden bu cihazdaki değişiklikler yüklenemiyor. Yer açmak için bazı notları veya ekleri kalıcı olarak silin."
   },
   "inbox": {
     "title": "Gelen Kutusu",

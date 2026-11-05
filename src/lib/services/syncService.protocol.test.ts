@@ -677,7 +677,7 @@ describe('sync protocol', () => {
 
     afterEach(() => {
       (syncService as unknown as { retryNotBefore: number }).retryNotBefore = 0;
-      vi.useRealTimers();
+      syncService.cancelPendingBackgroundSync();
     });
 
     it('keeps the credentials on a 403, says why, and stops background sync', async () => {
@@ -710,6 +710,149 @@ describe('sync protocol', () => {
 
       vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 3601_000);
       expect((await syncService.syncNow()).error).not.toBe('Rate limited');
+    });
+  });
+
+  describe('a busy, slow or full server', () => {
+    afterEach(() => {
+      (syncService as unknown as { retryNotBefore: number }).retryNotBefore = 0;
+      (syncService as unknown as { quotaNoticeAt: number }).quotaNoticeAt = 0;
+      syncService.cancelPendingBackgroundSync();
+    });
+
+    async function dirtyNote(n: number): Promise<void> {
+      await noteRepository.create(createTestNote({
+        id: ID(n), content: await encrypted('x'), needsSync: true,
+        contentHash: HASH('a'), parentHash: null, hashChain: [HASH('a')],
+      }));
+    }
+
+    /** `push` decides the status of each push: 200 accepts its notes */
+    function serveStatuses(push: (body: SyncPushRequest) => number, headers: Record<string, string> = {}) {
+      server.use(
+        http.get(`${ENDPOINT}/api/v1/sync/status`, () => HttpResponse.json({ serverTime: NOW })),
+        http.post(`${ENDPOINT}/api/v1/sync/push`, async ({ request }) => {
+          const body = await request.json() as SyncPushRequest;
+          pushes.push(body);
+          const status = push(body);
+          return status === 200
+            ? HttpResponse.json({ accepted: body.notes.map(n => ({ id: n.id })), rejected: [] })
+            : new HttpResponse('{"error":"no"}', { status, headers });
+        }),
+        http.post(`${ENDPOINT}/api/v1/sync/pull`, async ({ request }) => {
+          pulls.push(await request.json() as SyncPullRequest);
+          return HttpResponse.json({ notes: [], attachments: [], versions: [], syncedAt: NOW });
+        }),
+      );
+    }
+
+    describe('408', () => {
+      it('tries a batch again in smaller pieces, which are likelier to finish', async () => {
+        await dirtyNote(1);
+        await dirtyNote(2);
+        serveStatuses(body => (body.notes.length > 1 ? 408 : 200));
+
+        const result = await syncService.syncNow();
+
+        expect(result.success).toBe(true);
+        expect((await noteRepository.getById(ID(1)))?.needsSync).toBe(false);
+        expect((await noteRepository.getById(ID(2)))?.needsSync).toBe(false);
+      });
+
+      it('leaves a single note marked, without treating it as refused', async () => {
+        await dirtyNote(1);
+        serveStatuses(() => 408);
+
+        const result = await syncService.syncNow();
+
+        expect(result.success).toBe(false);
+        expect((await noteRepository.getById(ID(1)))?.needsSync).toBe(true);
+        expect((await syncRepository.getNoteSyncMetadata(ID(1)))?.lastSyncStatus).not.toBe('error');
+        expect(pulls).toHaveLength(1);
+      });
+    });
+
+    describe('503', () => {
+      it('waits as long as it is told, then tries again by itself', async () => {
+        // With live updates on, periodic sync is suspended, so nothing else would
+        await dirtyNote(1);
+        const schedule = vi.spyOn(window, 'setTimeout');
+        serveStatuses(() => 503, { 'Retry-After': '30' });
+
+        await syncService.syncNow();
+        expect((await syncService.syncNow()).error).toBe('Rate limited');
+
+        // Not the 30,000 of a request timeout: the wait, plus a small margin
+        const retry = schedule.mock.calls.find(([, delay]) => (delay ?? 0) > 30_000 && (delay ?? 0) < 31_000);
+        expect(retry).toBeDefined();
+
+        vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 31_000);
+        serveStatuses(() => 200);
+        (retry?.[0] as () => void)();
+
+        await vi.waitFor(async () => expect((await noteRepository.getById(ID(1)))?.needsSync).toBe(false));
+      });
+
+      it('does not split a batch, which would only add to the load', async () => {
+        await dirtyNote(1);
+        await dirtyNote(2);
+        serveStatuses(() => 503, { 'Retry-After': '30' });
+
+        await syncService.syncNow();
+
+        expect(pushes).toHaveLength(1);
+      });
+    });
+
+    describe('507', () => {
+      const quotaNotices = (spy: { mock: { calls: unknown[][] } }) =>
+        spy.mock.calls.filter(([message]) => message === 'sync.storageQuotaExceeded');
+
+      it('tells the user, keeps the note marked, and still pulls', async () => {
+        const error = vi.spyOn(toast, 'error');
+        await dirtyNote(1);
+        serveStatuses(() => 507);
+
+        const result = await syncService.syncNow();
+
+        expect(result.success).toBe(false);
+        expect(quotaNotices(error)).toHaveLength(1);
+        expect((await noteRepository.getById(ID(1)))?.needsSync).toBe(true);
+        expect(pulls).toHaveLength(1);
+      });
+
+      it('does not repeat itself on every background sync', async () => {
+        const error = vi.spyOn(toast, 'error');
+        await dirtyNote(1);
+        serveStatuses(() => 507);
+
+        await syncService.syncNow();
+        await syncService.syncNow();
+
+        expect(quotaNotices(error)).toHaveLength(1);
+      });
+
+      it('does not split a batch, because no piece would fit', async () => {
+        await dirtyNote(1);
+        await dirtyNote(2);
+        serveStatuses(() => 507);
+
+        await syncService.syncNow();
+
+        expect(pushes).toHaveLength(1);
+      });
+
+      it('still sends deletions, so the user can make room', async () => {
+        await noteRepository.create(createTestNote({ id: ID(1), content: await encrypted('x'), needsSync: false }));
+        await noteRepository.permanentDelete(ID(1));
+        const { create } = await import('./savedSearchRepository');
+        await create('a', 'b');
+        serveStatuses(body => (body.savedSearches ? 507 : 200));
+
+        await syncService.syncNow();
+
+        expect(await noteRepository.getPendingDeletions()).toEqual([]);
+      });
     });
   });
 
