@@ -72,7 +72,7 @@ The easiest way to get started is with Docker. Pre-built multi-architecture imag
     docker-compose up -d
     ```
 
-    The web interface will be available at `http://localhost:8088`.
+    The web interface will be available at `http://localhost:8088`. The port is only published on this machine, because it's plain HTTP and Docker's published ports bypass host firewalls such as ufw. `docker-compose.yml` shows how to widen it for a trusted LAN. Anything else should go through a TLS proxy.
 
 #### Building from Source
 
@@ -114,6 +114,18 @@ docker run -d \
   -e DEFAULT_ADMIN_PASSWORD='Choose-a-Str0ng-Password' \
   ghcr.io/seesee/jottery:latest
 ```
+
+#### Upgrading
+
+`docker-compose.yml` names an exact version, so a pull never brings in a new release and its database migrations unannounced. Some migrations can't be rolled back, so back up the `jottery_data` volume first. Then change the `image:` tag to the version you want and run:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+The `:latest` tag used in the `docker run` examples moves with each release, so pin a version there too if you want the same control.
+
+The services run as an unprivileged `jottery` user (uid 10001). Earlier images ran as root, so on its first start a new image takes ownership of the data volume, then drops to that user. If you bind-mount a host directory instead, that changes its owner to uid 10001. To keep your own owner, start the container with `--user` (`user:` in Compose) set to a uid that can write to the directory.
 
 ### First-Time Setup
 

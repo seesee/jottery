@@ -1,37 +1,5 @@
-// Authentication state management
+// Authentication state for the admin dashboard
 import { api } from './api';
-import type { LoginResponse } from './api';
+import { DashboardAuth } from './dashboardAuth.svelte';
 
-interface AuthState {
-  isAuthenticated: boolean;
-  user: LoginResponse['user'] | null;
-}
-
-class AuthStore {
-  private state = $state<AuthState>({
-    isAuthenticated: api.isAuthenticated(),
-    user: null,
-  });
-
-  get isAuthenticated() {
-    return this.state.isAuthenticated;
-  }
-
-  get user() {
-    return this.state.user;
-  }
-
-  async login(email: string, password: string): Promise<void> {
-    const response = await api.login(email, password);
-    this.state.isAuthenticated = true;
-    this.state.user = response.user;
-  }
-
-  async logout(): Promise<void> {
-    await api.logout();
-    this.state.isAuthenticated = false;
-    this.state.user = null;
-  }
-}
-
-export const auth = new AuthStore();
+export const auth = new DashboardAuth(api);

@@ -538,11 +538,11 @@ Multi-Admin Support:
 
 Default Admin Account:
 
-**Created by migration 003:**
-- Email: `admin@localhost`
-- Password: `changeme`
+**Created by migration 003, then secured on first start:**
+- Email: `admin@localhost`, unless `DEFAULT_ADMIN_EMAIL` is set
+- Password: `DEFAULT_ADMIN_PASSWORD`, or a random one printed once in the server log
 - Pre-approved and active
-- ⚠️ MUST be changed on first deployment
+- ⚠️ A generated password must be changed at first sign-in
 
 Admin Dashboard:
 

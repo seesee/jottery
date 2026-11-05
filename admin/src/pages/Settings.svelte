@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api } from '../lib/api';
+  import { describeError } from '../lib/apiErrors';
   import { toast } from '../lib/toast.svelte';
   import { _, locale } from 'svelte-i18n';
   import { AVAILABLE_LOCALES } from '../lib/services/i18nService';
@@ -55,7 +56,7 @@
       newPassword = '';
       confirmPassword = '';
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : $_('settings.changePassword.errors.failed');
+      const errorMessage = describeError(error, $_, 'settings.changePassword.errors.failed');
       passwordError = errorMessage;
       toast.error(errorMessage);
     } finally {

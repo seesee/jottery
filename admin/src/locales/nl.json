@@ -46,6 +46,23 @@
     "confirmTitle": "Uitloggen bevestigen",
     "confirmMessage": "Weet u zeker dat u wilt uitloggen?"
   },
+  "errors": {
+    "unknown": "Er is iets misgegaan. Probeer het opnieuw.",
+    "network": "De server is niet bereikbaar. Controleer uw verbinding en probeer het opnieuw.",
+    "forbidden": "U hebt daarvoor geen toestemming.",
+    "wrongPassword": "Huidig wachtwoord is onjuist",
+    "rateLimited": "Te veel pogingen. Probeer het over {seconds} seconden opnieuw.",
+    "tooManyAttempts": "Te veel pogingen. Wacht even en probeer het opnieuw.",
+    "passwordTooShort": "Nieuw wachtwoord moet minimaal 12 tekens lang zijn",
+    "passwordSameAsCurrent": "Het nieuwe wachtwoord moet verschillen van het huidige"
+  },
+  "session": {
+    "expired": "Uw sessie is verlopen. Meld u opnieuw aan."
+  },
+  "forcedPasswordChange": {
+    "title": "Wijzig uw wachtwoord",
+    "description": "U moet een nieuw wachtwoord kiezen voordat u verder kunt. Het moet minstens 12 tekens lang zijn."
+  },
   "dashboard": {
     "title": "Dashboard",
     "loadingStats": "Statistieken laden...",
@@ -248,6 +265,7 @@
       "errors": {
         "invalidCredentials": "Ongeldig e-mailadres of wachtwoord",
         "accountInactive": "Uw account is inactief. Neem contact op met de beheerder.",
+        "accountPending": "Uw account wacht op goedkeuring door een beheerder.",
         "unexpected": "Er is een onverwachte fout opgetreden",
         "statusCheckFailed": "Failed to check status. Please try again."
       },
