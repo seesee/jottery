@@ -53,19 +53,22 @@ export function parseOutliner(text: string): OutlinerNode[] {
       continue;
     }
 
-    // Calculate indent level by counting leading spaces
-    let spaces = 0;
+    // Calculate indent level from leading whitespace. A tab is one character but
+    // counts for a whole indent, so what to remove has to be counted separately.
+    let indentWidth = 0;
+    let leadingCharacters = 0;
     for (const char of line) {
       if (char === ' ') {
-        spaces++;
+        indentWidth++;
       } else if (char === '\t') {
-        spaces += INDENT_SIZE; // Treat tab as equivalent to indent size
+        indentWidth += INDENT_SIZE;
       } else {
         break;
       }
+      leadingCharacters++;
     }
-    const level = Math.floor(spaces / INDENT_SIZE);
-    let content = line.slice(spaces);
+    const level = Math.floor(indentWidth / INDENT_SIZE);
+    let content = line.slice(leadingCharacters);
 
     // Check for bullet markers
     let collapsed = false;
