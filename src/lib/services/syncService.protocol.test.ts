@@ -1493,6 +1493,14 @@ describe('sync protocol', () => {
   describe('the inbox', () => {
     const item = { id: ID(50), content: 'x', tags: [], createdAt: NOW, sizeBytes: 1 };
 
+    it('goes when the account is disconnected, as it is plaintext from that account', async () => {
+      inboxItems.set([item]);
+
+      await syncService.disconnect();
+
+      expect(get(inboxItems)).toEqual([]);
+    });
+
     it('is empty when a page says nothing about it, on any page', async () => {
       inboxItems.set([item]);
       const note = await remoteNote(1);

@@ -1,9 +1,10 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { isLocked, isLocking, notes, settings, searchQuery, filteredNotes, selectNote, isContentOnlyUpdate, archiveMode, toggleArchiveMode, isSyncing } from './lib/stores/appStore';
-  import { addNoteToStoreAndSearch } from './lib/stores/storeHelpers';
+  import { addNoteToStoreAndSearch, clearDecryptedState } from './lib/stores/storeHelpers';
   import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, AVAILABLE_LOCALES, syncService, syncRepository, appUpdateService, versionRepository } from './lib/services';
   import { startAutoLock, stopAutoLock } from './lib/services/autoLockService';
+  import { listenForLockElsewhere } from './lib/services/lockService';
   import { keyManager, setupActivityListeners } from './lib/services/keyManager';
   import { resetVaultHealth, undecryptableNotes } from './lib/services/vaultHealthService';
   import { toast } from './lib/utils/toast.svelte';
@@ -35,6 +36,7 @@
   let loadingProgress = { current: 0, total: 0 };
   let loadGeneration = 0; // Invalidates background batches from a superseded loadNotes run
   let keyManagerLockUnsubscribe: (() => void) | null = null;
+  let lockElsewhereUnsubscribe: (() => void) | null = null;
   let showSettings = false;
   let settingsInitialTab: 'general' | 'advanced' | null = null;
   let showRecycleBin = false;
@@ -329,6 +331,7 @@
         sessionStorageService.clear();
         isLocked.set(true);
       });
+      lockElsewhereUnsubscribe = listenForLockElsewhere();
 
       // Start version checking (only in production)
       appUpdateService.startChecking();
@@ -352,6 +355,7 @@
     if (backSpinnerTimeout !== null) {
       clearTimeout(backSpinnerTimeout);
     }
+    lockElsewhereUnsubscribe?.();
     if (keyManagerLockUnsubscribe) {
       keyManagerLockUnsubscribe();
       keyManagerLockUnsubscribe = null;
@@ -621,8 +625,7 @@
 
   // Clear notes when locked (loading is handled by the unlock reactive at line 349)
   $: if ($isLocked) {
-    notes.set([]);
-    filteredNotes.set([]);
+    clearDecryptedState();
   }
 
   // Perform search when query changes (indexing happens in loadNotes)

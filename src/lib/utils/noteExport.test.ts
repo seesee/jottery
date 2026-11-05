@@ -11,7 +11,7 @@ vi.mock('../services', () => ({
   keyManager: { getMasterKey: vi.fn(() => ({ key: {} })) },
 }));
 
-import { generatePrintHtml, printNote } from './noteExport';
+import { generatePrintHtml, printNote, removePrintFrames } from './noteExport';
 
 const HOSTILE = '<img src=x onerror="window.__pwned=1"><script>window.__pwned=1</script>Visible';
 
@@ -84,6 +84,15 @@ describe('printNote', () => {
     });
     return { result, built };
   }
+
+  it('leaves nothing behind if the app locks while the dialog is open', async () => {
+    const { built } = await startPrint();
+    const remove = vi.spyOn(built, 'remove');
+
+    removePrintFrames();
+
+    expect(remove).toHaveBeenCalledOnce();
+  });
 
   function stubWindow(built: HTMLIFrameElement) {
     const listeners: Record<string, () => void> = {};

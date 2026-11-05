@@ -1974,6 +1974,7 @@ class SyncService {
 
     // Clear all sync metadata (credentials, client ID, etc.)
     await syncRepository.clearAll();
+    inboxItems.set([]);
 
     // Update settings to disable sync
     await settingsRepository.update({

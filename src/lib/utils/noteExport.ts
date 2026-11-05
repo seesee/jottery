@@ -338,6 +338,19 @@ async function findAttachmentByFilename(
   return null;
 }
 
+/** Frames still holding a note, for as long as their print dialog is open */
+const printFrames = new Set<HTMLIFrameElement>();
+
+function removePrintFrame(frame: HTMLIFrameElement): void {
+  frame.remove();
+  printFrames.delete(frame);
+}
+
+/** Remove any note still in a print frame, which matters if the app locks meanwhile */
+export function removePrintFrames(): void {
+  printFrames.forEach(removePrintFrame);
+}
+
 /**
  * Print a document from a hidden frame, removing it afterwards so decrypted
  * content doesn't stay around.
@@ -357,18 +370,19 @@ function printInSandboxedFrame(html: string): Promise<boolean> {
     frame.addEventListener('load', () => {
       try {
         const printWindow = frame.contentWindow as Window;
-        printWindow.addEventListener('afterprint', () => frame.remove(), { once: true });
+        printWindow.addEventListener('afterprint', () => removePrintFrame(frame), { once: true });
         printWindow.focus();
         printWindow.print();
         resolve(true);
       } catch (error) {
         console.error('Failed to print note:', error);
-        frame.remove();
+        removePrintFrame(frame);
         resolve(false);
       }
     }, { once: true });
 
     frame.srcdoc = html;
+    printFrames.add(frame);
     document.body.appendChild(frame);
   });
 }
