@@ -7,6 +7,7 @@ extension L {
     static var setupRestoreFromBackup: String { String(localized: "setup.restoreFromBackup") }
     static var setupRestoreTitle: String { String(localized: "setup.restoreTitle") }
     static var setupRestoreFile: String { String(localized: "setup.restoreFile") }
+    static var setupRestoreChooseFile: String { String(localized: "setup.restoreChooseFile") }
     static var setupRestoreHint: String { String(localized: "setup.restoreHint") }
     static var setupRestoreAction: String { String(localized: "setup.restoreAction") }
     static var restoreVaultExists: String { String(localized: "restore.vaultExists") }
@@ -116,6 +117,7 @@ extension L {
     static func accountDeleteNotesMessage(_ count: Int) -> String {
         String(localized: "account.deleteNotesMessage \(count)")
     }
+    static var accountDeleteNotesMessageNoCount: String { String(localized: "account.deleteNotesMessageNoCount") }
     static var accountDeleteNotesHint: String { String(localized: "account.deleteNotesHint") }
     static var accountDeleteNotesAction: String { String(localized: "account.deleteNotesAction") }
     static var accountDeleteWrongPassword: String { String(localized: "account.deleteWrongPassword") }

@@ -51,9 +51,11 @@ struct AccountView: View {
                 deletePassword = ""
                 perform { await model.deleteServerNotes(password: entered, client: $0) }
             }
+            .disabled(deletePassword.isEmpty)
             Button(L.commonCancel, role: .cancel) { deletePassword = "" }
         } message: {
-            Text(L.accountDeleteNotesMessage(model.info?.noteCount ?? 0))
+            // An unknown count isn't zero, on something that can't be undone.
+            Text(model.info?.noteCount.map(L.accountDeleteNotesMessage) ?? L.accountDeleteNotesMessageNoCount)
         }
         .alert(L.accountReplaceTokenTitle, isPresented: $showReplaceTokenConfirmation) {
             Button(L.accountReplaceTokenAction, role: .destructive) {
