@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
   import { attachmentService } from '../services/attachmentService';
   import PdfViewer from './PdfViewer.svelte';
@@ -18,6 +19,21 @@
   let previewType: PreviewType = null;
   let isLoading = false;
   let decryptedFilename: string | null = null;
+
+  // Each load gets a number, so one that finishes late can tell it's been replaced
+  let loadGeneration = 0;
+  let objectUrl: string | null = null;
+
+  /** Let go of the decrypted file. Called whenever it's replaced or closed. */
+  function releasePreview() {
+    loadGeneration++;
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
+      objectUrl = null;
+    }
+  }
+
+  onDestroy(releasePreview);
 
   // Check if attachment can be previewed
   function canPreview(mimeType: string): boolean {
@@ -53,6 +69,9 @@
   }
 
   async function loadPreview(att: Attachment) {
+    releasePreview();
+    const generation = loadGeneration;
+
     if (!canPreview(att.mimeType)) {
       previewType = 'unsupported';
       return;
@@ -65,38 +84,41 @@
 
     try {
       // Decrypt the filename if not explicitly provided
-      if (!filename) {
-        decryptedFilename = await attachmentService.getDecryptedFilename(att);
-      }
+      const name = filename ? null : await attachmentService.getDecryptedFilename(att);
 
       // Get the decrypted data (returns Blob)
       const blob = await attachmentService.getAttachmentData(att);
+      if (generation !== loadGeneration) return;
 
-      if (previewType === 'image') {
-        previewContent = await imageObjectUrl(blob);
-      } else if (previewType === 'audio' || previewType === 'video' || previewType === 'pdf') {
+      decryptedFilename = name;
+      const type = getPreviewType(att.mimeType);
+
+      if (type === 'image' || type === 'audio' || type === 'video' || type === 'pdf') {
         // Create blob URL for media files
-        previewContent = URL.createObjectURL(blob);
-      } else if (previewType === 'text') {
+        const url = type === 'image' ? await imageObjectUrl(blob) : URL.createObjectURL(blob);
+        if (generation !== loadGeneration) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        objectUrl = url;
+        previewContent = url;
+      } else if (type === 'text') {
         // Convert blob to text for text files
         const arrayBuffer = await blob.arrayBuffer();
-        const text = new TextDecoder().decode(arrayBuffer);
-        previewContent = text;
+        if (generation !== loadGeneration) return;
+        previewContent = new TextDecoder().decode(arrayBuffer);
       }
     } catch (error) {
       console.error('Failed to load preview:', error);
-      previewType = 'unsupported';
+      if (generation === loadGeneration) previewType = 'unsupported';
     } finally {
-      isLoading = false;
+      if (generation === loadGeneration) isLoading = false;
     }
   }
 
   function handleClose() {
-    // Revoke blob URLs to free memory
-    if (previewContent && (previewType === 'image' || previewType === 'audio' || previewType === 'video' || previewType === 'pdf')) {
-      URL.revokeObjectURL(previewContent);
-    }
-
+    releasePreview();
+    isLoading = false;
     previewContent = null;
     previewType = null;
     decryptedFilename = null;

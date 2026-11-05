@@ -2,7 +2,7 @@
   import { _ } from 'svelte-i18n';
   import type { Attachment } from '../types';
   import { attachmentService } from '../services';
-  import { onMount, onDestroy } from 'svelte';
+  import { onDestroy } from 'svelte';
   import { toast } from '../utils/toast.svelte';
   import AttachmentPreviewModal from './AttachmentPreviewModal.svelte';
   import { attachmentMarkdown } from '../utils/attachmentMarkdown';
@@ -13,6 +13,7 @@
 
   // Thumbnail cache (blob URLs)
   let thumbnails: Map<string, string | null> = new Map();
+  let thumbnailGeneration = 0;
 
   // Preview state
   let previewAttachment: Attachment | null = null;
@@ -33,11 +34,17 @@
   async function loadThumbnails() {
     // Revoke old URLs before loading new ones
     revokeThumbnailUrls();
+    const generation = ++thumbnailGeneration;
 
     for (const attachment of attachments) {
       if (attachmentService.supportsThumbnail(attachment.mimeType)) {
         try {
           const thumbnailUrl = await attachmentService.getThumbnailData(attachment);
+          // A newer load has taken over, or this list has gone
+          if (generation !== thumbnailGeneration) {
+            if (thumbnailUrl) URL.revokeObjectURL(thumbnailUrl);
+            return;
+          }
           thumbnails.set(attachment.id, thumbnailUrl);
           thumbnails = thumbnails; // Trigger reactivity
         } catch (error) {
@@ -130,13 +137,9 @@
     }
   }
 
-  onMount(() => {
-    loadThumbnails();
-    loadFilenames();
-  });
-
   // Clean up blob URLs when component is destroyed
   onDestroy(() => {
+    thumbnailGeneration++;
     revokeThumbnailUrls();
   });
 

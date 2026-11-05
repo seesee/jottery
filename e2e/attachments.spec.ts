@@ -446,4 +446,70 @@ test.describe('Attachments', () => {
       expect(refused).toBe(true);
     });
   });
+  test.describe('decrypted attachments in memory', () => {
+    /** Keeps count of blob URLs still alive, from before the app starts */
+    async function trackObjectUrls(page: Page) {
+      await page.evaluate(() => {
+        const live = new Set<string>();
+        (window as unknown as { liveUrls: Set<string> }).liveUrls = live;
+        const create = URL.createObjectURL.bind(URL);
+        const revoke = URL.revokeObjectURL.bind(URL);
+        URL.createObjectURL = (blob: Blob) => { const url = create(blob); live.add(url); return url; };
+        URL.revokeObjectURL = (url: string) => { live.delete(url); revoke(url); };
+      });
+    }
+
+    const liveUrls = (page: Page) => page.evaluate(() => (window as unknown as { liveUrls: Set<string> }).liveUrls.size);
+
+    test('are released when another preview opens before the first has finished loading', async ({ page }) => {
+      const first = createTestFile('test-slow-1.png', 'not really a png');
+      const second = createTestFile('test-slow-2.png', 'not one either');
+      try {
+        await openAttachmentsModal(page, jp);
+        await uploadFileAndWait(page, jp, first, 'test-slow-1');
+        await uploadFileAndWait(page, jp, second, 'test-slow-2');
+        await trackObjectUrls(page);
+        await page.evaluate(async () => {
+          const { attachmentService } = await import('/src/lib/services/attachmentService.ts' as string);
+          const state = window as unknown as { finished: number };
+          state.finished = 0;
+          const read = attachmentService.getAttachmentData.bind(attachmentService);
+          attachmentService.getAttachmentData = async (attachment: unknown) => {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const data = await read(attachment);
+            setTimeout(() => { state.finished++; }, 100);
+            return data;
+          };
+        });
+        const before = await liveUrls(page);
+        const closePreview = page.getByRole('button', { name: /close/i }).last();
+
+        await jp.dialog.locator('.attachment-item').nth(0).locator('button').nth(1).click();
+        await closePreview.click();
+        await jp.dialog.locator('.attachment-item').nth(1).locator('button').nth(1).click();
+        await page.waitForFunction(() => (window as unknown as { finished: number }).finished === 2);
+        await closePreview.click();
+
+        expect(await liveUrls(page)).toBe(before);
+      } finally {
+        cleanupTestFile(first);
+        cleanupTestFile(second);
+      }
+    });
+
+    test('are all released when a list of thumbnails goes away', async ({ page }) => {
+      const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+      const filePath = path.join(__dirname, 'test-thumbnail.png');
+      fs.writeFileSync(filePath, pixel);
+      await trackObjectUrls(page);
+      try {
+        await openAttachmentsModal(page, jp);
+        await uploadFileAndWait(page, jp, filePath, 'test-thumbnail');
+        await closeAttachmentsModal(page, jp);
+        await expect.poll(() => liveUrls(page)).toBe(0);
+      } finally {
+        cleanupTestFile(filePath);
+      }
+    });
+  });
 });
