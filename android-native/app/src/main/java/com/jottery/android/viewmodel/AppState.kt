@@ -34,7 +34,11 @@ import com.jottery.android.model.UserSettings
 import com.jottery.android.network.SSEClient
 import com.jottery.android.network.SyncClient
 import com.jottery.android.crypto.EncryptedData
-import com.jottery.android.service.BackupService
+import com.jottery.android.service.backup.BackupService
+import com.jottery.android.service.backup.BackupSource
+import com.jottery.android.service.backup.RestorePlan
+import com.jottery.android.service.backup.RestoreResult
+import com.jottery.android.service.backup.keyBytes
 import com.jottery.android.service.EnvelopeException
 import com.jottery.android.service.EnvelopeService
 import com.jottery.android.service.ImportService
@@ -2172,29 +2176,61 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
     // MARK: - Backup & Import
 
-    /**
-     * Create an encrypted backup of all notes.
-     */
-    suspend fun createBackup(): String {
-        val nRepo = noteRepo ?: throw AppStateError.NotInitialised
-        val vRepo = versionRepo ?: throw AppStateError.NotInitialised
-        val aRepo = attachmentRepo ?: throw AppStateError.NotInitialised
-        val service = BackupService(nRepo, vRepo, aRepo, savedSearchRepo)
-        return withContext(Dispatchers.IO) { service.createBackup() }
+    private fun backupService(): BackupService = BackupService(
+        noteRepo = noteRepo ?: throw AppStateError.NotInitialised,
+        versionRepo = versionRepo ?: throw AppStateError.NotInitialised,
+        attachmentRepo = attachmentRepo ?: throw AppStateError.NotInitialised,
+        savedSearchRepo = savedSearchRepo ?: throw AppStateError.NotInitialised,
+        encryptionRepo = encryptionRepo ?: throw AppStateError.NotInitialised,
+        transaction = { block ->
+            (db ?: throw AppStateError.NotInitialised).withTransaction { block() }
+        },
+    )
+
+    /** Write an encrypted backup of the whole vault to [out]. */
+    suspend fun createBackup(out: java.io.OutputStream): BackupService.Summary {
+        val key = keyManager.masterKey ?: throw AppStateError.NotInitialised
+        return withContext(Dispatchers.IO) { backupService().write(out, key) }
     }
 
     /**
-     * Restore notes from an encrypted backup.
-     * Returns the number of notes restored.
+     * Establish a backup's key from [password] and check the whole file, changing
+     * nothing, so the user can confirm what a restore will do.
      */
-    suspend fun restoreBackup(backupJson: String): Int {
-        val nRepo = noteRepo ?: throw AppStateError.NotInitialised
-        val vRepo = versionRepo ?: throw AppStateError.NotInitialised
-        val aRepo = attachmentRepo ?: throw AppStateError.NotInitialised
-        val service = BackupService(nRepo, vRepo, aRepo, savedSearchRepo)
-        val count = withContext(Dispatchers.IO) { service.restoreBackup(backupJson) }
+    suspend fun inspectBackup(source: BackupSource, password: String): RestorePlan =
+        withContext(Dispatchers.Default) {
+            backupService().inspect(source, password, keyManager.masterKey)
+        }
+
+    /** Merge a checked backup into the open vault. */
+    suspend fun restoreBackup(source: BackupSource, plan: RestorePlan): RestoreResult {
+        val key = keyManager.masterKey ?: throw AppStateError.NotInitialised
+        val result = withContext(Dispatchers.Default) { backupService().restore(source, plan, key) }
         loadNotes()
-        return count
+        scheduleDebouncedSync()
+        return result
+    }
+
+    /**
+     * Fresh install: make the backup's vault this device's vault and open it.
+     * Runs in viewModelScope because opening the vault leaves the setup screen.
+     */
+    fun restoreAsNewVault(source: BackupSource, password: String, onFailure: (Throwable) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val plan = inspectBackup(source, password)
+                withContext(Dispatchers.Default) { backupService().restoreAsNewVault(source, plan) }
+                keyManager.unlockWithKeyData(plan.keyBytes())
+                _isFirstLaunch.value = false
+                _isLocked.value = false
+                loadNotes()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "[Backup] Restore into a new vault failed: ${e.javaClass.simpleName}")
+                onFailure(e)
+            }
+        }
     }
 
     /**

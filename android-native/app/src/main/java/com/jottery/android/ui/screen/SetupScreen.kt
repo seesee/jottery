@@ -1,6 +1,9 @@
 package com.jottery.android.ui.screen
 
+import android.net.Uri
 import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -32,16 +35,20 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.jottery.android.R
+import com.jottery.android.service.backup.BackupSource
 import com.jottery.android.viewmodel.AppState
 import kotlinx.coroutines.launch
 
-private enum class SetupMode { NEW_VAULT, REGISTER, IMPORT }
+private enum class SetupMode { NEW_VAULT, REGISTER, IMPORT, RESTORE }
 
 @Composable
 fun SetupScreen(
@@ -68,6 +75,19 @@ fun SetupScreen(
     var credentialString by remember { mutableStateOf("") }
     var importPassword by remember { mutableStateOf("") }
     var deviceName by remember { mutableStateOf(Build.MODEL) }
+
+    // Restore fields
+    val context = LocalContext.current
+    var backupUri by remember { mutableStateOf<Uri?>(null) }
+    var backupPassword by remember { mutableStateOf("") }
+    val backupPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            backupUri = uri
+            error = null
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -97,6 +117,7 @@ fun SetupScreen(
             SetupMode.NEW_VAULT -> "Create a password to encrypt your notes.\nThis cannot be recovered if lost."
             SetupMode.REGISTER -> "Register as the first device on a sync server."
             SetupMode.IMPORT -> "Import credentials from an existing device\nto sync your encrypted notes."
+            SetupMode.RESTORE -> stringResource(R.string.setup_restore_subtitle)
         }
         Text(
             text = subtitle,
@@ -200,6 +221,82 @@ fun SetupScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Import from Another Device")
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedButton(
+                    onClick = { mode = SetupMode.RESTORE; error = null },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.setup_restore_button))
+                }
+            }
+
+            // ── Restore (fresh install, from a backup file) ─────────
+            SetupMode.RESTORE -> {
+                OutlinedButton(
+                    onClick = { backupPicker.launch(arrayOf("*/*")) },
+                    enabled = !isCreating,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        stringResource(
+                            if (backupUri == null) R.string.setup_restore_choose
+                            else R.string.setup_restore_chosen
+                        )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = backupPassword,
+                    onValueChange = { backupPassword = it; error = null },
+                    label = { Text(stringResource(R.string.backup_password_label)) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    enabled = !isCreating,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                ErrorText(error)
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = {
+                        val uri = backupUri ?: return@Button
+                        isCreating = true
+                        error = null
+                        val source = BackupSource {
+                            context.contentResolver.openInputStream(uri)
+                                ?: throw java.io.FileNotFoundException()
+                        }
+                        appState.restoreAsNewVault(source, backupPassword) { failure ->
+                            error = context.backupErrorText(failure)
+                            isCreating = false
+                        }
+                    },
+                    enabled = !isCreating && backupUri != null && backupPassword.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        stringResource(
+                            if (isCreating) R.string.setup_restore_working else R.string.setup_restore_action
+                        )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedButton(
+                    onClick = { mode = SetupMode.NEW_VAULT; error = null },
+                    enabled = !isCreating,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(stringResource(R.string.back))
                 }
             }
 

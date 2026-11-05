@@ -122,9 +122,6 @@
     <string name="inbox_delete_all">Delete All</string>
 
     <!-- Backup -->
-    <string name="backup_title">Backup &amp; Restore</string>
-    <string name="backup_create">Create Backup</string>
-    <string name="backup_restore">Restore Backup</string>
 
     <!-- Import/Export -->
     <string name="import_title">Import</string>
@@ -155,4 +152,41 @@
     <string name="auto_lock_30">30 minutes</string>
     <string name="auto_lock_60">1 hour</string>
     <string name="auto_lock_never">Never</string>
+
+    <!-- Backup -->
+    <string name="backup_title">Backup &amp; Restore</string>
+    <string name="backup_intro">Create an encrypted backup of everything in this vault, or restore one. A backup opens with the notes password it was made with, on this device, a new one, or another Jottery client.</string>
+    <string name="backup_create">Create Backup</string>
+    <string name="backup_restore">Restore from Backup</string>
+    <string name="backup_created">Backup created: %1$d notes, %2$d attachments.</string>
+    <string name="backup_failed">Backup failed: %1$s</string>
+    <string name="backup_password_title">Backup password</string>
+    <string name="backup_password_message">Enter the notes password that was in use when this backup was made.</string>
+    <string name="backup_password_label">Password</string>
+    <string name="backup_checking">Checking backup\u2026</string>
+    <string name="backup_confirm_title">Restore this backup?</string>
+    <string name="backup_confirm_summary">It holds %1$d notes, %2$d attachments, %3$d versions and %4$d saved searches.</string>
+    <string name="backup_confirm_replaced">%1$d notes here will be replaced. Their current text is kept in version history.</string>
+    <string name="backup_confirm_kept">%1$d notes here are newer than the backup and will be kept.</string>
+    <string name="backup_confirm_unreadable">%1$d notes in the backup can\'t be read and will be skipped.</string>
+    <string name="backup_confirm_button">Restore</string>
+    <string name="backup_restored">Restored %1$d notes and %2$d attachments.</string>
+    <string name="backup_restored_kept">%1$d newer notes were kept.</string>
+    <string name="backup_restored_unreadable">%1$d notes in the backup couldn\'t be read.</string>
+    <string name="backup_error_wrong_password">That password doesn\'t open this backup.</string>
+    <string name="backup_error_not_backup">This file isn\'t a Jottery backup.</string>
+    <string name="backup_error_unsupported">This backup was made by a newer version of Jottery (format %1$s). Update Jottery and try again.</string>
+    <string name="backup_error_corrupt">This backup is damaged and can\'t be restored. Nothing has been changed.</string>
+    <string name="backup_error_no_key">This backup was made by an older version of Jottery for Android and doesn\'t contain its key. It can only be restored into the vault that made it.</string>
+    <string name="backup_error_generic">Restore failed: %1$s</string>
+    <string name="cancel">Cancel</string>
+    <string name="back">Back</string>
+
+    <!-- Setup: restore -->
+    <string name="setup_restore_button">Restore from Backup</string>
+    <string name="setup_restore_subtitle">Start from a Jottery backup. Enter the notes password it was made with.</string>
+    <string name="setup_restore_choose">Choose Backup File</string>
+    <string name="setup_restore_chosen">Backup file selected</string>
+    <string name="setup_restore_action">Restore</string>
+    <string name="setup_restore_working">Restoring\u2026</string>
 </resources>
