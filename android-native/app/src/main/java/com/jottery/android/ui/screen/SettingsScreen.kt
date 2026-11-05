@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.jottery.android.BuildConfig
 import com.jottery.android.R
 import com.jottery.android.model.SortOrder
 import com.jottery.android.model.ThemeMode
@@ -199,7 +200,7 @@ fun SettingsScreen(
             SettingsSectionHeader(stringResource(R.string.settings_about2))
             SettingsRow(
                 title = stringResource(R.string.settings_about_app),
-                subtitle = stringResource(R.string.settings_about_version, appVersion(context)),
+                subtitle = stringResource(R.string.settings_about_version, BuildConfig.VERSION_NAME),
             )
             val numbers = remember { NumberFormat.getInstance() }
             val counts = listOf(
@@ -289,8 +290,6 @@ fun SettingsScreen(
     }
 }
 
-private fun appVersion(context: android.content.Context): String =
-    context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
 
 @Composable
 private fun SettingsSectionHeader(title: String) {
