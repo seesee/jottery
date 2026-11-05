@@ -31,6 +31,7 @@ struct SetupScreen: View {
 
             if selectedTab == 0 {
                 NewVaultView()
+                RestoreFromBackupButton()
             } else {
                 ConnectToServerView()
             }

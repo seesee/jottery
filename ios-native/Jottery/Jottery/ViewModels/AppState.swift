@@ -335,6 +335,8 @@ final class AppState {
             self?.lock()
         }
 
+        VaultFromBackup.removeLeftovers(besides: database)
+
         self.db = database
         let verRepo = VersionRepository(db: database)
         self.versionRepo = verRepo
