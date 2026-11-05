@@ -1011,6 +1011,11 @@
       "notAvailable": "Voorvertoning niet beschikbaar voor dit bestandstype.",
       "audioNotSupported": "Uw browser ondersteunt geen audio-afspelen.",
       "videoNotSupported": "Uw browser ondersteunt geen video-afspelen."
+    },
+    "confirmDelete": {
+      "title": "Bijlage verwijderen?",
+      "message": "Het bestand wordt uit deze notitie verwijderd. Tenzij een eerdere versie van de notitie het nog bevat, kan het niet worden hersteld.",
+      "confirmButton": "Verwijderen"
     }
   },
   "keyboard": {

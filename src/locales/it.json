@@ -1011,6 +1011,11 @@
       "notAvailable": "Anteprima non disponibile per questo tipo di file.",
       "audioNotSupported": "Il tuo browser non supporta la riproduzione audio.",
       "videoNotSupported": "Il tuo browser non supporta la riproduzione video."
+    },
+    "confirmDelete": {
+      "title": "Rimuovere l'allegato?",
+      "message": "Il file verrà rimosso da questa nota. A meno che non sia ancora presente in una versione precedente della nota, non potrà essere recuperato.",
+      "confirmButton": "Rimuovi"
     }
   },
   "keyboard": {

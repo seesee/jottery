@@ -1011,6 +1011,11 @@
       "notAvailable": "Bu dosya türü için önizleme kullanılamıyor.",
       "audioNotSupported": "Tarayıcınız ses oynatmayı desteklemiyor.",
       "videoNotSupported": "Tarayıcınız video oynatmayı desteklemiyor."
+    },
+    "confirmDelete": {
+      "title": "Ek kaldırılsın mı?",
+      "message": "Dosya bu nottan kaldırılacak. Notun önceki bir sürümünde hâlâ yoksa kurtarılamaz.",
+      "confirmButton": "Kaldır"
     }
   },
   "keyboard": {

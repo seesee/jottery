@@ -1011,6 +1011,11 @@
       "notAvailable": "Vorschau für diesen Dateityp nicht verfügbar.",
       "audioNotSupported": "Ihr Browser unterstützt keine Audiowiedergabe.",
       "videoNotSupported": "Ihr Browser unterstützt keine Videowiedergabe."
+    },
+    "confirmDelete": {
+      "title": "Anhang entfernen?",
+      "message": "Die Datei wird aus dieser Notiz entfernt. Sofern sie nicht in einer früheren Version der Notiz enthalten ist, kann sie nicht wiederhergestellt werden.",
+      "confirmButton": "Entfernen"
     }
   },
   "keyboard": {

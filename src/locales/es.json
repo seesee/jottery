@@ -1011,6 +1011,11 @@
       "notAvailable": "Vista previa no disponible para este tipo de archivo.",
       "audioNotSupported": "Su navegador no admite reproducción de audio.",
       "videoNotSupported": "Su navegador no admite reproducción de video."
+    },
+    "confirmDelete": {
+      "title": "¿Quitar el adjunto?",
+      "message": "El archivo se quitará de esta nota. Salvo que siga en una versión anterior de la nota, no se podrá recuperar.",
+      "confirmButton": "Quitar"
     }
   },
   "keyboard": {

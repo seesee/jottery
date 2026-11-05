@@ -1011,6 +1011,11 @@
       "notAvailable": "此文件类型无法预览。",
       "audioNotSupported": "您的浏览器不支持音频播放。",
       "videoNotSupported": "您的浏览器不支持视频播放。"
+    },
+    "confirmDelete": {
+      "title": "移除附件？",
+      "message": "该文件将从此笔记中移除。除非笔记的早期版本中仍有此文件，否则无法恢复。",
+      "confirmButton": "移除"
     }
   },
   "keyboard": {

@@ -1011,6 +1011,11 @@
       "notAvailable": "Aperçu non disponible pour ce type de fichier.",
       "audioNotSupported": "Votre navigateur ne prend pas en charge la lecture audio.",
       "videoNotSupported": "Votre navigateur ne prend pas en charge la lecture vidéo."
+    },
+    "confirmDelete": {
+      "title": "Retirer la pièce jointe ?",
+      "message": "Le fichier sera retiré de cette note. À moins qu'une version antérieure de la note ne le contienne encore, il ne pourra pas être récupéré.",
+      "confirmButton": "Retirer"
     }
   },
   "keyboard": {

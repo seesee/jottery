@@ -108,6 +108,7 @@
   let showAttachmentsModal: boolean = false; // Mobile: show attachments in modal
   let showColorPicker: boolean = false;
   let showDeleteConfirm: boolean = false;
+  let attachmentToDelete: Attachment | null = null;
   let hasContentChanged: boolean = false; // Track if content modified since note loaded
   let isDarkMode: boolean = false; // Track if dark mode is active (updated via MutationObserver)
   let editorMode: 'raw' | 'wysiwyg' = 'raw'; // Editor mode for markdown notes
@@ -765,6 +766,19 @@
     }
   }
 
+  // The bin icon is small and easy to hit, and a removed file may be gone for good
+  function requestDeleteAttachment(attachment: Attachment) {
+    attachmentToDelete = attachment;
+  }
+
+  function confirmDeleteAttachment() {
+    const attachment = attachmentToDelete;
+    attachmentToDelete = null;
+    if (attachment) {
+      handleDeleteAttachment(attachment);
+    }
+  }
+
   async function handleDeleteAttachment(attachment: Attachment) {
     try {
       // Remove from attachments array
@@ -1229,7 +1243,7 @@
         {isUploading}
         backgroundColor={noteBackgroundColor ? hexWithOpacity(noteBackgroundColor, 0.15) : undefined}
         onToggleExpanded={toggleAttachments}
-        onDelete={handleDeleteAttachment}
+        onDelete={requestDeleteAttachment}
         onFileUpload={handleFileUpload}
       />
     {/if}
@@ -1334,8 +1348,19 @@
   {attachments}
   {isUploading}
   onClose={() => showAttachmentsModal = false}
-  onDelete={handleDeleteAttachment}
+  onDelete={requestDeleteAttachment}
   onFileUpload={handleFileUpload}
+/>
+
+<!-- Attachment delete confirmation. After the attachments modal, so it sits on top. -->
+<ConfirmModal
+  show={attachmentToDelete !== null}
+  title={$_('attachments.confirmDelete.title')}
+  message={$_('attachments.confirmDelete.message')}
+  confirmText={$_('attachments.confirmDelete.confirmButton')}
+  cancelText={$_('common.cancel')}
+  onConfirm={confirmDeleteAttachment}
+  onCancel={() => attachmentToDelete = null}
 />
 
 <!-- Color Picker Modal -->

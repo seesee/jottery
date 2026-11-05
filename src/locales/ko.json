@@ -1011,6 +1011,11 @@
       "notAvailable": "이 파일 형식은 미리보기가 불가능합니다.",
       "audioNotSupported": "브라우저가 오디오 재생을 지원하지 않습니다.",
       "videoNotSupported": "브라우저가 비디오 재생을 지원하지 않습니다."
+    },
+    "confirmDelete": {
+      "title": "첨부 파일을 제거할까요?",
+      "message": "이 파일이 메모에서 제거됩니다. 메모의 이전 버전에 남아 있지 않으면 복구할 수 없습니다.",
+      "confirmButton": "제거"
     }
   },
   "keyboard": {

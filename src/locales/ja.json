@@ -1011,6 +1011,11 @@
       "notAvailable": "このファイルタイプのプレビューは利用できません。",
       "audioNotSupported": "お使いのブラウザは音声の再生に対応していません。",
       "videoNotSupported": "お使いのブラウザは動画の再生に対応していません。"
+    },
+    "confirmDelete": {
+      "title": "添付ファイルを削除しますか？",
+      "message": "このファイルはノートから削除されます。ノートの以前のバージョンに残っていない限り、復元できません。",
+      "confirmButton": "削除"
     }
   },
   "keyboard": {

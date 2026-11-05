@@ -6,7 +6,7 @@
 import type { Note, DecryptedNote, SortOrder, Attachment } from '../types';
 import { DEFAULT_NOTE } from '../types';
 import { noteRepository } from './noteRepository';
-import { attachmentRepository } from './attachmentRepository';
+import { deleteUnreferencedAttachments } from './storageCleanupService';
 import { versionRepository } from './versionRepository';
 import { advanceContentHash, cryptoService, encryptStringArray, decryptStringArray, updateHashChain } from './crypto';
 import { recordDecryptFailure } from './vaultHealthService';
@@ -347,6 +347,7 @@ class NoteService {
 
     // Track if actual content changed (not just UI state)
     let hasContentChange = false;
+    let removedAttachmentIds: string[] = [];
 
     // Decrypt current content to compare
     let currentContent = '';
@@ -396,19 +397,7 @@ class NoteService {
         [...oldAttachmentIds].some(id => !newAttachmentIds.has(id));
 
       if (attachmentsChanged) {
-        // Delete attachments that were removed
-        for (const oldId of oldAttachmentIds) {
-          if (!newAttachmentIds.has(oldId)) {
-            try {
-              await attachmentRepository.deleteBlob(oldId);
-              // Also try to delete thumbnail if it exists
-              await attachmentRepository.deleteThumbnail(oldId);
-            } catch (error) {
-              console.error(`Failed to delete attachment blob ${oldId}:`, error);
-            }
-          }
-        }
-
+        removedAttachmentIds = [...oldAttachmentIds].filter(id => !newAttachmentIds.has(id));
         note.attachments = updates.attachments;
         hasContentChange = true;
       }
@@ -459,6 +448,9 @@ class NoteService {
 
     // Update modifiedAt for any change (content or UI state) so it syncs properly
     const updatedNote = await noteRepository.update(note, hasContentChange);
+
+    // After the save, so this note's old reference no longer counts
+    await deleteUnreferencedAttachments(removedAttachmentIds);
 
     // Notify backup scheduler of note update (fire and forget)
     if (hasContentChange) {
@@ -606,16 +598,13 @@ class NoteService {
    */
   async permanentlyDeleteNote(id: string): Promise<void> {
     const note = await noteRepository.getById(id);
-    if (note && note.attachments.length > 0) {
-      // Delete all attachments
-      await Promise.all(
-        note.attachments.map(attachment =>
-          attachmentRepository.deleteAll(attachment.id)
-        )
-      );
-    }
 
+    // Its versions can't be reached once the note has gone, and they would keep its
+    // attachments in use for good
+    await versionRepository.deleteVersionsForNote(id);
     await noteRepository.permanentDelete(id);
+
+    await deleteUnreferencedAttachments(note?.attachments.map(attachment => attachment.id) ?? []);
   }
 
   /**

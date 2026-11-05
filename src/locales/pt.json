@@ -1011,6 +1011,11 @@
       "notAvailable": "Visualização não disponível para este tipo de arquivo.",
       "audioNotSupported": "Seu navegador não suporta reprodução de áudio.",
       "videoNotSupported": "Seu navegador não suporta reprodução de vídeo."
+    },
+    "confirmDelete": {
+      "title": "Remover o anexo?",
+      "message": "O ficheiro será removido desta nota. A menos que uma versão anterior da nota ainda o tenha, não poderá ser recuperado.",
+      "confirmButton": "Remover"
     }
   },
   "keyboard": {

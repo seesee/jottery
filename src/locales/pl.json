@@ -1011,6 +1011,11 @@
       "notAvailable": "Podgląd niedostępny dla tego typu pliku.",
       "audioNotSupported": "Twoja przeglądarka nie obsługuje odtwarzania audio.",
       "videoNotSupported": "Twoja przeglądarka nie obsługuje odtwarzania wideo."
+    },
+    "confirmDelete": {
+      "title": "Usunąć załącznik?",
+      "message": "Plik zostanie usunięty z tej notatki. Jeśli nie ma go w żadnej wcześniejszej wersji notatki, nie będzie można go odzyskać.",
+      "confirmButton": "Usuń"
     }
   },
   "keyboard": {

@@ -1093,6 +1093,11 @@
       "notAvailable": "Preview not available for this file type.",
       "audioNotSupported": "Your browser does not support audio playback.",
       "videoNotSupported": "Your browser does not support video playback."
+    },
+    "confirmDelete": {
+      "title": "Remove attachment?",
+      "message": "The file will be removed from this note. Unless an earlier version of the note still has it, it can't be recovered.",
+      "confirmButton": "Remove"
     }
   },
   "keyboard": {
