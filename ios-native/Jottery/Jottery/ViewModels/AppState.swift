@@ -327,10 +327,12 @@ final class AppState {
         }
     }
 
-    /// Remove every file that held something on its way in or out of the vault.
+    /// Remove every file that held something on its way in or out of the vault,
+    /// and the pictures of attachments kept in memory.
     private func removeTemporaryFiles() {
         temporaryFiles.removeAll()
         TemporaryFiles.removeLeftovers()
+        AttachmentThumbnails.shared.removeAll()
     }
 
     /// Wire repositories to a specific database. Internal so tests can
@@ -1459,6 +1461,7 @@ final class AppState {
 
         // Delete blob
         try? attachmentRepo.deleteBlob(id: ref.data)
+        AttachmentThumbnails.shared.remove(attachmentId)
 
         refreshNoteFromStore(id: noteId)
     }
