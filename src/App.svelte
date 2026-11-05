@@ -287,8 +287,9 @@
       }
       settings.set({ ...DEFAULT_SETTINGS, ...userSettings });
 
-      // Expose app context for E2E testing
-      if (typeof window !== 'undefined') {
+      // Only for tooling against the dev server. In a release this would hand the
+      // decrypted vault to any script that ran in the page.
+      if (import.meta.env.DEV) {
         (window as any).__appContext = {
           settingsRepository,
           settings,
