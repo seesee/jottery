@@ -293,7 +293,7 @@ pub fn delete_current_attachment(app: &mut App) -> Result<()> {
             app.selected_attachment = note_in_list.attachments.len() - 1;
         }
 
-        app.error = Some(format!("Deleted: {}", filename));
+        app.notify(t!("attachment.deleted", name = filename).to_string());
     }
 
     Ok(())

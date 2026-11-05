@@ -119,6 +119,8 @@ attachment:
   press_enter: "続行するには Enter を押してください..."
   opened: "既定のアプリケーションでファイルを開きました。"
   no_opener: "このシステムにはファイルを開くプログラムがありません。代わりに S で添付ファイルを保存してください。"
+  delete_failed: "添付ファイルの削除に失敗しました: %{error}"
+  deleted: "削除しました: %{name}"
 version:
   history: バージョン履歴
   restore: バージョンを復元

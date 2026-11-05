@@ -119,6 +119,8 @@ attachment:
   press_enter: "Devam etmek için Enter tuşuna basın..."
   opened: "Dosya varsayılan uygulamada açıldı."
   no_opener: "Bu sistemde dosya açacak bir program yok. Bunun yerine eki S ile kaydedin."
+  delete_failed: "Ek silinemedi: %{error}"
+  deleted: "Silindi: %{name}"
 version:
   history: Sürüm geçmişi
   restore: Sürümü geri yükle

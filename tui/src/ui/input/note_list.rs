@@ -91,6 +91,9 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
         app.sync_status = None;
     }
 
+    // An error stays on screen until the next key
+    app.error = None;
+
     // Handle inbox view mode
     if matches!(app.view_mode, ViewMode::Inbox) {
         super::inbox::handle_inbox_key(app, key);
@@ -329,7 +332,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         let version_number = app.loaded_versions[app.selected_version].version;
                         match operations::notes::restore_version(app, version_number) {
                             Ok(()) => {
-                                app.error = Some(t!("version.restored", number = version_number).to_string());
+                                app.notify(t!("version.restored", number = version_number).to_string());
                                 app.view_mode = ViewMode::NoteList;
                                 app.loaded_versions.clear();
                                 app.versions_note_id = None;
@@ -732,7 +735,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                             if let (Some(db), Some(key)) = (&app.db, &app.key) {
                                 let repo = NoteRepository::new(db.connection());
                                 if let Err(e) = repo.update(note, key) {
-                                    app.error = Some(t!("note.archive_failed", error = e.to_string()).to_string());
+                                    app.error = Some(t!("archive.failed", error = e.to_string()).to_string());
                                 }
                             }
                         }
@@ -856,7 +859,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 // In attachment viewer: delete selected attachment
                 if matches!(app.view_mode, ViewMode::AttachmentViewer) {
                     if let Err(e) = operations::attachments::delete_current_attachment(app) {
-                        app.error = Some(t!("attachment.add_failed", error = e.to_string()).to_string());
+                        app.error = Some(t!("attachment.delete_failed", error = e.to_string()).to_string());
                     }
                 }
                 // Delete attachment when attachment panel is focused
@@ -970,7 +973,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 // Remove selected attachment (only in note list view)
                 if matches!(app.view_mode, ViewMode::NoteList) {
                     if let Err(e) = operations::attachments::remove_attachment_from_current_note(app) {
-                        app.error = Some(t!("attachment.add_failed", error = e.to_string()).to_string());
+                        app.error = Some(t!("attachment.delete_failed", error = e.to_string()).to_string());
                     }
                 }
             }

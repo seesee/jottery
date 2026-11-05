@@ -119,6 +119,8 @@ attachment:
   press_enter: "Prima Enter para continuar..."
   opened: "Ficheiro aberto na aplicação predefinida."
   no_opener: "Este sistema não tem um programa para abrir ficheiros. Guarde o anexo com S."
+  delete_failed: "Não foi possível eliminar o anexo: %{error}"
+  deleted: "Eliminado: %{name}"
 version:
   history: Histórico de versões
   restore: Restaurar versão

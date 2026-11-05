@@ -100,15 +100,17 @@ pub fn save_note(app: &mut App) -> Result<()> {
 /// the edit stays in `note_input` and the note view opens on it, so the text can be
 /// saved again rather than being lost when the list reloads.
 pub fn edit_and_save(app: &mut App) {
-    let new_content = match super::attachments::edit_with_external_editor(app) {
-        Ok(content) => content,
+    match super::attachments::edit_with_external_editor(app) {
+        Ok(content) => save_edit(app, content),
         Err(e) => {
             app.error = Some(format!("{e:#}"));
             app.editing_note_id = None;
-            return;
         }
-    };
+    }
+}
 
+/// Save text that came back from the editor.
+fn save_edit(app: &mut App, new_content: String) {
     app.note_input = new_content;
     if let Err(e) = save_note(app) {
         app.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
@@ -271,3 +273,88 @@ pub fn view_note_readonly(app: &mut App, content: &str, syntax: crate::models::S
     super::pager::view_with_pager(app, content, syntax)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::Database;
+    use crate::ui::input::note_view::handle_note_view_key;
+    use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+
+    /// An unlocked app holding one note, whose saves can be made to fail.
+    fn unlocked_app() -> App {
+        let dir = tempfile::tempdir().unwrap();
+        let mut app = App::new(dir.path().join("test.db"), None).unwrap();
+        std::mem::forget(dir);
+
+        let key = crate::crypto::CryptoService::new().generate_master_key();
+        let db = Database::in_memory(&uuid::Uuid::new_v4().to_string()).unwrap();
+        let note = Note::new("Original".to_string());
+        NoteRepository::new(db.connection()).create(&note, &key).unwrap();
+
+        app.editing_note_id = Some(note.id.clone());
+        app.notes.push(note);
+        app.db = Some(db);
+        app.key = Some(key);
+        app
+    }
+
+    fn break_saving(app: &App) {
+        app.db.as_ref().unwrap().connection().execute_batch("DROP TABLE notes").unwrap();
+    }
+
+    fn press(app: &mut App, code: KeyCode) {
+        handle_note_view_key(app, KeyEvent::new(code, KeyModifiers::NONE)).unwrap();
+    }
+
+    #[test]
+    fn a_failed_save_keeps_the_edit_and_says_so() {
+        let mut app = unlocked_app();
+        break_saving(&app);
+
+        save_edit(&mut app, "My edit".to_string());
+
+        assert_eq!(app.note_input, "My edit");
+        assert!(app.editing_note_id.is_some());
+        assert!(matches!(app.state, AppState::NoteView));
+        assert!(app.error.is_some());
+    }
+
+    #[test]
+    fn a_successful_save_leaves_nothing_behind() {
+        let mut app = unlocked_app();
+
+        save_edit(&mut app, "My edit".to_string());
+
+        assert_eq!(app.notes[0].content, "My edit");
+        assert!(app.editing_note_id.is_none());
+        assert!(app.error.is_none());
+    }
+
+    #[test]
+    fn saving_from_the_note_view_stays_put_when_it_fails() {
+        let mut app = unlocked_app();
+        app.state = AppState::NoteView;
+        app.note_input = "My edit".to_string();
+        break_saving(&app);
+
+        press(&mut app, KeyCode::Char('q'));
+
+        assert!(matches!(app.state, AppState::NoteView));
+        assert_eq!(app.note_input, "My edit");
+        assert!(app.error.is_some());
+    }
+
+    #[test]
+    fn escape_gives_up_on_an_edit_that_will_not_save() {
+        let mut app = unlocked_app();
+        app.state = AppState::NoteView;
+        app.note_input = "My edit".to_string();
+        break_saving(&app);
+
+        press(&mut app, KeyCode::Char('q'));
+        press(&mut app, KeyCode::Esc);
+
+        assert!(matches!(app.state, AppState::NoteList));
+        assert!(app.error.is_none());
+    }
+}

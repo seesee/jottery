@@ -455,6 +455,12 @@ impl App {
         }
     }
 
+    /// Tell the user something went well, in the status bar. It clears itself.
+    pub(crate) fn notify(&mut self, message: String) {
+        self.sync_status = Some(message);
+        self.sync_status_set_at = Some(Instant::now());
+    }
+
     /// Handle key events
     pub fn handle_key(&mut self, key: KeyEvent) -> Result<()> {
         // Handle help and settings screens separately to avoid borrow issues

@@ -119,6 +119,8 @@ attachment:
   press_enter: "Premi Invio per continuare..."
   opened: "File aperto nell'applicazione predefinita."
   no_opener: "Nessun programma per aprire i file su questo sistema. Salva invece l'allegato con S."
+  delete_failed: "Impossibile eliminare l'allegato: %{error}"
+  deleted: "Eliminato: %{name}"
 version:
   history: Cronologia versioni
   restore: Ripristina versione

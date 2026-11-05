@@ -119,6 +119,8 @@ attachment:
   press_enter: "Appuyez sur Entrée pour continuer..."
   opened: "Fichier ouvert dans l'application par défaut."
   no_opener: "Aucun programme pour ouvrir des fichiers sur ce système. Enregistrez plutôt la pièce jointe avec S."
+  delete_failed: "Impossible de supprimer la pièce jointe : %{error}"
+  deleted: "Supprimé : %{name}"
 version:
   history: Historique des versions
   restore: Restaurer la version

@@ -334,8 +334,11 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         height: list_chunk.height.saturating_sub(2),
     };
 
-    // Help text (full width at bottom)
-    let status_text = if let Some(ref status) = app.sync_status {
+    // Help text (full width at bottom). An error comes first: handlers report
+    // failures through app.error, and this is the only place they'd be seen.
+    let status_text = if let Some(ref error) = app.error {
+        error.clone()
+    } else if let Some(ref status) = app.sync_status {
         status.clone()
     } else if app.search_active {
         // Show count of matching notes in opposite mode (if > 0)
@@ -397,7 +400,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         }
     };
     let help = Paragraph::new(status_text)
-        .style(if let Some(ref status) = app.sync_status {
+        .style(if app.error.is_some() {
+            Style::default().fg(app.color_scheme.error)
+        } else if let Some(ref status) = app.sync_status {
             // Show red for errors, yellow for other sync status, green for success
             if status.contains("failed") || status.contains("error") {
                 Style::default().fg(app.color_scheme.error)
@@ -1024,4 +1029,66 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     app.tag_positions = tag_positions_local;
     app.note_link_positions = note_link_positions_local;
     app.preview_area = preview_area_local;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::Note;
+    use ratatui::{backend::TestBackend, Terminal};
+
+    pub(crate) fn test_app() -> App {
+        let dir = tempfile::tempdir().unwrap();
+        let app = App::new(dir.path().join("test.db"), None).unwrap();
+        std::mem::forget(dir);
+        app
+    }
+
+    pub(crate) fn screen(app: &mut App) -> String {
+        let mut terminal = Terminal::new(TestBackend::new(120, 30)).unwrap();
+        terminal.draw(|frame| render_note_list(app, frame)).unwrap();
+        let buffer = terminal.backend().buffer();
+        (0..buffer.area.height)
+            .map(|y| {
+                (0..buffer.area.width)
+                    .map(|x| buffer[(x, y)].symbol().to_string())
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    #[test]
+    fn an_error_is_shown_in_the_status_bar() {
+        let mut app = test_app();
+        app.notes.push(Note::new("A note".to_string()));
+        app.error = Some("The disk is full".to_string());
+
+        assert!(screen(&mut app).contains("The disk is full"));
+    }
+
+    #[test]
+    fn an_error_outranks_a_sync_status() {
+        let mut app = test_app();
+        app.error = Some("The disk is full".to_string());
+        app.sync_status = Some("All synced".to_string());
+
+        let drawn = screen(&mut app);
+        assert!(drawn.contains("The disk is full"));
+        assert!(!drawn.contains("All synced"));
+    }
+
+    #[test]
+    fn a_note_with_a_short_or_multi_byte_id_draws() {
+        let mut app = test_app();
+        let mut short = Note::new("Short id".to_string());
+        short.id = "x".to_string();
+        let mut wide = Note::new("Wide id".to_string());
+        wide.id = "日本語のノート".to_string();
+        app.notes.push(short);
+        app.notes.push(wide);
+
+        let drawn = screen(&mut app);
+        assert!(drawn.contains("Short id"));
+    }
 }

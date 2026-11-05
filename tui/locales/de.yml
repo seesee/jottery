@@ -119,6 +119,8 @@ attachment:
   press_enter: "Zum Fortfahren die Eingabetaste drücken..."
   opened: "Datei in der Standardanwendung geöffnet."
   no_opener: "Auf diesem System gibt es kein Programm zum Öffnen von Dateien. Speichere den Anhang stattdessen mit S."
+  delete_failed: "Anhang konnte nicht gelöscht werden: %{error}"
+  deleted: "Gelöscht: %{name}"
 version:
   history: Versionshistorie
   restore: Version wiederherstellen

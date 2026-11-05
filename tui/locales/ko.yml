@@ -119,6 +119,8 @@ attachment:
   press_enter: "계속하려면 Enter를 누르세요..."
   opened: "기본 응용 프로그램에서 파일을 열었습니다."
   no_opener: "이 시스템에는 파일을 열 프로그램이 없습니다. 대신 S로 첨부 파일을 저장하세요."
+  delete_failed: "첨부 파일을 삭제하지 못했습니다: %{error}"
+  deleted: "삭제됨: %{name}"
 version:
   history: "버전 히스토리"
   restore: "버전 복원"

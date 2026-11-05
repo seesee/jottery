@@ -133,6 +133,8 @@ attachment:
   press_enter: "Press Enter to continue..."
   opened: "File opened in default application."
   no_opener: "No program to open files with on this system. Save the attachment with S instead."
+  delete_failed: "Failed to delete attachment: %{error}"
+  deleted: "Deleted: %{name}"
 
 # Version history
 version:

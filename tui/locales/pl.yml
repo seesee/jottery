@@ -119,6 +119,8 @@ attachment:
   press_enter: "Naciśnij Enter, aby kontynuować..."
   opened: "Plik otwarto w domyślnej aplikacji."
   no_opener: "W tym systemie nie ma programu do otwierania plików. Zapisz załącznik klawiszem S."
+  delete_failed: "Nie udało się usunąć załącznika: %{error}"
+  deleted: "Usunięto: %{name}"
 version:
   history: Historia wersji
   restore: Przywróć wersję

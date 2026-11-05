@@ -119,6 +119,8 @@ attachment:
   press_enter: "Druk op Enter om door te gaan..."
   opened: "Bestand geopend in de standaardtoepassing."
   no_opener: "Dit systeem heeft geen programma om bestanden te openen. Bewaar de bijlage in plaats daarvan met S."
+  delete_failed: "Bijlage verwijderen mislukt: %{error}"
+  deleted: "Verwijderd: %{name}"
 version:
   history: Versiegeschiedenis
   restore: Versie herstellen

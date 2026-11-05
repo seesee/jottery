@@ -119,6 +119,8 @@ attachment:
   press_enter: "按 Enter 继续..."
   opened: "已在默认应用程序中打开文件。"
   no_opener: "此系统没有可打开文件的程序。请改用 S 保存附件。"
+  delete_failed: "删除附件失败：%{error}"
+  deleted: "已删除：%{name}"
 version:
   history: 版本历史
   restore: 恢复版本
