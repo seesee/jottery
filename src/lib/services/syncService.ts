@@ -30,7 +30,6 @@ import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/base64';
 import { searchService } from './searchService';
 import { notes, remoteNoteUpdate, settings, isSyncRefreshing, isSyncing as isSyncingStore, syncProgress, inboxItems } from '../stores/appStore';
 import { toast } from '../utils/toast.svelte';
-import { createSyncRecoveryNote, deleteSyncRecoveryNote } from './syncRecoveryService';
 import { recordRejectedRemoteRecord, reportServerMissingAttachments } from './vaultHealthService';
 import {
   isTimestamp,
@@ -298,11 +297,6 @@ class SyncService {
 
     console.log('[SyncService] Registration complete, clientId:', data.clientId);
 
-    // Create sync recovery note (non-blocking)
-    createSyncRecoveryNote().catch(err =>
-      console.warn('[SyncService] Failed to create recovery note:', err)
-    );
-
     return data;
   }
 
@@ -338,11 +332,6 @@ class SyncService {
     });
 
     console.log('[SyncService] Credentials configured successfully');
-
-    // Create sync recovery note (non-blocking)
-    createSyncRecoveryNote().catch(err =>
-      console.warn('[SyncService] Failed to create recovery note:', err)
-    );
   }
 
   /**
@@ -1991,11 +1980,6 @@ class SyncService {
 
     // Before the credentials go, because this needs them
     const revoked = await this.revokeThisDevice();
-
-    // Delete recovery note (non-blocking)
-    deleteSyncRecoveryNote().catch(err =>
-      console.warn('[SyncService] Failed to delete recovery note:', err)
-    );
 
     // Clear all sync metadata (credentials, client ID, etc.)
     await syncRepository.clearAll();

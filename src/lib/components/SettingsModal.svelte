@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import { settings, isLocked, notes } from '../stores/appStore';
-  import { settingsRepository, deleteAllLocalData, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, lock, passwordStorageService, sessionStorageService, createSyncRecoveryNote, onboardFromServer, uploadWrappedKeyToServer, verifyUnlockPassword } from '../services';
+  import { settingsRepository, deleteAllLocalData, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, lock, passwordStorageService, sessionStorageService, onboardFromServer, uploadWrappedKeyToServer, verifyUnlockPassword } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { createBackupFile, downloadBackupFile } from '../services/backupService';
   import { backupSchedulerService } from '../services/backupSchedulerService';
@@ -439,11 +439,6 @@
       if (isSamePassword(notesPassword, userPassword)) {
         toast.error($_('settings.syncSetup.notesPassword.matchesAccountWarning'));
       }
-
-      // Create sync recovery note (non-blocking)
-      createSyncRecoveryNote().catch(err =>
-        console.warn('[SettingsModal] Failed to create recovery note:', err)
-      );
     } catch (error) {
       console.error('Device registration failed:', error);
       syncError = error instanceof Error ? error.message : 'Device registration failed';
