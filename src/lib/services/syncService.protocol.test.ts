@@ -3,7 +3,7 @@
  * attachment lists and refused deletions, against both a server that has them and
  * one that doesn't. Released servers stay in service, so neither is a special case.
  */
-import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { get } from 'svelte/store';
@@ -338,6 +338,183 @@ describe('sync protocol', () => {
 
       expect((await metadata())?.pullCursor).toBeUndefined();
       expect(pulls[0].lastSyncAt).toBeDefined();
+    });
+  });
+
+  describe('attachmentsAuthoritative', () => {
+    async function dirtyNote(n: number, overrides: Partial<Note> = {}): Promise<void> {
+      await noteRepository.create(createTestNote({
+        id: ID(n), content: await encrypted('x'), needsSync: true,
+        contentHash: HASH('a'), parentHash: null, hashChain: [HASH('a')], ...overrides,
+      }));
+    }
+
+    it('is sent on every batch, so a removal reaches the server', async () => {
+      for (let n = 1; n <= 101; n++) await dirtyNote(n);
+      serve(() => ({}));
+
+      await syncService.syncNow();
+
+      expect(pushes.length).toBeGreaterThan(1);
+      expect(pushes.every(p => p.attachmentsAuthoritative === true)).toBe(true);
+    });
+
+    it('is left off for a push holding a note with no hash, which can be accepted on timestamps alone', async () => {
+      // Its list can be stale, and the flag would then remove what another device added
+      await dirtyNote(1);
+      await dirtyNote(2, { contentHash: undefined, hashChain: undefined });
+      serve(() => ({}));
+
+      await syncService.syncNow();
+
+      expect(pushes[0].attachmentsAuthoritative).toBeUndefined();
+    });
+
+    it('is not sent on a repair push, which carries no notes', async () => {
+      await dirtyNote(1);
+      serve(() => ({}), body => (body.notes.length > 0
+        ? { accepted: [{ id: ID(1) }], attachmentWarnings: [{ noteId: ID(1), attachmentIds: [ID(90)] }] }
+        : {}));
+      const { attachmentRepository } = await import('./attachmentRepository');
+      await attachmentRepository.storeBlob(ID(90), new Uint8Array([1, 2, 3]).buffer);
+
+      await syncService.syncNow();
+
+      expect(pushes).toHaveLength(2);
+      expect(pushes[1].notes).toEqual([]);
+      expect(pushes[1].attachmentsAuthoritative).toBeUndefined();
+    });
+  });
+
+  describe('deletions', () => {
+    const pending = () => noteRepository.getPendingDeletions();
+
+    async function deleteHere(n: number): Promise<void> {
+      await noteRepository.create(createTestNote({ id: ID(n), content: await encrypted('x'), needsSync: false }));
+      await noteRepository.permanentDelete(ID(n));
+    }
+
+    it('stops sending one the server refused, and the note comes back through the pull', async () => {
+      await deleteHere(1);
+      const note = await remoteNote(1);
+      serve(() => ({ notes: [note] }), () => ({ rejectedDeletions: [ID(1)] }));
+
+      await syncService.syncNow();
+      expect(await noteRepository.getById(ID(1))).toBeTruthy();
+      expect(await pending()).toEqual([]);
+
+      pushes = [];
+      await syncService.syncNow();
+      expect(pushes).toEqual([]);
+    });
+
+    it('marks the rest as synced', async () => {
+      await deleteHere(1);
+      await deleteHere(2);
+      serve(() => ({}), () => ({ rejectedDeletions: [ID(1)] }));
+
+      await syncService.syncNow();
+
+      expect(await pending()).toEqual([]);
+      const { getDB, STORES } = await import('./db');
+      const rows = await getDB().getAll(STORES.DELETIONS);
+      expect(rows.map(row => row.id)).toEqual([ID(2)]);
+    });
+
+    it('treats a server that sends no list as refusing nothing', async () => {
+      await deleteHere(1);
+      serve(() => ({}));
+
+      await syncService.syncNow();
+
+      expect(await pending()).toEqual([]);
+    });
+
+    it('sends a deletion when no note has changed', async () => {
+      await deleteHere(1);
+      serve(() => ({}));
+
+      await syncService.syncNow();
+
+      expect(pushes).toHaveLength(1);
+      expect(pushes[0].notes).toEqual([]);
+      expect(pushes[0].deletions?.map(d => d.id)).toEqual([ID(1)]);
+    });
+
+    it('ignores an id it never sent', async () => {
+      await deleteHere(1);
+      serve(() => ({}), () => ({ rejectedDeletions: [ID(99), 'not an id' as never] }));
+
+      await syncService.syncNow();
+
+      const { getDB, STORES } = await import('./db');
+      expect((await getDB().getAll(STORES.DELETIONS)).map(row => row.id)).toEqual([ID(1)]);
+    });
+  });
+
+  describe('saved searches', () => {
+    it('are sent when no note has changed', async () => {
+      const { create } = await import('./savedSearchRepository');
+      await create('a', 'b');
+      serve(() => ({}));
+
+      await syncService.syncNow();
+
+      expect(pushes).toHaveLength(1);
+      expect(pushes[0].savedSearches).toHaveLength(1);
+    });
+  });
+
+  describe('nothing to push', () => {
+    it('sends nothing at all', async () => {
+      serve(() => ({}));
+
+      await syncService.syncNow();
+
+      expect(pushes).toEqual([]);
+    });
+  });
+
+  describe('locks', () => {
+    it('are pushed, so a push here cannot clear one set elsewhere', async () => {
+      await noteRepository.create(createTestNote({
+        id: ID(1), content: await encrypted('x'), needsSync: true,
+        locked: true, lockedAt: NOW, contentHash: HASH('a'), parentHash: null, hashChain: [HASH('a')],
+      }));
+      serve(() => ({}));
+
+      await syncService.syncNow();
+
+      expect(pushes[0].notes[0].locked).toBe(true);
+      expect(pushes[0].notes[0].lockedAt).toBe(NOW);
+    });
+  });
+
+  describe('a long sync', () => {
+    it('is not mistaken for a stuck one while pages keep arriving', async () => {
+      // Two minutes with nothing happening means stuck. A big vault passes that
+      // while working normally, and a second sync would start alongside it.
+      await onCursor('c0');
+      let now = Date.now();
+      vi.spyOn(Date, 'now').mockImplementation(() => now);
+      let overlapping: { success: boolean; error?: string } | undefined;
+
+      server.use(http.get(`${ENDPOINT}/api/v1/sync/status`, () => HttpResponse.json({ serverTime: NOW })));
+      serve((_, index) => {
+        now += 90_000;
+        return index < 2 ? { hasMore: true, nextCursor: `c${index + 1}` } : { nextCursor: 'done' };
+      });
+      const original = syncRepository.updateMetadata.bind(syncRepository);
+      vi.spyOn(syncRepository, 'updateMetadata').mockImplementation(async update => {
+        if (update.pullCursor === 'c2') {
+          overlapping = await syncService.syncNow();
+        }
+        return original(update);
+      });
+
+      await syncService.syncNow();
+
+      expect(overlapping?.error).toBe('Sync already in progress');
     });
   });
 

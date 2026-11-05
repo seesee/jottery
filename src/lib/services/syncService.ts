@@ -12,6 +12,7 @@ import type {
   SyncNote,
   SyncRejected,
   SyncAccepted,
+  SyncDeletion,
 } from '../types';
 import type { AttachmentWarning, InboxItem } from '../types';
 import { syncRepository } from './syncRepository';
@@ -37,6 +38,7 @@ import {
   validateConflict,
   validateInboxItem,
   validatePullResponse,
+  validatePushResponse,
   validateRemoteNote,
   validateRemoteVersion,
   validateSavedSearch,
@@ -54,7 +56,7 @@ import {
 // Debounce delay for background sync (30 seconds of inactivity)
 const BACKGROUND_SYNC_DEBOUNCE_MS = 30000;
 
-// Maximum time a sync can run before we consider it stuck (2 minutes)
+// How long a sync can go without finishing a page or batch before we consider it stuck
 const SYNC_STUCK_TIMEOUT_MS = 120000;
 
 // How far before the last sync an older server is asked to look. It stamps a push
@@ -106,8 +108,13 @@ class SyncService {
     return this.restoreInProgress;
   }
 
+  /** A sync is only stuck if it stops doing anything. A big vault can take minutes. */
+  private noteSyncActivity(): void {
+    this.syncStartTime = Date.now();
+  }
+
   /**
-   * Check if a sync appears to be stuck (running for too long)
+   * Check if a sync appears to be stuck (nothing done for too long)
    * and reset the state if needed
    */
   private checkAndResetStuckSync(): boolean {
@@ -625,6 +632,9 @@ class SyncService {
       pinned: note.pinned,
       archived: note.archived,
       archivedAt: note.archivedAt,
+      // The server defaults a missing lock to false, which would clear one set elsewhere
+      locked: note.locked ?? false,
+      lockedAt: note.lockedAt,
       deleted: note.deleted,
       deletedAt: note.deletedAt,
       version: note.version,
@@ -639,6 +649,15 @@ class SyncService {
     };
   }
 
+  /**
+   * Whether this device can vouch for every attachment list in a push. A note with no
+   * hash can be accepted on its timestamp alone, even if another device has since
+   * added an attachment, and the flag would then remove that attachment.
+   */
+  private canVouchForAttachments(batchNotes: Note[]): boolean {
+    return batchNotes.length > 0 && batchNotes.every(note => !!note.contentHash);
+  }
+
   /** Process a single batch of notes for pushing */
   private async processPushBatch(
     batchNotes: Note[],
@@ -651,22 +670,20 @@ class SyncService {
     if (totalBatches > 1) {
       console.log(`[SyncService] Pushing batch ${batchIndex + 1}/${totalBatches} (${batchNotes.length} notes)`);
     }
+    this.noteSyncActivity();
 
     // Collect attachments and build request
     const attachmentMap = await this.collectAttachmentsForBatch(batchNotes);
-    const savedSearchesForPush = batchIndex === 0 ? await this.collectSavedSearchesForPush() : [];
-    const pendingDeletions = batchIndex === 0 ? await noteRepository.getPendingDeletions() : [];
 
     const pushRequest: SyncPushRequest = {
       notes: await Promise.all(batchNotes.map(note => this.convertNoteToSyncFormat(note, masterKey))),
       attachments: Array.from(attachmentMap.entries()).map(([id, data]) => ({ id, data })),
       versions: await this.collectVersionsForPush(batchNotes),
-      savedSearches: savedSearchesForPush.length > 0 ? savedSearchesForPush : undefined,
-      deletions: pendingDeletions.length > 0 ? pendingDeletions : undefined,
+      attachmentsAuthoritative: this.canVouchForAttachments(batchNotes) ? true : undefined,
     };
 
     // Send to server and process results
-    const result = await pushToServer(endpoint, apiKey, pushRequest);
+    const result = validatePushResponse(await pushToServer(endpoint, apiKey, pushRequest));
     const pushedNotes = new Map(batchNotes.map(note => [note.id, note]));
     await this.processAcceptedNotes(result.accepted, pushedNotes);
     await this.processRejectedNotes(result.rejected, pushedNotes);
@@ -675,21 +692,41 @@ class SyncService {
     // Update progress
     syncProgress.update(p => ({ ...p, completed: p.completed + batchNotes.length }));
 
-    // Mark saved searches and deletions as synced (only in first batch)
-    if (batchIndex === 0) {
-      if (savedSearchesForPush.length > 0) {
-        for (const search of savedSearchesForPush) {
-          await savedSearchRepository.markSynced(search.id, search.version);
-        }
-        console.log(`[SyncService] Marked ${savedSearchesForPush.length} saved searches as synced`);
-      }
-      if (pendingDeletions.length > 0) {
-        await noteRepository.markDeletionsSynced(pendingDeletions.map(d => d.id));
-        console.log(`[SyncService] Marked ${pendingDeletions.length} deletions as synced`);
-      }
+    return { accepted: result.accepted.length, rejected: result.rejected.length, warnings };
+  }
+
+  /**
+   * Send saved searches and permanent deletions. They go in a request of their own,
+   * so they don't wait for a note to change, and a note the server refuses can't
+   * hold them back. After the server's 30-day cleanup, a deletion that never left
+   * this device would leave that note alive on every other one.
+   */
+  private async pushSearchesAndDeletions(
+    endpoint: string,
+    apiKey: string,
+    savedSearches: SyncSavedSearch[],
+    deletions: SyncDeletion[]
+  ): Promise<void> {
+    const result = validatePushResponse(await pushToServer(endpoint, apiKey, {
+      notes: [],
+      attachments: [],
+      versions: [],
+      savedSearches: savedSearches.length > 0 ? savedSearches : undefined,
+      deletions: deletions.length > 0 ? deletions : undefined,
+    }));
+
+    for (const search of savedSearches) {
+      await savedSearchRepository.markSynced(search.id, search.version);
     }
 
-    return { accepted: result.accepted.length, rejected: result.rejected.length, warnings };
+    // Refused means the note has a newer edit. Sending it again would only make the
+    // server re-announce the note to every device, on every push.
+    const refused = new Set(result.rejectedDeletions ?? []);
+    const sent = deletions.map(deletion => deletion.id);
+    await noteRepository.markDeletionsSynced(sent.filter(id => !refused.has(id)));
+    await noteRepository.forgetDeletions(sent.filter(id => refused.has(id)));
+
+    console.log(`[SyncService] Pushed ${savedSearches.length} saved searches and ${deletions.length} deletions (${refused.size} refused)`);
   }
 
   /**
@@ -702,14 +739,20 @@ class SyncService {
     const modifiedNotes = forceAll
       ? await noteRepository.getAll()
       : await noteRepository.getNotesNeedingSync();
+    const savedSearches = await this.collectSavedSearchesForPush();
+    const deletions = await noteRepository.getPendingDeletions();
 
-    if (modifiedNotes.length === 0) {
+    if (modifiedNotes.length === 0 && savedSearches.length === 0 && deletions.length === 0) {
       return 0;
     }
 
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
       throw new Error('Application is locked');
+    }
+
+    if (savedSearches.length > 0 || deletions.length > 0) {
+      await this.pushSearchesAndDeletions(endpoint, apiKey, savedSearches, deletions);
     }
 
     syncProgress.update(p => ({ ...p, total: p.total + modifiedNotes.length }));
@@ -1151,6 +1194,7 @@ class SyncService {
 
     while (hasMore) {
       const result = validatePullResponse(await pullFromServer(endpoint, apiKey, request));
+      this.noteSyncActivity();
       const syncedAt = result.syncedAt ?? new Date().toISOString();
       serverTime ??= result.syncedAt;
       hasMore = result.hasMore ?? false;

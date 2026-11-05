@@ -154,6 +154,18 @@ export function validatePullResponse(value: unknown): SyncPullResponse {
   };
 }
 
+/** The same check for a push response. Absent lists are what an older server sends. */
+export function validatePushResponse(value: unknown): SyncPushResponse {
+  if (!isRecord(value)) throw new Error('Malformed sync response');
+
+  return {
+    accepted: optionalList(value.accepted, 'accepted'),
+    rejected: optionalList(value.rejected, 'rejected'),
+    attachmentWarnings: optionalList(value.attachmentWarnings, 'attachmentWarnings'),
+    rejectedDeletions: optionalList<unknown>(value.rejectedDeletions, 'rejectedDeletions').filter(isUuid),
+  };
+}
+
 export function validateRemoteNote(value: unknown): Validated<SyncNote> {
   if (!isRecord(value)) return fail('not a note');
   if (!isUuid(value.id)) return fail('invalid id');

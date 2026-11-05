@@ -73,6 +73,8 @@ export interface SyncPushRequest {
   savedSearches?: SyncSavedSearch[];
   /** Hard-deleted note IDs (from emptying trash) */
   deletions?: SyncDeletion[];
+  /** Each note's attachments are its complete list, so the server can remove what's gone */
+  attachmentsAuthoritative?: boolean;
 }
 
 // Note structure for sync (matches server expectations)
@@ -121,6 +123,8 @@ export interface SyncPushResponse {
   accepted: SyncAccepted[];
   rejected: SyncRejected[];
   errors?: string[]; // Optional, for backward compatibility
+  /** Deletions refused because the note has a newer edit. Older servers don't send it */
+  rejectedDeletions?: string[];
   attachmentWarnings?: AttachmentWarning[]; // Accepted notes referencing attachment data the server lacks
 }
 
