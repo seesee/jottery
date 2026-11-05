@@ -150,6 +150,20 @@ class AppState(application: Application) : AndroidViewModel(application) {
     private val _pendingEditorNote = MutableStateFlow<DecryptedNote?>(null)
     val pendingEditorNote: StateFlow<DecryptedNote?> = _pendingEditorNote.asStateFlow()
 
+    // MARK: - User Messages
+
+    /** A one-off message for the snackbar on the main screen. */
+    private val _userMessage = MutableStateFlow<String?>(null)
+    val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
+
+    fun showMessage(message: String) {
+        _userMessage.value = message
+    }
+
+    fun clearMessage() {
+        _userMessage.value = null
+    }
+
     // MARK: - Internal
 
     private var db: JotteryDatabase? = null
@@ -226,7 +240,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
             this.db = database
             val verRepo = VersionRepository(database.noteVersionDao())
             this.versionRepo = verRepo
-            this.noteRepo = NoteRepository(database.noteDao(), database.noteVersionDao())
+            this.noteRepo = NoteRepository(database.noteDao(), database.noteVersionDao()) { block ->
+                database.withTransaction { block() }
+            }
             this.encryptionRepo = EncryptionRepository(database.encryptionMetadataDao())
             this.settingsRepo = SettingsRepository(database.settingsDao())
             this.syncRepo = SyncRepository(
@@ -548,18 +564,22 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun saveNote(note: DecryptedNote) {
         val repo = noteRepo ?: return
         val key = keyManager.masterKey ?: return
-        repo.update(note, key)
-
-        // Update in-memory
-        val currentNotes = _notes.value.toMutableList()
-        val index = currentNotes.indexOfFirst { it.id == note.id }
-        if (index >= 0) {
-            val updated = note.copy(modifiedAt = Instant.now())
-            currentNotes[index] = updated
-            _notes.value = currentNotes
-            scheduleSearch()
-        }
+        if (!repo.update(note, key)) return
+        refreshNote(note.id)
         scheduleDebouncedSync()
+    }
+
+    /**
+     * Republish one note from the database. Flags and timestamps always come
+     * from the row, never from a copy of an earlier in-memory note.
+     */
+    private suspend fun refreshNote(id: String) {
+        val repo = noteRepo ?: return
+        val key = keyManager.masterKey ?: return
+        val fresh = repo.get(id = id, key = key) ?: return
+        _notes.value = _notes.value.map { if (it.id == id) fresh else it }
+        _archivedNotes.value = _archivedNotes.value.map { if (it.id == id) fresh else it }
+        scheduleSearch()
     }
 
     /**
@@ -606,14 +626,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun togglePin(id: String) {
         val repo = noteRepo ?: return
         repo.togglePin(id)
-        val currentNotes = _notes.value.toMutableList()
-        val index = currentNotes.indexOfFirst { it.id == id }
-        if (index >= 0) {
-            val note = currentNotes[index]
-            currentNotes[index] = note.copy(pinned = !note.pinned)
-            _notes.value = currentNotes
-            scheduleSearch()
-        }
+        refreshNote(id)
         scheduleDebouncedSync()
     }
 
@@ -652,30 +665,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun toggleLock(id: String) {
         val repo = noteRepo ?: return
         repo.toggleLock(id)
-
-        val currentNotes = _notes.value.toMutableList()
-        val noteIndex = currentNotes.indexOfFirst { it.id == id }
-        if (noteIndex >= 0) {
-            val note = currentNotes[noteIndex]
-            val newLocked = !note.locked
-            currentNotes[noteIndex] = note.copy(
-                locked = newLocked,
-                lockedAt = if (newLocked) Instant.now() else null,
-            )
-            _notes.value = currentNotes
-        }
-
-        val currentArchived = _archivedNotes.value.toMutableList()
-        val archivedIndex = currentArchived.indexOfFirst { it.id == id }
-        if (archivedIndex >= 0) {
-            val note = currentArchived[archivedIndex]
-            val newLocked = !note.locked
-            currentArchived[archivedIndex] = note.copy(
-                locked = newLocked,
-                lockedAt = if (newLocked) Instant.now() else null,
-            )
-            _archivedNotes.value = currentArchived
-        }
+        refreshNote(id)
         scheduleDebouncedSync()
     }
 
@@ -1098,21 +1088,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         // Update note with encrypted filename in the raw record
         noteRepository.addAttachment(noteId = noteId, ref = ref)
 
-        // Update in-memory (with plaintext filename for display)
-        val currentNotes = _notes.value.toMutableList()
-        val index = currentNotes.indexOfFirst { it.id == noteId }
-        if (index >= 0) {
-            val currentNote = currentNotes[index]
-            val updatedAttachments = currentNote.attachments + AttachmentRef(
-                id = attachmentId,
-                filename = filename,
-                mimeType = mimeType,
-                size = data.size,
-                data = attachmentId,
-            )
-            currentNotes[index] = currentNote.copy(attachments = updatedAttachments)
-            _notes.value = currentNotes
-        }
+        refreshNote(noteId)
         scheduleDebouncedSync()
     }
 
@@ -1136,16 +1112,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             attachmentRepository.delete(ref.data)
         } catch (_: Exception) { /* ignore */ }
 
-        // Update in-memory
-        val currentNotes = _notes.value.toMutableList()
-        val index = currentNotes.indexOfFirst { it.id == noteId }
-        if (index >= 0) {
-            val currentNote = currentNotes[index]
-            currentNotes[index] = currentNote.copy(
-                attachments = currentNote.attachments.filter { it.id != attachmentId }
-            )
-            _notes.value = currentNotes
-        }
+        refreshNote(noteId)
         scheduleDebouncedSync()
     }
 
@@ -1207,46 +1174,30 @@ class AppState(application: Application) : AndroidViewModel(application) {
     // MARK: - Version Restore
 
     /**
-     * Restore a note to a previous version. Creates a snapshot of the current state first.
+     * Restore a note to a previous version, keeping a snapshot of the current
+     * state. Returns false, having changed nothing, if the version can't be read.
      */
-    suspend fun restoreVersion(noteId: String, version: NoteVersionRecord) {
-        val noteRepository = noteRepo ?: return
-        val versionRepository = versionRepo ?: return
-        val key = keyManager.masterKey ?: return
+    suspend fun restoreVersion(noteId: String, version: NoteVersionRecord): Boolean {
+        val noteRepository = noteRepo ?: return false
+        val versionRepository = versionRepo ?: return false
+        val key = keyManager.masterKey ?: return false
 
-        // Snapshot current state before restoring
-        val currentRecord = noteRepository.getRaw(noteId)
-        if (currentRecord != null) {
-            versionRepository.insertOrReplace(
-                NoteVersionRecord.from(currentRecord, "pre-restore")
-            )
+        val note: DecryptedNote
+        val content: String
+        val tags: List<String>
+        try {
+            note = noteRepository.get(id = noteId, key = key) ?: return false
+            content = CryptoService.decryptText(CryptoService.parseEncryptedJSON(version.content), key)
+            tags = decryptVersionTags(version.tags, key)
+        } catch (e: Exception) {
+            Log.w(TAG, "[Versions] Can't read version ${version.versionKey}: ${e.javaClass.simpleName}")
+            return false
         }
 
-        // Decrypt the version's content and tags
-        val encContent = CryptoService.parseEncryptedJSON(version.content)
-        val content = CryptoService.decryptText(encContent, key)
-
-        val encTags = CryptoService.parseEncryptedJSON(version.tags)
-        val tagsText = CryptoService.decryptText(encTags, key)
-        val tags: List<String> = when {
-            tagsText.isEmpty() -> emptyList()
-            tagsText.startsWith("[") -> {
-                try {
-                    json.decodeFromString(tagsText)
-                } catch (_: Exception) {
-                    emptyList()
-                }
-            }
-            else -> {
-                tagsText.split(",")
-                    .map { it.trim() }
-                    .filter { it.isNotEmpty() }
-            }
+        noteRepository.getRaw(noteId)?.let {
+            versionRepository.insertOrReplace(NoteVersionRecord.safetySnapshot(it, "pre-restore"))
         }
-
-        // Get current decrypted note and update with restored content
-        val note = noteRepository.get(id = noteId, key = key) ?: return
-        val restoredNote = note.copy(
+        val restored = note.copy(
             content = content,
             tags = tags,
             syntaxLanguage = version.syntaxLanguage ?: note.syntaxLanguage,
@@ -1254,17 +1205,22 @@ class AppState(application: Application) : AndroidViewModel(application) {
             showPreview = version.showPreview ?: note.showPreview,
             color = version.color,
         )
-        noteRepository.update(restoredNote, key)
+        if (!noteRepository.update(restored, key)) return false
 
-        // Update in-memory
-        val currentNotes = _notes.value.toMutableList()
-        val index = currentNotes.indexOfFirst { it.id == noteId }
-        if (index >= 0) {
-            val refreshed = noteRepository.get(id = noteId, key = key)
-            if (refreshed != null) {
-                currentNotes[index] = refreshed
-                _notes.value = currentNotes
-            }
+        refreshNote(noteId)
+        scheduleDebouncedSync()
+        return true
+    }
+
+    /** Older builds stored '[]' for a version with no tags. */
+    private fun decryptVersionTags(tags: String, key: SecretKey): List<String> {
+        if (tags == "[]") return emptyList()
+        val text = CryptoService.decryptText(CryptoService.parseEncryptedJSON(tags), key)
+        return when {
+            text.isEmpty() -> emptyList()
+            text.startsWith("[") -> json.decodeFromString(text)
+            text.startsWith("\"") -> listOf(json.decodeFromString<String>(text))
+            else -> text.split(",").map { it.trim() }.filter { it.isNotEmpty() }
         }
     }
 

@@ -32,14 +32,18 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -73,7 +77,16 @@ fun MainScreen(
     val syncError by appState.syncError.collectAsState()
     val syncEnabled by appState.syncEnabled.collectAsState()
     val showArchive by appState.showArchive.collectAsState()
+    val userMessage by appState.userMessage.collectAsState()
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(userMessage) {
+        userMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            appState.clearMessage()
+        }
+    }
 
     // Derive counts from collected state
     val noteCount by remember(allNotes, archivedNotes, showArchive) {
@@ -107,6 +120,7 @@ fun MainScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (showListOnNarrow) {
                 TopAppBar(
@@ -271,13 +285,17 @@ fun MainScreen(
 
                     // Editor pane
                     if (selectedNote != null) {
-                        NoteEditorView(
-                            appState = appState,
-                            note = selectedNote,
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight(),
-                        )
+                        // A new composition per note: no undo stack, WebView
+                        // buffer or pending save may carry over to another note.
+                        key(selectedNote.id) {
+                            NoteEditorView(
+                                appState = appState,
+                                note = selectedNote,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight(),
+                            )
+                        }
                     } else {
                         // Empty state for editor pane
                         Box(
@@ -306,12 +324,14 @@ fun MainScreen(
                         modifier = Modifier.weight(1f),
                     )
                 } else if (selectedNote != null) {
-                    NoteEditorView(
-                        appState = appState,
-                        note = selectedNote,
-                        onNavigateBack = { appState.setSelectedNoteId(null) },
-                        modifier = Modifier.weight(1f),
-                    )
+                    key(selectedNote.id) {
+                        NoteEditorView(
+                            appState = appState,
+                            note = selectedNote,
+                            onNavigateBack = { appState.setSelectedNoteId(null) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             }
 

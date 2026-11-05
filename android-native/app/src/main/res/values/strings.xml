@@ -182,6 +182,9 @@
     <string name="cancel">Cancel</string>
     <string name="back">Back</string>
 
+    <!-- Version history -->
+    <string name="version_restore_failed">This version can\'t be read, so it wasn\'t restored.</string>
+
     <!-- Setup: restore -->
     <string name="setup_restore_button">Restore from Backup</string>
     <string name="setup_restore_subtitle">Start from a Jottery backup. Enter the notes password it was made with.</string>

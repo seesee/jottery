@@ -24,6 +24,8 @@ import javax.crypto.SecretKey
 class NoteRepository(
     private val noteDao: NoteDao,
     private val noteVersionDao: NoteVersionDao,
+    /** Runs a block in one database transaction. */
+    private val runInTransaction: suspend (suspend () -> Unit) -> Unit = { it() },
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -184,93 +186,85 @@ class NoteRepository(
 
     // MARK: - Update
 
-    /** Update a decrypted note's content and tags back to the database. */
-    suspend fun update(note: DecryptedNote, key: SecretKey) {
-        val encContent = CryptoService.encryptText(note.content, key)
-        val encTags = CryptoService.encryptStringArray(note.tags, key)
+    /**
+     * Save what the editor owns: content, tags, language, word wrap, colour and
+     * preview. Everything else comes from the current row, so an editor holding
+     * an older copy can't undo a delete, archive, lock or pin, drop attachments
+     * added elsewhere, or write decrypted filenames back to the database.
+     *
+     * Returns false, writing nothing, if the note is gone or in the bin.
+     */
+    suspend fun update(note: DecryptedNote, key: SecretKey): Boolean {
+        var saved = false
+        runInTransaction {
+            val current = noteDao.getById(note.id)
+            if (current != null && !current.deleted) {
+                write(current, note, key)
+                saved = true
+            }
+        }
+        return saved
+    }
 
-        val contentJSON = CryptoService.serializeEncryptedJSON(encContent)
-        val tagsJSON = CryptoService.serializeEncryptedJSON(encTags)
+    private suspend fun write(current: NoteRecord, note: DecryptedNote, key: SecretKey) {
+        val contentJSON = CryptoService.serializeEncryptedJSON(CryptoService.encryptText(note.content, key))
+        val tagsJSON = CryptoService.serializeEncryptedJSON(CryptoService.encryptStringArray(note.tags, key))
 
-        val now = DateUtils.nowISO8601()
-        val attachmentsString = json.encodeToString(note.attachments)
-
-        // Fetch the current DB record so we can read the previous hash and version
-        val currentRecord = getRaw(note.id)
-        val previousHash = currentRecord?.contentHash
-        val previousChain: List<String> = if (currentRecord?.hashChain != null) {
+        val previousChain: List<String> = current.hashChain?.let {
             try {
-                json.decodeFromString(currentRecord.hashChain!!)
+                json.decodeFromString(it)
             } catch (_: Exception) {
                 emptyList()
             }
-        } else {
-            emptyList()
-        }
+        } ?: emptyList()
 
         // Compute content hash using sync-format tags
-        val syncTags = encryptTagsToSyncFormat(note.tags, key)
+        val attachmentIds = try {
+            json.decodeFromString<List<AttachmentRef>>(current.attachments).map { it.id }.sorted()
+        } catch (_: Exception) {
+            emptyList()
+        }
         val contentHash = CryptoService.computeContentHash(
             SyncableNoteFields(
                 content = contentJSON,
-                tags = syncTags,
-                attachmentIds = note.attachments.map { it.id }.sorted(),
-                pinned = note.pinned,
-                archived = note.archived,
-                locked = note.locked,
+                tags = encryptTagsToSyncFormat(note.tags, key),
+                attachmentIds = attachmentIds,
+                pinned = current.pinned,
+                archived = current.archived,
+                locked = current.locked,
                 syntaxLanguage = note.syntaxLanguage,
                 wordWrap = note.wordWrap,
                 showPreview = note.showPreview,
                 color = note.color,
             )
         )
-        val parentHash = previousHash
-        val hashChain = CryptoService.updateHashChain(contentHash, previousChain)
-        val hashChainStr = json.encodeToString(hashChain)
+        val hashChainStr = json.encodeToString(CryptoService.updateHashChain(contentHash, previousChain))
 
         // First-edit snapshot: when version is 0, create a snapshot of the original state
         // then advance version to 1
-        val currentVersion = currentRecord?.version ?: note.version
-        val newVersion: Int
-        if (currentVersion == 0 && currentRecord != null) {
-            val versionSnapshot = NoteVersionRecord.from(currentRecord, "manual-sync")
-            noteVersionDao.insertOrReplace(versionSnapshot)
-            newVersion = 1
+        val newVersion = if (current.version == 0) {
+            noteVersionDao.insertOrReplace(NoteVersionRecord.from(current, "manual-sync"))
+            1
         } else {
-            newVersion = currentVersion
+            current.version
         }
 
-        // Build the updated record
-        val updatedRecord = (currentRecord ?: NoteRecord(
-            id = note.id,
-            createdAt = DateUtils.formatISO8601(note.createdAt),
-            modifiedAt = now,
-            content = contentJSON,
-            tags = tagsJSON,
-        )).copy(
-            content = contentJSON,
-            tags = tagsJSON,
-            modifiedAt = now,
-            attachments = attachmentsString,
-            pinned = note.pinned,
-            archived = note.archived,
-            archivedAt = note.archivedAt?.let { DateUtils.formatISO8601(it) },
-            locked = note.locked,
-            lockedAt = note.lockedAt?.let { DateUtils.formatISO8601(it) },
-            deleted = note.deleted,
-            deletedAt = note.deletedAt?.let { DateUtils.formatISO8601(it) },
-            version = newVersion,
-            wordWrap = note.wordWrap,
-            syntaxLanguage = note.syntaxLanguage,
-            showPreview = note.showPreview,
-            color = note.color,
-            contentHash = contentHash,
-            parentHash = parentHash,
-            hashChain = hashChainStr,
-            needsSync = true,
+        noteDao.update(
+            current.copy(
+                content = contentJSON,
+                tags = tagsJSON,
+                modifiedAt = DateUtils.nowISO8601(),
+                version = newVersion,
+                wordWrap = note.wordWrap,
+                syntaxLanguage = note.syntaxLanguage,
+                showPreview = note.showPreview,
+                color = note.color,
+                contentHash = contentHash,
+                parentHash = current.contentHash,
+                hashChain = hashChainStr,
+                needsSync = true,
+            )
         )
-
-        noteDao.update(updatedRecord)
     }
 
     /** Update a raw record (used during sync). */
@@ -536,7 +530,6 @@ class NoteRepository(
             parentHash = record.parentHash,
             hashChain = hashChain,
             needsSync = record.needsSync,
-            decryptedAt = Instant.now(),
         )
     }
 }

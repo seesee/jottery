@@ -41,15 +41,19 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jottery.android.R
 import com.jottery.android.model.DecryptedNote
 import com.jottery.android.model.NoteVersionRecord
 import com.jottery.android.ui.theme.NoteColors
@@ -98,6 +102,13 @@ fun NoteEditorView(
     var showPreview by remember(note.id) { mutableStateOf(note.showPreview) }
     var didSaveDuringSession by remember(note.id) { mutableStateOf(false) }
 
+    // The last text this editor wrote. Its own save coming back through the note
+    // must not replace what the user has typed since.
+    var lastSavedContent by remember(note.id) { mutableStateOf(note.content) }
+
+    // onDispose outlives every recomposition, so it must read the current note
+    val latestNote by rememberUpdatedState(note)
+
     var menuExpanded by remember { mutableStateOf(false) }
     var colorMenuExpanded by remember { mutableStateOf(false) }
     var languageMenuExpanded by remember { mutableStateOf(false) }
@@ -113,30 +124,35 @@ fun NoteEditorView(
     var saveJob by remember { mutableStateOf<Job?>(null) }
 
     val isReadOnly = note.locked || note.archived
+    val restoreFailedMessage = stringResource(R.string.version_restore_failed)
 
     // Effective font size (base 14sp * scale)
     val effectiveFontSize = (14f * editorFontScale).coerceIn(8f, 42f).sp
 
     fun hasChanges(): Boolean {
-        return textFieldValue.text != note.content ||
-                tags != note.tags ||
-                syntaxLanguage != note.syntaxLanguage ||
-                wordWrap != note.wordWrap ||
-                color != note.color ||
-                showPreview != note.showPreview
+        val current = latestNote
+        return textFieldValue.text != current.content ||
+                tags != current.tags ||
+                syntaxLanguage != current.syntaxLanguage ||
+                wordWrap != current.wordWrap ||
+                color != current.color ||
+                showPreview != current.showPreview
     }
+
+    fun editedNote() = latestNote.copy(
+        content = textFieldValue.text,
+        tags = tags,
+        syntaxLanguage = syntaxLanguage,
+        wordWrap = wordWrap,
+        color = color,
+        showPreview = showPreview,
+    )
 
     fun saveImmediately() {
         saveJob?.cancel()
         if (!hasChanges()) return
-        val updated = note.copy(
-            content = textFieldValue.text,
-            tags = tags,
-            syntaxLanguage = syntaxLanguage,
-            wordWrap = wordWrap,
-            color = color,
-            showPreview = showPreview,
-        )
+        val updated = editedNote()
+        lastSavedContent = updated.content
         scope.launch {
             appState.saveNote(updated)
             didSaveDuringSession = true
@@ -160,15 +176,7 @@ fun NoteEditorView(
         onDispose {
             saveJob?.cancel()
             if (hasChanges()) {
-                val updated = note.copy(
-                    content = textFieldValue.text,
-                    tags = tags,
-                    syntaxLanguage = syntaxLanguage,
-                    wordWrap = wordWrap,
-                    color = color,
-                    showPreview = showPreview,
-                )
-                appState.saveNoteAndSync(updated)
+                appState.saveNoteAndSync(editedNote())
             } else if (didSaveDuringSession && appState.syncEnabledValue) {
                 appState.triggerSyncBackground()
             }
@@ -177,8 +185,16 @@ fun NoteEditorView(
 
     // Sync text state when note changes externally (e.g. sync)
     LaunchedEffect(note.content, note.tags, note.syntaxLanguage, note.wordWrap, note.color, note.showPreview) {
-        if (textFieldValue.text != note.content) {
-            textFieldValue = TextFieldValue(note.content)
+        // Our own save coming back: whatever was typed since is newer
+        if (note.content == lastSavedContent) return@LaunchedEffect
+
+        // A change from elsewhere (sync, restored version). Unsaved typing wins
+        // and goes out in the next save; otherwise show the new text, with the
+        // caret kept where it was as far as the new text allows.
+        if (textFieldValue.text == lastSavedContent) {
+            lastSavedContent = note.content
+            val caret = textFieldValue.selection.end.coerceAtMost(note.content.length)
+            textFieldValue = TextFieldValue(note.content, TextRange(caret))
         }
         tags = note.tags
         syntaxLanguage = note.syntaxLanguage
@@ -523,8 +539,12 @@ fun NoteEditorView(
         VersionHistoryView(
             versions = versions,
             onRestore = { version ->
+                // Typing still waiting to save must not land on top of the restore
+                saveJob?.cancel()
                 scope.launch {
-                    appState.restoreVersion(note.id, version)
+                    if (!appState.restoreVersion(note.id, version)) {
+                        appState.showMessage(restoreFailedMessage)
+                    }
                 }
                 showVersionHistory = false
             },

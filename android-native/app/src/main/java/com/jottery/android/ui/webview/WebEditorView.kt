@@ -43,9 +43,21 @@ fun WebEditorView(
     val currentOnOpenLink by rememberUpdatedState(onOpenLink)
     val currentOnRequestAttachment by rememberUpdatedState(onRequestAttachment)
 
+    // The latest text, read when the page finishes loading.
+    val currentContent by rememberUpdatedState(content)
+
+    // What the page holds: set when we send it text and when it reports an edit.
+    // The two differ only if something else changed the note, such as a sync, a
+    // restored version or a resolved conflict, and then the page must be told, or
+    // the next keystroke would write its stale buffer back over the note.
+    val pageState = remember { WebPageState() }
+
     val bridge = remember {
         WebBridge(
-            onContentChanged = { currentOnContentChanged(it) },
+            onContentChanged = {
+                pageState.content = it
+                currentOnContentChanged(it)
+            },
             onReady = { currentOnReady() },
             onOpenLink = { currentOnOpenLink(it) },
             onRequestAttachment = { currentOnRequestAttachment(it) },
@@ -78,7 +90,8 @@ fun WebEditorView(
                         super.onPageFinished(view, url)
                         // Set initial content after page loads using JSON string
                         // escaping (handles all special characters)
-                        val jsonContent = org.json.JSONObject.quote(content)
+                        val text = currentContent
+                        val jsonContent = org.json.JSONObject.quote(text)
                         view?.evaluateJavascript(
                             "window.bridge.setContent($jsonContent, $isDark)",
                             null,
@@ -87,6 +100,8 @@ fun WebEditorView(
                             "window.bridge.setFontSize($fontSize)",
                             null,
                         )
+                        pageState.content = text
+                        pageState.loaded = true
                     }
                 }
 
@@ -96,9 +111,20 @@ fun WebEditorView(
         update = { webView ->
             webView.evaluateJavascript("window.bridge.setTheme($isDark)", null)
             webView.evaluateJavascript("window.bridge.setFontSize($fontSize)", null)
+            if (pageState.loaded && pageState.content != content) {
+                pageState.content = content
+                val jsonContent = org.json.JSONObject.quote(content)
+                webView.evaluateJavascript("window.bridge.setContent($jsonContent, $isDark)", null)
+            }
         },
         modifier = modifier,
     )
+}
+
+/** What a loaded page currently holds. Used only on the main thread. */
+private class WebPageState {
+    var content: String? = null
+    var loaded = false
 }
 
 /**
