@@ -311,6 +311,9 @@ pub struct LoginResponse {
     pub session_id: String,
     #[allow(dead_code)]
     pub expires_at: String,
+    /// The session can only change the password until this is cleared
+    #[serde(default)]
+    pub must_change_password: bool,
 }
 
 /// Inbox token generation response
@@ -337,7 +340,9 @@ impl SessionClient {
     /// Login and create a session client
     pub fn login(base_url: &str, email: &str, password: &str) -> Result<Self> {
         let client = reqwest::blocking::Client::new();
-        let url = format!("{}/api/v1/auth/login", base_url);
+
+        // The account route. /auth/login is the admin dashboard's, and refuses everyone else.
+        let url = format!("{}/api/v1/user/login", base_url);
 
         let response = client
             .post(&url)
@@ -356,6 +361,10 @@ impl SessionClient {
 
         let login_response: LoginResponse = response.json()
             .context("Failed to parse login response")?;
+
+        if login_response.must_change_password {
+            anyhow::bail!("{}", rust_i18n::t!("cli.password_change_required"));
+        }
 
         Ok(Self {
             base_url: base_url.to_string(),
@@ -469,6 +478,54 @@ pub fn delete_all_inbox_items(endpoint: &str, api_key: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Answers one request, and hands back the path it was asked for.
+    fn serve_once(body: &'static str) -> (String, std::sync::mpsc::Receiver<String>) {
+        use std::io::{Read, Write};
+
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let endpoint = format!("http://{}", listener.local_addr().unwrap());
+        let (sender, receiver) = std::sync::mpsc::channel();
+
+        std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = [0u8; 4096];
+            let read = stream.read(&mut request).unwrap();
+            let path = String::from_utf8_lossy(&request[..read])
+                .split_whitespace().nth(1).unwrap_or("").to_string();
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len(),
+            );
+            stream.write_all(response.as_bytes()).unwrap();
+            sender.send(path).unwrap();
+        });
+
+        (endpoint, receiver)
+    }
+
+    /// The admin route refuses non-admins, so an ordinary account could never sign in.
+    #[test]
+    fn signing_in_uses_the_account_route() {
+        let (endpoint, path) = serve_once(r#"{"sessionId":"session","expiresAt":"2030-01-01T00:00:00Z"}"#);
+
+        let client = SessionClient::login(&endpoint, "someone@example.com", &uuid::Uuid::new_v4().to_string()).unwrap();
+
+        assert_eq!(path.recv().unwrap(), "/api/v1/user/login");
+        assert_eq!(client.session_token, "session");
+    }
+
+    #[test]
+    fn an_account_that_must_change_its_password_is_told_so() {
+        let (endpoint, _path) = serve_once(
+            r#"{"sessionId":"session","expiresAt":"2030-01-01T00:00:00Z","mustChangePassword":true}"#,
+        );
+
+        let error = SessionClient::login(&endpoint, "someone@example.com", &uuid::Uuid::new_v4().to_string())
+            .err().unwrap();
+
+        assert_eq!(error.to_string(), rust_i18n::t!("cli.password_change_required"));
+    }
 
     #[test]
     fn test_auth_client_creation() {

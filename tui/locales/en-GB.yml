@@ -626,6 +626,7 @@ cli:
   archived_help: "List archived notes instead"
   import_summary: "%{created} added, %{updated} updated, %{skipped} already up to date"
   import_failed: "%{count} items in the file couldn't be imported"
+  password_change_required: "This account has to change its password first. Sign in to the web app to do that, then try again."
 
 # Status messages
 status:

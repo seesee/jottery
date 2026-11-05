@@ -577,6 +577,7 @@ cli:
   archived_help: "Stattdessen archivierte Notizen auflisten"
   import_summary: "%{created} hinzugefügt, %{updated} aktualisiert, %{skipped} bereits aktuell"
   import_failed: "%{count} Einträge in der Datei konnten nicht importiert werden"
+  password_change_required: "Dieses Konto muss zuerst sein Passwort ändern. Melden Sie sich dazu in der Web-App an und versuchen Sie es dann erneut."
 status:
   locked: Gesperrt
   unlocked: Entsperrt

@@ -577,6 +577,7 @@ cli:
   archived_help: "Mostrar las notas archivadas"
   import_summary: "%{created} añadidas, %{updated} actualizadas, %{skipped} ya al día"
   import_failed: "No se han podido importar %{count} elementos del archivo"
+  password_change_required: "Esta cuenta debe cambiar antes su contraseña. Inicia sesión en la aplicación web para hacerlo y vuelve a intentarlo."
 status:
   locked: Bloqueado
   unlocked: Desbloqueado

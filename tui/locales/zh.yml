@@ -577,6 +577,7 @@ cli:
   archived_help: "改为列出已归档的笔记"
   import_summary: "已添加 %{created} 条，已更新 %{updated} 条，%{skipped} 条已是最新"
   import_failed: "文件中有 %{count} 项无法导入"
+  password_change_required: "此账户需要先更改密码。请登录 Web 应用进行更改，然后重试。"
 status:
   locked: 已锁定
   unlocked: 已解锁

@@ -577,6 +577,7 @@ cli:
   archived_help: "In plaats daarvan gearchiveerde notities tonen"
   import_summary: "%{created} toegevoegd, %{updated} bijgewerkt, %{skipped} al up-to-date"
   import_failed: "%{count} items in het bestand konden niet worden geïmporteerd"
+  password_change_required: "Dit account moet eerst zijn wachtwoord wijzigen. Meld je daarvoor aan bij de webapp en probeer het opnieuw."
 status:
   locked: Vergrendeld
   unlocked: Ontgrendeld

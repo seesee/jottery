@@ -577,6 +577,7 @@ cli:
   archived_help: "Bunun yerine arşivlenmiş notları listele"
   import_summary: "%{created} eklendi, %{updated} güncellendi, %{skipped} zaten güncel"
   import_failed: "Dosyadaki %{count} öğe içe aktarılamadı"
+  password_change_required: "Bu hesabın önce parolasını değiştirmesi gerekiyor. Bunun için web uygulamasında oturum açın ve yeniden deneyin."
 status:
   locked: Kilitli
   unlocked: Kilitsiz

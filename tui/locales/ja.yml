@@ -577,6 +577,7 @@ cli:
   archived_help: "代わりにアーカイブ済みのノートを一覧表示"
   import_summary: "%{created} 件追加、%{updated} 件更新、%{skipped} 件は最新です"
   import_failed: "ファイル内の %{count} 件をインポートできませんでした"
+  password_change_required: "このアカウントは先にパスワードを変更する必要があります。Web アプリにサインインして変更してから、もう一度お試しください。"
 status:
   locked: ロック中
   unlocked: ロック解除

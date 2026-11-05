@@ -577,6 +577,7 @@ cli:
   archived_help: "Pokaż zamiast tego zarchiwizowane notatki"
   import_summary: "Dodano: %{created}, zaktualizowano: %{updated}, już aktualne: %{skipped}"
   import_failed: "Nie udało się zaimportować elementów z pliku: %{count}"
+  password_change_required: "To konto musi najpierw zmienić hasło. Zaloguj się w aplikacji internetowej, aby to zrobić, i spróbuj ponownie."
 status:
   locked: Zablokowane
   unlocked: Odblokowane
