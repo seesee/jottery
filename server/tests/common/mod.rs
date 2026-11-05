@@ -91,6 +91,7 @@ pub fn app_with(pool: &SqlitePool, config: Config) -> Router {
         sync_broadcast,
         sse_tokens: api::sse::create_token_store(),
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     }))
 }
 

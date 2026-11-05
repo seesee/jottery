@@ -81,6 +81,7 @@ async fn create_test_app() -> (Router, SqlitePool) {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config: test_config(),
     });
 

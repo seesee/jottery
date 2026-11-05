@@ -193,6 +193,7 @@ async fn test_admin_stats_requires_authentication() {
         config,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     });
 
     let app = axum::Router::new()
@@ -253,6 +254,7 @@ async fn test_admin_stats_success() {
         config,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     });
 
     let app = axum::Router::new()
@@ -333,6 +335,7 @@ async fn test_user_login_success() {
         config,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     });
 
     let app = axum::Router::new()
@@ -406,6 +409,7 @@ async fn test_user_login_wrong_password() {
         config,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     });
 
     let app = axum::Router::new()
@@ -472,6 +476,7 @@ async fn test_user_login_nonexistent_user() {
         config,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     });
 
     let app = axum::Router::new()
@@ -537,6 +542,7 @@ async fn test_get_account_info_success() {
         config,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     });
 
     let app = axum::Router::new()
@@ -633,6 +639,7 @@ async fn test_get_account_info_requires_authentication() {
         config,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     });
 
     let app = axum::Router::new()
@@ -695,6 +702,7 @@ async fn test_delete_all_notes_success() {
         config,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     });
 
     let app = axum::Router::new()

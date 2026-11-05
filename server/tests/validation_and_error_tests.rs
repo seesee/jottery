@@ -121,6 +121,7 @@ async fn test_malformed_json_sync_push() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
@@ -187,6 +188,7 @@ async fn test_malformed_json_user_login() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
@@ -247,6 +249,7 @@ async fn test_sync_push_missing_notes_field() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
@@ -319,6 +322,7 @@ async fn test_sync_push_note_missing_required_fields() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
@@ -399,6 +403,7 @@ async fn test_register_user_missing_email() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
@@ -463,6 +468,7 @@ async fn test_login_missing_password() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
@@ -529,6 +535,7 @@ async fn test_sync_push_wrong_data_type() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
@@ -602,6 +609,7 @@ async fn test_sync_push_version_wrong_type() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
@@ -693,6 +701,7 @@ async fn test_register_device_wrong_type() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
@@ -762,6 +771,7 @@ async fn test_get_user_invalid_uuid() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
@@ -863,6 +873,7 @@ async fn test_empty_string_fields() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
@@ -930,6 +941,7 @@ async fn test_extremely_large_note_content() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
@@ -1023,6 +1035,7 @@ async fn test_many_tags() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
@@ -1119,6 +1132,7 @@ async fn test_special_characters_in_content() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
@@ -1215,6 +1229,7 @@ async fn test_sync_push_skips_versions_for_rejected_notes() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
@@ -1370,6 +1385,7 @@ async fn test_sync_push_handles_orphan_attachment_data_gracefully() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
