@@ -236,9 +236,10 @@ jobs:
     needs: collect-tui
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     env:
-      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
-      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
       SQLX_OFFLINE: "true"
       VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.run_number) }}
 
@@ -269,8 +270,11 @@ jobs:
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
-          username: ${{ secrets.GHCR_USERNAME }}
-          password: ${{ secrets.GHCR_TOKEN }}
+          # Prefer the job's own short-lived token. The personal token is only used
+          # while its secrets exist, until the package grants this repo Actions
+          # access; deleting both secrets then switches to GITHUB_TOKEN.
+          username: ${{ secrets.GHCR_USERNAME || github.actor }}
+          password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Build and push multi-arch image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -279,11 +283,13 @@ jobs:
           file: ./Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-          cache-from: type=registry,ref=ghcr.io/${{ secrets.GHCR_USERNAME }}/jottery:buildcache
-          cache-to: type=registry,ref=ghcr.io/${{ secrets.GHCR_USERNAME }}/jottery:buildcache,mode=max
+          cache-from: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache
+          cache-to: type=registry,ref=ghcr.io/${{ github.repository }}:buildcache,mode=max
+          # Release candidates (vX.Y.Z-rc.N) must not move :latest, because compose
+          # hosts would pick up their migrations, which can't be rolled back.
           tags: |
-            ghcr.io/${{ secrets.GHCR_USERNAME }}/jottery:latest
-            ghcr.io/${{ secrets.GHCR_USERNAME }}/jottery:${{ github.ref_name }}
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ${{ !contains(github.ref_name, '-') && format('ghcr.io/{0}:latest', github.repository) || '' }}
 
   make-release:
     name: Publish GitHub Release
@@ -330,6 +336,8 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: Jottery ${{ github.ref_name }}
+          # Keeps candidates off /releases/latest, which Settings download links use
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             release-assets/tui-release-zip/*
             release-assets/all-tui/*
