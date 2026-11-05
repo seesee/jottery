@@ -40,20 +40,15 @@ impl SseHandle {
         self.receiver.try_recv().ok()
     }
 
-    /// Stop the SSE thread
+    /// Stop the SSE thread.
+    ///
+    /// This doesn't wait for it. The thread only sees the flag after its next line from
+    /// the server, up to 30 seconds away on a quiet stream, and this runs on the UI
+    /// thread, including on the way out. Nothing depends on the thread having finished.
     pub fn stop(&mut self) {
         debug!("Stopping SSE thread");
         self.stop_flag.store(true, Ordering::SeqCst);
-
-        // Wait for thread to finish (with timeout)
-        if let Some(handle) = self.thread_handle.take() {
-            // Give the thread a moment to notice the stop flag
-            thread::sleep(Duration::from_millis(100));
-
-            // We can't really force-kill the thread, but the stop flag
-            // will cause it to exit on next iteration
-            let _ = handle.join();
-        }
+        self.thread_handle.take();
     }
 }
 
@@ -277,4 +272,35 @@ fn connect_and_listen(
 
     // Stream ended unexpectedly
     Err("SSE stream ended".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A quiet stream can keep its thread blocked for half a minute. The thread here only
+    /// finishes after `stop` has returned, so waiting for it would never end.
+    #[test]
+    fn stopping_does_not_wait_for_the_thread() {
+        let (release, blocked) = mpsc::channel::<()>();
+        let (_sender, receiver) = mpsc::channel();
+        let stop_flag = Arc::new(AtomicBool::new(false));
+        let mut handle = SseHandle {
+            receiver,
+            stop_flag: stop_flag.clone(),
+            thread_handle: Some(thread::spawn(move || {
+                let _ = blocked.recv();
+            })),
+        };
+
+        let (stopped, finished) = mpsc::channel();
+        thread::spawn(move || {
+            handle.stop();
+            stopped.send(()).unwrap();
+        });
+
+        assert!(finished.recv_timeout(Duration::from_secs(10)).is_ok());
+        assert!(stop_flag.load(Ordering::SeqCst));
+        release.send(()).unwrap();
+    }
 }
