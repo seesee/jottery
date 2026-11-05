@@ -2,7 +2,7 @@
  * Export/Import service for notes data
  */
 
-import type { ExportData, ExportNote, ExportAttachment, Note, Attachment } from '../types';
+import type { EncryptionResult, ExportData, ExportNote, ExportAttachment, Note, Attachment } from '../types';
 import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
 import { noteService } from './noteService';
@@ -119,10 +119,17 @@ export async function exportNotes(noteIds: string[]): Promise<ExportData> {
 
   const notes = await noteRepository.getByIds(noteIds);
   const exportNotes: ExportNote[] = [];
+  const skipped = { notes: 0, attachments: 0 };
 
   for (const note of notes) {
-    const exportNote = await convertNoteToExport(note, masterKey.key);
-    exportNotes.push(exportNote);
+    try {
+      const exportNote = await convertNoteToExport(note, masterKey.key);
+      skipped.attachments += note.attachments.length - exportNote.attachments.length;
+      exportNotes.push(exportNote);
+    } catch (error) {
+      console.error(`Failed to export note ${note.id}:`, error);
+      skipped.notes++;
+    }
   }
 
   // Export color settings
@@ -137,33 +144,38 @@ export async function exportNotes(noteIds: string[]): Promise<ExportData> {
       colorPalette: userSettings.colorPalette,
       tagColors: userSettings.tagColors,
     },
+    skipped: skipped.notes + skipped.attachments > 0 ? skipped : undefined,
   };
 }
 
 /**
- * Convert a note to export format (decrypt all fields)
+ * The ciphertext in a stored field, or null for plain text from before notes were
+ * encrypted. Only that case may be used as it stands: a value that is ciphertext and
+ * won't decrypt has to fail, or the export would hold a blob of it as the note's text.
+ */
+function parseCiphertext(value: string): EncryptionResult | null {
+  try {
+    const parsed = JSON.parse(value);
+    return typeof parsed?.ciphertext === 'string' && typeof parsed?.iv === 'string' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Convert a note to export format (decrypt all fields). Throws if the note can't be
+ * read, and the caller leaves it out and reports it.
  */
 async function convertNoteToExport(note: Note, key: CryptoKey): Promise<ExportNote> {
   // Decrypt content
-  let content: string;
-  try {
-    const encryptedContent = JSON.parse(note.content);
-    content = await cryptoService.decryptText(encryptedContent, key);
-  } catch (parseError) {
-    console.warn(`Note ${note.id} has unencrypted content, using as-is`);
-    content = note.content;
-  }
+  const encryptedContent = parseCiphertext(note.content);
+  const content = encryptedContent ? await cryptoService.decryptText(encryptedContent, key) : note.content;
 
   // Decrypt tags
   let tags: string[] = [];
   if (note.tags.length > 0 && note.tags[0]) {
-    try {
-      const encryptedTags = JSON.parse(note.tags[0]);
-      tags = await decryptStringArray(encryptedTags, key);
-    } catch (parseError) {
-      console.warn(`Note ${note.id} has unencrypted tags, using as-is`);
-      tags = note.tags;
-    }
+    const encryptedTags = parseCiphertext(note.tags[0]);
+    tags = encryptedTags ? await decryptStringArray(encryptedTags, key) : note.tags;
   }
 
   // Decrypt and export attachments
@@ -176,15 +188,10 @@ async function convertNoteToExport(note: Note, key: CryptoKey): Promise<ExportNo
 
       // Decrypt attachment filename
       // Handle both encrypted (JSON) and plain text filenames for backward compatibility
-      let filename: string;
-      try {
-        const filenameEncrypted = JSON.parse(attachment.filename);
-        filename = await cryptoService.decryptText(filenameEncrypted, key);
-      } catch (parseError) {
-        // If JSON.parse fails, assume it's a plain text filename (old data)
-        console.warn(`Attachment ${attachment.id} has unencrypted filename, using as-is`);
-        filename = attachment.filename;
-      }
+      const filenameEncrypted = parseCiphertext(attachment.filename);
+      const filename = filenameEncrypted
+        ? await cryptoService.decryptText(filenameEncrypted, key)
+        : attachment.filename;
 
       // Decrypt attachment data
       const encryptedDataJson = new TextDecoder().decode(encryptedBlob);
