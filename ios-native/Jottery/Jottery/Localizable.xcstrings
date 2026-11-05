@@ -26542,6 +26542,95 @@
         }
       }
     },
+    "syncError.clockAhead": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einige Änderungen wurden nicht synchronisiert, weil ihr Datum mehr als einen Tag vor der Serverzeit liegt. Prüfen Sie Datum und Uhrzeit auf diesem Gerät."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ορισμένες αλλαγές δεν συγχρονίστηκαν, επειδή η ημερομηνία τους είναι πάνω από μία ημέρα μπροστά από τον διακομιστή. Ελέγξτε την ημερομηνία και την ώρα αυτής της συσκευής."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some changes weren't synced because they're dated more than a day ahead of the server. Check the date and time on this device."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Algunos cambios no se han sincronizado porque su fecha va más de un día por delante del servidor. Comprueba la fecha y la hora de este dispositivo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Certaines modifications n'ont pas été synchronisées, car leur date a plus d'un jour d'avance sur le serveur. Vérifiez la date et l'heure de cet appareil."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alcune modifiche non sono state sincronizzate perché la loro data è avanti di più di un giorno rispetto al server. Controlla la data e l'ora di questo dispositivo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日付がサーバーより1日以上先になっているため、一部の変更を同期できませんでした。このデバイスの日付と時刻を確認してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "날짜가 서버보다 하루 이상 앞서 있어 일부 변경 사항이 동기화되지 않았습니다. 이 기기의 날짜와 시간을 확인하세요."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sommige wijzigingen zijn niet gesynchroniseerd, omdat hun datum meer dan een dag op de server voorloopt. Controleer de datum en tijd op dit apparaat."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niektóre zmiany nie zostały zsynchronizowane, ponieważ ich data wyprzedza serwer o ponad jeden dzień. Sprawdź datę i godzinę na tym urządzeniu."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Algumas alterações não foram sincronizadas porque a sua data está mais de um dia à frente do servidor. Verifique a data e a hora deste dispositivo."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Некоторые изменения не синхронизированы: их дата опережает сервер более чем на сутки. Проверьте дату и время на этом устройстве."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tarihleri sunucunun bir günden fazla ilerisinde olduğu için bazı değişiklikler eşitlenmedi. Bu cihazın tarih ve saatini kontrol edin."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分更改未能同步，因为其日期比服务器提前了一天以上。请检查此设备的日期和时间。"
+          }
+        }
+      }
+    },
     "syncError.keyChanged": {
       "extractionState": "manual",
       "localizations": {

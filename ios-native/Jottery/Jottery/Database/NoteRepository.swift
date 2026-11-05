@@ -371,6 +371,31 @@ struct NoteRepository: Sendable {
         }
     }
 
+    /// The server skipped this note because it was deleted for good after the
+    /// edit `sentModifiedAt` was sent. That edit is what's being set aside, so
+    /// unlike `applyServerDeletion` the waiting flag doesn't save it, but a newer
+    /// edit does: that one is later than the deletion, and the next push brings
+    /// the note back.
+    func applySkippedDeletion(id: String, sentModifiedAt: String?) throws -> ServerDeletionResult {
+        let now = Date().iso8601
+        return try db.dbPool.write { db in
+            guard let row = try Row.fetchOne(
+                db, sql: "SELECT deleted, modified_at FROM notes WHERE id = ?", arguments: [id]
+            ) else {
+                return .nothingToDo
+            }
+            let modifiedAt: String = row["modified_at"]
+            guard modifiedAt == sentModifiedAt else { return .keptLocalEdit }
+            let isDeleted: Bool = row["deleted"]
+            try db.execute(sql: """
+                UPDATE notes SET deleted = 1, deleted_at = COALESCE(deleted_at, ?),
+                    local_deleted_at = COALESCE(local_deleted_at, ?), needs_sync = 0
+                WHERE id = ?
+            """, arguments: [now, now, id])
+            return isDeleted ? .nothingToDo : .movedToBin
+        }
+    }
+
     /// Archive a note.
     func archive(id: String) throws {
         let now = Date().iso8601

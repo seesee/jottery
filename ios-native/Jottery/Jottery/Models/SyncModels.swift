@@ -56,6 +56,9 @@ struct SyncPushResponse: Codable {
     /// Deletions refused because the note has a newer edit. Absent on older
     /// servers. The note comes back through a normal pull.
     var rejectedDeletions: [String]?
+    /// Pushed notes skipped because they were permanently deleted after this
+    /// edit. Absent on older servers.
+    var skippedDeleted: [String]?
 }
 
 /// One accepted note whose attachment references have no data on the server.
@@ -83,6 +86,9 @@ struct SyncRejected: Codable {
     var serverArchivedAt: String?
     var serverLocked: Bool?
     var serverLockedAt: String?
+    /// Whether the server's copy is in the bin. Absent on older servers.
+    var serverDeleted: Bool?
+    var serverDeletedAt: String?
     var serverSyntaxLanguage: String?
     var serverWordWrap: Bool?
     var serverShowPreview: Bool?
@@ -299,6 +305,10 @@ struct SyncSavedSearch: Codable {
 
 // MARK: - Account Management
 
+struct DeleteAccountRequest: Codable {
+    let currentPassword: String
+}
+
 struct UserLoginRequest: Codable {
     let email: String
     let password: String
@@ -335,6 +345,9 @@ struct SyncChanges: Sendable {
     /// so a lot of these at once is suspicious.
     var removedByServerIds: Set<String> = []
     var fullReloadRequired: Bool = false
+    /// Something this cycle sent went unanswered, and was dated over a day
+    /// ahead of the server's clock. Never set by `merge`: `sync()` decides it.
+    var clockLooksWrong = false
 
     /// No changes, no reload needed — the default/no-op value.
     static let none = SyncChanges()

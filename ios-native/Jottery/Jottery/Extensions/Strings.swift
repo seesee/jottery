@@ -68,6 +68,7 @@ enum L {
     static var syncErrorTimedOut: String { String(localized: "syncError.timedOut") }
     static var syncErrorStorageFull: String { String(localized: "syncError.storageFull") }
     static var syncErrorKeyChanged: String { String(localized: "syncError.keyChanged") }
+    static var syncErrorClockAhead: String { String(localized: "syncError.clockAhead") }
     static func syncNotesTooLarge(_ count: Int) -> String {
         String(format: String(localized: "syncError.notesTooLarge"), count)
     }

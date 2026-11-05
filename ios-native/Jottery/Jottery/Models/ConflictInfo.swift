@@ -33,6 +33,8 @@ struct ConflictInfo: Identifiable, Sendable {
     var serverLocked: Bool?
     var serverLockedAt: String?
     var serverColor: String?
+    var serverDeleted: Bool?
+    var serverDeletedAt: String?
 }
 
 enum ConflictResolutionStrategy: Sendable {

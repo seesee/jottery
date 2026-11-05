@@ -1506,6 +1506,9 @@ final class AppState {
         if changes.removedByServerIds.count >= Self.suspiciousRemovalCount {
             notesRemovedByServer = Array(Set(notesRemovedByServer).union(changes.removedByServerIds))
         }
+        if changes.clockLooksWrong {
+            syncError = L.syncErrorClockAhead
+        }
     }
 
     /// How many notes in use one sync can remove before the user is asked. A

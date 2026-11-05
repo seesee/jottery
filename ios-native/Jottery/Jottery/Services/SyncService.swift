@@ -21,6 +21,10 @@ actor SyncService {
     private var postSyncHandler: (@Sendable (SyncChanges) async -> Void)?
     /// Set when the server said to wait. No sync starts until then.
     private var retryNotBefore: Date?
+    /// The times on whatever the last push sent and heard nothing back about.
+    private var unansweredTimes: [String] = []
+    /// The server's clock, from the last pull.
+    private var lastServerTime: Date?
 
     init(syncClient: SyncClient, noteRepo: NoteRepository, syncRepo: SyncRepository, versionRepo: VersionRepository, attachmentRepo: AttachmentRepository, savedSearchRepo: SavedSearchRepository, key: SymmetricKey) {
         self.syncClient = syncClient
@@ -64,6 +68,7 @@ actor SyncService {
             } catch {
                 throw pushError ?? error
             }
+            changes.clockLooksWrong = clockLooksWrong
             try await finalise()
             await postSyncHandler?(changes)
             if let pushError { throw pushError }
@@ -81,6 +86,20 @@ actor SyncService {
             return (try await push(), nil)
         } catch {
             return (.fullReload, error)
+        }
+    }
+
+    /// How far ahead of its clock the server lets a time be (docs/sync-protocol.md).
+    private static let clockTolerance: TimeInterval = 24 * 60 * 60
+
+    /// The server skips anything dated over a day ahead of it, and says so only
+    /// in `errors`, which aren't for parsing. So this looks at what it answered
+    /// nothing about and compares those times with the server's clock, because
+    /// the device's own clock is the one in doubt.
+    private var clockLooksWrong: Bool {
+        guard let limit = lastServerTime?.addingTimeInterval(Self.clockTolerance) else { return false }
+        return unansweredTimes.contains { time in
+            Date(iso8601: time).map { $0 > limit } ?? false
         }
     }
 
@@ -306,6 +325,7 @@ actor SyncService {
     @discardableResult
     func push() async throws -> SyncChanges {
         var changes = SyncChanges()
+        unansweredTimes = []
         let records = try noteRepo.listNeedingSync()
         let deletions = try syncRepo.getPendingDeletions()
         let savedSearchRecords = try savedSearchRepo.listNeedingSync()
@@ -468,8 +488,40 @@ actor SyncService {
                 serverArchivedAt: rejected.serverArchivedAt,
                 serverLocked: rejected.serverLocked,
                 serverLockedAt: rejected.serverLockedAt,
-                serverColor: rejected.serverColor
+                serverColor: rejected.serverColor,
+                serverDeleted: rejected.serverDeleted,
+                serverDeletedAt: rejected.serverDeletedAt
             ))
+        }
+
+        try applySkippedNotes(in: response, batch: batch, pushed: pushed, changes: &changes)
+    }
+
+    /// Act on the notes the server left out of `accepted` and `rejected`. Only
+    /// what this batch sent counts: the server can't name other notes here.
+    private func applySkippedNotes(
+        in response: SyncPushResponse,
+        batch: [NoteRecord],
+        pushed: [String: NoteRecord],
+        changes: inout SyncChanges
+    ) throws {
+        let answered = Set(response.accepted.map(\.id)).union(response.rejected.map(\.id))
+        let deletedElsewhere = Set(response.skippedDeleted ?? []).subtracting(answered)
+
+        for record in batch where !answered.contains(record.id) {
+            guard deletedElsewhere.contains(record.id) else {
+                unansweredTimes += [
+                    record.createdAt, record.modifiedAt, record.deletedAt, record.archivedAt, record.lockedAt,
+                ].compactMap { $0 }
+                continue
+            }
+            // A conflict is an edit the user hasn't decided about yet.
+            guard !pendingConflicts.contains(where: { $0.id == record.id }) else { continue }
+            let result = try noteRepo.applySkippedDeletion(id: record.id, sentModifiedAt: pushed[record.id]?.modifiedAt)
+            if result == .movedToBin {
+                changes.deletedIds.insert(record.id)
+                changes.removedByServerIds.insert(record.id)
+            }
         }
     }
 
@@ -506,9 +558,17 @@ actor SyncService {
                 version: record.version
             )
         }
-        _ = try await syncClient.push(SyncPushRequest(
+        let response = try await syncClient.push(SyncPushRequest(
             notes: [], attachments: [], versions: [], savedSearches: syncSavedSearches
         ))
+
+        // Searches are all this request holds, so an error means one was skipped.
+        // Nothing says which, and sending them all again is harmless.
+        if let errors = response.errors, !errors.isEmpty {
+            Log.debug("[Sync] push: the server skipped saved searches: \(errors.count)")
+            unansweredTimes += records.map(\.modifiedAt)
+            return
+        }
 
         let now = Date().iso8601
         for record in records {
@@ -580,12 +640,15 @@ actor SyncService {
         var fullPullPending = fullPullIfCursorsWork
         var startedAt: Date?
         let pendingDeletions = Set(try syncRepo.getPendingDeletions().map(\.id))
+        lastServerTime = nil
 
         for _ in 0..<Self.maxPullPages {
             let requestedAt = Date()
             let page = SyncValidation.sanitised(try await syncClient.pull(request))
             try apply(page, skipping: pendingDeletions, changes: &changes)
-            startedAt = startedAt ?? page.syncedAt.flatMap { Date(iso8601: $0) } ?? requestedAt
+            let serverTime = page.syncedAt.flatMap { Date(iso8601: $0) }
+            lastServerTime = lastServerTime ?? serverTime
+            startedAt = startedAt ?? serverTime ?? requestedAt
 
             let hasMore = page.hasMore ?? false
             if let nextCursor = SyncValidation.opaqueToken(page.nextCursor) {
@@ -813,7 +876,9 @@ actor SyncService {
             serverArchivedAt: syncNote.archivedAt,
             serverLocked: syncNote.locked,
             serverLockedAt: syncNote.lockedAt,
-            serverColor: syncNote.color
+            serverColor: syncNote.color,
+            serverDeleted: syncNote.deleted,
+            serverDeletedAt: syncNote.deletedAt
         )
     }
 
@@ -827,8 +892,15 @@ actor SyncService {
     /// append to `pendingConflicts`) deliberately don't, since `resolveConflict`
     /// triggers its own full reload once the user resolves them.
     private func processNote(_ syncNote: SyncNote, syncedAt: String, changes: inout SyncChanges) throws {
-        // Skip notes with pending conflicts from push — preserve local version
-        if pendingConflicts.contains(where: { $0.id == syncNote.id }) {
+        // A conflict counts as an edit that hasn't been sent, so the note here
+        // stays as it is: it may be the only copy of the local side. The conflict
+        // moves on to the newest server copy, though, because the pull won't
+        // deliver this one again, and Keep Server has to take what's there now.
+        if let waiting = pendingConflicts.firstIndex(where: { $0.id == syncNote.id }) {
+            if syncNote.contentHash != pendingConflicts[waiting].serverContentHash,
+               let localRecord = try noteRepo.getRaw(id: syncNote.id) {
+                pendingConflicts[waiting] = buildPullConflictInfo(localRecord: localRecord, syncNote: syncNote)
+            }
             return
         }
 
@@ -1014,6 +1086,11 @@ actor SyncService {
         if let locked = conflict.serverLocked {
             updated.locked = locked
             updated.lockedAt = conflict.serverLockedAt
+        }
+        if let deleted = conflict.serverDeleted {
+            updated.deleted = deleted
+            updated.deletedAt = deleted ? conflict.serverDeletedAt ?? syncedAt : nil
+            updated.localDeletedAt = deleted ? updated.localDeletedAt ?? syncedAt : nil
         }
         updated.syntaxLanguage = conflict.serverSyntaxLanguage ?? updated.syntaxLanguage
         updated.wordWrap = conflict.serverWordWrap ?? updated.wordWrap
@@ -1319,7 +1396,7 @@ enum SyncServiceError: LocalizedError, Equatable {
 }
 
 // Extension to set the callback
-private extension SSEClient {
+extension SSEClient {
     func setOnSyncEvent(_ handler: @escaping @Sendable () async -> Void) {
         self.onSyncEvent = handler
     }
