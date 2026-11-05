@@ -11,6 +11,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
@@ -26,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -49,6 +51,9 @@ fun SearchBar(
     modifier: Modifier = Modifier,
     focusRequested: Boolean = false,
     onFocusHandled: () -> Unit = {},
+    onSubmit: () -> Unit = {},
+    onHelp: () -> Unit = {},
+    onFocusChanged: (Boolean) -> Unit = {},
 ) {
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
@@ -91,11 +96,15 @@ fun SearchBar(
                 ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(
-                    onSearch = { focusManager.clearFocus() },
+                    onSearch = {
+                        onSubmit()
+                        focusManager.clearFocus()
+                    },
                 ),
                 modifier = Modifier
                     .weight(1f)
                     .focusRequester(focusRequester)
+                    .onFocusChanged { onFocusChanged(it.isFocused) }
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 decorationBox = { innerTextField ->
                     if (query.isEmpty()) {
@@ -129,6 +138,17 @@ fun SearchBar(
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
+            }
+
+            if (query.isEmpty()) {
+                IconButton(onClick = onHelp, modifier = Modifier.size(24.dp)) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.HelpOutline,
+                        contentDescription = stringResource(R.string.search_help_title),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
             }
 
             // Clear button

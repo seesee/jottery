@@ -75,7 +75,10 @@ import com.jottery.android.R
 import com.jottery.android.model.SortOrder
 import com.jottery.android.ui.component.NoteEditorView
 import com.jottery.android.ui.component.NoteListView
+import com.jottery.android.model.tagCounts
 import com.jottery.android.ui.component.SearchBar
+import com.jottery.android.ui.component.SearchHelpSheet
+import com.jottery.android.ui.component.SearchSuggestionChips
 import com.jottery.android.ui.component.enableBiometricUnlock
 import com.jottery.android.ui.component.sortOrderLabel
 import com.jottery.android.viewmodel.AppState
@@ -140,9 +143,21 @@ fun MainScreen(
     }
 
     var searchVisible by remember { mutableStateOf(false) }
+    var showSearchHelp by remember { mutableStateOf(false) }
+    var searchFocused by remember { mutableStateOf(false) }
+    val recentSearches by appState.recentSearches.collectAsState()
     val searchRequested by appState.searchRequested.collectAsState()
     LaunchedEffect(searchRequested) {
         if (searchRequested) searchVisible = true
+    }
+    if (showSearchHelp) {
+        SearchHelpSheet(
+            onChoose = {
+                showSearchHelp = false
+                appState.setSearchQuery(it)
+            },
+            onDismiss = { showSearchHelp = false },
+        )
     }
     var showSaveSearch by remember { mutableStateOf(false) }
 
@@ -348,9 +363,23 @@ fun MainScreen(
                     showCounts = searchQuery.isNotEmpty(),
                     focusRequested = searchRequested,
                     onFocusHandled = appState::searchRequestHandled,
+                    onSubmit = { appState.rememberSearch(searchQuery) },
+                    onHelp = { showSearchHelp = true },
+                    onFocusChanged = { searchFocused = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+
+            if (searchVisible && showListOnNarrow && searchFocused) {
+                SearchSuggestionChips(
+                    query = searchQuery,
+                    tags = remember(allNotes, archivedNotes) {
+                        (allNotes + archivedNotes).tagCounts().map { it.first }
+                    },
+                    recent = recentSearches,
+                    onChoose = { appState.setSearchQuery(it) },
                 )
             }
 

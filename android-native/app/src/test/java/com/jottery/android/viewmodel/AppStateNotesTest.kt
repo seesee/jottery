@@ -196,6 +196,29 @@ class AppStateNotesTest {
         assertEquals("Tagged", appState.filteredNotes.value.single().content)
     }
 
+    @Test fun `a search says how many match in the view not showing`() = runBlocking {
+        val archived = appState.createNote("Hidden treasure")!!
+        appState.createNote("Something else")
+        appState.archiveNote(archived.id)
+
+        appState.setSearchQuery("treasure")
+
+        withTimeout(5_000) { while (appState.otherViewMatches.value != 1) delay(5) }
+        assertTrue(appState.filteredNotes.value.isEmpty())
+
+        appState.setSearchQuery("nothing matches this")
+        withTimeout(5_000) { while (appState.otherViewMatches.value != 0) delay(5) }
+    }
+
+    @Test fun `recent searches are gone once the vault is locked`() = runBlocking {
+        appState.rememberSearch("something private")
+        assertEquals(listOf("something private"), appState.recentSearches.value)
+
+        appState.lock()
+
+        assertTrue(appState.recentSearches.value.isEmpty())
+    }
+
     @Test fun `restoring a version updates the list the editor reads`() = runBlocking {
         val note = appState.createNote("original")!!
         appState.saveNote(note.copy(content = "first edit"))

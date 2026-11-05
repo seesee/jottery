@@ -78,6 +78,7 @@ fun NoteListView(
     val searchQuery by appState.searchQuery.collectAsState()
     val conflicts by appState.pendingConflicts.collectAsState()
     val conflictIds = remember(conflicts) { conflicts.map { it.id }.toSet() }
+    val otherViewMatches by appState.otherViewMatches.collectAsState()
 
     // Derive counts from collected state
     val noteCount = if (showArchive) archivedNotes.size else allNotes.size
@@ -209,6 +210,17 @@ fun NoteListView(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             textAlign = TextAlign.Center,
                         )
+                        if (searchQuery.isNotEmpty() && otherViewMatches > 0) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            TextButton(onClick = { appState.toggleArchiveView() }) {
+                                Text(
+                                    stringResource(
+                                        if (showArchive) R.string.search_in_notes else R.string.search_in_archive,
+                                        otherViewMatches,
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
             } else {

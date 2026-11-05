@@ -71,6 +71,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import com.jottery.android.util.QuickAction
+import com.jottery.android.util.SearchSuggestions
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -699,6 +700,8 @@ class AppState(application: Application) : AndroidViewModel(application) {
         _notes.value = emptyList()
         _archivedNotes.value = emptyList()
         _filteredNotes.value = emptyList()
+        _recentSearches.value = emptyList()
+        _otherViewMatches.value = 0
         _savedSearches.value = emptyList()
         _pendingConflicts.value = emptyList()
         _inboxItems.value = emptyList()
@@ -1005,6 +1008,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         }
         val order = _sortOrder.value
         val categories = NoteCategories.from(_settings.value)
+        val otherView = if (_showArchive.value) _notes.value else _archivedNotes.value
 
         searchJob = viewModelScope.launch {
             // Debounce while typing. With no query there's nothing to wait for.
@@ -1013,6 +1017,12 @@ class AppState(application: Application) : AndroidViewModel(application) {
             _filteredNotes.value = withContext(Dispatchers.Default) {
                 val matches = if (query.isBlank()) source else SearchService.filter(source, query, categories).notes
                 SearchService.sort(matches, order)
+            }
+            // An archive search already covers both views
+            _otherViewMatches.value = if (query.isBlank() || source.size > displayedNotes.size) {
+                0
+            } else {
+                withContext(Dispatchers.Default) { SearchService.filter(otherView, query, categories).matchCount }
             }
         }
     }
@@ -1455,6 +1465,8 @@ class AppState(application: Application) : AndroidViewModel(application) {
         _notes.value = emptyList()
         _archivedNotes.value = emptyList()
         _filteredNotes.value = emptyList()
+        _recentSearches.value = emptyList()
+        _otherViewMatches.value = 0
         _savedSearches.value = emptyList()
         _pendingConflicts.value = emptyList()
         _inboxItems.value = emptyList()
@@ -2282,6 +2294,20 @@ class AppState(application: Application) : AndroidViewModel(application) {
             if (addAttachment(note.id, file.data, file.name, file.mimeType) == null) failed++
         }
         showMessage(text(if (failed == 0) R.string.share_saved else R.string.share_file_failed))
+    }
+
+    // MARK: - Search Help
+
+    private val _otherViewMatches = MutableStateFlow(0)
+    /** How many notes match in the view not showing, so a search can't quietly miss them. */
+    val otherViewMatches: StateFlow<Int> = _otherViewMatches.asStateFlow()
+
+    private val _recentSearches = MutableStateFlow<List<String>>(emptyList())
+    /** In memory only, and gone on lock: what someone searched for says a lot about them. */
+    val recentSearches: StateFlow<List<String>> = _recentSearches.asStateFlow()
+
+    fun rememberSearch(query: String) {
+        _recentSearches.value = SearchSuggestions.remember(_recentSearches.value, query)
     }
 
     // MARK: - Quick Actions
