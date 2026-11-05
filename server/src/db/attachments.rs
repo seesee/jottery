@@ -8,7 +8,7 @@
 //! only ever see `attachment_id`, which is unique per user, so every lookup here
 //! goes through `(user_id, attachment_id)`.
 
-use sqlx::{Sqlite, SqliteConnection};
+use sqlx::{Sqlite, SqliteConnection, SqlitePool};
 use uuid::Uuid;
 
 use crate::models::AttachmentRef;
@@ -71,6 +71,32 @@ impl AttachmentRepository {
         .execute(&mut *conn)
         .await?;
 
+        Ok(())
+    }
+
+    /// Remove a note's references to everything except `keep`. The attachments
+    /// themselves stay until housekeeping finds nothing else needs them.
+    pub async fn unlink_others(
+        conn: &mut SqliteConnection,
+        user_id: &str,
+        note_id: &str,
+        keep: &[&str],
+    ) -> Result<(), sqlx::Error> {
+        let mut query: sqlx::QueryBuilder<'_, Sqlite> =
+            sqlx::QueryBuilder::new("DELETE FROM note_attachments WHERE user_id = ");
+        query.push_bind(user_id);
+        query.push(" AND note_id = ");
+        query.push_bind(note_id);
+        if !keep.is_empty() {
+            query.push(" AND attachment_id NOT IN (");
+            let mut ids = query.separated(", ");
+            for attachment_id in keep {
+                ids.push_bind(*attachment_id);
+            }
+            ids.push_unseparated(")");
+        }
+
+        query.build().execute(&mut *conn).await?;
         Ok(())
     }
 
@@ -203,5 +229,55 @@ impl AttachmentRepository {
         ids.push_unseparated(")");
 
         query.build_query_as().fetch_all(&mut *conn).await
+    }
+
+    /// Delete attachments nothing needs any more, and return how many went.
+    ///
+    /// An attachment is kept while a note references it, or a version snapshot
+    /// does, because restoring that version needs the blob. Once neither is
+    /// true it is kept for `grace` as well, and only deleted if nothing has
+    /// referenced it again by then. Deleting the metadata removes the blob.
+    ///
+    /// Version snapshots keep attachment references as JSON. Searching that text
+    /// for the id can only err towards keeping a blob.
+    pub async fn purge_unreferenced(
+        pool: &SqlitePool,
+        grace: chrono::Duration,
+    ) -> Result<u64, sqlx::Error> {
+        let now = chrono::Utc::now();
+        let started = now.to_rfc3339();
+        let cutoff = (now - grace).to_rfc3339();
+
+        sqlx::query!(
+            "UPDATE attachments_meta SET unreferenced_at = ?
+             WHERE unreferenced_at IS NULL AND NOT EXISTS (
+                 SELECT 1 FROM note_attachments na
+                 WHERE na.user_id = attachments_meta.user_id
+                   AND na.attachment_id = attachments_meta.attachment_id
+             )",
+            started
+        )
+        .execute(pool)
+        .await?;
+
+        let result = sqlx::query!(
+            "DELETE FROM attachments_meta
+             WHERE unreferenced_at < ?
+               AND NOT EXISTS (
+                   SELECT 1 FROM note_attachments na
+                   WHERE na.user_id = attachments_meta.user_id
+                     AND na.attachment_id = attachments_meta.attachment_id
+               )
+               AND NOT EXISTS (
+                   SELECT 1 FROM note_versions v
+                   WHERE v.user_id = attachments_meta.user_id
+                     AND instr(v.attachments, attachments_meta.attachment_id) > 0
+               )",
+            cutoff
+        )
+        .execute(pool)
+        .await?;
+
+        Ok(result.rows_affected())
     }
 }

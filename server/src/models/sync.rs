@@ -12,6 +12,11 @@ pub struct SyncPushRequest {
     /// Hard-deleted note IDs from client (when emptying trash)
     #[serde(default)]
     pub deletions: Vec<SyncDeletion>,
+    /// Each pushed note's `attachments` is its complete list, so anything else
+    /// the server has for an accepted note is removed. Off by default because
+    /// some older clients send empty lists by mistake.
+    #[serde(rename = "attachmentsAuthoritative", default)]
+    pub attachments_authoritative: bool,
 }
 
 /// Hard deletion record for sync

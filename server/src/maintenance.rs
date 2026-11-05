@@ -3,11 +3,17 @@
 use sqlx::SqlitePool;
 use std::time::Duration;
 
+use crate::db::AttachmentRepository;
+
 /// How often housekeeping runs.
 const INTERVAL: Duration = Duration::from_secs(60 * 60);
 
 /// How long a soft-deleted note stays on the server before it is purged.
 const DELETED_NOTE_RETENTION_DAYS: i64 = 30;
+
+/// How long an attachment nothing references is kept before it is deleted. This
+/// covers a device that is still catching up and re-links it.
+const UNREFERENCED_ATTACHMENT_RETENTION_DAYS: i64 = 7;
 
 /// Run housekeeping now and then every hour, for the life of the process.
 pub fn spawn(pool: SqlitePool) {
@@ -25,6 +31,16 @@ pub fn spawn(pool: SqlitePool) {
 /// One housekeeping pass.
 pub async fn run_once(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     purge_deleted_notes(pool).await?;
+
+    let purged = AttachmentRepository::purge_unreferenced(
+        pool,
+        chrono::Duration::days(UNREFERENCED_ATTACHMENT_RETENTION_DAYS),
+    )
+    .await?;
+    if purged > 0 {
+        tracing::info!("Purged {} attachments nothing references", purged);
+    }
+
     Ok(())
 }
 

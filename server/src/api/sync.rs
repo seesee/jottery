@@ -154,6 +154,8 @@ pub async fn push(
         estimated_size / 1024
     );
 
+    let attachments_authoritative = push_req.attachments_authoritative;
+
     // Everything that can fail on the input alone happens before the first
     // write, so a bad request leaves no trace.
     for note in &push_req.notes {
@@ -394,6 +396,19 @@ pub async fn push(
                 .await?;
 
                 tracing::debug!("Stored attachment metadata: {} for note {}", attachment_ref.id, note.id);
+            }
+
+            // Only a client that vouches for its list gets pruning: some older
+            // clients send empty lists by mistake.
+            if attachments_authoritative {
+                let keep: Vec<&str> = note.attachments.iter().map(|a| a.id.as_str()).collect();
+                AttachmentRepository::unlink_others(
+                    &mut tx,
+                    &client_info.user_id,
+                    &note.id,
+                    &keep,
+                )
+                .await?;
             }
 
             tracing::debug!("Accepted note: {}", note.id);
