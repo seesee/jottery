@@ -390,4 +390,139 @@ test.describe('Attachments', () => {
       cleanupTestFile(testFilePath);
     }
   });
+  test.describe('an SVG, which can hold script', () => {
+    const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="30"><script>window.top.ran = true</script><rect width="40" height="30" fill="red"/></svg>';
+
+    /** What a browser would serve if this image were opened in a tab of its own */
+    const servedType = (page: Page, src: string) => page.evaluate(async url => (await (await fetch(url)).blob()).type, src);
+
+    test('is shown as a picture, so opening it in a tab runs nothing', async ({ page }) => {
+      await openAttachmentsModal(page, jp);
+      const filePath = createTestFile('test-drawing.svg', SVG);
+
+      try {
+        await uploadFileAndWait(page, jp, filePath, 'test-drawing.svg');
+        await jp.dialog.locator('.attachment-item').first().locator('button').nth(1).click();
+
+        const image = page.locator('img[alt="test-drawing.svg"]');
+        await expect(image).toBeVisible();
+        const src = await image.getAttribute('src');
+
+        expect(await servedType(page, src as string)).toBe('image/png');
+        await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(40);
+      } finally {
+        cleanupTestFile(filePath);
+      }
+    });
+
+    test('is drawn the same way wherever a note shows it', async ({ page }) => {
+      const types = await page.evaluate(async svg => {
+        const { imageObjectUrl } = await import('/src/lib/utils/safeObjectUrl.ts' as string);
+        const typeOf = async (blob: Blob) => {
+          const url = await imageObjectUrl(blob);
+          return (await (await fetch(url)).blob()).type;
+        };
+        return {
+          svg: await typeOf(new Blob([svg], { type: 'image/svg+xml' })),
+          withParameter: await typeOf(new Blob([svg], { type: 'image/svg+xml; charset=utf-8' })),
+          png: await typeOf(new Blob([new Uint8Array(8)], { type: 'image/png' })),
+        };
+      }, SVG);
+
+      expect(types).toEqual({ svg: 'image/png', withParameter: 'image/png', png: 'image/png' });
+    });
+
+    test('refuses anything else that would run as a page, whatever an attachment says it is', async ({ page }) => {
+      const refused = await page.evaluate(async () => {
+        const { imageObjectUrl } = await import('/src/lib/utils/safeObjectUrl.ts' as string);
+        try {
+          await imageObjectUrl(new Blob(['<script>window.top.ran = true</script>'], { type: 'text/html' }));
+          return false;
+        } catch {
+          return true;
+        }
+      });
+
+      expect(refused).toBe(true);
+    });
+  });
+  test.describe('decrypted attachments in memory', () => {
+    /** Keeps count of blob URLs still alive, from before the app starts */
+    async function trackObjectUrls(page: Page) {
+      await page.evaluate(() => {
+        const live = new Set<string>();
+        (window as unknown as { liveUrls: Set<string> }).liveUrls = live;
+        const create = URL.createObjectURL.bind(URL);
+        const revoke = URL.revokeObjectURL.bind(URL);
+        URL.createObjectURL = (blob: Blob) => { const url = create(blob); live.add(url); return url; };
+        URL.revokeObjectURL = (url: string) => { live.delete(url); revoke(url); };
+      });
+    }
+
+    const liveUrls = (page: Page) => page.evaluate(() => (window as unknown as { liveUrls: Set<string> }).liveUrls.size);
+
+    test('are released when another preview opens before the first has finished loading', async ({ page }) => {
+      const first = createTestFile('test-slow-1.png', 'not really a png');
+      const second = createTestFile('test-slow-2.png', 'not one either');
+      try {
+        await openAttachmentsModal(page, jp);
+        await uploadFileAndWait(page, jp, first, 'test-slow-1');
+        await uploadFileAndWait(page, jp, second, 'test-slow-2');
+        await trackObjectUrls(page);
+        await page.evaluate(async () => {
+          const { attachmentService } = await import('/src/lib/services/attachmentService.ts' as string);
+          const state = window as unknown as { finished: number };
+          state.finished = 0;
+          const read = attachmentService.getAttachmentData.bind(attachmentService);
+          attachmentService.getAttachmentData = async (attachment: unknown) => {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const data = await read(attachment);
+            setTimeout(() => { state.finished++; }, 100);
+            return data;
+          };
+        });
+        const before = await liveUrls(page);
+        const closePreview = page.getByRole('button', { name: /close/i }).last();
+
+        await jp.dialog.locator('.attachment-item').nth(0).locator('button').nth(1).click();
+        await closePreview.click();
+        await jp.dialog.locator('.attachment-item').nth(1).locator('button').nth(1).click();
+        await page.waitForFunction(() => (window as unknown as { finished: number }).finished === 2);
+        await closePreview.click();
+
+        expect(await liveUrls(page)).toBe(before);
+      } finally {
+        cleanupTestFile(first);
+        cleanupTestFile(second);
+      }
+    });
+
+    test('are all released when a list of thumbnails goes away', async ({ page }) => {
+      const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+      const filePath = path.join(__dirname, 'test-thumbnail.png');
+      fs.writeFileSync(filePath, pixel);
+      await trackObjectUrls(page);
+      try {
+        await openAttachmentsModal(page, jp);
+        await uploadFileAndWait(page, jp, filePath, 'test-thumbnail');
+        await closeAttachmentsModal(page, jp);
+        await expect.poll(() => liveUrls(page)).toBe(0);
+      } finally {
+        cleanupTestFile(filePath);
+      }
+    });
+  });
+  test('a PDF that cannot be read says so, not "1 of 0"', async ({ page }) => {
+    const filePath = createTestFile('test-broken.pdf', 'this is not a pdf');
+    try {
+      await openAttachmentsModal(page, jp);
+      await uploadFileAndWait(page, jp, filePath, 'test-broken');
+      await jp.dialog.locator('.attachment-item').first().locator('button').nth(1).click();
+
+      await expect(page.getByText(/couldn't be opened/)).toBeVisible({ timeout: 15000 });
+      await expect(page.getByText(/1 (of|\/) 0/)).toHaveCount(0);
+    } finally {
+      cleanupTestFile(filePath);
+    }
+  });
 });

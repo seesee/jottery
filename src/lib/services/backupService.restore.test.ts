@@ -4,6 +4,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
+  createBackup,
   createBatchedBackup,
   getBackupStats,
   validateBackup,
@@ -15,10 +16,12 @@ import {
 import { initialize, restoreFromBackup } from './initService';
 import { noteService } from './noteService';
 import { noteRepository } from './noteRepository';
+import { settingsRepository } from './settingsRepository';
 import { attachmentRepository } from './attachmentRepository';
 import { keyManager } from './keyManager';
 import { closeDB, deleteDB, initDB } from './db';
 import { BackupStorageFullError } from '../errors';
+import { DEFAULT_SETTINGS } from '../types';
 
 const PASSWORD = 'notes-password-correct-horse';
 const TYPE = 'jottery-encrypted-backup';
@@ -172,6 +175,22 @@ describe('checking a backup before restoring', () => {
       await expect(restoreFromBackup(backup, PASSWORD)).rejects.toThrow();
 
       expect(await noteCount()).toBe(2);
+    }, 60_000);
+
+    it.each([
+      ['v3', () => createBatchedBackup()],
+      ['v2.1', () => createBackup()],
+    ])('leaves per-device security settings behind, in a %s backup', async (_version, create) => {
+      await settingsRepository.update({ rememberPassword: true, persistSession: true, persistSessionTimeout: 999, theme: 'dark' });
+      const backup = await create();
+
+      await restoreFromBackup(backup, PASSWORD);
+
+      const restored = await settingsRepository.get();
+      expect(restored.rememberPassword).toBe(false);
+      expect(restored.persistSession).toBe(false);
+      expect(restored.persistSessionTimeout).toBe(DEFAULT_SETTINGS.persistSessionTimeout);
+      expect(restored.theme).toBe('dark');
     }, 60_000);
 
     it('still restores a good backup', async () => {

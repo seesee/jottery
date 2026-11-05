@@ -180,3 +180,42 @@ test.describe('The open editor and a pull', () => {
     });
   });
 });
+
+test.describe('A save still running when the note changes', () => {
+  test('keeps the first note\'s text in the list, not the one now open', async ({ page }) => {
+    const jp = new JotteryPage(page);
+    await jp.setup();
+    await jp.createNote('Second note');
+    await jp.createNote('First note');
+
+    await page.evaluate(async () => {
+      const { noteService } = await import('/src/lib/services/noteService.ts' as string);
+      const state = window as unknown as { saving?: boolean; saved?: boolean };
+      const update = noteService.updateNote.bind(noteService);
+      noteService.updateNote = async (...args: unknown[]) => {
+        state.saving = true;
+        const result = await update(...args);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        state.saved = true;
+        return result;
+      };
+    });
+
+    await jp.editorContent.click();
+    await page.keyboard.insertText(' edited');
+    await page.waitForFunction(() => (window as unknown as { saving?: boolean }).saving === true);
+
+    await jp.noteListItem(/Second note/).first().click();
+    await page.waitForFunction(() => (window as unknown as { saved?: boolean }).saved === true);
+
+    const contents = await page.evaluate(async () => {
+      const { notes } = await import('/src/lib/stores/appStore.ts' as string);
+      let list: Array<{ content: string }> = [];
+      notes.subscribe((current: Array<{ content: string }>) => { list = current; })();
+      return list.map(note => note.content);
+    });
+
+    expect(contents.filter(content => content === 'Second note')).toHaveLength(1);
+    expect(contents.some(content => content.includes('edited'))).toBe(true);
+  });
+});

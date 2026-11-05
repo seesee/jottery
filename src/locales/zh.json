@@ -186,6 +186,21 @@
     "readOnly": {
       "archivedBanner": "此笔记已归档。取消归档后可编辑。",
       "lockedBanner": "此笔记已锁定。解锁后可编辑。"
+    },
+    "actionFailed": {
+      "archive": "归档笔记失败: {error}",
+      "unarchive": "取消归档笔记失败: {error}",
+      "lock": "锁定笔记失败: {error}",
+      "unlock": "解锁笔记失败: {error}",
+      "delete": "删除笔记失败: {error}"
+    },
+    "copyLinkFailed": "复制链接到剪贴板失败",
+    "noteEditor": "笔记编辑器",
+    "calc": {
+      "tooLong": "此笔记太长，无法计算（{lines} 行，最多 {max} 行）。请缩短或改用其他语法。",
+      "consecutiveErrors": "连续出现 {count} 个错误后已停止。这看起来不像计算内容，请尝试其他语法。",
+      "totalErrors": "出现 {count} 个错误后已停止。请为此笔记尝试其他语法。",
+      "tooSlow": "由于耗时过长已停止。下方各行没有结果。"
     }
   },
   "noteList": {
@@ -195,7 +210,8 @@
     "noteCountAll": "{total} 条笔记"
   },
   "tagInput": {
-    "removeTag": "移除标签"
+    "removeTag": "移除标签",
+    "suggestions": "标签建议"
   },
   "backupReminder": {
     "title": "是时候备份您的笔记了",
@@ -216,7 +232,8 @@
     "frequencyMonthly": "每月",
     "frequencyOnChanges": "在一定数量的更改后",
     "changesThreshold": "在此数量的笔记更改后备份",
-    "description": "自动备份将下载到您的设备。启用提醒以便在需要备份时收到通知。"
+    "description": "自动备份将下载到您的设备。启用提醒以便在需要备份时收到通知。",
+    "saveFailed": "该设置未保存。请重试。"
   },
   "backup": {
     "title": "加密备份",
@@ -256,7 +273,8 @@
         "records": "记录"
       },
       "storageFull": "浏览器存储空间不足，恢复未完成，也未保留任何内容。您的备份文件没有问题：请释放一些空间后重新恢复。"
-    }
+    },
+    "autoFailed": "自动备份失败。请手动创建备份。"
   },
   "settings": {
     "title": "设置",
@@ -447,7 +465,19 @@
         "mustDiffer": "笔记密码和账户密码必须不同。同步服务器能看到您的账户密码，如果两者相同，它就可以读取您的笔记。",
         "matchesAccountWarning": "您的笔记密码与账户密码相同，因此同步服务器可以读取您的笔记。请更改笔记密码以解决此问题。"
       },
-      "existingAccountDetected": "此邮箱已有账户，因此本设备将连接到该账户。请输入您在其他设备上使用的笔记密码。"
+      "existingAccountDetected": "此邮箱已有账户，因此本设备将连接到该账户。请输入您在其他设备上使用的笔记密码。",
+      "errors": {
+        "credentialsRequired": "需要电子邮件和密码",
+        "passwordTooShort": "密码至少需要 12 个字符",
+        "registrationFailed": "用户注册失败",
+        "deviceRegistrationFailed": "设备注册失败",
+        "loginFailed": "登录失败",
+        "accountInfoFailed": "加载账户信息失败",
+        "deleteNotesFailed": "删除笔记失败",
+        "disconnectFailed": "断开连接失败",
+        "syncFailed": "同步失败",
+        "toggleFailed": "更改同步失败"
+      }
     },
     "editorTab": {
       "vimMode": "编辑器模式",
@@ -485,7 +515,9 @@
       "formatHelp": "使用 YYYY、MM、DD、HH、mm、ss 标记",
       "value": "值",
       "description": "描述",
-      "preview": "预览"
+      "preview": "预览",
+      "textPlaceholder": "要插入的文本",
+      "descriptionPlaceholder": "自动补全中显示的说明"
     },
     "keyboardTab": {
       "description": "自定义快捷键。点击快捷键进行修改,然后按下您想要的组合键。",
@@ -519,7 +551,8 @@
       "pressKey": "按下按键...",
       "notSet": "未设置",
       "needsModifier": "此快捷键在输入时也会生效，因此需要 Ctrl、Cmd 或 Alt。请按其他键，或按 Esc 取消。",
-      "reserved": "该键已被保留。请按其他键，或按 Esc 取消。"
+      "reserved": "该键已被保留。请按其他键，或按 Esc 取消。",
+      "toggleCollapse": "折叠或展开"
     },
     "syncTab": {
       "enableSync": "启用同步",
@@ -573,7 +606,8 @@
         "button": "更改密码",
         "success": "密码更改成功",
         "error": "更改密码失败: {error}",
-        "serverKeyFailed": "您的密码已在此设备上更改，但无法更新服务器。下次解锁时将重试。在此之前，新设备需要使用您的旧密码。"
+        "serverKeyFailed": "您的密码已在此设备上更改，但无法更新服务器。下次解锁时将重试。在此之前，新设备需要使用您的旧密码。",
+        "keyStaysTheSame": "您的加密密钥保持不变，因此旧备份仍可用旧密码打开。请妥善保管。"
       },
       "connectionDetails": {
         "title": "连接详情",
@@ -656,7 +690,9 @@
       "note": "无需注册 • 离线工作 • 可自托管"
     },
     "screenshots": {
-      "mainInterface": "显示笔记列表和编辑器的主界面"
+      "mainInterface": "显示笔记列表和编辑器的主界面",
+      "carouselLabel": "屏幕截图轮播",
+      "fullSizeLabel": "查看完整尺寸图片"
     },
     "features": {
       "title": "您所需的一切",
@@ -945,7 +981,9 @@
   "lock": {
     "title": "锁定应用程序",
     "message": "锁定应用程序?未保存的更改将丢失。",
-    "confirmButton": "锁定"
+    "confirmButton": "锁定",
+    "locking": "正在锁定...",
+    "savingAndSyncing": "正在保存并同步您的笔记"
   },
   "recycleBin": {
     "title": "回收站",
@@ -1009,14 +1047,18 @@
     "markdownCopied": "Markdown 链接已复制到剪贴板",
     "error": {
       "download": "下载附件失败",
-      "copyMarkdown": "复制 Markdown 链接失败"
+      "copyMarkdown": "复制 Markdown 链接失败",
+      "upload": "上传 {name} 失败: {error}",
+      "delete": "删除附件失败: {error}",
+      "paste": "粘贴图片失败: {error}"
     },
     "preview": {
       "title": "附件预览",
       "loading": "加载预览中...",
       "notAvailable": "此文件类型无法预览。",
       "audioNotSupported": "您的浏览器不支持音频播放。",
-      "videoNotSupported": "您的浏览器不支持视频播放。"
+      "videoNotSupported": "您的浏览器不支持视频播放。",
+      "videoLabel": "视频预览"
     },
     "confirmDelete": {
       "title": "移除附件？",
@@ -1069,7 +1111,8 @@
     "previousPage": "上一页",
     "nextPage": "下一页",
     "zoomOut": "缩小",
-    "zoomIn": "放大"
+    "zoomIn": "放大",
+    "loadFailed": "无法打开此 PDF。您仍可下载它。"
   },
   "versionHistory": {
     "title": "版本历史",
@@ -1092,7 +1135,8 @@
       "title": "恢复版本",
       "message": "您确定要恢复此版本吗?在恢复之前,您当前的笔记将保存为新版本。",
       "confirmButton": "恢复"
-    }
+    },
+    "restoreFailed": "恢复版本失败: {error}"
   },
   "header": {
     "menu": "菜单",
@@ -1101,7 +1145,8 @@
     "addContentFirst": "请先在当前笔记中添加内容",
     "lastSynced": "上次同步：{time}",
     "neverSynced": "尚未同步",
-    "syncDisabled": "未启用同步"
+    "syncDisabled": "未启用同步",
+    "newNote": "新建笔记"
   },
   "confirm": {
     "deleteDatabase": {
@@ -1190,7 +1235,9 @@
     "resolveButton": "解决冲突",
     "syncNotification": "{count}个笔记有同步冲突",
     "serverUnreadable": "服务器上此笔记的副本无法读取，可能已被篡改。只能保留您的版本。",
-    "localUnreadable": "无法读取此设备上的笔记副本。"
+    "localUnreadable": "无法读取此设备上的笔记副本。",
+    "loadFailed": "加载冲突数据失败",
+    "resolveFailed": "解决冲突失败"
   },
   "pullToRefresh": {
     "pull": "下拉同步",
@@ -1204,7 +1251,10 @@
     "notesRefused": "部分笔记超出了您账户的上传限制，未能同步。其余内容均已同步。",
     "accountDisabled": "您的账户已停用或正在等待批准，因此同步已停止。此设备上的笔记是安全的。请联系您的管理员。",
     "storageQuotaExceeded": "您的账户已达到存储上限，因此无法上传此设备上的更改。请永久删除一些笔记或附件以释放空间。",
-    "massDeletionHeld": "服务器要求一次删除 {count} 条笔记。它们已被移至回收站，以防这不是您的操作。请从那里恢复，如果确实是您的操作，请清空回收站。"
+    "massDeletionHeld": "服务器要求一次删除 {count} 条笔记。它们已被移至回收站，以防这不是您的操作。请从那里恢复，如果确实是您的操作，请清空回收站。",
+    "clockAhead": "部分更改未能同步，因为其日期比服务器提前了一天以上。请检查此设备的日期和时间。",
+    "deviceRevoked": "此设备已不再连接到您的账户，因此同步已停止。此设备上的笔记是安全的。请在设置中重新连接。",
+    "databaseLost": "数据库连接已断开。请刷新页面以继续。"
   },
   "inbox": {
     "title": "收件箱",
@@ -1454,6 +1504,7 @@
       "attachment": "附件",
       "inboxItem": "收件箱项目",
       "deletion": "删除"
-    }
+    },
+    "scanFailed": "扫描未完成。请重试。"
   }
 }

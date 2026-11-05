@@ -12,6 +12,7 @@ vi.mock('../services', () => ({
 }));
 
 import { generatePrintHtml, printNote } from './noteExport';
+import { removePrintFrames } from './printFrames';
 
 const HOSTILE = '<img src=x onerror="window.__pwned=1"><script>window.__pwned=1</script>Visible';
 
@@ -36,6 +37,21 @@ describe('generatePrintHtml', () => {
       expect(body(html as string).textContent).toContain('Visible');
     });
   }
+
+  it('renders a markdown note with the preview off, which leaves no preview HTML', async () => {
+    const html = await generatePrintHtml({ content: '# Title\n\nSome **bold** text', language: 'markdown', previewHtml: '' });
+
+    const root = body(html as string);
+    expect(root.querySelector('h1')?.textContent).toBe('Title');
+    expect(root.querySelector('strong')?.textContent).toBe('bold');
+    expect(root.querySelector('pre')).toBeNull();
+  });
+
+  it('keeps a markdown note it renders itself from running anything', async () => {
+    const html = await generatePrintHtml({ content: HOSTILE, language: 'markdown' });
+
+    expect(hasLiveContent(html as string)).toBe(false);
+  });
 
   it('does not trust the preview HTML it is given', async () => {
     const html = await generatePrintHtml({ content: 'x', language: 'markdown', previewHtml: HOSTILE });
@@ -84,6 +100,15 @@ describe('printNote', () => {
     });
     return { result, built };
   }
+
+  it('leaves nothing behind if the app locks while the dialog is open', async () => {
+    const { built } = await startPrint();
+    const remove = vi.spyOn(built, 'remove');
+
+    removePrintFrames();
+
+    expect(remove).toHaveBeenCalledOnce();
+  });
 
   function stubWindow(built: HTMLIFrameElement) {
     const listeners: Record<string, () => void> = {};

@@ -186,6 +186,21 @@
     "readOnly": {
       "archivedBanner": "Deze notitie is gearchiveerd. Dearchiveer om te bewerken.",
       "lockedBanner": "Deze notitie is vergrendeld. Ontgrendel om te bewerken."
+    },
+    "actionFailed": {
+      "archive": "Archiveren van notitie mislukt: {error}",
+      "unarchive": "Dearchiveren van notitie mislukt: {error}",
+      "lock": "Vergrendelen van notitie mislukt: {error}",
+      "unlock": "Ontgrendelen van notitie mislukt: {error}",
+      "delete": "Verwijderen van notitie mislukt: {error}"
+    },
+    "copyLinkFailed": "Kopiëren van link naar klembord mislukt",
+    "noteEditor": "Notitie-editor",
+    "calc": {
+      "tooLong": "Deze notitie is te lang om te berekenen ({lines} regels, maximaal {max}). Maak hem korter of gebruik een andere syntaxis.",
+      "consecutiveErrors": "Gestopt na {count} fouten op rij. Dit lijkt geen berekening, dus probeer een andere syntaxis.",
+      "totalErrors": "Gestopt na {count} fouten. Probeer een andere syntaxis voor deze notitie.",
+      "tooSlow": "Gestopt omdat dit te lang duurde. De regels hieronder hebben geen resultaat."
     }
   },
   "noteList": {
@@ -195,7 +210,8 @@
     "noteCountAll": "{total} notities"
   },
   "tagInput": {
-    "removeTag": "Tag verwijderen"
+    "removeTag": "Tag verwijderen",
+    "suggestions": "Tagsuggesties"
   },
   "backupReminder": {
     "title": "Tijd om een back-up te maken",
@@ -216,7 +232,8 @@
     "frequencyMonthly": "Maandelijks",
     "frequencyOnChanges": "Na een aantal wijzigingen",
     "changesThreshold": "Back-up maken na dit aantal wijzigingen",
-    "description": "Automatische back-ups worden naar je apparaat gedownload. Schakel herinneringen in om een melding te krijgen wanneer het tijd is voor een back-up."
+    "description": "Automatische back-ups worden naar je apparaat gedownload. Schakel herinneringen in om een melding te krijgen wanneer het tijd is voor een back-up.",
+    "saveFailed": "Die instelling is niet opgeslagen. Probeer het opnieuw."
   },
   "backup": {
     "title": "Versleutelde Back-up",
@@ -256,7 +273,8 @@
         "records": "Gegevens"
       },
       "storageFull": "De browser had geen opslagruimte meer, dus het herstellen is niet voltooid en er is niets bewaard. Je back-upbestand is in orde: maak ruimte vrij en herstel het opnieuw."
-    }
+    },
+    "autoFailed": "De automatische back-up is mislukt. Maak handmatig een back-up."
   },
   "settings": {
     "title": "Instellingen",
@@ -447,7 +465,19 @@
         "mustDiffer": "Je notitiewachtwoord en accountwachtwoord moeten verschillen. De synchronisatieserver ziet je accountwachtwoord, dus als ze gelijk zijn, kan de server je notities lezen.",
         "matchesAccountWarning": "Je notitiewachtwoord is gelijk aan je accountwachtwoord, dus de synchronisatieserver kan je notities lezen. Wijzig je notitiewachtwoord om dit op te lossen."
       },
-      "existingAccountDetected": "Dit e-mailadres heeft al een account, dus dit apparaat maakt daarmee verbinding. Voer het notitiewachtwoord in dat je op je andere apparaten gebruikt."
+      "existingAccountDetected": "Dit e-mailadres heeft al een account, dus dit apparaat maakt daarmee verbinding. Voer het notitiewachtwoord in dat je op je andere apparaten gebruikt.",
+      "errors": {
+        "credentialsRequired": "E-mailadres en wachtwoord zijn verplicht",
+        "passwordTooShort": "Het wachtwoord moet minstens 12 tekens lang zijn",
+        "registrationFailed": "Gebruikersregistratie mislukt",
+        "deviceRegistrationFailed": "Apparaatregistratie mislukt",
+        "loginFailed": "Inloggen mislukt",
+        "accountInfoFailed": "Laden van accountgegevens mislukt",
+        "deleteNotesFailed": "Verwijderen van notities mislukt",
+        "disconnectFailed": "Verbreken van verbinding mislukt",
+        "syncFailed": "Synchronisatie mislukt",
+        "toggleFailed": "Wijzigen van synchronisatie mislukt"
+      }
     },
     "editorTab": {
       "vimMode": "Editormodus",
@@ -485,7 +515,9 @@
       "formatHelp": "Gebruik YYYY, MM, DD, HH, mm, ss tokens",
       "value": "Waarde",
       "description": "Beschrijving",
-      "preview": "Voorvertoning"
+      "preview": "Voorvertoning",
+      "textPlaceholder": "In te voegen tekst",
+      "descriptionPlaceholder": "Beschrijving in automatisch aanvullen"
     },
     "keyboardTab": {
       "description": "Pas sneltoetsen aan. Klik op een sneltoets om deze te wijzigen en druk vervolgens op de gewenste toetscombinatie.",
@@ -519,7 +551,8 @@
       "pressKey": "Druk op een toets...",
       "notSet": "Niet ingesteld",
       "needsModifier": "Deze sneltoets werkt tijdens het typen en heeft dus Ctrl, Cmd of Alt nodig. Druk op een andere toets, of op Esc om te annuleren.",
-      "reserved": "Die toets is gereserveerd. Druk op een andere toets, of op Esc om te annuleren."
+      "reserved": "Die toets is gereserveerd. Druk op een andere toets, of op Esc om te annuleren.",
+      "toggleCollapse": "In- of uitklappen"
     },
     "syncTab": {
       "enableSync": "Synchronisatie inschakelen",
@@ -573,7 +606,8 @@
         "button": "Wachtwoord wijzigen",
         "success": "Wachtwoord succesvol gewijzigd",
         "error": "Kan wachtwoord niet wijzigen: {error}",
-        "serverKeyFailed": "Je wachtwoord is op dit apparaat gewijzigd, maar de server kon niet worden bijgewerkt. Dit wordt opnieuw geprobeerd wanneer je de volgende keer ontgrendelt. Tot die tijd heeft een nieuw apparaat je oude wachtwoord nodig."
+        "serverKeyFailed": "Je wachtwoord is op dit apparaat gewijzigd, maar de server kon niet worden bijgewerkt. Dit wordt opnieuw geprobeerd wanneer je de volgende keer ontgrendelt. Tot die tijd heeft een nieuw apparaat je oude wachtwoord nodig.",
+        "keyStaysTheSame": "Je encryptiesleutel blijft hetzelfde, dus oude back-ups gaan nog steeds open met je oude wachtwoord. Bewaar ze op een veilige plek."
       },
       "connectionDetails": {
         "title": "Verbindingsdetails",
@@ -656,7 +690,9 @@
       "note": "Geen account vereist • Werkt offline • Zelf te hosten"
     },
     "screenshots": {
-      "mainInterface": "Hoofdinterface met notitielijst en editor"
+      "mainInterface": "Hoofdinterface met notitielijst en editor",
+      "carouselLabel": "Carrousel met schermafbeeldingen",
+      "fullSizeLabel": "Afbeelding op volledige grootte"
     },
     "features": {
       "title": "Alles wat je nodig hebt",
@@ -945,7 +981,9 @@
   "lock": {
     "title": "Applicatie vergrendelen",
     "message": "Applicatie vergrendelen? Niet-opgeslagen wijzigingen gaan verloren.",
-    "confirmButton": "Vergrendelen"
+    "confirmButton": "Vergrendelen",
+    "locking": "Vergrendelen...",
+    "savingAndSyncing": "Je notities worden opgeslagen en gesynchroniseerd"
   },
   "recycleBin": {
     "title": "Prullenbak",
@@ -1009,14 +1047,18 @@
     "markdownCopied": "Markdown-link gekopieerd naar klembord",
     "error": {
       "download": "Downloaden van bijlage mislukt",
-      "copyMarkdown": "Kopiëren van Markdown-link mislukt"
+      "copyMarkdown": "Kopiëren van Markdown-link mislukt",
+      "upload": "Uploaden van {name} mislukt: {error}",
+      "delete": "Verwijderen van bijlage mislukt: {error}",
+      "paste": "Plakken van afbeelding mislukt: {error}"
     },
     "preview": {
       "title": "Bijlage voorvertoning",
       "loading": "Voorvertoning laden...",
       "notAvailable": "Voorvertoning niet beschikbaar voor dit bestandstype.",
       "audioNotSupported": "Uw browser ondersteunt geen audio-afspelen.",
-      "videoNotSupported": "Uw browser ondersteunt geen video-afspelen."
+      "videoNotSupported": "Uw browser ondersteunt geen video-afspelen.",
+      "videoLabel": "Videovoorbeeld"
     },
     "confirmDelete": {
       "title": "Bijlage verwijderen?",
@@ -1069,7 +1111,8 @@
     "previousPage": "Vorige pagina",
     "nextPage": "Volgende pagina",
     "zoomOut": "Uitzoomen",
-    "zoomIn": "Inzoomen"
+    "zoomIn": "Inzoomen",
+    "loadFailed": "Deze pdf kan niet worden geopend. Je kunt hem nog wel downloaden."
   },
   "versionHistory": {
     "title": "Versiegeschiedenis",
@@ -1092,7 +1135,8 @@
       "title": "Versie herstellen",
       "message": "Weet u zeker dat u deze versie wilt herstellen? Uw huidige notitie wordt opgeslagen als een nieuwe versie voordat wordt hersteld.",
       "confirmButton": "Herstellen"
-    }
+    },
+    "restoreFailed": "Herstellen van versie mislukt: {error}"
   },
   "header": {
     "menu": "Menu",
@@ -1101,7 +1145,8 @@
     "addContentFirst": "Voeg eerst inhoud toe aan huidige notitie",
     "lastSynced": "Laatst gesynchroniseerd: {time}",
     "neverSynced": "Nog niet gesynchroniseerd",
-    "syncDisabled": "Synchronisatie is niet ingeschakeld"
+    "syncDisabled": "Synchronisatie is niet ingeschakeld",
+    "newNote": "Nieuwe Notitie"
   },
   "confirm": {
     "deleteDatabase": {
@@ -1190,7 +1235,9 @@
     "resolveButton": "Conflict oplossen",
     "syncNotification": "{count, plural, one {1 notitie heeft een synchronisatieconflict} other {{count} notities hebben synchronisatieconflicten}}",
     "serverUnreadable": "De kopie van deze notitie op de server is niet leesbaar en is mogelijk gewijzigd. Alleen jouw versie kan worden behouden.",
-    "localUnreadable": "De kopie van deze notitie op dit apparaat is niet leesbaar."
+    "localUnreadable": "De kopie van deze notitie op dit apparaat is niet leesbaar.",
+    "loadFailed": "Laden van conflictgegevens mislukt",
+    "resolveFailed": "Oplossen van conflict mislukt"
   },
   "pullToRefresh": {
     "pull": "Trek omlaag om te synchroniseren",
@@ -1204,7 +1251,10 @@
     "notesRefused": "Sommige notities zijn te groot voor de uploadlimiet van je account en zijn niet gesynchroniseerd. De rest wel.",
     "accountDisabled": "Je account is gedeactiveerd of wacht op goedkeuring, dus de synchronisatie is gestopt. Je notities op dit apparaat zijn veilig. Neem contact op met je beheerder.",
     "storageQuotaExceeded": "Je account heeft de opslaglimiet bereikt, dus wijzigingen op dit apparaat kunnen niet worden geüpload. Verwijder enkele notities of bijlagen definitief om ruimte te maken.",
-    "massDeletionHeld": "De server vroeg om {count} notities tegelijk te verwijderen. Ze staan in de prullenbak voor het geval jij dit niet was. Herstel ze daar, of leeg de prullenbak als jij het wel was."
+    "massDeletionHeld": "De server vroeg om {count} notities tegelijk te verwijderen. Ze staan in de prullenbak voor het geval jij dit niet was. Herstel ze daar, of leeg de prullenbak als jij het wel was.",
+    "clockAhead": "Sommige wijzigingen zijn niet gesynchroniseerd, omdat hun datum meer dan een dag op de server voorloopt. Controleer de datum en tijd op dit apparaat.",
+    "deviceRevoked": "Dit apparaat is niet meer met je account verbonden, dus de synchronisatie is gestopt. Je notities op dit apparaat zijn veilig. Verbind het opnieuw via Instellingen.",
+    "databaseLost": "De databaseverbinding is verbroken. Vernieuw de pagina om door te gaan."
   },
   "inbox": {
     "title": "Postvak IN",
@@ -1454,6 +1504,7 @@
       "attachment": "Bijlage",
       "inboxItem": "Inboxitem",
       "deletion": "Verwijdering"
-    }
+    },
+    "scanFailed": "De controle is niet voltooid. Probeer het opnieuw."
   }
 }

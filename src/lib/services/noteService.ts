@@ -6,10 +6,11 @@
 import type { Note, DecryptedNote, SortOrder, Attachment } from '../types';
 import { DEFAULT_NOTE } from '../types';
 import { noteRepository } from './noteRepository';
+import { attachmentService } from './attachmentService';
 import { deleteUnreferencedAttachments } from './storageCleanupService';
 import { versionRepository } from './versionRepository';
 import { advanceContentHash, cryptoService, encryptStringArray, decryptStringArray, updateHashChain } from './crypto';
-import { recordDecryptFailure } from './vaultHealthService';
+import { recordDecryptFailure, repairAttachment } from './vaultHealthService';
 import { keyManager } from './keyManager';
 import { ApplicationLockedError, NotFoundError, NoteReadOnlyError, CryptoError } from '../errors';
 import { syncToStorage } from './tagConversionService';
@@ -585,7 +586,9 @@ class NoteService {
 
   /**
    * Duplicate an existing note
-   * Creates a copy with new ID and timestamps, preserving all content and settings
+   * Creates a copy with new ID and timestamps, preserving all content and settings.
+   * Attachments are copied too, and the copy's text points at them, so the two notes
+   * can be deleted independently.
    */
   async duplicateNote(id: string): Promise<Note> {
     const masterKey = keyManager.getMasterKey();
@@ -599,14 +602,20 @@ class NoteService {
       throw new NotFoundError('Note', id);
     }
 
+    const attachments = await attachmentService.copyAttachments(original.attachments, repairAttachment);
+    const content = original.attachments.reduce(
+      (text, attachment, index) => text.replaceAll(`attachment:${attachment.id}`, `attachment:${attachments[index].id}`),
+      original.content
+    );
+
     // Create a new note with the same content and settings
-    return await this.createNote(original.content, original.tags, {
+    return await this.createNote(content, original.tags, {
       pinned: false, // Don't duplicate pinned status
       wordWrap: original.wordWrap,
       syntaxLanguage: original.syntaxLanguage,
       showPreview: original.showPreview,
-      // Note: attachments are not duplicated - they reference the same blobs
-      // If we wanted to duplicate attachments, we'd need to copy the blobs too
+      color: original.color,
+      attachments,
     });
   }
 
@@ -665,17 +674,22 @@ class NoteService {
   }
 
   /**
-   * Purge old deleted notes (older than specified days)
+   * Purge notes that have been in the bin on this device for the given number of days.
+   *
+   * The time is this device's own. deletedAt can come from a server, which could then
+   * have a note purged at the next unlock without it ever sitting in the bin. So a
+   * note's time starts when this first finds it there, and a note already in the bin
+   * gets its full time.
    */
   async purgeOldDeletedNotes(daysOld: number = 30): Promise<number> {
-    const notes = await noteRepository.getDeleted();
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-    const cutoffISO = cutoffDate.toISOString();
+    const now = new Date();
+    const cutoff = now.getTime() - daysOld * 24 * 60 * 60 * 1000;
 
     let purgedCount = 0;
-    for (const note of notes) {
-      if (note.deletedAt && note.deletedAt < cutoffISO) {
+    for (const note of await noteRepository.getDeleted()) {
+      if (!note.binnedAt) {
+        await noteRepository.update({ ...note, binnedAt: now.toISOString() }, false, true);
+      } else if (Date.parse(note.binnedAt) < cutoff) {
         await this.permanentlyDeleteNote(note.id);
         purgedCount++;
       }

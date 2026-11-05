@@ -195,6 +195,45 @@ class AttachmentService {
   }
 
   /**
+   * Copy attachments under new ids, so that two notes never share a blob and deleting
+   * one can't damage the other. The ciphertext can be copied as it is. Either every
+   * attachment is copied or none is. `fetchMissing` gets a blob this device doesn't have.
+   */
+  async copyAttachments(
+    attachments: Attachment[],
+    fetchMissing?: (attachmentId: string) => Promise<string>
+  ): Promise<Attachment[]> {
+    const copies: Attachment[] = [];
+
+    try {
+      for (const attachment of attachments) {
+        let blob = await attachmentRepository.getBlob(attachment.data);
+        if (!blob && (await fetchMissing?.(attachment.id)) === 'repaired') {
+          blob = await attachmentRepository.getBlob(attachment.data);
+        }
+        if (!blob) {
+          throw new NotFoundError('Attachment', attachment.data);
+        }
+
+        const id = cryptoService.generateUUID();
+        await attachmentRepository.storeBlob(id, blob);
+        copies.push({ ...attachment, id, data: id, thumbnailData: undefined });
+
+        const thumbnail = attachment.thumbnailData ? await attachmentRepository.getThumbnail(attachment.thumbnailData) : null;
+        if (thumbnail) {
+          await attachmentRepository.storeThumbnail(id, thumbnail);
+          copies[copies.length - 1].thumbnailData = id;
+        }
+      }
+    } catch (error) {
+      await Promise.all(copies.map(copy => attachmentRepository.deleteAll(copy.id)));
+      throw error;
+    }
+
+    return copies;
+  }
+
+  /**
    * Get attachment blob data (decrypted)
    */
   async getAttachmentData(attachment: Attachment): Promise<Blob> {

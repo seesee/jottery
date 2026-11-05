@@ -25,7 +25,7 @@
     on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onClose())}
     role="button"
     tabindex="-1"
-    aria-label="Close attachments"
+    aria-label={$_('attachments.close')}
   >
     <div
       class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col"

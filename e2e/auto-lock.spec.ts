@@ -147,3 +147,46 @@ test.describe('Auto-lock timeout', () => {
     await expectLocked(page);
   });
 });
+
+test.describe('Locking with two tabs open', () => {
+  test('locks both', async ({ page, context }) => {
+    const jp = new JotteryPage(page);
+    await jp.setup();
+    await jp.createNote('Seen in two tabs');
+
+    const other = await context.newPage();
+    await other.goto('', { waitUntil: 'domcontentloaded' });
+    await unlock(other, new JotteryPage(other));
+    await expect(other.getByText('Seen in two tabs').first()).toBeVisible();
+
+    await jp.lockButton.click();
+
+    await expect(unlockField(other)).toBeVisible({ timeout: 15000 });
+    await expect(other.getByText('Seen in two tabs')).toHaveCount(0);
+  });
+});
+
+test.describe('However the app locks', () => {
+  test('nothing decrypted stays in memory, even when the key is cleared on its own', async ({ page }) => {
+    const jp = new JotteryPage(page);
+    await jp.setup();
+
+    const left = await page.evaluate(async () => {
+      const { inboxItems, notes } = await import('/src/lib/stores/appStore.ts' as string);
+      const { keyManager } = await import('/src/lib/services/keyManager.ts' as string);
+      const read = (store: { subscribe: (run: (value: unknown[]) => void) => () => void }) => {
+        let value: unknown[] = [];
+        store.subscribe(current => { value = current; })();
+        return value;
+      };
+
+      inboxItems.set([{ id: 'a', content: 'secret', tags: [], createdAt: '2026-01-01T00:00:00Z', sizeBytes: 6 }]);
+      keyManager.clearMasterKey();
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      return { inbox: read(inboxItems).length, notes: read(notes).length };
+    });
+
+    expect(left).toEqual({ inbox: 0, notes: 0 });
+  });
+});

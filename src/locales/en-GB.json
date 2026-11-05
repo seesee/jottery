@@ -212,6 +212,21 @@
     "readOnly": {
       "archivedBanner": "This note is archived. Unarchive to edit.",
       "lockedBanner": "This note is locked. Unlock to edit."
+    },
+    "actionFailed": {
+      "archive": "Failed to archive note: {error}",
+      "unarchive": "Failed to unarchive note: {error}",
+      "lock": "Failed to lock note: {error}",
+      "unlock": "Failed to unlock note: {error}",
+      "delete": "Failed to delete note: {error}"
+    },
+    "copyLinkFailed": "Failed to copy link to clipboard",
+    "noteEditor": "Note editor",
+    "calc": {
+      "tooLong": "This note is too long to calculate ({lines} lines, at most {max}). Shorten it, or use a different syntax.",
+      "consecutiveErrors": "Stopped after {count} errors in a row. This doesn't look like calculations, so try a different syntax.",
+      "totalErrors": "Stopped after {count} errors. Try a different syntax for this note.",
+      "tooSlow": "Stopped because this was taking too long. Lines below here have no results."
     }
   },
   "noteList": {
@@ -241,7 +256,8 @@
     "delete": "Delete"
   },
   "tagInput": {
-    "removeTag": "Remove tag"
+    "removeTag": "Remove tag",
+    "suggestions": "Tag suggestions"
   },
   "backupReminder": {
     "title": "Time to back up your notes",
@@ -262,7 +278,8 @@
     "frequencyMonthly": "Monthly",
     "frequencyOnChanges": "After a number of changes",
     "changesThreshold": "Back up after this many note changes",
-    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up."
+    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up.",
+    "saveFailed": "That setting wasn't saved. Try again."
   },
   "backup": {
     "title": "Encrypted Backup",
@@ -302,7 +319,8 @@
         "records": "Records"
       },
       "storageFull": "The browser ran out of storage, so the restore didn't finish and nothing was kept. Your backup file is fine: free up some space and restore it again."
-    }
+    },
+    "autoFailed": "Automatic backup failed. Please create a manual backup."
   },
   "settings": {
     "title": "Settings",
@@ -493,7 +511,19 @@
         "mustDiffer": "Your notes password and account password must be different. The sync server sees your account password, so if they match it could read your notes.",
         "matchesAccountWarning": "Your notes password is the same as your account password, so the sync server could read your notes. Change your notes password to fix this."
       },
-      "existingAccountDetected": "This email already has an account, so this device will connect to it. Enter the notes password you use on your other devices."
+      "existingAccountDetected": "This email already has an account, so this device will connect to it. Enter the notes password you use on your other devices.",
+      "errors": {
+        "credentialsRequired": "Email and password are required",
+        "passwordTooShort": "Password must be at least 12 characters",
+        "registrationFailed": "User registration failed",
+        "deviceRegistrationFailed": "Device registration failed",
+        "loginFailed": "Login failed",
+        "accountInfoFailed": "Failed to load account info",
+        "deleteNotesFailed": "Failed to delete notes",
+        "disconnectFailed": "Failed to disconnect",
+        "syncFailed": "Sync failed",
+        "toggleFailed": "Failed to change sync"
+      }
     },
     "editorTab": {
       "vimMode": "Editor mode",
@@ -531,7 +561,9 @@
       "otherLanguages": "Other languages",
       "enabledCount": "{enabled}/{total} enabled",
       "alwaysEnabled": "(always enabled)",
-      "popularLanguages": "Popular languages"
+      "popularLanguages": "Popular languages",
+      "textPlaceholder": "Text to insert",
+      "descriptionPlaceholder": "Description shown in autocomplete"
     },
     "keyboardTab": {
       "description": "Customise keyboard shortcuts. Click on a shortcut to change it, then press your desired key combination.",
@@ -565,7 +597,8 @@
       "pressKey": "Press a key...",
       "notSet": "Not set",
       "needsModifier": "This shortcut works while you type, so it needs Ctrl, Cmd or Alt. Press another key, or Esc to cancel.",
-      "reserved": "That key is reserved. Press another key, or Esc to cancel."
+      "reserved": "That key is reserved. Press another key, or Esc to cancel.",
+      "toggleCollapse": "Collapse or expand"
     },
     "syncTab": {
       "enableSync": "Enable Sync",
@@ -605,7 +638,8 @@
         "button": "Change Password",
         "success": "Password changed successfully",
         "error": "Failed to change password: {error}",
-        "serverKeyFailed": "Your password was changed on this device, but the server couldn't be updated. It will try again the next time you unlock. Until then, a new device would need your old password."
+        "serverKeyFailed": "Your password was changed on this device, but the server couldn't be updated. It will try again the next time you unlock. Until then, a new device would need your old password.",
+        "keyStaysTheSame": "Your encryption key stays the same, so old backups still open with your old password. Keep them safe."
       },
       "connectionDetails": {
         "title": "Connection Details",
@@ -688,7 +722,9 @@
       "note": "No account required • Works offline • Self-hostable"
     },
     "screenshots": {
-      "mainInterface": "Main interface showing note list and editor"
+      "mainInterface": "Main interface showing note list and editor",
+      "carouselLabel": "Screenshot carousel",
+      "fullSizeLabel": "Full size image view"
     },
     "features": {
       "title": "Everything You Need",
@@ -977,7 +1013,9 @@
   "lock": {
     "title": "Lock Application",
     "message": "Lock the application? Unsaved changes will be lost.",
-    "confirmButton": "Lock"
+    "confirmButton": "Lock",
+    "locking": "Locking...",
+    "savingAndSyncing": "Saving and syncing your notes"
   },
   "recycleBin": {
     "title": "Recycle Bin",
@@ -1137,14 +1175,18 @@
     "markdownCopied": "Markdown link copied to clipboard",
     "error": {
       "download": "Failed to download attachment",
-      "copyMarkdown": "Failed to copy markdown link"
+      "copyMarkdown": "Failed to copy markdown link",
+      "upload": "Failed to upload {name}: {error}",
+      "delete": "Failed to delete attachment: {error}",
+      "paste": "Failed to paste image: {error}"
     },
     "preview": {
       "title": "Attachment preview",
       "loading": "Loading preview...",
       "notAvailable": "Preview not available for this file type.",
       "audioNotSupported": "Your browser does not support audio playback.",
-      "videoNotSupported": "Your browser does not support video playback."
+      "videoNotSupported": "Your browser does not support video playback.",
+      "videoLabel": "Video preview"
     },
     "confirmDelete": {
       "title": "Remove attachment?",
@@ -1197,7 +1239,8 @@
     "previousPage": "Previous page",
     "nextPage": "Next page",
     "zoomOut": "Zoom out",
-    "zoomIn": "Zoom in"
+    "zoomIn": "Zoom in",
+    "loadFailed": "This PDF couldn't be opened. You can still download it."
   },
   "versionHistory": {
     "title": "Version history",
@@ -1220,7 +1263,8 @@
       "title": "Restore version",
       "message": "Are you sure you want to restore this version? Your current note will be saved as a new version before restoring.",
       "confirmButton": "Restore"
-    }
+    },
+    "restoreFailed": "Failed to restore version: {error}"
   },
   "header": {
     "menu": "Menu",
@@ -1229,7 +1273,8 @@
     "addContentFirst": "Add content to current note first",
     "lastSynced": "Last synced: {time}",
     "neverSynced": "Not synced yet",
-    "syncDisabled": "Sync is not enabled"
+    "syncDisabled": "Sync is not enabled",
+    "newNote": "New note"
   },
   "confirm": {
     "deleteDatabase": {
@@ -1292,7 +1337,9 @@
     "commonAncestor": "Common ancestor",
     "ancestorDescription": "The version you both started from",
     "serverUnreadable": "The server's copy of this note can't be read, and may have been altered. Only your version can be kept.",
-    "localUnreadable": "This device's copy of the note can't be read."
+    "localUnreadable": "This device's copy of the note can't be read.",
+    "loadFailed": "Failed to load conflict data",
+    "resolveFailed": "Failed to resolve conflict"
   },
   "sync": {
     "syncing": "Syncing...",
@@ -1300,7 +1347,10 @@
     "notesRefused": "Some notes are too large for your account's upload limit and weren't synced. Everything else was.",
     "accountDisabled": "Your account is deactivated or waiting for approval, so sync has stopped. Your notes on this device are safe. Contact your administrator.",
     "storageQuotaExceeded": "Your account has reached its storage limit, so changes on this device can't be uploaded. Permanently delete some notes or attachments to make room.",
-    "massDeletionHeld": "The server asked to delete {count} notes at once. They're in the recycle bin in case that wasn't you. Restore them there, or empty the bin if it was."
+    "massDeletionHeld": "The server asked to delete {count} notes at once. They're in the recycle bin in case that wasn't you. Restore them there, or empty the bin if it was.",
+    "clockAhead": "Some changes weren't synced because they're dated more than a day ahead of the server. Check the date and time on this device.",
+    "deviceRevoked": "This device is no longer connected to your account, so sync has stopped. Your notes on this device are safe. Connect it again in Settings.",
+    "databaseLost": "Database connection lost. Please refresh the page to continue."
   },
   "pullToRefresh": {
     "pull": "Pull down to sync",
@@ -1440,6 +1490,7 @@
       "attachment": "Attachment",
       "inboxItem": "Inbox item",
       "deletion": "Deletion"
-    }
+    },
+    "scanFailed": "The scan didn't finish. Try again."
   }
 }

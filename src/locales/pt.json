@@ -186,6 +186,21 @@
     "readOnly": {
       "archivedBanner": "Esta nota está arquivada. Desarquive para editar.",
       "lockedBanner": "Esta nota está bloqueada. Desbloqueie para editar."
+    },
+    "actionFailed": {
+      "archive": "Falha ao arquivar nota: {error}",
+      "unarchive": "Falha ao desarquivar nota: {error}",
+      "lock": "Falha ao bloquear nota: {error}",
+      "unlock": "Falha ao desbloquear nota: {error}",
+      "delete": "Falha ao excluir nota: {error}"
+    },
+    "copyLinkFailed": "Falha ao copiar o link",
+    "noteEditor": "Editor de notas",
+    "calc": {
+      "tooLong": "Esta nota é demasiado longa para calcular ({lines} linhas, no máximo {max}). Encurte-a ou use outra sintaxe.",
+      "consecutiveErrors": "Parado após {count} erros seguidos. Isto não parecem cálculos, por isso experimente outra sintaxe.",
+      "totalErrors": "Parado após {count} erros. Experimente outra sintaxe para esta nota.",
+      "tooSlow": "Parado porque estava a demorar demasiado. As linhas seguintes não têm resultado."
     }
   },
   "noteList": {
@@ -195,7 +210,8 @@
     "noteCountAll": "{total} notas"
   },
   "tagInput": {
-    "removeTag": "Remover tag"
+    "removeTag": "Remover tag",
+    "suggestions": "Sugestões de etiquetas"
   },
   "backupReminder": {
     "title": "Hora de fazer backup das suas notas",
@@ -216,7 +232,8 @@
     "frequencyMonthly": "Mensal",
     "frequencyOnChanges": "Após um número de alterações",
     "changesThreshold": "Fazer backup após este número de alterações",
-    "description": "Os backups automáticos são descarregados para o seu dispositivo. Ative os lembretes para ser notificado quando for hora de fazer backup."
+    "description": "Os backups automáticos são descarregados para o seu dispositivo. Ative os lembretes para ser notificado quando for hora de fazer backup.",
+    "saveFailed": "Essa definição não foi guardada. Tente novamente."
   },
   "backup": {
     "title": "Backup Encriptado",
@@ -256,7 +273,8 @@
         "records": "Registos"
       },
       "storageFull": "O navegador ficou sem espaço de armazenamento, por isso o restauro não terminou e nada foi mantido. O seu ficheiro de cópia de segurança está bem: liberte espaço e restaure-o novamente."
-    }
+    },
+    "autoFailed": "A cópia de segurança automática falhou. Crie uma cópia manualmente."
   },
   "settings": {
     "title": "Configurações",
@@ -447,7 +465,19 @@
         "mustDiffer": "A palavra-passe das notas e a da conta têm de ser diferentes. O servidor de sincronização vê a palavra-passe da conta, por isso, se coincidirem, poderá ler as suas notas.",
         "matchesAccountWarning": "A palavra-passe das notas é igual à da conta, pelo que o servidor de sincronização poderá ler as suas notas. Altere a palavra-passe das notas para resolver isto."
       },
-      "existingAccountDetected": "Este e-mail já tem uma conta, por isso este dispositivo irá ligar-se a ela. Introduza a palavra-passe das notas que utiliza nos outros dispositivos."
+      "existingAccountDetected": "Este e-mail já tem uma conta, por isso este dispositivo irá ligar-se a ela. Introduza a palavra-passe das notas que utiliza nos outros dispositivos.",
+      "errors": {
+        "credentialsRequired": "O e-mail e a palavra-passe são obrigatórios",
+        "passwordTooShort": "A palavra-passe deve ter pelo menos 12 caracteres",
+        "registrationFailed": "Falha ao registar o utilizador",
+        "deviceRegistrationFailed": "Falha ao registar o dispositivo",
+        "loginFailed": "Falha ao iniciar sessão",
+        "accountInfoFailed": "Falha ao carregar as informações da conta",
+        "deleteNotesFailed": "Falha ao excluir as notas",
+        "disconnectFailed": "Falha ao desligar",
+        "syncFailed": "Falha na sincronização",
+        "toggleFailed": "Falha ao alterar a sincronização"
+      }
     },
     "editorTab": {
       "vimMode": "Modo do editor",
@@ -485,7 +515,9 @@
       "formatHelp": "Use tokens YYYY, MM, DD, HH, mm, ss",
       "value": "Valor",
       "description": "Descrição",
-      "preview": "Visualização"
+      "preview": "Visualização",
+      "textPlaceholder": "Texto a inserir",
+      "descriptionPlaceholder": "Descrição apresentada no preenchimento automático"
     },
     "keyboardTab": {
       "description": "Personalize atalhos de teclado. Clique em um atalho para alterá-lo e pressione a combinação de teclas desejada.",
@@ -519,7 +551,8 @@
       "pressKey": "Pressione uma tecla...",
       "notSet": "Não definido",
       "needsModifier": "Este atalho funciona enquanto escreve, por isso precisa de Ctrl, Cmd ou Alt. Prima outra tecla, ou Esc para cancelar.",
-      "reserved": "Essa tecla está reservada. Prima outra tecla, ou Esc para cancelar."
+      "reserved": "Essa tecla está reservada. Prima outra tecla, ou Esc para cancelar.",
+      "toggleCollapse": "Recolher ou expandir"
     },
     "syncTab": {
       "enableSync": "Ativar sincronização",
@@ -573,7 +606,8 @@
         "button": "Alterar palavra-passe",
         "success": "Palavra-passe alterada com sucesso",
         "error": "Falha ao alterar a palavra-passe: {error}",
-        "serverKeyFailed": "A sua palavra-passe foi alterada neste dispositivo, mas não foi possível atualizar o servidor. Será tentado novamente no próximo desbloqueio. Até lá, um novo dispositivo precisaria da palavra-passe antiga."
+        "serverKeyFailed": "A sua palavra-passe foi alterada neste dispositivo, mas não foi possível atualizar o servidor. Será tentado novamente no próximo desbloqueio. Até lá, um novo dispositivo precisaria da palavra-passe antiga.",
+        "keyStaysTheSame": "A sua chave de encriptação mantém-se, por isso as cópias de segurança antigas continuam a abrir com a palavra-passe antiga. Guarde-as em segurança."
       },
       "connectionDetails": {
         "title": "Detalhes da conexão",
@@ -656,7 +690,9 @@
       "note": "Nenhuma conta necessária • Funciona offline • Auto-hospedável"
     },
     "screenshots": {
-      "mainInterface": "Interface principal mostrando lista de notas e editor"
+      "mainInterface": "Interface principal mostrando lista de notas e editor",
+      "carouselLabel": "Carrossel de capturas de ecrã",
+      "fullSizeLabel": "Imagem em tamanho real"
     },
     "features": {
       "title": "Tudo o que você precisa",
@@ -945,7 +981,9 @@
   "lock": {
     "title": "Bloquear aplicativo",
     "message": "Bloquear o aplicativo? Alterações não salvas serão perdidas.",
-    "confirmButton": "Bloquear"
+    "confirmButton": "Bloquear",
+    "locking": "Bloqueando...",
+    "savingAndSyncing": "Salvando e sincronizando as suas notas"
   },
   "recycleBin": {
     "title": "Lixeira",
@@ -1009,14 +1047,18 @@
     "markdownCopied": "Link markdown copiado para área de transferência",
     "error": {
       "download": "Falha ao baixar anexo",
-      "copyMarkdown": "Falha ao copiar link markdown"
+      "copyMarkdown": "Falha ao copiar link markdown",
+      "upload": "Falha ao enviar {name}: {error}",
+      "delete": "Falha ao excluir anexo: {error}",
+      "paste": "Falha ao colar imagem: {error}"
     },
     "preview": {
       "title": "Visualização de anexo",
       "loading": "Carregando visualização...",
       "notAvailable": "Visualização não disponível para este tipo de arquivo.",
       "audioNotSupported": "Seu navegador não suporta reprodução de áudio.",
-      "videoNotSupported": "Seu navegador não suporta reprodução de vídeo."
+      "videoNotSupported": "Seu navegador não suporta reprodução de vídeo.",
+      "videoLabel": "Pré-visualização do vídeo"
     },
     "confirmDelete": {
       "title": "Remover o anexo?",
@@ -1069,7 +1111,8 @@
     "previousPage": "Página anterior",
     "nextPage": "Próxima página",
     "zoomOut": "Reduzir",
-    "zoomIn": "Ampliar"
+    "zoomIn": "Ampliar",
+    "loadFailed": "Não foi possível abrir este PDF. Pode ainda transferi-lo."
   },
   "versionHistory": {
     "title": "Histórico de versões",
@@ -1092,7 +1135,8 @@
       "title": "Restaurar versão",
       "message": "Tem certeza de que deseja restaurar esta versão? Sua nota atual será salva como uma nova versão antes da restauração.",
       "confirmButton": "Restaurar"
-    }
+    },
+    "restoreFailed": "Falha ao restaurar versão: {error}"
   },
   "header": {
     "menu": "Menu",
@@ -1101,7 +1145,8 @@
     "addContentFirst": "Adicione conteúdo à nota atual primeiro",
     "lastSynced": "Última sincronização: {time}",
     "neverSynced": "Ainda não sincronizado",
-    "syncDisabled": "A sincronização não está ativada"
+    "syncDisabled": "A sincronização não está ativada",
+    "newNote": "Nova Nota"
   },
   "confirm": {
     "deleteDatabase": {
@@ -1190,7 +1235,9 @@
     "resolveButton": "Resolver conflito",
     "syncNotification": "{count, plural, one {1 nota tem um conflito de sincronização} other {{count} notas têm conflitos de sincronização}}",
     "serverUnreadable": "A cópia desta nota no servidor não pode ser lida e pode ter sido alterada. Só é possível manter a sua versão.",
-    "localUnreadable": "A cópia desta nota neste dispositivo não pode ser lida."
+    "localUnreadable": "A cópia desta nota neste dispositivo não pode ser lida.",
+    "loadFailed": "Falha ao carregar os dados do conflito",
+    "resolveFailed": "Falha ao resolver o conflito"
   },
   "pullToRefresh": {
     "pull": "Puxe para baixo para sincronizar",
@@ -1204,7 +1251,10 @@
     "notesRefused": "Algumas notas excedem o limite de envio da sua conta e não foram sincronizadas. Tudo o resto foi.",
     "accountDisabled": "A sua conta está desativada ou a aguardar aprovação, pelo que a sincronização parou. As suas notas neste dispositivo estão seguras. Contacte o seu administrador.",
     "storageQuotaExceeded": "A sua conta atingiu o limite de armazenamento, pelo que as alterações neste dispositivo não podem ser enviadas. Elimine permanentemente algumas notas ou anexos para libertar espaço.",
-    "massDeletionHeld": "O servidor pediu para eliminar {count} notas de uma vez. Estão na reciclagem, caso não tenha sido você. Restaure-as a partir daí, ou esvazie a reciclagem se tiver sido."
+    "massDeletionHeld": "O servidor pediu para eliminar {count} notas de uma vez. Estão na reciclagem, caso não tenha sido você. Restaure-as a partir daí, ou esvazie a reciclagem se tiver sido.",
+    "clockAhead": "Algumas alterações não foram sincronizadas porque a sua data está mais de um dia à frente do servidor. Verifique a data e a hora deste dispositivo.",
+    "deviceRevoked": "Este dispositivo já não está ligado à sua conta, por isso a sincronização parou. As suas notas neste dispositivo estão seguras. Volte a ligá-lo nas Definições.",
+    "databaseLost": "A ligação à base de dados foi perdida. Atualize a página para continuar."
   },
   "inbox": {
     "title": "Caixa de entrada",
@@ -1454,6 +1504,7 @@
       "attachment": "Anexo",
       "inboxItem": "Item da caixa de entrada",
       "deletion": "Eliminação"
-    }
+    },
+    "scanFailed": "A verificação não terminou. Tente novamente."
   }
 }

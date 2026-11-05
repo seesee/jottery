@@ -107,7 +107,8 @@ As RFC 7516 requires, **the additional authenticated data is the ASCII bytes of 
 first part of the token**, the base64url protected header. Sealing with no additional
 data produces a token that looks right and won't decrypt.
 
-Web writes at most 250 notes, 50 attachments or 250 versions per batch. A reader
+Web writes at most 250 notes, 50 attachments or 250 versions per batch, and starts a
+new batch of attachments once one holds about 16 MB. A reader
 shouldn't depend on those sizes, or on the order of the batches. A type with nothing to
 hold can be left out. `settings` and `sync_metadata` are optional, and iOS writes
 neither.
@@ -202,7 +203,9 @@ hold `name` and `query` as plaintext. Web encrypts those once, after restoring.
 ### `settings`
 
 One item, in a batch of its own. These are the web client's `UserSettings`, and a
-reader takes the fields it knows. A client that writes this batch should use those
+reader takes the fields it knows. `rememberPassword`, `persistSession` and
+`persistSessionTimeout` stay behind on a restore: they are security choices about one
+device, made with a warning and the password. A client that writes this batch should use those
 names, such as `language`, `theme`, `sortOrder` and `autoLockTimeout`.
 
 `theme` is `light`, `dark` or `auto`. The TUI's colour schemes don't fit that, so it adds
@@ -261,6 +264,8 @@ one on iOS, then back up again.
 
 ## Testing
 
-`src/test/fixtures/ios-v3.jottery-backup` is a real file written by the iOS app, and
-`backupService.crossclient.test.ts` restores it. The Android tests read fixtures written
-by web, in `android-native/app/src/test/resources/backup/`.
+`src/test/fixtures/` holds a real file from each other client: iOS, the TUI, and Android
+from a legacy and an envelope vault. Each password sits beside its file, in a
+`.password` file. `backupService.crossclient.test.ts` restores them all, through both
+readers, and unlocks the result. The Android tests read fixtures written by web, in
+`android-native/app/src/test/resources/backup/`.

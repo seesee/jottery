@@ -433,7 +433,7 @@
                   id="cmd-value"
                   type="text"
                   bind:value={editingCommand.value}
-                  placeholder="Text to insert"
+                  placeholder={$_('settings.editorTab.textPlaceholder')}
                   class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -448,7 +448,7 @@
                 id="cmd-description"
                 type="text"
                 bind:value={editingCommand.description}
-                placeholder="Description shown in autocomplete"
+                placeholder={$_('settings.editorTab.descriptionPlaceholder')}
                 class="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500"
               />
             </div>

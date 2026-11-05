@@ -56,7 +56,7 @@
       }
     } catch (error) {
       console.error('Failed to load conflict:', error);
-      toast.error('Failed to load conflict data');
+      toast.error($_('conflict.loadFailed'));
     } finally {
       loading = false;
     }
@@ -72,7 +72,7 @@
       onClose();
     } catch (error) {
       console.error('Failed to resolve conflict:', error);
-      toast.error('Failed to resolve conflict');
+      toast.error($_('conflict.resolveFailed'));
     } finally {
       resolving = false;
     }
@@ -88,7 +88,7 @@
       onClose();
     } catch (error) {
       console.error('Failed to resolve conflict:', error);
-      toast.error('Failed to resolve conflict');
+      toast.error($_('conflict.resolveFailed'));
     } finally {
       resolving = false;
     }
@@ -104,7 +104,7 @@
       onClose();
     } catch (error) {
       console.error('Failed to resolve conflict:', error);
-      toast.error('Failed to resolve conflict');
+      toast.error($_('conflict.resolveFailed'));
     } finally {
       resolving = false;
     }

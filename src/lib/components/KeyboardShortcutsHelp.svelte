@@ -2,6 +2,7 @@
   import { _ } from 'svelte-i18n';
   import { settings } from '../stores/appStore';
   import type { KeyboardShortcut } from '../types';
+  import { withDefaultShortcuts } from '../utils/keyboardShortcuts';
 
   export let show: boolean = false;
   export let onClose: () => void;
@@ -27,6 +28,8 @@
 
     return keys;
   }
+
+  $: outliner = withDefaultShortcuts($settings.keyboardShortcuts);
 
   $: shortcuts = [
     {
@@ -64,6 +67,16 @@
         { keys: formatShortcut($settings.keyboardShortcuts?.noteInfo || { key: 'i', alt: true }), description: $_('keyboard.noteInfo') },
         { keys: ['Ctrl/Cmd', 'F'], description: $_('keyboard.findInNote') },
         { keys: ['Ctrl/Cmd', 'H'], description: $_('keyboard.replaceInNote') },
+      ]
+    },
+    {
+      category: $_('outliner.name'),
+      items: [
+        { keys: formatShortcut(outliner.outlinerIndent), description: $_('outliner.indent') },
+        { keys: formatShortcut(outliner.outlinerOutdent), description: $_('outliner.outdent') },
+        { keys: formatShortcut(outliner.outlinerMoveUp), description: $_('outliner.moveUp') },
+        { keys: formatShortcut(outliner.outlinerMoveDown), description: $_('outliner.moveDown') },
+        { keys: formatShortcut(outliner.outlinerToggleCollapse), description: $_('settings.keyboardTab.toggleCollapse') },
       ]
     }
   ];

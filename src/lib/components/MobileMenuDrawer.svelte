@@ -44,7 +44,7 @@
     on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), handleBackdropClick())}
     role="button"
     tabindex="-1"
-    aria-label="Close menu"
+    aria-label={$_('common.close')}
   ></div>
 
   <!-- Drawer (slides in from right) -->
@@ -55,7 +55,7 @@
         <button
           on:click={close}
           class="min-h-11 min-w-11 p-3 active:bg-gray-100 dark:active:bg-gray-700 rounded-md transition-colors"
-          aria-label="Close menu"
+          aria-label={$_('common.close')}
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

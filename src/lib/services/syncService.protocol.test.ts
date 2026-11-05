@@ -6,7 +6,8 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 
 // The message key is what matters here, not its translation
-vi.mock('svelte-i18n', () => ({
+vi.mock('svelte-i18n', async importOriginal => ({
+  ...await importOriginal<object>(),
   _: { subscribe: (run: (format: (key: string) => string) => void) => { run((key: string) => key); return () => undefined; } },
 }));
 
@@ -20,7 +21,7 @@ import { keyManager } from './keyManager';
 import { cryptoService } from './crypto';
 import { decryptTags } from './tagConversionService';
 import { initTestDB, cleanupTestDB, createTestNote } from '../../test/db-utils';
-import { inboxItems, settings } from '../stores/appStore';
+import { inboxItems, notes as appNotes, settings } from '../stores/appStore';
 import { toast } from '../utils/toast.svelte';
 import { DEFAULT_SETTINGS } from '../types';
 import type { Note, SyncNote, SyncPullRequest, SyncPullResponse, SyncPushRequest, SyncPushResponse } from '../types';
@@ -497,7 +498,8 @@ describe('sync protocol', () => {
     });
   });
 
-  describe('pushes the server refuses', () => {
+  // These move megabytes through real base64, which takes a while on a busy machine
+  describe('pushes the server refuses', { timeout: 30_000 }, () => {
     const MB = 1024 * 1024;
 
     async function noteWithBlob(n: number, bytes: number, overrides: Partial<Note> = {}): Promise<void> {
@@ -1062,6 +1064,28 @@ describe('sync protocol', () => {
       expect(Date.now() - Date.parse(note.deletedAt as string)).toBeLessThan(60_000);
     });
 
+    it('cannot be got round by asking again, which would delete them from the bin', async () => {
+      await vaultOf(30);
+      serve(() => ({ deletions: deletionsOf(30) }));
+
+      await syncService.syncNow();
+      await syncService.syncNow();
+
+      expect(await noteRepository.getAll()).toHaveLength(30);
+    });
+
+    it('lets a note restored from the bin be deleted again in the ordinary way', async () => {
+      await vaultOf(30);
+      serve(() => ({ deletions: deletionsOf(30) }));
+      await syncService.syncNow();
+      await noteRepository.restore(ID(1));
+      serve(() => ({ deletions: deletionsOf(1) }), () => ({ skippedDeleted: [] }));
+
+      await syncService.syncNow();
+
+      expect(await noteRepository.getById(ID(1))).toBeFalsy();
+    });
+
     it('applies an ordinary deletion straight away', async () => {
       await vaultOf(30);
       serve(() => ({ deletions: deletionsOf(3) }));
@@ -1093,8 +1117,507 @@ describe('sync protocol', () => {
     });
   });
 
+  describe('skippedDeleted', () => {
+    async function dirtyNote(n: number, overrides: Partial<Note> = {}): Promise<void> {
+      await noteRepository.create(createTestNote({
+        tags: [], id: ID(n), content: await encrypted('x'), needsSync: true,
+        contentHash: HASH('a'), parentHash: null, hashChain: [HASH('a')], ...overrides,
+      }));
+    }
+
+    const live = async () => (await noteRepository.getAllNonDeleted()).map(note => note.id);
+
+    it('drops a note deleted after this edit, even if no pull will say so', async () => {
+      await dirtyNote(1);
+      await onCursor('c1');
+      serve(() => ({ nextCursor: 'c1' }), () => ({ skippedDeleted: [ID(1)] }));
+
+      await syncService.syncNow();
+
+      expect(await noteRepository.getById(ID(1))).toBeFalsy();
+    });
+
+    it('stops sending it', async () => {
+      await dirtyNote(1);
+      await onCursor('c1');
+      serve(() => ({ nextCursor: 'c1' }), () => ({ skippedDeleted: [ID(1)] }));
+
+      await syncService.syncNow();
+      pushes = [];
+      await syncService.syncNow();
+
+      expect(pushes).toEqual([]);
+    });
+
+    it('keeps a note edited since it was sent, which is later than the deletion', async () => {
+      await dirtyNote(1);
+      await onCursor('c1');
+      serve(() => ({ nextCursor: 'c1' }), () => ({ skippedDeleted: [ID(1)] }));
+      const push = pushToServerThenEdit(ID(1));
+
+      await syncService.syncNow();
+      await push;
+
+      const note = await noteRepository.getById(ID(1));
+      expect(note?.needsSync).toBe(true);
+      expect(note?.deleted).toBe(false);
+    });
+
+    /** Edits a note the moment the server has its copy, as a person typing during a sync would */
+    function pushToServerThenEdit(id: string): Promise<void> {
+      return new Promise(resolve => {
+        const pull = async ({ request }: { request: Request }) => {
+          const body = await request.json() as SyncPushRequest;
+          pushes.push(body);
+          const note = await noteRepository.getById(id);
+          await noteRepository.update({ ...note!, modifiedAt: LATER, contentHash: HASH('z') }, false, true);
+          resolve();
+          return HttpResponse.json({ accepted: [], rejected: [], skippedDeleted: [id] });
+        };
+        server.use(http.post(`${ENDPOINT}/api/v1/sync/push`, pull));
+      });
+    }
+
+    it('means nothing from an older server, which does not send it', async () => {
+      await dirtyNote(1);
+      serve(() => ({}), body => ({ accepted: body.notes.map(n => ({ id: n.id, serverVersion: 1, syncedAt: NOW })) }));
+
+      await syncService.syncNow();
+
+      expect(await live()).toEqual([ID(1)]);
+    });
+
+    it('ignores a note it did not send, and anything that is not an id', async () => {
+      await dirtyNote(1);
+      await dirtyNote(2, { needsSync: false, syncedAt: NOW });
+      serve(() => ({}), () => ({ skippedDeleted: [ID(2), 'not an id' as never] }));
+
+      await syncService.syncNow();
+
+      expect((await live()).sort()).toEqual([ID(1), ID(2)]);
+    });
+
+    it('holds them in the bin past the limit, as a pull would, so a server cannot wipe a device this way', async () => {
+      const ids = Array.from({ length: 12 }, (_, i) => i + 1);
+      for (const n of ids) await dirtyNote(n);
+      await onCursor('c1');
+      const error = vi.spyOn(toast, 'error');
+      serve(() => ({ nextCursor: 'c1' }), body => ({ skippedDeleted: body.notes.map(n => n.id) }));
+
+      await syncService.syncNow();
+
+      const notes = await noteRepository.getAll();
+      expect(notes).toHaveLength(12);
+      expect(notes.every(note => note.deleted && !note.needsSync)).toBe(true);
+      expect(error).toHaveBeenCalledWith('sync.massDeletionHeld');
+    });
+
+    it('does not send a held note again, even one that never synced', async () => {
+      const ids = Array.from({ length: 12 }, (_, i) => i + 1);
+      for (const n of ids) await dirtyNote(n);
+      await onCursor('c1');
+      serve(() => ({ nextCursor: 'c1' }), body => ({ skippedDeleted: body.notes.map(n => n.id) }));
+
+      await syncService.syncNow();
+      pushes = [];
+      await syncService.syncNow();
+
+      expect(pushes).toEqual([]);
+      expect(await noteRepository.getAll()).toHaveLength(12);
+    });
+
+    it('takes the note out of the list', async () => {
+      await dirtyNote(1);
+      await onCursor('c1');
+      appNotes.set([{ id: ID(1) } as never]);
+      serve(() => ({ nextCursor: 'c1' }), () => ({ skippedDeleted: [ID(1)] }));
+
+      await syncService.syncNow();
+
+      expect(get(appNotes)).toEqual([]);
+    });
+  });
+
+  describe('a pull that only deletes', () => {
+    it('takes the note out of the list', async () => {
+      await noteRepository.create(createTestNote({ tags: [], id: ID(1), content: await encrypted('x'), needsSync: false }));
+      await onCursor('c1');
+      appNotes.set([{ id: ID(1) } as never]);
+      serve(() => ({ nextCursor: 'c2', deletions: [{ id: ID(1), deletedAt: LATER }] }));
+
+      await syncService.syncNow();
+
+      expect(get(appNotes)).toEqual([]);
+    });
+  });
+
+  describe('a clock over a day ahead of the server', () => {
+    const DAY = 24 * 60 * 60 * 1000;
+    const ahead = (ms: number) => new Date(Date.parse(NOW) + ms).toISOString();
+    const clockNotices = (spy: { mock: { calls: unknown[][] } }) =>
+      spy.mock.calls.filter(([message]) => message === 'sync.clockAhead');
+
+    afterEach(() => {
+      (syncService as unknown as { clockNoticeAt: number }).clockNoticeAt = 0;
+    });
+
+    async function noteDated(modifiedAt: string, overrides: Partial<Note> = {}): Promise<void> {
+      await noteRepository.create(createTestNote({
+        tags: [], id: ID(1), content: await encrypted('x'), needsSync: true, modifiedAt,
+        contentHash: HASH('a'), parentHash: null, hashChain: [HASH('a')], ...overrides,
+      }));
+    }
+
+    const skippedForItsTime = () => ({ errors: ['Note skipped: modifiedAt is more than 24 hours ahead'] });
+
+    it('is reported when the server skips a note for it, and the note stays to send again', async () => {
+      const error = vi.spyOn(toast, 'error');
+      await noteDated(ahead(DAY + 60_000));
+      serve(() => ({}), skippedForItsTime);
+
+      const result = await syncService.syncNow();
+
+      expect(result.success).toBe(true);
+      expect(clockNotices(error)).toHaveLength(1);
+      expect((await noteRepository.getById(ID(1)))?.needsSync).toBe(true);
+    });
+
+    it('is judged against the server, because the device is the one in doubt', async () => {
+      const error = vi.spyOn(toast, 'error');
+      // Long past by this machine's clock, and still a day ahead of this server's
+      const serverTime = '2001-01-01T00:00:00.000Z';
+      await noteDated('2001-01-03T00:00:00.000Z');
+      serve(() => ({ syncedAt: serverTime }), skippedForItsTime);
+
+      await syncService.syncNow();
+
+      expect(clockNotices(error)).toHaveLength(1);
+    });
+
+    it('looks at every time the server checks', async () => {
+      const error = vi.spyOn(toast, 'error');
+      await noteDated(NOW, { createdAt: ahead(2 * DAY) });
+      serve(() => ({}), skippedForItsTime);
+
+      await syncService.syncNow();
+
+      expect(clockNotices(error)).toHaveLength(1);
+    });
+
+    it('says nothing for a note within the day', async () => {
+      const error = vi.spyOn(toast, 'error');
+      await noteDated(ahead(DAY - 60_000));
+      serve(() => ({}));
+
+      await syncService.syncNow();
+
+      expect(clockNotices(error)).toHaveLength(0);
+    });
+
+    it('says nothing if the server took the note, as an older one does', async () => {
+      const error = vi.spyOn(toast, 'error');
+      await noteDated(ahead(2 * DAY));
+      serve(() => ({}), body => ({ accepted: body.notes.map(n => ({ id: n.id, serverVersion: 1, syncedAt: NOW })) }));
+
+      await syncService.syncNow();
+
+      expect(clockNotices(error)).toHaveLength(0);
+    });
+
+    it('says nothing for a note it was told is deleted', async () => {
+      const error = vi.spyOn(toast, 'error');
+      await noteDated(ahead(2 * DAY));
+      serve(() => ({}), () => ({ skippedDeleted: [ID(1)] }));
+
+      await syncService.syncNow();
+
+      expect(clockNotices(error)).toHaveLength(0);
+    });
+
+    it('does not repeat itself on every sync', async () => {
+      const error = vi.spyOn(toast, 'error');
+      await noteDated(ahead(2 * DAY));
+      serve(() => ({}), skippedForItsTime);
+
+      await syncService.syncNow();
+      await syncService.syncNow();
+
+      expect(clockNotices(error)).toHaveLength(1);
+    });
+
+    describe('for a saved search', () => {
+      async function searchDated(modifiedAt: string) {
+        const { getDB, STORES } = await import('./db');
+        await getDB().put(STORES.SAVED_SEARCHES, {
+          id: ID(9), name: await encrypted('n'), query: await encrypted('q'), order: 0,
+          createdAt: NOW, modifiedAt, deleted: false, version: 1, needsSync: true,
+        });
+      }
+
+      it('is reported, and the search stays to send again', async () => {
+        const { savedSearchRepository } = await import('./savedSearchRepository');
+        const error = vi.spyOn(toast, 'error');
+        await searchDated(ahead(2 * DAY));
+        serve(() => ({}), () => ({ errors: ['Saved search skipped: modifiedAt is more than 24 hours ahead'] }));
+
+        await syncService.syncNow();
+
+        expect(clockNotices(error)).toHaveLength(1);
+        expect(await savedSearchRepository.getAllNeedingSync()).toHaveLength(1);
+      });
+
+      it('is marked synced when the server skipped nothing', async () => {
+        const { savedSearchRepository } = await import('./savedSearchRepository');
+        await searchDated(NOW);
+        serve(() => ({}));
+
+        await syncService.syncNow();
+
+        expect(await savedSearchRepository.getAllNeedingSync()).toHaveLength(0);
+      });
+    });
+  });
+
+  describe('live updates', () => {
+    class FakeEventSource {
+      static instances: FakeEventSource[] = [];
+      static CONNECTING = 0;
+      static OPEN = 1;
+      static CLOSED = 2;
+
+      readyState = FakeEventSource.CONNECTING;
+      onopen: (() => void) | null = null;
+      onerror: ((event: unknown) => void) | null = null;
+
+      constructor(public url: string) {
+        FakeEventSource.instances.push(this);
+      }
+
+      addEventListener() {}
+
+      close() {
+        this.readyState = FakeEventSource.CLOSED;
+      }
+
+      /** What a browser does when connecting gets anything but a 200 */
+      refuse() {
+        this.readyState = FakeEventSource.CLOSED;
+        this.onerror?.({});
+      }
+    }
+
+    let tokenRequests: number;
+    let tokenStatus: number;
+
+    beforeEach(() => {
+      FakeEventSource.instances = [];
+      tokenRequests = 0;
+      tokenStatus = 200;
+      vi.stubGlobal('EventSource', FakeEventSource);
+      serve(() => ({}));
+      server.use(http.get(`${ENDPOINT}/api/v1/sync/events/token`, () => {
+        tokenRequests++;
+        return tokenStatus === 200
+          ? HttpResponse.json({ token: `token-${tokenRequests}`, expires_in: 300 })
+          : HttpResponse.json({ error: 'no' }, { status: tokenStatus });
+      }));
+    });
+
+    afterEach(() => {
+      syncService.disconnectFromSyncEvents();
+      syncService.disableAutoSync();
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    });
+
+    const stream = () => FakeEventSource.instances.at(-1)!;
+    const waitFor = async (check: () => boolean) => {
+      for (let attempt = 0; attempt < 500 && !check(); attempt++) {
+        await new Promise(resolve => setImmediate(resolve));
+      }
+      expect(check()).toBe(true);
+    };
+
+    it('asks for a new token when the server refuses the stream', async () => {
+      await syncService.connectToSyncEvents();
+      expect(stream().url).toContain('token=token-1');
+
+      vi.useFakeTimers({ toFake: ['setTimeout'] });
+      stream().refuse();
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
+
+      await waitFor(() => FakeEventSource.instances.length === 2);
+      expect(stream().url).toContain('token=token-2');
+    });
+
+    it('stops, and says the device was removed, if the new token is refused with a 401', async () => {
+      const error = vi.spyOn(toast, 'error');
+      syncService.enableAutoSync(5);
+      await syncService.connectToSyncEvents();
+      tokenStatus = 401;
+
+      vi.useFakeTimers({ toFake: ['setTimeout'] });
+      stream().refuse();
+      vi.runOnlyPendingTimers();
+      vi.useRealTimers();
+
+      await waitFor(() => tokenRequests === 2 && error.mock.calls.length > 0);
+      expect(error).toHaveBeenCalledWith('sync.deviceRevoked');
+      expect(syncService.isAutoSyncEnabled()).toBe(false);
+      expect(FakeEventSource.instances).toHaveLength(1);
+    });
+
+    it('stops, and says the account is disabled, if it is refused with a 403', async () => {
+      const error = vi.spyOn(toast, 'error');
+      syncService.enableAutoSync(5);
+      tokenStatus = 403;
+
+      await syncService.connectToSyncEvents();
+
+      expect(error).toHaveBeenCalledWith('sync.accountDisabled');
+      expect(syncService.isAutoSyncEnabled()).toBe(false);
+      expect(FakeEventSource.instances).toHaveLength(0);
+    });
+
+    it('falls back to periodic sync if the token cannot be had for any other reason', async () => {
+      const error = vi.spyOn(toast, 'error');
+      tokenStatus = 503;
+
+      await syncService.connectToSyncEvents();
+
+      expect(error).not.toHaveBeenCalled();
+      expect(FakeEventSource.instances).toHaveLength(0);
+      expect((syncService as unknown as { sseFailedOver: boolean }).sseFailedOver).toBe(true);
+    });
+  });
+
+  describe('a version from the server', () => {
+    async function pulledVersion(overrides: Record<string, unknown> = {}) {
+      const { versionRepository } = await import('./versionRepository');
+      const version = {
+        versionKey: `${ID(1)}:3`, noteId: ID(1), version: 3, createdAt: NOW, syncedAt: NOW,
+        content: await encrypted('old text'), tags: [], attachments: [], reason: 'sync',
+        contentHash: HASH('d'), parentHash: HASH('e'), showPreview: true, color: 'red', ...overrides,
+      };
+      serve(() => ({ versions: [version as never] }));
+
+      await syncService.syncNow();
+
+      return versionRepository.getVersion(ID(1), 3);
+    }
+
+    it('keeps its hashes, or a later push would send it without them', async () => {
+      const stored = await pulledVersion();
+
+      expect(stored?.contentHash).toBe(HASH('d'));
+      expect(stored?.parentHash).toBe(HASH('e'));
+    });
+
+    it('keeps its own date, not the time it arrived', async () => {
+      expect((await pulledVersion())?.createdAt).toBe(NOW);
+    });
+
+    it('keeps its colour', async () => {
+      expect((await pulledVersion())?.color).toBe('red');
+    });
+
+    it('takes no preview setting, which stays per device so that a server cannot turn one on', async () => {
+      expect((await pulledVersion())?.showPreview).toBeUndefined();
+    });
+  });
+
+  describe('an attachment that cannot be stored', () => {
+    it('is reported, as the next pull will not send it again', async () => {
+      const { attachmentRepository } = await import('./attachmentRepository');
+      const { rejectedRemoteRecords } = await import('./vaultHealthService');
+      rejectedRemoteRecords.set([]);
+      vi.spyOn(attachmentRepository, 'storeBlob').mockRejectedValue(new Error('quota'));
+      serve(() => ({ attachments: [{ id: ID(70), data: 'AAAA' }] }));
+
+      await syncService.syncNow();
+
+      expect(get(rejectedRemoteRecords).map(record => record.kind)).toContain('attachment');
+    });
+  });
+
   describe('the inbox', () => {
     const item = { id: ID(50), content: 'x', tags: [], createdAt: NOW, sizeBytes: 1 };
+
+    describe('after a delete that failed', () => {
+      let deletes: number;
+      let deleteStatus: number;
+
+      beforeEach(() => {
+        deletes = 0;
+        deleteStatus = 500;
+      });
+
+      const serveInbox = () => {
+        serve(() => ({ inboxItems: [item] }));
+        server.use(http.delete(`${ENDPOINT}/api/v1/inbox/${item.id}`, () => {
+          deletes++;
+          return new HttpResponse(null, { status: deleteStatus });
+        }));
+      };
+
+      async function acceptWhileDeleteFails() {
+        const { inboxService } = await import('./inboxService');
+        inboxItems.set([item]);
+        await inboxService.acceptItem(item);
+      }
+
+      it('does not offer the item again', async () => {
+        serveInbox();
+        await acceptWhileDeleteFails();
+
+        await syncService.syncNow();
+
+        expect(get(inboxItems)).toEqual([]);
+      });
+
+      it('tries the delete again on each sync, and stops once it works', async () => {
+        serveInbox();
+        await acceptWhileDeleteFails();
+        expect(deletes).toBe(1);
+
+        await syncService.syncNow();
+        expect(deletes).toBe(2);
+
+        deleteStatus = 204;
+        await syncService.syncNow();
+        expect(deletes).toBe(3);
+        expect((await metadata())?.acceptedInboxIds ?? []).toEqual([]);
+
+        await syncService.syncNow();
+        expect(deletes).toBe(3);
+      });
+
+      it('counts an item already gone from the server as done', async () => {
+        serveInbox();
+        await acceptWhileDeleteFails();
+        deleteStatus = 404;
+
+        await syncService.syncNow();
+
+        expect((await metadata())?.acceptedInboxIds ?? []).toEqual([]);
+      });
+
+      it('does not stop a sync', async () => {
+        serveInbox();
+        await acceptWhileDeleteFails();
+
+        expect((await syncService.syncNow()).success).toBe(true);
+      });
+    });
+
+    it('goes when the account is disconnected, as it is plaintext from that account', async () => {
+      inboxItems.set([item]);
+
+      await syncService.disconnect();
+
+      expect(get(inboxItems)).toEqual([]);
+    });
 
     it('is empty when a page says nothing about it, on any page', async () => {
       inboxItems.set([item]);

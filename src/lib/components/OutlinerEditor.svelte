@@ -19,6 +19,7 @@
   import OutlinerNodeComponent from './outliner/OutlinerNode.svelte';
   import { settings } from '../stores/appStore';
   import { getFontSize } from '../utils/fontSize';
+  import { matchesShortcut, withDefaultShortcuts } from '../utils/keyboardShortcuts';
 
   export let value: string = '';
   export let onChange: (value: string) => void = () => {};
@@ -260,8 +261,12 @@
 
     const { node, parent, index } = found;
 
-    // Tab - Indent (make child of previous sibling)
-    if (keyEvent.key === 'Tab' && !keyEvent.shiftKey) {
+    // These come first, because any of them can be set to a key that means something
+    // further down, such as Alt+Up
+    const shortcuts = withDefaultShortcuts($settings.keyboardShortcuts);
+
+    // Indent (make child of previous sibling)
+    if (matchesShortcut(keyEvent, shortcuts.outlinerIndent)) {
       keyEvent.preventDefault();
       if (index > 0) {
         // Remove from current position
@@ -278,8 +283,8 @@
       return;
     }
 
-    // Shift+Tab - Outdent (move up a level)
-    if (keyEvent.key === 'Tab' && keyEvent.shiftKey) {
+    // Outdent (move up a level)
+    if (matchesShortcut(keyEvent, shortcuts.outlinerOutdent)) {
       keyEvent.preventDefault();
       const parentNode = findParentNode(nodes, id);
       if (parentNode) {
@@ -294,6 +299,50 @@
         nodes = [...nodes];
         emitChange();
         focusNode(id);
+      }
+      return;
+    }
+
+    // Move node up
+    if (matchesShortcut(keyEvent, shortcuts.outlinerMoveUp)) {
+      keyEvent.preventDefault();
+      if (index > 0) {
+        // Swap with previous sibling
+        [parent[index - 1], parent[index]] = [parent[index], parent[index - 1]];
+        nodes = [...nodes];
+        emitChange();
+        focusNode(id);
+      }
+      return;
+    }
+
+    // Move node down
+    if (matchesShortcut(keyEvent, shortcuts.outlinerMoveDown)) {
+      keyEvent.preventDefault();
+      if (index < parent.length - 1) {
+        // Swap with next sibling
+        [parent[index], parent[index + 1]] = [parent[index + 1], parent[index]];
+        nodes = [...nodes];
+        emitChange();
+        focusNode(id);
+      }
+      return;
+    }
+
+    // Toggle collapse/expand
+    if (matchesShortcut(keyEvent, shortcuts.outlinerToggleCollapse)) {
+      keyEvent.preventDefault();
+      if (node.children.length > 0) {
+        node.collapsed = !node.collapsed;
+        if (node.collapsed) {
+          collapsedNodes.add(id);
+        } else {
+          collapsedNodes.delete(id);
+          node.collapsed = undefined;
+        }
+        collapsedNodes = new Set(collapsedNodes);
+        nodes = [...nodes];
+        emitChange();
       }
       return;
     }
@@ -432,50 +481,6 @@
           return;
         }
       }
-    }
-
-    // Ctrl/Cmd + Arrow Up - Move node up
-    if (keyEvent.key === 'ArrowUp' && (keyEvent.ctrlKey || keyEvent.metaKey)) {
-      keyEvent.preventDefault();
-      if (index > 0) {
-        // Swap with previous sibling
-        [parent[index - 1], parent[index]] = [parent[index], parent[index - 1]];
-        nodes = [...nodes];
-        emitChange();
-        focusNode(id);
-      }
-      return;
-    }
-
-    // Ctrl/Cmd + Arrow Down - Move node down
-    if (keyEvent.key === 'ArrowDown' && (keyEvent.ctrlKey || keyEvent.metaKey)) {
-      keyEvent.preventDefault();
-      if (index < parent.length - 1) {
-        // Swap with next sibling
-        [parent[index], parent[index + 1]] = [parent[index + 1], parent[index]];
-        nodes = [...nodes];
-        emitChange();
-        focusNode(id);
-      }
-      return;
-    }
-
-    // Ctrl/Cmd + . - Toggle collapse/expand
-    if (keyEvent.key === '.' && (keyEvent.ctrlKey || keyEvent.metaKey)) {
-      keyEvent.preventDefault();
-      if (node.children.length > 0) {
-        node.collapsed = !node.collapsed;
-        if (node.collapsed) {
-          collapsedNodes.add(id);
-        } else {
-          collapsedNodes.delete(id);
-          node.collapsed = undefined;
-        }
-        collapsedNodes = new Set(collapsedNodes);
-        nodes = [...nodes];
-        emitChange();
-      }
-      return;
     }
   }
 

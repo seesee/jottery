@@ -15,13 +15,23 @@ describe('hostile note text', () => {
     expect(performance.now() - started).toBeLessThan(500);
   });
 
-  it('strips unclosed brackets in linear time', () => {
-    for (const text of ['['.repeat(200_000), '![' .repeat(100_000), '[a]('.repeat(50_000), '[a]['.repeat(50_000)]) {
-      const started = performance.now();
-      stripMarkdownSignifiers(text);
-      expect(performance.now() - started).toBeLessThan(1000);
-    }
-  });
+  /**
+   * The old code was still running after four minutes, and the fix takes milliseconds,
+   * or a few seconds on a machine running a dozen other builds. The limit sits between
+   * them, so this tells them apart however busy the machine is.
+   */
+  it.each([
+    ['[', 200_000],
+    ['![', 100_000],
+    ['[a](', 50_000],
+    ['[a][', 50_000],
+  ])('strips unclosed %s in linear time', (unit, repeats) => {
+    const started = performance.now();
+
+    stripMarkdownSignifiers(unit.repeat(repeats));
+
+    expect(performance.now() - started).toBeLessThan(15_000);
+  }, 120_000);
 });
 
 describe('notePreview', () => {

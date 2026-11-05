@@ -144,6 +144,8 @@ class IndexedDBNoteRepository implements NoteRepository {
     }
     note.deleted = false;
     note.deletedAt = undefined;
+    note.deletionHeld = undefined;
+    note.binnedAt = undefined;
     await this.update(note);
   }
 
@@ -370,18 +372,25 @@ class IndexedDBNoteRepository implements NoteRepository {
    * Count all active notes
    */
   async countActive(): Promise<number> {
-    const db = getDB();
-    const notes = await db.getAll(STORES.NOTES);
-    return notes.filter((note) => !note.deleted).length;
+    return this.countWhere((note) => !note.deleted);
   }
 
   /**
    * Count deleted notes
    */
   async countDeleted(): Promise<number> {
-    const db = getDB();
-    const notes = await db.getAll(STORES.NOTES);
-    return notes.filter((note) => note.deleted).length;
+    return this.countWhere((note) => note.deleted);
+  }
+
+  /** Count with a cursor, so that counting doesn't hold every note's text at once */
+  private async countWhere(matches: (note: Note) => boolean): Promise<number> {
+    let count = 0;
+    let cursor = await getDB().transaction(STORES.NOTES, 'readonly').store.openCursor();
+    while (cursor) {
+      if (matches(cursor.value)) count++;
+      cursor = await cursor.continue();
+    }
+    return count;
   }
 }
 

@@ -117,6 +117,9 @@ export const CALC_MAX_LINES = 500;
 /** Maximum errors to display in calculator extension */
 export const CALC_MAX_TOTAL_ERRORS = 50;
 
+/** Longest the calculator extension spends on one pass over a note */
+export const CALC_MAX_EVALUATION_MS = 1000;
+
 /** Maximum length for notebook ID in path */
 export const MAX_NOTEBOOK_ID_LENGTH = 50;
 

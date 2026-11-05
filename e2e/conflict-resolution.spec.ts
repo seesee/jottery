@@ -544,6 +544,8 @@ test.describe('Hash Chain Conflict Detection', () => {
   });
 
   test('should preserve content hash fields after conflict resolution', async ({ page }) => {
+    // Two notes, two reloads and an unlock take most of the default budget by themselves
+    test.slow();
     const jp = new JotteryPage(page);
 
     // Create a note
@@ -589,6 +591,8 @@ test.describe('Hash Chain Conflict Detection', () => {
   });
 
   test('should handle multiple conflicts simultaneously', async ({ page }) => {
+    // Two notes, two reloads and an unlock take most of the default budget by themselves
+    test.slow();
     const jp = new JotteryPage(page);
 
     // Create first note

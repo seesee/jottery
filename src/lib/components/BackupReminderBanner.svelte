@@ -1,7 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import { showBackupReminder, lastBackupDate, isAutoBackingUp, backupSchedulerService } from '../services/backupSchedulerService';
-  import { createBatchedBackup, downloadBackup } from '../services/backupService';
+  import { createBackupFile, downloadBackupFile } from '../services/backupService';
   import { toast } from '../utils/toast.svelte';
   import { settings } from '../stores/appStore';
 
@@ -35,8 +35,7 @@
 
     isBackingUp = true;
     try {
-      const backup = await createBatchedBackup();
-      downloadBackup(backup);
+      downloadBackupFile(await createBackupFile());
       await backupSchedulerService.recordBackup();
       toast.success($_('backup.created'));
     } catch (error) {

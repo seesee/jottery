@@ -186,6 +186,21 @@
     "readOnly": {
       "archivedBanner": "Ta notatka jest zarchiwizowana. Przywróć z archiwum, aby edytować.",
       "lockedBanner": "Ta notatka jest zablokowana. Odblokuj, aby edytować."
+    },
+    "actionFailed": {
+      "archive": "Nie udało się zarchiwizować notatki: {error}",
+      "unarchive": "Nie udało się przywrócić notatki z archiwum: {error}",
+      "lock": "Nie udało się zablokować notatki: {error}",
+      "unlock": "Nie udało się odblokować notatki: {error}",
+      "delete": "Nie udało się usunąć notatki: {error}"
+    },
+    "copyLinkFailed": "Nie udało się skopiować linku do schowka",
+    "noteEditor": "Edytor notatek",
+    "calc": {
+      "tooLong": "Ta notatka jest zbyt długa do obliczeń ({lines} wierszy, maksymalnie {max}). Skróć ją lub użyj innej składni.",
+      "consecutiveErrors": "Zatrzymano po {count} błędach z rzędu. To nie wygląda na obliczenia, więc spróbuj innej składni.",
+      "totalErrors": "Zatrzymano po {count} błędach. Spróbuj innej składni dla tej notatki.",
+      "tooSlow": "Zatrzymano, ponieważ trwało to zbyt długo. Wiersze poniżej nie mają wyników."
     }
   },
   "noteList": {
@@ -195,7 +210,8 @@
     "noteCountAll": "{total} notatek"
   },
   "tagInput": {
-    "removeTag": "Usuń tag"
+    "removeTag": "Usuń tag",
+    "suggestions": "Sugestie tagów"
   },
   "backupReminder": {
     "title": "Czas na kopię zapasową notatek",
@@ -216,7 +232,8 @@
     "frequencyMonthly": "Co miesiąc",
     "frequencyOnChanges": "Po określonej liczbie zmian",
     "changesThreshold": "Utwórz kopię po tylu zmianach notatek",
-    "description": "Automatyczne kopie zapasowe są pobierane na Twoje urządzenie. Włącz przypomnienia, aby otrzymywać powiadomienia o czasie utworzenia kopii."
+    "description": "Automatyczne kopie zapasowe są pobierane na Twoje urządzenie. Włącz przypomnienia, aby otrzymywać powiadomienia o czasie utworzenia kopii.",
+    "saveFailed": "To ustawienie nie zostało zapisane. Spróbuj ponownie."
   },
   "backup": {
     "title": "Zaszyfrowana Kopia Zapasowa",
@@ -256,7 +273,8 @@
         "records": "Rekordy"
       },
       "storageFull": "W przeglądarce zabrakło miejsca, więc przywracanie nie zostało ukończone i nic nie zachowano. Plik kopii zapasowej jest w porządku: zwolnij miejsce i przywróć go ponownie."
-    }
+    },
+    "autoFailed": "Automatyczna kopia zapasowa nie powiodła się. Utwórz kopię ręcznie."
   },
   "settings": {
     "title": "Ustawienia",
@@ -447,7 +465,19 @@
         "mustDiffer": "Hasło do notatek i hasło do konta muszą być różne. Serwer synchronizacji widzi hasło do konta, więc jeśli są takie same, mógłby odczytać Twoje notatki.",
         "matchesAccountWarning": "Hasło do notatek jest takie samo jak hasło do konta, więc serwer synchronizacji mógłby odczytać Twoje notatki. Zmień hasło do notatek, aby to naprawić."
       },
-      "existingAccountDetected": "Ten adres e-mail ma już konto, więc to urządzenie się z nim połączy. Wpisz hasło do notatek używane na innych urządzeniach."
+      "existingAccountDetected": "Ten adres e-mail ma już konto, więc to urządzenie się z nim połączy. Wpisz hasło do notatek używane na innych urządzeniach.",
+      "errors": {
+        "credentialsRequired": "Adres e-mail i hasło są wymagane",
+        "passwordTooShort": "Hasło musi mieć co najmniej 12 znaków",
+        "registrationFailed": "Nie udało się zarejestrować użytkownika",
+        "deviceRegistrationFailed": "Nie udało się zarejestrować urządzenia",
+        "loginFailed": "Logowanie nie powiodło się",
+        "accountInfoFailed": "Nie udało się wczytać informacji o koncie",
+        "deleteNotesFailed": "Nie udało się usunąć notatek",
+        "disconnectFailed": "Nie udało się rozłączyć",
+        "syncFailed": "Synchronizacja nie powiodła się",
+        "toggleFailed": "Nie udało się zmienić synchronizacji"
+      }
     },
     "editorTab": {
       "vimMode": "Tryb edytora",
@@ -485,7 +515,9 @@
       "formatHelp": "Użyj tokenów YYYY, MM, DD, HH, mm, ss",
       "value": "Wartość",
       "description": "Opis",
-      "preview": "Podgląd"
+      "preview": "Podgląd",
+      "textPlaceholder": "Tekst do wstawienia",
+      "descriptionPlaceholder": "Opis widoczny w autouzupełnianiu"
     },
     "keyboardTab": {
       "description": "Dostosuj skróty klawiszowe. Kliknij skrót, aby go zmienić, a następnie naciśnij żądaną kombinację klawiszy.",
@@ -519,7 +551,8 @@
       "pressKey": "Naciśnij klawisz...",
       "notSet": "Nie ustawiono",
       "needsModifier": "Ten skrót działa podczas pisania, więc wymaga klawisza Ctrl, Cmd lub Alt. Naciśnij inny klawisz lub Esc, aby anulować.",
-      "reserved": "Ten klawisz jest zarezerwowany. Naciśnij inny klawisz lub Esc, aby anulować."
+      "reserved": "Ten klawisz jest zarezerwowany. Naciśnij inny klawisz lub Esc, aby anulować.",
+      "toggleCollapse": "Zwiń lub rozwiń"
     },
     "syncTab": {
       "enableSync": "Włącz synchronizację",
@@ -573,7 +606,8 @@
         "button": "Zmień hasło",
         "success": "Hasło zostało pomyślnie zmienione",
         "error": "Nie udało się zmienić hasła: {error}",
-        "serverKeyFailed": "Hasło zostało zmienione na tym urządzeniu, ale nie udało się zaktualizować serwera. Ponowna próba nastąpi przy kolejnym odblokowaniu. Do tego czasu nowe urządzenie będzie wymagać starego hasła."
+        "serverKeyFailed": "Hasło zostało zmienione na tym urządzeniu, ale nie udało się zaktualizować serwera. Ponowna próba nastąpi przy kolejnym odblokowaniu. Do tego czasu nowe urządzenie będzie wymagać starego hasła.",
+        "keyStaysTheSame": "Twój klucz szyfrowania pozostaje ten sam, więc stare kopie zapasowe nadal otwierają się starym hasłem. Przechowuj je w bezpiecznym miejscu."
       },
       "connectionDetails": {
         "title": "Szczegóły połączenia",
@@ -656,7 +690,9 @@
       "note": "Bez konta • Działa offline • Samodzielnie hostowalne"
     },
     "screenshots": {
-      "mainInterface": "Główny interfejs pokazujący listę notatek i edytor"
+      "mainInterface": "Główny interfejs pokazujący listę notatek i edytor",
+      "carouselLabel": "Karuzela zrzutów ekranu",
+      "fullSizeLabel": "Obraz w pełnym rozmiarze"
     },
     "features": {
       "title": "Wszystko czego potrzebujesz",
@@ -945,7 +981,9 @@
   "lock": {
     "title": "Zablokuj aplikację",
     "message": "Zablokować aplikację? Niezapisane zmiany zostaną utracone.",
-    "confirmButton": "Zablokuj"
+    "confirmButton": "Zablokuj",
+    "locking": "Blokowanie...",
+    "savingAndSyncing": "Zapisywanie i synchronizowanie notatek"
   },
   "recycleBin": {
     "title": "Kosz",
@@ -1009,14 +1047,18 @@
     "markdownCopied": "Link Markdown skopiowany do schowka",
     "error": {
       "download": "Nie udało się pobrać załącznika",
-      "copyMarkdown": "Nie udało się skopiować linku Markdown"
+      "copyMarkdown": "Nie udało się skopiować linku Markdown",
+      "upload": "Nie udało się przesłać {name}: {error}",
+      "delete": "Nie udało się usunąć załącznika: {error}",
+      "paste": "Nie udało się wkleić obrazu: {error}"
     },
     "preview": {
       "title": "Podgląd załącznika",
       "loading": "Ładowanie podglądu...",
       "notAvailable": "Podgląd niedostępny dla tego typu pliku.",
       "audioNotSupported": "Twoja przeglądarka nie obsługuje odtwarzania audio.",
-      "videoNotSupported": "Twoja przeglądarka nie obsługuje odtwarzania wideo."
+      "videoNotSupported": "Twoja przeglądarka nie obsługuje odtwarzania wideo.",
+      "videoLabel": "Podgląd wideo"
     },
     "confirmDelete": {
       "title": "Usunąć załącznik?",
@@ -1069,7 +1111,8 @@
     "previousPage": "Poprzednia strona",
     "nextPage": "Następna strona",
     "zoomOut": "Pomniejsz",
-    "zoomIn": "Powiększ"
+    "zoomIn": "Powiększ",
+    "loadFailed": "Nie można otworzyć tego pliku PDF. Nadal możesz go pobrać."
   },
   "versionHistory": {
     "title": "Historia wersji",
@@ -1092,7 +1135,8 @@
       "title": "Przywróć wersję",
       "message": "Czy na pewno chcesz przywrócić tę wersję? Twoja obecna notatka zostanie zapisana jako nowa wersja przed przywróceniem.",
       "confirmButton": "Przywróć"
-    }
+    },
+    "restoreFailed": "Nie udało się przywrócić wersji: {error}"
   },
   "header": {
     "menu": "Menu",
@@ -1101,7 +1145,8 @@
     "addContentFirst": "Najpierw dodaj treść do bieżącej notatki",
     "lastSynced": "Ostatnia synchronizacja: {time}",
     "neverSynced": "Jeszcze nie zsynchronizowano",
-    "syncDisabled": "Synchronizacja nie jest włączona"
+    "syncDisabled": "Synchronizacja nie jest włączona",
+    "newNote": "Nowa Notatka"
   },
   "confirm": {
     "deleteDatabase": {
@@ -1190,7 +1235,9 @@
     "resolveButton": "Rozwiąż konflikt",
     "syncNotification": "{count, plural, one {1 notatka ma konflikt synchronizacji} few {{count} notatki mają konflikty synchronizacji} other {{count} notatek ma konflikty synchronizacji}}",
     "serverUnreadable": "Kopii tej notatki na serwerze nie można odczytać i mogła zostać zmieniona. Można zachować tylko Twoją wersję.",
-    "localUnreadable": "Nie można odczytać kopii tej notatki na tym urządzeniu."
+    "localUnreadable": "Nie można odczytać kopii tej notatki na tym urządzeniu.",
+    "loadFailed": "Nie udało się wczytać danych konfliktu",
+    "resolveFailed": "Nie udało się rozwiązać konfliktu"
   },
   "pullToRefresh": {
     "pull": "Pociągnij w dół, aby zsynchronizować",
@@ -1204,7 +1251,10 @@
     "notesRefused": "Niektóre notatki przekraczają limit przesyłania Twojego konta i nie zostały zsynchronizowane. Cała reszta tak.",
     "accountDisabled": "Twoje konto jest dezaktywowane lub oczekuje na zatwierdzenie, więc synchronizacja została zatrzymana. Twoje notatki na tym urządzeniu są bezpieczne. Skontaktuj się z administratorem.",
     "storageQuotaExceeded": "Twoje konto osiągnęło limit miejsca, więc zmian z tego urządzenia nie można przesłać. Trwale usuń niektóre notatki lub załączniki, aby zwolnić miejsce.",
-    "massDeletionHeld": "Serwer zażądał usunięcia naraz tylu notatek: {count}. Są w koszu na wypadek, gdyby to nie było Twoje działanie. Przywróć je stamtąd lub opróżnij kosz, jeśli to Ty."
+    "massDeletionHeld": "Serwer zażądał usunięcia naraz tylu notatek: {count}. Są w koszu na wypadek, gdyby to nie było Twoje działanie. Przywróć je stamtąd lub opróżnij kosz, jeśli to Ty.",
+    "clockAhead": "Niektóre zmiany nie zostały zsynchronizowane, ponieważ ich data wyprzedza serwer o ponad jeden dzień. Sprawdź datę i godzinę na tym urządzeniu.",
+    "deviceRevoked": "To urządzenie nie jest już połączone z Twoim kontem, więc synchronizacja została zatrzymana. Twoje notatki na tym urządzeniu są bezpieczne. Połącz je ponownie w Ustawieniach.",
+    "databaseLost": "Utracono połączenie z bazą danych. Odśwież stronę, aby kontynuować."
   },
   "inbox": {
     "title": "Skrzynka odbiorcza",
@@ -1454,6 +1504,7 @@
       "attachment": "Załącznik",
       "inboxItem": "Element skrzynki odbiorczej",
       "deletion": "Usunięcie"
-    }
+    },
+    "scanFailed": "Skanowanie nie zostało ukończone. Spróbuj ponownie."
   }
 }

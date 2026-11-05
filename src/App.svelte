@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { isLocked, isLocking, notes, settings, searchQuery, filteredNotes, selectNote, isContentOnlyUpdate, archiveMode, toggleArchiveMode, isSyncing } from './lib/stores/appStore';
-  import { addNoteToStoreAndSearch } from './lib/stores/storeHelpers';
+  import { addNoteToStoreAndSearch, clearDecryptedState } from './lib/stores/storeHelpers';
   import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, AVAILABLE_LOCALES, syncService, syncRepository, appUpdateService, versionRepository } from './lib/services';
   import { startAutoLock, stopAutoLock } from './lib/services/autoLockService';
-  import { keyManager, setupActivityListeners } from './lib/services/keyManager';
+  import { listenForLockElsewhere } from './lib/services/lockService';
+  import { keyManager } from './lib/services/keyManager';
   import { resetVaultHealth, undecryptableNotes } from './lib/services/vaultHealthService';
   import { toast } from './lib/utils/toast.svelte';
   import { get } from 'svelte/store';
@@ -35,6 +36,7 @@
   let loadingProgress = { current: 0, total: 0 };
   let loadGeneration = 0; // Invalidates background batches from a superseded loadNotes run
   let keyManagerLockUnsubscribe: (() => void) | null = null;
+  let lockElsewhereUnsubscribe: (() => void) | null = null;
   let showSettings = false;
   let settingsInitialTab: 'general' | 'advanced' | null = null;
   let showRecycleBin = false;
@@ -329,6 +331,7 @@
         sessionStorageService.clear();
         isLocked.set(true);
       });
+      lockElsewhereUnsubscribe = listenForLockElsewhere();
 
       // Start version checking (only in production)
       appUpdateService.startChecking();
@@ -352,6 +355,7 @@
     if (backSpinnerTimeout !== null) {
       clearTimeout(backSpinnerTimeout);
     }
+    lockElsewhereUnsubscribe?.();
     if (keyManagerLockUnsubscribe) {
       keyManagerLockUnsubscribe();
       keyManagerLockUnsubscribe = null;
@@ -410,24 +414,16 @@
     }
   }
 
-  // Manage auto-lock based on lock state and remember password setting
-  $: if (!$isLocked && initialized && $settings) {
-    if ($settings.rememberPassword) {
-      // Remember password enabled - disable auto-lock
-      stopAutoLock();
-    } else {
-      // Remember password disabled - enable auto-lock
-      startAutoLock($settings.autoLockTimeout);
-    }
-  }
-
-  // keyManager runs its own idle timer alongside autoLockService, started at
-  // unlock. Keep it on the current timeout, or a change only takes effect from
-  // the next unlock. This depends on the value alone, so unrelated settings
-  // changes don't restart the timer. Zero turns it off.
-  $: keyManagerLockMinutes = $settings.rememberPassword ? 0 : $settings.autoLockTimeout;
+  // Auto-lock follows the lock state and the current timeout, and Remember Password
+  // switches it off. This depends on the value alone, so unrelated settings changes
+  // don't restart the timer. Zero turns it off.
+  $: autoLockMinutes = $settings.rememberPassword ? 0 : $settings.autoLockTimeout;
   $: if (!$isLocked && initialized) {
-    setupActivityListeners(keyManagerLockMinutes);
+    if (autoLockMinutes > 0) {
+      startAutoLock(autoLockMinutes);
+    } else {
+      stopAutoLock();
+    }
   }
 
   /**
@@ -621,8 +617,7 @@
 
   // Clear notes when locked (loading is handled by the unlock reactive at line 349)
   $: if ($isLocked) {
-    notes.set([]);
-    filteredNotes.set([]);
+    clearDecryptedState();
   }
 
   // Perform search when query changes (indexing happens in loadNotes)
@@ -802,8 +797,8 @@
   <div class="fixed inset-0 bg-gray-900 flex items-center justify-center z-[100]" role="status" aria-live="polite">
     <div class="text-center">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-      <p class="text-white text-lg font-medium">Locking...</p>
-      <p class="text-gray-300 text-sm mt-2">Saving and syncing your notes</p>
+      <p class="text-white text-lg font-medium">{$_('lock.locking')}</p>
+      <p class="text-gray-300 text-sm mt-2">{$_('lock.savingAndSyncing')}</p>
     </div>
   </div>
 {/if}

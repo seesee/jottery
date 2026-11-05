@@ -5,7 +5,7 @@
 
 import { marked } from 'marked';
 import type { Attachment, HighlightJsInstance } from '../types';
-import { TITLE_TAG_PREFIX } from './virtualTags';
+import { getNoteTitle, getTitleTagValue } from './noteTitle';
 import { escapeAttribute, escapeHtml, sanitiseHtml } from './htmlSanitiser';
 
 export interface MarkdownPreviewOptions {
@@ -18,74 +18,62 @@ export interface MarkdownPreviewOptions {
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/**
- * Extract title from note, checking for t: tag first, then first non-empty line
- */
-function extractNoteTitle(content: string, tags?: string[]): string {
-  // Check for title tag first
-  if (tags) {
-    const titleTag = tags.find(tag => tag.startsWith(TITLE_TAG_PREFIX));
-    if (titleTag) {
-      const title = titleTag.substring(TITLE_TAG_PREFIX.length).trim();
-      if (title) return title;
+type LinkableNote = NonNullable<MarkdownPreviewOptions['notes']>[number];
+
+interface NoteLinks {
+  byId: Map<string, { id: string; title: string }>;
+  byTitle: Map<string, { id: string; title: string }>;
+}
+
+/** The title a wiki link names a note by: as in the note list, without markdown */
+function linkTitle(note: LinkableNote): string {
+  const tags = note.tags ?? [];
+  const customTitle = getTitleTagValue(tags)?.trim();
+  if (customTitle) return customTitle;
+
+  return getNoteTitle({ content: note.content, tags: [] })
+    .replace(/^#+\s*/, '')      // Remove heading markers
+    .replace(/\*\*|__/g, '')    // Remove bold
+    .replace(/\*|_/g, '')       // Remove italic
+    .replace(/`/g, '')          // Remove code
+    .trim();
+}
+
+// A change to any note makes a new list, so a list only needs reading once, however
+// many links a note has and however often the preview renders
+const noteLinksByList = new WeakMap<object, NoteLinks>();
+
+function noteLinksFor(notes: LinkableNote[]): NoteLinks {
+  const known = noteLinksByList.get(notes);
+  if (known) return known;
+
+  const links: NoteLinks = { byId: new Map(), byTitle: new Map() };
+  for (const note of notes) {
+    const link = { id: note.id, title: linkTitle(note) };
+    links.byId.set(note.id, link);
+
+    const title = link.title.toLowerCase();
+    if (!links.byTitle.has(title)) {
+      links.byTitle.set(title, link);
     }
   }
 
-  // Fall back to first non-empty line
-  const lines = content.split('\n');
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed) {
-      // Remove markdown heading markers and formatting
-      return trimmed
-        .replace(/^#+\s*/, '')      // Remove heading markers
-        .replace(/\*\*|__/g, '')    // Remove bold
-        .replace(/\*|_/g, '')       // Remove italic
-        .replace(/`/g, '')          // Remove code
-        .trim();
-    }
-  }
-  return 'Untitled';
+  noteLinksByList.set(notes, links);
+  return links;
 }
 
 /**
  * Find note by title or UUID
  */
-function findNoteByTitleOrId(
-  notes: Array<{ id: string; content: string; tags?: string[] }>,
-  ref: string
-): { id: string; title: string } | undefined {
-  // Check if ref looks like a UUID
-  const isUuid = UUID_PATTERN.test(ref);
-
-  if (isUuid) {
-    const note = notes.find(n => n.id === ref);
-    if (note) {
-      return { id: note.id, title: extractNoteTitle(note.content, note.tags) };
-    }
-    return undefined;
-  }
-
-  // Search by title (case-insensitive)
-  const searchTitle = ref.toLowerCase();
-  for (const note of notes) {
-    const noteTitle = extractNoteTitle(note.content, note.tags);
-    if (noteTitle.toLowerCase() === searchTitle) {
-      return { id: note.id, title: noteTitle };
-    }
-  }
-
-  return undefined;
+function findNoteByTitleOrId(links: NoteLinks, ref: string): { id: string; title: string } | undefined {
+  return UUID_PATTERN.test(ref) ? links.byId.get(ref) : links.byTitle.get(ref.toLowerCase());
 }
 
 /**
  * Parse wiki-style links [[Note Title]] or [[uuid|Display Text]]
  * and convert to markdown links with note: protocol
  */
-function parseWikiLinks(
-  content: string,
-  notes: Array<{ id: string; content: string; tags?: string[] }>
-): string {
+function parseWikiLinks(content: string, links: NoteLinks): string {
   // Match [[...]] patterns, but not inside code blocks or inline code
   // This regex matches [[content]] where content can include | for display text
   // Limited so a run of unclosed brackets can't make each one scan the whole note
@@ -108,7 +96,7 @@ function parseWikiLinks(
     }
 
     // Try to find the note
-    const foundNote = findNoteByTitleOrId(notes, noteRef);
+    const foundNote = findNoteByTitleOrId(links, noteRef);
 
     if (foundNote && UUID_PATTERN.test(foundNote.id)) {
       // Found the note - create a link with the note's UUID
@@ -196,7 +184,8 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
 
   try {
     // Pre-process wiki-style links [[Note Title]] before markdown parsing
-    const processedContent = parseWikiLinks(content, notes);
+    const noteLinks = noteLinksFor(notes);
+    const processedContent = parseWikiLinks(content, noteLinks);
     // Configure marked for better rendering
     marked.setOptions({
       breaks: true, // Convert \n to <br>
@@ -264,7 +253,7 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
         const noteId = href.substring('link:'.length);
 
         // Look up the note to get its title (for empty link text)
-        const foundNote = notes.find(n => n.id === noteId);
+        const foundNote = noteLinks.byId.get(noteId);
 
         if (!foundNote) {
           // Note not found - render as broken link
@@ -275,7 +264,7 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
         }
 
         // Auto-populate title if link text is empty
-        const displayText = text || escapeHtml(extractNoteTitle(foundNote.content, foundNote.tags));
+        const displayText = text || escapeHtml(foundNote.title);
 
         // Valid note link - render as clickable
         return `<a href="note:${escapeAttribute(noteId)}" data-note-id="${escapeAttribute(noteId)}" class="note-link inline-flex items-center px-1.5 py-0.5 rounded text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 cursor-pointer transition-colors no-underline">

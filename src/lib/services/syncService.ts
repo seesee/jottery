@@ -14,7 +14,7 @@ import type {
   SyncAccepted,
   SyncDeletion,
 } from '../types';
-import type { AttachmentWarning, InboxItem } from '../types';
+import type { Attachment, AttachmentWarning, InboxItem, SyncPushResponse } from '../types';
 import { syncRepository } from './syncRepository';
 import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
@@ -30,7 +30,6 @@ import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/base64';
 import { searchService } from './searchService';
 import { notes, remoteNoteUpdate, settings, isSyncRefreshing, isSyncing as isSyncingStore, syncProgress, inboxItems } from '../stores/appStore';
 import { toast } from '../utils/toast.svelte';
-import { createSyncRecoveryNote, deleteSyncRecoveryNote } from './syncRecoveryService';
 import { recordRejectedRemoteRecord, reportServerMissingAttachments } from './vaultHealthService';
 import {
   isTimestamp,
@@ -52,6 +51,7 @@ import {
   pullFromServer,
   getServerStatus,
   revokeDevice,
+  deleteInboxItem,
   SyncApiError,
 } from './syncClient';
 import { get } from 'svelte/store';
@@ -91,6 +91,9 @@ const MASS_DELETION_SHARE = 0.25;
 
 // How often to repeat that the account is full: this comes back on every sync
 const QUOTA_NOTICE_INTERVAL_MS = 60 * 60 * 1000;
+
+// The server skips anything dated further ahead of its clock than this
+const CLOCK_TOLERANCE_MS = 24 * 60 * 60 * 1000;
 
 /** Live notes deleted so far in one pull, and how many that may reach */
 interface DeletionBudget {
@@ -153,6 +156,11 @@ class SyncService {
   private retryNotBefore = 0; // Set when the server asks for a wait: no sync before this time
   private retryTimer?: number;
   private quotaNoticeAt = 0;
+  private clockNoticeAt = 0;
+  /** Notes the last push found were deleted elsewhere, as they were sent */
+  private skippedDeletedNotes = new Map<string, Note>();
+  /** Times on whatever the last push sent and heard nothing back about */
+  private unansweredTimes: string[] = [];
 
   /**
    * Set restore-in-progress flag to disable sync during backup restore
@@ -289,11 +297,6 @@ class SyncService {
 
     console.log('[SyncService] Registration complete, clientId:', data.clientId);
 
-    // Create sync recovery note (non-blocking)
-    createSyncRecoveryNote().catch(err =>
-      console.warn('[SyncService] Failed to create recovery note:', err)
-    );
-
     return data;
   }
 
@@ -329,11 +332,6 @@ class SyncService {
     });
 
     console.log('[SyncService] Credentials configured successfully');
-
-    // Create sync recovery note (non-blocking)
-    createSyncRecoveryNote().catch(err =>
-      console.warn('[SyncService] Failed to create recovery note:', err)
-    );
   }
 
   /**
@@ -370,7 +368,7 @@ class SyncService {
         // Database was terminated - disable auto-sync to stop the error loop
         this.disableAutoSync();
         console.error('[SyncService] Database terminated. Auto-sync disabled. Please refresh the page.');
-        toast.error('Database connection lost. Please refresh the page to continue.');
+        toast.error(get(_)('sync.databaseLost'));
         return { success: false, error: 'Database connection lost. Please refresh the page.' };
       }
       return { success: false, error: 'Database not available' };
@@ -415,6 +413,8 @@ class SyncService {
 
       // 2. Push local changes (force full sync if requested). A push that fails must
       // not stop this device hearing about changes made elsewhere.
+      this.skippedDeletedNotes.clear();
+      this.unansweredTimes = [];
       let pushedCount = 0;
       let pushError: unknown;
       try {
@@ -425,6 +425,7 @@ class SyncService {
       }
 
       // 3. Pull remote changes
+      await this.finishAcceptedInboxItems(metadata.syncEndpoint, apiKey);
       const { pulledCount, serverTime } = await this.pull(metadata.syncEndpoint, apiKey);
 
       // 4. Update last sync timestamp. The server filters on its own clock, and on
@@ -432,6 +433,7 @@ class SyncService {
       await syncRepository.updateMetadata({
         lastSyncAt: serverTime ?? startedAt,
       });
+      this.warnIfClockLooksWrong(serverTime ?? startedAt);
 
       // 5. Only reload notes if we PULLED remote changes
       // When we push, the store is already up-to-date (we saved locally before syncing)
@@ -507,6 +509,22 @@ class SyncService {
     }
   }
 
+  /**
+   * The server skips anything dated over a day ahead of it, and says so only in
+   * `errors`, which aren't for parsing. So this looks for what it heard nothing back
+   * about and compares its times with the server's clock, as the device's own clock
+   * is the one in doubt.
+   */
+  private warnIfClockLooksWrong(serverTime: string): void {
+    const limit = Date.parse(serverTime) + CLOCK_TOLERANCE_MS;
+    const tooFarAhead = this.unansweredTimes.some(time => Date.parse(time) > limit);
+
+    if (tooFarAhead && Date.now() - this.clockNoticeAt >= QUOTA_NOTICE_INTERVAL_MS) {
+      this.clockNoticeAt = Date.now();
+      toast.error(get(_)('sync.clockAhead'));
+    }
+  }
+
   /** Wait as asked, then sync. With live updates on, nothing else would start one. */
   private retryIn(seconds: number): void {
     this.retryNotBefore = Date.now() + seconds * 1000;
@@ -525,11 +543,19 @@ class SyncService {
    * credentials stay. Background sync stops until the app next starts, or a manual
    * sync succeeds.
    *
+   * A 401 means the device was revoked, or its key is unknown. Nothing will work until
+   * it's connected again, so this stops too.
+   *
    * A 507 means the account is full. Nothing was written, and pulling and deleting
    * still work, so sync carries on and the user is told to make room.
    */
   private handleServerRefusal(error: SyncApiError): void {
     switch (error.status) {
+      case 401:
+        this.disableAutoSync();
+        this.disconnectFromSyncEvents();
+        toast.error(get(_)('sync.deviceRevoked'));
+        break;
       case 403:
         this.disableAutoSync();
         this.disconnectFromSyncEvents();
@@ -784,6 +810,24 @@ class SyncService {
     }
   }
 
+  /**
+   * Note what the server skipped. Only what was sent counts: it can't name other notes
+   * here. Anything it names is dealt with after the pull, whose deletions it may repeat.
+   */
+  private recordSkippedNotes(result: SyncPushResponse, pushedNotes: Map<string, Note>): void {
+    const answered = new Set([...result.accepted, ...result.rejected].map(item => item?.id));
+    const deletedElsewhere = new Set(result.skippedDeleted ?? []);
+
+    for (const [id, note] of pushedNotes) {
+      if (deletedElsewhere.has(id)) {
+        this.skippedDeletedNotes.set(id, note);
+      } else if (!answered.has(id)) {
+        const { createdAt, modifiedAt, deletedAt, archivedAt, lockedAt } = note;
+        this.unansweredTimes.push(...[createdAt, modifiedAt, deletedAt, archivedAt, lockedAt].filter(time => !!time) as string[]);
+      }
+    }
+  }
+
   /** Convert a note to sync format */
   private async convertNoteToSyncFormat(note: Note, masterKey: CryptoKey) {
     const syncTags = await storageToSync(note.tags, masterKey);
@@ -876,6 +920,7 @@ class SyncService {
     const pushedNotes = new Map(sendable.map(note => [note.id, note]));
     await this.processAcceptedNotes(result.accepted, pushedNotes, new Set(attachmentMap.keys()));
     await this.processRejectedNotes(result.rejected, pushedNotes);
+    this.recordSkippedNotes(result, pushedNotes);
     const warnings = result.attachmentWarnings ?? [];
 
     // Update progress
@@ -960,7 +1005,15 @@ class SyncService {
 
   /** Send saved searches, which also shouldn't have to wait for a note to change */
   private async pushSavedSearches(endpoint: string, apiKey: string, savedSearches: SyncSavedSearch[]): Promise<void> {
-    validatePushResponse(await pushToServer(endpoint, apiKey, { notes: [], attachments: [], versions: [], savedSearches }));
+    const result = validatePushResponse(await pushToServer(endpoint, apiKey, { notes: [], attachments: [], versions: [], savedSearches }));
+
+    // A search is all this request holds, so an error means one was skipped. Nothing
+    // says which, and sending them all again is harmless.
+    if (result.errors?.length) {
+      console.warn(`[SyncService] The server skipped saved searches: ${result.errors.length}`);
+      this.unansweredTimes.push(...savedSearches.map(search => search.modifiedAt));
+      return;
+    }
 
     for (const search of savedSearches) {
       await savedSearchRepository.markSynced(search.id, search.version);
@@ -1285,7 +1338,9 @@ class SyncService {
         const blob = base64ToArrayBuffer(attachment.data);
         await attachmentRepository.storeBlob(attachment.id, blob);
       } catch (error) {
+        // A pull that moves on won't send this again, so vault health has to know
         console.error(`[SyncService] Failed to download attachment ${attachment.id}:`, error);
+        recordRejectedRemoteRecord('attachment', attachment.id, 'could not be stored');
       }
     }
   }
@@ -1306,27 +1361,14 @@ class SyncService {
       );
 
       if (!existingVersion) {
-        await versionRepository.createVersion(
-          {
-            id: serverVersion.noteId,
-            content: serverVersion.content,
-            // Older rows on the server are in either format, depending on the client
-            tags: await syncToStorage(serverVersion.tags, masterKey),
-            attachments: serverVersion.attachments,
-            version: serverVersion.version,
-            syntaxLanguage: serverVersion.syntaxLanguage,
-            wordWrap: serverVersion.wordWrap,
-            createdAt: serverVersion.createdAt,
-            modifiedAt: serverVersion.createdAt,
-            pinned: false,
-            deleted: false,
-            syncedAt: serverVersion.syncedAt,
-          } as Note,
-          {
-            syncedAt: serverVersion.syncedAt,
-            reason: serverVersion.reason as 'sync' | 'manual-sync',
-          }
-        );
+        await versionRepository.storeRemoteVersion({
+          ...serverVersion,
+          // Older rows on the server are in either format, depending on the client
+          tags: await syncToStorage(serverVersion.tags, masterKey),
+          attachments: serverVersion.attachments as Attachment[],
+          // Per device, like a note's. A server mustn't be able to turn a preview on.
+          showPreview: undefined,
+        });
       }
     }
   }
@@ -1377,6 +1419,28 @@ class SyncService {
     console.log(`[SyncService] Processed ${savedSearches.length} saved searches from server`);
   }
 
+  /**
+   * Finish deleting inbox items accepted while the server couldn't be told. One that
+   * still can't be deleted waits for the next sync, and holds up nothing else.
+   */
+  private async finishAcceptedInboxItems(endpoint: string, apiKey: string): Promise<void> {
+    const accepted = (await syncRepository.getMetadata())?.acceptedInboxIds ?? [];
+    const deleted: string[] = [];
+
+    for (const id of accepted) {
+      try {
+        await deleteInboxItem(normalizeEndpoint(endpoint), apiKey, id);
+        deleted.push(id);
+      } catch (error) {
+        console.warn('[SyncService] Could not delete an accepted inbox item:', error);
+      }
+    }
+
+    if (deleted.length > 0) {
+      await syncRepository.removeAcceptedInboxIds(deleted);
+    }
+  }
+
   /** Inbox items that are safe to show, reporting any that are not */
   private validInboxItems(items: InboxItem[]): InboxItem[] {
     const valid: InboxItem[] = [];
@@ -1395,9 +1459,12 @@ class SyncService {
    * Process hard deletions from server. Past the limit, a note goes to the recycle bin
    * instead, so that a pull like that can be undone.
    *
-   * @returns How many notes were held in the bin
+   * @returns How many notes went from here, and how many of those are held in the bin
    */
-  private async processRemoteDeletions(deletions: Array<{ id: string }>, budget: DeletionBudget): Promise<number> {
+  private async processRemoteDeletions(
+    deletions: Array<{ id: string }>,
+    budget: DeletionBudget
+  ): Promise<{ removed: number; held: number }> {
     const valid = deletions.filter(deletion => {
       if (isUuid(deletion?.id)) return true;
       recordRejectedRemoteRecord('deletion', deletion?.id, 'invalid id');
@@ -1405,9 +1472,14 @@ class SyncService {
     });
 
     const live: Note[] = [];
+    const alreadyHeld = new Set<string>();
     for (const deletion of valid) {
       const note = await noteRepository.getById(deletion.id);
-      if (note && !note.deleted) live.push(note);
+      if (note?.deletionHeld) {
+        alreadyHeld.add(deletion.id);
+      } else if (note && !note.deleted) {
+        live.push(note);
+      }
     }
 
     if (budget.limit === null && live.length > 0) {
@@ -1421,17 +1493,48 @@ class SyncService {
 
     for (const note of live) {
       if (held.has(note.id)) {
-        await noteRepository.update({ ...note, deleted: true, deletedAt: new Date().toISOString(), needsSync: false }, false, true);
+        const now = new Date().toISOString();
+        await noteRepository.update(
+          { ...note, deleted: true, deletedAt: now, deletionHeld: true, needsSync: false, syncedAt: note.syncedAt ?? now },
+          false,
+          true
+        );
       }
     }
 
+    let removed = held.size;
+    // A held note waits for the person to decide. Asking again doesn't change that, or
+    // a second pull would delete from the bin what the first couldn't delete outright.
     for (const deletion of valid) {
-      if (!held.has(deletion.id) && await noteService.applyRemoteDeletion(deletion.id)) {
+      if (held.has(deletion.id) || alreadyHeld.has(deletion.id)) continue;
+      if (await noteService.applyRemoteDeletion(deletion.id)) {
         console.log(`[SyncService] Hard deleted note ${deletion.id} (from server)`);
+        removed++;
       }
     }
 
-    return held.size;
+    return { removed, held: held.size };
+  }
+
+  /**
+   * Apply what the push learned from `skippedDeleted`, counted with the pull's own
+   * deletions so that it can't be used to get round their limit. This matters for a
+   * device past the deletion in the pull's order, which won't be sent it again.
+   *
+   * A note edited since it was sent stays. That edit is later than the deletion, so
+   * the server will take it.
+   */
+  private async dropNotesDeletedElsewhere(budget: DeletionBudget): Promise<{ removed: number; held: number }> {
+    const deletions: Array<{ id: string }> = [];
+    for (const [id, pushed] of this.skippedDeletedNotes) {
+      const note = await noteRepository.getById(id);
+      if (note && this.isUnchangedSincePush(note, pushed)) {
+        deletions.push({ id });
+      }
+    }
+    this.skippedDeletedNotes.clear();
+
+    return this.processRemoteDeletions(deletions, budget);
   }
 
   /**
@@ -1454,6 +1557,7 @@ class SyncService {
 
     this.pulledNoteIds = [];
 
+    const alreadyAccepted = new Set(metadata?.acceptedInboxIds);
     let hasMore = true;
     let serverTime: string | undefined;
     let progressStarted = false;
@@ -1520,11 +1624,13 @@ class SyncService {
         await this.processSavedSearchesFromServer(result.savedSearches, syncedAt);
       }
       if (result.deletions) {
-        heldDeletions += await this.processRemoteDeletions(result.deletions, deletionBudget);
+        const { removed, held } = await this.processRemoteDeletions(result.deletions, deletionBudget);
+        heldDeletions += held;
+        totalNotes += removed; // So the list refreshes
       }
 
       // The server sends the whole inbox on every page, or nothing if it's empty
-      inboxItems.set(this.validInboxItems(result.inboxItems ?? []));
+      inboxItems.set(this.validInboxItems(result.inboxItems ?? []).filter(item => !alreadyAccepted.has(item.id)));
 
       if (result.nextCursor !== undefined) {
         // Timestamp mode can have silently skipped changes, and nothing can detect
@@ -1562,9 +1668,12 @@ class SyncService {
       }
     }
 
+    const dropped = await this.dropNotesDeletedElsewhere(deletionBudget);
+    heldDeletions += dropped.held;
+    totalNotes += dropped.removed;
+
     if (heldDeletions > 0) {
       toast.error(get(_)('sync.massDeletionHeld', { values: { count: String(heldDeletions) } }));
-      totalNotes += heldDeletions; // So the list refreshes
     }
 
     console.log(`[SyncService] Pulled ${totalNotes} notes, ${totalAttachments} attachments, ${totalDeletions} deletions`);
@@ -1668,7 +1777,7 @@ class SyncService {
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to get SSE token: ${response.status}`);
+      throw new SyncApiError(`Failed to get SSE token: ${response.status}`, response.status, await response.text());
     }
 
     const data = await response.json();
@@ -1681,6 +1790,10 @@ class SyncService {
    *
    * Security: Uses short-lived tokens instead of API keys in the URL.
    * The API key is exchanged for a token via an authenticated endpoint.
+   *
+   * A browser doesn't show a stream's status, so a 401 looks like any other refusal.
+   * Every reconnection therefore asks for a new token, and that request says why: a
+   * 401 or a 403 there means the device or account, not the token.
    */
   async connectToSyncEvents(): Promise<void> {
     // Don't reconnect if already connected or connecting
@@ -1790,8 +1903,12 @@ class SyncService {
       };
     } catch (error) {
       console.error('[SyncService] Failed to connect to SSE:', error);
-      // Fall back to periodic sync on any error
       this.sseConnecting = false;
+      if (error instanceof SyncApiError && (error.status === 401 || error.status === 403)) {
+        this.handleServerRefusal(error);
+        return;
+      }
+      // Fall back to periodic sync on any other error
       this.sseFailedOver = true;
       this.restorePeriodicSync();
     }
@@ -1853,13 +1970,9 @@ class SyncService {
     // Before the credentials go, because this needs them
     const revoked = await this.revokeThisDevice();
 
-    // Delete recovery note (non-blocking)
-    deleteSyncRecoveryNote().catch(err =>
-      console.warn('[SyncService] Failed to delete recovery note:', err)
-    );
-
     // Clear all sync metadata (credentials, client ID, etc.)
     await syncRepository.clearAll();
+    inboxItems.set([]);
 
     // Update settings to disable sync
     await settingsRepository.update({

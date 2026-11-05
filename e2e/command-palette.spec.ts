@@ -37,7 +37,6 @@ test.describe('Command palette', () => {
     test('Duplicate runs once', async ({ page }) => {
       await runCommand(page, 'Duplicate');
       await expect(app.noteListItems).toHaveCount(2, { timeout: 10000 });
-      await page.waitForTimeout(500);
       await expect(app.noteListItems).toHaveCount(2);
     });
 

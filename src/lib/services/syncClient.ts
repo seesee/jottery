@@ -86,6 +86,19 @@ function handleHttpError(response: Response, errorText: string, operation: strin
 }
 
 /**
+ * Delete an inbox item from the server. One that's already gone counts as deleted.
+ */
+export async function deleteInboxItem(endpoint: string, apiKey: string, itemId: string): Promise<void> {
+  const response = await fetchWithTimeout(`${endpoint}/api/${API_VERSION}/inbox/${itemId}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${apiKey}` },
+  });
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`Failed to delete inbox item: ${response.statusText}`);
+  }
+}
+
+/**
  * Register a new device with the sync server
  */
 export async function registerDevice(

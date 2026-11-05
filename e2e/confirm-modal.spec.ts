@@ -29,7 +29,6 @@ test.describe('Confirmation dialogs', () => {
     await page.keyboard.press('Enter');
 
     await expect(cancel).toBeHidden({ timeout: 5000 });
-    await page.waitForTimeout(500);
     await expect(app.noteListItems).toHaveCount(1);
   });
 

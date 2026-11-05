@@ -13,6 +13,8 @@ import type { Attachment } from '../types';
 import { attachmentService, cryptoService, keyManager } from '../services';
 import { stripMarkdownSignifiers, isMarkdownLanguage } from './markdownStrip';
 import { escapeHtml, sanitiseHtml } from './htmlSanitiser';
+import { renderMarkdown } from './markdownPreview';
+import { removePrintFrame, trackPrintFrame } from './printFrames';
 
 /**
  * Map syntax language to file extension
@@ -178,9 +180,9 @@ export async function generatePrintHtml(options: PrintOptions): Promise<string |
   // Build the HTML content based on language type
   let htmlContent: string;
 
-  if (language === 'markdown' && previewHtml) {
-    // Use rendered markdown preview
-    htmlContent = sanitiseHtml(previewHtml);
+  if (language === 'markdown') {
+    // There's no preview HTML unless the preview happens to be open
+    htmlContent = sanitiseHtml(previewHtml || renderMarkdown(content, { attachments, openLinksInNewTab: false }));
   } else if (language === 'html' || language === 'xml') {
     // The note's own markup, reduced to what can't run
     htmlContent = sanitiseHtml(content);
@@ -357,18 +359,19 @@ function printInSandboxedFrame(html: string): Promise<boolean> {
     frame.addEventListener('load', () => {
       try {
         const printWindow = frame.contentWindow as Window;
-        printWindow.addEventListener('afterprint', () => frame.remove(), { once: true });
+        printWindow.addEventListener('afterprint', () => removePrintFrame(frame), { once: true });
         printWindow.focus();
         printWindow.print();
         resolve(true);
       } catch (error) {
         console.error('Failed to print note:', error);
-        frame.remove();
+        removePrintFrame(frame);
         resolve(false);
       }
     }, { once: true });
 
     frame.srcdoc = html;
+    trackPrintFrame(frame);
     document.body.appendChild(frame);
   });
 }

@@ -136,21 +136,6 @@ export interface KeyManager {
    * Check if application is locked
    */
   isLocked(): boolean;
-
-  /**
-   * Register activity (for auto-lock timeout)
-   */
-  registerActivity(): void;
-
-  /**
-   * Start auto-lock timer
-   */
-  startAutoLock(timeoutMinutes: number): void;
-
-  /**
-   * Stop auto-lock timer
-   */
-  stopAutoLock(): void;
 }
 
 /**

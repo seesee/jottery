@@ -9,6 +9,7 @@
   import { settings } from '../stores/appStore';
   import { getFontSize } from '../utils/fontSize';
   import { attachmentService } from '../services';
+  import { imageObjectUrl } from '../utils/safeObjectUrl';
 
   export let value: string = '';
   export let onChange: (value: string) => void = () => {};
@@ -63,7 +64,7 @@
           // Load and decrypt the blob using attachmentService
           // Cast to Attachment type since we've verified data exists
           const blob = await attachmentService.getAttachmentData(attachment as import('../types').Attachment);
-          const blobUrl = URL.createObjectURL(blob);
+          const blobUrl = await imageObjectUrl(blob);
           blobUrls.push(blobUrl);
           img.setAttribute('src', blobUrl);
           img.setAttribute('data-loaded', 'true');
@@ -125,7 +126,7 @@
           (async () => {
             try {
               // Create a temporary blob URL for immediate display
-              const tempBlobUrl = URL.createObjectURL(file);
+              const tempBlobUrl = await imageObjectUrl(file);
               blobUrls.push(tempBlobUrl);
 
               const markdownRef = await onImagePaste(file);

@@ -5,9 +5,22 @@
 
 import type { DecryptedNote, SortOrder } from '../types';
 import { get } from 'svelte/store';
-import { notes, remoteNoteUpdate } from './appStore';
+import { filteredNotes, inboxItems, notes, remoteNoteUpdate } from './appStore';
 import { searchService } from '../services/searchService';
 import { noteService } from '../services/noteService';
+import { removePrintFrames } from '../utils/printFrames';
+
+/**
+ * Drop everything decrypted that the app holds, for when it locks. Not part of lock():
+ * a key can be cleared without that, by keyManager's own timer or a failed save.
+ */
+export function clearDecryptedState(): void {
+  notes.set([]);
+  filteredNotes.set([]);
+  inboxItems.set([]);
+  searchService.indexNotes([]);
+  removePrintFrames();
+}
 
 /**
  * Update a single note in the notes store

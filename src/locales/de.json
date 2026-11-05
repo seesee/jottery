@@ -186,6 +186,21 @@
     "confirmDelete": {
       "title": "Notiz löschen",
       "message": "Dies verschiebt die Notiz in den Papierkorb. Sie können sie später bei Bedarf wiederherstellen."
+    },
+    "actionFailed": {
+      "archive": "Fehler beim Archivieren der Notiz: {error}",
+      "unarchive": "Fehler beim Wiederherstellen der Notiz aus dem Archiv: {error}",
+      "lock": "Fehler beim Sperren der Notiz: {error}",
+      "unlock": "Fehler beim Entsperren der Notiz: {error}",
+      "delete": "Fehler beim Löschen der Notiz: {error}"
+    },
+    "copyLinkFailed": "Fehler beim Kopieren des Links in die Zwischenablage",
+    "noteEditor": "Notizeditor",
+    "calc": {
+      "tooLong": "Diese Notiz ist zu lang zum Berechnen ({lines} Zeilen, höchstens {max}). Kürzen Sie sie oder wählen Sie eine andere Syntax.",
+      "consecutiveErrors": "Nach {count} Fehlern in Folge angehalten. Das sieht nicht nach Berechnungen aus. Versuchen Sie eine andere Syntax.",
+      "totalErrors": "Nach {count} Fehlern angehalten. Versuchen Sie für diese Notiz eine andere Syntax.",
+      "tooSlow": "Angehalten, weil es zu lange gedauert hat. Die Zeilen darunter haben kein Ergebnis."
     }
   },
   "noteList": {
@@ -195,7 +210,8 @@
     "noteCountAll": "{total} Notizen"
   },
   "tagInput": {
-    "removeTag": "Schlagwort entfernen"
+    "removeTag": "Schlagwort entfernen",
+    "suggestions": "Tag-Vorschläge"
   },
   "backupReminder": {
     "title": "Zeit für eine Sicherung Ihrer Notizen",
@@ -216,7 +232,8 @@
     "frequencyMonthly": "Monatlich",
     "frequencyOnChanges": "Nach einer bestimmten Anzahl von Änderungen",
     "changesThreshold": "Sichern nach dieser Anzahl von Änderungen",
-    "description": "Automatische Sicherungen werden auf Ihr Gerät heruntergeladen. Aktivieren Sie Erinnerungen, um benachrichtigt zu werden, wenn es Zeit für eine Sicherung ist."
+    "description": "Automatische Sicherungen werden auf Ihr Gerät heruntergeladen. Aktivieren Sie Erinnerungen, um benachrichtigt zu werden, wenn es Zeit für eine Sicherung ist.",
+    "saveFailed": "Diese Einstellung wurde nicht gespeichert. Versuchen Sie es erneut."
   },
   "backup": {
     "title": "Verschlüsseltes Backup",
@@ -256,7 +273,8 @@
         "records": "Datensätze"
       },
       "storageFull": "Dem Browser ist der Speicher ausgegangen, daher wurde die Wiederherstellung nicht abgeschlossen und nichts behalten. Ihre Sicherungsdatei ist in Ordnung: Geben Sie Speicherplatz frei und stellen Sie sie erneut wieder her."
-    }
+    },
+    "autoFailed": "Die automatische Sicherung ist fehlgeschlagen. Bitte erstellen Sie eine manuelle Sicherung."
   },
   "settings": {
     "title": "Einstellungen",
@@ -447,7 +465,19 @@
         "mustDiffer": "Ihr Notizen-Passwort und Ihr Kontopasswort müssen sich unterscheiden. Der Sync-Server sieht Ihr Kontopasswort. Stimmen beide überein, könnte er Ihre Notizen lesen.",
         "matchesAccountWarning": "Ihr Notizen-Passwort entspricht Ihrem Kontopasswort, daher könnte der Sync-Server Ihre Notizen lesen. Ändern Sie Ihr Notizen-Passwort, um das zu beheben."
       },
-      "existingAccountDetected": "Für diese E-Mail-Adresse existiert bereits ein Konto, daher wird dieses Gerät damit verbunden. Geben Sie das Notizen-Passwort ein, das Sie auf Ihren anderen Geräten verwenden."
+      "existingAccountDetected": "Für diese E-Mail-Adresse existiert bereits ein Konto, daher wird dieses Gerät damit verbunden. Geben Sie das Notizen-Passwort ein, das Sie auf Ihren anderen Geräten verwenden.",
+      "errors": {
+        "credentialsRequired": "E-Mail und Passwort sind erforderlich",
+        "passwordTooShort": "Das Passwort muss mindestens 12 Zeichen lang sein",
+        "registrationFailed": "Benutzerregistrierung fehlgeschlagen",
+        "deviceRegistrationFailed": "Geräteregistrierung fehlgeschlagen",
+        "loginFailed": "Anmeldung fehlgeschlagen",
+        "accountInfoFailed": "Fehler beim Laden der Kontoinformationen",
+        "deleteNotesFailed": "Fehler beim Löschen der Notizen",
+        "disconnectFailed": "Fehler beim Trennen der Verbindung",
+        "syncFailed": "Synchronisierung fehlgeschlagen",
+        "toggleFailed": "Fehler beim Ändern der Synchronisierung"
+      }
     },
     "editorTab": {
       "vimMode": "Editor-Modus",
@@ -485,7 +515,9 @@
       "formatHelp": "YYYY, MM, DD, HH, mm, ss Token verwenden",
       "value": "Wert",
       "description": "Beschreibung",
-      "preview": "Vorschau"
+      "preview": "Vorschau",
+      "textPlaceholder": "Einzufügender Text",
+      "descriptionPlaceholder": "In der Autovervollständigung angezeigte Beschreibung"
     },
     "keyboardTab": {
       "description": "Tastenkombinationen anpassen. Klicken Sie auf eine Tastenkombination, um sie zu ändern, und drücken Sie dann die gewünschte Tastenkombination.",
@@ -519,7 +551,8 @@
       "pressKey": "Taste drücken...",
       "notSet": "Nicht festgelegt",
       "needsModifier": "Dieses Kürzel funktioniert auch beim Tippen und benötigt daher Strg, Cmd oder Alt. Drücken Sie eine andere Taste oder Esc zum Abbrechen.",
-      "reserved": "Diese Taste ist reserviert. Drücken Sie eine andere Taste oder Esc zum Abbrechen."
+      "reserved": "Diese Taste ist reserviert. Drücken Sie eine andere Taste oder Esc zum Abbrechen.",
+      "toggleCollapse": "Einklappen oder ausklappen"
     },
     "syncTab": {
       "enableSync": "Synchronisation aktivieren",
@@ -573,7 +606,8 @@
         "button": "Passwort ändern",
         "success": "Passwort erfolgreich geändert",
         "error": "Passwort konnte nicht geändert werden: {error}",
-        "serverKeyFailed": "Ihr Passwort wurde auf diesem Gerät geändert, aber der Server konnte nicht aktualisiert werden. Beim nächsten Entsperren wird es erneut versucht. Bis dahin bräuchte ein neues Gerät Ihr altes Passwort."
+        "serverKeyFailed": "Ihr Passwort wurde auf diesem Gerät geändert, aber der Server konnte nicht aktualisiert werden. Beim nächsten Entsperren wird es erneut versucht. Bis dahin bräuchte ein neues Gerät Ihr altes Passwort.",
+        "keyStaysTheSame": "Ihr Verschlüsselungsschlüssel bleibt gleich, daher lassen sich alte Backups weiterhin mit Ihrem alten Passwort öffnen. Bewahren Sie sie sicher auf."
       },
       "connectionDetails": {
         "title": "Verbindungsdetails",
@@ -656,7 +690,9 @@
       "note": "Kein Konto erforderlich • Funktioniert offline • Selbst hostbar"
     },
     "screenshots": {
-      "mainInterface": "Hauptoberfläche mit Notizliste und Editor"
+      "mainInterface": "Hauptoberfläche mit Notizliste und Editor",
+      "carouselLabel": "Screenshot-Karussell",
+      "fullSizeLabel": "Bild in voller Größe"
     },
     "features": {
       "title": "Alles was Sie brauchen",
@@ -945,7 +981,9 @@
   "lock": {
     "title": "Anwendung sperren",
     "message": "Anwendung sperren? Nicht gespeicherte Änderungen gehen verloren.",
-    "confirmButton": "Sperren"
+    "confirmButton": "Sperren",
+    "locking": "Wird gesperrt...",
+    "savingAndSyncing": "Ihre Notizen werden gespeichert und synchronisiert"
   },
   "recycleBin": {
     "title": "Papierkorb",
@@ -1009,14 +1047,18 @@
     "markdownCopied": "Markdown-Link in Zwischenablage kopiert",
     "error": {
       "download": "Fehler beim Herunterladen des Anhangs",
-      "copyMarkdown": "Fehler beim Kopieren des Markdown-Links"
+      "copyMarkdown": "Fehler beim Kopieren des Markdown-Links",
+      "upload": "Fehler beim Hochladen von {name}: {error}",
+      "delete": "Fehler beim Löschen des Anhangs: {error}",
+      "paste": "Fehler beim Einfügen des Bildes: {error}"
     },
     "preview": {
       "title": "Anhangsvorschau",
       "loading": "Vorschau wird geladen...",
       "notAvailable": "Vorschau für diesen Dateityp nicht verfügbar.",
       "audioNotSupported": "Ihr Browser unterstützt keine Audiowiedergabe.",
-      "videoNotSupported": "Ihr Browser unterstützt keine Videowiedergabe."
+      "videoNotSupported": "Ihr Browser unterstützt keine Videowiedergabe.",
+      "videoLabel": "Videovorschau"
     },
     "confirmDelete": {
       "title": "Anhang entfernen?",
@@ -1069,7 +1111,8 @@
     "previousPage": "Vorherige Seite",
     "nextPage": "Nächste Seite",
     "zoomOut": "Verkleinern",
-    "zoomIn": "Vergrößern"
+    "zoomIn": "Vergrößern",
+    "loadFailed": "Dieses PDF konnte nicht geöffnet werden. Sie können es trotzdem herunterladen."
   },
   "versionHistory": {
     "title": "Versionsverlauf",
@@ -1092,7 +1135,8 @@
       "title": "Version wiederherstellen",
       "message": "Möchten Sie diese Version wirklich wiederherstellen? Ihre aktuelle Notiz wird vor der Wiederherstellung als neue Version gespeichert.",
       "confirmButton": "Wiederherstellen"
-    }
+    },
+    "restoreFailed": "Fehler beim Wiederherstellen der Version: {error}"
   },
   "header": {
     "menu": "Menü",
@@ -1101,7 +1145,8 @@
     "addContentFirst": "Fügen Sie zuerst Inhalt zur aktuellen Notiz hinzu",
     "lastSynced": "Zuletzt synchronisiert: {time}",
     "neverSynced": "Noch nicht synchronisiert",
-    "syncDisabled": "Synchronisierung ist nicht aktiviert"
+    "syncDisabled": "Synchronisierung ist nicht aktiviert",
+    "newNote": "Neue Notiz"
   },
   "confirm": {
     "deleteDatabase": {
@@ -1190,7 +1235,9 @@
     "resolveButton": "Konflikt lösen",
     "syncNotification": "{count, plural, one {1 Notiz hat einen Synchronisierungskonflikt} other {{count} Notizen haben Synchronisierungskonflikte}}",
     "serverUnreadable": "Die Kopie dieser Notiz auf dem Server kann nicht gelesen werden und wurde möglicherweise verändert. Nur Ihre Version kann behalten werden.",
-    "localUnreadable": "Die Kopie dieser Notiz auf diesem Gerät kann nicht gelesen werden."
+    "localUnreadable": "Die Kopie dieser Notiz auf diesem Gerät kann nicht gelesen werden.",
+    "loadFailed": "Fehler beim Laden der Konfliktdaten",
+    "resolveFailed": "Fehler beim Lösen des Konflikts"
   },
   "pullToRefresh": {
     "pull": "Nach unten ziehen zum Synchronisieren",
@@ -1204,7 +1251,10 @@
     "notesRefused": "Einige Notizen überschreiten das Upload-Limit Ihres Kontos und wurden nicht synchronisiert. Alles andere wurde synchronisiert.",
     "accountDisabled": "Ihr Konto ist deaktiviert oder wartet auf Freigabe, daher wurde die Synchronisierung angehalten. Ihre Notizen auf diesem Gerät sind sicher. Wenden Sie sich an Ihren Administrator.",
     "storageQuotaExceeded": "Ihr Konto hat sein Speicherlimit erreicht, daher können Änderungen auf diesem Gerät nicht hochgeladen werden. Löschen Sie einige Notizen oder Anhänge endgültig, um Platz zu schaffen.",
-    "massDeletionHeld": "Der Server wollte {count} Notizen auf einmal löschen. Sie liegen im Papierkorb, falls das nicht von Ihnen kam. Stellen Sie sie dort wieder her oder leeren Sie den Papierkorb, wenn es gewollt war."
+    "massDeletionHeld": "Der Server wollte {count} Notizen auf einmal löschen. Sie liegen im Papierkorb, falls das nicht von Ihnen kam. Stellen Sie sie dort wieder her oder leeren Sie den Papierkorb, wenn es gewollt war.",
+    "clockAhead": "Einige Änderungen wurden nicht synchronisiert, weil ihr Datum mehr als einen Tag vor der Serverzeit liegt. Prüfen Sie Datum und Uhrzeit auf diesem Gerät.",
+    "deviceRevoked": "Dieses Gerät ist nicht mehr mit Ihrem Konto verbunden, daher wurde die Synchronisierung angehalten. Ihre Notizen auf diesem Gerät sind sicher. Verbinden Sie es in den Einstellungen erneut.",
+    "databaseLost": "Die Datenbankverbindung wurde getrennt. Bitte laden Sie die Seite neu, um fortzufahren."
   },
   "inbox": {
     "title": "Posteingang",
@@ -1454,6 +1504,7 @@
       "attachment": "Anhang",
       "inboxItem": "Posteingangselement",
       "deletion": "Löschung"
-    }
+    },
+    "scanFailed": "Die Prüfung wurde nicht abgeschlossen. Versuchen Sie es erneut."
   }
 }

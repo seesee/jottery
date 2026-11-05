@@ -430,7 +430,6 @@ test.describe('User Portal', () => {
       await deleteButton.click();
 
       // Wait for modal
-      await page.waitForTimeout(500);
 
       // Find the delete forever button in the modal
       const confirmDeleteButton = page.locator('.fixed button, [role="dialog"] button').filter({ hasText: /Delete Forever/i });

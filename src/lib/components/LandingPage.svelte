@@ -267,7 +267,7 @@
           on:mouseenter={stopCarousel}
           on:mouseleave={startCarousel}
           role="region"
-          aria-label="Screenshot carousel"
+          aria-label={$_('landing.screenshots.carouselLabel')}
         >
           {#each currentScreenshots as screenshot, index}
             <div
@@ -504,14 +504,14 @@
       on:keydown={handleLightboxKeydown}
       role="dialog"
       aria-modal="true"
-      aria-label="Full size image view"
+      aria-label={$_('landing.screenshots.fullSizeLabel')}
       tabindex="-1"
     >
       <button
         type="button"
         class="lightbox-close"
         on:click={closeLightbox}
-        aria-label="Close lightbox"
+        aria-label={$_('common.close')}
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"></line>

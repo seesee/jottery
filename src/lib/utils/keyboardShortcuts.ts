@@ -1,10 +1,25 @@
-import type { KeyboardShortcut } from '../types';
+import { DEFAULT_KEYBOARD_SHORTCUTS, type KeyboardShortcut, type KeyboardShortcuts } from '../types';
 
 /**
  * Detect if the user is on a Mac
  */
 export function isMac(): boolean {
   return typeof navigator !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+}
+
+/** Saved shortcuts, with defaults for any added since they were saved */
+export function withDefaultShortcuts(saved: Partial<KeyboardShortcuts> | undefined): KeyboardShortcuts {
+  return { ...DEFAULT_KEYBOARD_SHORTCUTS, ...saved };
+}
+
+/** Whether a key press is a shortcut, with Cmd counting as Ctrl */
+export function matchesShortcut(event: KeyboardEvent, shortcut: KeyboardShortcut | undefined): boolean {
+  if (!shortcut?.key) return false;
+
+  return (shortcut.ctrl === true) === (event.ctrlKey || event.metaKey)
+    && (shortcut.alt === true) === event.altKey
+    && (shortcut.shift === true) === event.shiftKey
+    && event.key.toLowerCase() === shortcut.key.toLowerCase();
 }
 
 /**

@@ -35,6 +35,8 @@ export interface Note {
   color?: string; // Semantic color name (e.g., 'red', 'blue') - unencrypted
   serverHash?: string; // Local-only: the hash the server held when this note last became unsynced
   needsSync?: boolean; // Local-only flag indicating note needs to be synced (never sent to server)
+  deletionHeld?: boolean; // Local-only: in the bin because a server deleted too many at once
+  binnedAt?: string; // Local-only: when this device found it in the bin, which starts its 30 days
 }
 
 /**
@@ -122,6 +124,13 @@ export interface KeyboardShortcuts {
   togglePreview: KeyboardShortcut;
   duplicateNote: KeyboardShortcut;
   exportNote: KeyboardShortcut;
+
+  // Outliner shortcuts
+  outlinerIndent: KeyboardShortcut;
+  outlinerOutdent: KeyboardShortcut;
+  outlinerMoveUp: KeyboardShortcut;
+  outlinerMoveDown: KeyboardShortcut;
+  outlinerToggleCollapse: KeyboardShortcut;
 }
 
 /**
@@ -418,6 +427,13 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
   togglePreview: { key: 'p', ctrl: true, shift: true }, // Ctrl/Cmd+Shift+P
   duplicateNote: { key: 'd', ctrl: true }, // Ctrl/Cmd+D
   exportNote: { key: 'e', ctrl: true }, // Ctrl/Cmd+E
+
+  // Outliner shortcuts
+  outlinerIndent: { key: 'Tab' }, // Tab
+  outlinerOutdent: { key: 'Tab', shift: true }, // Shift+Tab
+  outlinerMoveUp: { key: 'ArrowUp', ctrl: true }, // Ctrl/Cmd+Up
+  outlinerMoveDown: { key: 'ArrowDown', ctrl: true }, // Ctrl/Cmd+Down
+  outlinerToggleCollapse: { key: '.', ctrl: true }, // Ctrl/Cmd+.
 };
 
 /**

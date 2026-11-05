@@ -186,14 +186,12 @@ test.describe('Note Operations', () => {
 
     // Click on first note in list
     await page.getByRole('list').getByRole('button').filter({ hasText: /First note/i }).first().click();
-    await page.waitForTimeout(500);
 
     // Editor should show first note content
     await expect(editor).toContainText(/First note content/i);
 
     // Click on second note
     await page.getByRole('list').getByRole('button').filter({ hasText: /Second note/i }).first().click();
-    await page.waitForTimeout(500);
 
     // Editor should show second note content
     await expect(editor).toContainText(/Second note content/i);

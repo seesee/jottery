@@ -1,7 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import { updateAvailable, newVersionInfo, appUpdateService } from '../services';
-  import { createBatchedBackup, downloadBackup } from '../services/backupService';
+  import { createBackupFile, downloadBackupFile } from '../services/backupService';
   import { flushPendingSave } from '../utils/pendingSave';
 
   let isBackingUp = false;
@@ -15,8 +15,7 @@
     isBackingUp = true;
     try {
       await flushPendingSave();
-      const backup = await createBatchedBackup();
-      downloadBackup(backup);
+      downloadBackupFile(await createBackupFile());
       // Give the download a moment to start before reloading
       setTimeout(() => {
         appUpdateService.reloadApp();
