@@ -122,6 +122,22 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
         return Ok(());
     }
 
+    // An attachment that won't be opened: the only offer is to save it
+    if app.attachment_to_confirm.is_some() {
+        match key.code {
+            KeyCode::Char('y') => {
+                if let Some(attachment) = app.attachment_to_confirm.take() {
+                    operations::attachments::begin_save_attachment(app, attachment);
+                }
+            }
+            KeyCode::Char('n') | KeyCode::Char('q') | KeyCode::Esc => {
+                app.attachment_to_confirm = None;
+            }
+            _ => {}
+        }
+        return Ok(());
+    }
+
     // Handle bulk add tags input mode
     if matches!(app.input_mode, InputMode::BulkAddTags) {
         match handle_text_input(&key, &mut app.bulk_tags_input) {
@@ -981,6 +997,24 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                                 app.error = Some(t!("attachment.view_failed", error = e.to_string()).to_string());
                             }
                         }
+                    }
+                }
+            }
+            KeyCode::Char('+') => {
+                // Attach a file to the selected note
+                if matches!(app.view_mode, ViewMode::NoteList | ViewMode::AttachmentViewer) && !app.is_multi_select_mode {
+                    if let Err(e) = operations::attachments::begin_add_attachment(app) {
+                        app.error = Some(t!("attachment.add_failed", error = e.to_string()).to_string());
+                    }
+                }
+            }
+            KeyCode::Char('S') => {
+                // Save the selected attachment to a file
+                let in_attachments = matches!(app.view_mode, ViewMode::AttachmentViewer)
+                    || (matches!(app.view_mode, ViewMode::NoteList) && app.focused_panel == FocusedPanel::Attachments);
+                if in_attachments {
+                    if let Some(attachment) = operations::attachments::selected_attachment(app) {
+                        operations::attachments::begin_save_attachment(app, attachment);
                     }
                 }
             }

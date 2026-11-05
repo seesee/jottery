@@ -127,7 +127,8 @@ pub fn render_help(app: &App, frame: &mut Frame) {
             "help.attachments",
             vec![
                 HelpEntry::new("help.tab_focus_attachment_key", "help.tab_focus_attachment_desc"),
-                HelpEntry::new("help.A_add_attachment_key", "help.A_add_attachment_desc"),
+                HelpEntry::new("help.plus_add_attachment_key", "help.plus_add_attachment_desc"),
+                HelpEntry::new("help.S_save_attachment_key", "help.S_save_attachment_desc"),
                 HelpEntry::new("help.a_view_attachment_key", "help.a_view_attachment_desc"),
                 HelpEntry::new("help.shift_jk_attachment_key", "help.shift_jk_attachment_desc"),
                 HelpEntry::new("help.X_remove_attachment_key", "help.X_remove_attachment_desc"),

@@ -129,6 +129,13 @@ attachment:
   no_opener: "このシステムにはファイルを開くプログラムがありません。代わりに S で添付ファイルを保存してください。"
   delete_failed: "添付ファイルの削除に失敗しました: %{error}"
   deleted: "削除しました: %{name}"
+  exists: "%{path} はすでに存在します。別の名前を選んでください。"
+  saved: "%{path} に保存しました"
+  save_failed: "添付ファイルの保存に失敗しました: %{error}"
+  added: "%{name} を添付しました"
+  too_large: "ファイルが大きすぎます。上限は %{max_mb} MB です。"
+  unsafe_title: "このファイルは開きません"
+  unsafe_body: "この種類のファイルを開くと、送信者のコードが実行される可能性があります。代わりに保存しますか？"
 version:
   history: バージョン履歴
   restore: バージョンを復元
@@ -402,8 +409,8 @@ help:
   s_q_close_desc: 設定パネルを閉じる
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: 添付ファイルパネルにフォーカス (j/kで移動、Enterで表示、dで削除)
-  A_add_attachment_key: A
-  A_add_attachment_desc: 添付ファイルを追加 (ファイルパスを入力)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: 添付ファイルを追加 (ファイルパスを入力)
   a_view_attachment_key: a + 番号
   a_view_attachment_desc: 添付ファイルを表示 (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -468,6 +475,8 @@ help:
   scroll_desc: プレビューを上下にスクロール
   ctrl_l_lock_key: "Ctrl+L"
   ctrl_l_lock_desc: "Jottery をロック"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "選択した添付ファイルをファイルに保存"
 cli:
   # 代替 (一部で使用)
   list: ノートを一覧表示
@@ -609,6 +618,12 @@ ui:
   type: "タイプ:"
   modified: "更新日時:"
   version: "バージョン:"
+  save_attachment: "添付ファイルを保存 (Tab: 補完、↑↓: 選択、Enter: 確定)"
+  path: "パス"
+  attachments_hint: "添付ファイル: (Tab でフォーカス)"
+  attachments_focused_hint: "添付ファイル: (Tab で切替、j/k で移動、Enter で表示、S で保存、d で削除)"
+  attachments_keys_hint: "'a' で表示、'+' で追加、'X' で選択項目を削除"
+  attachment_viewer_hint: "↑/↓: 移動 │ 1-9: クイック選択 │ Enter: 表示 │ S: 保存 │ +: 追加 │ d: 削除 │ Esc: 閉じる"
 
 # ステータスバーヘルプテキスト
 status_bar:
@@ -658,6 +673,8 @@ status_bar:
   quick_select: "クイック選択"
   view: "表示"
   restore_version: "バージョンを復元"
+  save: "保存"
+  add: "追加"
 
 # Virtual tags
 tags:

@@ -266,8 +266,12 @@ pub struct App {
     pub selected_attachment: usize,
     /// Which panel is focused in preview pane (content or attachments)
     pub focused_panel: super::state::FocusedPanel,
-    /// File path input buffer (when adding attachments)
+    /// File path input buffer (when adding or saving attachments)
     pub attachment_path_input: String,
+    /// The attachment the path prompt is saving. None when it's adding a file.
+    pub attachment_to_save: Option<crate::models::Attachment>,
+    /// An attachment of a type that won't be opened, waiting for an answer about saving it
+    pub attachment_to_confirm: Option<crate::models::Attachment>,
     /// Path completions for Tab completion
     pub path_completions: Vec<String>,
     /// Selected completion index
@@ -436,6 +440,8 @@ impl App {
             selected_attachment: 0,
             focused_panel: super::state::FocusedPanel::default(),
             attachment_path_input: String::new(),
+            attachment_to_save: None,
+            attachment_to_confirm: None,
             path_completions: Vec::new(),
             path_completion_index: 0,
             chafa_available: None,
@@ -604,6 +610,8 @@ impl App {
         self.focused_panel = super::state::FocusedPanel::default();
         self.view_mode = ViewMode::NoteList;
         self.input_mode = InputMode::Normal;
+        self.attachment_to_save = None;
+        self.attachment_to_confirm = None;
         self.show_force_sync_confirm = false;
         self.show_empty_bin_confirm = false;
         self.show_bulk_delete_confirm = false;

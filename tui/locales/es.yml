@@ -129,6 +129,13 @@ attachment:
   no_opener: "Este sistema no tiene un programa para abrir archivos. Guarda el adjunto con S."
   delete_failed: "No se pudo eliminar el adjunto: %{error}"
   deleted: "Eliminado: %{name}"
+  exists: "%{path} ya existe. Elige otro nombre."
+  saved: "Guardado en %{path}"
+  save_failed: "No se pudo guardar el adjunto: %{error}"
+  added: "%{name} adjuntado"
+  too_large: "El archivo es demasiado grande. El límite es %{max_mb} MB."
+  unsafe_title: "Este archivo no se abrirá"
+  unsafe_body: "Abrir este tipo de archivo podría ejecutar código de quien lo envió. ¿Guardarlo en su lugar?"
 version:
   history: Historial de versiones
   restore: Restaurar versión
@@ -402,8 +409,8 @@ help:
   s_q_close_desc: Cerrar panel de configuración
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: Enfocar panel de adjuntos (j/k para navegar, Enter para ver, d para eliminar)
-  A_add_attachment_key: A
-  A_add_attachment_desc: Añadir adjunto (introducir ruta del archivo)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: Añadir adjunto (introducir ruta del archivo)
   a_view_attachment_key: a + número
   a_view_attachment_desc: Ver adjunto (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -468,6 +475,8 @@ help:
   scroll_desc: Desplazar vista previa arriba/abajo
   ctrl_l_lock_key: "Ctrl+L"
   ctrl_l_lock_desc: "Bloquear Jottery"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Guardar el adjunto seleccionado en un archivo"
 cli:
   # Alt (usado en algunos lugares)
   list: Listar notas
@@ -609,6 +618,12 @@ ui:
   type: "Tipo:"
   modified: "Modificado:"
   version: "Versión:"
+  save_attachment: "Guardar adjunto (Tab: completar, ↑↓: seleccionar, Intro: confirmar)"
+  path: "Ruta"
+  attachments_hint: "Adjuntos: (Tab para enfocar)"
+  attachments_focused_hint: "Adjuntos: (Tab para cambiar, j/k para navegar, Intro para ver, S para guardar, d para eliminar)"
+  attachments_keys_hint: "'a' para ver, '+' para añadir, 'X' para quitar el seleccionado"
+  attachment_viewer_hint: "↑/↓: navegar │ 1-9: selección rápida │ Intro: ver │ S: guardar │ +: añadir │ d: eliminar │ Esc: cerrar"
 
 # Texto de ayuda de la barra de estado
 status_bar:
@@ -658,6 +673,8 @@ status_bar:
   quick_select: "Selección rápida"
   view: "ver"
   restore_version: "Restaurar versión"
+  save: "guardar"
+  add: "añadir"
 
 # Virtual tags
 tags:

@@ -129,6 +129,13 @@ attachment:
   no_opener: "Dit systeem heeft geen programma om bestanden te openen. Bewaar de bijlage in plaats daarvan met S."
   delete_failed: "Bijlage verwijderen mislukt: %{error}"
   deleted: "Verwijderd: %{name}"
+  exists: "%{path} bestaat al. Kies een andere naam."
+  saved: "Opgeslagen in %{path}"
+  save_failed: "Bijlage opslaan mislukt: %{error}"
+  added: "%{name} bijgevoegd"
+  too_large: "Het bestand is te groot. De limiet is %{max_mb} MB."
+  unsafe_title: "Dit bestand wordt niet geopend"
+  unsafe_body: "Dit type bestand openen kan code van de afzender uitvoeren. In plaats daarvan opslaan?"
 version:
   history: Versiegeschiedenis
   restore: Versie herstellen
@@ -402,8 +409,8 @@ help:
   s_q_close_desc: Instellingenpaneel sluiten
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: Bijlagenpaneel focussen (j/k om te navigeren, Enter om te bekijken, d om te verwijderen)
-  A_add_attachment_key: A
-  A_add_attachment_desc: Bijlage toevoegen (bestandspad invoeren)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: Bijlage toevoegen (bestandspad invoeren)
   a_view_attachment_key: a + nummer
   a_view_attachment_desc: Bijlage bekijken (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -468,6 +475,8 @@ help:
   scroll_desc: Voorbeeld omhoog/omlaag scrollen
   ctrl_l_lock_key: "Ctrl+L"
   ctrl_l_lock_desc: "Jottery vergrendelen"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Geselecteerde bijlage in een bestand opslaan"
 cli:
   # Basis (op sommige plaatsen gebruikt)
   list: Notities weergeven
@@ -609,6 +618,12 @@ ui:
   type: "Type:"
   modified: "Gewijzigd:"
   version: "Versie:"
+  save_attachment: "Bijlage opslaan (Tab: aanvullen, ↑↓: kiezen, Enter: bevestigen)"
+  path: "Pad"
+  attachments_hint: "Bijlagen: (Tab om te focussen)"
+  attachments_focused_hint: "Bijlagen: (Tab om te wisselen, j/k om te navigeren, Enter om te bekijken, S om op te slaan, d om te verwijderen)"
+  attachments_keys_hint: "'a' om te bekijken, '+' om toe te voegen, 'X' om de selectie te verwijderen"
+  attachment_viewer_hint: "↑/↓: navigeren │ 1-9: snel kiezen │ Enter: bekijken │ S: opslaan │ +: toevoegen │ d: verwijderen │ Esc: sluiten"
 
 # Statusbalk hulptekst
 status_bar:
@@ -658,6 +673,8 @@ status_bar:
   quick_select: "Snelselectie"
   view: "bekijken"
   restore_version: "Versie herstellen"
+  save: "opslaan"
+  add: "toevoegen"
 
 # Virtual tags
 tags:

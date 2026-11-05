@@ -129,6 +129,13 @@ attachment:
   no_opener: "이 시스템에는 파일을 열 프로그램이 없습니다. 대신 S로 첨부 파일을 저장하세요."
   delete_failed: "첨부 파일을 삭제하지 못했습니다: %{error}"
   deleted: "삭제됨: %{name}"
+  exists: "%{path}이(가) 이미 있습니다. 다른 이름을 선택하세요."
+  saved: "%{path}에 저장했습니다"
+  save_failed: "첨부 파일을 저장하지 못했습니다: %{error}"
+  added: "%{name}을(를) 첨부했습니다"
+  too_large: "파일이 너무 큽니다. 제한은 %{max_mb}MB입니다."
+  unsafe_title: "이 파일은 열지 않습니다"
+  unsafe_body: "이 유형의 파일을 열면 보낸 사람의 코드가 실행될 수 있습니다. 대신 저장할까요?"
 version:
   history: "버전 히스토리"
   restore: "버전 복원"
@@ -402,8 +409,8 @@ help:
   s_q_close_desc: "설정 패널 닫기"
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: "첨부 파일 패널 포커스 (j/k로 탐색, Enter로 보기, d로 삭제)"
-  A_add_attachment_key: A
-  A_add_attachment_desc: "첨부 파일 추가 (파일 경로 입력)"
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: "첨부 파일 추가 (파일 경로 입력)"
   a_view_attachment_key: a + 번호
   a_view_attachment_desc: "첨부 파일 보기 (a1, a2, ...)"
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -468,6 +475,8 @@ help:
   scroll_desc: "미리보기 위/아래 스크롤"
   ctrl_l_lock_key: "Ctrl+L"
   ctrl_l_lock_desc: "Jottery 잠금"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "선택한 첨부 파일을 파일로 저장"
 cli:
   # 기존 (일부 위치에서 사용됨)
   list: "노트 목록"
@@ -609,6 +618,12 @@ ui:
   type: "유형:"
   modified: "수정됨:"
   version: "버전:"
+  save_attachment: "첨부 파일 저장 (Tab: 완성, ↑↓: 선택, Enter: 확인)"
+  path: "경로"
+  attachments_hint: "첨부 파일: (Tab으로 포커스)"
+  attachments_focused_hint: "첨부 파일: (Tab 전환, j/k 이동, Enter 보기, S 저장, d 삭제)"
+  attachments_keys_hint: "'a' 보기, '+' 추가, 'X' 선택 항목 제거"
+  attachment_viewer_hint: "↑/↓: 이동 │ 1-9: 빠른 선택 │ Enter: 보기 │ S: 저장 │ +: 추가 │ d: 삭제 │ Esc: 닫기"
 
 # 상태 표시줄 도움말 텍스트
 status_bar:
@@ -658,6 +673,8 @@ status_bar:
   quick_select: "빠른 선택"
   view: "보기"
   restore_version: "버전 복원"
+  save: "저장"
+  add: "추가"
 
 # Virtual tags
 tags:

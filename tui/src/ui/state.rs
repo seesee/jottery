@@ -94,9 +94,7 @@ pub enum InputMode {
     SettingsEdit,
     /// Password verification mode (for enabling remember password)
     PasswordVerify,
-    /// Attachment path input mode (entering file path to attach)
-    /// Note: This mode is defined but not currently used in the application
-    #[allow(dead_code)]
+    /// Attachment path input mode (entering a path to attach from or save to)
     AttachmentPath,
     /// Bulk add tags input mode
     BulkAddTags,

@@ -129,6 +129,13 @@ attachment:
   no_opener: "Aucun programme pour ouvrir des fichiers sur ce système. Enregistrez plutôt la pièce jointe avec S."
   delete_failed: "Impossible de supprimer la pièce jointe : %{error}"
   deleted: "Supprimé : %{name}"
+  exists: "%{path} existe déjà. Choisissez un autre nom."
+  saved: "Enregistré dans %{path}"
+  save_failed: "Impossible d'enregistrer la pièce jointe : %{error}"
+  added: "%{name} joint"
+  too_large: "Le fichier est trop volumineux. La limite est de %{max_mb} Mo."
+  unsafe_title: "Ce fichier ne sera pas ouvert"
+  unsafe_body: "Ouvrir ce type de fichier pourrait exécuter du code de son expéditeur. L'enregistrer plutôt ?"
 version:
   history: Historique des versions
   restore: Restaurer la version
@@ -402,8 +409,8 @@ help:
   s_q_close_desc: Fermer le panneau des paramètres
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: Focuser le panneau des pièces jointes (j/k pour naviguer, Entrée pour afficher, d pour supprimer)
-  A_add_attachment_key: A
-  A_add_attachment_desc: Ajouter une pièce jointe (entrez le chemin du fichier)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: Ajouter une pièce jointe (entrez le chemin du fichier)
   a_view_attachment_key: a + numéro
   a_view_attachment_desc: Voir la pièce jointe (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -468,6 +475,8 @@ help:
   scroll_desc: Faire défiler l'aperçu haut/bas
   ctrl_l_lock_key: "Ctrl+L"
   ctrl_l_lock_desc: "Verrouiller Jottery"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Enregistrer la pièce jointe sélectionnée dans un fichier"
 cli:
   # Alt (utilisé à certains endroits)
   list: Lister les notes
@@ -609,6 +618,12 @@ ui:
   type: "Type :"
   modified: "Modifié :"
   version: "Version :"
+  save_attachment: "Enregistrer la pièce jointe (Tab : compléter, ↑↓ : choisir, Entrée : confirmer)"
+  path: "Chemin"
+  attachments_hint: "Pièces jointes : (Tab pour sélectionner)"
+  attachments_focused_hint: "Pièces jointes : (Tab pour changer, j/k pour naviguer, Entrée pour voir, S pour enregistrer, d pour supprimer)"
+  attachments_keys_hint: "'a' pour voir, '+' pour ajouter, 'X' pour retirer la sélection"
+  attachment_viewer_hint: "↑/↓ : naviguer │ 1-9 : sélection rapide │ Entrée : voir │ S : enregistrer │ + : ajouter │ d : supprimer │ Esc : fermer"
 
 # Texte d'aide de la barre de statut
 status_bar:
@@ -658,6 +673,8 @@ status_bar:
   quick_select: "Sélection rapide"
   view: "afficher"
   restore_version: "Restaurer la version"
+  save: "enregistrer"
+  add: "ajouter"
 
 # Virtual tags
 tags:

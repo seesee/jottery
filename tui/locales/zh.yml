@@ -129,6 +129,13 @@ attachment:
   no_opener: "此系统没有可打开文件的程序。请改用 S 保存附件。"
   delete_failed: "删除附件失败：%{error}"
   deleted: "已删除：%{name}"
+  exists: "%{path} 已存在。请选择其他名称。"
+  saved: "已保存到 %{path}"
+  save_failed: "保存附件失败：%{error}"
+  added: "已添加附件 %{name}"
+  too_large: "文件过大。上限为 %{max_mb} MB。"
+  unsafe_title: "不会打开此文件"
+  unsafe_body: "打开此类型的文件可能会运行发送者的代码。是否改为保存？"
 version:
   history: 版本历史
   restore: 恢复版本
@@ -402,8 +409,8 @@ help:
   s_q_close_desc: 关闭设置面板
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: 聚焦附件面板 (j/k 导航，Enter 查看，d 删除)
-  A_add_attachment_key: A
-  A_add_attachment_desc: 添加附件 (输入文件路径)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: 添加附件 (输入文件路径)
   a_view_attachment_key: a + 数字
   a_view_attachment_desc: 查看附件 (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -468,6 +475,8 @@ help:
   scroll_desc: 上下滚动预览
   ctrl_l_lock_key: "Ctrl+L"
   ctrl_l_lock_desc: "锁定 Jottery"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "将所选附件保存到文件"
 cli:
   # 简短命令描述（用于旧版/备用）
   list: 列出笔记
@@ -609,6 +618,12 @@ ui:
   type: "类型："
   modified: "修改时间："
   version: "版本："
+  save_attachment: "保存附件（Tab：补全，↑↓：选择，Enter：确认）"
+  path: "路径"
+  attachments_hint: "附件：（按 Tab 聚焦）"
+  attachments_focused_hint: "附件：（Tab 切换，j/k 移动，Enter 查看，S 保存，d 删除）"
+  attachments_keys_hint: "按 'a' 查看，'+' 添加，'X' 删除所选"
+  attachment_viewer_hint: "↑/↓：移动 │ 1-9：快速选择 │ Enter：查看 │ S：保存 │ +：添加 │ d：删除 │ Esc：关闭"
 
 # 状态栏帮助文本
 status_bar:
@@ -658,6 +673,8 @@ status_bar:
   quick_select: "快速选择"
   view: "查看"
   restore_version: "恢复版本"
+  save: "保存"
+  add: "添加"
 
 # Virtual tags
 tags:

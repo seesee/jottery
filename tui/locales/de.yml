@@ -129,6 +129,13 @@ attachment:
   no_opener: "Auf diesem System gibt es kein Programm zum Öffnen von Dateien. Speichere den Anhang stattdessen mit S."
   delete_failed: "Anhang konnte nicht gelöscht werden: %{error}"
   deleted: "Gelöscht: %{name}"
+  exists: "%{path} existiert bereits. Wähle einen anderen Namen."
+  saved: "Gespeichert unter %{path}"
+  save_failed: "Anhang konnte nicht gespeichert werden: %{error}"
+  added: "%{name} angehängt"
+  too_large: "Die Datei ist zu groß. Die Grenze liegt bei %{max_mb} MB."
+  unsafe_title: "Diese Datei wird nicht geöffnet"
+  unsafe_body: "Beim Öffnen dieses Dateityps könnte Code des Absenders ausgeführt werden. Stattdessen speichern?"
 version:
   history: Versionshistorie
   restore: Version wiederherstellen
@@ -402,8 +409,8 @@ help:
   s_q_close_desc: Einstellungsfenster schließen
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: Anhang-Panel fokussieren (j/k zum Navigieren, Enter zum Anzeigen, d zum Löschen)
-  A_add_attachment_key: A
-  A_add_attachment_desc: Anhang hinzufügen (Dateipfad eingeben)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: Anhang hinzufügen (Dateipfad eingeben)
   a_view_attachment_key: a + Nummer
   a_view_attachment_desc: Anhang anzeigen (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -468,6 +475,8 @@ help:
   scroll_desc: Vorschau hoch/runter scrollen
   ctrl_l_lock_key: "Strg+L"
   ctrl_l_lock_desc: "Jottery sperren"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Ausgewählten Anhang in einer Datei speichern"
 cli:
   # Alt (an einigen Stellen verwendet)
   list: Notizen auflisten
@@ -609,6 +618,12 @@ ui:
   type: "Typ:"
   modified: "Geändert:"
   version: "Version:"
+  save_attachment: "Anhang speichern (Tab: vervollständigen, ↑↓: auswählen, Enter: bestätigen)"
+  path: "Pfad"
+  attachments_hint: "Anhänge: (Tab zum Fokussieren)"
+  attachments_focused_hint: "Anhänge: (Tab zum Wechseln, j/k zum Navigieren, Enter zum Anzeigen, S zum Speichern, d zum Löschen)"
+  attachments_keys_hint: "'a' zum Anzeigen, '+' zum Hinzufügen, 'X' zum Entfernen des ausgewählten Anhangs"
+  attachment_viewer_hint: "↑/↓: navigieren │ 1-9: Schnellauswahl │ Enter: anzeigen │ S: speichern │ +: hinzufügen │ d: löschen │ Esc: schließen"
 
 # Statusleisten-Hilfetext
 status_bar:
@@ -658,6 +673,8 @@ status_bar:
   quick_select: "Schnellauswahl"
   view: "anzeigen"
   restore_version: "Version wiederherstellen"
+  save: "speichern"
+  add: "hinzufügen"
 
 # Virtual tags
 tags:

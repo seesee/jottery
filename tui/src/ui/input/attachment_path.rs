@@ -27,6 +27,7 @@ pub fn handle_attachment_path_key(app: &mut App, key: KeyEvent) -> Result<bool> 
             // Cancel attachment input
             app.attachment_path_input.clear();
             app.reset_path_completions();
+            app.attachment_to_save = None;
             app.input_mode = InputMode::Normal;
         }
         KeyCode::Tab => {
@@ -93,15 +94,26 @@ fn handle_path_enter(app: &mut App) -> Result<()> {
             app.path_completions = operations::attachments::get_path_completions(&app.attachment_path_input);
         }
     } else {
-        // Add attachment from file path
+        // Save to the path, or add the file at it
         let path = app.attachment_path_input.clone();
+        let saving = app.attachment_to_save.take();
         app.attachment_path_input.clear();
         app.reset_path_completions();
         app.input_mode = InputMode::Normal;
 
-        if !path.is_empty() {
-            if let Err(e) = operations::attachments::add_attachment_to_current_note(app, &path) {
-                app.error = Some(t!("attachment.add_failed", error = e.to_string()).to_string());
+        if path.is_empty() {
+            return Ok(());
+        }
+
+        match saving {
+            Some(attachment) => match operations::attachments::save_attachment(app, &attachment, &path) {
+                Ok(saved) => app.notify(t!("attachment.saved", path = saved.display().to_string()).to_string()),
+                Err(e) => app.error = Some(t!("attachment.save_failed", error = format!("{e:#}")).to_string()),
+            },
+            None => {
+                if let Err(e) = operations::attachments::add_attachment_to_current_note(app, &path) {
+                    app.error = Some(t!("attachment.add_failed", error = e.to_string()).to_string());
+                }
             }
         }
     }

@@ -129,6 +129,13 @@ attachment:
   no_opener: "В этой системе нет программы для открытия файлов. Сохраните вложение клавишей S."
   delete_failed: "Не удалось удалить вложение: %{error}"
   deleted: "Удалено: %{name}"
+  exists: "%{path} уже существует. Выберите другое имя."
+  saved: "Сохранено в %{path}"
+  save_failed: "Не удалось сохранить вложение: %{error}"
+  added: "Вложение добавлено: %{name}"
+  too_large: "Файл слишком большой. Предел — %{max_mb} МБ."
+  unsafe_title: "Этот файл не будет открыт"
+  unsafe_body: "Открытие файла такого типа может запустить код отправителя. Сохранить его вместо этого?"
 version:
   history: История версий
   restore: Восстановить версию
@@ -402,8 +409,8 @@ help:
   s_q_close_desc: Закрыть панель настроек
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: Переключиться на панель вложений (j/k для навигации, Enter для просмотра, d для удаления)
-  A_add_attachment_key: A
-  A_add_attachment_desc: Добавить вложение (введите путь к файлу)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: Добавить вложение (введите путь к файлу)
   a_view_attachment_key: a + номер
   a_view_attachment_desc: Просмотреть вложение (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -468,6 +475,8 @@ help:
   scroll_desc: Прокрутка предпросмотра вверх/вниз
   ctrl_l_lock_key: "Ctrl+L"
   ctrl_l_lock_desc: "Заблокировать Jottery"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Сохранить выбранное вложение в файл"
 cli:
   # Альтернативные (используются в некоторых местах)
   list: Список заметок
@@ -609,6 +618,12 @@ ui:
   type: "Тип:"
   modified: "Изменено:"
   version: "Версия:"
+  save_attachment: "Сохранить вложение (Tab: дополнить, ↑↓: выбрать, Enter: подтвердить)"
+  path: "Путь"
+  attachments_hint: "Вложения: (Tab — перейти)"
+  attachments_focused_hint: "Вложения: (Tab — переключить, j/k — навигация, Enter — просмотр, S — сохранить, d — удалить)"
+  attachments_keys_hint: "'a' — просмотр, '+' — добавить, 'X' — удалить выбранное"
+  attachment_viewer_hint: "↑/↓: навигация │ 1-9: быстрый выбор │ Enter: просмотр │ S: сохранить │ +: добавить │ d: удалить │ Esc: закрыть"
 
 # Текст справки в строке состояния
 status_bar:
@@ -658,6 +673,8 @@ status_bar:
   quick_select: "быстрый выбор"
   view: "просмотр"
   restore_version: "восстановить версию"
+  save: "сохранить"
+  add: "добавить"
 
 # Virtual tags
 tags:

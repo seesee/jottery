@@ -143,6 +143,13 @@ attachment:
   no_opener: "No program to open files with on this system. Save the attachment with S instead."
   delete_failed: "Failed to delete attachment: %{error}"
   deleted: "Deleted: %{name}"
+  exists: "%{path} already exists. Choose another name."
+  saved: "Saved to %{path}"
+  save_failed: "Failed to save attachment: %{error}"
+  added: "Attached %{name}"
+  too_large: "File is too large. The limit is %{max_mb} MB."
+  unsafe_title: "This file won't be opened"
+  unsafe_body: "Opening this type of file could run code from whoever sent it. Save it instead?"
 
 # Version history
 version:
@@ -449,8 +456,8 @@ help:
   s_q_close_desc: "Close settings panel"
   tab_focus_attachment_key: "Tab"
   tab_focus_attachment_desc: "Focus attachment panel (j/k to navigate, Enter to view, d to delete)"
-  A_add_attachment_key: "A"
-  A_add_attachment_desc: "Add attachment (enter file path)"
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: "Add attachment (enter file path)"
   a_view_attachment_key: "a + number"
   a_view_attachment_desc: "View attachment (a1, a2, ...)"
   shift_jk_attachment_key: "Shift+j / Shift+k"
@@ -515,6 +522,8 @@ help:
   scroll_desc: "Scroll preview up/down"
   ctrl_l_lock_key: "Ctrl+L"
   ctrl_l_lock_desc: "Lock Jottery"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Save selected attachment to a file"
 
 # CLI commands and help text
 cli:
@@ -650,6 +659,12 @@ ui:
   type: "Type:"
   modified: "Modified:"
   version: "Version:"
+  save_attachment: "Save Attachment (Tab: complete, ↑↓: select, Enter: confirm)"
+  path: "Path"
+  attachments_hint: "Attachments: (Tab to focus)"
+  attachments_focused_hint: "Attachments: (Tab to switch, j/k to navigate, Enter to view, S to save, d to delete)"
+  attachments_keys_hint: "Press 'a' to view, '+' to add, 'X' to remove selected"
+  attachment_viewer_hint: "↑/↓: navigate │ 1-9: quick select │ Enter: view │ S: save │ +: add │ d: delete │ Esc: close"
 
 # Status bar help text
 status_bar:
@@ -699,6 +714,8 @@ status_bar:
   quick_select: "quick select"
   view: "view"
   restore_version: "restore version"
+  save: "save"
+  add: "add"
 
 # Virtual tags
 tags:

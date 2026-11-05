@@ -129,6 +129,13 @@ attachment:
   no_opener: "Bu sistemde dosya açacak bir program yok. Bunun yerine eki S ile kaydedin."
   delete_failed: "Ek silinemedi: %{error}"
   deleted: "Silindi: %{name}"
+  exists: "%{path} zaten var. Başka bir ad seçin."
+  saved: "%{path} konumuna kaydedildi"
+  save_failed: "Ek kaydedilemedi: %{error}"
+  added: "%{name} eklendi"
+  too_large: "Dosya çok büyük. Sınır %{max_mb} MB."
+  unsafe_title: "Bu dosya açılmayacak"
+  unsafe_body: "Bu tür bir dosyayı açmak gönderenin kodunu çalıştırabilir. Bunun yerine kaydedilsin mi?"
 version:
   history: Sürüm geçmişi
   restore: Sürümü geri yükle
@@ -402,8 +409,8 @@ help:
   s_q_close_desc: Ayarlar panelini kapat
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: Ek paneline odaklan (j/k ile gezin, Enter ile görüntüle, d ile sil)
-  A_add_attachment_key: A
-  A_add_attachment_desc: Ek ekle (dosya yolunu girin)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: Ek ekle (dosya yolunu girin)
   a_view_attachment_key: a + numara
   a_view_attachment_desc: Ek görüntüle (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -468,6 +475,8 @@ help:
   scroll_desc: Önizlemeyi yukarı/aşağı kaydır
   ctrl_l_lock_key: "Ctrl+L"
   ctrl_l_lock_desc: "Jottery uygulamasını kilitle"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Seçili eki bir dosyaya kaydet"
 cli:
   # Eski (bazı yerlerde kullanılıyor)
   list: Notları listele
@@ -609,6 +618,12 @@ ui:
   type: "Tür:"
   modified: "Değiştirildi:"
   version: "Sürüm:"
+  save_attachment: "Eki kaydet (Tab: tamamla, ↑↓: seç, Enter: onayla)"
+  path: "Yol"
+  attachments_hint: "Ekler: (odaklanmak için Tab)"
+  attachments_focused_hint: "Ekler: (geçmek için Tab, gezinmek için j/k, görüntülemek için Enter, kaydetmek için S, silmek için d)"
+  attachments_keys_hint: "Görüntülemek için 'a', eklemek için '+', seçileni kaldırmak için 'X'"
+  attachment_viewer_hint: "↑/↓: gezin │ 1-9: hızlı seçim │ Enter: görüntüle │ S: kaydet │ +: ekle │ d: sil │ Esc: kapat"
 
 # Durum çubuğu yardım metni
 status_bar:
@@ -658,6 +673,8 @@ status_bar:
   quick_select: "Hızlı seçim"
   view: "görüntüle"
   restore_version: "Sürümü geri yükle"
+  save: "kaydet"
+  add: "ekle"
 
 # Virtual tags
 tags:

@@ -129,6 +129,13 @@ attachment:
   no_opener: "Δεν υπάρχει πρόγραμμα ανοίγματος αρχείων σε αυτό το σύστημα. Αποθηκεύστε το συνημμένο με το S."
   delete_failed: "Αποτυχία διαγραφής συνημμένου: %{error}"
   deleted: "Διαγράφηκε: %{name}"
+  exists: "Το %{path} υπάρχει ήδη. Επιλέξτε άλλο όνομα."
+  saved: "Αποθηκεύτηκε στο %{path}"
+  save_failed: "Αποτυχία αποθήκευσης συνημμένου: %{error}"
+  added: "Επισυνάφθηκε το %{name}"
+  too_large: "Το αρχείο είναι πολύ μεγάλο. Το όριο είναι %{max_mb} MB."
+  unsafe_title: "Αυτό το αρχείο δεν θα ανοίξει"
+  unsafe_body: "Το άνοιγμα αυτού του τύπου αρχείου θα μπορούσε να εκτελέσει κώδικα του αποστολέα. Αποθήκευση αντί γι’ αυτό;"
 version:
   history: Ιστορικό εκδόσεων
   restore: Επαναφορά έκδοσης
@@ -402,8 +409,8 @@ help:
   s_q_close_desc: Κλείσιμο πίνακα ρυθμίσεων
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: Εστίαση στο πάνελ συνημμένων (j/k για πλοήγηση, Enter για προβολή, d για διαγραφή)
-  A_add_attachment_key: A
-  A_add_attachment_desc: Προσθήκη συνημμένου (εισαγάγετε διαδρομή αρχείου)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: Προσθήκη συνημμένου (εισαγάγετε διαδρομή αρχείου)
   a_view_attachment_key: a + αριθμός
   a_view_attachment_desc: Προβολή συνημμένου (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -468,6 +475,8 @@ help:
   scroll_desc: Κύλιση προεπισκόπησης πάνω/κάτω
   ctrl_l_lock_key: "Ctrl+L"
   ctrl_l_lock_desc: "Κλείδωμα του Jottery"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Αποθήκευση επιλεγμένου συνημμένου σε αρχείο"
 cli:
   # Εναλλακτικό (χρησιμοποιείται σε ορισμένα σημεία)
   list: Λίστα σημειώσεων
@@ -609,6 +618,12 @@ ui:
   type: "Τύπος:"
   modified: "Τροποποιήθηκε:"
   version: "Έκδοση:"
+  save_attachment: "Αποθήκευση συνημμένου (Tab: συμπλήρωση, ↑↓: επιλογή, Enter: επιβεβαίωση)"
+  path: "Διαδρομή"
+  attachments_hint: "Συνημμένα: (Tab για εστίαση)"
+  attachments_focused_hint: "Συνημμένα: (Tab εναλλαγή, j/k πλοήγηση, Enter προβολή, S αποθήκευση, d διαγραφή)"
+  attachments_keys_hint: "'a' για προβολή, '+' για προσθήκη, 'X' για αφαίρεση του επιλεγμένου"
+  attachment_viewer_hint: "↑/↓: πλοήγηση │ 1-9: γρήγορη επιλογή │ Enter: προβολή │ S: αποθήκευση │ +: προσθήκη │ d: διαγραφή │ Esc: κλείσιμο"
 
 # Κείμενο βοήθειας γραμμής κατάστασης
 status_bar:
@@ -658,6 +673,8 @@ status_bar:
   quick_select: "Γρήγορη επιλογή"
   view: "προβολή"
   restore_version: "επαναφορά έκδοσης"
+  save: "αποθήκευση"
+  add: "προσθήκη"
 
 # Virtual tags
 tags:

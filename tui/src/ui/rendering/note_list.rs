@@ -362,9 +362,10 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                     t!("status_bar.back_to_notes"), t!("status_bar.navigate"))
             }
             ViewMode::AttachmentViewer => {
-                format!("↑/↓: {} | 1-9: {} | Enter: {} | d: {} | Esc: {}",
+                format!("↑/↓: {} | 1-9: {} | Enter: {} | S: {} | +: {} | d: {} | Esc: {}",
                     t!("status_bar.navigate"), t!("status_bar.quick_select"),
-                    t!("status_bar.view"), t!("status_bar.delete"), t!("status_bar.close"))
+                    t!("status_bar.view"), t!("status_bar.save"), t!("status_bar.add"),
+                    t!("status_bar.delete"), t!("status_bar.close"))
             }
             ViewMode::VersionHistory => {
                 format!("↑/↓: {} | Enter: {} | Esc: {}",
@@ -610,9 +611,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
             // Show header with focus indicator
             let header_text = if is_focused {
-                "▶ Attachments: (Tab to switch, j/k to navigate, Enter to view, d to delete)"
+                format!("▶ {}", t!("ui.attachments_focused_hint"))
             } else {
-                "Attachments: (Tab to focus)"
+                t!("ui.attachments_hint").to_string()
             };
             let header_style = if is_focused {
                 Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)
@@ -655,7 +656,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             if !is_focused {
                 lines.push(Line::raw(""));
                 lines.push(Line::styled(
-                    "Press 'a' + number to view, 'A' to add, 'X' to remove selected",
+                    t!("ui.attachments_keys_hint").to_string(),
                     Style::default().fg(app.color_scheme.muted)
                 ));
             }
@@ -757,15 +758,20 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         frame.render_widget(Clear, modal_area);
 
         // Render modal background
+        let modal_title = if app.attachment_to_save.is_some() {
+            t!("ui.save_attachment").to_string()
+        } else {
+            t!("ui.add_attachment").to_string()
+        };
         let modal_block = Block::default()
-            .title(t!("ui.add_attachment").to_string())
+            .title(modal_title)
             .borders(Borders::ALL)
             .style(Style::default().bg(app.color_scheme.background).fg(app.color_scheme.accent));
 
         // Build content lines
         let mut lines = vec![
             Line::styled(
-                format!("Path: {}█", app.attachment_path_input),
+                format!("{}: {}█", t!("ui.path"), app.attachment_path_input),
                 Style::default().fg(app.color_scheme.foreground)
             ),
         ];
@@ -818,6 +824,25 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             app.color_scheme.accent,
             &app.color_scheme,
             60,
+            7,
+        );
+    }
+
+    // Render the question about an attachment that won't be opened
+    if let Some(attachment) = &app.attachment_to_confirm {
+        render_confirmation_modal(
+            frame,
+            size,
+            &t!("attachment.unsafe_title"),
+            vec![
+                Line::from(format!("{} ({})", attachment.filename, attachment.mime_type))
+                    .style(Style::default().fg(app.color_scheme.foreground)),
+                Line::from(t!("attachment.unsafe_body").to_string())
+                    .style(Style::default().fg(app.color_scheme.muted)),
+            ],
+            app.color_scheme.accent,
+            &app.color_scheme,
+            96,
             7,
         );
     }
@@ -902,7 +927,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
             modal_lines.push(Line::from(""));
             modal_lines.push(Line::styled(
-                "↑/↓: navigate │ 1-9: quick select │ Enter: view │ d: delete │ Esc: close",
+                t!("ui.attachment_viewer_hint").to_string(),
                 Style::default().fg(app.color_scheme.muted)
             ));
 

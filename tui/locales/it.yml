@@ -129,6 +129,13 @@ attachment:
   no_opener: "Nessun programma per aprire i file su questo sistema. Salva invece l'allegato con S."
   delete_failed: "Impossibile eliminare l'allegato: %{error}"
   deleted: "Eliminato: %{name}"
+  exists: "%{path} esiste già. Scegli un altro nome."
+  saved: "Salvato in %{path}"
+  save_failed: "Impossibile salvare l'allegato: %{error}"
+  added: "%{name} allegato"
+  too_large: "Il file è troppo grande. Il limite è %{max_mb} MB."
+  unsafe_title: "Questo file non verrà aperto"
+  unsafe_body: "Aprire questo tipo di file potrebbe eseguire codice del mittente. Salvarlo invece?"
 version:
   history: Cronologia versioni
   restore: Ripristina versione
@@ -402,8 +409,8 @@ help:
   s_q_close_desc: Chiudi pannello impostazioni
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: Sposta focus sul pannello allegati (j/k per navigare, Invio per visualizzare, d per eliminare)
-  A_add_attachment_key: A
-  A_add_attachment_desc: Aggiungi allegato (inserisci percorso file)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: Aggiungi allegato (inserisci percorso file)
   a_view_attachment_key: a + numero
   a_view_attachment_desc: Visualizza allegato (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -468,6 +475,8 @@ help:
   scroll_desc: Scorri anteprima su/giù
   ctrl_l_lock_key: "Ctrl+L"
   ctrl_l_lock_desc: "Blocca Jottery"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Salva l'allegato selezionato in un file"
 cli:
   # Alt (usato in alcuni contesti)
   list: Elenca note
@@ -609,6 +618,12 @@ ui:
   type: "Tipo:"
   modified: "Modificato:"
   version: "Versione:"
+  save_attachment: "Salva allegato (Tab: completa, ↑↓: seleziona, Invio: conferma)"
+  path: "Percorso"
+  attachments_hint: "Allegati: (Tab per il focus)"
+  attachments_focused_hint: "Allegati: (Tab per cambiare, j/k per navigare, Invio per vedere, S per salvare, d per eliminare)"
+  attachments_keys_hint: "'a' per vedere, '+' per aggiungere, 'X' per rimuovere il selezionato"
+  attachment_viewer_hint: "↑/↓: naviga │ 1-9: selezione rapida │ Invio: vedi │ S: salva │ +: aggiungi │ d: elimina │ Esc: chiudi"
 
 # Testo di aiuto barra di stato
 status_bar:
@@ -658,6 +673,8 @@ status_bar:
   quick_select: "Selezione rapida"
   view: "visualizza"
   restore_version: "Ripristina versione"
+  save: "salva"
+  add: "aggiungi"
 
 # Virtual tags
 tags:

@@ -129,6 +129,13 @@ attachment:
   no_opener: "W tym systemie nie ma programu do otwierania plików. Zapisz załącznik klawiszem S."
   delete_failed: "Nie udało się usunąć załącznika: %{error}"
   deleted: "Usunięto: %{name}"
+  exists: "%{path} już istnieje. Wybierz inną nazwę."
+  saved: "Zapisano w %{path}"
+  save_failed: "Nie udało się zapisać załącznika: %{error}"
+  added: "Dołączono %{name}"
+  too_large: "Plik jest za duży. Limit to %{max_mb} MB."
+  unsafe_title: "Ten plik nie zostanie otwarty"
+  unsafe_body: "Otwarcie pliku tego typu może uruchomić kod nadawcy. Zapisać go zamiast tego?"
 version:
   history: Historia wersji
   restore: Przywróć wersję
@@ -402,8 +409,8 @@ help:
   s_q_close_desc: Zamknij panel ustawień
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: Fokus na panelu załączników (j/k do nawigacji, Enter do podglądu, d do usunięcia)
-  A_add_attachment_key: A
-  A_add_attachment_desc: Dodaj załącznik (wprowadź ścieżkę pliku)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: Dodaj załącznik (wprowadź ścieżkę pliku)
   a_view_attachment_key: a + numer
   a_view_attachment_desc: Wyświetl załącznik (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -468,6 +475,8 @@ help:
   scroll_desc: Przewiń podgląd w górę/w dół
   ctrl_l_lock_key: "Ctrl+L"
   ctrl_l_lock_desc: "Zablokuj Jottery"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Zapisz wybrany załącznik do pliku"
 cli:
   # Alternatywne (używane w niektórych miejscach)
   list: Wyświetl notatki
@@ -609,6 +618,12 @@ ui:
   type: "Typ:"
   modified: "Zmodyfikowano:"
   version: "Wersja:"
+  save_attachment: "Zapisz załącznik (Tab: uzupełnij, ↑↓: wybierz, Enter: potwierdź)"
+  path: "Ścieżka"
+  attachments_hint: "Załączniki: (Tab, aby przejść)"
+  attachments_focused_hint: "Załączniki: (Tab — przełącz, j/k — nawigacja, Enter — podgląd, S — zapisz, d — usuń)"
+  attachments_keys_hint: "'a' — podgląd, '+' — dodaj, 'X' — usuń zaznaczony"
+  attachment_viewer_hint: "↑/↓: nawigacja │ 1-9: szybki wybór │ Enter: podgląd │ S: zapisz │ +: dodaj │ d: usuń │ Esc: zamknij"
 
 # Tekst pomocy paska stanu
 status_bar:
@@ -658,6 +673,8 @@ status_bar:
   quick_select: "Szybki wybór"
   view: "podgląd"
   restore_version: "Przywróć wersję"
+  save: "zapisz"
+  add: "dodaj"
 
 # Virtual tags
 tags:
