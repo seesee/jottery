@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT c.is_active, u.is_active AS user_is_active, u.approved AS user_approved\n           FROM clients c\n           JOIN users u ON u.id = c.user_id\n           WHERE c.id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "is_active",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "user_is_active",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "user_approved",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "65e6e02b71ea35bcabda02a576c21f21a4ffb58569840dce0788ec8bcd957c9c"
+}

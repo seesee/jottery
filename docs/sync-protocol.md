@@ -79,12 +79,17 @@ The size of `attachments[].data` plus note content must fit the account's upload
 | `errors` | string[] | Items skipped without failing the push, such as a blob with invalid base64. For logging: don't parse these |
 | `attachmentWarnings` | `{ noteId, attachmentIds }`[] | Only present when non-empty. Accepted notes referencing attachments the server has no blob for. Re-push any blobs you hold |
 | `rejectedDeletions` | string[] | Always present. Note ids whose deletion was refused (see [Deletions](#deletions)) |
+| `skippedDeleted` | string[] | Always present on a current server. Pushed notes skipped because they were permanently deleted after this edit. Stop sending them and drop the local copy, unless it has changed since. An older server doesn't send it, so treat it as empty |
 
 ### How a note is accepted
 
+A note's times are checked first. If `createdAt` or `modifiedAt`, or `deletedAt`, `archivedAt` or `lockedAt` when present, can't be read as RFC 3339, or is more than 24 hours ahead of the server's clock, the note is skipped. It's in neither `accepted` nor `rejected`, the reason is in `errors`, and nothing else in the push is affected. A saved search's `modifiedAt` is checked the same way. The note stays on the device, and can be sent again once the device's clock is right.
+
+Times are stored as they were sent, and compared as instants.
+
 For each note, in order:
 
-1. **A tombstone exists.** If the edit is later than the tombstone's `deletedAt`, the tombstone is cleared and the note is stored, resurrecting it. Otherwise the note is **skipped**: it appears in neither `accepted` nor `rejected`, and the client learns it is gone from `deletions` on a pull.
+1. **A tombstone exists.** If the edit is later than the tombstone's `deletedAt`, the tombstone is cleared and the note is stored, resurrecting it. Otherwise the note is **skipped**: its id is in `skippedDeleted`, it appears in neither `accepted` nor `rejected`, and the client learns it is gone from `deletions` on a pull.
 2. **The note is new to the server.** It is accepted.
 3. **Both sides have hashes** (the push sends `contentHash` and `parentHash`, and the server has `contentHash`). It is accepted if the server's hash equals the pushed `parentHash` (a fast-forward), equals the pushed `contentHash` (no change), or appears in the pushed `hashChain`. Otherwise it is rejected as a conflict.
 4. **Otherwise** it is accepted if `modifiedAt` is not earlier than the server's.
@@ -94,6 +99,8 @@ A note that isn't accepted changes nothing: its versions and attachment referenc
 ### Rejection
 
 A `rejected` entry describes the server's current note, so a client can merge without another request: `id`, `reason`, `serverModifiedAt`, `serverContent`, `serverTags`, `serverVersion`, `serverAttachments`, `serverPinned`, `serverArchived`, `serverArchivedAt`, `serverLocked`, `serverLockedAt`, `serverSyntaxLanguage`, `serverWordWrap`, `serverShowPreview`, `serverColor`, `serverContentHash`, `serverParentHash`, `serverHashChain`.
+
+`serverDeleted` and `serverDeletedAt` say whether the server's copy is in the bin. An older server doesn't send them, so treat them as `false` and `null`.
 
 When a common ancestor is found it also has `ancestorHash`, `ancestorContent` and `ancestorTags`, for a three-way merge.
 
@@ -258,7 +265,7 @@ There are two kinds of deletion.
 
 ### An edit beats an older deletion
 
-One rule applies whichever reaches the server first: **the note survives if its `modifiedAt` is later than the deletion's `deletedAt`.** Times are compared as instants, so their formatting doesn't matter. A time that can't be parsed keeps the note, because keeping one can be undone and deleting one can't.
+One rule applies whichever reaches the server first: **the note survives if its `modifiedAt` is later than the deletion's `deletedAt`.** Times are compared as instants, so their formatting doesn't matter. A time that can't be parsed keeps the note, because keeping one can be undone and deleting one can't, and so does a `deletedAt` more than 24 hours ahead of the server's clock.
 
 If a deletion loses, the server:
 
@@ -300,6 +307,8 @@ GET /api/v1/sync/events?token=<token>
 ```
 
 A Server-Sent Events stream. An event named `sync` with data `pull` means another of the user's devices changed something, so pull. The device that made the change isn't told. Heartbeats arrive every 30 seconds.
+
+A token can be used to reconnect for as long as it's valid, but only while the device and its account are. Otherwise connecting gets 401, and a stream that's already open ends within a minute. Ask for a new token after a 401: that request says why, with the usual 401 or 403.
 
 ### Wrapped master key
 
@@ -364,6 +373,7 @@ The path is `/api/v1/admin` from `/auth/login` and `/api/v1/user` from `/user/lo
 
 A `POST`, `PUT`, `PATCH` or `DELETE` that authenticates with the cookie gets 403 unless it has the header `X-Requested-With: JotteryDashboard`. A request with `Authorization: Bearer <token>` doesn't need it.
 
+- `DELETE /user/account` and `DELETE /user/notes` take `{ "currentPassword": "..." }` as a JSON body. A wrong one gets 401 with an `error`, and counts as a wrong password. Without one they only work within five minutes of signing in, which is what a client that asks for the password and signs in first relies on. After that they get 403 with `code: "password_required"`.
 - `GET /admin/me` returns `{ id, email, isAdmin }` for the signed-in admin. It's the check that a cookie session still works, because that cookie isn't sent to `/user/account`. During a forced password change it returns 403 with `code: "password_change_required"`.
 - `POST /admin/logout` and `POST /user/logout` end the session and clear that route's cookie. Both work with a token too. `/admin/logout` is new, so a dashboard holding a token should keep using `/user/logout`, which every server has.
 
@@ -410,3 +420,4 @@ To adopt these additions, a client needs to:
 5. Treat 403 from a device endpoint as "account disabled", not "device removed".
 6. Honour `Retry-After` on 429.
 7. Say what it wants on every `PUT /auth/wrapped-key`, as described under [Wrapped master key](#wrapped-master-key), and treat 409 as "read it again".
+8. Read `skippedDeleted`, treating its absence as an empty list, and stop sending those notes.

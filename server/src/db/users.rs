@@ -1,35 +1,50 @@
 use sqlx::{Sqlite, SqliteConnection, SqlitePool, Transaction};
 use uuid::Uuid;
 
-use crate::models::User;
+use crate::{config::Config, models::User};
 
 /// User repository for database operations
 pub struct UserRepository;
 
 impl UserRepository {
-    /// Create a new user
+    /// Create a new user, with the limits new accounts get on this server. Returns
+    /// `None` if the address is taken, in any case. The check is part of the insert,
+    /// so that two registrations at once can't both pass it.
     pub async fn create(
         pool: &SqlitePool,
         email: &str,
         password_hash: &str,
-    ) -> Result<User, sqlx::Error> {
+        config: &Config,
+    ) -> Result<Option<User>, sqlx::Error> {
         let id = Uuid::new_v4().to_string();
         let now = chrono::Utc::now().to_rfc3339();
 
-        sqlx::query!(
+        let inserted = sqlx::query!(
             r#"
-            INSERT INTO users (id, email, password_hash, created_at, approved, is_admin, is_active, storage_quota_mb, max_upload_size_mb)
-            VALUES (?, ?, ?, ?, 0, 0, 1, 1000, 5)
+            INSERT INTO users (
+                id, email, password_hash, created_at, approved, is_admin, is_active,
+                storage_quota_mb, max_upload_size_mb, inbox_max_items, inbox_max_size_mb
+            )
+            SELECT ?1, ?2, ?3, ?4, 0, 0, 1, ?5, ?6, ?7, ?8
+            WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = ?2 COLLATE NOCASE)
             "#,
             id,
             email,
             password_hash,
-            now
+            now,
+            config.default_storage_quota_mb,
+            config.default_max_upload_size_mb,
+            config.default_inbox_max_items,
+            config.default_inbox_max_size_mb
         )
         .execute(pool)
         .await?;
 
-        Self::get_by_id(pool, &id).await
+        if inserted.rows_affected() == 0 {
+            return Ok(None);
+        }
+
+        Self::get_by_id(pool, &id).await.map(Some)
     }
 
     /// Get user by ID
@@ -45,30 +60,33 @@ impl UserRepository {
 
     /// Get user by email
     pub async fn get_by_email(pool: &SqlitePool, email: &str) -> Result<User, sqlx::Error> {
-        sqlx::query_as!(
-            User,
-            r#"SELECT * FROM users WHERE email = ?"#,
-            email
-        )
-        .fetch_one(pool)
-        .await
+        Self::find_by_email(pool, email)
+            .await?
+            .ok_or(sqlx::Error::RowNotFound)
     }
 
-    /// Find a user by email, if there is one
+    /// Find a user by email, if there is one, whatever case it was typed in. Accounts
+    /// that differ only by case can exist from before that was refused, so the exact
+    /// address wins: anything else would lock one of them out.
     pub async fn find_by_email(pool: &SqlitePool, email: &str) -> Result<Option<User>, sqlx::Error> {
+        let email = email.trim();
+
         sqlx::query_as!(
             User,
-            r#"SELECT * FROM users WHERE email = ?"#,
+            r#"SELECT * FROM users WHERE email = ?1 COLLATE NOCASE
+               ORDER BY email = ?1 DESC, created_at
+               LIMIT 1"#,
             email
         )
         .fetch_optional(pool)
         .await
     }
 
-    /// Check if email exists
+    /// Check if email exists, in any case
     pub async fn email_exists(pool: &SqlitePool, email: &str) -> Result<bool, sqlx::Error> {
+        let email = email.trim();
         let result = sqlx::query!(
-            r#"SELECT COUNT(*) as count FROM users WHERE email = ?"#,
+            r#"SELECT COUNT(*) as count FROM users WHERE email = ? COLLATE NOCASE"#,
             email
         )
         .fetch_one(pool)

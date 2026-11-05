@@ -87,7 +87,7 @@ The record outlives the accounts it mentions, so it keeps ids, addresses and use
 
 - Admin sessions use UUID v4 tokens, SHA-256 hashed before storage
 - User portal sessions use the same mechanism
-- Default session expiry: 7 days (configurable via `SESSION_EXPIRY_DAYS`)
+- Default session expiry: 1 day (configurable via `SESSION_EXPIRY_DAYS`). A session is a way into the account, its settings and its wrapped key, so it's kept short. The cost is signing in to the dashboards daily. Device keys don't expire, so sync isn't affected
 - Sessions are invalidated on logout
 - Changing a password ends the account's other sessions, and an admin reset ends all of them. Device keys aren't tied to the password, so they keep working unless the admin also asks to revoke them
 - With `ENABLE_HSTS=true`, the admin dashboard and user portal keep their session in an HttpOnly, Secure, SameSite=Strict cookie, scoped to their own API, which script can't read. A request that changes anything must also carry a custom header, so another site can't forge one. HttpOnly stops a token being stolen, not a script in the same origin using the session while it lasts, so serving the dashboards from their own origin is stronger still
@@ -127,7 +127,7 @@ Before deploying Jottery to production, complete this checklist:
 
 - [ ] **Configure session expiry**
   ```bash
-  -e SESSION_EXPIRY_DAYS=1  # Shorter for sensitive environments
+  -e SESSION_EXPIRY_DAYS=1  # The default. Raise it only if daily sign-in is a real cost
   ```
 
 - [ ] **Set up database backups**
@@ -154,7 +154,7 @@ Before deploying Jottery to production, complete this checklist:
 | Variable | Default | Security Impact |
 |----------|---------|-----------------|
 | `DEFAULT_ADMIN_PASSWORD` | *(none)* | **Critical** — If unset, a random password is generated and logged once |
-| `SESSION_EXPIRY_DAYS` | `7` | Lower values reduce session hijacking window |
+| `SESSION_EXPIRY_DAYS` | `1` | Lower values reduce session hijacking window |
 | `CORS_ALLOWED_ORIGINS` | *(none)* | Restrict to trusted domains |
 | `TRUSTED_PROXY_HOPS` | `0` (`1` in the Docker image) | Set to the number of proxies in front of the server. Too low and clients share one rate limit; too high and they can forge their address |
 | `MAX_PAYLOAD_SIZE` | `5242880` | Limits upload size (DoS prevention) |

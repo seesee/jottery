@@ -77,6 +77,9 @@ pub struct Config {
     /// asked for: quotas were never enforced before, so an account can already be
     /// over one, and a refused push stops that device's sync.
     pub enforce_storage_quota: bool,
+
+    /// How often an open event stream checks that its device may still have one.
+    pub sse_recheck_secs: u64,
 }
 
 impl Config {
@@ -116,9 +119,9 @@ impl Config {
 
             // Security settings
             session_expiry_days: var("SESSION_EXPIRY_DAYS")
-                .unwrap_or_else(|_| "7".to_string())
+                .unwrap_or_else(|_| "1".to_string())
                 .parse()
-                .unwrap_or(7),
+                .unwrap_or(1),
             default_admin_email: var("DEFAULT_ADMIN_EMAIL")
                 .unwrap_or_else(|_| "admin@localhost".to_string()),
             default_admin_password: var("DEFAULT_ADMIN_PASSWORD")
@@ -204,6 +207,7 @@ impl Config {
                 .unwrap_or(50),
 
             enforce_storage_quota: parsed_or(lookup("ENFORCE_STORAGE_QUOTA"), false),
+            sse_recheck_secs: parsed_or(lookup("SSE_RECHECK_SECS"), 60),
         }
     }
 }
