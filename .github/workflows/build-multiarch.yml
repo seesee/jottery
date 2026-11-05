@@ -140,7 +140,7 @@ jobs:
         shell: bash
         run: |
           cd tui
-          cargo build --release --no-default-features --features sqlite
+          cargo build --release --locked --no-default-features --features sqlite
           mkdir -p ../releases-versioned
           cp target/release/jottery.exe ../releases-versioned/jottery-windows-${VERSION}.exe
 

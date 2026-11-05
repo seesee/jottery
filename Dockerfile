@@ -61,7 +61,8 @@ RUN npm run build
 # -----------------------------
 FROM rust:1.85 AS chef
 WORKDIR /app
-RUN cargo install cargo-chef
+# 0.1.75 is the newest cargo-chef whose lock file builds on Rust 1.85
+RUN cargo install cargo-chef --locked --version 0.1.75
 
 FROM chef AS planner
 WORKDIR /app/server
@@ -76,11 +77,11 @@ ENV SQLX_OFFLINE=true
 
 # Copy the recipe and build dependencies (this layer will be cached)
 COPY --from=planner /app/server/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
+RUN cargo chef cook --release --locked --recipe-path recipe.json
 
 # Now copy the actual source code and build
 COPY server/ .
-RUN cargo build --release --bin jottery-server
+RUN cargo build --release --locked --bin jottery-server
 
 # -----------------------------
 # Stage 4: Final unified runtime image (Caddy + Server)
