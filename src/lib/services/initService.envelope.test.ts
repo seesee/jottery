@@ -18,6 +18,7 @@ vi.mock('svelte-i18n', () => ({
 }));
 
 import {
+  deleteAllLocalData,
   initialize,
   onboardFromServer,
   tryMigrateToEnvelope,
@@ -37,6 +38,8 @@ import { syncRepository } from './syncRepository';
 import { noteRepository } from './noteRepository';
 import { savedSearchRepository } from './savedSearchRepository';
 import { settingsRepository } from './settingsRepository';
+import { passwordStorageService } from './passwordStorageService';
+import { sessionStorageService } from './sessionStorageService';
 import { toast } from '../utils/toast.svelte';
 import { closeDB, deleteDB, getDB, initDB, STORES } from './db';
 import { createTestNote } from '../../test/db-utils';
@@ -492,6 +495,40 @@ describe('server-wrapped master key', () => {
 
       expect((await syncRepository.getMetadata())?.apiKey).toBe('');
       expect((await syncRepository.getMetadata())?.syncEnabled).toBe(false);
+    }, 60_000);
+  });
+
+  describe('deleteAllLocalData', () => {
+    beforeEach(() => {
+      // Node's own global is undefined without a storage file, and shadows happy-dom's
+      const entries = new Map<string, string>();
+      vi.stubGlobal('localStorage', {
+        getItem: (key: string) => entries.get(key) ?? null,
+        setItem: (key: string, value: string) => void entries.set(key, value),
+        removeItem: (key: string) => void entries.delete(key),
+      });
+    });
+
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('leaves nothing behind, including a remembered password', async () => {
+      await initialize(NOTES_PASSWORD);
+      await passwordStorageService.store(NOTES_PASSWORD);
+      localStorage.setItem('jottery_stored_password', 'left by an older version');
+      localStorage.setItem('jottery-theme', 'dark');
+      localStorage.setItem('jottery-locale', 'fr');
+      sessionStorageService.store(NOTES_PASSWORD);
+
+      await deleteAllLocalData();
+
+      expect(await passwordStorageService.hasStored()).toBe(false);
+      expect(localStorage.getItem('jottery_stored_password')).toBeNull();
+      expect(localStorage.getItem('jottery-theme')).toBeNull();
+      expect(localStorage.getItem('jottery-locale')).toBeNull();
+      expect(sessionStorageService.hasStored()).toBe(false);
+
+      await initDB();
+      expect(await encryptionRepository.getMetadata()).toBeFalsy();
     }, 60_000);
   });
 

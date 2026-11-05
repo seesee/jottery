@@ -14,7 +14,7 @@
   } from '../stores/appStore';
   import { getColorHex, getTagColor } from '../services/colorService';
   import { formatTimestamp } from '../utils/timezone';
-  import { stripMarkdownSignifiers, isMarkdownLanguage } from '../utils/markdownStrip';
+  import { notePreview } from '../utils/markdownStrip';
   import { getNoteTitle, getTitleTagValue } from '../utils/noteTitle';
   import { getRegularTags } from '../utils/virtualTags';
   import {
@@ -140,10 +140,7 @@
   $: showDeleteBtn = shouldShowDeleteButton(visibilityState);
 
   // Strip markdown from preview only for markdown language
-  $: rawPreview = note.content.split('\n').slice(1).join(' ');
-  $: preview = isMarkdownLanguage(note.syntaxLanguage)
-    ? stripMarkdownSignifiers(rawPreview).slice(0, previewLength)
-    : rawPreview.slice(0, previewLength);
+  $: preview = notePreview(note.content, note.syntaxLanguage, previewLength);
 
   $: formattedDateStore = formatTimestamp(note.modifiedAt, 'date');
 

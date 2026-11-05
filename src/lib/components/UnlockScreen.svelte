@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import { isInitialized as isInitializedStore, isLocked, settings } from '../stores/appStore';
-  import { initialize, unlock, isInitialized, deleteDB, passwordStorageService, sessionStorageService, settingsRepository, restoreFromBackup, keyManager, cryptoService, syncRepository, syncService, onboardFromServer } from '../services';
+  import { initialize, unlock, isInitialized, deleteAllLocalData, passwordStorageService, sessionStorageService, settingsRepository, restoreFromBackup, keyManager, cryptoService, syncRepository, syncService, onboardFromServer } from '../services';
   import { authService } from '../services/authService';
   import { validateBackup, getBackupStats } from '../services/backupService';
   import type { BackupData } from '../services/backupService';
@@ -265,7 +265,7 @@
     showDeleteConfirm = false;
     loading = true;
     try {
-      await deleteDB();
+      await deleteAllLocalData();
       // Reload the page to reinitialize
       window.location.reload();
     } catch (err) {

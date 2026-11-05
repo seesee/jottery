@@ -88,7 +88,8 @@ function parseWikiLinks(
 ): string {
   // Match [[...]] patterns, but not inside code blocks or inline code
   // This regex matches [[content]] where content can include | for display text
-  const wikiLinkRegex = /\[\[([^\]]+)\]\]/g;
+  // Limited so a run of unclosed brackets can't make each one scan the whole note
+  const wikiLinkRegex = /\[\[([^\]]{1,500})\]\]/g;
 
   return content.replace(wikiLinkRegex, (_match, innerContent) => {
     // Check if this link has a display text separator

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import { settings, isLocked, notes } from '../stores/appStore';
-  import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, lock, passwordStorageService, sessionStorageService, createSyncRecoveryNote, onboardFromServer, uploadWrappedKeyToServer, verifyUnlockPassword } from '../services';
+  import { settingsRepository, deleteAllLocalData, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, lock, passwordStorageService, sessionStorageService, createSyncRecoveryNote, onboardFromServer, uploadWrappedKeyToServer, verifyUnlockPassword } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { createBatchedBackup, downloadBackup } from '../services/backupService';
   import { backupSchedulerService } from '../services/backupSchedulerService';
@@ -867,8 +867,7 @@
   async function confirmDeleteDatabase() {
     showDeleteConfirm = false;
     try {
-      // Close database and delete
-      await deleteDB();
+      await deleteAllLocalData();
 
       // Lock the app and reload
       isLocked.set(true);

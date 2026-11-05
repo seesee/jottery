@@ -13,6 +13,7 @@ import { savedSearchRepository } from './savedSearchRepository';
 import { cryptoService } from './crypto';
 import { keyManager, setupActivityListeners } from './keyManager';
 import { sessionStorageService } from './sessionStorageService';
+import { passwordStorageService } from './passwordStorageService';
 import { AuthApiError, authService } from './authService';
 import { arrayBufferToBase64, base64ToUint8Array } from '../utils/base64';
 import { CRYPTO_PBKDF2_ITERATIONS, CRYPTO_WRAPPING_ITERATIONS, CRYPTO_WRAPPING_KDF_VERSION } from '../constants';
@@ -361,6 +362,25 @@ export function lock(): void {
   sessionStorageService.clear();
   backupSchedulerService.stop();
   searchService.indexNotes([]);
+}
+
+/** Display preferences kept outside the vault, for before it is unlocked */
+const LOCAL_PREFERENCE_KEYS = ['jottery-theme', 'jottery-locale'];
+
+/**
+ * Delete everything this notebook keeps on this device. deleteDB alone leaves a
+ * remembered password readable in localStorage, and someone clearing a machine
+ * before handing it on has no way of knowing.
+ */
+export async function deleteAllLocalData(): Promise<void> {
+  await passwordStorageService.clear();
+  sessionStorageService.clear();
+  try {
+    LOCAL_PREFERENCE_KEYS.forEach(key => localStorage.removeItem(key));
+  } catch (error) {
+    console.warn('[Delete] Could not clear local preferences:', error);
+  }
+  await deleteDB();
 }
 
 /**
