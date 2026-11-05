@@ -128,6 +128,7 @@
           placeholder={$_('settings.changePassword.placeholder.new')}
           disabled={changingPassword}
         />
+        <p class="text-xs text-gray-500 mt-1">{$_('common.passwordRules')}</p>
       </div>
 
       <div>

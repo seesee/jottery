@@ -17,13 +17,15 @@
     "status": "Statut",
     "created": "Créé",
     "saving": "Enregistrement...",
-    "deleting": "Suppression..."
+    "deleting": "Suppression...",
+    "passwordRules": "Au moins 12 caractères. Le serveur peut aussi exiger un mélange de majuscules, de minuscules, de chiffres et de symboles."
   },
   "nav": {
     "dashboard": "Tableau de bord",
     "users": "Utilisateurs",
     "settings": "Paramètres",
-    "logout": "Se déconnecter"
+    "logout": "Se déconnecter",
+    "audit": "Journal d'audit"
   },
   "login": {
     "title": "Jottery Admin",
@@ -64,7 +66,15 @@
     "quotaRange": "Le quota de stockage doit être compris entre 1 et 100000 Mo.",
     "maxUploadRange": "La taille maximale de téléchargement doit être comprise entre 1 et 1000 Mo.",
     "inboxItemsRange": "Le nombre maximal d'éléments de la boîte de réception doit être compris entre 1 et 10000.",
-    "inboxSizeRange": "La taille maximale de la boîte de réception doit être comprise entre 1 et 1000 Mo."
+    "inboxSizeRange": "La taille maximale de la boîte de réception doit être comprise entre 1 et 1000 Mo.",
+    "passwordComplexity": "Le mot de passe doit contenir au moins {required} types de caractères sur 4. Manquants : {missing}.",
+    "passwordClass": {
+      "uppercase": "majuscule",
+      "lowercase": "minuscule",
+      "number": "chiffre",
+      "special": "symbole"
+    },
+    "passwordTooLong": "Le mot de passe est trop long."
   },
   "session": {
     "expired": "Votre session a expiré. Veuillez vous reconnecter."
@@ -156,7 +166,6 @@
       "newPasswordPlaceholder": "Entrez le nouveau mot de passe",
       "confirmPassword": "Confirmer le mot de passe",
       "confirmPasswordPlaceholder": "Confirmez le nouveau mot de passe",
-      "passwordRequirement": "Minimum 12 caractères",
       "passwordTooShort": "Le mot de passe doit contenir au moins 12 caractères",
       "passwordMismatch": "Les mots de passe ne correspondent pas",
       "passwordResetSuccess": "Mot de passe de {email} réinitialisé avec succès",
@@ -166,7 +175,9 @@
       "passwordResetWarning": "Ceci ne change que le mot de passe de connexion. Le chiffrement des notes n'est pas affecté. Si l'utilisateur a oublié son mot de passe de chiffrement, ses notes ne peuvent pas être récupérées.",
       "inboxMaxItems": "Éléments max. boîte de réception",
       "inboxMaxSize": "Taille max. boîte de réception",
-      "items": "éléments"
+      "items": "éléments",
+      "passwordResetDevices": "Les appareils de cet utilisateur continuent de se synchroniser après la réinitialisation, car leurs clés ne dépendent pas du mot de passe.",
+      "revokeDevicesOption": "Révoquer aussi toutes les clés d'appareil de cet utilisateur, si le compte a pu être compromis"
     },
     "filters": {
       "all": "Tous",
@@ -330,7 +341,8 @@
         "revokeFailed": "Impossible de révoquer le jeton, il fonctionne donc toujours : {error}",
         "copySuccess": "Jeton copié",
         "copyUnavailable": "Copie impossible ici. Sélectionnez le jeton et copiez-le vous-même."
-      }
+      },
+      "storageUsedNote": "Comprend les notes, l'historique des notes et les pièces jointes."
     },
     "devices": {
       "title": "Vos appareils",
@@ -360,7 +372,6 @@
       "currentPassword": "Mot de passe actuel",
       "newPassword": "Nouveau mot de passe",
       "confirmPassword": "Confirmer le mot de passe",
-      "passwordHint": "Le mot de passe doit comporter au moins 12 caractères",
       "updatePassword": "Mettre à jour le mot de passe",
       "passwordChanged": "Mot de passe modifié avec succès",
       "dangerZone": "Zone de danger",
@@ -394,6 +405,40 @@
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
       "notesDeleted": "All notes have been deleted from the server",
       "passwordToConfirm": "Saisissez votre mot de passe pour confirmer :"
+    }
+  },
+  "audit": {
+    "title": "Journal d'audit",
+    "description": "Un enregistrement permanent de ce que les admins ont fait sur ce serveur.",
+    "loading": "Chargement du journal d'audit...",
+    "failedToLoad": "Impossible de charger le journal d'audit",
+    "empty": "Rien n'a encore été enregistré.",
+    "allActions": "Toutes les actions",
+    "filterLabel": "Afficher",
+    "commandLine": "Ligne de commande",
+    "range": "{from}–{to} sur {total}",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "table": {
+      "time": "Quand",
+      "action": "Action",
+      "admin": "Admin",
+      "target": "Concerné",
+      "address": "Adresse"
+    },
+    "actions": {
+      "userApprove": "Utilisateur approuvé",
+      "userDeactivate": "Utilisateur désactivé",
+      "userActivate": "Utilisateur activé",
+      "userDelete": "Utilisateur supprimé",
+      "userPasswordReset": "Mot de passe réinitialisé",
+      "userAdminGrant": "Promu admin",
+      "userAdminRevoke": "Admin retiré",
+      "userSettingsUpdate": "Paramètres utilisateur modifiés",
+      "deviceRevoke": "Appareil révoqué",
+      "deviceDelete": "Appareil supprimé",
+      "deviceRename": "Appareil renommé",
+      "adminPasswordChange": "Mot de passe personnel modifié"
     }
   }
 }

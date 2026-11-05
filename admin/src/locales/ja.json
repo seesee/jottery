@@ -17,13 +17,15 @@
     "status": "ステータス",
     "created": "作成日",
     "saving": "保存中...",
-    "deleting": "削除中..."
+    "deleting": "削除中...",
+    "passwordRules": "12文字以上。サーバーによっては、大文字、小文字、数字、記号の組み合わせも必要です。"
   },
   "nav": {
     "dashboard": "ダッシュボード",
     "users": "ユーザー",
     "settings": "設定",
-    "logout": "ログアウト"
+    "logout": "ログアウト",
+    "audit": "監査ログ"
   },
   "login": {
     "title": "Jottery Admin",
@@ -64,7 +66,15 @@
     "quotaRange": "ストレージクォータは1〜100000 MBの範囲で指定してください。",
     "maxUploadRange": "最大アップロードサイズは1〜1000 MBの範囲で指定してください。",
     "inboxItemsRange": "受信トレイ最大件数は1〜10000の範囲で指定してください。",
-    "inboxSizeRange": "受信トレイ最大サイズは1〜1000 MBの範囲で指定してください。"
+    "inboxSizeRange": "受信トレイ最大サイズは1〜1000 MBの範囲で指定してください。",
+    "passwordComplexity": "パスワードには4種類の文字のうち少なくとも{required}種類が必要です。不足: {missing}。",
+    "passwordClass": {
+      "uppercase": "大文字",
+      "lowercase": "小文字",
+      "number": "数字",
+      "special": "記号"
+    },
+    "passwordTooLong": "パスワードが長すぎます。"
   },
   "session": {
     "expired": "セッションの有効期限が切れました。もう一度サインインしてください。"
@@ -156,7 +166,6 @@
       "newPasswordPlaceholder": "新しいパスワードを入力",
       "confirmPassword": "パスワードの確認",
       "confirmPasswordPlaceholder": "新しいパスワードを確認",
-      "passwordRequirement": "最低12文字",
       "passwordTooShort": "パスワードは12文字以上である必要があります",
       "passwordMismatch": "パスワードが一致しません",
       "passwordResetSuccess": "{email}のパスワードが正常にリセットされました",
@@ -166,7 +175,9 @@
       "passwordResetWarning": "これはアカウントのログインパスワードのみを変更します。ノートの暗号化には影響しません。ユーザーが暗号化パスワードを忘れた場合、ノートは復元できません。",
       "inboxMaxItems": "受信トレイ最大件数",
       "inboxMaxSize": "受信トレイ最大サイズ",
-      "items": "件"
+      "items": "件",
+      "passwordResetDevices": "デバイスキーはパスワードに紐付いていないため、リセット後もこのユーザーのデバイスは同期を続けます。",
+      "revokeDevicesOption": "アカウントが侵害された可能性がある場合は、このユーザーのデバイスキーもすべて取り消す"
     },
     "filters": {
       "all": "すべて",
@@ -330,7 +341,8 @@
         "revokeFailed": "トークンを取り消せなかったため、まだ有効です: {error}",
         "copySuccess": "トークンをコピーしました",
         "copyUnavailable": "ここではコピーできません。トークンを選択して手動でコピーしてください。"
-      }
+      },
+      "storageUsedNote": "ノート、ノートの履歴、添付ファイルを含みます。"
     },
     "devices": {
       "title": "あなたのデバイス",
@@ -360,7 +372,6 @@
       "currentPassword": "現在のパスワード",
       "newPassword": "新しいパスワード",
       "confirmPassword": "パスワードの確認",
-      "passwordHint": "パスワードは12文字以上である必要があります",
       "updatePassword": "パスワードを更新",
       "passwordChanged": "パスワードが正常に変更されました",
       "dangerZone": "危険な操作",
@@ -394,6 +405,40 @@
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
       "notesDeleted": "All notes have been deleted from the server",
       "passwordToConfirm": "確認のためパスワードを入力してください："
+    }
+  },
+  "audit": {
+    "title": "監査ログ",
+    "description": "このサーバーで管理者が行った操作の永続的な記録です。",
+    "loading": "監査ログを読み込み中...",
+    "failedToLoad": "監査ログを読み込めませんでした",
+    "empty": "まだ何も記録されていません。",
+    "allActions": "すべての操作",
+    "filterLabel": "表示",
+    "commandLine": "コマンドライン",
+    "range": "{total}件中 {from}–{to}件",
+    "previous": "前へ",
+    "next": "次へ",
+    "table": {
+      "time": "日時",
+      "action": "操作",
+      "admin": "管理者",
+      "target": "対象",
+      "address": "アドレス"
+    },
+    "actions": {
+      "userApprove": "ユーザーを承認",
+      "userDeactivate": "ユーザーを無効化",
+      "userActivate": "ユーザーを有効化",
+      "userDelete": "ユーザーを削除",
+      "userPasswordReset": "パスワードをリセット",
+      "userAdminGrant": "管理者に昇格",
+      "userAdminRevoke": "管理者から降格",
+      "userSettingsUpdate": "ユーザー設定を変更",
+      "deviceRevoke": "デバイスを取り消し",
+      "deviceDelete": "デバイスを削除",
+      "deviceRename": "デバイス名を変更",
+      "adminPasswordChange": "自分のパスワードを変更"
     }
   }
 }

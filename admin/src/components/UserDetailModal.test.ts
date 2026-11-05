@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/svelte';
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/svelte';
 import { addMessages, init, locale } from 'svelte-i18n';
 import en from '../locales/en-GB.json';
 import de from '../locales/de.json';
 import UserDetailModal from './UserDetailModal.svelte';
+import { ApiError } from '../lib/dashboardClient';
+import { toast } from '../lib/toast.svelte';
 
 const detail = {
   id: 'user-1',
@@ -28,9 +30,11 @@ const detail = {
   ],
 };
 
+const mocks = vi.hoisted(() => ({ resetUserPassword: vi.fn() }));
+
 vi.mock('../lib/api', async () => {
   const { ApiError } = await vi.importActual<typeof import('../lib/dashboardClient')>('../lib/dashboardClient');
-  return { ApiError, api: { getUser: vi.fn(async () => detail) } };
+  return { ApiError, api: { getUser: vi.fn(async () => detail), resetUserPassword: mocks.resetUserPassword } };
 });
 
 async function show() {
@@ -80,6 +84,64 @@ describe('UserDetailModal', () => {
 
     expect(screen.queryByRole('textbox', { name: en.devices.name })).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  describe('resetting a password', () => {
+    const NEW = 'A-long-replacement-1';
+
+    async function openReset() {
+      await show();
+      await fireEvent.click(screen.getByRole('button', { name: en.users.detail.resetPassword }));
+      const [first, second] = document.querySelectorAll<HTMLInputElement>('input[type="password"]');
+      await fireEvent.input(first, { target: { value: NEW } });
+      await fireEvent.input(second, { target: { value: NEW } });
+    }
+
+    function submit() {
+      return fireEvent.click(screen.getByRole('button', { name: en.users.detail.resetPassword }));
+    }
+
+    beforeEach(() => {
+      mocks.resetUserPassword.mockReset();
+      toast.items.forEach((item) => toast.remove(item.id));
+    });
+
+    it('says the devices stay connected', async () => {
+      await openReset();
+      expect(screen.getByText(en.users.detail.passwordResetDevices)).toBeTruthy();
+    });
+
+    it('leaves the device keys alone unless asked', async () => {
+      mocks.resetUserPassword.mockResolvedValueOnce(undefined);
+      await openReset();
+
+      await submit();
+
+      await waitFor(() => expect(mocks.resetUserPassword).toHaveBeenCalledWith('user-1', NEW, false));
+    });
+
+    it('can revoke them too', async () => {
+      mocks.resetUserPassword.mockResolvedValueOnce(undefined);
+      await openReset();
+
+      await fireEvent.click(screen.getByRole('checkbox', { name: en.users.detail.revokeDevicesOption }));
+      await submit();
+
+      await waitFor(() => expect(mocks.resetUserPassword).toHaveBeenCalledWith('user-1', NEW, true));
+    });
+
+    it('shows why the server refused a password', async () => {
+      mocks.resetUserPassword.mockRejectedValueOnce(
+        new ApiError(400, 'Password requires at least 3 of 4 character types. Missing: number, special character'),
+      );
+      await openReset();
+
+      await submit();
+
+      await waitFor(() => expect(toast.items.length).toBe(1));
+      expect(toast.items[0].message).toContain(en.errors.passwordClass.number);
+      expect(toast.items[0].message).toContain(en.errors.passwordClass.special);
+    });
   });
 
   it('won\'t let the browser fill the admin\'s own password into a reset', async () => {

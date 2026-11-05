@@ -17,13 +17,15 @@
     "status": "Status",
     "created": "Erstellt",
     "saving": "Speichern...",
-    "deleting": "Löschen..."
+    "deleting": "Löschen...",
+    "passwordRules": "Mindestens 12 Zeichen. Der Server kann zusätzlich eine Mischung aus Groß- und Kleinbuchstaben, Zahlen und Sonderzeichen verlangen."
   },
   "nav": {
     "dashboard": "Dashboard",
     "users": "Benutzer",
     "settings": "Einstellungen",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "audit": "Audit-Protokoll"
   },
   "login": {
     "title": "Jottery Admin",
@@ -64,7 +66,15 @@
     "quotaRange": "Das Speicherkontingent muss zwischen 1 und 100000 MB liegen.",
     "maxUploadRange": "Die maximale Upload-Größe muss zwischen 1 und 1000 MB liegen.",
     "inboxItemsRange": "Die maximale Anzahl an Posteingang-Elementen muss zwischen 1 und 10000 liegen.",
-    "inboxSizeRange": "Die maximale Posteingang-Größe muss zwischen 1 und 1000 MB liegen."
+    "inboxSizeRange": "Die maximale Posteingang-Größe muss zwischen 1 und 1000 MB liegen.",
+    "passwordComplexity": "Das Passwort braucht mindestens {required} von 4 Zeichentypen. Es fehlen: {missing}.",
+    "passwordClass": {
+      "uppercase": "Großbuchstabe",
+      "lowercase": "Kleinbuchstabe",
+      "number": "Zahl",
+      "special": "Sonderzeichen"
+    },
+    "passwordTooLong": "Das Passwort ist zu lang."
   },
   "session": {
     "expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an."
@@ -156,7 +166,6 @@
       "newPasswordPlaceholder": "Neues Passwort eingeben",
       "confirmPassword": "Passwort bestätigen",
       "confirmPasswordPlaceholder": "Neues Passwort bestätigen",
-      "passwordRequirement": "Mindestens 12 Zeichen",
       "passwordTooShort": "Passwort muss mindestens 12 Zeichen lang sein",
       "passwordMismatch": "Passwörter stimmen nicht überein",
       "passwordResetSuccess": "Passwort für {email} wurde erfolgreich zurückgesetzt",
@@ -166,7 +175,9 @@
       "passwordResetWarning": "Dies ändert nur das Anmeldepasswort. Die Notizen-Verschlüsselung bleibt unberührt. Wenn der Benutzer sein Verschlüsselungspasswort vergessen hat, können seine Notizen nicht wiederhergestellt werden.",
       "inboxMaxItems": "Max. Posteingang-Elemente",
       "inboxMaxSize": "Max. Posteingang-Größe",
-      "items": "Elemente"
+      "items": "Elemente",
+      "passwordResetDevices": "Die Geräte dieses Benutzers synchronisieren nach dem Zurücksetzen weiter, weil ihre Schlüssel nicht an das Passwort gebunden sind.",
+      "revokeDevicesOption": "Auch alle Geräteschlüssel dieses Benutzers widerrufen, falls das Konto kompromittiert sein könnte"
     },
     "filters": {
       "all": "Alle",
@@ -330,7 +341,8 @@
         "revokeFailed": "Das Token konnte nicht widerrufen werden und funktioniert weiterhin: {error}",
         "copySuccess": "Token kopiert",
         "copyUnavailable": "Kopieren ist hier nicht möglich. Markieren und kopieren Sie das Token selbst."
-      }
+      },
+      "storageUsedNote": "Umfasst Notizen, Notizverlauf und Anhänge."
     },
     "devices": {
       "title": "Ihre Geräte",
@@ -360,7 +372,6 @@
       "currentPassword": "Aktuelles Passwort",
       "newPassword": "Neues Passwort",
       "confirmPassword": "Passwort bestätigen",
-      "passwordHint": "Passwort muss mindestens 12 Zeichen lang sein",
       "updatePassword": "Passwort aktualisieren",
       "passwordChanged": "Passwort erfolgreich geändert",
       "dangerZone": "Gefahrenzone",
@@ -394,6 +405,40 @@
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
       "notesDeleted": "All notes have been deleted from the server",
       "passwordToConfirm": "Geben Sie zur Bestätigung Ihr Passwort ein:"
+    }
+  },
+  "audit": {
+    "title": "Audit-Protokoll",
+    "description": "Eine dauerhafte Aufzeichnung dessen, was Admins auf diesem Server getan haben.",
+    "loading": "Audit-Protokoll wird geladen...",
+    "failedToLoad": "Das Audit-Protokoll konnte nicht geladen werden",
+    "empty": "Bisher wurde nichts aufgezeichnet.",
+    "allActions": "Alle Aktionen",
+    "filterLabel": "Anzeigen",
+    "commandLine": "Befehlszeile",
+    "range": "{from}–{to} von {total}",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "table": {
+      "time": "Wann",
+      "action": "Aktion",
+      "admin": "Admin",
+      "target": "Betroffen",
+      "address": "Adresse"
+    },
+    "actions": {
+      "userApprove": "Benutzer genehmigt",
+      "userDeactivate": "Benutzer deaktiviert",
+      "userActivate": "Benutzer aktiviert",
+      "userDelete": "Benutzer gelöscht",
+      "userPasswordReset": "Passwort zurückgesetzt",
+      "userAdminGrant": "Zum Admin befördert",
+      "userAdminRevoke": "Admin-Rechte entzogen",
+      "userSettingsUpdate": "Benutzereinstellungen geändert",
+      "deviceRevoke": "Gerät widerrufen",
+      "deviceDelete": "Gerät gelöscht",
+      "deviceRename": "Gerät umbenannt",
+      "adminPasswordChange": "Eigenes Passwort geändert"
     }
   }
 }

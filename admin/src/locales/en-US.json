@@ -17,13 +17,15 @@
     "status": "Status",
     "created": "Created",
     "saving": "Saving...",
-    "deleting": "Deleting..."
+    "deleting": "Deleting...",
+    "passwordRules": "At least 12 characters. The server may also ask for a mix of upper and lower case letters, numbers and symbols."
   },
   "nav": {
     "dashboard": "Dashboard",
     "users": "Users",
     "settings": "Settings",
-    "logout": "Log out"
+    "logout": "Log out",
+    "audit": "Audit Log"
   },
   "login": {
     "title": "Jottery Admin",
@@ -64,7 +66,15 @@
     "quotaRange": "Storage quota must be between 1 and 100000 MB.",
     "maxUploadRange": "Maximum upload size must be between 1 and 1000 MB.",
     "inboxItemsRange": "Maximum inbox items must be between 1 and 10000.",
-    "inboxSizeRange": "Maximum inbox size must be between 1 and 1000 MB."
+    "inboxSizeRange": "Maximum inbox size must be between 1 and 1000 MB.",
+    "passwordComplexity": "The password needs at least {required} of 4 character types. Missing: {missing}.",
+    "passwordClass": {
+      "uppercase": "upper case letter",
+      "lowercase": "lower case letter",
+      "number": "number",
+      "special": "symbol"
+    },
+    "passwordTooLong": "The password is too long."
   },
   "session": {
     "expired": "Your session has expired. Please sign in again."
@@ -156,7 +166,6 @@
       "newPasswordPlaceholder": "Enter new password",
       "confirmPassword": "Confirm Password",
       "confirmPasswordPlaceholder": "Confirm new password",
-      "passwordRequirement": "Minimum 12 characters",
       "passwordTooShort": "Password must be at least 12 characters",
       "passwordMismatch": "Passwords do not match",
       "passwordResetSuccess": "Password for {email} has been reset successfully",
@@ -166,7 +175,9 @@
       "passwordResetWarning": "This only changes the account login password. It does not affect note encryption. If the user has forgotten their encryption password, their notes cannot be recovered.",
       "inboxMaxItems": "Inbox Max Items",
       "inboxMaxSize": "Inbox Max Size",
-      "items": "items"
+      "items": "items",
+      "passwordResetDevices": "This user's devices keep syncing after the reset, because their keys aren't tied to the password.",
+      "revokeDevicesOption": "Also revoke all of this user's device keys, if the account may be compromised"
     },
     "filters": {
       "all": "All",
@@ -330,7 +341,8 @@
         "revokeFailed": "Couldn't revoke the token, so it still works: {error}",
         "copySuccess": "Token copied",
         "copyUnavailable": "Can't copy here. Select the token and copy it yourself."
-      }
+      },
+      "storageUsedNote": "Includes notes, note history and attachments."
     },
     "devices": {
       "title": "Your Devices",
@@ -360,7 +372,6 @@
       "currentPassword": "Current Password",
       "newPassword": "New Password",
       "confirmPassword": "Confirm Password",
-      "passwordHint": "Password must be at least 12 characters",
       "updatePassword": "Update Password",
       "passwordChanged": "Password changed successfully",
       "dangerZone": "Danger Zone",
@@ -394,6 +405,40 @@
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
       "notesDeleted": "All notes have been deleted from the server",
       "passwordToConfirm": "Enter your password to confirm:"
+    }
+  },
+  "audit": {
+    "title": "Audit Log",
+    "description": "A permanent record of what admins have done on this server.",
+    "loading": "Loading audit log...",
+    "failedToLoad": "Failed to load the audit log",
+    "empty": "Nothing has been recorded yet.",
+    "allActions": "All actions",
+    "filterLabel": "Show",
+    "commandLine": "Command line",
+    "range": "{from}–{to} of {total}",
+    "previous": "Previous",
+    "next": "Next",
+    "table": {
+      "time": "When",
+      "action": "Action",
+      "admin": "Admin",
+      "target": "Affected",
+      "address": "Address"
+    },
+    "actions": {
+      "userApprove": "Approved user",
+      "userDeactivate": "Deactivated user",
+      "userActivate": "Activated user",
+      "userDelete": "Deleted user",
+      "userPasswordReset": "Reset password",
+      "userAdminGrant": "Made admin",
+      "userAdminRevoke": "Removed admin",
+      "userSettingsUpdate": "Changed user settings",
+      "deviceRevoke": "Revoked device",
+      "deviceDelete": "Deleted device",
+      "deviceRename": "Renamed device",
+      "adminPasswordChange": "Changed own password"
     }
   }
 }

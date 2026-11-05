@@ -17,13 +17,15 @@
     "status": "Статус",
     "created": "Создано",
     "saving": "Сохранение...",
-    "deleting": "Удаление..."
+    "deleting": "Удаление...",
+    "passwordRules": "Не менее 12 символов. Сервер также может требовать сочетание прописных и строчных букв, цифр и символов."
   },
   "nav": {
     "dashboard": "Панель управления",
     "users": "Пользователи",
     "settings": "Настройки",
-    "logout": "Выйти"
+    "logout": "Выйти",
+    "audit": "Журнал аудита"
   },
   "login": {
     "title": "Jottery Admin",
@@ -64,7 +66,15 @@
     "quotaRange": "Квота хранилища должна быть от 1 до 100000 МБ.",
     "maxUploadRange": "Максимальный размер загрузки должен быть от 1 до 1000 МБ.",
     "inboxItemsRange": "Максимальное число элементов входящих должно быть от 1 до 10000.",
-    "inboxSizeRange": "Максимальный размер входящих должен быть от 1 до 1000 МБ."
+    "inboxSizeRange": "Максимальный размер входящих должен быть от 1 до 1000 МБ.",
+    "passwordComplexity": "Пароль должен содержать не менее {required} из 4 типов символов. Не хватает: {missing}.",
+    "passwordClass": {
+      "uppercase": "прописная буква",
+      "lowercase": "строчная буква",
+      "number": "цифра",
+      "special": "символ"
+    },
+    "passwordTooLong": "Пароль слишком длинный."
   },
   "session": {
     "expired": "Срок действия сеанса истёк. Войдите снова."
@@ -156,7 +166,6 @@
       "newPasswordPlaceholder": "Введите новый пароль",
       "confirmPassword": "Подтвердите пароль",
       "confirmPasswordPlaceholder": "Подтвердите новый пароль",
-      "passwordRequirement": "Минимум 12 символов",
       "passwordTooShort": "Пароль должен содержать не менее 12 символов",
       "passwordMismatch": "Пароли не совпадают",
       "passwordResetSuccess": "Пароль для {email} успешно сброшен",
@@ -166,7 +175,9 @@
       "passwordResetWarning": "Это изменит только пароль для входа в аккаунт. Это не повлияет на шифрование заметок. Если пользователь забыл пароль шифрования, его заметки невозможно восстановить.",
       "inboxMaxItems": "Макс. элементов входящих",
       "inboxMaxSize": "Макс. размер входящих",
-      "items": "элементов"
+      "items": "элементов",
+      "passwordResetDevices": "Устройства этого пользователя продолжат синхронизацию после сброса, потому что их ключи не привязаны к паролю.",
+      "revokeDevicesOption": "Также отозвать все ключи устройств этого пользователя, если учётная запись могла быть скомпрометирована"
     },
     "filters": {
       "all": "Все",
@@ -330,7 +341,8 @@
         "revokeFailed": "Не удалось отозвать токен, поэтому он всё ещё действует: {error}",
         "copySuccess": "Токен скопирован",
         "copyUnavailable": "Здесь нельзя скопировать. Выделите токен и скопируйте его вручную."
-      }
+      },
+      "storageUsedNote": "Включает заметки, историю заметок и вложения."
     },
     "devices": {
       "title": "Ваши устройства",
@@ -360,7 +372,6 @@
       "currentPassword": "Текущий пароль",
       "newPassword": "Новый пароль",
       "confirmPassword": "Подтвердите пароль",
-      "passwordHint": "Пароль должен содержать не менее 12 символов",
       "updatePassword": "Обновить пароль",
       "passwordChanged": "Пароль успешно изменён",
       "dangerZone": "Опасная зона",
@@ -394,6 +405,40 @@
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
       "notesDeleted": "All notes have been deleted from the server",
       "passwordToConfirm": "Введите пароль для подтверждения:"
+    }
+  },
+  "audit": {
+    "title": "Журнал аудита",
+    "description": "Постоянная запись действий администраторов на этом сервере.",
+    "loading": "Загрузка журнала аудита...",
+    "failedToLoad": "Не удалось загрузить журнал аудита",
+    "empty": "Пока ничего не записано.",
+    "allActions": "Все действия",
+    "filterLabel": "Показать",
+    "commandLine": "Командная строка",
+    "range": "{from}–{to} из {total}",
+    "previous": "Назад",
+    "next": "Вперёд",
+    "table": {
+      "time": "Когда",
+      "action": "Действие",
+      "admin": "Администратор",
+      "target": "Объект",
+      "address": "Адрес"
+    },
+    "actions": {
+      "userApprove": "Пользователь одобрен",
+      "userDeactivate": "Пользователь деактивирован",
+      "userActivate": "Пользователь активирован",
+      "userDelete": "Пользователь удалён",
+      "userPasswordReset": "Пароль сброшен",
+      "userAdminGrant": "Повышен до администратора",
+      "userAdminRevoke": "Права администратора сняты",
+      "userSettingsUpdate": "Настройки пользователя изменены",
+      "deviceRevoke": "Устройство отозвано",
+      "deviceDelete": "Устройство удалено",
+      "deviceRename": "Устройство переименовано",
+      "adminPasswordChange": "Свой пароль изменён"
     }
   }
 }

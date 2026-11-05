@@ -17,13 +17,15 @@
     "status": "Status",
     "created": "Utworzono",
     "saving": "Zapisywanie...",
-    "deleting": "Usuwanie..."
+    "deleting": "Usuwanie...",
+    "passwordRules": "Co najmniej 12 znaków. Serwer może też wymagać połączenia wielkich i małych liter, cyfr oraz symboli."
   },
   "nav": {
     "dashboard": "Panel",
     "users": "Użytkownicy",
     "settings": "Ustawienia",
-    "logout": "Wyloguj"
+    "logout": "Wyloguj",
+    "audit": "Dziennik audytu"
   },
   "login": {
     "title": "Jottery Admin",
@@ -64,7 +66,15 @@
     "quotaRange": "Limit pamięci musi wynosić od 1 do 100000 MB.",
     "maxUploadRange": "Maksymalny rozmiar przesyłania musi wynosić od 1 do 1000 MB.",
     "inboxItemsRange": "Maksymalna liczba elementów w skrzynce musi wynosić od 1 do 10000.",
-    "inboxSizeRange": "Maksymalny rozmiar skrzynki musi wynosić od 1 do 1000 MB."
+    "inboxSizeRange": "Maksymalny rozmiar skrzynki musi wynosić od 1 do 1000 MB.",
+    "passwordComplexity": "Hasło wymaga co najmniej {required} z 4 rodzajów znaków. Brakuje: {missing}.",
+    "passwordClass": {
+      "uppercase": "wielka litera",
+      "lowercase": "mała litera",
+      "number": "cyfra",
+      "special": "symbol"
+    },
+    "passwordTooLong": "Hasło jest za długie."
   },
   "session": {
     "expired": "Twoja sesja wygasła. Zaloguj się ponownie."
@@ -156,7 +166,6 @@
       "newPasswordPlaceholder": "Wprowadź nowe hasło",
       "confirmPassword": "Potwierdź hasło",
       "confirmPasswordPlaceholder": "Potwierdź nowe hasło",
-      "passwordRequirement": "Minimum 12 znaków",
       "passwordTooShort": "Hasło musi mieć co najmniej 12 znaków",
       "passwordMismatch": "Hasła nie są zgodne",
       "passwordResetSuccess": "Hasło dla {email} zostało pomyślnie zresetowane",
@@ -166,7 +175,9 @@
       "passwordResetWarning": "To zmienia tylko hasło do logowania. Nie wpływa na szyfrowanie notatek. Jeśli użytkownik zapomniał hasła szyfrowania, jego notatki nie mogą być odzyskane.",
       "inboxMaxItems": "Maks. elementów w skrzynce",
       "inboxMaxSize": "Maks. rozmiar skrzynki",
-      "items": "elementów"
+      "items": "elementów",
+      "passwordResetDevices": "Urządzenia tego użytkownika będą nadal synchronizować po resecie, ponieważ ich klucze nie są powiązane z hasłem.",
+      "revokeDevicesOption": "Unieważnij też wszystkie klucze urządzeń tego użytkownika, jeśli konto mogło zostać przejęte"
     },
     "filters": {
       "all": "Wszyscy",
@@ -330,7 +341,8 @@
         "revokeFailed": "Nie udało się unieważnić tokenu, więc nadal działa: {error}",
         "copySuccess": "Token skopiowany",
         "copyUnavailable": "Tutaj nie można kopiować. Zaznacz token i skopiuj go ręcznie."
-      }
+      },
+      "storageUsedNote": "Obejmuje notatki, historię notatek i załączniki."
     },
     "devices": {
       "title": "Twoje urządzenia",
@@ -360,7 +372,6 @@
       "currentPassword": "Obecne hasło",
       "newPassword": "Nowe hasło",
       "confirmPassword": "Potwierdź hasło",
-      "passwordHint": "Hasło musi mieć co najmniej 12 znaków",
       "updatePassword": "Zaktualizuj hasło",
       "passwordChanged": "Hasło zostało pomyślnie zmienione",
       "dangerZone": "Strefa niebezpieczna",
@@ -394,6 +405,40 @@
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
       "notesDeleted": "All notes have been deleted from the server",
       "passwordToConfirm": "Wpisz hasło, aby potwierdzić:"
+    }
+  },
+  "audit": {
+    "title": "Dziennik audytu",
+    "description": "Trwały zapis działań administratorów na tym serwerze.",
+    "loading": "Wczytywanie dziennika audytu...",
+    "failedToLoad": "Nie udało się wczytać dziennika audytu",
+    "empty": "Nic jeszcze nie zapisano.",
+    "allActions": "Wszystkie działania",
+    "filterLabel": "Pokaż",
+    "commandLine": "Wiersz poleceń",
+    "range": "{from}–{to} z {total}",
+    "previous": "Poprzednie",
+    "next": "Następne",
+    "table": {
+      "time": "Kiedy",
+      "action": "Działanie",
+      "admin": "Administrator",
+      "target": "Dotyczy",
+      "address": "Adres"
+    },
+    "actions": {
+      "userApprove": "Zatwierdzono użytkownika",
+      "userDeactivate": "Dezaktywowano użytkownika",
+      "userActivate": "Aktywowano użytkownika",
+      "userDelete": "Usunięto użytkownika",
+      "userPasswordReset": "Zresetowano hasło",
+      "userAdminGrant": "Awansowano na administratora",
+      "userAdminRevoke": "Odebrano uprawnienia administratora",
+      "userSettingsUpdate": "Zmieniono ustawienia użytkownika",
+      "deviceRevoke": "Unieważniono urządzenie",
+      "deviceDelete": "Usunięto urządzenie",
+      "deviceRename": "Zmieniono nazwę urządzenia",
+      "adminPasswordChange": "Zmieniono własne hasło"
     }
   }
 }

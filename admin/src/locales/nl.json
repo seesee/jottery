@@ -17,13 +17,15 @@
     "status": "Status",
     "created": "Aangemaakt",
     "saving": "Opslaan...",
-    "deleting": "Verwijderen..."
+    "deleting": "Verwijderen...",
+    "passwordRules": "Minimaal 12 tekens. De server kan ook een mix van hoofdletters, kleine letters, cijfers en symbolen vragen."
   },
   "nav": {
     "dashboard": "Dashboard",
     "users": "Gebruikers",
     "settings": "Instellingen",
-    "logout": "Uitloggen"
+    "logout": "Uitloggen",
+    "audit": "Auditlogboek"
   },
   "login": {
     "title": "Jottery Admin",
@@ -64,7 +66,15 @@
     "quotaRange": "Het opslagquotum moet tussen 1 en 100000 MB liggen.",
     "maxUploadRange": "De maximale uploadgrootte moet tussen 1 en 1000 MB liggen.",
     "inboxItemsRange": "Het maximale aantal inbox-items moet tussen 1 en 10000 liggen.",
-    "inboxSizeRange": "De maximale inbox-grootte moet tussen 1 en 1000 MB liggen."
+    "inboxSizeRange": "De maximale inbox-grootte moet tussen 1 en 1000 MB liggen.",
+    "passwordComplexity": "Het wachtwoord heeft minstens {required} van de 4 tekentypen nodig. Ontbreekt: {missing}.",
+    "passwordClass": {
+      "uppercase": "hoofdletter",
+      "lowercase": "kleine letter",
+      "number": "cijfer",
+      "special": "symbool"
+    },
+    "passwordTooLong": "Het wachtwoord is te lang."
   },
   "session": {
     "expired": "Uw sessie is verlopen. Meld u opnieuw aan."
@@ -156,7 +166,6 @@
       "newPasswordPlaceholder": "Voer nieuw wachtwoord in",
       "confirmPassword": "Bevestig wachtwoord",
       "confirmPasswordPlaceholder": "Bevestig nieuw wachtwoord",
-      "passwordRequirement": "Minimaal 12 tekens",
       "passwordTooShort": "Wachtwoord moet minimaal 12 tekens lang zijn",
       "passwordMismatch": "Wachtwoorden komen niet overeen",
       "passwordResetSuccess": "Wachtwoord voor {email} is succesvol gereset",
@@ -166,7 +175,9 @@
       "passwordResetWarning": "Dit wijzigt alleen het inlogwachtwoord. Het heeft geen invloed op de notitie-versleuteling. Als de gebruiker hun versleutelingswachtwoord is vergeten, kunnen hun notities niet worden hersteld.",
       "inboxMaxItems": "Max. inbox-items",
       "inboxMaxSize": "Max. inbox-grootte",
-      "items": "items"
+      "items": "items",
+      "passwordResetDevices": "De apparaten van deze gebruiker blijven synchroniseren na het resetten, omdat hun sleutels niet aan het wachtwoord zijn gekoppeld.",
+      "revokeDevicesOption": "Ook alle apparaatsleutels van deze gebruiker intrekken, als het account mogelijk gecompromitteerd is"
     },
     "filters": {
       "all": "Alle",
@@ -330,7 +341,8 @@
         "revokeFailed": "Kon het token niet intrekken, dus het werkt nog steeds: {error}",
         "copySuccess": "Token gekopieerd",
         "copyUnavailable": "Kopiëren kan hier niet. Selecteer het token en kopieer het zelf."
-      }
+      },
+      "storageUsedNote": "Inclusief notities, notitiegeschiedenis en bijlagen."
     },
     "devices": {
       "title": "Uw apparaten",
@@ -360,7 +372,6 @@
       "currentPassword": "Huidig wachtwoord",
       "newPassword": "Nieuw wachtwoord",
       "confirmPassword": "Bevestig wachtwoord",
-      "passwordHint": "Wachtwoord moet minimaal 12 tekens lang zijn",
       "updatePassword": "Wachtwoord bijwerken",
       "passwordChanged": "Wachtwoord succesvol gewijzigd",
       "dangerZone": "Gevarenzone",
@@ -394,6 +405,40 @@
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
       "notesDeleted": "All notes have been deleted from the server",
       "passwordToConfirm": "Voer uw wachtwoord in om te bevestigen:"
+    }
+  },
+  "audit": {
+    "title": "Auditlogboek",
+    "description": "Een permanent overzicht van wat beheerders op deze server hebben gedaan.",
+    "loading": "Auditlogboek laden...",
+    "failedToLoad": "Kon het auditlogboek niet laden",
+    "empty": "Er is nog niets vastgelegd.",
+    "allActions": "Alle acties",
+    "filterLabel": "Tonen",
+    "commandLine": "Opdrachtregel",
+    "range": "{from}–{to} van {total}",
+    "previous": "Vorige",
+    "next": "Volgende",
+    "table": {
+      "time": "Wanneer",
+      "action": "Actie",
+      "admin": "Beheerder",
+      "target": "Betreft",
+      "address": "Adres"
+    },
+    "actions": {
+      "userApprove": "Gebruiker goedgekeurd",
+      "userDeactivate": "Gebruiker gedeactiveerd",
+      "userActivate": "Gebruiker geactiveerd",
+      "userDelete": "Gebruiker verwijderd",
+      "userPasswordReset": "Wachtwoord gereset",
+      "userAdminGrant": "Gepromoveerd tot beheerder",
+      "userAdminRevoke": "Beheerder verwijderd",
+      "userSettingsUpdate": "Gebruikersinstellingen gewijzigd",
+      "deviceRevoke": "Apparaat ingetrokken",
+      "deviceDelete": "Apparaat verwijderd",
+      "deviceRename": "Apparaat hernoemd",
+      "adminPasswordChange": "Eigen wachtwoord gewijzigd"
     }
   }
 }

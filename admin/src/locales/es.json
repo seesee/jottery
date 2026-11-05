@@ -17,13 +17,15 @@
     "status": "Estado",
     "created": "Creado",
     "saving": "Guardando...",
-    "deleting": "Eliminando..."
+    "deleting": "Eliminando...",
+    "passwordRules": "Al menos 12 caracteres. El servidor también puede pedir una mezcla de mayúsculas, minúsculas, números y símbolos."
   },
   "nav": {
     "dashboard": "Panel",
     "users": "Usuarios",
     "settings": "Configuración",
-    "logout": "Cerrar sesión"
+    "logout": "Cerrar sesión",
+    "audit": "Registro de auditoría"
   },
   "login": {
     "title": "Jottery Admin",
@@ -64,7 +66,15 @@
     "quotaRange": "La cuota de almacenamiento debe estar entre 1 y 100000 MB.",
     "maxUploadRange": "El tamaño máximo de carga debe estar entre 1 y 1000 MB.",
     "inboxItemsRange": "El máximo de elementos en la bandeja debe estar entre 1 y 10000.",
-    "inboxSizeRange": "El tamaño máximo de la bandeja debe estar entre 1 y 1000 MB."
+    "inboxSizeRange": "El tamaño máximo de la bandeja debe estar entre 1 y 1000 MB.",
+    "passwordComplexity": "La contraseña necesita al menos {required} de 4 tipos de caracteres. Faltan: {missing}.",
+    "passwordClass": {
+      "uppercase": "letra mayúscula",
+      "lowercase": "letra minúscula",
+      "number": "número",
+      "special": "símbolo"
+    },
+    "passwordTooLong": "La contraseña es demasiado larga."
   },
   "session": {
     "expired": "Tu sesión ha caducado. Inicia sesión de nuevo."
@@ -156,7 +166,6 @@
       "newPasswordPlaceholder": "Ingrese nueva contraseña",
       "confirmPassword": "Confirmar contraseña",
       "confirmPasswordPlaceholder": "Confirme nueva contraseña",
-      "passwordRequirement": "Mínimo 12 caracteres",
       "passwordTooShort": "La contraseña debe tener al menos 12 caracteres",
       "passwordMismatch": "Las contraseñas no coinciden",
       "passwordResetSuccess": "Contraseña de {email} restablecida exitosamente",
@@ -166,7 +175,9 @@
       "passwordResetWarning": "Esto solo cambia la contraseña de inicio de sesión. No afecta el cifrado de notas. Si el usuario olvidó su contraseña de cifrado, sus notas no pueden recuperarse.",
       "inboxMaxItems": "Máx. elementos en bandeja",
       "inboxMaxSize": "Tamaño máx. de bandeja",
-      "items": "elementos"
+      "items": "elementos",
+      "passwordResetDevices": "Los dispositivos de este usuario seguirán sincronizando después del restablecimiento, porque sus claves no dependen de la contraseña.",
+      "revokeDevicesOption": "Revocar también todas las claves de dispositivo de este usuario, si la cuenta puede estar comprometida"
     },
     "filters": {
       "all": "Todos",
@@ -330,7 +341,8 @@
         "revokeFailed": "No se pudo revocar el token, así que sigue funcionando: {error}",
         "copySuccess": "Token copiado",
         "copyUnavailable": "Aquí no se puede copiar. Selecciona el token y cópialo manualmente."
-      }
+      },
+      "storageUsedNote": "Incluye notas, historial de notas y archivos adjuntos."
     },
     "devices": {
       "title": "Tus dispositivos",
@@ -360,7 +372,6 @@
       "currentPassword": "Contraseña actual",
       "newPassword": "Nueva contraseña",
       "confirmPassword": "Confirmar contraseña",
-      "passwordHint": "La contraseña debe tener al menos 12 caracteres",
       "updatePassword": "Actualizar contraseña",
       "passwordChanged": "Contraseña cambiada exitosamente",
       "dangerZone": "Zona de peligro",
@@ -394,6 +405,40 @@
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
       "notesDeleted": "All notes have been deleted from the server",
       "passwordToConfirm": "Introduce tu contraseña para confirmar:"
+    }
+  },
+  "audit": {
+    "title": "Registro de auditoría",
+    "description": "Un registro permanente de lo que han hecho los administradores en este servidor.",
+    "loading": "Cargando registro de auditoría...",
+    "failedToLoad": "No se pudo cargar el registro de auditoría",
+    "empty": "Aún no se ha registrado nada.",
+    "allActions": "Todas las acciones",
+    "filterLabel": "Mostrar",
+    "commandLine": "Línea de comandos",
+    "range": "{from}–{to} de {total}",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "table": {
+      "time": "Cuándo",
+      "action": "Acción",
+      "admin": "Admin",
+      "target": "Afectado",
+      "address": "Dirección"
+    },
+    "actions": {
+      "userApprove": "Usuario aprobado",
+      "userDeactivate": "Usuario desactivado",
+      "userActivate": "Usuario activado",
+      "userDelete": "Usuario eliminado",
+      "userPasswordReset": "Contraseña restablecida",
+      "userAdminGrant": "Promovido a admin",
+      "userAdminRevoke": "Admin retirado",
+      "userSettingsUpdate": "Ajustes de usuario cambiados",
+      "deviceRevoke": "Dispositivo revocado",
+      "deviceDelete": "Dispositivo eliminado",
+      "deviceRename": "Dispositivo renombrado",
+      "adminPasswordChange": "Contraseña propia cambiada"
     }
   }
 }

@@ -17,13 +17,15 @@
     "status": "상태",
     "created": "생성일",
     "saving": "저장 중...",
-    "deleting": "삭제 중..."
+    "deleting": "삭제 중...",
+    "passwordRules": "12자 이상. 서버에서 대문자, 소문자, 숫자, 기호를 섞어 쓰도록 요구할 수도 있습니다."
   },
   "nav": {
     "dashboard": "대시보드",
     "users": "사용자",
     "settings": "설정",
-    "logout": "로그아웃"
+    "logout": "로그아웃",
+    "audit": "감사 로그"
   },
   "login": {
     "title": "Jottery Admin",
@@ -64,7 +66,15 @@
     "quotaRange": "저장 공간 할당량은 1에서 100000 MB 사이여야 합니다.",
     "maxUploadRange": "최대 업로드 크기는 1에서 1000 MB 사이여야 합니다.",
     "inboxItemsRange": "받은편지함 최대 항목 수는 1에서 10000 사이여야 합니다.",
-    "inboxSizeRange": "받은편지함 최대 크기는 1에서 1000 MB 사이여야 합니다."
+    "inboxSizeRange": "받은편지함 최대 크기는 1에서 1000 MB 사이여야 합니다.",
+    "passwordComplexity": "비밀번호에는 4가지 문자 유형 중 최소 {required}가지가 필요합니다. 없는 유형: {missing}.",
+    "passwordClass": {
+      "uppercase": "대문자",
+      "lowercase": "소문자",
+      "number": "숫자",
+      "special": "기호"
+    },
+    "passwordTooLong": "비밀번호가 너무 깁니다."
   },
   "session": {
     "expired": "세션이 만료되었습니다. 다시 로그인해 주세요."
@@ -156,7 +166,6 @@
       "newPasswordPlaceholder": "새 비밀번호 입력",
       "confirmPassword": "비밀번호 확인",
       "confirmPasswordPlaceholder": "새 비밀번호 확인",
-      "passwordRequirement": "최소 12자",
       "passwordTooShort": "비밀번호는 최소 12자 이상이어야 합니다",
       "passwordMismatch": "비밀번호가 일치하지 않습니다",
       "passwordResetSuccess": "{email}의 비밀번호가 성공적으로 재설정되었습니다",
@@ -166,7 +175,9 @@
       "passwordResetWarning": "이것은 계정 로그인 비밀번호만 변경합니다. 노트 암호화에는 영향을 주지 않습니다. 사용자가 암호화 비밀번호를 잊어버린 경우 노트를 복구할 수 없습니다.",
       "inboxMaxItems": "받은편지함 최대 항목 수",
       "inboxMaxSize": "받은편지함 최대 크기",
-      "items": "항목"
+      "items": "항목",
+      "passwordResetDevices": "기기 키는 비밀번호에 묶여 있지 않으므로, 재설정 후에도 이 사용자의 기기는 계속 동기화됩니다.",
+      "revokeDevicesOption": "계정이 침해되었을 수 있으면 이 사용자의 기기 키도 모두 해지"
     },
     "filters": {
       "all": "전체",
@@ -330,7 +341,8 @@
         "revokeFailed": "토큰을 해지하지 못해 아직 유효합니다: {error}",
         "copySuccess": "토큰을 복사했습니다",
         "copyUnavailable": "여기서는 복사할 수 없습니다. 토큰을 선택해 직접 복사하세요."
-      }
+      },
+      "storageUsedNote": "노트, 노트 기록, 첨부 파일이 포함됩니다."
     },
     "devices": {
       "title": "내 기기",
@@ -360,7 +372,6 @@
       "currentPassword": "현재 비밀번호",
       "newPassword": "새 비밀번호",
       "confirmPassword": "비밀번호 확인",
-      "passwordHint": "비밀번호는 최소 12자 이상이어야 합니다",
       "updatePassword": "비밀번호 업데이트",
       "passwordChanged": "비밀번호가 성공적으로 변경되었습니다",
       "dangerZone": "위험 구역",
@@ -394,6 +405,40 @@
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
       "notesDeleted": "All notes have been deleted from the server",
       "passwordToConfirm": "확인하려면 비밀번호를 입력하세요:"
+    }
+  },
+  "audit": {
+    "title": "감사 로그",
+    "description": "이 서버에서 관리자가 수행한 작업의 영구 기록입니다.",
+    "loading": "감사 로그를 불러오는 중...",
+    "failedToLoad": "감사 로그를 불러올 수 없습니다",
+    "empty": "아직 기록된 내용이 없습니다.",
+    "allActions": "모든 작업",
+    "filterLabel": "표시",
+    "commandLine": "명령줄",
+    "range": "{total}개 중 {from}–{to}",
+    "previous": "이전",
+    "next": "다음",
+    "table": {
+      "time": "시간",
+      "action": "작업",
+      "admin": "관리자",
+      "target": "대상",
+      "address": "주소"
+    },
+    "actions": {
+      "userApprove": "사용자 승인",
+      "userDeactivate": "사용자 비활성화",
+      "userActivate": "사용자 활성화",
+      "userDelete": "사용자 삭제",
+      "userPasswordReset": "비밀번호 재설정",
+      "userAdminGrant": "관리자로 승격",
+      "userAdminRevoke": "관리자 권한 제거",
+      "userSettingsUpdate": "사용자 설정 변경",
+      "deviceRevoke": "기기 해지",
+      "deviceDelete": "기기 삭제",
+      "deviceRename": "기기 이름 변경",
+      "adminPasswordChange": "자신의 비밀번호 변경"
     }
   }
 }
