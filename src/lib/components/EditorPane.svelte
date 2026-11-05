@@ -13,6 +13,7 @@
   import { conflictService } from '../services/conflictService';
   import type { Attachment, KeyboardShortcut, CodeEditorRef, HighlightJsInstance, DecryptedNote } from '../types';
   import VersionHistoryModal from './VersionHistoryModal.svelte';
+  import { registerPendingSave } from '../utils/pendingSave';
   import AttachmentPreviewModal from './AttachmentPreviewModal.svelte';
   import ConflictResolutionModal from './ConflictResolutionModal.svelte';
   import ConfirmModal from './ConfirmModal.svelte';
@@ -1154,7 +1155,26 @@
 
   let themeObserver: MutationObserver | null = null;
 
+  /** Save now if a debounced save is waiting. Closing the page won't wait for it. */
+  async function saveNowIfPending() {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+      await handleSave();
+    }
+  }
+
+  function handlePageHidden() {
+    if (document.visibilityState === 'hidden') {
+      void saveNowIfPending();
+    }
+  }
+
+  let stopFlushing: (() => void) | undefined;
+
   onMount(() => {
+    stopFlushing = registerPendingSave(saveNowIfPending);
+    window.addEventListener('pagehide', saveNowIfPending);
+    document.addEventListener('visibilitychange', handlePageHidden);
     window.addEventListener('keydown', handleEditorKeydown);
     window.addEventListener('command-palette-action', handleCommandPaletteAction);
 
@@ -1188,6 +1208,9 @@
       saveTimeout = null;
     }
 
+    stopFlushing?.();
+    window.removeEventListener('pagehide', saveNowIfPending);
+    document.removeEventListener('visibilitychange', handlePageHidden);
     window.removeEventListener('keydown', handleEditorKeydown);
     window.removeEventListener('command-palette-action', handleCommandPaletteAction);
 
