@@ -14,6 +14,7 @@ struct ImportView: View {
     @State private var isOpeningFile = false
     @State private var work: Task<Void, Never>?
     @State private var importResult: ImportService.ImportResult?
+    @State private var didStartImport = false
     @State private var isImporting = false
     @State private var progress: (current: Int, total: Int)?
     @State private var errorMessage: String?
@@ -149,20 +150,18 @@ struct ImportView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(importResult != nil ? L.versionHistoryDone : L.commonCancel) {
-                        if importResult != nil {
-                            Task {
-                                try? await appState.loadNotes()
-                                dismiss()
-                            }
-                        } else {
-                            dismiss()
-                        }
+                        dismiss()
                     }
                 }
             }
             .onDisappear {
                 work?.cancel()
                 releaseScopedFile()
+                // However the sheet went: a swipe skips the toolbar button, and an
+                // import stopped part way has still written notes.
+                if didStartImport {
+                    Task { await appState.reloadAfterImport() }
+                }
             }
             .fileImporter(
                 isPresented: $showFilePicker,
@@ -210,6 +209,7 @@ struct ImportView: View {
               let key = appState.keyManager.masterKey else { return }
 
         isImporting = true
+        didStartImport = true
         let currentStrategy = strategy
         work = Task { @MainActor in
             defer {

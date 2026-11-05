@@ -216,3 +216,33 @@ struct DuplicateNoteTests {
         #expect(calcCopy.contentHash != plainCopy.contentHash)
     }
 }
+
+/// Swiping the import sheet away skipped the reload, which only the toolbar button
+/// ran, and any failure was dropped (jottery-8d6d).
+@MainActor
+struct ImportReloadTests {
+
+    @Test func theListsCatchUpAfterAnImport() async throws {
+        let state = try TestVaults.makeState()
+        try await state.createVault(password: "notes-password-correct-horse")
+        let repo = try #require(state.noteRepo)
+        let key = try #require(state.keyManager.masterKey)
+        _ = try repo.create(content: "imported behind the list's back", key: key)
+        #expect(state.notes.isEmpty)
+
+        await state.reloadAfterImport()
+
+        #expect(state.notes.count == 1)
+    }
+
+    @Test func aReloadThatFailsIsReported() async throws {
+        let state = try TestVaults.makeState()
+        try await state.createVault(password: "notes-password-correct-horse")
+        // A note that won't decrypt is skipped, not an error, so the read has to fail.
+        try TestVaults.execute(state, "ALTER TABLE notes RENAME TO notes_gone", [])
+
+        await state.reloadAfterImport()
+
+        #expect(state.userErrorMessage != nil, "the list is out of date, and the user should know")
+    }
+}

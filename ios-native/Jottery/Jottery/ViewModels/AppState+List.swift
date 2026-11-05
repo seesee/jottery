@@ -45,6 +45,18 @@ extension AppState {
         return combinedId
     }
 
+    // MARK: - Importing
+
+    /// Bring the lists up to date once the import sheet has gone. A failure here
+    /// leaves the list out of date, so it's reported rather than ignored.
+    func reloadAfterImport() async {
+        do {
+            try await loadNotes()
+        } catch {
+            reportError(error.localizedDescription)
+        }
+    }
+
     // MARK: - Saved Searches
 
     func updateSavedSearch(id: String, name: String, query: String) throws {
