@@ -880,8 +880,7 @@
       // Just enabled (value is now true) - show confirmation to get password
       showPersistSessionConfirm = true;
     } else {
-      // Just disabled (value is now false) - clear session storage. The setting
-      // goes first: while it's on, auto-lock reads a missing session as expired.
+      // Just disabled (value is now false) - clear session storage
       settings.update(s => ({ ...s, persistSession: false }));
       sessionStorageService.clear();
     }
@@ -903,8 +902,14 @@
         return;
       }
 
-      // Password is correct! Store it in session storage
-      sessionStorageService.store(persistSessionConfirmInput);
+      // Password is correct! Store it in session storage. If that fails the option
+      // would do nothing, so it isn't switched on.
+      if (!sessionStorageService.store(persistSessionConfirmInput)) {
+        persistSessionError = $_('settings.persistSessionUnavailable');
+        persistSessionConfirmInput = '';
+        persistSession = false;
+        return;
+      }
 
       // Save the setting immediately to persist it
       await settingsRepository.update({ persistSession: true, persistSessionTimeout });

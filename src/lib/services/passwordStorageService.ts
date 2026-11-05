@@ -10,6 +10,8 @@
  * unreachable and has been removed rather than left as dead code.
  */
 
+import { decodeStoredPassword, encodeStoredPassword } from '../utils/storedPassword';
+
 const STORAGE_KEY = 'jottery_stored_password';
 
 /**
@@ -19,7 +21,7 @@ const STORAGE_KEY = 'jottery_stored_password';
  */
 export async function storePassword(password: string): Promise<void> {
   try {
-    localStorage.setItem(STORAGE_KEY, btoa(password));
+    localStorage.setItem(STORAGE_KEY, encodeStoredPassword(password));
   } catch (error) {
     console.error('Failed to store password:', error);
     throw new Error('Failed to store password in localStorage');
@@ -38,7 +40,7 @@ export async function getStoredPassword(): Promise<string | null> {
     if (!encoded) return null;
 
     try {
-      return atob(encoded);
+      return decodeStoredPassword(encoded);
     } catch (decodeError) {
       console.error('Failed to decode stored password:', decodeError);
       clearStoredPasswordSync();
