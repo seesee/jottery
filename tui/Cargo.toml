@@ -36,10 +36,9 @@ openssl = { version = "0.10", optional = true }
 openssl-sys = { version = "0.9", optional = true }
 
 # HTTP client for sync
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "blocking"] }
-
-# HTTP client for SSE (simpler streaming support)
-ureq = { version = "2.10", features = ["tls"] }
+# Both root sets: the bundled ones for a machine with none of its own, and the system's,
+# so a CA the user has installed works, as does SSL_CERT_FILE.
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "rustls-tls-native-roots", "json", "blocking"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -99,8 +98,6 @@ hostname = "0.4"
 # Temporary files for external editor
 tempfile = "3.13"
 
-# Clipboard support
-arboard = "3.4"
 
 # Syntax highlighting
 syntect = "5.3"

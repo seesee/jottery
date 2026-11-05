@@ -91,6 +91,18 @@ pub fn start_sse_thread(config: SseConfig) -> SseHandle {
     }
 }
 
+/// How long the server gets to hand over a token.
+const TOKEN_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// An HTTP client with the same trust settings as the rest of sync.
+fn client(connect: Duration, read: Duration) -> Result<reqwest::blocking::Client, SseError> {
+    reqwest::blocking::Client::builder()
+        .connect_timeout(connect)
+        .timeout(read)
+        .build()
+        .map_err(|e| SseError::Unreachable(format!("Failed to set up the HTTP client: {e}")))
+}
+
 /// Why a connection to the event stream ended.
 #[derive(Debug, PartialEq, Eq)]
 enum SseError {
@@ -202,31 +214,23 @@ fn get_sse_token(endpoint: &str, api_key: &str) -> Result<String, SseError> {
 
     debug!("Fetching SSE token from: {}", url);
 
-    let response = ureq::get(&url)
-        .set("Authorization", &format!("Bearer {}", api_key))
-        .timeout(Duration::from_secs(10))
-        .call()
-        .map_err(|e| match e {
-            ureq::Error::Status(status @ (401 | 403), _) => {
-                SseError::Refused(format!("Failed to get SSE token: HTTP {status}"))
-            }
-            e => SseError::Unreachable(format!("Failed to get SSE token: {e}")),
-        })?;
+    let response = client(TOKEN_TIMEOUT, TOKEN_TIMEOUT)?
+        .get(&url)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .send()
+        .map_err(|e| SseError::Unreachable(format!("Failed to get SSE token: {}", e.without_url())))?;
 
-    if response.status() != 200 {
-        return Err(SseError::Unreachable(format!(
-            "Failed to get SSE token: HTTP {} {}",
-            response.status(),
-            response.status_text()
-        )));
+    let status = response.status();
+    if matches!(status.as_u16(), 401 | 403) {
+        return Err(SseError::Refused(format!("Failed to get SSE token: HTTP {status}")));
+    }
+    if !status.is_success() {
+        return Err(SseError::Unreachable(format!("Failed to get SSE token: HTTP {status}")));
     }
 
-    let body_str = response
-        .into_string()
-        .map_err(|e| SseError::Unreachable(format!("Failed to read SSE token response: {e}")))?;
-
-    let body: serde_json::Value = serde_json::from_str(&body_str)
-        .map_err(|e| SseError::Unreachable(format!("Failed to parse SSE token response: {e}")))?;
+    let body: serde_json::Value = response
+        .json()
+        .map_err(|e| SseError::Unreachable(format!("Failed to read SSE token response: {}", e.without_url())))?;
 
     body.get("token")
         .and_then(|t| t.as_str())
@@ -257,33 +261,29 @@ fn connect_and_listen(
 
     debug!("Connecting to SSE endpoint: {}", config.endpoint);
 
-    // Build an agent with appropriate timeouts for SSE:
-    // - Short connect timeout (30s) to fail fast if server is unreachable
-    // - 45s read timeout: Server sends heartbeats every 30s, so 45s allows for
-    //   some jitter while still enabling the thread to check stop flag frequently.
-    //   On timeout, the thread will reconnect (after checking stop flag).
-    let agent = ureq::AgentBuilder::new()
-        .timeout_connect(Duration::from_secs(30))
-        .timeout_read(Duration::from_secs(45))
-        .build();
-
-    let response = agent
+    // Connecting gets 30s, to fail fast if the server is unreachable. The other timeout
+    // applies to each read, and the server sends heartbeats every 30s, so 45s allows for
+    // some jitter while still letting the thread check its stop flag. On a timeout the
+    // thread reconnects, after checking the flag. The URL holds the token, so it stays
+    // out of the error.
+    let response = client(Duration::from_secs(30), Duration::from_secs(45))?
         .get(&url)
-        .call()
-        .map_err(|e| match e {
-            ureq::Error::Status(401, _) => SseError::TokenRefused,
-            e => SseError::Unreachable(format!("Failed to connect: {e}")),
-        })?;
+        .send()
+        .map_err(|e| SseError::Unreachable(format!("Failed to connect: {}", e.without_url())))?;
 
-    if response.status() != 200 {
-        return Err(SseError::Lost(format!("HTTP {}: {}", response.status(), response.status_text())));
+    let status = response.status();
+    if status.as_u16() == 401 {
+        return Err(SseError::TokenRefused);
+    }
+    if !status.is_success() {
+        return Err(SseError::Unreachable(format!("Failed to connect: HTTP {status}")));
     }
 
     debug!("SSE connection established");
     let _ = sender.send(SseMessage::Connected);
 
     // Read the streaming response line by line
-    let reader = BufReader::new(response.into_reader());
+    let reader = BufReader::new(response);
     let mut current_event = String::new();
 
     for line in reader.lines() {
