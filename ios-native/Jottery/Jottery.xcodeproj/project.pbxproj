@@ -255,6 +255,19 @@
 				"en-GB",
 				"en-US",
 				Base,
+				de,
+				el,
+				es,
+				fr,
+				it,
+				ja,
+				ko,
+				nl,
+				pl,
+				pt,
+				ru,
+				tr,
+				"zh-Hans",
 			);
 			mainGroup = A8000001;
 			minimizedProjectReferenceProxies = 1;

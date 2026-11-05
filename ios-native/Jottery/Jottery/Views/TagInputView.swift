@@ -111,7 +111,8 @@ private struct TagChip: View {
     var body: some View {
         HStack(spacing: 4) {
             if isTitle, let value = titleValue {
-                Text("title: \(value)")
+                // `title:` is what you type in every language, so it isn't translated.
+                Text(verbatim: "title: \(value)")
                     .font(.callout)
                     .italic()
             } else {
