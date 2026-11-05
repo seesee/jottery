@@ -341,6 +341,10 @@ final class DatabaseManager: Sendable {
             try db.execute(sql: "ALTER TABLE settings ADD COLUMN backup_reminder_since TEXT")
         }
 
+        migrator.registerMigration("ios_w3_settings_2") { db in
+            try db.execute(sql: "ALTER TABLE settings ADD COLUMN default_syntax_language TEXT")
+        }
+
         try migrator.migrate(dbPool)
     }
 }

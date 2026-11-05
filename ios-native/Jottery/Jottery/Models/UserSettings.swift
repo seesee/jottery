@@ -19,6 +19,8 @@ struct UserSettings: Codable, FetchableRecord, PersistableRecord {
     var backupReminderDays: Int?
     /// When reminders were turned on, to count from if there's no backup yet.
     var backupReminderSince: String?
+    /// What a new blank note is (`NoteType`). Nil means the usual.
+    var defaultSyntaxLanguage: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -31,6 +33,7 @@ struct UserSettings: Codable, FetchableRecord, PersistableRecord {
         case lastBackupAt = "last_backup_at"
         case backupReminderDays = "backup_reminder_days"
         case backupReminderSince = "backup_reminder_since"
+        case defaultSyntaxLanguage = "default_syntax_language"
     }
 
     static let defaults = UserSettings(

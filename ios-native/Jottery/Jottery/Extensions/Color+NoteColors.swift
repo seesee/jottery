@@ -18,7 +18,7 @@ extension Color {
         "gray":   NoteColors(light: Color(hex: 0xF0F0F0), dark: Color(hex: 0x2A2A2A)),
     ]
 
-    static let noteColorNames = ["red", "orange", "yellow", "green", "blue", "purple", "pink", "gray"]
+    static let noteColorNames = NoteColourSettings.keys
 
     /// Get the note color for the current colour scheme.
     static func noteColor(named name: String, scheme: ColorScheme) -> Color? {

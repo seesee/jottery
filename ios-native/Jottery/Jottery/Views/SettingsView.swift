@@ -40,6 +40,18 @@ struct SettingsView: View {
                         }
                     }
 
+                    Picker(L.settingsDefaultNoteType, selection: defaultNoteType) {
+                        ForEach(NoteType.all, id: \.self) { type in
+                            Text(type.capitalized).tag(type)
+                        }
+                    }
+
+                    NavigationLink {
+                        ColoursView()
+                    } label: {
+                        Text(L.coloursTitle)
+                    }
+
                     Picker(L.settingsAutoLock, selection: setting(\.autoLockTimeout)) {
                         Text(L.settingsAutoLock1Min).tag(1)
                         Text(L.settingsAutoLock5Min).tag(5)
@@ -328,6 +340,14 @@ struct SettingsView: View {
                     appState.reportError(L.errorCouldntSaveSettings)
                 }
             }
+        )
+    }
+
+    private var defaultNoteType: Binding<String> {
+        let stored = setting(\.defaultSyntaxLanguage)
+        return Binding(
+            get: { appState.defaultNoteType ?? NoteType.fallback },
+            set: { stored.wrappedValue = $0 }
         )
     }
 

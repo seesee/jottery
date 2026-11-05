@@ -101,6 +101,11 @@ final class AppState {
 
     var backgroundedAt: ContinuousClock.Instant?
 
+    // MARK: - Colours
+
+    /// Category names and tag colours, decrypted. Empty while locked.
+    var noteColours = NoteColourSettings()
+
     // MARK: - Backup Reminders
 
     /// Replaced in tests, which mustn't reach the real notification centre.
@@ -246,6 +251,7 @@ final class AppState {
         // Both lists, because `archived` reaches whichever one isn't showing.
         let source = notes + archivedNotes
         let archiveMode = showArchive
+        let colours = noteColours
 
         searchTask = Task {
             // Debounce while typing
@@ -254,9 +260,9 @@ final class AppState {
 
             // Run expensive filter + sort off the main thread
             let (results, elsewhere) = await Task.detached(priority: .userInitiated) {
-                let filtered = SearchService.filter(notes: source, query: query, archiveMode: archiveMode)
+                let filtered = SearchService.filter(notes: source, query: query, archiveMode: archiveMode, colours: colours)
                 let elsewhere = filtered.isEmpty
-                    ? SearchService.filter(notes: source, query: query, archiveMode: !archiveMode).count
+                    ? SearchService.filter(notes: source, query: query, archiveMode: !archiveMode, colours: colours).count
                     : 0
                 return (SearchService.sort(notes: filtered, order: order), elsewhere)
             }.value
@@ -818,6 +824,7 @@ final class AppState {
         archivedNotes = []
         filteredNotes = []
         savedSearches = []
+        noteColours = NoteColourSettings()
         pendingConflicts = []
         inboxItems = []
         selectedNoteId = nil
@@ -930,6 +937,7 @@ final class AppState {
 
     func loadNotes() async throws {
         guard let noteRepo, let key = keyManager.masterKey else { return }
+        loadNoteColours(key: key)
         // Draw a ticket before the detached decrypt starts — on the main
         // actor, before any await — so it reflects this call's start order
         // relative to any other in-flight refresh (jottery-t94v).
@@ -1122,7 +1130,14 @@ final class AppState {
     func createNote(content: String = "", tags: [String] = []) throws -> DecryptedNote? {
         guard !isReKeying else { throw AppStateError.vaultBusy }
         guard let noteRepo, let key = keyManager.masterKey else { return nil }
-        let note = try noteRepo.create(content: content, tags: tags, key: key)
+        let note = try noteRepo.create(
+            content: content,
+            tags: tags,
+            // Text that came from somewhere else isn't a calculation because
+            // new notes are, so this is only for a blank note.
+            syntaxLanguage: content.isEmpty ? defaultNoteType : nil,
+            key: key
+        )
         changeLists { notes.insert(note, at: 0) }
         selectedNoteId = note.id
         scheduleAutoSync()
@@ -1941,6 +1956,7 @@ final class AppState {
         archivedNotes = []
         filteredNotes = []
         savedSearches = []
+        noteColours = NoteColourSettings()
         pendingConflicts = []
         pendingAccountKeyMerge = nil
         accountKeyNotice = nil

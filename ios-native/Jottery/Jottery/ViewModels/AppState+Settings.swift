@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 extension AppState {
@@ -93,5 +94,41 @@ extension AppState {
         } catch {
             reportError(L.errorCouldntSaveSettings)
         }
+    }
+
+    // MARK: - Note Types and Colours
+
+    /// What a new blank note is, if it's something this build knows.
+    var defaultNoteType: String? {
+        settings.defaultSyntaxLanguage.flatMap { NoteType.all.contains($0) ? $0 : nil }
+    }
+
+    /// Load category names and tag colours, which need the key.
+    func loadNoteColours(key: SymmetricKey) {
+        guard let db else { return }
+        do {
+            noteColours = try ColourSettingsRepository(db: db).load(key: key)
+        } catch {
+            Log.debug("[Settings] Couldn't load colour settings: \(error)")
+        }
+    }
+
+    func setCategoryName(_ name: String, for colourKey: String) throws {
+        try updateNoteColours { $0.setCategoryName(name, for: colourKey) }
+    }
+
+    func setTagColour(_ colourKey: String?, forTag tag: String) throws {
+        try updateNoteColours { $0.setColour(colourKey, forTag: tag) }
+    }
+
+    private func updateNoteColours(_ change: (inout NoteColourSettings) -> Void) throws {
+        guard !isReKeying else { throw AppStateError.vaultBusy }
+        guard let db, let key = keyManager.masterKey else { return }
+        var updated = noteColours
+        change(&updated)
+        try ColourSettingsRepository(db: db).save(updated, key: key)
+        noteColours = updated
+        // A search on screen may go by what just changed.
+        scheduleSearch()
     }
 }

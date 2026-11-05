@@ -89,6 +89,7 @@ struct NoteRepository: Sendable {
         fromInbox: Bool = false,
         copying original: DecryptedNote? = nil,
         attachments: [AttachmentRef] = [],
+        syntaxLanguage: String? = nil,
         key: SymmetricKey
     ) throws -> DecryptedNote {
         let encContent = try CryptoService.encryptText(content, key: key)
@@ -109,6 +110,7 @@ struct NoteRepository: Sendable {
         if !attachments.isEmpty {
             record.attachments = String(decoding: try JSONEncoder().encode(attachments), as: UTF8.self)
         }
+        if let syntaxLanguage { record.syntaxLanguage = syntaxLanguage }
 
         // Compute content hash using sync-format tags
         let syncTags = try encryptTagsToSyncFormat(tags, key: key)

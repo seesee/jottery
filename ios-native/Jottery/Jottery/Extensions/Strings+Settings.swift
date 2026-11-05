@@ -61,4 +61,16 @@ extension L {
     static var healthSendToServer: String { String(localized: "health.sendToServer") }
     static var healthUploadNotKept: String { String(localized: "health.uploadNotKept") }
     static var healthUploadUnreadable: String { String(localized: "health.uploadUnreadable") }
+
+    // MARK: - Note Types and Colours
+
+    static var settingsDefaultNoteType: String { String(localized: "settings.defaultNoteType") }
+    static var coloursTitle: String { String(localized: "colours.title") }
+    static var coloursCategoriesHeader: String { String(localized: "colours.categoriesHeader") }
+    static var coloursCategoriesFooter: String { String(localized: "colours.categoriesFooter") }
+    static func coloursCategoryLabel(_ colour: String) -> String { String(localized: "colours.categoryLabel \(colour)") }
+    static var coloursTagsHeader: String { String(localized: "colours.tagsHeader") }
+    static var coloursTagsFooter: String { String(localized: "colours.tagsFooter") }
+    static var coloursNoTags: String { String(localized: "colours.noTags") }
+    static var coloursFilterTags: String { String(localized: "colours.filterTags") }
 }

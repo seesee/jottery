@@ -211,7 +211,7 @@ struct NoteEditorView: View {
                                 color = name
                                 scheduleSave()
                             } label: {
-                                Label(name.capitalized, systemImage: color == name ? "checkmark.circle.fill" : "circle.fill")
+                                Label(appState.noteColours.displayName(for: name), systemImage: color == name ? "checkmark.circle.fill" : "circle.fill")
                             }
                         }
                         Divider()
@@ -562,7 +562,7 @@ struct NoteEditorView: View {
     }
 
     private var syntaxLanguages: [String] {
-        ["markdown", "calc", "outliner", "javascript", "typescript", "python", "perl", "json", "xml", "css", "bash", "sql", "plain"]
+        NoteType.all
     }
 
     // MARK: - Attachment Import
