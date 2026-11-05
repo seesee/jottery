@@ -90,6 +90,10 @@ private actor EventCounter {
 /// request is what says why (docs/sync-protocol.md).
 struct SSEClientTests {
 
+    /// A refusal backs off for two seconds or more. A stream that ended cleanly
+    /// waits one, which these tests aren't about.
+    private func isBackoff(_ pause: Duration) -> Bool { pause > .seconds(1) }
+
     private func makeClient(_ script: StreamScript, pauses: PauseLog? = nil) -> SSEClient {
         let host = "\(UUID().uuidString).example.test"
         ScriptedStreamProtocol.add(script, host: host)
@@ -128,7 +132,7 @@ struct SSEClientTests {
         await client.stop()
 
         #expect(await events.count > 0)
-        #expect(await pauses.pauses.isEmpty)
+        #expect(await pauses.pauses.filter(isBackoff).isEmpty)
     }
 
     /// Only the first refusal is free. Otherwise a server refusing every token
@@ -145,7 +149,7 @@ struct SSEClientTests {
         await client.stop()
 
         #expect(await events.count > 0)
-        #expect(await pauses.pauses.count == 1)
+        #expect(await pauses.pauses.filter(isBackoff).count == 1)
     }
 
     /// Whoever set the listener can be kept alive by it, along with the key they
@@ -183,6 +187,20 @@ struct SSEClientTests {
 
     /// A stream that ends is how a revoked device finds out if it was connected
     /// already. The reconnection asks for a token, and that's refused.
+    /// Without a wait, a server or proxy that closes every stream would get a
+    /// tight request loop from every device.
+    @Test func aStreamThatEndsWaitsBeforeConnectingAgain() async {
+        let script = StreamScript(tokenStatuses: [200, 200, 401])
+        let pauses = PauseLog()
+        let client = makeClient(script, pauses: pauses)
+
+        await client.start()
+        await client.waitUntilStopped()
+
+        #expect(script.streamRequests.count == 2)
+        #expect(await !pauses.pauses.isEmpty)
+    }
+
     @Test func aStreamThatEndsAsksForANewTokenBeforeConnectingAgain() async {
         let script = StreamScript(tokenStatuses: [200, 401])
         let client = makeClient(script)
