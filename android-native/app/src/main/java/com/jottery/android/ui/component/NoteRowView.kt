@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
@@ -46,6 +47,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.jottery.android.R
 import com.jottery.android.model.DecryptedNote
+import com.jottery.android.ui.theme.LocalNoteCategories
 import com.jottery.android.ui.theme.NoteColors
 import java.time.Duration
 import java.time.Instant
@@ -68,6 +70,7 @@ fun NoteRowView(
     accessibilityActions: List<CustomAccessibilityAction> = emptyList(),
 ) {
     val noteColor = NoteColors.fromString(note.color)
+    val categories = LocalNoteCategories.current
     val relativeDate = remember(note.modifiedAt) {
         relativeTime(note.modifiedAt)
     }
@@ -216,6 +219,16 @@ fun NoteRowView(
                             modifier = Modifier.weight(1f, fill = false),
                         ) {
                             note.regularTags.take(3).forEach { tag ->
+                                val tagColour = NoteColors.fromString(categories.colourOfTag(tag))
+                                if (tagColour != null) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.CenterVertically)
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(tagColour),
+                                    )
+                                }
                                 Text(
                                     text = "#$tag",
                                     style = MaterialTheme.typography.labelSmall,

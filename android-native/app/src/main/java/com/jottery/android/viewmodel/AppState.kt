@@ -27,6 +27,7 @@ import com.jottery.android.model.DecryptedNote
 import com.jottery.android.model.DecryptedSavedSearch
 import com.jottery.android.model.EncryptionMetadata
 import com.jottery.android.model.InboxItem
+import com.jottery.android.model.NoteCategories
 import com.jottery.android.model.NoteRecord
 import com.jottery.android.model.NoteVersionRecord
 import com.jottery.android.model.CloneDeviceRequest
@@ -166,6 +167,24 @@ class AppState(application: Application) : AndroidViewModel(application) {
             .getFloat(KEY_EDITOR_FONT_SCALE, 1.0f)
     )
     val editorFontScale: StateFlow<Float> = _editorFontScale.asStateFlow()
+
+    // MARK: - New Notes
+
+    private val _defaultNoteType = MutableStateFlow(
+        application.getSharedPreferences(PREFS_NAME, 0)
+            .getString(KEY_DEFAULT_NOTE_TYPE, DEFAULT_NOTE_TYPE) ?: DEFAULT_NOTE_TYPE
+    )
+    /** Per device, like the web's, and read for every note made here. */
+    val defaultNoteType: StateFlow<String> = _defaultNoteType.asStateFlow()
+
+    fun setDefaultNoteType(type: String) {
+        _defaultNoteType.value = type
+        getApplication<Application>()
+            .getSharedPreferences(PREFS_NAME, 0)
+            .edit()
+            .putString(KEY_DEFAULT_NOTE_TYPE, type)
+            .apply()
+    }
 
     // MARK: - Screen Security
 
@@ -793,10 +812,14 @@ class AppState(application: Application) : AndroidViewModel(application) {
      * Create a new note with the given content and tags.
      * Returns the created DecryptedNote, or null on failure.
      */
-    suspend fun createNote(content: String = "", tags: List<String> = emptyList()): DecryptedNote? {
+    suspend fun createNote(
+        content: String = "",
+        tags: List<String> = emptyList(),
+        syntaxLanguage: String = _defaultNoteType.value,
+    ): DecryptedNote? {
         val repo = noteRepo ?: return null
         val key = keyManager.masterKey ?: return null
-        val note = repo.create(content = content, tags = tags, key = key)
+        val note = repo.create(content = content, tags = tags, key = key, syntaxLanguage = syntaxLanguage)
         notesRevision.incrementAndGet()
         _notes.value = listOf(note) + _notes.value
         _selectedNoteId.value = note.id
@@ -981,13 +1004,14 @@ class AppState(application: Application) : AndroidViewModel(application) {
             displayedNotes
         }
         val order = _sortOrder.value
+        val categories = NoteCategories.from(_settings.value)
 
         searchJob = viewModelScope.launch {
             // Debounce while typing. With no query there's nothing to wait for.
             if (query.isNotBlank()) delay(150)
 
             _filteredNotes.value = withContext(Dispatchers.Default) {
-                val matches = if (query.isBlank()) source else SearchService.filter(source, query).notes
+                val matches = if (query.isBlank()) source else SearchService.filter(source, query, categories).notes
                 SearchService.sort(matches, order)
             }
         }
@@ -1378,6 +1402,18 @@ class AppState(application: Application) : AndroidViewModel(application) {
         repo.save(newSettings)
         _sortOrder.value = newSettings.sort
         keyManager.autoLockTimeout = newSettings.autoLockTimeout.toLong() * 60L
+    }
+
+    /** Name a colour, or clear its name with a blank one. */
+    suspend fun setCategoryName(colour: String, name: String) = changeCategories { it.named(colour, name) }
+
+    /** Give a tag a colour, or take it away with null. */
+    suspend fun setTagColour(tag: String, colour: String?) = changeCategories { it.withTag(tag, colour) }
+
+    private suspend fun changeCategories(change: (NoteCategories) -> NoteCategories) {
+        val settings = _settings.value
+        updateSettings(change(NoteCategories.from(settings)).appliedTo(settings))
+        scheduleSearch()
     }
 
     // MARK: - Wipe & Re-onboard
@@ -2239,7 +2275,8 @@ class AppState(application: Application) : AndroidViewModel(application) {
     private suspend fun applyPendingShare() {
         val shared = pendingShare ?: return
         pendingShare = null
-        val note = createNote(shared.text.orEmpty()) ?: return
+        // Text from another app is text, whatever new notes here usually are
+        val note = createNote(shared.text.orEmpty(), syntaxLanguage = DEFAULT_NOTE_TYPE) ?: return
         var failed = 0
         for (file in shared.files) {
             if (addAttachment(note.id, file.data, file.name, file.mimeType) == null) failed++
@@ -2866,6 +2903,8 @@ class AppState(application: Application) : AndroidViewModel(application) {
         private const val TAG = "AppState"
         private const val PREFS_NAME = "jottery_prefs"
         private const val KEY_EDITOR_FONT_SCALE = "editorFontScale"
+        private const val KEY_DEFAULT_NOTE_TYPE = "defaultNoteType"
+        private const val DEFAULT_NOTE_TYPE = "markdown"
         private const val KEY_SCREEN_SECURITY = "screenSecurity"
         private const val KEY_BIOMETRIC_OFFERED = "biometricOffered"
         private const val MAX_LOAD_ATTEMPTS = 3

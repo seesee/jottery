@@ -362,6 +362,12 @@
     <string name="note_row_select">ノートを選択</string>
     <string name="tags_empty">タグはまだありません。</string>
     <string name="settings_about_notes">ノート</string>
+    <string name="settings_default_note_type">デフォルトのノートタイプ</string>
+    <string name="settings_colours">カテゴリの色</string>
+    <string name="settings_colours_detail">色に名前を付けると、category:名前 で検索できます。名前はこのデバイスにのみ保存されます。</string>
+    <string name="settings_tag_categories">タグのカテゴリ</string>
+    <string name="settings_tag_categories_detail">タグにカテゴリをグローバルに割り当て（赤、オレンジ、黄色、緑、青、紫、ピンク、グレー）</string>
+    <string name="change_password_old_backups">この変更より前に作成したバックアップは、古いパスワードで引き続き開けます。</string>
     <string name="note_row_has_attachments">添付ファイルあり</string>
     <string name="search_bar_search">検索</string>
     <string name="search_bar_search_notes">ノートを検索…</string>

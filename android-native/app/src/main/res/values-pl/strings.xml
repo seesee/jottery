@@ -404,6 +404,12 @@
     <string name="note_row_select">Zaznacz notatkę</string>
     <string name="tags_empty">Nie ma jeszcze tagów.</string>
     <string name="settings_about_notes">Notatki</string>
+    <string name="settings_default_note_type">Domyślny typ notatki</string>
+    <string name="settings_colours">Kolory Kategorii</string>
+    <string name="settings_colours_detail">Nadaj kolorowi nazwę, a potem znajdź go za pomocą category:nazwa. Nazwy pozostają na tym urządzeniu.</string>
+    <string name="settings_tag_categories">Kategorie Tagów</string>
+    <string name="settings_tag_categories_detail">Przypisz kategorie do tagów globalnie (czerwony, pomarańczowy, żółty, zielony, niebieski, fioletowy, różowy, szary)</string>
+    <string name="change_password_old_backups">Kopie zapasowe utworzone przed tą zmianą nadal otwierają się starym hasłem.</string>
     <string name="note_row_has_attachments">Ma załączniki</string>
     <string name="search_bar_search">Szukaj</string>
     <string name="search_bar_search_notes">Szukaj w notatkach…</string>

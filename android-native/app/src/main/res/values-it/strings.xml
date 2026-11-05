@@ -390,6 +390,12 @@
     <string name="note_row_select">Seleziona nota</string>
     <string name="tags_empty">Ancora nessun tag.</string>
     <string name="settings_about_notes">Note</string>
+    <string name="settings_default_note_type">Tipo nota predefinito</string>
+    <string name="settings_colours">Colori Categorie</string>
+    <string name="settings_colours_detail">Assegna un nome a un colore, poi trovalo con category:nome. I nomi restano su questo dispositivo.</string>
+    <string name="settings_tag_categories">Categorie Tag</string>
+    <string name="settings_tag_categories_detail">Assegna categorie ai tag globalmente</string>
+    <string name="change_password_old_backups">I backup creati prima di questa modifica si aprono ancora con la vecchia password.</string>
     <string name="note_row_has_attachments">Ha allegati</string>
     <string name="search_bar_search">Cerca</string>
     <string name="search_bar_search_notes">Cerca nelle note…</string>

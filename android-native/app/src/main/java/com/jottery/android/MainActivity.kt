@@ -12,14 +12,18 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.jottery.android.model.DecryptedNote
+import com.jottery.android.model.NoteCategories
 import com.jottery.android.ui.navigation.JotteryNavigation
+import com.jottery.android.ui.theme.LocalNoteCategories
 import com.jottery.android.ui.theme.JotteryTheme
 import com.jottery.android.util.AttachmentFiles
 import com.jottery.android.util.QuickAction
@@ -43,9 +47,13 @@ class MainActivity : FragmentActivity() {
         setContent {
             val settings by appState.settings.collectAsState()
 
+            val categories = remember(settings) { NoteCategories.from(settings) }
+
             JotteryTheme(themeMode = settings.themeMode) {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    JotteryNavigation(appState = appState)
+                CompositionLocalProvider(LocalNoteCategories provides categories) {
+                    Surface(modifier = Modifier.fillMaxSize()) {
+                        JotteryNavigation(appState = appState)
+                    }
                 }
             }
         }

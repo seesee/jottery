@@ -10,6 +10,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.jottery.android.ui.screen.BackupScreen
 import com.jottery.android.ui.screen.ChangePasswordScreen
+import com.jottery.android.ui.screen.ColoursScreen
 import com.jottery.android.ui.screen.ConflictResolutionScreen
 import com.jottery.android.ui.screen.ImportScreen
 import com.jottery.android.ui.screen.InboxScreen
@@ -37,6 +38,7 @@ object Routes {
     const val IMPORT = "import"
     const val SAVED_SEARCHES = "saved_searches"
     const val TAGS = "tags"
+    const val COLOURS = "colours"
     const val CONFLICT_RESOLUTION = "conflict_resolution"
     const val INBOX = "inbox"
 }
@@ -135,6 +137,7 @@ fun JotteryNavigation(
                 onNavigateToBackup = { navController.navigate(Routes.BACKUP) },
                 onNavigateToImport = { navController.navigate(Routes.IMPORT) },
                 onNavigateToSavedSearches = { navController.navigate(Routes.SAVED_SEARCHES) },
+                onNavigateToColours = { navController.navigate(Routes.COLOURS) },
                 onNavigateToChangePassword = { navController.navigate(Routes.CHANGE_PASSWORD) },
             )
         }
@@ -170,6 +173,13 @@ fun JotteryNavigation(
 
         composable(Routes.IMPORT) {
             ImportScreen(
+                appState = appState,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(Routes.COLOURS) {
+            ColoursScreen(
                 appState = appState,
                 onBack = { navController.popBackStack() },
             )

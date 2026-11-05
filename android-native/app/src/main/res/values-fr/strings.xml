@@ -390,6 +390,12 @@
     <string name="note_row_select">Sélectionner la note</string>
     <string name="tags_empty">Aucune étiquette pour l\'instant.</string>
     <string name="settings_about_notes">Notes</string>
+    <string name="settings_default_note_type">Type de note par défaut</string>
+    <string name="settings_colours">Couleurs de Catégories</string>
+    <string name="settings_colours_detail">Donnez un nom à une couleur, puis retrouvez-la avec category:nom. Ces noms restent sur cet appareil.</string>
+    <string name="settings_tag_categories">Catégories d\'Étiquettes</string>
+    <string name="settings_tag_categories_detail">Attribuer des catégories aux étiquettes globalement</string>
+    <string name="change_password_old_backups">Les sauvegardes créées avant ce changement s\'ouvrent toujours avec l\'ancien mot de passe.</string>
     <string name="note_row_has_attachments">A des pièces jointes</string>
     <string name="search_bar_search">Rechercher</string>
     <string name="search_bar_search_notes">Rechercher des notes…</string>

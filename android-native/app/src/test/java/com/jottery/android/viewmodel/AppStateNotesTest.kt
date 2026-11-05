@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.jottery.android.crypto.CryptoService
 import com.jottery.android.database.JotteryDatabase
 import com.jottery.android.model.NoteVersionRecord
+import com.jottery.android.model.NoteCategories
 import com.jottery.android.util.QuickAction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -148,6 +149,51 @@ class AppStateNotesTest {
         assertTrue(appState.connectState.value is AppState.ConnectState.Failed)
         assertNull(appState.pendingConnection.value)
         server.shutdown()
+    }
+
+    @Test fun `a new note takes the default type, and that's remembered`() = runBlocking {
+        assertEquals("markdown", appState.createNote("Before")!!.syntaxLanguage)
+
+        appState.setDefaultNoteType("calc")
+
+        assertEquals("calc", appState.createNote("After")!!.syntaxLanguage)
+        val reopened = AppState(ApplicationProvider.getApplicationContext<Application>())
+        assertEquals("calc", reopened.defaultNoteType.value)
+        appState.setDefaultNoteType("markdown")
+    }
+
+    @Test fun `what's shared in stays text, whatever the default`() = runBlocking {
+        appState.setDefaultNoteType("calc")
+
+        appState.receiveShare("A link from another app", emptyList())
+
+        withTimeout(5_000) { while (appState.notes.value.isEmpty()) delay(5) }
+        assertEquals("markdown", appState.notes.value.single().syntaxLanguage)
+        appState.setDefaultNoteType("markdown")
+    }
+
+    @Test fun `naming a colour reaches search, and survives a restart of the app's state`() = runBlocking {
+        val note = appState.createNote("Coloured")!!
+        appState.saveNote(note.copy(color = "red"))
+        appState.createNote("Plain")
+        appState.setCategoryName("red", "Urgent")
+
+        appState.setSearchQuery("category:urgent")
+
+        withTimeout(5_000) { while (appState.filteredNotes.value.size != 1) delay(5) }
+        assertEquals("Coloured", appState.filteredNotes.value.single().content)
+        assertEquals("Urgent", NoteCategories.from(appState.settings.value).names["red"])
+    }
+
+    @Test fun `a tag's colour reaches search`() = runBlocking {
+        appState.createNote("Tagged", listOf("work"))
+        appState.createNote("Plain")
+        appState.setTagColour("work", "blue")
+
+        appState.setSearchQuery("color:blue tag")
+
+        withTimeout(5_000) { while (appState.filteredNotes.value.size != 1) delay(5) }
+        assertEquals("Tagged", appState.filteredNotes.value.single().content)
     }
 
     @Test fun `restoring a version updates the list the editor reads`() = runBlocking {

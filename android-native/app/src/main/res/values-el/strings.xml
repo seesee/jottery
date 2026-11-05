@@ -376,6 +376,12 @@
     <string name="note_row_select">Επιλογή σημείωσης</string>
     <string name="tags_empty">Δεν υπάρχουν ακόμη ετικέτες.</string>
     <string name="settings_about_notes">Σημειώσεις</string>
+    <string name="settings_default_note_type">Προεπιλεγμένος τύπος σημείωσης</string>
+    <string name="settings_colours">Χρώματα Κατηγοριών</string>
+    <string name="settings_colours_detail">Δώστε ένα όνομα σε ένα χρώμα και βρείτε το με το category:name. Τα ονόματα παραμένουν σε αυτήν τη συσκευή.</string>
+    <string name="settings_tag_categories">Κατηγορίες Ετικετών</string>
+    <string name="settings_tag_categories_detail">Ανάθεση κατηγοριών σε ετικέτες καθολικά (κόκκινο, πορτοκαλί, κίτρινο, πράσινο, μπλε, μωβ, ροζ, γκρι)</string>
+    <string name="change_password_old_backups">Τα αντίγραφα ασφαλείας που δημιουργήθηκαν πριν από αυτήν την αλλαγή ανοίγουν ακόμη με τον παλιό κωδικό.</string>
     <string name="note_row_has_attachments">Έχει συνημμένα</string>
     <string name="search_bar_search">Αναζήτηση</string>
     <string name="search_bar_search_notes">Αναζήτηση σημειώσεων…</string>

@@ -25,6 +25,7 @@ import com.jottery.android.ui.component.autoLockLabel
 import com.jottery.android.ui.component.enableBiometricUnlock
 import com.jottery.android.ui.component.relativeTime
 import com.jottery.android.ui.component.sortOrderLabel
+import com.jottery.android.ui.component.syntaxLanguages
 import com.jottery.android.ui.component.themeModeLabel
 import com.jottery.android.util.BiometricHelper
 import com.jottery.android.viewmodel.AppState
@@ -41,6 +42,7 @@ fun SettingsScreen(
     onNavigateToBackup: () -> Unit,
     onNavigateToImport: () -> Unit,
     onNavigateToSavedSearches: () -> Unit,
+    onNavigateToColours: () -> Unit,
     onNavigateToChangePassword: () -> Unit,
 ) {
     val screenSecurity by appState.screenSecurity.collectAsState()
@@ -53,6 +55,8 @@ fun SettingsScreen(
     val syncError by appState.syncError.collectAsState()
     var showThemeDialog by remember { mutableStateOf(false) }
     var showSortDialog by remember { mutableStateOf(false) }
+    var showNoteTypeDialog by remember { mutableStateOf(false) }
+    val defaultNoteType by appState.defaultNoteType.collectAsState()
     var showAutoLockDialog by remember { mutableStateOf(false) }
     var showWipeConfirm by remember { mutableStateOf(false) }
 
@@ -104,6 +108,15 @@ fun SettingsScreen(
                 title = stringResource(R.string.settings_auto_lock_timeout),
                 subtitle = autoLockLabel(settings.autoLockTimeout),
                 onClick = { showAutoLockDialog = true },
+            )
+            SettingsRow(
+                title = stringResource(R.string.settings_default_note_type),
+                subtitle = defaultNoteType.replaceFirstChar { it.uppercase() },
+                onClick = { showNoteTypeDialog = true },
+            )
+            SettingsRow(
+                title = stringResource(R.string.settings_colours),
+                onClick = onNavigateToColours,
             )
             SettingsRow(
                 title = stringResource(R.string.saved_searches_title),
@@ -231,6 +244,19 @@ fun SettingsScreen(
                 }
             },
             onDismiss = { showThemeDialog = false },
+        )
+    }
+
+    if (showNoteTypeDialog) {
+        SingleChoiceDialog(
+            title = stringResource(R.string.settings_default_note_type),
+            options = syntaxLanguages.map { it.replaceFirstChar { first -> first.uppercase() } to it },
+            selected = defaultNoteType,
+            onSelect = { type ->
+                showNoteTypeDialog = false
+                appState.setDefaultNoteType(type)
+            },
+            onDismiss = { showNoteTypeDialog = false },
         )
     }
 

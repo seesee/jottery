@@ -376,6 +376,12 @@
     <string name="note_row_select">Notu seç</string>
     <string name="tags_empty">Henüz etiket yok.</string>
     <string name="settings_about_notes">Notlar</string>
+    <string name="settings_default_note_type">Varsayılan not türü</string>
+    <string name="settings_colours">Kategori Renkleri</string>
+    <string name="settings_colours_detail">Bir renge ad verin, sonra category:ad ile bulun. Bu adlar bu cihazda kalır.</string>
+    <string name="settings_tag_categories">Etiket Kategorileri</string>
+    <string name="settings_tag_categories_detail">Etiketlere global olarak kategori ata (kırmızı, turuncu, sarı, yeşil, mavi, mor, pembe, gri)</string>
+    <string name="change_password_old_backups">Bu değişiklikten önce oluşturulan yedekler eski şifreyle açılmaya devam eder.</string>
     <string name="note_row_has_attachments">Eki var</string>
     <string name="search_bar_search">Ara</string>
     <string name="search_bar_search_notes">Notlarda ara…</string>

@@ -376,6 +376,12 @@
     <string name="note_row_select">Notitie selecteren</string>
     <string name="tags_empty">Nog geen tags.</string>
     <string name="settings_about_notes">Notities</string>
+    <string name="settings_default_note_type">Standaard notitietype</string>
+    <string name="settings_colours">Categoriekleuren</string>
+    <string name="settings_colours_detail">Geef een kleur een naam en vind deze met category:naam. Deze namen blijven op dit apparaat.</string>
+    <string name="settings_tag_categories">Tag Categorieën</string>
+    <string name="settings_tag_categories_detail">Categorieën globaal aan tags toewijzen (rood, oranje, geel, groen, blauw, paars, roze, grijs)</string>
+    <string name="change_password_old_backups">Back-ups van vóór deze wijziging openen nog steeds met het oude wachtwoord.</string>
     <string name="note_row_has_attachments">Heeft bijlagen</string>
     <string name="search_bar_search">Zoeken</string>
     <string name="search_bar_search_notes">Notities zoeken…</string>

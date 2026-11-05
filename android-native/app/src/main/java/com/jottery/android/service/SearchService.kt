@@ -1,6 +1,7 @@
 package com.jottery.android.service
 
 import com.jottery.android.model.DecryptedNote
+import com.jottery.android.model.NoteCategories
 import com.jottery.android.model.SortOrder
 import java.time.Instant
 import java.time.LocalDate
@@ -42,14 +43,18 @@ object SearchService {
      * Returns a [FilterResult] containing the matched notes plus counts
      * for the search bar display (e.g. "87/456").
      */
-    fun filter(notes: List<DecryptedNote>, query: String): FilterResult {
+    fun filter(
+        notes: List<DecryptedNote>,
+        query: String,
+        categories: NoteCategories = NoteCategories(),
+    ): FilterResult {
         val trimmed = query.trim()
         if (trimmed.isEmpty()) {
             return FilterResult(notes = notes, matchCount = notes.size, totalCount = notes.size)
         }
 
-        val parsed = parseQuery(trimmed)
-        val filtered = notes.filter { matchesQuery(it, parsed) }
+        val parsed = parseQuery(trimmed, categories)
+        val filtered = notes.filter { matchesQuery(it, parsed, categories) }
         return FilterResult(notes = filtered, matchCount = filtered.size, totalCount = notes.size)
     }
 
@@ -103,8 +108,9 @@ object SearchService {
         val excludeColors: MutableList<String> = mutableListOf(),
         // `archived` searches archived notes only
         var archivedOnly: Boolean = false,
-        // `color:red tag` asks for a tag colour, which this client doesn't have
+        // `color:red tag` or `color:red note` narrows it to that kind
         var tagColorOnly: Boolean = false,
+        var noteColorOnly: Boolean = false,
     )
 
     sealed class OrTerm {
@@ -154,10 +160,10 @@ object SearchService {
     //  Query Parsing
     // ------------------------------------------------------------------ //
 
-    fun parseQuery(raw: String): ParsedQuery {
+    fun parseQuery(raw: String, categories: NoteCategories = NoteCategories()): ParsedQuery {
         val query = ParsedQuery()
         // 1. Extract modifiers (removed from the query string)
-        val remaining = extractModifiers(raw, query)
+        val remaining = extractModifiers(raw, query, categories)
         // 2. Tokenize the remainder (handles quotes, #tags, -exclusions, | OR)
         tokenize(remaining, query)
         return query
@@ -170,7 +176,7 @@ object SearchService {
     private val DATE_PATTERN = """(\d{4}-\d{2}-\d{2})"""
     private val DATE_REGEX = Regex(DATE_PATTERN)
 
-    private fun extractModifiers(input: String, query: ParsedQuery): String {
+    private fun extractModifiers(input: String, query: ParsedQuery, categories: NoteCategories): String {
         var text = input
 
         // archived, archived:true
@@ -205,7 +211,7 @@ object SearchService {
         text = extractWordCount(text, query)
 
         // color: / colour: / category: filters
-        text = extractColorFilters(text, query)
+        text = extractColorFilters(text, query, categories)
 
         return text.trim()
     }
@@ -291,8 +297,25 @@ object SearchService {
         return result
     }
 
-    private fun extractColorFilters(text: String, query: ParsedQuery): String {
+    private fun extractColorFilters(text: String, query: ParsedQuery, categories: NoteCategories): String {
         var result = text
+
+        fun narrow(kind: String) {
+            if (kind.equals("tag", ignoreCase = true)) query.tagColorOnly = true
+            if (kind.equals("note", ignoreCase = true)) query.noteColorOnly = true
+        }
+
+        // A name the user chose can be several words, so the names come first, longest first
+        for ((colour, name) in categories.names.entries.sortedByDescending { it.value.length }) {
+            val pattern = Regex("""(?i)\bcategory:${Regex.escape(name)}(?![\w-])(?:\s+(note|tag)\b)?""")
+            var match = pattern.find(result)
+            while (match != null) {
+                query.colors.add(colour)
+                narrow(match.groupValues[1])
+                result = result.removeRange(match.range)
+                match = pattern.find(result)
+            }
+        }
 
         // Match color:name, colour:name, or category:name (case-insensitive)
         // `note` or `tag` after it says which colour is meant
@@ -301,7 +324,7 @@ object SearchService {
         while (match != null) {
             val colorName = match.groupValues[1].lowercase()
             query.colors.add(colorName)
-            if (match.groupValues[2].equals("tag", ignoreCase = true)) query.tagColorOnly = true
+            narrow(match.groupValues[2])
             result = result.removeRange(match.range)
             match = colorPattern.find(result)
         }
@@ -467,7 +490,7 @@ object SearchService {
     //  Matching
     // ------------------------------------------------------------------ //
 
-    private fun matchesQuery(note: DecryptedNote, query: ParsedQuery): Boolean {
+    private fun matchesQuery(note: DecryptedNote, query: ParsedQuery, categories: NoteCategories): Boolean {
         val lowerContent = note.searchableContent
         val lowerTags = note.searchableTags
         val searchableText = lowerContent + " " + lowerTags.joinToString(" ")
@@ -504,7 +527,6 @@ object SearchService {
         }
 
         if (query.archivedOnly && !note.archived) return false
-        if (query.tagColorOnly) return false
 
         // has:attachment
         if (query.hasAttachment == true) {
@@ -523,8 +545,18 @@ object SearchService {
 
         // Color / category
         if (query.colors.isNotEmpty()) {
-            val noteColor = note.color?.lowercase() ?: return false
-            if (noteColor !in query.colors) return false
+            val noteColor = note.color?.lowercase()
+            val tagColors = note.tags.mapNotNull(categories::colourOfTag)
+            val matched = query.colors.any { colour ->
+                val onNote = colour == noteColor
+                val onTag = colour in tagColors
+                when {
+                    query.tagColorOnly -> onTag
+                    query.noteColorOnly -> onNote
+                    else -> onNote || onTag
+                }
+            }
+            if (!matched) return false
         }
 
         return true

@@ -1143,7 +1143,7 @@ private fun ClipData.urisOrEmpty(): List<Uri> =
     (0 until itemCount).mapNotNull { getItemAt(it).uri }
 
 /** Supported syntax languages matching the iOS editor. */
-private val syntaxLanguages = listOf(
+internal val syntaxLanguages = listOf(
     "markdown",
     "calc",
     "outliner",

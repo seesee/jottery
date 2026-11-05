@@ -5,4 +5,6 @@
     <string name="bulk_clear_colour">No color</string>
     <string name="editor_colour_value">Color: %1$s</string>
     <string name="info_colour">Color</string>
+    <string name="settings_colours">Category Colors</string>
+    <string name="settings_colours_detail">Give a color a name, then find it with category:name. These stay on this device.</string>
 </resources>

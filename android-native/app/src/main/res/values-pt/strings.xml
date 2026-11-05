@@ -390,6 +390,12 @@
     <string name="note_row_select">Selecionar nota</string>
     <string name="tags_empty">Ainda não há tags.</string>
     <string name="settings_about_notes">Notas</string>
+    <string name="settings_default_note_type">Tipo de nota padrão</string>
+    <string name="settings_colours">Cores de Categoria</string>
+    <string name="settings_colours_detail">Dê um nome a uma cor e encontre-a com category:nome. Estes nomes ficam neste dispositivo.</string>
+    <string name="settings_tag_categories">Categorias de Tags</string>
+    <string name="settings_tag_categories_detail">Atribuir categorias às tags globalmente (vermelho, laranja, amarelo, verde, azul, roxo, rosa, cinza)</string>
+    <string name="change_password_old_backups">Os backups feitos antes desta alteração continuam abrindo com a senha antiga.</string>
     <string name="note_row_has_attachments">Tem anexos</string>
     <string name="search_bar_search">Pesquisar</string>
     <string name="search_bar_search_notes">Pesquisar notas…</string>

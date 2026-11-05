@@ -404,6 +404,12 @@
     <string name="note_row_select">Выбрать заметку</string>
     <string name="tags_empty">Тегов пока нет.</string>
     <string name="settings_about_notes">Заметки</string>
+    <string name="settings_default_note_type">Тип заметки по умолчанию</string>
+    <string name="settings_colours">Цвета Категорий</string>
+    <string name="settings_colours_detail">Назовите цвет, а затем находите его с помощью category:имя. Названия хранятся только на этом устройстве.</string>
+    <string name="settings_tag_categories">Категории Тегов</string>
+    <string name="settings_tag_categories_detail">Назначить категории тегам глобально (красный, оранжевый, жёлтый, зелёный, синий, фиолетовый, розовый, серый)</string>
+    <string name="change_password_old_backups">Резервные копии, созданные до этого изменения, по-прежнему открываются старым паролем.</string>
     <string name="note_row_has_attachments">Есть вложения</string>
     <string name="search_bar_search">Поиск</string>
     <string name="search_bar_search_notes">Поиск заметок…</string>

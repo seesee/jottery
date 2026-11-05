@@ -376,6 +376,12 @@
     <string name="note_row_select">Notiz auswählen</string>
     <string name="tags_empty">Noch keine Schlagwörter.</string>
     <string name="settings_about_notes">Notizen</string>
+    <string name="settings_default_note_type">Standard-Notiztyp</string>
+    <string name="settings_colours">Kategoriefarben</string>
+    <string name="settings_colours_detail">Geben Sie einer Farbe einen Namen und finden Sie sie dann mit category:name. Diese Namen bleiben auf diesem Gerät.</string>
+    <string name="settings_tag_categories">Tag-Kategorien</string>
+    <string name="settings_tag_categories_detail">Kategorien Tags global zuweisen</string>
+    <string name="change_password_old_backups">Backups, die vor dieser Änderung erstellt wurden, lassen sich weiterhin mit dem alten Passwort öffnen.</string>
     <string name="note_row_has_attachments">Hat Anhänge</string>
     <string name="search_bar_search">Suchen</string>
     <string name="search_bar_search_notes">Notizen durchsuchen…</string>

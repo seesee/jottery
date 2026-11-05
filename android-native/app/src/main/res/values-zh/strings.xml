@@ -362,6 +362,12 @@
     <string name="note_row_select">选择笔记</string>
     <string name="tags_empty">还没有标签。</string>
     <string name="settings_about_notes">笔记</string>
+    <string name="settings_default_note_type">默认笔记类型</string>
+    <string name="settings_colours">类别颜色</string>
+    <string name="settings_colours_detail">为颜色命名后，可以用 category:名称 查找。这些名称只保存在此设备上。</string>
+    <string name="settings_tag_categories">标签类别</string>
+    <string name="settings_tag_categories_detail">全局分配标签类别（红色、橙色、黄色、绿色、蓝色、紫色、粉色、灰色）</string>
+    <string name="change_password_old_backups">在此更改之前创建的备份仍可使用旧密码打开。</string>
     <string name="note_row_has_attachments">含有附件</string>
     <string name="search_bar_search">搜索</string>
     <string name="search_bar_search_notes">搜索笔记…</string>
