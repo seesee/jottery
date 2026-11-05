@@ -203,7 +203,9 @@ hold `name` and `query` as plaintext. Web encrypts those once, after restoring.
 ### `settings`
 
 One item, in a batch of its own. These are the web client's `UserSettings`, and a
-reader takes the fields it knows. A client that writes this batch should use those
+reader takes the fields it knows. `rememberPassword`, `persistSession` and
+`persistSessionTimeout` stay behind on a restore: they are security choices about one
+device, made with a warning and the password. A client that writes this batch should use those
 names, such as `language`, `theme`, `sortOrder` and `autoLockTimeout`.
 
 `theme` is `light`, `dark` or `auto`. The TUI's colour schemes don't fit that, so it adds

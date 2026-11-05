@@ -192,7 +192,7 @@ class WebCryptoService implements CryptoService {
    * This is a version token, not an integrity check. Nothing recomputes a hash to compare
    * it, and each client builds its own differently, so two clients never produce the same
    * value for one note. It's only compared with the values already in a chain. Changing
-   * how it's computed is a format change: see "Deferred by design" in the review notes.
+   * how it's computed would need every client to change at once.
    *
    * @param note - The note to hash (with encrypted content/tags)
    * @returns SHA-256 hash of the note's change-triggering fields
