@@ -614,7 +614,7 @@
     },
     "advancedTab": {
       "importExport": "Import/Eksport",
-      "exportDescription": "Eksportuj notatki jako odszyfrowany JSON. Import scali notatki z istniejącymi danymi.",
+      "exportDescription": "Eksport tworzy niezaszyfrowaną kopię JSON do przenoszenia notatek: każdy, kto ma plik, może ją odczytać. Aby uzyskać zaszyfrowaną kopię, użyj kopii zapasowej. Import scala notatki z już istniejącymi.",
       "downloadClient": "Pobierz klienta terminalowego/HTML",
       "downloadTerminalClient": "Pobierz klienta terminalowego",
       "clientDescription": "Pobierz klienta terminalowego dla dostępu z wiersza poleceń lub klienta HTML do lokalnego uruchomienia z systemu plików",

@@ -587,7 +587,7 @@
     },
     "advancedTab": {
       "importExport": "Import/Export",
-      "exportDescription": "Export notes as decrypted JSON. Import will merge notes with existing data.",
+      "exportDescription": "Export makes an unencrypted JSON copy for moving notes elsewhere: anyone with the file can read it. For an encrypted copy, use Backup. Import merges notes with what's already here.",
       "downloadClient": "Download Terminal/HTML Client",
       "downloadTerminalClient": "Download Terminal Client",
       "clientDescription": "Download the terminal client for command-line access, or the HTML client to run locally from the filesystem",

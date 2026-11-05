@@ -614,7 +614,7 @@
     },
     "advancedTab": {
       "importExport": "导入/导出",
-      "exportDescription": "将笔记导出为解密的 JSON。导入将合并笔记与现有数据。",
+      "exportDescription": "导出会创建未加密的 JSON 副本，用于将笔记迁移到其他地方：任何拿到文件的人都能读取。如需加密副本，请使用备份。导入会将笔记与现有内容合并。",
       "downloadClient": "下载终端/HTML客户端",
       "downloadTerminalClient": "下载终端客户端",
       "clientDescription": "下载终端客户端用于命令行访问，或下载HTML客户端从本地文件系统运行",

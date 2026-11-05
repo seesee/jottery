@@ -614,7 +614,7 @@
     },
     "advancedTab": {
       "importExport": "İçe/Dışa Aktar",
-      "exportDescription": "Notları şifresi çözülmüş JSON olarak dışa aktarın. İçe aktarma, notları mevcut verilerle birleştirir.",
+      "exportDescription": "Dışa aktarma, notları başka yere taşımak için şifrelenmemiş bir JSON kopyası oluşturur: dosyaya sahip olan herkes okuyabilir. Şifreli bir kopya için yedeklemeyi kullanın. İçe aktarma, notları mevcut olanlarla birleştirir.",
       "downloadClient": "Terminal/HTML İstemcisini İndir",
       "downloadTerminalClient": "Terminal İstemcisini İndir",
       "clientDescription": "Komut satırı erişimi için terminal istemcisini veya dosya sisteminden yerel olarak çalıştırmak için HTML istemcisini indirin",

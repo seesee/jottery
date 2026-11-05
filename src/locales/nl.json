@@ -614,7 +614,7 @@
     },
     "advancedTab": {
       "importExport": "Importeren/Exporteren",
-      "exportDescription": "Exporteer notities als ontsleutelde JSON. Import zal notities samenvoegen met bestaande gegevens.",
+      "exportDescription": "Exporteren maakt een onversleutelde JSON-kopie om notities elders te gebruiken: iedereen met het bestand kan het lezen. Gebruik Back-up voor een versleutelde kopie. Importeren voegt notities samen met wat er al is.",
       "downloadClient": "Terminal/HTML-client downloaden",
       "downloadTerminalClient": "Terminalclient downloaden",
       "clientDescription": "Download de terminalclient voor opdrachtregeltoegang, of de HTML-client om lokaal vanuit het bestandssysteem uit te voeren",

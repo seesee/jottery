@@ -614,7 +614,7 @@
     },
     "advancedTab": {
       "importExport": "Importar/Exportar",
-      "exportDescription": "Exportar notas como JSON descriptografado. A importação mesclará notas com dados existentes.",
+      "exportDescription": "A exportação cria uma cópia JSON não encriptada para levar as notas para outro lado: qualquer pessoa com o ficheiro a pode ler. Para uma cópia encriptada, use a cópia de segurança. A importação junta as notas às que já existem.",
       "downloadClient": "Baixar cliente de terminal/HTML",
       "downloadTerminalClient": "Baixar cliente de terminal",
       "clientDescription": "Baixe o cliente de terminal para acesso via linha de comando, ou o cliente HTML para executar localmente a partir do sistema de arquivos",

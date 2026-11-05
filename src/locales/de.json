@@ -614,7 +614,7 @@
     },
     "advancedTab": {
       "importExport": "Importieren/Exportieren",
-      "exportDescription": "Notizen als entschlüsseltes JSON exportieren. Der Import führt Notizen mit vorhandenen Daten zusammen.",
+      "exportDescription": "Der Export erstellt eine unverschlüsselte JSON-Kopie, um Notizen anderswohin zu übertragen: Jeder mit der Datei kann sie lesen. Für eine verschlüsselte Kopie nutzen Sie die Datensicherung. Der Import führt Notizen mit den vorhandenen zusammen.",
       "downloadClient": "Terminal-/HTML-Client herunterladen",
       "downloadTerminalClient": "Terminal-Client herunterladen",
       "clientDescription": "Laden Sie den Terminal-Client für Befehlszeilenzugriff herunter oder den HTML-Client, um ihn lokal vom Dateisystem auszuführen",

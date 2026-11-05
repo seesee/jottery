@@ -614,7 +614,7 @@
     },
     "advancedTab": {
       "importExport": "Importa/Esporta",
-      "exportDescription": "Esporta note come JSON decifrato. L'importazione unirà le note con i dati esistenti.",
+      "exportDescription": "L'esportazione crea una copia JSON non cifrata per spostare le note altrove: chiunque abbia il file può leggerla. Per una copia cifrata, usa il backup. L'importazione unisce le note a quelle già presenti.",
       "downloadClient": "Scarica client terminale/HTML",
       "downloadTerminalClient": "Scarica client terminale",
       "clientDescription": "Scarica il client terminale per l'accesso da riga di comando, o il client HTML per l'esecuzione locale dal filesystem",
