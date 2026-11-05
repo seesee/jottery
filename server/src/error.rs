@@ -18,6 +18,8 @@ pub enum AppError {
     TooManyRequests(String),
     /// The account must set a new password before it can do anything else.
     PasswordChangeRequired,
+    /// This can't be undone, and the session is too old to vouch for the person.
+    PasswordRequired,
     /// The push would take the account past its storage quota.
     StorageQuotaExceeded,
     /// Too many attempts: the client should wait this long before trying again.
@@ -38,6 +40,7 @@ impl std::fmt::Display for AppError {
             AppError::PayloadTooLarge(msg) => write!(f, "Payload too large: {}", msg),
             AppError::TooManyRequests(msg) => write!(f, "Too many requests: {}", msg),
             AppError::PasswordChangeRequired => write!(f, "Password change required"),
+            AppError::PasswordRequired => write!(f, "Password required"),
             AppError::StorageQuotaExceeded => write!(f, "Storage quota exceeded"),
             AppError::RateLimited { retry_after_secs } => {
                 write!(f, "Rate limited for {} seconds", retry_after_secs)
@@ -83,6 +86,14 @@ impl IntoResponse for AppError {
             return (StatusCode::FORBIDDEN, body).into_response();
         }
 
+        if matches!(self, AppError::PasswordRequired) {
+            let body = Json(json!({
+                "error": "Enter your password to do this",
+                "code": "password_required"
+            }));
+            return (StatusCode::FORBIDDEN, body).into_response();
+        }
+
         if matches!(self, AppError::StorageQuotaExceeded) {
             let body = Json(json!({
                 "error": "This account has reached its storage quota",
@@ -114,6 +125,7 @@ impl IntoResponse for AppError {
             AppError::PayloadTooLarge(msg) => (StatusCode::PAYLOAD_TOO_LARGE, msg),
             AppError::TooManyRequests(msg) => (StatusCode::TOO_MANY_REQUESTS, msg),
             AppError::PasswordChangeRequired
+            | AppError::PasswordRequired
             | AppError::StorageQuotaExceeded
             | AppError::RateLimited { .. } => {
                 unreachable!("handled above")

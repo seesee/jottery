@@ -366,6 +366,7 @@ The path is `/api/v1/admin` from `/auth/login` and `/api/v1/user` from `/user/lo
 
 A `POST`, `PUT`, `PATCH` or `DELETE` that authenticates with the cookie gets 403 unless it has the header `X-Requested-With: JotteryDashboard`. A request with `Authorization: Bearer <token>` doesn't need it.
 
+- `DELETE /user/account` and `DELETE /user/notes` take `{ "currentPassword": "..." }` as a JSON body. A wrong one gets 401 with an `error`, and counts as a wrong password. Without one they only work within five minutes of signing in, which is what a client that asks for the password and signs in first relies on. After that they get 403 with `code: "password_required"`.
 - `GET /admin/me` returns `{ id, email, isAdmin }` for the signed-in admin. It's the check that a cookie session still works, because that cookie isn't sent to `/user/account`. During a forced password change it returns 403 with `code: "password_change_required"`.
 - `POST /admin/logout` and `POST /user/logout` end the session and clear that route's cookie. Both work with a token too. `/admin/logout` is new, so a dashboard holding a token should keep using `/user/logout`, which every server has.
 

@@ -274,11 +274,67 @@ pub async fn get_account_info(
     }))
 }
 
+/// How long a sign-in counts as proof of the password. Released iOS clients ask for
+/// the password, sign in and delete the account at once, without sending it again.
+const RECENT_SIGN_IN_MINUTES: i64 = 5;
+
+/// The password, sent with a request that can't be undone.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PasswordConfirmation {
+    pub current_password: Option<String>,
+}
+
+fn signed_in_recently(session: &Session) -> bool {
+    chrono::DateTime::parse_from_rfc3339(&session.created_at).is_ok_and(|created_at| {
+        chrono::Utc::now() - created_at.with_timezone(&chrono::Utc)
+            < chrono::Duration::minutes(RECENT_SIGN_IN_MINUTES)
+    })
+}
+
+/// Check that the person behind a session really is the account holder, before
+/// something that can't be undone. A session alone may be stolen, or left open.
+async fn confirm_account_holder(
+    state: &AppState,
+    session: &Session,
+    confirmation: Option<PasswordConfirmation>,
+) -> AppResult<()> {
+    let Some(password) = confirmation.and_then(|c| c.current_password) else {
+        return if signed_in_recently(session) {
+            Ok(())
+        } else {
+            Err(AppError::PasswordRequired)
+        };
+    };
+
+    let user = UserRepository::get_by_id(&state.pool, &session.user_id).await?;
+    state.login_throttle.check(&user.email)?;
+
+    let password_valid = verify_stored(&password, &user.password_hash)
+        .await
+        .map_err(|e| {
+            tracing::error!("Password verification failed: {}", e);
+            AppError::InternalServerError
+        })?;
+
+    if !password_valid {
+        tracing::warn!("Wrong password for a destructive action: user {}", user.id);
+        state.login_throttle.record_failure(&user.email);
+        return Err(AppError::Unauthorized);
+    }
+
+    state.login_throttle.record_success(&user.email);
+    Ok(())
+}
+
 /// Delete all user's notes from server
 pub async fn delete_all_notes(
     State(state): State<Arc<AppState>>,
     axum::Extension(session): axum::Extension<Session>,
+    confirmation: Option<Json<PasswordConfirmation>>,
 ) -> AppResult<StatusCode> {
+    confirm_account_holder(&state, &session, confirmation.map(|Json(c)| c)).await?;
+
     let user_id = session.user_id;
 
     tracing::warn!("User {} requested to delete all their notes", user_id);
@@ -433,7 +489,10 @@ pub async fn delete_account(
     State(state): State<Arc<AppState>>,
     axum::Extension(session): axum::Extension<Session>,
     Query(query): Query<DeleteAccountQuery>,
+    confirmation: Option<Json<PasswordConfirmation>>,
 ) -> AppResult<StatusCode> {
+    confirm_account_holder(&state, &session, confirmation.map(|Json(c)| c)).await?;
+
     let user_id = &session.user_id;
 
     let user = UserRepository::get_by_id(&state.pool, user_id).await?;
