@@ -113,6 +113,12 @@ After manual updates, rebuild to see changes:
 - Web: `npm run build`
 - TUI: `cargo build --release`
 
+## Compilers
+
+`server/rust-toolchain.toml` and `tui/rust-toolchain.toml` pin the Rust compiler, so a release can be rebuilt from its tag. rustup installs the right one when you first run `cargo` in those directories.
+
+The server's pin has to match the `rust` image in the `Dockerfile`, so that its tests run on the compiler that builds the release. CI fails if they differ, so update both together.
+
 ## Current Versions
 
 Run these commands to check current versions:
