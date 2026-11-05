@@ -444,7 +444,7 @@
         "required": "Introduza a palavra-passe das suas notas.",
         "incorrect": "Esta não é a palavra-passe que desbloqueia as suas notas neste dispositivo. Introduza a palavra-passe das notas, não a do servidor.",
         "uploadFailed": "A sincronização está configurada, mas não foi possível guardar a chave de encriptação no servidor, por isso os outros dispositivos ainda não se podem ligar. Será feita nova tentativa no próximo desbloqueio",
-        "mustDiffer": "A palavra-passe das notas e a da conta têm de ser diferentes. O servidor de sincronização vê a palavra-passe da conta, por isso, se coincidirem, poderá ler as suas notas. Se forem iguais nos outros dispositivos, altere primeiro aí a palavra-passe das notas.",
+        "mustDiffer": "A palavra-passe das notas e a da conta têm de ser diferentes. O servidor de sincronização vê a palavra-passe da conta, por isso, se coincidirem, poderá ler as suas notas.",
         "matchesAccountWarning": "A palavra-passe das notas é igual à da conta, pelo que o servidor de sincronização poderá ler as suas notas. Altere a palavra-passe das notas para resolver isto."
       },
       "existingAccountDetected": "Este e-mail já tem uma conta, por isso este dispositivo irá ligar-se a ela. Introduza a palavra-passe das notas que utiliza nos outros dispositivos."
@@ -570,7 +570,8 @@
         "changing": "A alterar palavra-passe...",
         "button": "Alterar palavra-passe",
         "success": "Palavra-passe alterada com sucesso",
-        "error": "Falha ao alterar a palavra-passe: {error}"
+        "error": "Falha ao alterar a palavra-passe: {error}",
+        "serverKeyFailed": "A sua palavra-passe foi alterada neste dispositivo, mas não foi possível atualizar o servidor. Será tentado novamente no próximo desbloqueio. Até lá, um novo dispositivo precisaria da palavra-passe antiga."
       },
       "connectionDetails": {
         "title": "Detalhes da conexão",
@@ -934,7 +935,8 @@
         "encrypting": "A proteger credenciais…",
         "syncing": "A iniciar primeira sincronização…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "A palavra-passe das notas foi alterada noutro dispositivo. Este dispositivo continua a desbloquear com a palavra-passe antiga e as suas notas estão seguras, mas os novos dispositivos vão precisar da nova."
   },
   "lock": {
     "title": "Bloquear aplicativo",

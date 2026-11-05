@@ -25,6 +25,9 @@ import { restrictConnections } from './cspService';
 import { searchService } from './searchService';
 import { AccountKeyExistsError, AccountKeyUnreadableError, LocalNotesOrphanedError, ValidationError } from '../errors';
 import { isNotesPasswordLongEnough, MIN_NOTES_PASSWORD_LENGTH } from '../utils/passwordRules';
+import { toast } from '../utils/toast.svelte';
+import { get } from 'svelte/store';
+import { _ } from 'svelte-i18n';
 
 /**
  * Check if the application has been initialized
@@ -350,11 +353,14 @@ export function isLocked(): boolean {
 
 /**
  * Change the password (enabled by envelope encryption — no re-encryption needed)
+ *
+ * The local change always stands. `serverKeyUpdated` is false if the server's copy
+ * couldn't be updated, in which case the upload is retried at the next unlock.
  */
 export async function changePassword(
   currentPassword: string,
   newPassword: string
-): Promise<void> {
+): Promise<{ serverKeyUpdated: boolean }> {
   if (!isNotesPasswordLongEnough(newPassword)) {
     throw new ValidationError(`Password must be at least ${MIN_NOTES_PASSWORD_LENGTH} characters`, 'newPassword');
   }
@@ -402,29 +408,24 @@ export async function changePassword(
   });
 
   // Re-wrap master key for server (if sync configured)
+  let serverKeyUpdated = true;
   const syncMetadata = await syncRepository.getMetadata();
   if (syncMetadata?.syncEnabled && syncMetadata.userId && syncMetadata.apiKey && syncMetadata.syncEndpoint) {
     try {
-      const wrappingKey = await cryptoService.deriveWrappingKey(newPassword, syncMetadata.userId);
-      const serverWrapped = await cryptoService.wrapMasterKey(wrappingKey, currentMasterKey.keyBytes);
-
-      // Get plaintext API key for auth
-      const encryptedApiKey = JSON.parse(syncMetadata.apiKey);
-      const plaintextApiKey = await cryptoService.decryptText(encryptedApiKey, currentMasterKey.key);
-
-      await authService.putWrappedKey(syncMetadata.syncEndpoint, plaintextApiKey, {
-        blob: JSON.stringify(serverWrapped),
-        kdfVersion: CRYPTO_WRAPPING_KDF_VERSION,
-        kdfIterations: CRYPTO_WRAPPING_ITERATIONS,
-      });
+      await uploadWrappedKey(newPassword, currentMasterKey.keyBytes);
       console.log('[ChangePassword] ✓ Server wrapped key updated');
     } catch (error) {
       console.warn('[ChangePassword] Failed to update server wrapped key:', error);
-      // Non-fatal — local password change still succeeded
+      // The server still holds a copy under the old password, so a new device would
+      // need that one. Without this, unlock would read the mismatch as a change
+      // made somewhere else, and never repair it.
+      serverKeyUpdated = false;
+      await syncRepository.updateMetadata({ serverKeyStale: true });
     }
   }
 
   console.log('[ChangePassword] ✓ Password changed successfully (no re-encryption needed)');
+  return { serverKeyUpdated };
 }
 
 /**
@@ -501,6 +502,8 @@ async function uploadWrappedKey(password: string, masterKeyBytes: Uint8Array): P
     kdfVersion: CRYPTO_WRAPPING_KDF_VERSION,
     kdfIterations: CRYPTO_WRAPPING_ITERATIONS,
   });
+
+  await syncRepository.updateMetadata({ serverKeyVerified: true, serverKeyStale: false });
 }
 
 /**
@@ -607,8 +610,15 @@ export async function verifyUnlockPassword(password: string): Promise<boolean> {
  *
  * A blob that opens with the notes password is never touched, even if it holds a
  * different key: that means this device has diverged, and overwriting would damage
- * the account. A blob that won't open is replaced only by a device that has synced
- * successfully, because such a device holds the account's real key.
+ * the account.
+ *
+ * A blob that won't open has three possible causes, and only one is safe to repair:
+ * - A password change here never reached the server. Finish it.
+ * - This device has opened or uploaded the blob before, so it isn't old-format. The
+ *   password must have changed on another device, and overwriting would undo that
+ *   and start the two devices taking turns. Leave it, and tell the user.
+ * - This device has never opened it. If it has synced it holds the account's real
+ *   key, so it may repair the blob. Doing so sets the flag, so that happens only once.
  *
  * All failures (including being offline) are logged and ignored.
  */
@@ -628,10 +638,19 @@ export async function ensureServerWrappedKey(notesPassword: string): Promise<voi
     const existing = await authService.getWrappedKey(syncMetadata.syncEndpoint, plaintextApiKey);
     if (existing) {
       if (await unwrapServerBlob(existing.blob, notesPassword, syncMetadata.userId)) {
+        if (!syncMetadata.serverKeyVerified || syncMetadata.serverKeyStale) {
+          await syncRepository.updateMetadata({ serverKeyVerified: true, serverKeyStale: false });
+        }
         return;
       }
-      if (!syncMetadata.lastSyncAt) {
-        return;
+      if (!syncMetadata.serverKeyStale) {
+        if (syncMetadata.serverKeyVerified) {
+          toast.info(get(_)('unlock.passwordChangedElsewhere'));
+          return;
+        }
+        if (!syncMetadata.lastSyncAt) {
+          return;
+        }
       }
       console.log('[Unlock] Server key does not open with the notes password, re-wrapping it...');
     } else {
@@ -793,6 +812,10 @@ export async function onboardFromServer(
     derivedAt: Date.now(),
   };
   keyManager.setMasterKey(masterKey);
+
+  // Written with the account it belongs to, because the proof is only about that one
+  await syncRepository.updateMetadata({ syncEndpoint: endpoint, userId, serverKeyVerified: true, serverKeyStale: false });
+
   console.log('[Onboard] ✓ Device onboarded via envelope encryption');
 }
 

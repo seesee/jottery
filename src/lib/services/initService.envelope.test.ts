@@ -11,6 +11,12 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+
+// The message key is what matters here, not its translation
+vi.mock('svelte-i18n', () => ({
+  _: { subscribe: (run: (format: (key: string) => string) => void) => { run((key: string) => key); return () => undefined; } },
+}));
+
 import {
   initialize,
   onboardFromServer,
@@ -31,6 +37,7 @@ import { syncRepository } from './syncRepository';
 import { noteRepository } from './noteRepository';
 import { savedSearchRepository } from './savedSearchRepository';
 import { settingsRepository } from './settingsRepository';
+import { toast } from '../utils/toast.svelte';
 import { closeDB, deleteDB, getDB, initDB, STORES } from './db';
 import { createTestNote } from '../../test/db-utils';
 import { AccountKeyExistsError, AccountKeyUnreadableError, LocalNotesOrphanedError, ValidationError } from '../errors';
@@ -504,6 +511,176 @@ describe('server-wrapped master key', () => {
         await ensureServerWrappedKey(NOTES_PASSWORD);
 
         expect(putSpy).not.toHaveBeenCalled();
+      }, 60_000);
+    });
+
+    describe('after the password changes on another device', () => {
+      const NEW_PASSWORD = 'changed-on-another-device';
+      const CHANGED_ELSEWHERE = 'unlock.passwordChangedElsewhere';
+
+      /** The other device's password change, as this one sees it: a new blob on the server. */
+      const otherDeviceChangesPassword = (key: Uint8Array) => wrapOnServer(NEW_PASSWORD, key);
+
+      async function serverOpensWith(password: string, key: Uint8Array): Promise<boolean> {
+        const wrappingKey = await cryptoService.deriveWrappingKey(password, USER_ID);
+        try {
+          const opened = await cryptoService.unwrapMasterKey(wrappingKey, JSON.parse(serverBlob!.blob));
+          return opened.every((byte, i) => byte === key[i]);
+        } catch {
+          return false;
+        }
+      }
+
+      it('leaves the blob alone on a device that uploaded it, and says why', async () => {
+        const info = vi.spyOn(toast, 'info');
+        const key = await setUpFirstDevice();
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+        await markSynced();
+        expect(putSpy).toHaveBeenCalledTimes(1);
+
+        await otherDeviceChangesPassword(key);
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        expect(putSpy).toHaveBeenCalledTimes(1);
+        expect(await serverOpensWith(NEW_PASSWORD, key)).toBe(true);
+        expect(info).toHaveBeenCalledWith(CHANGED_ELSEWHERE);
+      }, 60_000);
+
+      it('leaves the blob alone on a device that has only ever opened it', async () => {
+        const key = await setUpFirstDevice();
+        await wrapOnServer(NOTES_PASSWORD, key);
+        await markSynced();
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        await otherDeviceChangesPassword(key);
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        expect(putSpy).not.toHaveBeenCalled();
+      }, 60_000);
+
+      it('leaves the blob alone on a device that joined by opening it', async () => {
+        const key = await setUpFirstDevice();
+        await wrapOnServer(NOTES_PASSWORD, key);
+        await becomeSecondDevice();
+        await initialize(NOTES_PASSWORD);
+        await onboardFromServer(NOTES_PASSWORD, ENDPOINT, USER_ID, API_KEY, NOTES_PASSWORD);
+        await syncRepository.updateMetadata({
+          syncEnabled: true,
+          syncEndpoint: ENDPOINT,
+          userId: USER_ID,
+          apiKey: JSON.stringify(await cryptoService.encryptText(API_KEY, keyManager.getMasterKey()!.key)),
+        });
+        await markSynced();
+
+        await otherDeviceChangesPassword(key);
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        expect(putSpy).not.toHaveBeenCalled();
+      }, 60_000);
+
+      it('stops two devices taking turns to overwrite each other', async () => {
+        // Both devices start on the first password. Each round is the second
+        // device's next unlock, with the first device's change already on the server.
+        const key = await setUpFirstDevice();
+        await wrapOnServer(NOTES_PASSWORD, key);
+        await markSynced();
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        await otherDeviceChangesPassword(key);
+        for (let unlocks = 0; unlocks < 3; unlocks++) {
+          await ensureServerWrappedKey(NOTES_PASSWORD);
+        }
+
+        expect(putSpy).not.toHaveBeenCalled();
+        expect(await serverOpensWith(NEW_PASSWORD, key)).toBe(true);
+      }, 60_000);
+
+      it('heals an old-format blob only once', async () => {
+        const key = await setUpFirstDevice();
+        await wrapOnServer(SERVER_PASSWORD, key);
+        await markSynced();
+
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+        expect(putSpy).toHaveBeenCalledTimes(1);
+        expect(await serverOpensWith(NOTES_PASSWORD, key)).toBe(true);
+
+        await otherDeviceChangesPassword(key);
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        expect(putSpy).toHaveBeenCalledTimes(1);
+      }, 60_000);
+
+      it('still uploads when the server has lost the blob', async () => {
+        await setUpFirstDevice();
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+        expect(putSpy).toHaveBeenCalledTimes(1);
+
+        serverBlob = null;
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        expect(putSpy).toHaveBeenCalledTimes(2);
+      }, 60_000);
+
+      it('forgets the proof when the device moves to another account', async () => {
+        await setUpFirstDevice();
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+        await markSynced();
+
+        await syncRepository.updateMetadata({ userId: 'c9d2e6b3-9a1f-4d66-8e63-3a7b2d1f8b22' });
+
+        const metadata = await syncRepository.getMetadata();
+        expect(metadata?.serverKeyVerified).toBeFalsy();
+        expect(metadata?.lastSyncAt).toBeUndefined();
+      }, 60_000);
+    });
+
+    describe('when a password change here fails to reach the server', () => {
+      const NEW_PASSWORD = 'changed-on-this-device';
+
+      it('retries at the next unlock, and does not blame another device', async () => {
+        const info = vi.spyOn(toast, 'info');
+        const key = await setUpFirstDevice();
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+        await markSynced();
+        expect(putSpy).toHaveBeenCalledTimes(1);
+
+        putSpy.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+        const result = await changePassword(NOTES_PASSWORD, NEW_PASSWORD);
+        expect(result.serverKeyUpdated).toBe(false);
+        expect((await syncRepository.getMetadata())?.serverKeyStale).toBe(true);
+
+        await ensureServerWrappedKey(NEW_PASSWORD);
+
+        expect(putSpy).toHaveBeenCalledTimes(3);
+        expect(info).not.toHaveBeenCalled();
+        expect((await syncRepository.getMetadata())?.serverKeyStale).toBeFalsy();
+        const wrappingKey = await cryptoService.deriveWrappingKey(NEW_PASSWORD, USER_ID);
+        expect(Array.from(await cryptoService.unwrapMasterKey(wrappingKey, JSON.parse(serverBlob!.blob)))).toEqual(Array.from(key));
+      }, 60_000);
+
+      it('keeps retrying until the upload works', async () => {
+        await setUpFirstDevice();
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        putSpy.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+        await changePassword(NOTES_PASSWORD, NEW_PASSWORD);
+
+        putSpy.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+        await ensureServerWrappedKey(NEW_PASSWORD);
+        expect((await syncRepository.getMetadata())?.serverKeyStale).toBe(true);
+
+        await ensureServerWrappedKey(NEW_PASSWORD);
+        expect((await syncRepository.getMetadata())?.serverKeyStale).toBeFalsy();
+      }, 60_000);
+
+      it('reports success when the upload works first time', async () => {
+        await setUpFirstDevice();
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        const result = await changePassword(NOTES_PASSWORD, NEW_PASSWORD);
+
+        expect(result.serverKeyUpdated).toBe(true);
+        expect((await syncRepository.getMetadata())?.serverKeyStale).toBeFalsy();
       }, 60_000);
     });
 

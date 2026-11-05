@@ -444,7 +444,7 @@
         "required": "Inserisci la password delle tue note.",
         "incorrect": "Questa non è la password che sblocca le tue note su questo dispositivo. Inserisci la password delle note, non quella del server.",
         "uploadFailed": "La sincronizzazione è configurata, ma non è stato possibile salvare la chiave di cifratura sul server, quindi gli altri dispositivi non possono ancora connettersi. Verrà fatto un nuovo tentativo al prossimo sblocco",
-        "mustDiffer": "La password delle note e quella dell'account devono essere diverse. Il server di sincronizzazione vede la password dell'account, quindi se coincidono potrebbe leggere le tue note. Se sono uguali sugli altri dispositivi, cambia prima lì la password delle note.",
+        "mustDiffer": "La password delle note e quella dell'account devono essere diverse. Il server di sincronizzazione vede la password dell'account, quindi se coincidono potrebbe leggere le tue note.",
         "matchesAccountWarning": "La password delle note è uguale a quella dell'account, quindi il server di sincronizzazione potrebbe leggere le tue note. Cambia la password delle note per risolvere il problema."
       },
       "existingAccountDetected": "Questa email ha già un account, quindi questo dispositivo si collegherà a esso. Inserisci la password delle note che usi sugli altri dispositivi."
@@ -570,7 +570,8 @@
         "changing": "Modifica della password in corso...",
         "button": "Cambia password",
         "success": "Password modificata con successo",
-        "error": "Impossibile modificare la password: {error}"
+        "error": "Impossibile modificare la password: {error}",
+        "serverKeyFailed": "La password è stata cambiata su questo dispositivo, ma non è stato possibile aggiornare il server. Verrà riprovato al prossimo sblocco. Fino ad allora, un nuovo dispositivo avrebbe bisogno della vecchia password."
       },
       "connectionDetails": {
         "title": "Dettagli connessione",
@@ -934,7 +935,8 @@
         "encrypting": "Protezione delle credenziali…",
         "syncing": "Avvio della sincronizzazione iniziale…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "La password delle note è stata cambiata su un altro dispositivo. Questo dispositivo si sblocca ancora con la vecchia password e le tue note sono al sicuro, ma i nuovi dispositivi avranno bisogno di quella nuova."
   },
   "lock": {
     "title": "Blocca applicazione",

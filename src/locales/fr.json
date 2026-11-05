@@ -444,7 +444,7 @@
         "required": "Veuillez saisir le mot de passe de vos notes.",
         "incorrect": "Ce n'est pas le mot de passe qui déverrouille vos notes sur cet appareil. Saisissez le mot de passe des notes, pas celui du serveur.",
         "uploadFailed": "La synchronisation est configurée, mais la clé de chiffrement n'a pas pu être enregistrée sur le serveur, donc les autres appareils ne peuvent pas encore se connecter. Une nouvelle tentative aura lieu au prochain déverrouillage",
-        "mustDiffer": "Votre mot de passe des notes et celui de votre compte doivent être différents. Le serveur de synchronisation voit le mot de passe de votre compte : s'ils sont identiques, il pourrait lire vos notes. S'ils sont identiques sur vos autres appareils, changez d'abord le mot de passe des notes sur ceux-ci.",
+        "mustDiffer": "Votre mot de passe des notes et celui de votre compte doivent être différents. Le serveur de synchronisation voit le mot de passe de votre compte : s'ils sont identiques, il pourrait lire vos notes.",
         "matchesAccountWarning": "Votre mot de passe des notes est identique à celui de votre compte : le serveur de synchronisation pourrait donc lire vos notes. Changez votre mot de passe des notes pour corriger cela."
       },
       "existingAccountDetected": "Cette adresse e-mail a déjà un compte : cet appareil va donc s'y connecter. Saisissez le mot de passe des notes que vous utilisez sur vos autres appareils."
@@ -570,7 +570,8 @@
         "changing": "Modification du mot de passe...",
         "button": "Modifier le mot de passe",
         "success": "Mot de passe modifié avec succès",
-        "error": "Échec de la modification du mot de passe : {error}"
+        "error": "Échec de la modification du mot de passe : {error}",
+        "serverKeyFailed": "Votre mot de passe a été modifié sur cet appareil, mais le serveur n'a pas pu être mis à jour. Une nouvelle tentative aura lieu au prochain déverrouillage. D'ici là, un nouvel appareil aurait besoin de votre ancien mot de passe."
       },
       "connectionDetails": {
         "title": "Détails de connexion",
@@ -934,7 +935,8 @@
         "encrypting": "Sécurisation des identifiants…",
         "syncing": "Démarrage de la synchronisation initiale…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "Votre mot de passe des notes a été modifié sur un autre appareil. Cet appareil se déverrouille toujours avec l'ancien mot de passe et vos notes sont en sécurité, mais les nouveaux appareils auront besoin du nouveau."
   },
   "lock": {
     "title": "Verrouiller l'application",

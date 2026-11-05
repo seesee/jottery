@@ -444,7 +444,7 @@
         "required": "Lütfen not parolanızı girin.",
         "incorrect": "Bu, notlarınızın bu cihazdaki kilidini açan parola değil. Sunucu parolanızı değil, not parolanızı girin.",
         "uploadFailed": "Eşitleme kuruldu, ancak şifreleme anahtarı sunucuya kaydedilemedi; bu nedenle diğer cihazlar henüz bağlanamıyor. Bir sonraki kilit açışınızda yeniden denenecek",
-        "mustDiffer": "Not parolanız ile hesap parolanız farklı olmalıdır. Eşitleme sunucusu hesap parolanızı görür, bu yüzden aynı olurlarsa notlarınızı okuyabilir. Diğer cihazlarınızda aynıysa önce orada not parolanızı değiştirin.",
+        "mustDiffer": "Not parolanız ile hesap parolanız farklı olmalıdır. Eşitleme sunucusu hesap parolanızı görür, bu yüzden aynı olurlarsa notlarınızı okuyabilir.",
         "matchesAccountWarning": "Not parolanız hesap parolanızla aynı, bu yüzden eşitleme sunucusu notlarınızı okuyabilir. Bunu düzeltmek için not parolanızı değiştirin."
       },
       "existingAccountDetected": "Bu e-postanın zaten bir hesabı var, bu yüzden bu cihaz ona bağlanacak. Diğer cihazlarınızda kullandığınız not parolasını girin."
@@ -570,7 +570,8 @@
         "changing": "Şifre değiştiriliyor...",
         "button": "Şifre Değiştir",
         "success": "Şifre başarıyla değiştirildi",
-        "error": "Şifre değiştirilemedi: {error}"
+        "error": "Şifre değiştirilemedi: {error}",
+        "serverKeyFailed": "Parolanız bu cihazda değiştirildi ancak sunucu güncellenemedi. Bir sonraki kilit açışınızda yeniden denenecek. O zamana kadar yeni bir cihaz eski parolanıza ihtiyaç duyar."
       },
       "connectionDetails": {
         "title": "Bağlantı Detayları",
@@ -934,7 +935,8 @@
         "encrypting": "Kimlik bilgileri güvence altına alınıyor…",
         "syncing": "İlk senkronizasyon başlatılıyor…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "Not parolanız başka bir cihazda değiştirildi. Bu cihazın kilidi hâlâ eski parolayla açılıyor ve notlarınız güvende, ancak yeni cihazlar yeni parolaya ihtiyaç duyacak."
   },
   "lock": {
     "title": "Uygulamayı Kilitle",

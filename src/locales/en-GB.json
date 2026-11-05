@@ -490,7 +490,7 @@
         "required": "Please enter your notes password.",
         "incorrect": "That is not the password that unlocks your notes on this device. Enter your notes password, not your server password.",
         "uploadFailed": "Sync is set up, but the encryption key could not be stored on the server, so other devices cannot connect yet. It will be retried the next time you unlock",
-        "mustDiffer": "Your notes password and account password must be different. The sync server sees your account password, so if they match it could read your notes. If they're the same on your other devices, change your notes password there first.",
+        "mustDiffer": "Your notes password and account password must be different. The sync server sees your account password, so if they match it could read your notes.",
         "matchesAccountWarning": "Your notes password is the same as your account password, so the sync server could read your notes. Change your notes password to fix this."
       },
       "existingAccountDetected": "This email already has an account, so this device will connect to it. Enter the notes password you use on your other devices."
@@ -602,7 +602,8 @@
         "changing": "Changing password...",
         "button": "Change Password",
         "success": "Password changed successfully",
-        "error": "Failed to change password: {error}"
+        "error": "Failed to change password: {error}",
+        "serverKeyFailed": "Your password was changed on this device, but the server couldn't be updated. It will try again the next time you unlock. Until then, a new device would need your old password."
       },
       "connectionDetails": {
         "title": "Connection Details",
@@ -966,7 +967,8 @@
         "encrypting": "Securing credentials…",
         "syncing": "Starting initial sync…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "Your notes password was changed on another device. This device still unlocks with its old password and your notes are safe, but new devices will need the new one."
   },
   "lock": {
     "title": "Lock Application",

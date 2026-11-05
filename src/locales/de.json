@@ -444,7 +444,7 @@
         "required": "Bitte geben Sie Ihr Notizen-Passwort ein.",
         "incorrect": "Dies ist nicht das Passwort, mit dem Ihre Notizen auf diesem Gerät entsperrt werden. Geben Sie Ihr Notizen-Passwort ein, nicht Ihr Server-Passwort.",
         "uploadFailed": "Die Synchronisierung ist eingerichtet, aber der Verschlüsselungsschlüssel konnte nicht auf dem Server gespeichert werden. Andere Geräte können sich daher noch nicht verbinden. Beim nächsten Entsperren wird es erneut versucht",
-        "mustDiffer": "Ihr Notizen-Passwort und Ihr Kontopasswort müssen sich unterscheiden. Der Sync-Server sieht Ihr Kontopasswort. Stimmen beide überein, könnte er Ihre Notizen lesen. Falls sie auf Ihren anderen Geräten gleich sind, ändern Sie dort zuerst Ihr Notizen-Passwort.",
+        "mustDiffer": "Ihr Notizen-Passwort und Ihr Kontopasswort müssen sich unterscheiden. Der Sync-Server sieht Ihr Kontopasswort. Stimmen beide überein, könnte er Ihre Notizen lesen.",
         "matchesAccountWarning": "Ihr Notizen-Passwort entspricht Ihrem Kontopasswort, daher könnte der Sync-Server Ihre Notizen lesen. Ändern Sie Ihr Notizen-Passwort, um das zu beheben."
       },
       "existingAccountDetected": "Für diese E-Mail-Adresse existiert bereits ein Konto, daher wird dieses Gerät damit verbunden. Geben Sie das Notizen-Passwort ein, das Sie auf Ihren anderen Geräten verwenden."
@@ -570,7 +570,8 @@
         "changing": "Passwort wird geändert...",
         "button": "Passwort ändern",
         "success": "Passwort erfolgreich geändert",
-        "error": "Passwort konnte nicht geändert werden: {error}"
+        "error": "Passwort konnte nicht geändert werden: {error}",
+        "serverKeyFailed": "Ihr Passwort wurde auf diesem Gerät geändert, aber der Server konnte nicht aktualisiert werden. Beim nächsten Entsperren wird es erneut versucht. Bis dahin bräuchte ein neues Gerät Ihr altes Passwort."
       },
       "connectionDetails": {
         "title": "Verbindungsdetails",
@@ -934,7 +935,8 @@
         "encrypting": "Anmeldedaten werden gesichert…",
         "syncing": "Erste Synchronisierung wird gestartet…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "Ihr Notizen-Passwort wurde auf einem anderen Gerät geändert. Dieses Gerät lässt sich weiterhin mit dem alten Passwort entsperren und Ihre Notizen sind sicher, aber neue Geräte benötigen das neue Passwort."
   },
   "lock": {
     "title": "Anwendung sperren",

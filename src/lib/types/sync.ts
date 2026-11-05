@@ -14,6 +14,14 @@ export interface SyncMetadata {
   syncEnabled: boolean;
   syncEndpoint: string;
   autoSyncInterval?: number;      // Minutes (0 = disabled, default: 5)
+  /**
+   * This device has opened or uploaded the account's wrapped key. That proves the
+   * blob isn't old-format, so if it later won't open, the password changed on
+   * another device and it must not be replaced.
+   */
+  serverKeyVerified?: boolean;
+  /** A password change here hasn't reached the server yet. Retried at unlock. */
+  serverKeyStale?: boolean;
   pendingDeviceName?: string;     // Device name for pending clone-device call (during import)
 }
 

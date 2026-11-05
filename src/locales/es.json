@@ -444,7 +444,7 @@
         "required": "Introduce la contraseña de tus notas.",
         "incorrect": "Esa no es la contraseña que desbloquea tus notas en este dispositivo. Introduce la contraseña de las notas, no la del servidor.",
         "uploadFailed": "La sincronización está configurada, pero no se pudo guardar la clave de cifrado en el servidor, por lo que otros dispositivos aún no pueden conectarse. Se volverá a intentar la próxima vez que desbloquees",
-        "mustDiffer": "Tu contraseña de notas y la de tu cuenta deben ser distintas. El servidor de sincronización ve la contraseña de tu cuenta, así que si coinciden podría leer tus notas. Si son iguales en tus otros dispositivos, cambia primero allí la contraseña de notas.",
+        "mustDiffer": "Tu contraseña de notas y la de tu cuenta deben ser distintas. El servidor de sincronización ve la contraseña de tu cuenta, así que si coinciden podría leer tus notas.",
         "matchesAccountWarning": "Tu contraseña de notas es la misma que la de tu cuenta, por lo que el servidor de sincronización podría leer tus notas. Cambia tu contraseña de notas para solucionarlo."
       },
       "existingAccountDetected": "Este correo ya tiene una cuenta, así que este dispositivo se conectará a ella. Introduce la contraseña de notas que usas en tus otros dispositivos."
@@ -570,7 +570,8 @@
         "changing": "Cambiando contraseña...",
         "button": "Cambiar contraseña",
         "success": "Contraseña cambiada correctamente",
-        "error": "Error al cambiar la contraseña: {error}"
+        "error": "Error al cambiar la contraseña: {error}",
+        "serverKeyFailed": "Tu contraseña se cambió en este dispositivo, pero no se pudo actualizar el servidor. Se volverá a intentar la próxima vez que desbloquees. Hasta entonces, un dispositivo nuevo necesitaría tu contraseña antigua."
       },
       "connectionDetails": {
         "title": "Detalles de conexión",
@@ -934,7 +935,8 @@
         "encrypting": "Asegurando credenciales…",
         "syncing": "Iniciando sincronización inicial…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "Tu contraseña de notas se cambió en otro dispositivo. Este dispositivo sigue desbloqueándose con la contraseña antigua y tus notas están a salvo, pero los dispositivos nuevos necesitarán la nueva."
   },
   "lock": {
     "title": "Bloquear aplicación",
