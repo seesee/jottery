@@ -1,20 +1,20 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) FROM users WHERE email = ? AND id != ?",
+  "query": "SELECT COUNT(*) as count FROM users WHERE email = ? COLLATE NOCASE",
   "describe": {
     "columns": [
       {
-        "name": "COUNT(*)",
+        "name": "count",
         "ordinal": 0,
         "type_info": "Integer"
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 1
     },
     "nullable": [
       false
     ]
   },
-  "hash": "b04ed4f6840cb63b63281f813d245e0d66110e30bcae4ffa5c2b141360120d79"
+  "hash": "91d3930cacb15c613744463cf5d4c3d3b35d709193fd6023d6c7165dc827682e"
 }

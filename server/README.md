@@ -119,7 +119,7 @@ The admin dashboard provides comprehensive user and system management:
 
 **Account Management:**
 - Change admin password (requires current password)
-- Session management (configurable expiry, default 7 days)
+- Session management (configurable expiry, default 1 day)
 - Logout functionality
 
 ### Security Recommendations
@@ -517,7 +517,7 @@ See admin dashboard at `/admin` for full user management UI with visual interfac
 The server uses SQLite with the following tables:
 
 - **`users`**: User accounts with email, Argon2id password hash, approval status, admin role
-- **`sessions`**: Admin dashboard sessions with token hash and expiry (7-day lifespan)
+- **`sessions`**: Admin dashboard sessions with token hash and expiry (1 day by default)
 - **`clients`**: Registered devices with hashed API keys (linked to users via user_id)
 - **`notes`**: Encrypted note data with versioning (linked to users via user_id)
 - **`attachments_meta`**: Attachment metadata
@@ -529,7 +529,7 @@ The server uses SQLite with the following tables:
 - Each note belongs to a user (via user_id foreign key)
 - Device API keys are hashed (SHA-256) before storage
 - Admin passwords use Argon2id hashing (memory=19456, time=2, parallelism=1)
-- Sessions expire after 7 days and are automatically cleaned up
+- Sessions expire after 1 day by default and are automatically cleaned up
 
 - **`sync_operations`**: Audit trail of sync operations
 
@@ -855,7 +855,7 @@ MAX_PAYLOAD_SIZE=104857600
 CORS_ALLOWED_ORIGINS=https://example.com
 
 # Session security
-SESSION_EXPIRY_DAYS=7
+SESSION_EXPIRY_DAYS=1
 
 # Admin account. Leave the password unset to have one generated and logged once.
 DEFAULT_ADMIN_EMAIL=admin@localhost

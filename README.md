@@ -95,9 +95,11 @@ You can configure the server using environment variables:
 | `DEFAULT_ADMIN_PASSWORD` | *(none)* | Admin account password. If unset, or too weak for `PASSWORD_COMPLEXITY`, a random one is generated and logged once |
 | `DATABASE_URL` | `sqlite:jottery.db` | Database file path |
 | `PORT` | `3030` | Internal server port |
-| `SESSION_EXPIRY_DAYS` | `7` | Admin session expiry in days |
-| `DEFAULT_STORAGE_QUOTA_MB` | `1000` | Default user storage quota in MB |
-| `DEFAULT_MAX_UPLOAD_SIZE_MB` | `5` | Default user upload limit in MB |
+| `SESSION_EXPIRY_DAYS` | `1` | How long a dashboard session lasts, in days. Device keys don't expire, so sync isn't affected |
+| `DEFAULT_STORAGE_QUOTA_MB` | `1000` | Storage quota in MB that new users get |
+| `DEFAULT_MAX_UPLOAD_SIZE_MB` | `5` | Largest push in MB that new users can send |
+| `DEFAULT_INBOX_MAX_ITEMS` | `100` | Inbox items that new users can hold |
+| `DEFAULT_INBOX_MAX_SIZE_MB` | `10` | Inbox size in MB that new users can hold |
 | `ENFORCE_STORAGE_QUOTA` | `false` | Refuse pushes that would take an account past its quota. Check accounts in the dashboard first: quotas weren't enforced before, so one may already be over, and a refused push stops that device's sync |
 | `MAX_PAYLOAD_SIZE` | `104857600` | Max size of a sync push in bytes (100 MB), which the Docker image also applies in Caddy. Other routes have small fixed limits. Lowering it can stop large syncs with a 413 |
 | `PASSWORD_COMPLEXITY` | `standard` | Character classes a password needs, on top of the 12-character minimum: `none`, `basic` (2), `standard` (3) or `strong` (4) |

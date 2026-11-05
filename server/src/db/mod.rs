@@ -86,5 +86,22 @@ pub async fn run_migrations(pool: &SqlitePool) -> Result<(), MigrateError> {
         );
     }
 
+    // Addresses didn't use to be compared without case, so an install can hold
+    // accounts that differ only by case. Both keep working, and need a person to
+    // decide which one is real.
+    let collisions: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM (
+             SELECT 1 FROM users GROUP BY email COLLATE NOCASE HAVING COUNT(*) > 1
+         )",
+    )
+    .fetch_one(&mut *conn)
+    .await?;
+    if collisions > 0 {
+        tracing::warn!(
+            "{} email addresses belong to more than one account, differing only by case",
+            collisions
+        );
+    }
+
     Ok(())
 }

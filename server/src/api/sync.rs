@@ -4,6 +4,7 @@ use axum::{
     Json,
 };
 use base64::Engine;
+use chrono::{DateTime, Utc};
 use sqlx::SqliteConnection;
 use std::{
     collections::{HashMap, HashSet},
@@ -48,15 +49,73 @@ const LAST_SYNC_OVERLAP_MINUTES: i64 = 2;
 
 const CURSOR_PREFIX: &str = "v1.";
 
+/// How far ahead of the server a client's clock can plausibly be. It allows for any
+/// time zone mistake. Past this a time isn't believed, because the latest time wins
+/// a conflict, and a device a year ahead would otherwise win all of them.
+const MAX_CLOCK_SKEW_HOURS: i64 = 24;
+
+fn read_time(time: &str) -> Option<DateTime<Utc>> {
+    DateTime::parse_from_rfc3339(time)
+        .ok()
+        .map(|time| time.with_timezone(&Utc))
+}
+
+fn is_implausibly_future(time: DateTime<Utc>) -> bool {
+    time > Utc::now() + chrono::Duration::hours(MAX_CLOCK_SKEW_HOURS)
+}
+
+/// Why a time from a client can't be used, if it can't.
+fn time_problem(name: &str, time: &str) -> Option<String> {
+    match read_time(time) {
+        None => Some(format!("{name} can't be read")),
+        Some(time) if is_implausibly_future(time) => {
+            Some(format!("{name} is more than {MAX_CLOCK_SKEW_HOURS} hours ahead"))
+        }
+        Some(_) => None,
+    }
+}
+
+/// Why a pushed note's times can't be used, if they can't. An optional time that's
+/// empty counts as absent.
+fn note_time_problem(note: &SyncNote) -> Option<String> {
+    let required = [("createdAt", &note.created_at), ("modifiedAt", &note.modified_at)];
+    let optional = [
+        ("deletedAt", &note.deleted_at),
+        ("archivedAt", &note.archived_at),
+        ("lockedAt", &note.locked_at),
+    ];
+
+    required
+        .into_iter()
+        .filter_map(|(name, time)| time_problem(name, time))
+        .chain(optional.into_iter().filter_map(|(name, time)| {
+            time.as_deref()
+                .filter(|time| !time.is_empty())
+                .and_then(|time| time_problem(name, time))
+        }))
+        .next()
+}
+
+/// Whether a pushed time is at least as late as a stored one. Clients format times
+/// differently, so these are compared as instants. A stored time from before they
+/// were checked may not be readable, and is compared as text, as it always was.
+fn is_not_older(pushed: &str, stored: &str) -> bool {
+    match (read_time(pushed), read_time(stored)) {
+        (Some(pushed), Some(stored)) => pushed >= stored,
+        _ => pushed >= stored,
+    }
+}
+
 /// Whether an edit made at `edit` wins over a deletion made at `deletion`.
 ///
 /// The same rule applies whichever arrives first, so devices agree. Clients
 /// format times differently, so these must be compared as instants, not as
 /// text. A time that can't be read can't prove the edit is older, so the edit
-/// wins: keeping a note can be undone, deleting it can't.
+/// wins: keeping a note can be undone, deleting it can't. A deletion dated far in
+/// the future can't be believed either, or it would beat every edit there will be.
 fn edit_wins_over_deletion(edit: &str, deletion: &str) -> bool {
-    let parse = |time: &str| chrono::DateTime::parse_from_rfc3339(time).ok();
-    match (parse(edit), parse(deletion)) {
+    match (read_time(edit), read_time(deletion)) {
+        (Some(_), Some(deletion)) if is_implausibly_future(deletion) => true,
         (Some(edit), Some(deletion)) => edit > deletion,
         _ => true,
     }
@@ -276,7 +335,7 @@ pub async fn push(
         match base64::engine::general_purpose::STANDARD.decode(&attachment.data) {
             Ok(data) => blobs.push((attachment.id, data)),
             Err(e) => {
-                tracing::warn!("Invalid base64 for attachment {}: {} (skipping)", attachment.id, e);
+                tracing::warn!("Invalid base64 for attachment {:?}: {} (skipping)", attachment.id, e);
                 errors.push(format!("Attachment {} skipped: invalid base64", attachment.id));
             }
         }
@@ -284,6 +343,7 @@ pub async fn push(
 
     let mut accepted = Vec::new();
     let mut rejected = Vec::new();
+    let mut skipped_deleted = Vec::new();
 
     // The whole push is one transaction. BEGIN IMMEDIATE takes the write lock
     // up front, so reading a note and acting on what was read can't interleave
@@ -305,6 +365,14 @@ pub async fn push(
     .await?;
 
     for note in push_req.notes {
+        // A time that can't be trusted can't be allowed to decide anything. The
+        // note stays on the device, which sends it again once its clock is right.
+        if let Some(problem) = note_time_problem(&note) {
+            tracing::warn!("Skipping note {:?}: {}", note.id, problem);
+            errors.push(format!("Note {} skipped: {}", note.id, problem));
+            continue;
+        }
+
         // Check if this note was hard-deleted by another device. A pushed
         // edit made *after* the tombstone wins (edit-wins-over-delete,
         // matching the client's own conflict semantics): clear the
@@ -335,7 +403,7 @@ pub async fn push(
                 .await?;
 
                 tracing::info!(
-                    "Resurrecting note {} - pushed edit ({}) postdates tombstone ({})",
+                    "Resurrecting note {:?} - pushed edit ({:?}) postdates tombstone ({:?})",
                     note.id,
                     note.modified_at,
                     tombstone.deleted_at
@@ -347,13 +415,15 @@ pub async fn push(
                 // reports the *current* server note's content/tags/version
                 // for a 3-way merge, which does not exist here), so we keep
                 // this as an explicit skip. The client will re-learn the
-                // note is gone from the `deletions` list on its next pull.
+                // note is gone from the `deletions` list on its next pull, and
+                // `skippedDeleted` tells it now, so it can stop sending the note.
                 tracing::info!(
-                    "Ignoring push for note {} - was hard-deleted by another device (edit {} does not postdate tombstone {})",
+                    "Ignoring push for note {:?} - was hard-deleted by another device (edit {:?} does not postdate tombstone {:?})",
                     note.id,
                     note.modified_at,
                     tombstone.deleted_at
                 );
+                skipped_deleted.push(note.id);
                 continue;
             }
         }
@@ -394,12 +464,12 @@ pub async fn push(
                         }
                     } else {
                         // Server has no hash yet (legacy note) - use timestamp fallback
-                        note.modified_at >= existing_note.modified_at
+                        is_not_older(&note.modified_at, &existing_note.modified_at)
                     }
                 } else {
                     // Client doesn't have hash fields (legacy client) - use timestamp fallback
-                    // Use >= to avoid false conflicts when timestamps are identical
-                    note.modified_at >= existing_note.modified_at
+                    // Not older, to avoid false conflicts when timestamps are identical
+                    is_not_older(&note.modified_at, &existing_note.modified_at)
                 }
             }
         };
@@ -531,7 +601,7 @@ pub async fn push(
             // Fetch full server note data for conflict resolution
             let server_note = sqlx::query!(
                 r#"SELECT content, tags, pinned, archived, archived_at, locked, locked_at, server_version, syntax_language, word_wrap, show_preview, color, modified_at,
-                          content_hash, parent_hash, hash_chain
+                          content_hash, parent_hash, hash_chain, deleted, deleted_at
                    FROM notes WHERE id = ? AND user_id = ?"#,
                 note.id,
                 client_info.user_id
@@ -612,6 +682,8 @@ pub async fn push(
                 server_content: server_note.content,
                 server_tags,
                 server_version: server_note.server_version,
+                server_deleted: server_note.deleted != 0,
+                server_deleted_at: server_note.deleted_at,
                 server_attachments,
                 server_pinned: server_note.pinned != 0,
                 server_archived: server_note.archived,
@@ -714,7 +786,7 @@ pub async fn push(
             Err(e) => {
                 // Log and skip on FK or other errors (graceful degradation)
                 tracing::warn!(
-                    "Failed to store version {} for note {}: {} (skipping)",
+                    "Failed to store version {:?} for note {:?}: {} (skipping)",
                     version.version_key,
                     version.note_id,
                     e
@@ -726,6 +798,7 @@ pub async fn push(
 
     // Store attachment data (binary blobs). A blob is only stored against
     // this user's own metadata, so one user can't reach another's attachment.
+    let mut blobs_stored = false;
     for (attachment_id, data) in &blobs {
         let stored = AttachmentRepository::store_blob(
             &mut tx,
@@ -740,16 +813,18 @@ pub async fn push(
             BlobStored::NoMetadata => {
                 // Expected when the note was rejected: its metadata was never stored.
                 tracing::warn!(
-                    "Skipping attachment data {} from client {}: no matching metadata for user {}",
+                    "Skipping attachment data {:?} from client {}: no matching metadata for user {}",
                     attachment_id,
                     client_info.client_id,
                     client_info.user_id
                 );
             }
             BlobStored::Replaced => {
+                blobs_stored = true;
                 tracing::debug!("Replaced attachment: {}", attachment_id);
             }
             BlobStored::Added => {
+                blobs_stored = true;
                 tracing::debug!("Stored attachment: {}", attachment_id);
 
                 // A blob that arrives after its note, as a repair push does,
@@ -771,6 +846,12 @@ pub async fn push(
     // Store saved searches (similar to notes, with last-write-wins conflict resolution)
     let mut searches_changed = false;
     for search in push_req.saved_searches {
+        if let Some(problem) = time_problem("modifiedAt", &search.modified_at) {
+            tracing::warn!("Skipping saved search {:?}: {}", search.id, problem);
+            errors.push(format!("Saved search {} skipped: {}", search.id, problem));
+            continue;
+        }
+
         // Check if saved search exists for this user
         let existing = sqlx::query!(
             "SELECT modified_at FROM saved_searches WHERE id = ? AND user_id = ?",
@@ -784,7 +865,7 @@ pub async fn push(
             None => true, // New saved search
             Some(existing_search) => {
                 // Last-Write-Wins: compare modifiedAt
-                search.modified_at >= existing_search.modified_at
+                is_not_older(&search.modified_at, &existing_search.modified_at)
             }
         };
 
@@ -850,7 +931,7 @@ pub async fn push(
         if let Some(modified_at) = existing {
             if edit_wins_over_deletion(&modified_at, &deletion.deleted_at) {
                 tracing::info!(
-                    "Refusing deletion of note {} - edit ({}) postdates deletion ({})",
+                    "Refusing deletion of note {:?} - edit ({:?}) postdates deletion ({:?})",
                     deletion.id,
                     modified_at,
                     deletion.deleted_at
@@ -883,7 +964,7 @@ pub async fn push(
             .await?;
 
             deletions_applied = true;
-            tracing::info!("Recorded hard deletion for note {} (user {})", deletion.id, client_info.user_id);
+            tracing::info!("Recorded hard deletion for note {:?} (user {})", deletion.id, client_info.user_id);
         }
     }
 
@@ -892,6 +973,7 @@ pub async fn push(
     // Broadcast sync notification to other connected devices of this user
     // This triggers real-time sync via SSE for any other connected clients
     if !accepted.is_empty()
+        || blobs_stored
         || deletions_applied
         || searches_changed
         || !rejected_deletions.is_empty()
@@ -938,7 +1020,7 @@ pub async fn push(
                 let mut by_note: std::collections::BTreeMap<String, Vec<String>> = Default::default();
                 for (note_id, att_id) in rows {
                     tracing::warn!(
-                        "Note {} (user {}) references attachment {} with no stored data",
+                        "Note {:?} (user {}) references attachment {:?} with no stored data",
                         note_id,
                         client_info.user_id,
                         att_id
@@ -969,6 +1051,7 @@ pub async fn push(
         errors,
         attachment_warnings,
         rejected_deletions,
+        skipped_deleted,
     }))
 }
 
@@ -1625,7 +1708,7 @@ pub async fn delete_note(
     tx.commit().await?;
 
     tracing::info!(
-        "Deleted note: {} for user: {} (client: {})",
+        "Deleted note: {:?} for user: {} (client: {})",
         note_id,
         client_info.user_id,
         client_info.client_id
@@ -1656,7 +1739,7 @@ pub async fn get_attachment(
     match blob {
         Some((_, data)) => {
             tracing::info!(
-                "Serving attachment {} ({} bytes) to user {} (client {})",
+                "Serving attachment {:?} ({} bytes) to user {} (client {})",
                 attachment_id,
                 data.len(),
                 client_info.user_id,

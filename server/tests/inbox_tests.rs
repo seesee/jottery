@@ -66,6 +66,7 @@ fn test_config() -> jottery_server::config::Config {
         max_tag_length: 100,
         max_tags_per_note: 50,
         enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     }
 }
 
@@ -1225,4 +1226,71 @@ async fn test_admin_user_detail_includes_inbox_info() {
     assert!(body["inboxMaxSizeMb"].is_number());
 
     pool.close().await;
+}
+
+mod source_limits {
+    use super::*;
+
+    async fn app_with_token() -> (Router, SqlitePool, String, String) {
+        let (app, pool) = create_test_app().await;
+        let user_id = uuid::Uuid::new_v4().to_string();
+        let token = uuid::Uuid::new_v4().to_string();
+        let hash = jottery_server::utils::crypto::hash_sha256(&token);
+        sqlx::query(
+            "INSERT INTO users (id, email, password_hash, approved, is_active, created_at, inbox_token_hash)
+             VALUES (?, ?, 'unused', 1, 1, '2026-01-01T00:00:00+00:00', ?)",
+        )
+        .bind(&user_id)
+        .bind(format!("{user_id}@example.com"))
+        .bind(hash)
+        .execute(&pool)
+        .await
+        .unwrap();
+        (app, pool, user_id, token)
+    }
+
+    async fn submit(app: &Router, token: &str, source: &str) -> StatusCode {
+        let request = Request::builder()
+            .method("POST")
+            .uri("/api/v1/inbox")
+            .header("content-type", "application/json")
+            .header("Authorization", format!("Bearer {token}"))
+            .body(Body::from(json!({ "content": "hello", "source": source }).to_string()))
+            .unwrap();
+        app.clone().oneshot(request).await.unwrap().status()
+    }
+
+    #[tokio::test]
+    async fn a_source_of_the_maximum_length_is_accepted() {
+        let (app, _pool, _, token) = app_with_token().await;
+
+        assert_eq!(submit(&app, &token, &"s".repeat(255)).await, StatusCode::CREATED);
+    }
+
+    #[tokio::test]
+    async fn a_longer_source_is_refused() {
+        let (app, pool, _, token) = app_with_token().await;
+
+        assert_eq!(submit(&app, &token, &"s".repeat(256)).await, StatusCode::BAD_REQUEST);
+
+        let stored: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM inbox_items")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(stored, 0);
+    }
+
+    #[tokio::test]
+    async fn the_source_counts_towards_the_quota() {
+        let (app, pool, _, token) = app_with_token().await;
+
+        assert_eq!(submit(&app, &token, "sixteen-bytes-!!").await, StatusCode::CREATED);
+
+        // "hello", "[]" and the source
+        let size: i64 = sqlx::query_scalar("SELECT size_bytes FROM inbox_items")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(size, 5 + 2 + 16);
+    }
 }
