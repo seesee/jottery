@@ -7,8 +7,9 @@ import SwiftUI
 struct WebCalcEditorView: View {
     @Binding var content: String
     var fontSize: CGFloat = EditorTheme.defaultFontSize
+    var isReadOnly = false
 
     var body: some View {
-        WebEditorView(bundleName: "calc", content: $content, fontSize: fontSize)
+        WebEditorView(bundleName: "calc", content: $content, fontSize: fontSize, isReadOnly: isReadOnly)
     }
 }

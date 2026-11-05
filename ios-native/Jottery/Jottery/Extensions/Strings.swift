@@ -461,6 +461,11 @@ enum L {
 
     static var errorCouldntAddAttachment: String { String(localized: "error.couldntAddAttachment") }
     static var errorCouldntSaveNote: String { String(localized: "error.couldntSaveNote") }
+    static var editorCopy: String { String(localized: "editor.copy") }
+    static var editorCopyLink: String { String(localized: "editor.copyLink") }
+    static var editorShare: String { String(localized: "editor.share") }
+    static var editorPrint: String { String(localized: "editor.print") }
+    static var previewNoteNotFound: String { String(localized: "preview.noteNotFound") }
     static var errorCouldntSaveSettings: String { String(localized: "error.couldntSaveSettings") }
     static var errorCouldntRestoreVersion: String { String(localized: "error.couldntRestoreVersion") }
     static var unlockDeleteAuthReason: String { String(localized: "unlock.deleteAuthReason") }

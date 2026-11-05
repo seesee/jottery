@@ -1042,6 +1042,22 @@ final class AppState {
         notes.first(where: { $0.id == id }) ?? archivedNotes.first(where: { $0.id == id })
     }
 
+    /// Ids and titles for the note links in `content`. Only a note that looks
+    /// like it has links pays for this, or hands the titles to a web view.
+    func noteTitles(linkedFrom content: String) -> [String: String] {
+        guard content.contains("[[") || content.contains("(link:") || content.contains("(note:") else { return [:] }
+        return Dictionary((notes + archivedNotes).map { ($0.id, $0.title) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    /// Follow a note link, wherever the note is. It may have been deleted.
+    func openLinkedNote(id: String) {
+        if displayedNote(id: id) != nil {
+            selectedNoteId = id
+        } else {
+            reportError(L.previewNoteNotFound)
+        }
+    }
+
     func createNote(content: String = "", tags: [String] = []) throws -> DecryptedNote? {
         guard let noteRepo, let key = keyManager.masterKey else { return nil }
         let note = try noteRepo.create(content: content, tags: tags, key: key)

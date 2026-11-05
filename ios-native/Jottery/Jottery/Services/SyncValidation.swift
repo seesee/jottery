@@ -26,14 +26,15 @@ enum SyncValidation {
         value.map(isTimestamp) ?? true
     }
 
-    /// `type/subtype`, with optional parameters.
+    /// `type/subtype`, with optional parameters like `charset=utf-8`.
     static func isMimeType(_ value: String) -> Bool {
         guard !value.isEmpty, value.utf8.count <= maxMimeTypeLength else { return false }
-        let essence = value.split(separator: ";", maxSplits: 1).first.map(String.init) ?? value
-        let parts = essence.trimmingCharacters(in: .whitespaces).split(separator: "/", omittingEmptySubsequences: false)
-        guard parts.count == 2 else { return false }
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "!#$&^_.+-"))
-        return parts.allSatisfy { !$0.isEmpty && $0.unicodeScalars.allSatisfy(allowed.contains) }
+        let token = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "!#$&^_.+-"))
+        let pieces = value.split(separator: ";", omittingEmptySubsequences: false)
+        let parameters = token.union(CharacterSet(charactersIn: "= "))
+        guard pieces.dropFirst().allSatisfy({ $0.unicodeScalars.allSatisfy(parameters.contains) }) else { return false }
+        let parts = pieces[0].trimmingCharacters(in: .whitespaces).split(separator: "/", omittingEmptySubsequences: false)
+        return parts.count == 2 && parts.allSatisfy { !$0.isEmpty && $0.unicodeScalars.allSatisfy(token.contains) }
     }
 
     static func isValid(_ ref: AttachmentRef) -> Bool {

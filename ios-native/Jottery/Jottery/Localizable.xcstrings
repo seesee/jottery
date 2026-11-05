@@ -1041,6 +1041,28 @@
         }
       }
     },
+    "editor.copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Text"
+          }
+        }
+      }
+    },
+    "editor.copyLink": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Link"
+          }
+        }
+      }
+    },
     "editor.delete": {
       "extractionState": "manual",
       "localizations": {
@@ -1162,6 +1184,17 @@
         }
       }
     },
+    "editor.print": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Print…"
+          }
+        }
+      }
+    },
     "editor.resetTextSize": {
       "extractionState": "manual",
       "localizations": {
@@ -1169,6 +1202,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Reset Text Size"
+          }
+        }
+      }
+    },
+    "editor.share": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share…"
           }
         }
       }
@@ -2181,6 +2225,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Use at least %lld characters."
+          }
+        }
+      }
+    },
+    "preview.noteNotFound": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "That note isn't on this device, or has been deleted."
           }
         }
       }
