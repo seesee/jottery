@@ -124,17 +124,12 @@
       return;
     }
 
-    // Editor shortcuts - only close note if no modals are open
-    if (event.key === 'Escape' && $selectedNoteId) {
-      // Check if any modal is open (they have z-50 class and are visible)
-      const modals = document.querySelectorAll('.z-50');
-      const hasOpenModal = Array.from(modals).some(modal => {
-        const style = window.getComputedStyle(modal as HTMLElement);
-        return style.display !== 'none' && style.visibility !== 'hidden';
-      });
-
-      // Only close the note if no modal is open
-      if (!hasOpenModal) {
+    // Escape closes the note, unless something else wants it: a dialog, a field such
+    // as search or tags, or anything that has handled it already. In vim mode, that
+    // includes the editor leaving insert mode.
+    if (event.key === 'Escape' && $selectedNoteId && !event.defaultPrevented) {
+      const inField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
+      if (!inField && !document.querySelector('[role="dialog"]')) {
         event.preventDefault();
         clearSelection();
         return;
