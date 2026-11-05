@@ -228,8 +228,17 @@ class IndexedDBNoteRepository implements NoteRepository {
   async getPendingDeletions(): Promise<Array<{ id: string; deletedAt: string }>> {
     const db = getDB();
     const all = await db.getAll(STORES.DELETIONS);
-    return all
-      .filter(d => !d.synced)
+    const pending = all.filter(d => !d.synced);
+
+    // A hard delete removes the note, so a deletion whose note exists again is
+    // stale: the note came back from a backup or an import, and sending it would
+    // delete the note again, on every device.
+    const stillGone = await Promise.all(
+      pending.map(async d => (await db.get(STORES.NOTES, d.id)) === undefined)
+    );
+
+    return pending
+      .filter((_, index) => stillGone[index])
       .map(d => ({ id: d.id, deletedAt: d.deletedAt }));
   }
 
