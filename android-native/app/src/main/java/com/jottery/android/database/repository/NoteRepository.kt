@@ -602,6 +602,8 @@ class NoteRepository(
     suspend fun listExpiredDeleted(cutoff: String): List<ExpiredNote> =
         noteDao.listExpiredDeleted(cutoff)
 
+    suspend fun startBinClocks() = noteDao.startBinClocks(DateUtils.nowISO8601())
+
     // MARK: - Private
 
     /**
