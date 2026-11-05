@@ -112,6 +112,8 @@ fun JotteryNavigation(
                 appState = appState,
                 onNavigateToRecycleBin = { navController.navigate(Routes.RECYCLE_BIN) },
                 onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
+                onNavigateToConflicts = { navController.navigate(Routes.CONFLICT_RESOLUTION) },
+                onNavigateToInbox = { navController.navigate(Routes.INBOX) },
             )
         }
 

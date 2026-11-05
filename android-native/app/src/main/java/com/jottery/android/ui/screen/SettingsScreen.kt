@@ -1,5 +1,7 @@
 package com.jottery.android.ui.screen
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -10,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -17,6 +20,7 @@ import com.jottery.android.R
 import com.jottery.android.model.SortOrder
 import com.jottery.android.model.ThemeMode
 import com.jottery.android.viewmodel.AppState
+import com.jottery.android.viewmodel.defaultExportName
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,6 +45,15 @@ fun SettingsScreen(
     var showWipeConfirm by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    var exportStatus by remember { mutableStateOf<String?>(null) }
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch { exportStatus = appState.exportTo(context, uri, ids = null) }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -143,6 +156,11 @@ fun SettingsScreen(
             SettingsSectionHeader("Data")
             SettingsRow(title = "Backup & Restore", onClick = onNavigateToBackup)
             SettingsRow(title = "Import notes", onClick = onNavigateToImport)
+            SettingsRow(
+                title = stringResource(R.string.export_all),
+                subtitle = exportStatus ?: stringResource(R.string.export_all_detail),
+                onClick = { exportLauncher.launch(defaultExportName()) },
+            )
             SettingsRow(
                 title = "Wipe all data",
                 subtitle = "Delete everything and start fresh",

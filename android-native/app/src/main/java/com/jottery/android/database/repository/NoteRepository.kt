@@ -10,6 +10,7 @@ import com.jottery.android.model.DecryptedNote
 import com.jottery.android.model.NoteRecord
 import com.jottery.android.model.NoteVersionRecord
 import com.jottery.android.model.SyncableNoteFields
+import com.jottery.android.service.ExportService
 import com.jottery.android.util.DateUtils
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -198,6 +199,57 @@ class NoteRepository(
         return decrypt(record, key)
     }
 
+    /** Store a note from an export file with everything the file carried. */
+    suspend fun createImported(
+        id: String,
+        note: ExportService.ExportNote,
+        attachments: List<AttachmentRef>,
+        key: SecretKey,
+    ) {
+        val contentJSON = CryptoService.serializeEncryptedJSON(CryptoService.encryptText(note.content, key))
+        val contentHash = CryptoService.computeContentHash(
+            SyncableNoteFields(
+                content = contentJSON,
+                tags = encryptTagsToSyncFormat(note.tags, key),
+                attachmentIds = attachments.map { it.id },
+                pinned = note.pinned,
+                archived = note.archived,
+                locked = note.locked,
+                syntaxLanguage = note.syntaxLanguage,
+                wordWrap = note.wordWrap,
+                showPreview = note.showPreview,
+                color = note.color,
+            )
+        )
+        val now = DateUtils.nowISO8601()
+        val createdAt = DateUtils.parseISO8601(note.createdAt)?.let(DateUtils::formatISO8601) ?: now
+        val modifiedAt = DateUtils.parseISO8601(note.modifiedAt)?.let(DateUtils::formatISO8601) ?: now
+        noteDao.insertOrReplace(
+            NoteRecord(
+                id = id,
+                createdAt = createdAt,
+                modifiedAt = modifiedAt,
+                content = contentJSON,
+                tags = CryptoService.serializeEncryptedJSON(CryptoService.encryptStringArray(note.tags, key)),
+                attachments = json.encodeToString(attachments),
+                pinned = note.pinned,
+                archived = note.archived,
+                archivedAt = if (note.archived) modifiedAt else null,
+                locked = note.locked,
+                lockedAt = if (note.locked) modifiedAt else null,
+                version = 0,
+                wordWrap = note.wordWrap,
+                syntaxLanguage = note.syntaxLanguage,
+                showPreview = note.showPreview,
+                color = note.color,
+                contentHash = contentHash,
+                parentHash = null,
+                hashChain = json.encodeToString(CryptoService.updateHashChain(contentHash, emptyList())),
+                needsSync = true,
+            )
+        )
+    }
+
     // MARK: - Update
 
     /**
@@ -375,6 +427,13 @@ class NoteRepository(
     }
 
     // MARK: - Attachment Management
+
+    /** Add or remove tags on one note, as an edit. */
+    suspend fun changeTags(id: String, key: SecretKey, change: (List<String>) -> List<String>) {
+        val note = get(id, key) ?: return
+        val tags = change(note.tags)
+        if (tags != note.tags) update(note.copy(tags = tags), key)
+    }
 
     /** Add an attachment reference to a note's attachments JSON array. */
     suspend fun addAttachment(noteId: String, ref: AttachmentRef) {

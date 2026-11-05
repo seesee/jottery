@@ -215,6 +215,56 @@
     <string name="connect_button_import">Import and Connect</string>
     <string name="connect_title">Sync Setup</string>
 
+    <!-- Conflicts -->
+    <string name="conflict_screen_title">Sync Conflicts (%1$d)</string>
+    <string name="conflict_none">No conflicts to resolve.</string>
+    <string name="conflict_local_version">This device</string>
+    <string name="conflict_server_version">Server</string>
+    <string name="conflict_ancestor">Before either change</string>
+    <string name="conflict_modified">Modified: %1$s</string>
+    <string name="conflict_tags">Tags: %1$s</string>
+    <string name="conflict_server_unreadable">This version can\'t be decrypted on this device.</string>
+    <string name="conflict_show_more">Show more</string>
+    <string name="conflict_show_less">Show less</string>
+    <string name="conflict_resolve_failed">That didn\'t work, and nothing has changed. Try again.</string>
+    <string name="conflict_row_label">Sync conflict</string>
+    <plurals name="conflict_banner">
+        <item quantity="one">%1$d note has a sync conflict. Tap to resolve.</item>
+        <item quantity="other">%1$d notes have sync conflicts. Tap to resolve.</item>
+    </plurals>
+
+    <!-- Inbox -->
+    <string name="inbox_menu">Inbox (%1$d)</string>
+    <string name="inbox_delete_failed">Couldn\'t remove that from the server\'s inbox. Try again.</string>
+
+    <!-- Import and export -->
+    <string name="import_duplicates">If a note already exists</string>
+    <string name="import_skip">Skip</string>
+    <string name="import_replace">Replace</string>
+    <string name="import_keep_both">Keep both</string>
+    <string name="import_done">Imported %1$d notes and %2$d attachments.</string>
+    <string name="import_skipped">%1$d already here were skipped.</string>
+    <string name="import_failures">%1$d notes and %2$d attachments couldn\'t be imported.</string>
+    <string name="export_all">Export all notes</string>
+    <string name="export_all_detail">Decrypted JSON, including archived notes. Anyone with the file can read it.</string>
+    <string name="export_done">Exported %1$d notes.</string>
+    <string name="export_done_skipped">Exported %1$d notes, but %2$d attachments couldn\'t be read and were left out.</string>
+    <string name="export_failed">Export failed: %1$s</string>
+
+    <!-- Attachments -->
+    <string name="attachment_add_photo">Add Photo or Video</string>
+    <string name="attachment_add_file">Add File</string>
+    <string name="attachment_unnamed">Attachment</string>
+    <string name="attachment_share">Share %1$s</string>
+    <string name="attachment_remove">Remove %1$s</string>
+    <string name="attachment_remove_title">Remove Attachment</string>
+    <string name="attachment_remove_message">Remove %1$s from this note?</string>
+    <string name="attachment_remove_confirm">Remove</string>
+    <string name="attachment_unreadable">This attachment can\'t be read on this device.</string>
+    <string name="attachment_no_app">No app here can open this.</string>
+    <string name="attachment_too_large">Attachments can be up to %1$d MB.</string>
+    <string name="attachment_add_failed">Couldn\'t add that file.</string>
+
     <!-- Version history -->
     <string name="version_restore_failed">This version can\'t be read, so it wasn\'t restored.</string>
 

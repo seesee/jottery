@@ -52,6 +52,14 @@ data class ConflictInfo(
     val id: String get() = stored.id
     val serverModifiedAt: String get() = stored.serverModifiedAt
     val serverUnreadable: Boolean get() = serverContent == null
+
+    /** The note's first line, from whichever side has one. */
+    val title: String
+        get() = (localContent.lineSequence() + serverContent.orEmpty().lineSequence())
+            .map { it.trim().trimStart('#').trim() }
+            .firstOrNull { it.isNotEmpty() }
+            ?.take(80)
+            .orEmpty()
 }
 
 enum class ConflictResolutionStrategy {

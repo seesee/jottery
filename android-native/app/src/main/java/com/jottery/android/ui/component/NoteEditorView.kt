@@ -1,5 +1,11 @@
 package com.jottery.android.ui.component
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
@@ -12,10 +18,12 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -47,6 +55,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
@@ -55,13 +64,17 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jottery.android.R
+import com.jottery.android.model.AttachmentRef
 import com.jottery.android.model.DecryptedNote
 import com.jottery.android.model.NoteVersionRecord
 import com.jottery.android.ui.theme.NoteColors
 import com.jottery.android.ui.webview.MarkdownPreviewView
 import com.jottery.android.ui.webview.WebCalcEditorView
 import com.jottery.android.ui.webview.WebOutlinerEditorView
+import com.jottery.android.ui.webview.isOpenableLink
+import com.jottery.android.util.AttachmentFiles
 import com.jottery.android.viewmodel.AppState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -169,6 +182,63 @@ fun NoteEditorView(
         }
     }
 
+    val context = LocalContext.current
+    var attachmentToRemove by remember { mutableStateOf<AttachmentRef?>(null) }
+    val unreadableMessage = stringResource(R.string.attachment_unreadable)
+    val noAppMessage = stringResource(R.string.attachment_no_app)
+    val tooLargeMessage = stringResource(R.string.attachment_too_large, AttachmentFiles.MAX_ATTACHMENT_BYTES / (1024 * 1024))
+    val addFailedMessage = stringResource(R.string.attachment_add_failed)
+
+    fun attach(uris: List<Uri>) {
+        scope.launch {
+            for (uri in uris) {
+                try {
+                    val picked = AttachmentFiles.read(context.contentResolver, uri)
+                    val id = appState.addAttachment(note.id, picked.data, picked.name, picked.mimeType)
+                    if (id != null && picked.mimeType.startsWith("image/") && syntaxLanguage == "markdown") {
+                        val text = textFieldValue.text
+                        val caret = textFieldValue.selection.end.coerceIn(0, text.length)
+                        val insert = "![](attachment:$id)"
+                        textFieldValue = TextFieldValue(
+                            text.substring(0, caret) + insert + text.substring(caret),
+                            TextRange(caret + insert.length),
+                        )
+                        scheduleSave()
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: AttachmentFiles.TooLarge) {
+                    appState.showMessage(tooLargeMessage)
+                } catch (e: Exception) {
+                    appState.showMessage(addFailedMessage)
+                }
+            }
+        }
+    }
+
+    val photoPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia()
+    ) { uris -> attach(uris) }
+    val filePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris -> attach(uris) }
+
+    fun handOff(attachment: AttachmentRef, buildIntent: suspend (ByteArray) -> Intent) {
+        scope.launch {
+            val data = appState.attachmentData(attachment)
+            if (data == null) {
+                appState.showMessage(unreadableMessage)
+                return@launch
+            }
+            try {
+                context.startActivity(buildIntent(data))
+            } catch (_: ActivityNotFoundException) {
+                appState.showMessage(noAppMessage)
+            }
+        }
+    }
+
+
     // Save on dispose (navigating away).
     // Uses viewModelScope via appState methods because the composable scope
     // (rememberCoroutineScope) is cancelled when leaving the composition,
@@ -272,6 +342,15 @@ fun NoteEditorView(
                         onDuplicate = {
                             scope.launch { appState.duplicateNote(note.id) }
                             menuExpanded = false
+                        },
+                        canAddAttachments = !isReadOnly,
+                        onAddPhoto = {
+                            menuExpanded = false
+                            photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                        },
+                        onAddFile = {
+                            menuExpanded = false
+                            filePicker.launch(arrayOf("*/*"))
                         },
                         onDelete = {
                             menuExpanded = false
@@ -442,15 +521,14 @@ fun NoteEditorView(
                             }
                         },
                         onOpenLink = { url ->
-                            try {
-                                val intent = android.content.Intent(
-                                    android.content.Intent.ACTION_VIEW,
-                                    android.net.Uri.parse(url),
-                                )
-                                appState.getApplication<android.app.Application>().startActivity(
-                                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                                )
-                            } catch (_: Exception) { }
+                            // A note must not be able to start anything but these
+                            if (isOpenableLink(url)) {
+                                try {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                } catch (_: ActivityNotFoundException) {
+                                    appState.showMessage(noAppMessage)
+                                }
+                            }
                         },
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -520,6 +598,44 @@ fun NoteEditorView(
                 }
             }
         }
+
+        if (note.attachments.isNotEmpty()) {
+            HorizontalDivider()
+            AttachmentListView(
+                attachments = note.attachments,
+                onOpen = { attachment ->
+                    handOff(attachment) { data ->
+                        AttachmentFiles.viewIntent(context, attachment.filename, attachment.mimeType, data)
+                    }
+                },
+                onShare = { attachment ->
+                    handOff(attachment) { data ->
+                        AttachmentFiles.shareIntent(context, attachment.filename, attachment.mimeType, data)
+                    }
+                },
+                onRemove = if (isReadOnly) null else { attachment -> attachmentToRemove = attachment },
+                loadThumbnail = { attachment ->
+                    appState.attachmentData(attachment)?.let { AttachmentFiles.thumbnail(it) }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+
+    attachmentToRemove?.let { attachment ->
+        ConfirmDialog(
+            title = stringResource(R.string.attachment_remove_title),
+            message = stringResource(
+                R.string.attachment_remove_message,
+                attachment.filename.ifEmpty { stringResource(R.string.attachment_unnamed) },
+            ),
+            confirmText = stringResource(R.string.attachment_remove_confirm),
+            onConfirm = {
+                attachmentToRemove = null
+                scope.launch { appState.removeAttachment(note.id, attachment.id) }
+            },
+            onDismiss = { attachmentToRemove = null },
+        )
     }
 
     // Delete confirmation dialog
@@ -588,6 +704,9 @@ private fun EditorContextMenu(
     onToggleWordWrap: () -> Unit,
     onTogglePreview: () -> Unit,
     onDuplicate: () -> Unit,
+    canAddAttachments: Boolean,
+    onAddPhoto: () -> Unit,
+    onAddFile: () -> Unit,
     onDelete: () -> Unit,
     onShowColourMenu: () -> Unit,
     onShowLanguageMenu: () -> Unit,
@@ -692,6 +811,19 @@ private fun EditorContextMenu(
                 Icon(Icons.Default.Info, contentDescription = null)
             },
         )
+
+        if (canAddAttachments) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.attachment_add_photo)) },
+                onClick = onAddPhoto,
+                leadingIcon = { Icon(Icons.Default.Image, contentDescription = null) },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.attachment_add_file)) },
+                onClick = onAddFile,
+                leadingIcon = { Icon(Icons.Default.AttachFile, contentDescription = null) },
+            )
+        }
 
         // Duplicate
         DropdownMenuItem(

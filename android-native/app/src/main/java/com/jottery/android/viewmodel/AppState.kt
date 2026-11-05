@@ -44,10 +44,14 @@ import com.jottery.android.service.backup.keyBytes
 import com.jottery.android.service.EnvelopeException
 import com.jottery.android.service.EnvelopeService
 import com.jottery.android.service.VaultReKeyService
+import com.jottery.android.service.ExportService
 import com.jottery.android.service.ImportService
+import com.jottery.android.service.ImportStrategy
 import com.jottery.android.service.SearchService
+import com.jottery.android.service.SyncValidator
 import com.jottery.android.service.SyncService
 import javax.crypto.spec.SecretKeySpec
+import com.jottery.android.util.AttachmentFiles
 import com.jottery.android.util.DateUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -261,6 +265,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
         if (db != null) return  // Already initialised
 
         val context = getApplication<Application>()
+
+        // Anything still decrypted for another app from the last session goes now
+        AttachmentFiles.clear(context)
 
         // Wire auto-lock so the timer triggers a full app lock (UI + key wipe)
         keyManager.onAutoLock = {
@@ -543,6 +550,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         sseClientInstance = null
         _syncEnabled.value = false
 
+        AttachmentFiles.clear(getApplication())
         keyManager.lock()
         _isLocked.value = true
         _notes.value = emptyList()
@@ -884,15 +892,6 @@ class AppState(application: Application) : AndroidViewModel(application) {
         repo.hardDelete(id)
     }
 
-    /**
-     * Export selected notes to JSON.
-     * TODO: Phase 5 -- implement full export with attachments and share intent.
-     */
-    suspend fun exportNotes(ids: Set<String>) {
-        Log.i(TAG, "[Export] Export requested for ${ids.size} notes")
-        // TODO: Implement export to JSON file via share intent
-    }
-
     // MARK: - Saved Searches
 
     /**
@@ -927,55 +926,57 @@ class AppState(application: Application) : AndroidViewModel(application) {
     // MARK: - Attachments
 
     /**
-     * Add an attachment to a note.
+     * Add an attachment to a note. Returns its id, or null if nothing was added.
+     * The name is stored only as ciphertext, in the note's reference.
      */
     suspend fun addAttachment(
         noteId: String,
         data: ByteArray,
         filename: String,
         mimeType: String,
-    ) {
-        val noteRepository = noteRepo ?: return
-        val attachmentRepository = attachmentRepo ?: return
-        val key = keyManager.masterKey ?: return
-        val note = noteRepository.get(id = noteId, key = key) ?: return
+    ): String? {
+        val noteRepository = noteRepo ?: return null
+        val attachmentRepository = attachmentRepo ?: return null
+        val key = keyManager.masterKey ?: return null
 
-        // Encrypt the file data
-        val encrypted = CryptoService.encrypt(data, key)
-        val encryptedJSON = CryptoService.serializeEncryptedJSON(encrypted)
-        val blobData = encryptedJSON.toByteArray(Charsets.UTF_8)
-
-        // Single ID for both metadata and blob
         val attachmentId = CryptoService.generateUUID()
-
-        // Store encrypted blob
-        val record = AttachmentRecord(
-            id = attachmentId,
-            filename = "",
-            mimeType = mimeType,
-            size = data.size,
-            data = blobData,
+        val blobData = withContext(Dispatchers.Default) {
+            CryptoService.serializeEncryptedJSON(CryptoService.encrypt(data, key)).toByteArray(Charsets.UTF_8)
+        }
+        attachmentRepository.insertOrReplace(
+            AttachmentRecord(id = attachmentId, filename = "", mimeType = mimeType, size = data.size, data = blobData)
         )
-        attachmentRepository.insertOrReplace(record)
 
-        // Encrypt the filename for storage
-        val encFilename = CryptoService.encryptText(filename, key)
-        val encFilenameJSON = CryptoService.serializeEncryptedJSON(encFilename)
-
-        // Create attachment ref (data = attachmentId so blob lookup matches)
+        // One ID for both metadata and blob
         val ref = AttachmentRef(
             id = attachmentId,
-            filename = encFilenameJSON,
+            filename = CryptoService.serializeEncryptedJSON(CryptoService.encryptText(filename, key)),
             mimeType = mimeType,
             size = data.size,
             data = attachmentId,
         )
-
-        // Update note with encrypted filename in the raw record
         noteRepository.addAttachment(noteId = noteId, ref = ref)
 
         refreshNote(noteId)
         scheduleDebouncedSync()
+        return attachmentId
+    }
+
+    /** An attachment's decrypted bytes, or null if it can't be read. */
+    suspend fun attachmentData(ref: AttachmentRef): ByteArray? {
+        val attachmentRepository = attachmentRepo ?: return null
+        val key = keyManager.masterKey ?: return null
+        return withContext(Dispatchers.Default) {
+            try {
+                val blob = attachmentRepository.getBlob(ref.data) ?: return@withContext null
+                CryptoService.decrypt(CryptoService.parseEncryptedJSON(String(blob, Charsets.UTF_8)), key)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "[Attachments] Can't read ${ref.id}: ${e.javaClass.simpleName}")
+                null
+            }
+        }
     }
 
     /**
@@ -1637,6 +1638,13 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
         // Start SSE and run initial sync
         viewModelScope.launch {
+            // Conflicts are kept across lock and restart
+            try {
+                val stored = withContext(Dispatchers.Default) { service.loadConflicts() }
+                _pendingConflicts.value = stored
+            } catch (e: Exception) {
+                Log.w(TAG, "[Sync] Couldn't load conflicts: ${e.javaClass.simpleName}")
+            }
             try { service.startSSE() } catch (e: Exception) {
                 Log.w(TAG, "[Sync] SSE start failed: ${e.message}")
             }
@@ -1686,6 +1694,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
                 "Synced \u2014 up to date"
             }
             loadNotes()
+            loadInboxItems()
         } catch (e: Exception) {
             Log.e(TAG, "[Sync] triggerSync failed: ${e.message}", e)
             _isSyncing.value = false
@@ -1969,18 +1978,60 @@ class AppState(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /**
-     * Import notes from a JSON export file.
-     * Returns the number of notes imported.
-     */
-    suspend fun importNotes(jsonString: String): Int {
+    /** Import notes from a JSON export file. */
+    suspend fun importNotes(jsonString: String, strategy: ImportStrategy): ImportService.Result {
         val nRepo = noteRepo ?: throw AppStateError.NotInitialised
         val aRepo = attachmentRepo ?: throw AppStateError.NotInitialised
+        val database = db ?: throw AppStateError.NotInitialised
         val key = keyManager.masterKey ?: throw AppStateError.NotInitialised
-        val service = ImportService(nRepo, aRepo)
-        val count = withContext(Dispatchers.IO) { service.`import`(jsonString, key) }
+        val service = ImportService(nRepo, aRepo) { block -> database.withTransaction { block() } }
+        val result = withContext(Dispatchers.Default) { service.`import`(jsonString, key, strategy) }
         loadNotes()
-        return count
+        scheduleDebouncedSync()
+        return result
+    }
+
+    /**
+     * Export notes to a file the user chose. With no [ids] that's every note,
+     * including archived ones. Returns a message to show the user.
+     */
+    suspend fun exportTo(context: android.content.Context, uri: android.net.Uri, ids: Set<String>?): String {
+        val aRepo = attachmentRepo ?: return ""
+        val key = keyManager.masterKey ?: return ""
+        val all = _notes.value + _archivedNotes.value
+        val notes = if (ids == null) all else all.filter { it.id in ids }
+        return try {
+            val result = withContext(Dispatchers.IO) {
+                val stream = context.contentResolver.openOutputStream(uri) ?: throw java.io.FileNotFoundException()
+                stream.use { ExportService(aRepo).export(notes, key, it) }
+            }
+            if (result.skippedAttachments > 0) {
+                text(R.string.export_done_skipped, result.notes, result.skippedAttachments)
+            } else {
+                text(R.string.export_done, result.notes)
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "[Export] Failed: ${e.javaClass.simpleName}")
+            text(R.string.export_failed, e.message ?: e.javaClass.simpleName)
+        }
+    }
+
+    /** Add tags to several notes. */
+    suspend fun addTagsToNotes(ids: Set<String>, tags: List<String>) =
+        changeTags(ids) { current -> (current + tags).distinct() }
+
+    /** Remove tags from several notes. */
+    suspend fun removeTagsFromNotes(ids: Set<String>, tags: List<String>) =
+        changeTags(ids) { current -> current - tags.toSet() }
+
+    private suspend fun changeTags(ids: Set<String>, change: (List<String>) -> List<String>) {
+        val repo = noteRepo ?: return
+        val key = keyManager.masterKey ?: return
+        ids.forEach { repo.changeTags(it, key, change) }
+        ids.forEach { refreshNote(it) }
+        scheduleDebouncedSync()
     }
 
     /**
@@ -2003,53 +2054,73 @@ class AppState(application: Application) : AndroidViewModel(application) {
         triggerSync()
     }
 
-    // MARK: - Inbox (Phase 5 Stubs)
+    // MARK: - Inbox
 
-    /**
-     * Load inbox items from the server.
-     *
-     * TODO: Phase 5 -- fetch from SyncClient.
-     */
+    /** Fetch the inbox. A failure keeps what's already shown, and is no sync error. */
     suspend fun loadInboxItems() {
-        // TODO: Phase 5 -- syncClient.listInboxItems()
-        Log.d(TAG, "[Sync] loadInboxItems: stub")
+        val client = syncClientInstance ?: return
+        try {
+            val items = withContext(Dispatchers.IO) { client.getInboxItems() }
+            // The server is not trusted: ids go into a URL path on delete
+            _inboxItems.value = items.filter { SyncValidator.isUuid(it.id) }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "[Inbox] Load failed: ${e.javaClass.simpleName}")
+        }
     }
 
     /**
-     * Accept an inbox item -- create a local note from it and delete from server.
-     *
-     * TODO: Phase 5 -- create note from item, delete from server.
+     * Turn an inbox item into a note. The server's copy is deleted only once the
+     * note is saved, so a failure can't lose the item. If the delete itself fails
+     * the item stays listed, and accepting it again would make a second note, so
+     * the user is told.
      */
     suspend fun acceptInboxItem(item: InboxItem) {
         val repo = noteRepo ?: return
         val key = keyManager.masterKey ?: return
+        val client = syncClientInstance ?: return
 
-        // Create a new encrypted note from the inbox item
         val note = repo.create(content = item.content, tags = item.tags, key = key)
+        notesRevision.incrementAndGet()
         _notes.value = listOf(note) + _notes.value
+        scheduleSearch()
+        scheduleDebouncedSync()
 
-        // TODO: Phase 5 -- syncClient.deleteInboxItem(id = item.id)
-        _inboxItems.value = _inboxItems.value.filter { it.id != item.id }
+        try {
+            withContext(Dispatchers.IO) { client.deleteInboxItem(item.id) }
+            _inboxItems.value = _inboxItems.value.filter { it.id != item.id }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            showMessage(text(R.string.inbox_delete_failed))
+        }
     }
 
-    /**
-     * Delete a single inbox item from the server.
-     *
-     * TODO: Phase 5 -- delete from SyncClient.
-     */
+    /** Delete one inbox item from the server. */
     suspend fun deleteInboxItem(item: InboxItem) {
-        // TODO: Phase 5 -- syncClient.deleteInboxItem(id = item.id)
-        _inboxItems.value = _inboxItems.value.filter { it.id != item.id }
+        val client = syncClientInstance ?: return
+        try {
+            withContext(Dispatchers.IO) { client.deleteInboxItem(item.id) }
+            _inboxItems.value = _inboxItems.value.filter { it.id != item.id }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            showMessage(text(R.string.inbox_delete_failed))
+        }
     }
 
-    /**
-     * Delete all inbox items from the server.
-     *
-     * TODO: Phase 5 -- delete all from SyncClient.
-     */
+    /** Delete every inbox item from the server. */
     suspend fun deleteAllInboxItems() {
-        // TODO: Phase 5 -- syncClient.deleteAllInboxItems()
-        _inboxItems.value = emptyList()
+        val client = syncClientInstance ?: return
+        try {
+            withContext(Dispatchers.IO) { client.deleteAllInboxItems() }
+            _inboxItems.value = emptyList()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            showMessage(text(R.string.inbox_delete_failed))
+        }
     }
 
     // MARK: - Lifecycle
@@ -2096,6 +2167,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
         private const val MAX_LOAD_ATTEMPTS = 3
     }
 }
+
+/** A default name for an export file. */
+fun defaultExportName(): String = "jottery-export-${java.time.LocalDate.now()}.json"
 
 // MARK: - Error Types
 

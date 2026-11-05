@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -36,6 +37,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -52,8 +54,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowWidthSizeClass
+import com.jottery.android.R
 import com.jottery.android.model.SortOrder
 import com.jottery.android.ui.component.NoteEditorView
 import com.jottery.android.ui.component.NoteListView
@@ -67,7 +72,11 @@ fun MainScreen(
     appState: AppState,
     onNavigateToRecycleBin: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToConflicts: () -> Unit,
+    onNavigateToInbox: () -> Unit,
 ) {
+    val conflicts by appState.pendingConflicts.collectAsState()
+    val inboxItems by appState.inboxItems.collectAsState()
     val notes by appState.filteredNotes.collectAsState()
     val allNotes by appState.notes.collectAsState()
     val archivedNotes by appState.archivedNotes.collectAsState()
@@ -186,6 +195,18 @@ fun MainScreen(
                                         Icon(Icons.Default.Archive, contentDescription = null)
                                     },
                                 )
+                                if (syncEnabled) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.inbox_menu, inboxItems.size)) },
+                                        onClick = {
+                                            overflowMenuExpanded = false
+                                            onNavigateToInbox()
+                                        },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Inbox, contentDescription = null)
+                                        },
+                                    )
+                                }
                                 DropdownMenuItem(
                                     text = { Text("Recycle Bin") },
                                     onClick = {
@@ -337,6 +358,22 @@ fun MainScreen(
                             modifier = Modifier.weight(1f),
                         )
                     }
+                }
+            }
+
+            // A conflict is held until the user decides, so it must stay visible
+            if (conflicts.isNotEmpty()) {
+                Surface(
+                    onClick = onNavigateToConflicts,
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = pluralStringResource(R.plurals.conflict_banner, conflicts.size, conflicts.size),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    )
                 }
             }
 
