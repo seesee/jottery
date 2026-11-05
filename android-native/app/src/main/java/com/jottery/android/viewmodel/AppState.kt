@@ -843,8 +843,22 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun duplicateNote(id: String) {
         val repo = noteRepo ?: return
         val key = keyManager.masterKey ?: return
+        // What's on screen is what the user means to copy
+        flushPendingEditor()
         val original = repo.get(id = id, key = key) ?: return
-        val duplicate = repo.create(content = original.content, tags = original.tags, key = key)
+        val created = repo.create(
+            content = original.content,
+            tags = original.tags,
+            key = key,
+            syntaxLanguage = original.syntaxLanguage,
+            wordWrap = original.wordWrap,
+            showPreview = original.showPreview,
+            color = original.color,
+        )
+        // Both notes point at the same blobs, which stay until nothing refers to them
+        val refs = repo.rawAttachmentRefs(id)
+        if (refs.isNotEmpty()) repo.setAttachments(created.id, refs, key)
+        val duplicate = repo.get(id = created.id, key = key) ?: created
         notesRevision.incrementAndGet()
         _notes.value = listOf(duplicate) + _notes.value
         _selectedNoteId.value = duplicate.id

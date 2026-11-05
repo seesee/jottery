@@ -16,6 +16,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -80,6 +81,38 @@ class AppStateNotesTest {
         assertNull(appState.selectedNoteId.value)
         appState.searchRequestHandled()
         assertFalse(appState.searchRequested.value)
+    }
+
+    @Test fun `a duplicate keeps what makes the note what it is`() = runBlocking {
+        val note = appState.createNote("1 + 1", listOf("sums"))!!
+        appState.saveNote(
+            note.copy(syntaxLanguage = "calc", color = "red", wordWrap = false, showPreview = true, pinned = true)
+        )
+        val attachmentId = appState.addAttachment(note.id, "bytes".toByteArray(), "sums.txt", "text/plain")!!
+
+        appState.duplicateNote(note.id)
+
+        val copy = appState.notes.value.first { it.id == appState.selectedNoteId.value }
+        assertNotEquals(note.id, copy.id)
+        assertEquals("1 + 1", copy.content)
+        assertEquals(listOf("sums"), copy.tags)
+        assertEquals("calc", copy.syntaxLanguage)
+        assertEquals("red", copy.color)
+        assertEquals(false, copy.wordWrap)
+        assertEquals(true, copy.showPreview)
+        assertEquals(attachmentId, copy.attachments.single().id)
+        assertEquals("sums.txt", copy.attachments.single().filename)
+        assertFalse("a copy doesn't jump the queue", copy.pinned)
+    }
+
+    @Test fun `a duplicate takes the text on screen, not what was last saved`() = runBlocking {
+        val note = appState.createNote("Saved")!!
+        appState.setPendingEditorNote(note.copy(content = "Still being typed"))
+
+        appState.duplicateNote(note.id)
+
+        val copy = appState.notes.value.first { it.id == appState.selectedNoteId.value }
+        assertEquals("Still being typed", copy.content)
     }
 
     @Test fun `restoring a version updates the list the editor reads`() = runBlocking {

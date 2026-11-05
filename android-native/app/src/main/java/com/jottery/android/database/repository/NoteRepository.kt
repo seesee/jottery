@@ -211,6 +211,10 @@ class NoteRepository(
         content: String,
         tags: List<String> = emptyList(),
         key: SecretKey,
+        syntaxLanguage: String = "markdown",
+        wordWrap: Boolean = true,
+        showPreview: Boolean = false,
+        color: String? = null,
     ): DecryptedNote {
         val encContent = CryptoService.encryptText(content, key)
         val encTags = CryptoService.encryptStringArray(tags, key)
@@ -221,7 +225,7 @@ class NoteRepository(
         var record = NoteRecord.new(
             encryptedContent = contentJSON,
             encryptedTags = tagsJSON,
-        )
+        ).copy(syntaxLanguage = syntaxLanguage, wordWrap = wordWrap, showPreview = showPreview, color = color)
 
         // Compute content hash using sync-format tags
         val syncTags = encryptTagsToSyncFormat(tags, key)
