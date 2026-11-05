@@ -33,6 +33,7 @@ An error response has the shape `{ "error": "message" }`. Some carry a stable `c
 | 429 | Rate limited. See [Rate limits](#rate-limits) |
 | 500 | Server error. A push that fails writes nothing, so it is safe to retry |
 | 503 | The server is busy. Try again after `Retry-After` |
+| 507 | The account is at its storage quota, on a server that enforces one. `code` is `storage_quota_exceeded`. Nothing was written. Pushes that only delete still work, so tell the user to make room |
 
 ## Detecting what a server supports
 

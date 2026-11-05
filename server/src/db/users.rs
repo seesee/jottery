@@ -124,6 +124,23 @@ impl UserRepository {
         Ok(())
     }
 
+    /// What a user holds on the server, in bytes: blobs, and the content and tags of
+    /// notes and versions. Reads every note, so it isn't for the request path.
+    pub async fn measure_storage(pool: &SqlitePool, user_id: &str) -> Result<i64, sqlx::Error> {
+        let bytes: i64 = sqlx::query_scalar(
+            "SELECT
+               COALESCE((SELECT SUM(LENGTH(content) + LENGTH(tags)) FROM notes WHERE user_id = ?1), 0)
+             + COALESCE((SELECT SUM(LENGTH(content) + LENGTH(tags)) FROM note_versions WHERE user_id = ?1), 0)
+             + COALESCE((SELECT SUM(LENGTH(d.data)) FROM attachments_meta m
+                         JOIN attachments_data d ON d.id = m.id WHERE m.user_id = ?1), 0)",
+        )
+        .bind(user_id)
+        .fetch_one(pool)
+        .await?;
+
+        Ok(bytes)
+    }
+
     /// Set a user's password, which also satisfies a forced change.
     pub async fn set_password(
         conn: &mut SqliteConnection,

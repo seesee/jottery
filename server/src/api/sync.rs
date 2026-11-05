@@ -187,25 +187,29 @@ pub async fn push(
     Json(push_req): Json<SyncPushRequest>,
 ) -> AppResult<Json<SyncPushResponse>> {
 
-    // Get user's max upload size limit
+    // Get user's limits
     let user = sqlx::query!(
-        "SELECT max_upload_size_mb FROM users WHERE id = ?",
+        "SELECT max_upload_size_mb, storage_quota_mb, storage_used_bytes FROM users WHERE id = ?",
         client_info.user_id
     )
     .fetch_optional(&state.pool)
     .await?;
 
     let max_upload_bytes = user
+        .as_ref()
         .map(|u| u.max_upload_size_mb)
         .unwrap_or(state.config.default_max_upload_size_mb) as usize * 1024 * 1024;
 
-    // Estimate payload size from attachments (main contributor to size)
-    let estimated_size: usize = push_req.attachments.iter()
-        .map(|a| a.data.len())
-        .sum::<usize>()
-        + push_req.notes.iter()
-            .map(|n| n.content.len())
-            .sum::<usize>();
+    let blob_bytes: usize = push_req.attachments.iter().map(|a| a.data.len()).sum();
+    let note_bytes: usize = push_req.notes.iter().map(|n| n.content.len()).sum();
+    let version_bytes: usize = push_req.versions.iter().map(|v| v.content.len()).sum();
+
+    // Estimate payload size from attachments (main contributor to size). Versions
+    // only count once quotas are on: released clients send a lot of them, and an
+    // install that hasn't asked for limits shouldn't start refusing their pushes.
+    let estimated_size = blob_bytes
+        + note_bytes
+        + if state.config.enforce_storage_quota { version_bytes } else { 0 };
 
     if estimated_size > max_upload_bytes {
         let max_mb = max_upload_bytes / (1024 * 1024);
@@ -214,6 +218,36 @@ pub async fn push(
             estimated_size / (1024 * 1024),
             max_mb
         )));
+    }
+
+    // What this push adds. A note going to the bin doesn't count, so that a full
+    // account can still make room. Blobs are counted as base64, a little over.
+    let growth = blob_bytes
+        + version_bytes
+        + push_req
+            .notes
+            .iter()
+            .filter(|n| !n.deleted)
+            .map(|n| n.content.len())
+            .sum::<usize>();
+
+    if state.config.enforce_storage_quota && growth > 0 {
+        let quota_mb = user
+            .as_ref()
+            .and_then(|u| u.storage_quota_mb)
+            .unwrap_or(state.config.default_storage_quota_mb);
+        let used = user.as_ref().map_or(0, |u| u.storage_used_bytes);
+
+        if used + growth as i64 > quota_mb * 1024 * 1024 {
+            tracing::warn!(
+                "Refusing a push from user {}: {} bytes used, {} more would pass the {}MB quota",
+                client_info.user_id,
+                used,
+                growth,
+                quota_mb
+            );
+            return Err(AppError::StorageQuotaExceeded);
+        }
     }
 
     tracing::info!(
@@ -259,6 +293,16 @@ pub async fn push(
 
     // Stamped inside the lock, so timestamps follow commit order
     let now = chrono::Utc::now().to_rfc3339();
+
+    // Housekeeping corrects this to what's really stored, every hour
+    let growth = growth as i64;
+    sqlx::query!(
+        "UPDATE users SET storage_used_bytes = storage_used_bytes + ? WHERE id = ?",
+        growth,
+        client_info.user_id
+    )
+    .execute(&mut *tx)
+    .await?;
 
     for note in push_req.notes {
         // Check if this note was hard-deleted by another device. A pushed

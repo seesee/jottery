@@ -173,6 +173,7 @@ mod tests {
             max_note_content_size: 10_485_760,
             max_tag_length: 100,
             max_tags_per_note: 50,
+            enforce_storage_quota: false,
         }
     }
 
@@ -184,6 +185,7 @@ mod tests {
             max_note_content_size: 200,
             max_tag_length: 5,
             max_tags_per_note: 3,
+            enforce_storage_quota: false,
             ..test_config()
         }
     }

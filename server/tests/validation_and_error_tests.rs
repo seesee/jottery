@@ -112,6 +112,7 @@ async fn test_malformed_json_sync_push() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -179,6 +180,7 @@ async fn test_malformed_json_user_login() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -240,6 +242,7 @@ async fn test_sync_push_missing_notes_field() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -313,6 +316,7 @@ async fn test_sync_push_note_missing_required_fields() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -394,6 +398,7 @@ async fn test_register_user_missing_email() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -459,6 +464,7 @@ async fn test_login_missing_password() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -526,6 +532,7 @@ async fn test_sync_push_wrong_data_type() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -600,6 +607,7 @@ async fn test_sync_push_version_wrong_type() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -692,6 +700,7 @@ async fn test_register_device_wrong_type() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -762,6 +771,7 @@ async fn test_get_user_invalid_uuid() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -864,6 +874,7 @@ async fn test_empty_string_fields() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -932,6 +943,7 @@ async fn test_extremely_large_note_content() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -1026,6 +1038,7 @@ async fn test_many_tags() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -1123,6 +1136,7 @@ async fn test_special_characters_in_content() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -1220,6 +1234,7 @@ async fn test_sync_push_skips_versions_for_rejected_notes() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -1376,6 +1391,7 @@ async fn test_sync_push_handles_orphan_attachment_data_gracefully() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);

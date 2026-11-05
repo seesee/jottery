@@ -230,21 +230,12 @@ pub async fn get_account_info(
     })?;
 
     // Calculate storage used
-    let storage_used = sqlx::query_scalar!(
-        "SELECT COALESCE(SUM(m.size), 0) FROM attachments_meta m
-         WHERE m.user_id = ?1 AND EXISTS (
-             SELECT 1 FROM note_attachments na
-             JOIN notes n ON n.id = na.note_id AND n.user_id = na.user_id
-             WHERE na.user_id = ?1 AND na.attachment_id = m.attachment_id AND n.deleted = 0
-         )",
-        user_id
-    )
-    .fetch_one(&state.pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to calculate storage: {}", e);
-        AppError::InternalServerError
-    })?;
+    let storage_used = UserRepository::measure_storage(&state.pool, &user_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to calculate storage: {}", e);
+            AppError::InternalServerError
+        })?;
 
     // Get last sync time
     let last_sync: Option<String> = sqlx::query_scalar(
@@ -271,7 +262,7 @@ pub async fn get_account_info(
         email: user.email,
         note_count: note_count as i64,
         attachment_count: attachment_count as i64,
-        storage_used_bytes: storage_used as i64,
+        storage_used_bytes: storage_used,
         storage_quota_mb: user.storage_quota_mb.unwrap_or(state.config.default_storage_quota_mb) as i64,
         created_at: user.created_at,
         last_sync_at: last_sync,

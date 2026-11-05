@@ -73,6 +73,11 @@ pub struct Config {
     pub max_note_content_size: usize,
     pub max_tag_length: usize,
     pub max_tags_per_note: usize,
+
+    /// Refuse pushes that would take an account past its storage quota. Off unless
+    /// asked for: quotas were never enforced before, so an account can already be
+    /// over one, and a refused push stops that device's sync.
+    pub enforce_storage_quota: bool,
 }
 
 impl Config {
@@ -195,6 +200,8 @@ impl Config {
                 .unwrap_or_else(|_| "50".to_string())
                 .parse()
                 .unwrap_or(50),
+
+            enforce_storage_quota: env_or("ENFORCE_STORAGE_QUOTA", false),
         })
     }
 }

@@ -4,7 +4,7 @@ use sqlx::SqlitePool;
 use std::time::Duration;
 
 use crate::api::sync::record_tombstone;
-use crate::db::{AttachmentRepository, SessionRepository};
+use crate::db::{AttachmentRepository, SessionRepository, UserRepository};
 
 /// How often housekeeping runs.
 const INTERVAL: Duration = Duration::from_secs(60 * 60);
@@ -45,10 +45,38 @@ pub async fn run_once(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         tracing::info!("Purged {} attachments nothing references", purged);
     }
 
+    refresh_storage_used(pool).await?;
+
     // A session is otherwise only removed if its token is presented after it expires
     let expired = SessionRepository::delete_expired(pool).await?;
     if expired > 0 {
         tracing::info!("Removed {} expired sessions", expired);
+    }
+
+    Ok(())
+}
+
+/// Bring each user's stored usage back to what's really there. A push only adds to
+/// it, which overcounts edits and doesn't see deletions. Each user is measured
+/// outside any transaction, so that this doesn't hold the write lock while it reads.
+async fn refresh_storage_used(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    let users = sqlx::query!("SELECT id, storage_quota_mb FROM users")
+        .fetch_all(pool)
+        .await?;
+
+    for user in users {
+        let used = UserRepository::measure_storage(pool, &user.id).await?;
+        sqlx::query!(
+            "UPDATE users SET storage_used_bytes = ? WHERE id = ?",
+            used,
+            user.id
+        )
+        .execute(pool)
+        .await?;
+
+        if user.storage_quota_mb.is_some_and(|quota| used > quota * 1024 * 1024) {
+            tracing::warn!("User {} is over their storage quota: {} bytes", user.id, used);
+        }
     }
 
     Ok(())

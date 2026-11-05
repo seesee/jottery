@@ -18,6 +18,8 @@ pub enum AppError {
     TooManyRequests(String),
     /// The account must set a new password before it can do anything else.
     PasswordChangeRequired,
+    /// The push would take the account past its storage quota.
+    StorageQuotaExceeded,
     /// Too many attempts: the client should wait this long before trying again.
     RateLimited { retry_after_secs: u64 },
     InternalError(String),
@@ -36,6 +38,7 @@ impl std::fmt::Display for AppError {
             AppError::PayloadTooLarge(msg) => write!(f, "Payload too large: {}", msg),
             AppError::TooManyRequests(msg) => write!(f, "Too many requests: {}", msg),
             AppError::PasswordChangeRequired => write!(f, "Password change required"),
+            AppError::StorageQuotaExceeded => write!(f, "Storage quota exceeded"),
             AppError::RateLimited { retry_after_secs } => {
                 write!(f, "Rate limited for {} seconds", retry_after_secs)
             }
@@ -80,6 +83,14 @@ impl IntoResponse for AppError {
             return (StatusCode::FORBIDDEN, body).into_response();
         }
 
+        if matches!(self, AppError::StorageQuotaExceeded) {
+            let body = Json(json!({
+                "error": "This account has reached its storage quota",
+                "code": "storage_quota_exceeded"
+            }));
+            return (StatusCode::INSUFFICIENT_STORAGE, body).into_response();
+        }
+
         if let AppError::RateLimited { retry_after_secs } = self {
             let body = Json(json!({
                 "error": format!("Too many attempts. Try again in {} seconds.", retry_after_secs),
@@ -102,7 +113,9 @@ impl IntoResponse for AppError {
             AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
             AppError::PayloadTooLarge(msg) => (StatusCode::PAYLOAD_TOO_LARGE, msg),
             AppError::TooManyRequests(msg) => (StatusCode::TOO_MANY_REQUESTS, msg),
-            AppError::PasswordChangeRequired | AppError::RateLimited { .. } => {
+            AppError::PasswordChangeRequired
+            | AppError::StorageQuotaExceeded
+            | AppError::RateLimited { .. } => {
                 unreachable!("handled above")
             }
             AppError::InternalError(msg) => {

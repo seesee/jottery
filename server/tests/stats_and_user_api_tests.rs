@@ -183,6 +183,7 @@ async fn test_admin_stats_requires_authentication() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -244,6 +245,7 @@ async fn test_admin_stats_success() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -325,6 +327,7 @@ async fn test_user_login_success() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -399,6 +402,7 @@ async fn test_user_login_wrong_password() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -466,6 +470,7 @@ async fn test_user_login_nonexistent_user() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -532,6 +537,7 @@ async fn test_get_account_info_success() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -596,7 +602,7 @@ async fn test_get_account_info_success() {
     assert_eq!(body["email"], email);
     assert_eq!(body["noteCount"], 2);
     assert_eq!(body["attachmentCount"], 0);
-    assert_eq!(body["storageUsedBytes"], 0);
+    assert!(body["storageUsedBytes"].as_i64().unwrap() > 0, "notes take up space too");
     assert!(body["storageQuotaMb"].as_i64().unwrap() > 0);
 
     pool.close().await;
@@ -629,6 +635,7 @@ async fn test_get_account_info_requires_authentication() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -692,6 +699,7 @@ async fn test_delete_all_notes_success() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);

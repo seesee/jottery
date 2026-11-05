@@ -20,6 +20,7 @@ pub struct User {
     pub inbox_max_items: Option<i64>,
     pub inbox_max_size_mb: Option<i64>,
     pub must_change_password: i64,   // 0/1
+    pub storage_used_bytes: i64,     // Approximate between housekeeping passes
 }
 
 /// User registration request (email + password)
