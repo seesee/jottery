@@ -239,13 +239,14 @@ struct NoteRepository: Sendable {
         }
     }
 
-    /// Soft-delete a note.
+    /// Soft-delete a note. Moves `modified_at` on, like any other change, so a
+    /// push in flight can't mark it synced (see `markSynced`).
     func softDelete(id: String) throws {
         let now = Date().iso8601
         try db.dbPool.write { db in
             try db.execute(sql: """
-                UPDATE notes SET deleted = 1, deleted_at = ?, needs_sync = 1 WHERE id = ?
-            """, arguments: [now, id])
+                UPDATE notes SET deleted = 1, deleted_at = ?, modified_at = ?, needs_sync = 1 WHERE id = ?
+            """, arguments: [now, now, id])
         }
     }
 
@@ -253,8 +254,8 @@ struct NoteRepository: Sendable {
     func restore(id: String) throws {
         try db.dbPool.write { db in
             try db.execute(sql: """
-                UPDATE notes SET deleted = 0, deleted_at = NULL, needs_sync = 1 WHERE id = ?
-            """, arguments: [id])
+                UPDATE notes SET deleted = 0, deleted_at = NULL, modified_at = ?, needs_sync = 1 WHERE id = ?
+            """, arguments: [Date().iso8601, id])
         }
     }
 

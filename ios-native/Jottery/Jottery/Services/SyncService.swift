@@ -678,8 +678,15 @@ actor SyncService {
                 return
             }
 
-            // CASE 2: Identical content — no update needed
+            // CASE 2: Same hash. The notes usually match, but not always: see
+            // `differsDespiteEqualHash`. A local change still waiting to go up
+            // wins, and the next push carries it.
             if localHash == remoteHash {
+                if !localRecord.needsSync, Self.differsDespiteEqualHash(local: localRecord, remote: syncNote) {
+                    let record = try buildNoteRecord(from: syncNote, syncedAt: syncedAt)
+                    try noteRepo.insertOrReplace(record)
+                    changes.updatedIds.insert(syncNote.id)
+                }
                 return
             }
 
@@ -730,6 +737,22 @@ actor SyncService {
         let record = try buildNoteRecord(from: syncNote, syncedAt: syncedAt)
         try noteRepo.insertOrReplace(record)
         changes.updatedIds.insert(syncNote.id)
+    }
+
+    /// Whether a note with the same content hash as the local one really is a
+    /// different note. Delete, archive, pin, lock and attachment changes don't
+    /// recompute the hash on every client, and older web clients restore a
+    /// version without doing so, yet the server stores them all. Comparing
+    /// hashes alone left those changes stuck on the device that made them,
+    /// until a later edit elsewhere undid them. The hash covers the ciphertext,
+    /// so different ciphertext can't be the same content.
+    private static func differsDespiteEqualHash(local: NoteRecord, remote: SyncNote) -> Bool {
+        local.content != remote.content
+            || local.pinned != remote.pinned
+            || local.archived != remote.archived
+            || local.locked != (remote.locked ?? local.locked)
+            || local.deleted != remote.deleted
+            || Set(decodeAttachments(local.attachments).map(\.id)) != Set(remote.attachments.map(\.id))
     }
 
     // MARK: - Conflict Resolution
