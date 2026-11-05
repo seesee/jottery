@@ -38,6 +38,21 @@ describe('generatePrintHtml', () => {
     });
   }
 
+  it('renders a markdown note with the preview off, which leaves no preview HTML', async () => {
+    const html = await generatePrintHtml({ content: '# Title\n\nSome **bold** text', language: 'markdown', previewHtml: '' });
+
+    const root = body(html as string);
+    expect(root.querySelector('h1')?.textContent).toBe('Title');
+    expect(root.querySelector('strong')?.textContent).toBe('bold');
+    expect(root.querySelector('pre')).toBeNull();
+  });
+
+  it('keeps a markdown note it renders itself from running anything', async () => {
+    const html = await generatePrintHtml({ content: HOSTILE, language: 'markdown' });
+
+    expect(hasLiveContent(html as string)).toBe(false);
+  });
+
   it('does not trust the preview HTML it is given', async () => {
     const html = await generatePrintHtml({ content: 'x', language: 'markdown', previewHtml: HOSTILE });
     expect(hasLiveContent(html as string)).toBe(false);
