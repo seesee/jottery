@@ -27,13 +27,17 @@ actor SSEClient {
 
     /// Start listening for SSE events.
     func start() {
-        stop()
-        reconnectAttempts = 0
+        cancelConnection()
         task = Task { await connectLoop() }
     }
 
-    /// Stop listening.
+    /// Stop listening, and let go of whoever was listening.
     func stop() {
+        cancelConnection()
+        onSyncEvent = nil
+    }
+
+    private func cancelConnection() {
         task?.cancel()
         task = nil
         reconnectAttempts = 0
@@ -48,11 +52,29 @@ actor SSEClient {
                 reconnectAttempts = 0
             } catch {
                 if Task.isCancelled { return }
+                // The device or account is no longer welcome, and retrying can't
+                // change that. The next sync reports it, and a reactivated
+                // account picks up when the app next starts listening.
+                if Self.isPermanent(error) {
+                    Log.debug("[SSE] stopping: the server refused this device")
+                    return
+                }
                 reconnectAttempts += 1
                 let delay = min(pow(2.0, Double(min(reconnectAttempts, 5))), maxBackoffSeconds)
                 Log.debug("[SSE] connection error (attempt \(reconnectAttempts)), retrying in \(delay)s")
                 try? await Task.sleep(for: .seconds(delay))
             }
+        }
+    }
+
+    private static func isPermanent(_ error: Error) -> Bool {
+        switch error {
+        case SyncClientError.accountDisabled, SyncClientError.accountPendingApproval:
+            return true
+        case SyncClientError.httpError(let status, _):
+            return status == 401
+        default:
+            return false
         }
     }
 

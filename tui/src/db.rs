@@ -110,6 +110,12 @@ impl Database {
 
     /// Run database migrations
     fn run_migrations(&mut self) -> Result<()> {
+        self.migrate_to(i32::MAX)
+    }
+
+    /// Run migrations up to `target`. Each is one transaction, so a crash can't leave
+    /// one half done, which on the next start would fail for good on its first ALTER.
+    fn migrate_to(&mut self, target: i32) -> Result<()> {
         info!("Running database migrations...");
 
         // Get current schema version (0 if table doesn't exist)
@@ -138,11 +144,15 @@ impl Database {
             (15, include_str!("../migrations/015_add_hash_chain.sql")),
             (16, include_str!("../migrations/016_add_envelope_encryption.sql")),
             (17, include_str!("../migrations/017_add_user_id.sql")),
+            (18, include_str!("../migrations/018_add_server_key_state.sql")),
+            (19, include_str!("../migrations/019_add_sync_state.sql")),
+            (20, include_str!("../migrations/020_add_held_deletions.sql")),
+            (21, include_str!("../migrations/021_language_follows_system.sql")),
         ];
 
         // Run pending migrations
         for (version, sql) in migrations {
-            if version > current_version {
+            if version > current_version && version <= target {
                 info!("Applying migration {}", version);
 
                 // Special handling for migration 11: check if columns already exist
@@ -190,9 +200,11 @@ impl Database {
                     }
                 }
 
-                self.conn
+                let transaction = self.conn.unchecked_transaction()?;
+                transaction
                     .execute_batch(sql)
                     .context(format!("Failed to apply migration {}", version))?;
+                transaction.commit()?;
                 info!("Migration {} applied successfully", version);
             }
         }
@@ -309,11 +321,53 @@ mod tests {
             .unwrap_or_else(|_| "test_password_placeholder".to_string())
     }
 
+    /// A database as the last release left it, with rows in it.
+    fn database_before_sync_state() -> Database {
+        let conn = Connection::open_in_memory().unwrap();
+        let mut db = Database { conn };
+        db.migrate_to(18).unwrap();
+        db.conn.execute_batch(
+            "INSERT INTO sync_metadata (id, last_sync_at, sync_enabled, sync_endpoint)
+                 VALUES (1, '2026-06-01T00:00:00+00:00', 1, 'https://example.com');
+             INSERT INTO notes (id, created_at, modified_at, content, tags, attachments, version)
+                 VALUES ('old', '2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00', 'c', 't', '[]', 1),
+                        ('new', '2026-01-01T00:00:00+00:00', '2026-07-01T00:00:00+00:00', 'c', 't', '[]', 1);",
+        ).unwrap();
+        db
+    }
+
+    #[test]
+    fn upgrading_keeps_every_note_and_finds_what_was_waiting_to_be_pushed() {
+        let mut db = database_before_sync_state();
+
+        db.run_migrations().unwrap();
+
+        let pending: Vec<(String, i32)> = db.conn
+            .prepare("SELECT id, needs_sync FROM notes ORDER BY id").unwrap()
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?))).unwrap()
+            .collect::<rusqlite::Result<_>>().unwrap();
+        assert_eq!(pending, vec![("new".to_string(), 1), ("old".to_string(), 0)]);
+    }
+
+    /// Older builds could empty an attachment list by mistake, so nothing from before
+    /// the upgrade can claim to be complete.
+    #[test]
+    fn upgrading_vouches_for_no_attachment_list() {
+        let mut db = database_before_sync_state();
+
+        db.run_migrations().unwrap();
+
+        let vouched: i64 = db.conn
+            .query_row("SELECT COUNT(*) FROM notes WHERE attachments_complete = 1", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(vouched, 0);
+    }
+
     #[test]
     fn test_in_memory_database() {
         let db = Database::in_memory(&test_password()).unwrap();
         assert!(db.is_initialized().unwrap() == false);
-        assert_eq!(db.schema_version().unwrap(), 17);
+        assert_eq!(db.schema_version().unwrap(), 21);
         assert_eq!(db.count_notes(false).unwrap(), 0);
     }
 
@@ -376,13 +430,13 @@ mod tests {
         // Create and close database
         {
             let db = Database::open(&db_path, &password).unwrap();
-            assert_eq!(db.schema_version().unwrap(), 17);
+            assert_eq!(db.schema_version().unwrap(), 21);
         }
 
         // Reopen and verify
         {
             let db = Database::open(&db_path, &password).unwrap();
-            assert_eq!(db.schema_version().unwrap(), 17);
+            assert_eq!(db.schema_version().unwrap(), 21);
         }
     }
 }

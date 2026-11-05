@@ -314,6 +314,31 @@ pub fn handle_register_input_email_key(app: &mut App, key: KeyEvent) -> Result<(
     Ok(())
 }
 
+/// Refuse an account password that's being chosen now, if it's the notes password.
+///
+/// This prompt also takes the password of an account that already exists, where the
+/// match is old news and refusing would stop the device joining. Connecting warns about
+/// that instead. If the server can't say the account exists, it's treated as new.
+fn check_account_password(app: &mut App, password: &str) -> Result<()> {
+    let Some(notes_password) = app.unlock_password.as_deref() else {
+        return Ok(());
+    };
+    let refusal = crate::vault::check_passwords_differ(notes_password, password);
+    if refusal.is_ok() {
+        return Ok(());
+    }
+
+    let AppState::RegisterInputPassword { endpoint, email, .. } = &app.state else {
+        return refusal;
+    };
+    let (endpoint, email) = (endpoint.clone(), email.clone());
+
+    match operations::settings::account_exists(&endpoint, &email) {
+        Ok(true) => Ok(()),
+        _ => refusal,
+    }
+}
+
 /// Handle key events when inputting password for registration
 pub fn handle_register_input_password_key(app: &mut App, key: KeyEvent) -> Result<()> {
     app.error = None;
@@ -334,12 +359,10 @@ pub fn handle_register_input_password_key(app: &mut App, key: KeyEvent) -> Resul
                 app.error = Some(t!("register.password_too_short").to_string());
                 return Ok(());
             }
-            if let Some(notes_password) = app.unlock_password.as_deref() {
-                if let Err(e) = crate::vault::check_passwords_differ(notes_password, &password) {
-                    app.credential_input.zeroize();
-                    app.error = Some(e.to_string());
-                    return Ok(());
-                }
+            if let Err(e) = check_account_password(app, &password) {
+                app.credential_input.zeroize();
+                app.error = Some(e.to_string());
+                return Ok(());
             }
             app.credential_input.zeroize();
 
@@ -529,7 +552,7 @@ mod tests {
     }
 
     #[test]
-    fn the_account_password_cannot_be_the_notes_password() {
+    fn a_new_account_password_cannot_be_the_notes_password() {
         let password = uuid::Uuid::new_v4().to_string();
         let mut app = app_at_the_password_prompt(&password);
         app.credential_input = password;
@@ -539,5 +562,55 @@ mod tests {
         assert!(matches!(app.state, AppState::RegisterInputPassword { .. }));
         assert_eq!(app.error, Some(t!("password.same_as_account").to_string()));
         assert!(app.credential_input.is_empty());
+    }
+
+    /// A server that answers every request the same way.
+    fn server_replying(body: &'static str) -> String {
+        use std::io::{Read, Write};
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let endpoint = format!("http://{}", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let mut stream = stream.unwrap();
+                let mut request = [0u8; 8192];
+                let _ = stream.read(&mut request);
+                let response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len(),
+                );
+                let _ = stream.write_all(response.as_bytes());
+            }
+        });
+        endpoint
+    }
+
+    /// The account already has this password, so refusing wouldn't protect anything.
+    /// It would only stop this person adding a device.
+    #[test]
+    fn an_existing_account_with_the_notes_password_is_not_refused() {
+        let password = uuid::Uuid::new_v4().to_string();
+        let endpoint = server_replying(r#"{"exists":true,"isApproved":true,"isActive":true}"#);
+        let mut app = app_at_the_password_prompt(&password);
+        app.state = AppState::RegisterInputPassword {
+            endpoint: endpoint.clone(),
+            email: "someone@example.com".to_string(),
+            previous: Box::new(AppState::NoteList),
+        };
+
+        assert!(check_account_password(&mut app, &password).is_ok());
+    }
+
+    #[test]
+    fn a_server_that_has_never_heard_of_the_account_means_a_new_password() {
+        let password = uuid::Uuid::new_v4().to_string();
+        let endpoint = server_replying(r#"{"exists":false,"isApproved":false,"isActive":false}"#);
+        let mut app = app_at_the_password_prompt(&password);
+        app.state = AppState::RegisterInputPassword {
+            endpoint: endpoint.clone(),
+            email: "someone@example.com".to_string(),
+            previous: Box::new(AppState::NoteList),
+        };
+
+        assert!(check_account_password(&mut app, &password).is_err());
     }
 }

@@ -2,136 +2,32 @@
 
 use anyhow::{Context, Result};
 use chrono::Utc;
-use serde::{Deserialize, Serialize};
+use rust_i18n::t;
 use std::fs;
 use std::path::Path;
 
-use crate::repository::NoteRepository;
+use crate::{
+    export::{export_note, ExportData},
+    repository::{attachment::AttachmentRepository, NoteRepository},
+};
 
 use super::super::app::App;
 
-/// Export format for notes
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ExportData {
-    pub version: String,
-    pub export_date: String,
-    pub notes: Vec<ExportNote>,
-}
-
-/// Export format for a single note
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ExportNote {
-    pub id: String,
-    pub created_at: String,
-    pub modified_at: String,
-    pub content: String,
-    pub tags: Vec<String>,
-    pub pinned: bool,
-    pub word_wrap: bool,
-    pub syntax_language: Option<String>,
-}
-
-/// Add tags to all selected notes
-pub fn add_tags_to_selected(app: &mut App, tags: &[String]) -> Result<usize> {
-    if tags.is_empty() || app.selected_note_ids.is_empty() {
-        return Ok(0);
-    }
+/// Change every selected note that may be changed, returning how many really did.
+/// `change` says whether it did anything to a note.
+fn change_selected(app: &mut App, mut change: impl FnMut(&mut crate::models::Note) -> bool) -> Result<usize> {
+    let ids = app.editable_selection();
 
     let db = app.db.as_ref().context("Database not available")?;
     let key = app.key.as_ref().context("Key not available")?;
     let repo = NoteRepository::new(db.connection());
 
-    let selected_ids: Vec<String> = app.selected_note_ids.iter().cloned().collect();
-    let mut updated_count = 0;
-
-    for note_id in &selected_ids {
-        if let Some(note) = app.notes.iter_mut().find(|n| &n.id == note_id) {
-            let original_count = note.tags.len();
-
-            // Add tags that aren't already present
-            for tag in tags {
-                if !note.tags.iter().any(|t| t.eq_ignore_ascii_case(tag)) {
-                    note.tags.push(tag.clone());
-                }
-            }
-
-            if note.tags.len() != original_count {
-                note.modified_at = Utc::now();
-                note.version += 1;
-                repo.update(note, key)?;
-                updated_count += 1;
-            }
-        }
-    }
-
-    // Clear multi-selection
-    app.clear_multi_selection();
-
-    // Trigger sync to push tag changes to server
-    if updated_count > 0 && app.settings.sync_enabled {
-        app.trigger_sync();
-    }
-
-    Ok(updated_count)
-}
-
-/// Delete all selected notes (soft delete)
-pub fn delete_selected(app: &mut App) -> Result<usize> {
-    if app.selected_note_ids.is_empty() {
-        return Ok(0);
-    }
-
-    let db = app.db.as_ref().context("Database not available")?;
-    let repo = NoteRepository::new(db.connection());
-
-    let selected_ids: Vec<String> = app.selected_note_ids.iter().cloned().collect();
-    let mut deleted_count = 0;
-
-    for note_id in &selected_ids {
-        repo.delete(note_id)?;
-        deleted_count += 1;
-    }
-
-    // Remove deleted notes from the list
-    app.notes.retain(|n| !selected_ids.contains(&n.id));
-    app.invalidate_filter_cache();
-
-    // Adjust selection
-    let note_count = app.notes.len();
-    if app.selected_note >= note_count && note_count > 0 {
-        app.selected_note = note_count - 1;
-    } else if note_count == 0 {
-        app.selected_note = 0;
-    }
-
-    // Clear multi-selection
-    app.clear_multi_selection();
-
-    // Trigger sync to push deletions to server
-    if deleted_count > 0 && app.settings.sync_enabled {
-        app.trigger_sync();
-    }
-
-    Ok(deleted_count)
-}
-
-/// Archive all selected notes, leaving locked ones where they are, and return how
-/// many moved.
-pub fn archive_selected(app: &mut App) -> Result<usize> {
-    let db = app.db.as_ref().context("Database not available")?;
-    let key = app.key.as_ref().context("Key not available")?;
-    let repo = NoteRepository::new(db.connection());
-
-    let mut archived_count = 0;
-    for note in app.notes.iter_mut() {
-        if app.selected_note_ids.contains(&note.id) && !note.locked && !note.archived {
-            note.archived = true;
-            note.archived_at = Some(Utc::now());
+    let mut changed = 0;
+    for note in app.notes.iter_mut().filter(|note| ids.contains(&note.id)) {
+        if change(note) {
             note.touch();
             repo.update(note, key)?;
-            archived_count += 1;
+            changed += 1;
         }
     }
 
@@ -139,12 +35,102 @@ pub fn archive_selected(app: &mut App) -> Result<usize> {
     app.invalidate_filter_cache();
     app.keep_selection_on_note();
 
-    // Trigger sync to push the change to the server
-    if archived_count > 0 && app.settings.sync_enabled {
+    // Trigger sync to push the changes to the server
+    if changed > 0 && app.settings.sync_enabled {
         app.trigger_sync();
     }
 
-    Ok(archived_count)
+    Ok(changed)
+}
+
+/// Add tags to all selected notes
+pub fn add_tags_to_selected(app: &mut App, tags: &[String]) -> Result<usize> {
+    if tags.is_empty() {
+        return Ok(0);
+    }
+
+    change_selected(app, |note| {
+        let before = note.tags.len();
+        for tag in tags {
+            if !note.tags.iter().any(|t| t.eq_ignore_ascii_case(tag)) {
+                note.tags.push(tag.clone());
+            }
+        }
+        note.tags.len() != before
+    })
+}
+
+/// Remove tags from all selected notes
+pub fn remove_tags_from_selected(app: &mut App, tags: &[String]) -> Result<usize> {
+    if tags.is_empty() {
+        return Ok(0);
+    }
+
+    change_selected(app, |note| {
+        let before = note.tags.len();
+        note.tags.retain(|existing| !tags.iter().any(|tag| tag.eq_ignore_ascii_case(existing)));
+        note.tags.len() != before
+    })
+}
+
+/// Set the colour of all selected notes, by its name in the palette. Nothing clears it.
+pub fn set_colour_of_selected(app: &mut App, colour: &str) -> Result<usize> {
+    let colour = (!colour.is_empty()).then(|| colour.to_string());
+
+    if let Some(name) = &colour {
+        if !app.settings.get_color_palette().contains_key(name) {
+            anyhow::bail!("{}", t!("bulk.unknown_colour", colour = name));
+        }
+    }
+
+    change_selected(app, |note| {
+        let changed = note.color != colour;
+        note.color = colour.clone();
+        changed
+    })
+}
+
+/// Delete all selected notes (soft delete)
+pub fn delete_selected(app: &mut App) -> Result<usize> {
+    let selected_ids = app.editable_selection();
+    if selected_ids.is_empty() {
+        return Ok(0);
+    }
+
+    let db = app.db.as_ref().context("Database not available")?;
+    let repo = NoteRepository::new(db.connection());
+
+    let transaction = db.connection().unchecked_transaction()?;
+    for note_id in &selected_ids {
+        repo.delete(note_id)?;
+    }
+    transaction.commit()?;
+
+    // Remove deleted notes from the list
+    app.notes.retain(|n| !selected_ids.contains(&n.id));
+    app.clear_multi_selection();
+    app.invalidate_filter_cache();
+    app.keep_selection_on_note();
+
+    // Trigger sync to push deletions to server
+    if app.settings.sync_enabled {
+        app.trigger_sync();
+    }
+
+    Ok(selected_ids.len())
+}
+
+/// Archive all selected notes, leaving locked ones where they are, and return how
+/// many moved.
+pub fn archive_selected(app: &mut App) -> Result<usize> {
+    change_selected(app, |note| {
+        if note.archived {
+            return false;
+        }
+        note.archived = true;
+        note.archived_at = Some(Utc::now());
+        true
+    })
 }
 
 /// Export selected notes to a JSON file
@@ -153,27 +139,18 @@ pub fn export_selected(app: &App, path: &Path) -> Result<usize> {
         return Ok(0);
     }
 
-    let mut export_notes = Vec::new();
+    let db = app.db.as_ref().context("Database not available")?;
+    let key = app.key.as_ref().context("Key not available")?;
+    let attachments = AttachmentRepository::new(db.connection());
 
-    for note in &app.notes {
-        if app.selected_note_ids.contains(&note.id) {
-            export_notes.push(ExportNote {
-                id: note.id.clone(),
-                created_at: note.created_at.to_rfc3339(),
-                modified_at: note.modified_at.to_rfc3339(),
-                content: note.content.clone(),
-                tags: note.tags.clone(),
-                pinned: note.pinned,
-                word_wrap: note.word_wrap,
-                syntax_language: Some(note.syntax_language.to_string()),
-            });
-        }
-    }
+    let notes = app.visible_selection().into_iter()
+        .map(|note| export_note(note, &attachments, key))
+        .collect();
 
     let export_data = ExportData {
         version: "1.0".to_string(),
         export_date: Utc::now().to_rfc3339(),
-        notes: export_notes,
+        notes,
     };
 
     let count = export_data.notes.len();
@@ -208,17 +185,17 @@ pub fn merge_tags(notes: &[&crate::models::Note]) -> Vec<String> {
 /// - Content is joined with horizontal rule separator
 /// - Notes are ordered by creation date (oldest first)
 /// - Tags and attachments are merged from all notes
-/// - Original notes are soft-deleted
+/// - Original notes are soft-deleted, in the same transaction, so a failure can't leave
+///   the combined note alongside its originals
 pub fn combine_selected(app: &mut App) -> Result<usize> {
-    if app.selected_note_ids.len() < 2 {
-        anyhow::bail!("Select at least 2 notes to combine");
+    let selected_ids = app.editable_selection();
+    if selected_ids.len() < 2 {
+        anyhow::bail!("{}", t!("bulk.combine_requires_two"));
     }
 
     let db = app.db.as_ref().context("Database not available")?;
     let key = app.key.as_ref().context("Key not available")?;
     let repo = NoteRepository::new(db.connection());
-
-    let selected_ids: Vec<String> = app.selected_note_ids.iter().cloned().collect();
 
     // Get selected notes sorted by creation date (oldest first)
     let mut selected_notes: Vec<&crate::models::Note> = app
@@ -234,11 +211,13 @@ pub fn combine_selected(app: &mut App) -> Result<usize> {
     // Merge all unique tags
     let combined_tags = merge_tags(&selected_notes);
 
-    // Combine all attachments
-    let combined_attachments: Vec<crate::models::Attachment> = selected_notes
-        .iter()
-        .flat_map(|n| n.attachments.clone())
-        .collect();
+    // Combine all attachments. Notes can share one.
+    let mut combined_attachments: Vec<crate::models::Attachment> = Vec::new();
+    for attachment in selected_notes.iter().flat_map(|n| n.attachments.iter()) {
+        if !combined_attachments.iter().any(|known| known.id == attachment.id) {
+            combined_attachments.push(attachment.clone());
+        }
+    }
 
     // Create new combined note
     let mut new_note = crate::models::Note::new(combined_content);
@@ -246,27 +225,29 @@ pub fn combine_selected(app: &mut App) -> Result<usize> {
     new_note.attachments = combined_attachments;
     new_note.syntax_language = crate::models::SyntaxLanguage::Markdown;
 
-    // Save new note to database
+    let transaction = db.connection().unchecked_transaction()?;
     repo.create(&new_note, key)?;
-
-    // Soft-delete original notes
     for note_id in &selected_ids {
         repo.delete(note_id)?;
     }
+    transaction.commit()?;
 
     let count = selected_ids.len();
+    let new_note_id = new_note.id.clone();
 
     // Remove deleted notes from the list
     app.notes.retain(|n| !selected_ids.contains(&n.id));
-
-    // Insert new note at appropriate position (after pinned notes)
-    let pinned_count = app.notes.iter().filter(|n| n.pinned).count();
-    app.notes.insert(pinned_count, new_note);
-    app.invalidate_filter_cache();
+    app.notes.push(new_note);
 
     // Clear multi-selection and select the new note
     app.clear_multi_selection();
-    app.selected_note = pinned_count;
+    app.selected_note_id = Some(new_note_id);
+    app.invalidate_filter_cache();
+    app.keep_selection_on_note();
+
+    if app.settings.sync_enabled {
+        app.trigger_sync();
+    }
 
     Ok(count)
 }
@@ -299,6 +280,132 @@ mod tests {
         let conn = app.db.as_ref().unwrap().connection();
         assert!(NoteRepository::new(conn).get(&open.id, &key).unwrap().unwrap().archived);
         assert!(!NoteRepository::new(conn).get(&locked.id, &key).unwrap().unwrap().archived);
+    }
+
+    /// A selection of these notes, the first of them locked.
+    fn app_selecting(contents: &[&str]) -> (App, [u8; 32], Vec<String>) {
+        let dir = tempfile::tempdir().unwrap();
+        let mut app = App::new(dir.path().join("test.db"), None).unwrap();
+        std::mem::forget(dir);
+        let key = crate::crypto::CryptoService::new().generate_master_key();
+        let db = crate::db::Database::in_memory(&uuid::Uuid::new_v4().to_string()).unwrap();
+
+        let mut ids = Vec::new();
+        for (index, content) in contents.iter().enumerate() {
+            let mut note = Note::new(content.to_string());
+            note.locked = index == 0;
+            note.tags = vec!["keep".to_string(), "drop".to_string()];
+            NoteRepository::new(db.connection()).create(&note, &key).unwrap();
+            ids.push(note.id.clone());
+            app.notes.push(note);
+        }
+
+        app.selected_note_ids.extend(ids.iter().cloned());
+        app.is_multi_select_mode = true;
+        app.db = Some(db);
+        app.key = Some(key);
+        (app, key, ids)
+    }
+
+    fn stored(app: &App, key: &[u8; 32], id: &str) -> Note {
+        let conn = app.db.as_ref().unwrap().connection();
+        NoteRepository::new(conn).get(id, key).unwrap().unwrap()
+    }
+
+    #[test]
+    fn deleting_a_selection_skips_locked_notes() {
+        let (mut app, key, ids) = app_selecting(&["locked", "open"]);
+
+        assert_eq!(delete_selected(&mut app).unwrap(), 1);
+
+        assert!(!stored(&app, &key, &ids[0]).deleted);
+        assert!(stored(&app, &key, &ids[1]).deleted);
+    }
+
+    #[test]
+    fn tagging_a_selection_skips_locked_notes() {
+        let (mut app, key, ids) = app_selecting(&["locked", "open"]);
+
+        add_tags_to_selected(&mut app, &["new".to_string()]).unwrap();
+
+        assert!(!stored(&app, &key, &ids[0]).tags.contains(&"new".to_string()));
+        assert!(stored(&app, &key, &ids[1]).tags.contains(&"new".to_string()));
+    }
+
+    /// The selection outlives a search, and an action shouldn't reach what's out of view.
+    #[test]
+    fn a_note_out_of_view_is_not_touched() {
+        let (mut app, key, ids) = app_selecting(&["locked", "visible", "hidden"]);
+        app.search_input = "visible".to_string();
+        app.invalidate_filter_cache();
+
+        assert_eq!(delete_selected(&mut app).unwrap(), 1);
+
+        assert!(stored(&app, &key, &ids[1]).deleted);
+        assert!(!stored(&app, &key, &ids[2]).deleted);
+    }
+
+    #[test]
+    fn combining_skips_locked_notes_and_needs_two_that_can_change() {
+        let (mut app, _key, _ids) = app_selecting(&["locked", "open"]);
+        assert!(combine_selected(&mut app).is_err());
+
+        let (mut app, key, ids) = app_selecting(&["locked", "one", "two"]);
+        assert_eq!(combine_selected(&mut app).unwrap(), 2);
+
+        assert!(!stored(&app, &key, &ids[0]).deleted);
+        assert!(stored(&app, &key, &ids[1]).deleted);
+        assert_eq!(app.filtered_notes()[app.selected_note].content, "one\n\n---\n\ntwo");
+    }
+
+    #[test]
+    fn a_failed_combine_leaves_the_originals_as_they_were() {
+        let (mut app, key, ids) = app_selecting(&["locked", "one", "two"]);
+        let conn = app.db.as_ref().unwrap().connection();
+        conn.execute_batch(&format!(
+            "CREATE TRIGGER refuse_delete BEFORE UPDATE OF deleted ON notes
+             WHEN NEW.id = '{}'
+             BEGIN SELECT RAISE(ABORT, 'refused'); END;",
+            ids[2],
+        )).unwrap();
+
+        assert!(combine_selected(&mut app).is_err());
+
+        assert!(!stored(&app, &key, &ids[1]).deleted);
+        let conn = app.db.as_ref().unwrap().connection();
+        assert_eq!(NoteRepository::new(conn).count(false).unwrap(), 3);
+    }
+
+    #[test]
+    fn tags_can_be_removed_from_a_selection() {
+        let (mut app, key, ids) = app_selecting(&["locked", "one", "two"]);
+
+        assert_eq!(remove_tags_from_selected(&mut app, &["DROP".to_string()]).unwrap(), 2);
+
+        assert_eq!(stored(&app, &key, &ids[1]).tags, vec!["keep"]);
+        assert_eq!(stored(&app, &key, &ids[0]).tags, vec!["keep", "drop"]);
+    }
+
+    #[test]
+    fn a_selection_can_be_coloured_by_name_and_cleared() {
+        let (mut app, key, ids) = app_selecting(&["locked", "one"]);
+        let colour = app.settings.get_color_palette().keys().next().unwrap().clone();
+
+        assert_eq!(set_colour_of_selected(&mut app, &colour).unwrap(), 1);
+        assert_eq!(stored(&app, &key, &ids[1]).color, Some(colour));
+        assert_eq!(stored(&app, &key, &ids[0]).color, None);
+
+        app.selected_note_ids.insert(ids[1].clone());
+        assert_eq!(set_colour_of_selected(&mut app, "").unwrap(), 1);
+        assert_eq!(stored(&app, &key, &ids[1]).color, None);
+    }
+
+    #[test]
+    fn a_colour_that_is_not_in_the_palette_is_refused() {
+        let (mut app, _key, _ids) = app_selecting(&["locked", "one"]);
+
+        assert!(set_colour_of_selected(&mut app, "no-such-colour").is_err());
+        assert!(app.is_multi_select_mode);
     }
 
     #[test]

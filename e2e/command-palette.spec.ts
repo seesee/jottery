@@ -46,9 +46,29 @@ test.describe('Command palette', () => {
       await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
     });
 
+    test('Note info closes with Escape', async ({ page }) => {
+      await runCommand(page, 'Note Info');
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+
+      await page.keyboard.press('Escape');
+
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(page.getByRole('region', { name: 'Note editor' })).toBeVisible();
+    });
+
     test('Version history opens', async ({ page }) => {
       await runCommand(page, 'Version History');
       await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+    });
+
+    test('Version history closes with Escape, wherever focus went', async ({ page }) => {
+      await runCommand(page, 'Version History');
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 });
+
+      await page.keyboard.press('Escape');
+
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(page.getByRole('region', { name: 'Note editor' })).toBeVisible();
     });
 
     test('Delete asks first', async ({ page }) => {

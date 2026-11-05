@@ -34,6 +34,15 @@ if ! touch "$DATA_DIR/jottery.db"; then
   exit 1
 fi
 
+# The server ignores a MAX_PAYLOAD_SIZE it can't read and uses its default, but Caddy
+# won't start on one. Only hand on what both accept, so a typo in a setting that used
+# to do nothing can't take the site down.
+if [[ "${MAX_PAYLOAD_SIZE:-}" =~ ^[0-9]{1,18}$ ]]; then
+  export JOTTERY_MAX_BODY_SIZE=$MAX_PAYLOAD_SIZE
+else
+  unset JOTTERY_MAX_BODY_SIZE
+fi
+
 jottery-server &
 server_pid=$!
 caddy run --config /etc/caddy/Caddyfile --adapter caddyfile &

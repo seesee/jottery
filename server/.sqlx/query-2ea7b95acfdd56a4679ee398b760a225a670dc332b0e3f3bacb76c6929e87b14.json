@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT * FROM users WHERE id = ? OR id LIKE ?",
+  "query": "SELECT * FROM users WHERE email = ?1 COLLATE NOCASE\n               ORDER BY email = ?1 DESC, created_at\n               LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -90,7 +90,7 @@
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 1
     },
     "nullable": [
       false,
@@ -112,5 +112,5 @@
       false
     ]
   },
-  "hash": "988ff5848557e391a20abd26ef59bf1e6d45e0de4608c611046ce24f9b47db02"
+  "hash": "2ea7b95acfdd56a4679ee398b760a225a670dc332b0e3f3bacb76c6929e87b14"
 }

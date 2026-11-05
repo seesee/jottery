@@ -444,7 +444,7 @@
         "required": "请输入您的笔记密码。",
         "incorrect": "这不是在此设备上解锁笔记的密码。请输入笔记密码，而不是服务器密码。",
         "uploadFailed": "同步已设置，但加密密钥未能保存到服务器，因此其他设备暂时无法连接。下次解锁时将重试",
-        "mustDiffer": "笔记密码和账户密码必须不同。同步服务器能看到您的账户密码，如果两者相同，它就可以读取您的笔记。如果您的其他设备上两者相同，请先在那些设备上更改笔记密码。",
+        "mustDiffer": "笔记密码和账户密码必须不同。同步服务器能看到您的账户密码，如果两者相同，它就可以读取您的笔记。",
         "matchesAccountWarning": "您的笔记密码与账户密码相同，因此同步服务器可以读取您的笔记。请更改笔记密码以解决此问题。"
       },
       "existingAccountDetected": "此邮箱已有账户，因此本设备将连接到该账户。请输入您在其他设备上使用的笔记密码。"
@@ -517,7 +517,9 @@
       "duplicateNote": "复制笔记",
       "exportNote": "导出笔记",
       "pressKey": "按下按键...",
-      "notSet": "未设置"
+      "notSet": "未设置",
+      "needsModifier": "此快捷键在输入时也会生效，因此需要 Ctrl、Cmd 或 Alt。请按其他键，或按 Esc 取消。",
+      "reserved": "该键已被保留。请按其他键，或按 Esc 取消。"
     },
     "syncTab": {
       "enableSync": "启用同步",
@@ -570,7 +572,8 @@
         "changing": "正在更改密码...",
         "button": "更改密码",
         "success": "密码更改成功",
-        "error": "更改密码失败: {error}"
+        "error": "更改密码失败: {error}",
+        "serverKeyFailed": "您的密码已在此设备上更改，但无法更新服务器。下次解锁时将重试。在此之前，新设备需要使用您的旧密码。"
       },
       "connectionDetails": {
         "title": "连接详情",
@@ -606,11 +609,12 @@
         "dangerZone": "危险区域",
         "deleteNotesDescription": "从同步服务器删除所有笔记。此操作无法撤消。您的本地笔记不会被删除。",
         "deleteNotesButton": "从服务器删除所有笔记"
-      }
+      },
+      "disconnectNotRevoked": "此设备已断开连接，但无法通知服务器，因此它仍在列表中，其密钥仍然有效。请在用户门户中撤销它。"
     },
     "advancedTab": {
       "importExport": "导入/导出",
-      "exportDescription": "将笔记导出为解密的 JSON。导入将合并笔记与现有数据。",
+      "exportDescription": "导出会创建未加密的 JSON 副本，用于将笔记迁移到其他地方：任何拿到文件的人都能读取。如需加密副本，请使用备份。导入会将笔记与现有内容合并。",
       "downloadClient": "下载终端/HTML客户端",
       "downloadTerminalClient": "下载终端客户端",
       "clientDescription": "下载终端客户端用于命令行访问，或下载HTML客户端从本地文件系统运行",
@@ -638,7 +642,8 @@
       "aboutDescription": "Jottery 是一个注重隐私、自托管的便签应用程序,用于捕获、组织和搜索具有丰富内容、语法高亮和加密的笔记。",
       "viewOnGithub": "在 GitHub 上查看",
       "license": "使用 MIT 许可证授权。"
-    }
+    },
+    "exportIncomplete": "导出不完整：{notes} 条笔记和 {attachments} 个附件无法读取，已被略过。"
   },
   "landing": {
     "languagePicker": {
@@ -934,7 +939,8 @@
         "encrypting": "正在保护凭据…",
         "syncing": "正在开始初始同步…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "您的笔记密码已在另一台设备上更改。此设备仍可使用旧密码解锁，您的笔记是安全的，但新设备需要使用新密码。"
   },
   "lock": {
     "title": "锁定应用程序",
@@ -1194,7 +1200,11 @@
   },
   "sync": {
     "syncing": "同步中...",
-    "syncProgress": "同步中: {percentage}% 已完成"
+    "syncProgress": "同步中: {percentage}% 已完成",
+    "notesRefused": "部分笔记超出了您账户的上传限制，未能同步。其余内容均已同步。",
+    "accountDisabled": "您的账户已停用或正在等待批准，因此同步已停止。此设备上的笔记是安全的。请联系您的管理员。",
+    "storageQuotaExceeded": "您的账户已达到存储上限，因此无法上传此设备上的更改。请永久删除一些笔记或附件以释放空间。",
+    "massDeletionHeld": "服务器要求一次删除 {count} 条笔记。它们已被移至回收站，以防这不是您的操作。请从那里恢复，如果确实是您的操作，请清空回收站。"
   },
   "inbox": {
     "title": "收件箱",

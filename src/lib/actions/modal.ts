@@ -8,6 +8,9 @@
  * - Restores focus to trigger element on close
  */
 
+/** Open modals, newest last */
+const openModals: HTMLElement[] = [];
+
 export interface ModalOptions {
   /** Callback when escape key is pressed */
   onEscape?: () => void;
@@ -110,8 +113,30 @@ export function modal(node: HTMLElement, options: ModalOptions = {}) {
     }
   }
 
-  // Add event listener
+  /**
+   * Keys still belong to the top modal when focus has left every dialog, which
+   * happens when whatever opened it restores focus afterwards, or after a click on
+   * the backdrop. A key pressed in another dialog is that dialog's business.
+   */
+  function handleStrayKeyDown(event: KeyboardEvent) {
+    const target = event.target as Element | null;
+    const isTopModal = openModals[openModals.length - 1] === node;
+    if (!isTopModal || !target?.closest || target.closest('[role="dialog"]')) {
+      return;
+    }
+
+    if (event.key === 'Tab' && trapFocus) {
+      event.preventDefault();
+      focusFirstElement();
+    } else {
+      handleKeyDown(event);
+    }
+  }
+
+  // Add event listeners
+  openModals.push(node);
   node.addEventListener('keydown', handleKeyDown);
+  document.addEventListener('keydown', handleStrayKeyDown);
 
   return {
     update(newOptions: ModalOptions) {
@@ -119,8 +144,10 @@ export function modal(node: HTMLElement, options: ModalOptions = {}) {
       Object.assign(options, newOptions);
     },
     destroy() {
-      // Remove event listener
+      // Remove event listeners
+      openModals.splice(openModals.indexOf(node), 1);
       node.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keydown', handleStrayKeyDown);
 
       // Restore body scroll
       if (lockScroll) {

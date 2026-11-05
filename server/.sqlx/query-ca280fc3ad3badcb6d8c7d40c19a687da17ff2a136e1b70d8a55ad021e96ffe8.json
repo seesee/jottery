@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT * FROM users WHERE email = ?",
+  "query": "SELECT * FROM users WHERE id LIKE ? ESCAPE '\\' LIMIT 2",
   "describe": {
     "columns": [
       {
@@ -112,5 +112,5 @@
       false
     ]
   },
-  "hash": "3e4e5c4be44ef130a6e886ed815bdf3e8d3d3f61e17713aa10f9912522cd84ca"
+  "hash": "ca280fc3ad3badcb6d8c7d40c19a687da17ff2a136e1b70d8a55ad021e96ffe8"
 }

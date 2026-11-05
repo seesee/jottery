@@ -16,7 +16,6 @@ struct JotteryApp: App {
         WindowGroup {
             ContentView()
                 .environment(appState)
-                .environment(\.locale, resolvedLocale)
         }
         .commands {
             CommandGroup(after: .newItem) {
@@ -31,16 +30,6 @@ struct JotteryApp: App {
                 }
                 .keyboardShortcut("l", modifiers: .command)
             }
-        }
-    }
-
-    private var resolvedLocale: Locale {
-        switch appState.settings.language {
-        // "en-US" is no longer offered in Settings, but keep resolving it so
-        // anyone who selected it before the option was removed is unaffected.
-        case "en-US": return Locale(identifier: "en_US")
-        case "en-GB": return Locale(identifier: "en_GB")
-        default: return .current  // "system"
         }
     }
 }
@@ -97,6 +86,17 @@ struct ContentView: View {
         }
         .animation(.default, value: appState.isLocked)
         .animation(.default, value: appState.isFirstLaunch)
+        .preferredColorScheme(appState.settings.themeMode.colorScheme)
+        // Nothing can be saved until this is done, so nothing can be touched.
+        .overlay {
+            if appState.isReKeying {
+                ZStack {
+                    Color.clear.background(.ultraThinMaterial)
+                    ProgressView(L.vaultReKeying)
+                }
+                .ignoresSafeArea()
+            }
+        }
         .onAppear {
             appState.initialise()
             pickUpPendingShortcut()
@@ -274,6 +274,37 @@ struct MainView: View {
                 server: SyncEndpoint.displayHost(appState.settings.syncEndpoint ?? ""),
                 noteCount: appState.notes.count + appState.archivedNotes.count
             ))
+        }
+        // The server can't prove a deletion came from one of the user's devices.
+        // The notes are safe in the bin, and a real clear-out wouldn't get here.
+        .alert(L.syncServerRemovedTitle, isPresented: Binding(
+            get: { !appState.notesRemovedByServer.isEmpty },
+            set: { if !$0 { appState.notesRemovedByServer = [] } }
+        )) {
+            Button(L.syncServerRemovedRestore) {
+                Task { await appState.restoreNotesRemovedByServer() }
+            }
+            Button(L.syncServerRemovedKeep, role: .cancel) {}
+        } message: {
+            Text(L.syncServerRemovedMessage(appState.notesRemovedByServer.count))
+        }
+        .alert(accountKeyNoticeTitle, isPresented: Binding(
+            get: { appState.accountKeyNotice != nil },
+            set: { if !$0 { appState.accountKeyNotice = nil } }
+        ), presenting: appState.accountKeyNotice) { _ in
+            Button(L.commonOK, role: .cancel) {}
+        } message: { notice in
+            switch notice {
+            case .passwordChangedElsewhere: Text(L.accountKeyPasswordChangedElsewhereMessage)
+            case .passwordMatchesAccount: Text(L.accountKeyPasswordMatchesAccountMessage)
+            }
+        }
+    }
+
+    private var accountKeyNoticeTitle: String {
+        switch appState.accountKeyNotice {
+        case .passwordMatchesAccount: L.accountKeyPasswordMatchesAccountTitle
+        default: L.accountKeyPasswordChangedElsewhereTitle
         }
     }
 

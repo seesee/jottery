@@ -444,7 +444,7 @@
         "required": "Inserisci la password delle tue note.",
         "incorrect": "Questa non è la password che sblocca le tue note su questo dispositivo. Inserisci la password delle note, non quella del server.",
         "uploadFailed": "La sincronizzazione è configurata, ma non è stato possibile salvare la chiave di cifratura sul server, quindi gli altri dispositivi non possono ancora connettersi. Verrà fatto un nuovo tentativo al prossimo sblocco",
-        "mustDiffer": "La password delle note e quella dell'account devono essere diverse. Il server di sincronizzazione vede la password dell'account, quindi se coincidono potrebbe leggere le tue note. Se sono uguali sugli altri dispositivi, cambia prima lì la password delle note.",
+        "mustDiffer": "La password delle note e quella dell'account devono essere diverse. Il server di sincronizzazione vede la password dell'account, quindi se coincidono potrebbe leggere le tue note.",
         "matchesAccountWarning": "La password delle note è uguale a quella dell'account, quindi il server di sincronizzazione potrebbe leggere le tue note. Cambia la password delle note per risolvere il problema."
       },
       "existingAccountDetected": "Questa email ha già un account, quindi questo dispositivo si collegherà a esso. Inserisci la password delle note che usi sugli altri dispositivi."
@@ -517,7 +517,9 @@
       "duplicateNote": "Duplica nota",
       "exportNote": "Esporta nota",
       "pressKey": "Premi un tasto...",
-      "notSet": "Non impostato"
+      "notSet": "Non impostato",
+      "needsModifier": "Questa scorciatoia funziona mentre scrivi, quindi richiede Ctrl, Cmd o Alt. Premi un altro tasto, o Esc per annullare.",
+      "reserved": "Questo tasto è riservato. Premi un altro tasto, o Esc per annullare."
     },
     "syncTab": {
       "enableSync": "Abilita sincronizzazione",
@@ -570,7 +572,8 @@
         "changing": "Modifica della password in corso...",
         "button": "Cambia password",
         "success": "Password modificata con successo",
-        "error": "Impossibile modificare la password: {error}"
+        "error": "Impossibile modificare la password: {error}",
+        "serverKeyFailed": "La password è stata cambiata su questo dispositivo, ma non è stato possibile aggiornare il server. Verrà riprovato al prossimo sblocco. Fino ad allora, un nuovo dispositivo avrebbe bisogno della vecchia password."
       },
       "connectionDetails": {
         "title": "Dettagli connessione",
@@ -606,11 +609,12 @@
         "dangerZone": "Zona pericolosa",
         "deleteNotesDescription": "Elimina tutte le tue note dal server di sincronizzazione. Questa azione non può essere annullata. Le tue note locali NON saranno eliminate.",
         "deleteNotesButton": "Elimina tutte le note dal server"
-      }
+      },
+      "disconnectNotRevoked": "Questo dispositivo è disconnesso, ma non è stato possibile avvisare il server, quindi è ancora elencato e la sua chiave funziona ancora. Revocalo nel portale utente."
     },
     "advancedTab": {
       "importExport": "Importa/Esporta",
-      "exportDescription": "Esporta note come JSON decifrato. L'importazione unirà le note con i dati esistenti.",
+      "exportDescription": "L'esportazione crea una copia JSON non cifrata per spostare le note altrove: chiunque abbia il file può leggerla. Per una copia cifrata, usa il backup. L'importazione unisce le note a quelle già presenti.",
       "downloadClient": "Scarica client terminale/HTML",
       "downloadTerminalClient": "Scarica client terminale",
       "clientDescription": "Scarica il client terminale per l'accesso da riga di comando, o il client HTML per l'esecuzione locale dal filesystem",
@@ -638,7 +642,8 @@
       "aboutDescription": "Jottery è un'applicazione scratch pad self-hosted incentrata sulla privacy per catturare, organizzare e cercare note con contenuti ricchi, evidenziazione della sintassi e crittografia.",
       "viewOnGithub": "Visualizza su GitHub",
       "license": "Licenza MIT."
-    }
+    },
+    "exportIncomplete": "L'esportazione è incompleta: {notes} note e {attachments} allegati non sono stati letti e sono stati omessi."
   },
   "landing": {
     "languagePicker": {
@@ -934,7 +939,8 @@
         "encrypting": "Protezione delle credenziali…",
         "syncing": "Avvio della sincronizzazione iniziale…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "La password delle note è stata cambiata su un altro dispositivo. Questo dispositivo si sblocca ancora con la vecchia password e le tue note sono al sicuro, ma i nuovi dispositivi avranno bisogno di quella nuova."
   },
   "lock": {
     "title": "Blocca applicazione",
@@ -1194,7 +1200,11 @@
   },
   "sync": {
     "syncing": "Sincronizzazione...",
-    "syncProgress": "Sincronizzazione: {percentage}% completato"
+    "syncProgress": "Sincronizzazione: {percentage}% completato",
+    "notesRefused": "Alcune note superano il limite di caricamento del tuo account e non sono state sincronizzate. Tutto il resto sì.",
+    "accountDisabled": "Il tuo account è disattivato o in attesa di approvazione, quindi la sincronizzazione si è interrotta. Le tue note su questo dispositivo sono al sicuro. Contatta il tuo amministratore.",
+    "storageQuotaExceeded": "Il tuo account ha raggiunto il limite di archiviazione, quindi le modifiche su questo dispositivo non possono essere caricate. Elimina definitivamente alcune note o allegati per fare spazio.",
+    "massDeletionHeld": "Il server ha chiesto di eliminare {count} note in una volta. Sono nel cestino nel caso non sia stata una tua azione. Ripristinale da lì, oppure svuota il cestino se è stata tua."
   },
   "inbox": {
     "title": "Posta in arrivo",

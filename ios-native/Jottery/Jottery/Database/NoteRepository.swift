@@ -64,24 +64,10 @@ struct NoteRepository: Sendable {
         }
     }
 
-    /// Return note IDs and their referenced attachment blob IDs for all non-deleted
-    /// notes. Uses raw DB access — no decryption required.
-    func listIdsAndAttachmentBlobIds() throws -> [(id: String, blobIds: [String])] {
+    /// Count of notes in use that the server hasn't got.
+    func countUnsynced() throws -> Int {
         try db.dbPool.read { db in
-            let rows = try Row.fetchAll(db, sql: """
-                SELECT id, attachments FROM notes WHERE deleted = 0
-            """)
-            return rows.map { row in
-                let id: String = row["id"]
-                let json: String = row["attachments"]
-                if json != "[]",
-                   let data = json.data(using: .utf8),
-                   let refs = try? JSONDecoder().decode([AttachmentRef].self, from: data),
-                   !refs.isEmpty {
-                    return (id, refs.map(\.data))
-                }
-                return (id, [])
-            }
+            try NoteRecord.filter(Column("deleted") == false && Column("needs_sync") == true).fetchCount(db)
         }
     }
 
@@ -94,8 +80,15 @@ struct NoteRepository: Sendable {
 
     // MARK: - Create
 
-    /// Create a new note with the given content.
-    func create(content: String, tags: [String] = [], key: SymmetricKey) throws -> DecryptedNote {
+    /// Create a new note with the given content. `id` is for a note that has to
+    /// keep one it already has, and `fromInbox` marks an inbox item's note.
+    func create(
+        id: String? = nil,
+        content: String,
+        tags: [String] = [],
+        fromInbox: Bool = false,
+        key: SymmetricKey
+    ) throws -> DecryptedNote {
         let encContent = try CryptoService.encryptText(content, key: key)
         let encTags = try CryptoService.encryptStringArray(tags, key: key)
 
@@ -103,6 +96,8 @@ struct NoteRepository: Sendable {
         let tagsJSON = try CryptoService.serializeEncryptedJSON(encTags)
 
         var record = NoteRecord.new(encryptedContent: contentJSON, encryptedTags: tagsJSON)
+        if let id { record.id = id }
+        record.fromInbox = fromInbox
 
         // Compute content hash using sync-format tags
         let syncTags = try encryptTagsToSyncFormat(tags, key: key)
@@ -176,7 +171,11 @@ struct NoteRepository: Sendable {
             color: note.color
         )
         let parentHash = previousHash
-        let hashChain = HashChainService.updateHashChain(currentHash: contentHash, parentChain: previousChain)
+        // With nothing pending, the hash being replaced is the one the server has.
+        let serverHash = currentRecord?.needsSync == false ? previousHash : currentRecord?.syncHash
+        let hashChain = HashChainService.updateHashChain(
+            currentHash: contentHash, parentChain: previousChain, keeping: serverHash
+        )
         let hashChainStr = String(data: try JSONEncoder().encode(hashChain), encoding: .utf8)
 
         // First-edit snapshot: when version is 0, create a snapshot of the original state
@@ -212,6 +211,8 @@ struct NoteRepository: Sendable {
                     content_hash = ?,
                     parent_hash = ?,
                     hash_chain = ?,
+                    sync_hash = ?,
+                    from_inbox = from_inbox AND NOT ?,
                     needs_sync = 1
                 WHERE id = ?
             """, arguments: [
@@ -234,6 +235,8 @@ struct NoteRepository: Sendable {
                 contentHash,
                 parentHash,
                 hashChainStr,
+                serverHash,
+                note.showPreview,
                 note.id,
             ])
         }
@@ -252,8 +255,24 @@ struct NoteRepository: Sendable {
         let now = Date().iso8601
         try db.dbPool.write { db in
             try db.execute(sql: """
-                UPDATE notes SET deleted = 1, deleted_at = ?, modified_at = ?, needs_sync = 1 WHERE id = ?
-            """, arguments: [now, now, id])
+                UPDATE notes SET
+                    deleted = 1, deleted_at = ?, local_deleted_at = ?, modified_at = ?, needs_sync = 1
+                WHERE id = ?
+            """, arguments: [now, now, now, id])
+        }
+    }
+
+    /// Soft-delete many notes in one transaction.
+    func softDelete(ids: [String]) throws {
+        let now = Date().iso8601
+        try db.dbPool.write { db in
+            for id in ids {
+                try db.execute(sql: """
+                    UPDATE notes SET
+                        deleted = 1, deleted_at = ?, local_deleted_at = ?, modified_at = ?, needs_sync = 1
+                    WHERE id = ?
+                """, arguments: [now, now, now, id])
+            }
         }
     }
 
@@ -261,32 +280,94 @@ struct NoteRepository: Sendable {
     func restore(id: String) throws {
         try db.dbPool.write { db in
             try db.execute(sql: """
-                UPDATE notes SET deleted = 0, deleted_at = NULL, modified_at = ?, needs_sync = 1 WHERE id = ?
+                UPDATE notes SET
+                    deleted = 0, deleted_at = NULL, local_deleted_at = NULL, modified_at = ?, needs_sync = 1
+                WHERE id = ?
             """, arguments: [Date().iso8601, id])
         }
     }
 
-    /// Hard-delete a note (permanent).
-    func hardDelete(id: String) throws {
+    /// Delete a note, its version history and any attachment nothing else
+    /// uses, and queue the deletion so other devices hear about it. One
+    /// transaction, so a note can't go without the deletion being recorded.
+    func permanentlyDelete(id: String, deletedAt: String = Date().iso8601) throws {
         try db.dbPool.write { db in
-            try db.execute(sql: "DELETE FROM notes WHERE id = ?", arguments: [id])
+            try Self.permanentlyDelete(id: id, deletedAt: deletedAt, in: db)
         }
     }
 
-    /// Hard-delete only when the note has no unsynced local changes.
-    /// A remote deletion must never destroy an edit the server has not seen —
-    /// the surviving note stays local with `needs_sync = 1`. Note: the server
-    /// currently ignores pushes for tombstoned notes, so resurrection needs
-    /// server-side support (tracked in jottery-tqwh); until then the edit is
-    /// preserved on this device only.
-    /// Returns true if the row was deleted.
-    func hardDeleteIfSynced(id: String) throws -> Bool {
+    private static func permanentlyDelete(id: String, deletedAt: String, in db: Database) throws {
+        let attachments = try String.fetchOne(db, sql: "SELECT attachments FROM notes WHERE id = ?", arguments: [id])
+        guard let attachments else { return }
+        let versions = try String.fetchAll(
+            db, sql: "SELECT attachments FROM note_versions WHERE note_id = ?", arguments: [id]
+        )
+
+        try db.execute(sql: "DELETE FROM notes WHERE id = ?", arguments: [id])
+        try db.execute(sql: "DELETE FROM note_versions WHERE note_id = ?", arguments: [id])
+        try SyncRepository.recordDeletion(id: id, deletedAt: deletedAt, in: db)
+        try removeUnreferencedBlobs(listedIn: [attachments] + versions, in: db)
+    }
+
+    /// Delete the blobs in these attachment lists that nothing refers to any
+    /// more. Several notes can share an attachment, and a version of another
+    /// note can still need it. Ids are UUIDs, so a substring match is exact.
+    private static func removeUnreferencedBlobs(listedIn lists: [String], in db: Database) throws {
+        let blobIds = Set(lists.flatMap { json -> [String] in
+            let refs = try? JSONDecoder().decode([AttachmentRef].self, from: Data(json.utf8))
+            return refs?.map(\.data) ?? []
+        })
+        for blobId in blobIds {
+            try db.execute(sql: """
+                DELETE FROM attachments WHERE id = ?1
+                    AND NOT EXISTS (SELECT 1 FROM notes WHERE instr(attachments, ?1) > 0)
+                    AND NOT EXISTS (SELECT 1 FROM note_versions WHERE instr(attachments, ?1) > 0)
+            """, arguments: [blobId])
+        }
+    }
+
+    /// Replace a note in one step, tidying up the attachments it had.
+    func replace(with record: NoteRecord) throws {
         try db.dbPool.write { db in
-            try db.execute(
-                sql: "DELETE FROM notes WHERE id = ? AND needs_sync = 0",
-                arguments: [id]
+            let previous = try String.fetchOne(
+                db, sql: "SELECT attachments FROM notes WHERE id = ?", arguments: [record.id]
             )
-            return db.changesCount > 0
+            try record.save(db)
+            try Self.removeUnreferencedBlobs(listedIn: [previous].compactMap { $0 }, in: db)
+        }
+    }
+
+    /// What became of a note the server listed as permanently deleted.
+    enum ServerDeletionResult: Equatable {
+        /// It was in use, and has moved to the bin.
+        case movedToBin
+        /// It was in the bin already, or isn't here.
+        case nothingToDo
+        /// It has an edit the server hasn't seen, which outranks the deletion.
+        case keptLocalEdit
+    }
+
+    /// Apply a permanent deletion from the server, which moves the note to the
+    /// bin rather than deleting it. Tombstones aren't authenticated, so if a
+    /// server deleted everything outright, every device would lose every note.
+    /// The bin gives the user time to notice, and restoring a note pushes it
+    /// back. The purge deletes it in the end, going by this device's clock.
+    func applyServerDeletion(id: String) throws -> ServerDeletionResult {
+        let now = Date().iso8601
+        return try db.dbPool.write { db in
+            guard let row = try Row.fetchOne(
+                db, sql: "SELECT deleted, needs_sync FROM notes WHERE id = ?", arguments: [id]
+            ) else {
+                return .nothingToDo
+            }
+            let isDeleted: Bool = row["deleted"]
+            let needsSync: Bool = row["needs_sync"]
+            if needsSync { return .keptLocalEdit }
+            if isDeleted { return .nothingToDo }
+            try db.execute(sql: """
+                UPDATE notes SET deleted = 1, deleted_at = ?, local_deleted_at = ? WHERE id = ?
+            """, arguments: [now, now, id])
+            return .movedToBin
         }
     }
 
@@ -297,6 +378,18 @@ struct NoteRepository: Sendable {
             try db.execute(sql: """
                 UPDATE notes SET archived = 1, archived_at = ?, modified_at = ?, needs_sync = 1 WHERE id = ?
             """, arguments: [now, now, id])
+        }
+    }
+
+    /// Archive many notes in one transaction.
+    func archive(ids: [String]) throws {
+        let now = Date().iso8601
+        try db.dbPool.write { db in
+            for id in ids {
+                try db.execute(sql: """
+                    UPDATE notes SET archived = 1, archived_at = ?, modified_at = ?, needs_sync = 1 WHERE id = ?
+                """, arguments: [now, now, id])
+            }
         }
     }
 
@@ -352,8 +445,17 @@ struct NoteRepository: Sendable {
     /// since the snapshot that was actually pushed. This stops an edit made
     /// during the push round-trip from being clobbered back to "synced" when
     /// the server never saw it.
-    func markSynced(id: String, syncedAt: String, serverVersion: Int? = nil, ifModifiedAt: String? = nil) throws {
+    func markSynced(
+        id: String,
+        syncedAt: String,
+        serverVersion: Int? = nil,
+        ifModifiedAt: String? = nil,
+        pushedHash: String? = nil
+    ) throws {
         try db.dbPool.write { db in
+            if let pushedHash {
+                try db.execute(sql: "UPDATE notes SET sync_hash = ? WHERE id = ?", arguments: [pushedHash, id])
+            }
             if let serverVersion {
                 try db.execute(sql: """
                     UPDATE notes SET synced_at = ?, version = ? WHERE id = ?
@@ -460,23 +562,49 @@ struct NoteRepository: Sendable {
         }
     }
 
+    /// Write a batch of restored notes in one transaction. A note here that's
+    /// at least as new as the backup's copy stays as it is: it holds edits the
+    /// backup doesn't, and they'd otherwise be overwritten and synced everywhere.
+    func restore(_ records: [NoteRecord]) throws -> (restored: Int, keptNewer: Int) {
+        try db.dbPool.write { db in
+            var restored = 0
+            var keptNewer = 0
+            for record in records {
+                if let existing = try NoteRecord.fetchOne(db, key: record.id),
+                   !Date.isLater(record.modifiedAt, than: existing.modifiedAt) {
+                    keptNewer += 1
+                } else {
+                    try record.save(db)
+                    restored += 1
+                }
+            }
+            return (restored, keptNewer)
+        }
+    }
+
     // MARK: - Purge
 
-    /// Permanently delete notes that have been in the recycle bin longer than the given interval.
+    /// Permanently delete notes that have been in the recycle bin longer than
+    /// the given interval, by this device's clock: a date from the server can't
+    /// make a note skip the bin. A note with a change waiting to go up stays.
     /// Returns the number of notes purged.
+    ///
+    /// The deletion is sent with the time the note was binned, so an edit made
+    /// elsewhere since then still beats it.
     @discardableResult
     func purgeOldDeletedNotes(olderThan interval: TimeInterval = 30 * 24 * 60 * 60) throws -> Int {
         let cutoff = Date().addingTimeInterval(-interval).iso8601
         return try db.dbPool.write { db in
-            let count = try NoteRecord
-                .filter(Column("deleted") == true)
-                .filter(Column("deleted_at") != nil)
-                .filter(Column("deleted_at") < cutoff)
-                .fetchCount(db)
-            try db.execute(sql: """
-                DELETE FROM notes WHERE deleted = 1 AND deleted_at IS NOT NULL AND deleted_at < ?
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT id, deleted_at FROM notes
+                WHERE deleted = 1 AND needs_sync = 0 AND local_deleted_at IS NOT NULL AND local_deleted_at < ?
             """, arguments: [cutoff])
-            return count
+            for row in rows {
+                let id: String = row["id"]
+                let deletedAt: String? = row["deleted_at"]
+                try Self.permanentlyDelete(id: id, deletedAt: deletedAt ?? cutoff, in: db)
+            }
+            return rows.count
         }
     }
 

@@ -59,6 +59,103 @@ struct BackupFormatTests {
         try CryptoService.decrypt(CryptoService.parseEncryptedJSON(String(decoding: data, as: UTF8.self)), key: key)
     }
 
+    // MARK: - From the TUI
+
+    /// A real file, made by the TUI's own `jottery backup` from a vault with
+    /// two notes: tags and an attachment on one, neither on the other. The TUI
+    /// holds tags as one blob in an array, and attachments as an array of refs.
+    private var tuiBackup: URL {
+        URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .appendingPathComponent("Fixtures/tui-v3.jottery-backup")
+    }
+
+    @Test func aTUIBackupRestoresWithEverythingInIt() async throws {
+        let state = try await makeVault()
+
+        let result = try restore(tuiBackup, password: "correct-horse-notes-pw", into: state)
+
+        #expect(result == BackupService.RestoreResult(notes: 2, skipped: 0))
+        try await state.loadNotes()
+        let key = try #require(state.keyManager.masterKey)
+
+        let tagged = try #require(state.notes.first { $0.content == "From the TUI with tags" })
+        #expect(tagged.tags == ["tui", "two words"])
+        #expect(tagged.pinned)
+        let attachment = try #require(tagged.attachments.first)
+        #expect(attachment.filename == "hello.txt")
+        #expect(attachment.mimeType == "text/plain")
+        let blob = try #require(try state.attachmentRepo?.getBlob(id: attachment.data))
+        #expect(String(decoding: try decryptBlob(blob, key: key), as: UTF8.self) == "hello from the tui")
+
+        let plain = try #require(state.notes.first { $0.content == "No tags here" })
+        #expect(plain.tags.isEmpty)
+        #expect(plain.attachments.isEmpty)
+    }
+
+    @Test func aTUIBackupRefusesTheWrongPassword() async throws {
+        let state = try await makeVault()
+
+        #expect(throws: BackupError.wrongPassword) {
+            try restore(tuiBackup, password: "not-the-password", into: state)
+        }
+    }
+
+    // MARK: - Restoring over what's here (jottery-tx3i)
+
+    @Test func aRestoreKeepsANoteEditedSinceTheBackup() async throws {
+        let state = try await makeVault()
+        let note = try #require(try state.createNote(content: "in the backup"))
+        let url = try backup(of: state)
+        var edited = note
+        edited.content = "edited since"
+        try state.saveNote(edited)
+
+        let result = try restore(url, into: state)
+
+        #expect(result.notes == 0)
+        #expect(result.keptNewer == 1)
+        let key = try #require(state.keyManager.masterKey)
+        #expect(try state.noteRepo?.get(id: note.id, key: key)?.content == "edited since")
+    }
+
+    @Test func aRestoreBringsBackADeletedNoteAndTakesANewerCopy() async throws {
+        let state = try await makeVault()
+        let gone = try #require(try state.createNote(content: "deleted since"))
+        let stale = try #require(try state.createNote(content: "newer in the backup"))
+        let url = try backup(of: state)
+        try #require(state.noteRepo).permanentlyDelete(id: gone.id)
+        try TestVaults.execute(state, "UPDATE notes SET modified_at = ? WHERE id = ?", ["2020-01-01T00:00:00.000Z", stale.id])
+
+        let result = try restore(url, into: state)
+
+        #expect(result.notes == 2)
+        #expect(result.keptNewer == 0)
+    }
+
+    /// One bad write used to leave an unknown part of the batch behind.
+    @Test func aBatchThatCantBeWrittenLeavesNothingBehind() async throws {
+        let source = try await makeVault()
+        for index in 0..<3 { _ = try source.createNote(content: "note \(index)") }
+        let url = try backup(of: source)
+
+        let state = try await makeVault()
+        let db = try #require(state.db)
+        try await db.dbPool.write { database in
+            try database.execute(sql: """
+                CREATE TRIGGER fail_the_last BEFORE INSERT ON notes
+                WHEN (SELECT COUNT(*) FROM notes) >= 2
+                BEGIN SELECT RAISE(ABORT, 'disk full'); END
+            """)
+        }
+
+        #expect(throws: (any Error).self) {
+            try restore(url, password: password, into: state)
+        }
+
+        #expect(try state.noteRepo?.countActive() == 0)
+    }
+
     // MARK: - From the web
 
     /// A real file, written by `createBatchedBackup` and `downloadBackup` in the

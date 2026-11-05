@@ -118,6 +118,7 @@ editor:
   temp_write_error: Zapis do pliku tymczasowego nie powiódł się
   temp_read_error: Odczyt pliku tymczasowego nie powiódł się
   default_editor: vi
+  temp_on_disk: "Ten komputer nie ma folderu tymczasowego w pamięci, więc otwarta notatka jest na dysku do czasu jej zamknięcia."
 attachment:
   add: Dodaj załącznik
   add_failed: "Dodawanie załącznika nie powiodło się: %{error}"
@@ -176,6 +177,8 @@ settings:
   press_enter_cycle: naciśnij Enter, aby przełączyć
   press_enter_toggle: naciśnij Enter, aby przełączyć
   disabled: wyłączone
+  sort_order: "Sortowanie"
+  language_auto: "Jak w systemie"
 sync:
   push: Wyślij na serwer
   pull: Pobierz z serwera
@@ -213,6 +216,23 @@ sync:
   notes: notatek
   skipped_notes: "Nie udało się odczytać elementów z serwera (%{count}) i zostały pominięte"
   rejected_notes: "Notatki w konflikcie z serwerem: %{count}. Otwórz Jottery, aby je rozwiązać."
+  rate_limited: "Serwer poprosił Jottery o odczekanie %{seconds} s przed ponowną synchronizacją."
+  key_refused: "Serwer nie zaakceptował klucza API tego urządzenia. Zarejestruj urządzenie ponownie."
+  server_busy: "Serwer jest zajęty. Jottery spróbuje ponownie za %{seconds} s."
+  quota_exceeded: "Konto osiągnęło limit miejsca, więc nie udało się wysłać zmian. Są bezpieczne na tym urządzeniu. Opróżnij kosz lub usuń załączniki, aby zwolnić miejsce."
+  deletions_held_title: "Usunięto wiele notatek"
+  deletions_held: "Według serwera %{count} notatek trwale usunięto gdzie indziej. Czy to Ty?"
+  deletions_held_warning: "y: przenieś je tutaj do kosza. n: zachowaj je i przywróć na serwer."
+  deletions_held_cli: "Według serwera %{count} notatek usunięto gdzie indziej. Nadal tu są: otwórz Jottery, aby zdecydować."
+  deletions_applied: "Przeniesiono do kosza notatek: %{count}"
+  force_title: "Wymuś pełną resynchronizację"
+  force_confirm: "Pobrać WSZYSTKIE notatki i załączniki z serwera?"
+  force_note: "Niewysłane zmiany lokalne zostaną zachowane."
+  disconnect_title: "Odłącz synchronizację"
+  disconnect_confirm: "Odłączyć to urządzenie od serwera?"
+  disconnect_warning: "Notatki zostają tutaj. Urządzenie zostanie unieważnione na serwerze."
+  disconnect_conflicts: "Notatki z nierozwiązanymi konfliktami: %{count}. Ich kopie z serwera zostaną tutaj zapomniane."
+  device_still_registered: "Odłączono tutaj, ale nie udało się powiadomić serwera, więc klucz tego urządzenia nadal działa. Unieważnij go w portalu użytkownika."
 
 # Skrzynka odbiorcza
 inbox:
@@ -259,6 +279,7 @@ register:
   cleared: Rejestracja wyczyszczona. Możesz zacząć od nowa.
   pending_status: Oczekuje na zatwierdzenie
   password_differs: "Musi się różnić od hasła notatek."
+  insecure_endpoint: "Ten adres używa niezaszyfrowanego HTTP, więc hasło do konta i klucz urządzenia mogą zostać odczytane po drodze. Użyj https:// albo wpisz ten adres ponownie, aby to zaakceptować."
 color_scheme:
   default_dark: Domyślny ciemny
   default_light: Domyślny jasny
@@ -484,6 +505,28 @@ help:
   z_archive_desc: "Zarchiwizuj wybraną notatkę (lub przywróć w trybie archiwum)"
   multi_z_archive_key: "z"
   multi_z_archive_desc: "Zarchiwizuj wybrane notatki"
+  search_or_key: "a | b"
+  search_or_desc: "Jedno z dwóch (LUB)"
+  search_phrase_key: "\"a phrase\""
+  search_phrase_desc: "Te słowa w tej kolejności"
+  search_wildcard_key: "word* / *word"
+  search_wildcard_desc: "Słowo zaczyna się lub kończy tym"
+  search_exclude_tag_key: "-#tag"
+  search_exclude_tag_desc: "Wyklucz notatki z tym tagiem"
+  search_attachment_key: "has:attachment"
+  search_attachment_desc: "Notatki z załącznikami"
+  search_archived_key: "archived"
+  search_archived_desc: "Szukaj w archiwum"
+  search_created_key: "created:>2024-01-01"
+  search_created_desc: "Utworzone po dacie (także < i a..b)"
+  search_modified_key: "modified:>2024-01-01"
+  search_modified_desc: "Zmienione po dacie (także < i a..b)"
+  search_words_key: "words:>100"
+  search_words_desc: "Liczba słów (także < i a..b)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "Usuń tagi z wybranych notatek"
+  multi_colour_key: "C"
+  multi_colour_desc: "Ustaw kolor wybranych notatek"
 cli:
   # Alternatywne (używane w niektórych miejscach)
   list: Wyświetl notatki
@@ -555,6 +598,13 @@ cli:
   attach_file_help: "Plik do dołączenia"
   attachment_number_help: "Który załącznik, według numeracji z show"
   archived_help: "Pokaż zamiast tego zarchiwizowane notatki"
+  import_summary: "Dodano: %{created}, zaktualizowano: %{updated}, już aktualne: %{skipped}"
+  import_failed: "Nie udało się zaimportować elementów z pliku: %{count}"
+  password_change_required: "To konto musi najpierw zmienić hasło. Zaloguj się w aplikacji internetowej, aby to zrobić, i spróbuj ponownie."
+  insecure_endpoint: "%{endpoint} używa niezaszyfrowanego HTTP, więc hasło może zostać odczytane po drodze. Użyj https:// albo podaj --allow-insecure-http, aby to zaakceptować."
+  allow_insecure_http_help: "Zezwól na wysłanie hasła przez niezaszyfrowane HTTP do publicznego hosta"
+  password_flag_deprecated: "Hasło w wierszu poleceń jest widoczne w ps i historii powłoki. Użyj zamiast tego --password-stdin lub JOTTERY_PASSWORD."
+  password_stdin_help: "Czytaj hasła ze stdin, po jednym w wierszu, zamiast pytać"
 status:
   locked: Zablokowane
   unlocked: Odblokowane
@@ -577,6 +627,12 @@ bulk:
   add_tags_to: Dodaj tagi do
   export_notes_to: Eksportuj
   archived: "Zarchiwizowane notatki: %{count}"
+  tags_removed: "Usunięto tagi z notatek (%{count}): %{tags}"
+  remove_tags_from: "Usuń tagi z notatek (%{count})"
+  enter_colour: "Wpisz nazwę koloru (puste, aby wyczyścić):"
+  colour_of: "Ustaw kolor notatek (%{count})"
+  colour_set: "Zmieniono kolor notatek: %{count}"
+  unknown_colour: "Nie ma koloru o nazwie %{colour}"
 time:
   just_now: przed chwilą
   minutes_ago: "%{count} minut temu"
@@ -709,3 +765,6 @@ envelope:
   unwrap_failed: "Hasło notatek nie otwiera klucza tego konta. Mógł zostać zapisany przez starszą wersję. Odblokuj Jottery na już połączonym urządzeniu, co to naprawi, i spróbuj ponownie."
   rekey_failed: "Nie udało się przenieść lokalnych notatek na klucz tego konta, więc nic się nie zmieniło: %{error}"
   diverged: "Klucz tego urządzenia różni się od klucza konta. Notatki z innych urządzeń mogą się tu nie otwierać."
+  password_changed_elsewhere: "Hasło do notatek zmieniono na innym urządzeniu, więc niczego nie nadpisano. To urządzenie nadal odblokowuje się starym hasłem. Zmień je tutaj, aby mogły dołączać nowe urządzenia."
+  server_update_pending: "Hasło zmieniono na tym urządzeniu, ale nie udało się zaktualizować kopii klucza na serwerze. Jottery spróbuje ponownie. Do tego czasu nowe urządzenie nie dołączy z nowym hasłem."
+  key_keeps_changing: "Klucz konta ciągle zmienia się na serwerze, więc to urządzenie go nie ruszyło. Spróbuj ponownie za chwilę."

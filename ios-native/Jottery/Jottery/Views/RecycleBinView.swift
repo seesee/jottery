@@ -65,7 +65,7 @@ struct RecycleBinView: View {
                 }
                 Button(L.commonCancel, role: .cancel) {}
             } message: {
-                Text("This will permanently delete \(deletedNotes.count) note\(deletedNotes.count == 1 ? "" : "s"). This cannot be undone.")
+                Text(L.recycleBinEmptyConfirmMessage(deletedNotes.count))
             }
             .overlay {
                 if deletedNotes.isEmpty {
@@ -112,7 +112,7 @@ struct RecycleBinView: View {
 
     private func permanentlyDelete(id: String) {
         do {
-            try appState.noteRepo?.hardDelete(id: id)
+            try appState.permanentlyDeleteNote(id: id)
             deletedNotes.removeAll { $0.id == id }
         } catch {
             appState.reportError(L.errorCouldntDeleteNoteForever)
@@ -123,7 +123,7 @@ struct RecycleBinView: View {
         var failureCount = 0
         for note in deletedNotes {
             do {
-                try appState.noteRepo?.hardDelete(id: note.id)
+                try appState.permanentlyDeleteNote(id: note.id)
             } catch {
                 failureCount += 1
             }

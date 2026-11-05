@@ -25,6 +25,11 @@ playwright-report/
 coverage/
 scripts/test-history.db
 
+# Release binaries. Under public/ they would also end up in the web client's dist
+releases/*
+!releases/.gitkeep
+public/releases/
+
 # Demo generation intermediates (not public/screenshots/)
 /screenshots/
 demo-generation/screenshots/*

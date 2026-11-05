@@ -8,12 +8,46 @@ struct AttachmentRepository: Sendable {
 
     /// Store an attachment blob with metadata from the note's AttachmentRef.
     /// Uses INSERT OR REPLACE so it works for both new and updated blobs.
-    func storeBlob(id: String, filename: String, mimeType: String, size: Int, data: Data) throws {
+    ///
+    /// The filename stays in the note's ref, encrypted, and never comes here:
+    /// the column is plaintext and nothing reads it. `uploaded` says the server
+    /// already holds this blob, as it does one that was pulled.
+    func storeBlob(id: String, mimeType: String, size: Int, data: Data, uploaded: Bool = false) throws {
         try db.dbPool.write { db in
             try db.execute(sql: """
-                INSERT OR REPLACE INTO attachments (id, filename, mime_type, size, data)
-                VALUES (?, ?, ?, ?, ?)
-            """, arguments: [id, filename, mimeType, size, data])
+                INSERT OR REPLACE INTO attachments (id, filename, mime_type, size, data, uploaded)
+                VALUES (?, '', ?, ?, ?, ?)
+            """, arguments: [id, mimeType, size, data, uploaded])
+        }
+    }
+
+    /// The blob, unless the server is known to hold it already.
+    func getBlobToUpload(id: String) throws -> Data? {
+        try db.dbPool.read { db in
+            try Data.fetchOne(db, sql: "SELECT data FROM attachments WHERE id = ? AND uploaded = 0", arguments: [id])
+        }
+    }
+
+    /// Bytes of each listed blob the server doesn't hold yet.
+    func uploadSizes(ids: [String]) throws -> [String: Int] {
+        guard !ids.isEmpty else { return [:] }
+        return try db.dbPool.read { db in
+            let placeholders = ids.map { _ in "?" }.joined(separator: ",")
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT id, LENGTH(data) AS bytes FROM attachments WHERE uploaded = 0 AND id IN (\(placeholders))
+            """, arguments: StatementArguments(ids))
+            return Dictionary(uniqueKeysWithValues: rows.map { ($0["id"], $0["bytes"]) })
+        }
+    }
+
+    func markUploaded(ids: [String]) throws {
+        guard !ids.isEmpty else { return }
+        try db.dbPool.write { db in
+            let placeholders = ids.map { _ in "?" }.joined(separator: ",")
+            try db.execute(
+                sql: "UPDATE attachments SET uploaded = 1 WHERE id IN (\(placeholders))",
+                arguments: StatementArguments(ids)
+            )
         }
     }
 

@@ -134,9 +134,7 @@ struct PrivacyCoverWindowTests {
         #expect(state.isLocked)
         #expect(controller.coverWindow(for: scene) != nil)
 
-        for _ in 0..<200 where controller.coverWindow(for: scene) != nil {
-            try? await Task.sleep(for: .milliseconds(20))
-        }
+        await waitUntil { controller.coverWindow(for: scene) == nil }
         #expect(controller.coverWindow(for: scene) == nil)
     }
 

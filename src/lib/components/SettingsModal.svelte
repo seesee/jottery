@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import { settings, isLocked, notes } from '../stores/appStore';
-  import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, lock, passwordStorageService, sessionStorageService, createSyncRecoveryNote, onboardFromServer, uploadWrappedKeyToServer, verifyUnlockPassword } from '../services';
+  import { settingsRepository, deleteAllLocalData, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, lock, passwordStorageService, sessionStorageService, createSyncRecoveryNote, onboardFromServer, uploadWrappedKeyToServer, verifyUnlockPassword } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
   import { createBatchedBackup, downloadBackup } from '../services/backupService';
   import { backupSchedulerService } from '../services/backupSchedulerService';
@@ -18,6 +18,7 @@
   import { GeneralTab, EditorTab, KeyboardTab, SyncTab, AdvancedTab, AboutTab, ColorsTab } from './settings';
   import { toast } from '../utils/toast.svelte';
   import { isSamePassword } from '../utils/passwordRules';
+  import { shortcutProblem, type ShortcutProblem } from '../utils/shortcutRecording';
   import { onboardingErrorKey } from '../utils/onboardingErrors';
   import { isConnectionRestricted } from '../services/cspService';
 
@@ -102,6 +103,7 @@
 
   // Keyboard shortcut recording
   let recordingShortcut: keyof KeyboardShortcuts | null = null;
+  let recordingProblem: ShortcutProblem | null = null;
   let tempShortcuts: KeyboardShortcuts = { ...DEFAULT_KEYBOARD_SHORTCUTS, ...$settings.keyboardShortcuts };
 
   // Documentation and downloads
@@ -324,7 +326,9 @@
       return;
     }
 
-    if (isSamePassword(notesPassword, userPassword)) {
+    // Joining an account chooses neither password, so a match is warned about below.
+    // Refusing would stop anyone who already has one adding a device.
+    if (registrationMode !== 'existingUser' && isSamePassword(notesPassword, userPassword)) {
       syncError = $_('settings.syncSetup.notesPassword.mustDiffer');
       return;
     }
@@ -431,6 +435,10 @@
 
       registrationStep = 'complete';
       syncError = keyUploadError;
+
+      if (isSamePassword(notesPassword, userPassword)) {
+        toast.error($_('settings.syncSetup.notesPassword.matchesAccountWarning'));
+      }
 
       // Create sync recovery note (non-blocking)
       createSyncRecoveryNote().catch(err =>
@@ -581,7 +589,10 @@
 
   async function handleDisconnect() {
     try {
-      await syncService.disconnect();
+      const { revoked } = await syncService.disconnect();
+      if (!revoked) {
+        toast.error($_('settings.syncTab.disconnectNotRevoked'));
+      }
 
       // Connections are limited to the old server for this page load, and only a
       // reload can lift that, so a new server couldn't be reached otherwise
@@ -685,12 +696,25 @@
 
   function startRecording(shortcutName: keyof KeyboardShortcuts) {
     recordingShortcut = shortcutName;
+    recordingProblem = null;
+
+    const stopRecording = () => {
+      recordingShortcut = null;
+      window.removeEventListener('keydown', handleKeyDown, { capture: true });
+    };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Prevent default browser behavior
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
+
+      // Escape cancels, and has to be caught here: this is where keys get recorded
+      if (e.key === 'Escape') {
+        recordingProblem = null;
+        stopRecording();
+        return;
+      }
 
       // Ignore just modifier keys by themselves
       if (['Control', 'Alt', 'Shift', 'Meta', 'Command'].includes(e.key)) {
@@ -717,29 +741,22 @@
         shift: hasShift || undefined,
       };
 
+      // Keep listening: the user can press something else
+      recordingProblem = shortcutProblem(shortcutName, newShortcut);
+      if (recordingProblem) {
+        return;
+      }
+
       tempShortcuts = {
         ...tempShortcuts,
         [shortcutName]: newShortcut,
       };
 
-      recordingShortcut = null;
-      window.removeEventListener('keydown', handleKeyDown, { capture: true });
-      window.removeEventListener('keyup', handleKeyUp, { capture: true });
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      // Cancel recording on Escape
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        recordingShortcut = null;
-        window.removeEventListener('keydown', handleKeyDown, { capture: true });
-        window.removeEventListener('keyup', handleKeyUp, { capture: true });
-      }
+      stopRecording();
     };
 
     // Use capture phase to intercept before browser shortcuts
     window.addEventListener('keydown', handleKeyDown, { capture: true, passive: false });
-    window.addEventListener('keyup', handleKeyUp, { capture: true, passive: false });
   }
 
   function resetShortcuts() {
@@ -853,8 +870,7 @@
   async function confirmDeleteDatabase() {
     showDeleteConfirm = false;
     try {
-      // Close database and delete
-      await deleteDB();
+      await deleteAllLocalData();
 
       // Lock the app and reload
       isLocked.set(true);
@@ -1029,6 +1045,12 @@
         if (progress.current) progressCurrent = progress.current;
       });
       await downloadExport(data);
+      if (data.skipped) {
+        toast.error($_('settings.exportIncomplete', { values: {
+          notes: String(data.skipped.notes),
+          attachments: String(data.skipped.attachments),
+        } }));
+      }
     } catch (error) {
       console.error('Failed to export notes:', error);
       toast.error($_('settings.exportFailed', { values: { error: error instanceof Error ? error.message : String(error) } }));
@@ -1229,6 +1251,7 @@
           <KeyboardTab
             bind:tempShortcuts
             bind:recordingShortcut
+            {recordingProblem}
             onStartRecording={startRecording}
             onResetShortcuts={resetShortcuts}
             {onOpenShortcutsHelp}

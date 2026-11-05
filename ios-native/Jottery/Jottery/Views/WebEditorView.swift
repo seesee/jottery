@@ -11,6 +11,8 @@ struct WebEditorView: UIViewRepresentable {
     let bundleName: String
     @Binding var content: String
     var fontSize: CGFloat = EditorTheme.defaultFontSize
+    /// A locked or archived note: shown, but nothing typed may look accepted.
+    var isReadOnly = false
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -43,7 +45,16 @@ struct WebEditorView: UIViewRepresentable {
 
     func updateUIView(_ webView: WKWebView, context: Context) {
         let coordinator = context.coordinator
+        coordinator.parent = self
         let isDark = colorScheme == .dark
+
+        // Update read-only state if changed
+        if coordinator.currentIsReadOnly != isReadOnly {
+            coordinator.currentIsReadOnly = isReadOnly
+            if coordinator.isReady {
+                callJS(webView, "bridge.setReadOnly(\(isReadOnly))")
+            }
+        }
 
         // Update theme if changed
         if coordinator.currentIsDark != isDark {
@@ -80,6 +91,7 @@ struct WebEditorView: UIViewRepresentable {
         var isUpdatingFromJS = false
         var currentIsDark: Bool?
         var currentFontSize: CGFloat = 0
+        var currentIsReadOnly: Bool?
         var lastSentContent: String?
 
         init(parent: WebEditorView) {
@@ -100,15 +112,18 @@ struct WebEditorView: UIViewRepresentable {
                 let isDark = parent.colorScheme == .dark
                 currentIsDark = isDark
                 currentFontSize = parent.fontSize
+                currentIsReadOnly = parent.isReadOnly
                 lastSentContent = parent.content
                 if let webView {
+                    // Before the content, so a read-only outliner never takes focus.
+                    callJS(webView, "bridge.setReadOnly(\(parent.isReadOnly))")
                     callJS(webView, "bridge.setFontSize(\(parent.fontSize))")
                     let escaped = escapeForJS(parent.content)
                     callJS(webView, "bridge.setContent(\(escaped), \(isDark))")
                 }
 
             case "contentChanged":
-                guard let content = body["content"] as? String else { return }
+                guard let content = body["content"] as? String, !parent.isReadOnly else { return }
                 isUpdatingFromJS = true
                 lastSentContent = content
                 parent.content = content

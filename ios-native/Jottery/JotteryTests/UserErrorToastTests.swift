@@ -6,20 +6,14 @@ import Testing
 /// Covers the auto-clearing user-error toast surface (jottery-jqx8):
 /// `AppState.reportError(_:duration:)` publishes `userErrorMessage`
 /// immediately and clears it again once `duration` elapses, unless a
-/// newer message replaced it first. Uses a short, explicit `duration`
-/// instead of the real 4s default so the test runs fast without a fake
-/// clock — mirrors the existing `syncStatusMessage` auto-clear pattern.
+/// newer message replaced it first. A test that needs a timer not to have
+/// fired decides when it fires (`waitOutErrorMessage`), because no delay is
+/// certain to outlast a stalled runner.
 @MainActor
 struct UserErrorToastTests {
 
-    /// Waits for the message to clear. `reportError` starts its timer from a
-    /// main-actor task, so while another test holds the main actor that timer
-    /// hasn't begun, and no fixed sleep or deadline is long enough. Counting
-    /// attempts works however long the stall: it costs only one of them.
     private func waitForMessageToClear(in state: AppState) async {
-        for _ in 0..<1500 where state.userErrorMessage != nil {
-            try? await Task.sleep(for: .milliseconds(20))
-        }
+        await waitUntil { state.userErrorMessage == nil }
     }
 
     @Test func reportErrorPublishesMessage() {
@@ -44,17 +38,27 @@ struct UserErrorToastTests {
 
     @Test func newerMessageIsNotClobberedByAnOlderMessagesTimer() async {
         let state = AppState()
+        let first = AsyncGate()
+        let second = AsyncGate()
+        state.waitOutErrorMessage = { duration in
+            await (duration == .milliseconds(100) ? first : second).wait()
+        }
 
         state.reportError("first failure", duration: .milliseconds(100))
         state.reportError("second failure", duration: .milliseconds(400))
+        await waitUntil {
+            let firstIsWaiting = await first.waitingCount == 1
+            let secondIsWaiting = await second.waitingCount == 1
+            return firstIsWaiting && secondIsWaiting
+        }
 
-        // The first message's clear-timer must not fire and wipe the second
-        // message out from under it. Checked well before either timer's
-        // due, so scheduler contention from the wider parallel test run
-        // can't flip this into a false failure.
-        try? await Task.sleep(for: .milliseconds(200))
+        // The first message's clear-timer fires, and must not wipe the second
+        // message out from under it.
+        await first.open()
+        for _ in 0..<10 { await Task.yield() }
         #expect(state.userErrorMessage == "second failure")
 
+        await second.open()
         await waitForMessageToClear(in: state)
         #expect(state.userErrorMessage == nil)
     }

@@ -214,4 +214,84 @@ struct SyncClientTransportTests {
             }
         }
     }
+
+    // MARK: - Creating an account (R2-138)
+
+    @Suite struct Registration {
+
+        private func makeClient(status: Int, body: String = "") -> SyncClient {
+            makeStubbedClient(status: status, body: body, apiKey: "test-api-key")
+        }
+
+        @Test func anAccountIsCreatedWithoutADeviceKey() async throws {
+            let client = makeClient(status: 201, body: #"{"userId":"u","email":"a@b.c","status":"pending_approval","message":"m"}"#)
+
+            let account = try await client.registerUser(email: "a@b.c", password: "a-long-account-password")
+
+            #expect(!account.isApproved)
+            let call = StubURLProtocol.recorded.first
+            #expect(call?.method == "POST")
+            #expect(call?.url.hasSuffix("/api/v1/auth/register-user") == true)
+            #expect(call?.authorization == nil)
+        }
+
+        @Test func anApprovedAccountCanConnectAtOnce() async throws {
+            let client = makeClient(status: 201, body: #"{"userId":"u","email":"a@b.c","status":"approved","message":"m"}"#)
+
+            #expect(try await client.registerUser(email: "a@b.c", password: "a-long-account-password").isApproved)
+        }
+
+        @Test func anAddressWithAnAccountSaysSo() async throws {
+            let client = makeClient(status: 409, body: #"{"error":"Email already registered"}"#)
+
+            await #expect {
+                _ = try await client.registerUser(email: "a@b.c", password: "a-long-account-password")
+            } throws: { error in
+                if case SyncClientError.accountExists = error { return true }
+                return false
+            }
+        }
+
+        /// The server's password rules are configurable, so only it can say.
+        @Test func aRefusalGivesTheServersReason() async throws {
+            let client = makeClient(status: 400, body: #"{"error":"Password is too short"}"#)
+
+            await #expect {
+                _ = try await client.registerUser(email: "a@b.c", password: "short")
+            } throws: { error in
+                error.localizedDescription == "Password is too short"
+            }
+        }
+
+        @Test func statusIsAskedForWithThePassword() async throws {
+            let client = makeClient(status: 200, body: #"{"exists":true,"isApproved":true,"isActive":true}"#)
+
+            let status = try await client.userStatus(email: "a@b.c", password: "a-long-account-password")
+
+            #expect(status.isApproved)
+            #expect(StubURLProtocol.recorded.first?.method == "POST")
+        }
+
+        @Test func anOlderServerIsAskedTheOldWay() async throws {
+            let client = makeClient(status: 405, body: "")
+
+            // The stub answers 405 to both, so the second call shows the fallback.
+            _ = try? await client.userStatus(email: "a@b.c", password: "a-long-account-password")
+
+            let calls = StubURLProtocol.recorded
+            #expect(calls.map(\.method) == ["POST", "GET"])
+            #expect(calls.last?.url.contains("user/status?email=a@b.c") == true)
+        }
+
+        @Test func aPendingAccountIsToldApartFromADisabledOne() async throws {
+            let client = makeClient(status: 403, body: #"{"error":"Account pending admin approval"}"#)
+
+            await #expect {
+                _ = try await client.logIn(email: "a@b.c", password: "a-long-account-password")
+            } throws: { error in
+                if case SyncClientError.accountPendingApproval = error { return true }
+                return false
+            }
+        }
+    }
 }

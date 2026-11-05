@@ -72,13 +72,21 @@ export async function exportAllNotes(onProgress?: ExportProgressCallback): Promi
 
   onProgress?.({ phase: 'counting' });
 
-  const notes = await noteRepository.getAllActive();
+  // Everything but the recycle bin. Someone moving away must get their archive too.
+  const notes = await noteRepository.getAllNonDeleted();
   const total = notes.length;
   const exportNotes: ExportNote[] = [];
+  const skipped = { notes: 0, attachments: 0 };
 
   for (let i = 0; i < notes.length; i++) {
-    const exportNote = await convertNoteToExport(notes[i], masterKey.key);
-    exportNotes.push(exportNote);
+    try {
+      const exportNote = await convertNoteToExport(notes[i], masterKey.key);
+      skipped.attachments += notes[i].attachments.length - exportNote.attachments.length;
+      exportNotes.push(exportNote);
+    } catch (error) {
+      console.error(`Failed to export note ${notes[i].id}:`, error);
+      skipped.notes++;
+    }
     onProgress?.({ phase: 'exporting', current: i + 1, total });
   }
 
@@ -96,6 +104,7 @@ export async function exportAllNotes(onProgress?: ExportProgressCallback): Promi
       colorPalette: userSettings.colorPalette,
       tagColors: userSettings.tagColors,
     },
+    skipped: skipped.notes + skipped.attachments > 0 ? skipped : undefined,
   };
 }
 
@@ -341,6 +350,7 @@ export async function importNotes(
         modifiedAt: exportNote.modifiedAt,
         pinned: exportNote.pinned,
         locked: exportNote.locked,
+        archived: exportNote.archived,
         wordWrap: exportNote.wordWrap,
         syntaxLanguage: exportNote.syntaxLanguage as 'markdown' | 'javascript' | 'python' | 'json' | 'css' | 'bash' | 'sql' | 'plain' | 'html' | undefined,
         showPreview: exportNote.showPreview,

@@ -27,6 +27,12 @@ struct ConflictInfo: Identifiable, Sendable {
     let serverContentHash: String?
     let serverParentHash: String?
     let serverHashChain: [String]?
+    // Nil when the server didn't say, and the local value then stands.
+    var serverArchived: Bool?
+    var serverArchivedAt: String?
+    var serverLocked: Bool?
+    var serverLockedAt: String?
+    var serverColor: String?
 }
 
 enum ConflictResolutionStrategy: Sendable {

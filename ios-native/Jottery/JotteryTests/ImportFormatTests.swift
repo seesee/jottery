@@ -140,7 +140,7 @@ struct ImportFormatTests {
         #expect(exportNote.showPreview == true)
         #expect(exportNote.color == "blue")
 
-        try noteRepo.hardDelete(id: created.id)
+        try noteRepo.permanentlyDelete(id: created.id)
         let result = try ImportService.importNotes(
             export, strategy: .replace, noteRepo: noteRepo, attachmentRepo: attachmentRepo, key: key
         )
@@ -154,5 +154,68 @@ struct ImportFormatTests {
         #expect(reimported.syntaxLanguage == "python")
         #expect(reimported.showPreview == true)
         #expect(reimported.color == "blue")
+    }
+
+    // MARK: - Replacing a note (jottery-bhp5)
+
+    private func makeRepos() throws -> (DatabaseManager, NoteRepository, AttachmentRepository) {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("jottery-import-replace-tests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let db = try DatabaseManager(path: dir.appendingPathComponent("test.db").path)
+        return (db, NoteRepository(db: db, versionRepo: VersionRepository(db: db)), AttachmentRepository(db: db))
+    }
+
+    private func exportData(replacing id: String, content: String) throws -> ExportService.ExportData {
+        let json = """
+            {"version":"1.0","exportDate":"2026-11-05T09:00:00Z","notes":[{"id":"\(id)",
+            "createdAt":"2026-01-01T00:00:00Z","modifiedAt":"2026-01-02T00:00:00Z","content":"\(content)",
+            "tags":["imported"],"attachments":[],"pinned":false}]}
+            """
+        return try ImportService.parse(Data(json.utf8))
+    }
+
+    /// The original used to be deleted first, and a failure after that lost it.
+    @Test func aReplacementThatFailsLeavesTheOriginal() throws {
+        let (db, repo, attachmentRepo) = try makeRepos()
+        let key = SymmetricKey(data: Data(repeating: 9, count: 32))
+        let original = try repo.create(content: "the original", key: key)
+        try db.dbPool.write { database in
+            try database.execute(sql: """
+                CREATE TRIGGER no_writes BEFORE UPDATE ON notes
+                BEGIN SELECT RAISE(ABORT, 'disk full'); END
+            """)
+        }
+
+        let result = try ImportService.importNotes(
+            exportData(replacing: original.id, content: "the replacement"),
+            strategy: .replace, noteRepo: repo, attachmentRepo: attachmentRepo, key: key
+        )
+
+        #expect(result.imported == 0)
+        #expect(result.errors.count == 1)
+        #expect(try repo.get(id: original.id, key: key)?.content == "the original")
+    }
+
+    @Test func aReplacementCarriesOnFromTheNoteItReplaces() throws {
+        let (_, repo, attachmentRepo) = try makeRepos()
+        let key = SymmetricKey(data: Data(repeating: 9, count: 32))
+        let original = try repo.create(content: "the original", key: key)
+        try repo.markSynced(id: original.id, syncedAt: Date().iso8601)
+        let before = try #require(try repo.getRaw(id: original.id))
+
+        _ = try ImportService.importNotes(
+            exportData(replacing: original.id, content: "the replacement"),
+            strategy: .replace, noteRepo: repo, attachmentRepo: attachmentRepo, key: key
+        )
+
+        let after = try #require(try repo.getRaw(id: original.id))
+        let chain = try JSONDecoder().decode([String].self, from: Data(try #require(after.hashChain).utf8))
+        #expect(after.parentHash == before.contentHash)
+        #expect(chain.contains(try #require(before.contentHash)))
+        #expect(after.needsSync)
+        #expect(try repo.get(id: original.id, key: key)?.content == "the replacement")
+        // What was replaced can still be got back.
+        #expect(try repo.versionRepo.getVersions(noteId: original.id).map(\.reason) == ["pre-overwrite"])
     }
 }

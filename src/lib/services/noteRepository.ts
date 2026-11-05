@@ -250,6 +250,21 @@ class IndexedDBNoteRepository implements NoteRepository {
   }
 
   /**
+   * Stop sending deletions the server refused. The note has a newer edit, and comes
+   * back through the next pull.
+   */
+  async forgetDeletions(ids: string[]): Promise<void> {
+    const db = getDB();
+    const tx = db.transaction(STORES.DELETIONS, 'readwrite');
+
+    for (const id of ids) {
+      await tx.store.delete(id);
+    }
+
+    await tx.done;
+  }
+
+  /**
    * Apply a remote deletion (from server pull)
    * Hard-deletes the note locally without recording it for sync
    */

@@ -444,7 +444,7 @@
         "required": "Lütfen not parolanızı girin.",
         "incorrect": "Bu, notlarınızın bu cihazdaki kilidini açan parola değil. Sunucu parolanızı değil, not parolanızı girin.",
         "uploadFailed": "Eşitleme kuruldu, ancak şifreleme anahtarı sunucuya kaydedilemedi; bu nedenle diğer cihazlar henüz bağlanamıyor. Bir sonraki kilit açışınızda yeniden denenecek",
-        "mustDiffer": "Not parolanız ile hesap parolanız farklı olmalıdır. Eşitleme sunucusu hesap parolanızı görür, bu yüzden aynı olurlarsa notlarınızı okuyabilir. Diğer cihazlarınızda aynıysa önce orada not parolanızı değiştirin.",
+        "mustDiffer": "Not parolanız ile hesap parolanız farklı olmalıdır. Eşitleme sunucusu hesap parolanızı görür, bu yüzden aynı olurlarsa notlarınızı okuyabilir.",
         "matchesAccountWarning": "Not parolanız hesap parolanızla aynı, bu yüzden eşitleme sunucusu notlarınızı okuyabilir. Bunu düzeltmek için not parolanızı değiştirin."
       },
       "existingAccountDetected": "Bu e-postanın zaten bir hesabı var, bu yüzden bu cihaz ona bağlanacak. Diğer cihazlarınızda kullandığınız not parolasını girin."
@@ -517,7 +517,9 @@
       "duplicateNote": "Notu Çoğalt",
       "exportNote": "Notu Dışa Aktar",
       "pressKey": "Bir tuşa basın...",
-      "notSet": "Ayarlanmadı"
+      "notSet": "Ayarlanmadı",
+      "needsModifier": "Bu kısayol yazarken de çalışır, bu yüzden Ctrl, Cmd veya Alt gerekir. Başka bir tuşa basın ya da iptal etmek için Esc'ye basın.",
+      "reserved": "Bu tuş ayrılmıştır. Başka bir tuşa basın ya da iptal etmek için Esc'ye basın."
     },
     "syncTab": {
       "enableSync": "Senkronizasyonu Etkinleştir",
@@ -570,7 +572,8 @@
         "changing": "Şifre değiştiriliyor...",
         "button": "Şifre Değiştir",
         "success": "Şifre başarıyla değiştirildi",
-        "error": "Şifre değiştirilemedi: {error}"
+        "error": "Şifre değiştirilemedi: {error}",
+        "serverKeyFailed": "Parolanız bu cihazda değiştirildi ancak sunucu güncellenemedi. Bir sonraki kilit açışınızda yeniden denenecek. O zamana kadar yeni bir cihaz eski parolanıza ihtiyaç duyar."
       },
       "connectionDetails": {
         "title": "Bağlantı Detayları",
@@ -606,11 +609,12 @@
         "dangerZone": "Tehlikeli Bölge",
         "deleteNotesDescription": "Senkronizasyon sunucusundan tüm notlarınızı silin. Bu işlem geri alınamaz. Yerel notlarınız SİLİNMEYECEKTİR.",
         "deleteNotesButton": "Sunucudan Tüm Notları Sil"
-      }
+      },
+      "disconnectNotRevoked": "Bu cihazın bağlantısı kesildi ancak sunucuya bildirilemedi, bu yüzden hâlâ orada listeleniyor ve anahtarı çalışıyor. Kullanıcı portalından iptal edin."
     },
     "advancedTab": {
       "importExport": "İçe/Dışa Aktar",
-      "exportDescription": "Notları şifresi çözülmüş JSON olarak dışa aktarın. İçe aktarma, notları mevcut verilerle birleştirir.",
+      "exportDescription": "Dışa aktarma, notları başka yere taşımak için şifrelenmemiş bir JSON kopyası oluşturur: dosyaya sahip olan herkes okuyabilir. Şifreli bir kopya için yedeklemeyi kullanın. İçe aktarma, notları mevcut olanlarla birleştirir.",
       "downloadClient": "Terminal/HTML İstemcisini İndir",
       "downloadTerminalClient": "Terminal İstemcisini İndir",
       "clientDescription": "Komut satırı erişimi için terminal istemcisini veya dosya sisteminden yerel olarak çalıştırmak için HTML istemcisini indirin",
@@ -638,7 +642,8 @@
       "aboutDescription": "Jottery, zengin içerik, sözdizimi vurgulama ve şifreleme ile notları yakalamak, düzenlemek ve aramak için gizlilik odaklı, kendi barındırılan bir not defteri uygulamasıdır.",
       "viewOnGithub": "GitHub'da Görüntüle",
       "license": "MIT Lisansı altında lisanslanmıştır."
-    }
+    },
+    "exportIncomplete": "Dışa aktarma eksik: {notes} not ve {attachments} ek okunamadı ve dışarıda bırakıldı."
   },
   "landing": {
     "languagePicker": {
@@ -934,7 +939,8 @@
         "encrypting": "Kimlik bilgileri güvence altına alınıyor…",
         "syncing": "İlk senkronizasyon başlatılıyor…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "Not parolanız başka bir cihazda değiştirildi. Bu cihazın kilidi hâlâ eski parolayla açılıyor ve notlarınız güvende, ancak yeni cihazlar yeni parolaya ihtiyaç duyacak."
   },
   "lock": {
     "title": "Uygulamayı Kilitle",
@@ -1194,7 +1200,11 @@
   },
   "sync": {
     "syncing": "Senkronize ediliyor...",
-    "syncProgress": "Senkronizasyon: %{percentage} tamamlandı"
+    "syncProgress": "Senkronizasyon: %{percentage} tamamlandı",
+    "notesRefused": "Bazı notlar hesabınızın yükleme sınırını aşıyor ve eşitlenmedi. Geri kalan her şey eşitlendi.",
+    "accountDisabled": "Hesabınız devre dışı veya onay bekliyor, bu yüzden eşitleme durduruldu. Bu cihazdaki notlarınız güvende. Yöneticinizle iletişime geçin.",
+    "storageQuotaExceeded": "Hesabınız depolama sınırına ulaştı, bu yüzden bu cihazdaki değişiklikler yüklenemiyor. Yer açmak için bazı notları veya ekleri kalıcı olarak silin.",
+    "massDeletionHeld": "Sunucu aynı anda {count} notun silinmesini istedi. Siz yapmadıysanız diye geri dönüşüm kutusundalar. Oradan geri yükleyin ya da siz yaptıysanız kutuyu boşaltın."
   },
   "inbox": {
     "title": "Gelen Kutusu",

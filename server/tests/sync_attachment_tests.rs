@@ -371,7 +371,7 @@ async fn a_combined_note_keeps_attachments_it_shares_with_an_original() {
     let deleted = push(
         &app,
         &key,
-        json!({ "deletions": [{ "id": original, "deletedAt": "2099-01-01T00:00:00Z" }] }),
+        json!({ "deletions": [{ "id": original, "deletedAt": chrono::Utc::now().to_rfc3339() }] }),
     )
     .await;
     assert_eq!(deleted["rejectedDeletions"], json!([]));

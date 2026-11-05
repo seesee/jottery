@@ -107,6 +107,7 @@
         <input
           id="currentPassword"
           type="password"
+          autocomplete="current-password"
           bind:value={currentPassword}
           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder={$_('settings.changePassword.placeholder.current')}
@@ -121,11 +122,13 @@
         <input
           id="newPassword"
           type="password"
+          autocomplete="new-password"
           bind:value={newPassword}
           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder={$_('settings.changePassword.placeholder.new')}
           disabled={changingPassword}
         />
+        <p class="text-xs text-gray-500 mt-1">{$_('common.passwordRules')}</p>
       </div>
 
       <div>
@@ -135,6 +138,7 @@
         <input
           id="confirmPassword"
           type="password"
+          autocomplete="new-password"
           bind:value={confirmPassword}
           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder={$_('settings.changePassword.placeholder.confirm')}
@@ -143,7 +147,7 @@
       </div>
 
       {#if passwordError}
-        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div role="alert" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {passwordError}
         </div>
       {/if}

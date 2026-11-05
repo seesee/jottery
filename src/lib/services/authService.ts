@@ -45,12 +45,50 @@ export interface WrappedKeyResponse {
   blob: string;
   kdfVersion: number;
   kdfIterations: number;
+  /** Opaque. Its presence means the server supports conditional writes */
+  updatedAt?: string;
 }
 
 export interface PutWrappedKeyRequest {
   blob: string;
   kdfVersion: number;
   kdfIterations: number;
+}
+
+/**
+ * What a write to the account's key is for. There is one key per account, and
+ * overwriting it with the wrong one locks out every new device.
+ * - `replace: false`: a first upload, refused if the account already has a key.
+ * - `replace: true`: a password change, which always applies.
+ * - `ifMatch`: a repair, refused if the key has changed since it was read.
+ */
+export type WrappedKeyWrite = { replace: boolean } | { ifMatch: string };
+
+/** A refusal from the server, as opposed to not reaching it at all */
+export class AuthApiError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+    this.name = 'AuthApiError';
+  }
+}
+
+/** A header value, as the server is untrusted and fetch throws on a bad one */
+const UPDATED_AT_PATTERN = /^[\x20-\x7e]{1,256}$/;
+
+/**
+ * The wait a rate limit asks for, in the server's own words. Those are shown as
+ * text and limited in length, because the server is untrusted.
+ */
+function rateLimitMessage(errorText: string): string {
+  try {
+    const { error } = JSON.parse(errorText);
+    if (typeof error === 'string' && error.length > 0 && error.length <= 200) {
+      return error;
+    }
+  } catch {
+    // Not JSON, so fall through to the general message
+  }
+  return 'Too many attempts. Please wait and try again.';
 }
 
 class AuthService {
@@ -104,6 +142,9 @@ class AuthService {
 
     if (!response.ok) {
       const errorText = await response.text();
+      if (response.status === 429) {
+        throw new AuthApiError(rateLimitMessage(errorText), 429);
+      }
       throw new Error(`User registration failed: ${errorText}`);
     }
 
@@ -146,13 +187,16 @@ class AuthService {
 
       // Provide user-friendly error messages
       if (status === 403) {
-        throw new Error(
-          'Your account is pending admin approval or has been deactivated. Please contact the administrator.'
+        throw new AuthApiError(
+          'Your account is pending admin approval or has been deactivated. Please contact the administrator.',
+          status
         );
       } else if (status === 401) {
-        throw new Error('Invalid email or password.');
+        throw new AuthApiError('Invalid email or password.', status);
+      } else if (status === 429) {
+        throw new AuthApiError(rateLimitMessage(errorText), status);
       } else {
-        throw new Error(`Device registration failed: ${errorText}`);
+        throw new AuthApiError(`Device registration failed: ${errorText}`, status);
       }
     }
 
@@ -192,13 +236,16 @@ class AuthService {
       const errorText = await response.text();
 
       if (status === 403) {
-        throw new Error(
-          'Your account is pending admin approval or has been deactivated. Please contact the administrator.'
+        throw new AuthApiError(
+          'Your account is pending admin approval or has been deactivated. Please contact the administrator.',
+          status
         );
       } else if (status === 401) {
-        throw new Error('Invalid API key or device is inactive.');
+        throw new AuthApiError('Invalid API key or device is inactive.', status);
+      } else if (status === 429) {
+        throw new AuthApiError(rateLimitMessage(errorText), status);
       } else {
-        throw new Error(`Device cloning failed: ${errorText}`);
+        throw new AuthApiError(`Device cloning failed: ${errorText}`, status);
       }
     }
 
@@ -230,29 +277,44 @@ class AuthService {
       throw new Error(`Failed to get wrapped key: ${await response.text()}`);
     }
 
-    return await response.json();
+    const wrappedKey: WrappedKeyResponse = await response.json();
+    return {
+      ...wrappedKey,
+      updatedAt: typeof wrappedKey.updatedAt === 'string' && UPDATED_AT_PATTERN.test(wrappedKey.updatedAt)
+        ? wrappedKey.updatedAt
+        : undefined,
+    };
   }
 
   /**
    * Store or update the server-escrowed wrapped master key.
+   *
+   * @throws AuthApiError with status 409 if the write's condition failed. Nothing was
+   * written. Don't retry it: read the key again and decide again from what's there.
    */
   async putWrappedKey(
     endpoint: string,
     authToken: string,
-    request: PutWrappedKeyRequest
+    request: PutWrappedKeyRequest,
+    write: WrappedKeyWrite
   ): Promise<void> {
     endpoint = this.normalizeEndpoint(endpoint);
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${authToken}`,
+    };
+    if ('ifMatch' in write) {
+      headers['If-Match'] = write.ifMatch;
+    }
+
     const response = await fetch(`${endpoint}/api/v1/auth/wrapped-key`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authToken}`,
-      },
-      body: JSON.stringify(request),
+      headers,
+      body: JSON.stringify('replace' in write ? { ...request, replace: write.replace } : request),
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to store wrapped key: ${await response.text()}`);
+      throw new AuthApiError(`Failed to store wrapped key: ${await response.text()}`, response.status);
     }
   }
 }

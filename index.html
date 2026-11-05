@@ -24,7 +24,7 @@
     <!-- CSP: the build adds the hash of the inlined script to script-src (see cspHash.ts). -->
     <!-- connect-src allows any https host because the sync server is user-configured. It is narrowed after unlock (see cspService.ts). -->
     <!-- Note: frame-ancestors only works in HTTP headers, not meta tags -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' blob: http://localhost:* http://127.0.0.1:* https://*; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self' blob: http://localhost:* http://127.0.0.1:* https://*; object-src 'none'; base-uri 'self'; form-action 'self';">
     <title>Jottery</title>
   </head>
   <body>

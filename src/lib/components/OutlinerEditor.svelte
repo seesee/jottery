@@ -331,7 +331,7 @@
         const range = selection.getRangeAt(0);
         if (range.startOffset === 0 && range.endOffset === 0) {
           // At start of node
-          if (node.content === '' && nodes.length > 1 || parent.length > 1) {
+          if (node.content === '' && (nodes.length > 1 || parent.length > 1)) {
             keyEvent.preventDefault();
             // Get previous node to focus
             const prevNode = getPreviousNode(nodes, id);

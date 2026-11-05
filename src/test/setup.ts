@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom';
 import 'fake-indexeddb/auto';
+import './happyDomCompat';
 import { beforeEach, afterEach, vi } from 'vitest';
 
 // Mock Web Crypto API for testing

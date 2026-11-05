@@ -287,8 +287,9 @@
       }
       settings.set({ ...DEFAULT_SETTINGS, ...userSettings });
 
-      // Expose app context for E2E testing
-      if (typeof window !== 'undefined') {
+      // Only for tooling against the dev server. In a release this would hand the
+      // decrypted vault to any script that ran in the page.
+      if (import.meta.env.DEV) {
         (window as any).__appContext = {
           settingsRepository,
           settings,
@@ -689,7 +690,7 @@
         {loadingProgress}
       />
 
-      <main id="main-content" class="flex-1 min-h-0 overflow-hidden flex" tabindex="-1">
+      <main id="main-content" class="flex-1 min-h-0 overflow-hidden flex" tabindex="-1" inert={$isLocking}>
         {#if useMobileLayout}
           <!-- Mobile: Keep both components mounted, toggle visibility with CSS -->
           <!-- This preserves NoteList state (scroll position, height cache) across navigation -->
@@ -798,7 +799,7 @@
 
 <!-- Locking Interstitial -->
 {#if $isLocking}
-  <div class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100]" role="status" aria-live="polite">
+  <div class="fixed inset-0 bg-gray-900 flex items-center justify-center z-[100]" role="status" aria-live="polite">
     <div class="text-center">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
       <p class="text-white text-lg font-medium">Locking...</p>

@@ -128,21 +128,22 @@ class UserApiClient {
     }, { checksPassword: true });
   }
 
-  // Delete all notes (keep account)
-  async deleteAllNotes(): Promise<void> {
-    return this.request('DELETE', '/api/v1/user/notes');
+  // Delete all notes (keep account). Older servers ignore the password. Current ones
+  // refuse these three requests without it, unless the session is minutes old.
+  async deleteAllNotes(currentPassword: string): Promise<void> {
+    return this.request('DELETE', '/api/v1/user/notes', { currentPassword }, { checksPassword: true });
   }
 
   // Deactivate account (can re-register with admin approval)
-  async deactivateAccount(): Promise<void> {
-    await this.request('DELETE', '/api/v1/user/account?mode=deactivate');
+  async deactivateAccount(currentPassword: string): Promise<void> {
+    await this.request('DELETE', '/api/v1/user/account?mode=deactivate', { currentPassword }, { checksPassword: true });
     // Clear local session since account is now inactive
     this.session.clear();
   }
 
   // Permanently delete account and all data
-  async deleteAccount(): Promise<void> {
-    await this.request('DELETE', '/api/v1/user/account?mode=delete');
+  async deleteAccount(currentPassword: string): Promise<void> {
+    await this.request('DELETE', '/api/v1/user/account?mode=delete', { currentPassword }, { checksPassword: true });
     // Clear local session since account no longer exists
     this.session.clear();
   }
@@ -169,8 +170,28 @@ class UserApiClient {
     return this.request('GET', '/api/v1/user/inbox-token/status');
   }
 
-  // Check user approval status (no auth required)
-  async checkStatus(email: string): Promise<UserStatusResponse> {
+  /**
+   * Where an account stands, for someone who holds its password. A pending account
+   * can't sign in, so this is how its owner finds out. Older servers only have the
+   * GET, which answers for any address and doesn't need the password.
+   */
+  async checkStatus(email: string, password: string): Promise<UserStatusResponse> {
+    try {
+      return await this.request<UserStatusResponse>(
+        'POST',
+        '/api/v1/user/status',
+        { email, password },
+        { checksPassword: true },
+      );
+    } catch (err) {
+      if (err instanceof ApiError && (err.status === 404 || err.status === 405)) {
+        return this.checkStatusWithoutPassword(email);
+      }
+      throw err;
+    }
+  }
+
+  private async checkStatusWithoutPassword(email: string): Promise<UserStatusResponse> {
     const response = await fetch(`${API_BASE}/api/v1/user/status?email=${encodeURIComponent(email)}`, {
       method: 'GET',
       headers: {
