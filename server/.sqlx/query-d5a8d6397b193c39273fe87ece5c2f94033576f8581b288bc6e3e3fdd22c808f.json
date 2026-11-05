@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT m.attachment_id AS id, d.data FROM attachments_data d JOIN attachments_meta m ON m.id = d.id WHERE m.attachment_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "data",
+        "ordinal": 1,
+        "type_info": "Blob"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "d5a8d6397b193c39273fe87ece5c2f94033576f8581b288bc6e3e3fdd22c808f"
+}

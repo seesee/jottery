@@ -5,11 +5,16 @@ use axum::{
     extract::{Request, State},
     http::{HeaderMap, StatusCode},
     middleware::Next,
-    response::Response,
+    response::{IntoResponse, Response},
 };
 use std::sync::Arc;
 
-use crate::{api::middleware::extract_session_token, db::SessionRepository, AppState};
+use crate::{
+    api::middleware::extract_session_token, db::SessionRepository, error::AppError, AppState,
+};
+
+/// The only admin route open to an account that must change its password.
+const ADMIN_CHANGE_PASSWORD_PATH: &str = "/api/v1/admin/change-password";
 
 /// Admin session middleware
 /// Validates session token and ensures user is admin
@@ -33,7 +38,7 @@ pub async fn admin_auth_middleware(
 
     // Verify user is admin (check in database)
     let user = match sqlx::query!(
-        r#"SELECT id, is_admin, is_active FROM users WHERE id = ?"#,
+        r#"SELECT id, is_admin, is_active, must_change_password FROM users WHERE id = ?"#,
         session.user_id
     )
     .fetch_optional(&state.pool)
@@ -60,6 +65,11 @@ pub async fn admin_auth_middleware(
     if user.is_active != 1 {
         tracing::warn!("Inactive user attempted admin access: {}", session.user_id);
         return Err(StatusCode::FORBIDDEN);
+    }
+
+    // A session on a password that must be changed can do nothing else
+    if user.must_change_password != 0 && request.uri().path() != ADMIN_CHANGE_PASSWORD_PATH {
+        return Ok(AppError::PasswordChangeRequired.into_response());
     }
 
     // Add user_id to request extensions for use in handlers

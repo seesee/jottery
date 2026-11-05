@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT tags FROM inbox_items WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "tags",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "b29f5d62b1145bd10524889c18ba6d1fc3ab2e3decaee9cb089056b879b8d1a3"
+}

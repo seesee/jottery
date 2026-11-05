@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT note_id FROM note_attachments WHERE user_id = ? AND attachment_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "note_id",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "30c479e75f7ba31cdbebbb0caec4183dbe4b0d8ed901b552c29bdb32224a4c61"
+}

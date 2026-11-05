@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, is_active, approved, must_change_password FROM users WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "is_active",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "approved",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "must_change_password",
+        "ordinal": 3,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "63ec12fbaf554c92daf6cba07044b588413fbfc8afdd197bd41318bdbab871d0"
+}

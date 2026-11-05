@@ -116,11 +116,14 @@ pub async fn get_user(
     let attachment_stats = sqlx::query!(
         r#"
         SELECT
-            COUNT(DISTINCT am.id) as count,
+            COUNT(*) as count,
             COALESCE(SUM(am.size), 0) as total_bytes
-        FROM notes n
-        JOIN attachments_meta am ON n.id = am.note_id
-        WHERE n.user_id = ? AND n.deleted = 0
+        FROM attachments_meta am
+        WHERE am.user_id = ?1 AND EXISTS (
+            SELECT 1 FROM note_attachments na
+            JOIN notes n ON n.id = na.note_id AND n.user_id = na.user_id
+            WHERE na.user_id = ?1 AND na.attachment_id = am.attachment_id AND n.deleted = 0
+        )
         "#,
         user_id
     )
@@ -547,6 +550,13 @@ pub async fn change_password(
         ));
     }
 
+    // "Changing" to the same password would satisfy a forced change
+    if verify_password(&req.new_password, &user.password_hash).unwrap_or(false) {
+        return Err(crate::error::AppError::BadRequest(
+            "New password must be different from the current one".to_string(),
+        ));
+    }
+
     // Hash new password with configured Argon2 parameters
     let new_password_hash = hash_password_with_params(
         &req.new_password,
@@ -561,7 +571,7 @@ pub async fn change_password(
 
     // Update password
     sqlx::query!(
-        r#"UPDATE users SET password_hash = ? WHERE id = ?"#,
+        r#"UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?"#,
         new_password_hash,
         user_id
     )
@@ -616,7 +626,7 @@ pub async fn reset_user_password(
 
     // Update password
     sqlx::query!(
-        r#"UPDATE users SET password_hash = ? WHERE id = ?"#,
+        r#"UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?"#,
         new_password_hash,
         user_id
     )

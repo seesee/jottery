@@ -53,6 +53,8 @@ pub struct LoginResponse {
     pub session_id: String,
     pub expires_at: String,
     pub user: UserInfo,
+    /// The session can only change the password until this is cleared.
+    pub must_change_password: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -70,9 +72,11 @@ pub async fn login(
 ) -> AppResult<(StatusCode, Json<LoginResponse>)> {
     tracing::info!("User login request: email={}", req.email);
 
+    state.login_throttle.check(&req.email)?;
+
     // Get user by email
     let user = sqlx::query!(
-        "SELECT id, email, password_hash, is_admin FROM users WHERE email = ?",
+        "SELECT id, email, password_hash, is_admin, approved, is_active, must_change_password FROM users WHERE email = ?",
         req.email
     )
     .fetch_optional(&state.pool)
@@ -83,6 +87,7 @@ pub async fn login(
     })?
     .ok_or_else(|| {
         tracing::warn!("Login failed: user not found: {}", req.email);
+        state.login_throttle.record_failure(&req.email);
         AppError::Unauthorized
     })?;
 
@@ -95,7 +100,21 @@ pub async fn login(
 
     if !password_valid {
         tracing::warn!("Login failed: invalid password for {}", req.email);
+        state.login_throttle.record_failure(&req.email);
         return Err(AppError::Unauthorized);
+    }
+    state.login_throttle.record_success(&req.email);
+
+    // Registration is open, so a session must wait for an admin's approval.
+    // These come after the password check so they reveal nothing to strangers.
+    if user.approved == 0 {
+        tracing::warn!("Login failed: user not approved: {}", req.email);
+        return Err(AppError::Forbidden("Account pending admin approval".to_string()));
+    }
+
+    if user.is_active == 0 {
+        tracing::warn!("Login failed: user deactivated: {}", req.email);
+        return Err(AppError::Forbidden("Account deactivated".to_string()));
     }
 
     // Update last login
@@ -146,6 +165,7 @@ pub async fn login(
                 email: user.email,
                 is_admin: user.is_admin != 0,
             },
+            must_change_password: user.must_change_password != 0,
         }),
     ))
 }
@@ -184,7 +204,12 @@ pub async fn get_account_info(
 
     // Count attachments
     let attachment_count = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM attachments_meta WHERE note_id IN (SELECT id FROM notes WHERE user_id = ? AND deleted = 0)",
+        "SELECT COUNT(*) FROM attachments_meta m
+         WHERE m.user_id = ?1 AND EXISTS (
+             SELECT 1 FROM note_attachments na
+             JOIN notes n ON n.id = na.note_id AND n.user_id = na.user_id
+             WHERE na.user_id = ?1 AND na.attachment_id = m.attachment_id AND n.deleted = 0
+         )",
         user_id
     )
     .fetch_one(&state.pool)
@@ -196,8 +221,12 @@ pub async fn get_account_info(
 
     // Calculate storage used
     let storage_used = sqlx::query_scalar!(
-        "SELECT COALESCE(SUM(size), 0) FROM attachments_meta
-         WHERE note_id IN (SELECT id FROM notes WHERE user_id = ? AND deleted = 0)",
+        "SELECT COALESCE(SUM(m.size), 0) FROM attachments_meta m
+         WHERE m.user_id = ?1 AND EXISTS (
+             SELECT 1 FROM note_attachments na
+             JOIN notes n ON n.id = na.note_id AND n.user_id = na.user_id
+             WHERE na.user_id = ?1 AND na.attachment_id = m.attachment_id AND n.deleted = 0
+         )",
         user_id
     )
     .fetch_one(&state.pool)
@@ -328,10 +357,21 @@ pub async fn change_password(
         return Err(AppError::Unauthorized);
     }
 
+    if let Some(blob) = &req.wrapped_blob {
+        crate::api::auth::validate_wrapped_blob(blob)?;
+    }
+
     // Validate new password strength based on configured complexity
     if let Err(msg) = validate_password_strength(&req.new_password, &state.config.password_complexity) {
         tracing::warn!("Password change validation failed for user {}: {}", user_id, msg);
         return Err(AppError::BadRequest(msg));
+    }
+
+    // "Changing" to the same password would satisfy a forced change
+    if verify_password(&req.new_password, &user.password_hash).unwrap_or(false) {
+        return Err(AppError::BadRequest(
+            "New password must be different from the current one".to_string(),
+        ));
     }
 
     // Hash new password with configured Argon2 parameters
@@ -348,7 +388,7 @@ pub async fn change_password(
 
     // Update password
     sqlx::query!(
-        r#"UPDATE users SET password_hash = ? WHERE id = ?"#,
+        r#"UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?"#,
         new_password_hash,
         user_id
     )

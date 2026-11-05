@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Note {
     pub id: String,
-    pub client_id: String,
+    pub client_id: Option<String>, // First device to push it; None once deleted
     pub created_at: String,
     pub modified_at: String,
     pub server_modified_at: String,
@@ -26,23 +26,4 @@ pub struct Note {
     pub content_hash: Option<String>,
     pub parent_hash: Option<String>,
     pub hash_chain: Option<String>, // JSON array of ancestor hashes
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AttachmentMeta {
-    pub id: String,
-    pub note_id: String,
-    pub filename: String,
-    pub mime_type: String,
-    pub size: i64,
-    pub created_at: String,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, Clone)]
-pub struct AttachmentData {
-    pub id: String,
-    pub data: Vec<u8>,
-    pub created_at: String,
 }

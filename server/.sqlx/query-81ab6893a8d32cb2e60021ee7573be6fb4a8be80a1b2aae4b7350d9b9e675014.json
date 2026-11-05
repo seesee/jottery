@@ -77,6 +77,11 @@
         "name": "inbox_max_size_mb",
         "ordinal": 14,
         "type_info": "Integer"
+      },
+      {
+        "name": "must_change_password",
+        "ordinal": 15,
+        "type_info": "Integer"
       }
     ],
     "parameters": {
@@ -97,7 +102,8 @@
       false,
       true,
       true,
-      true
+      true,
+      false
     ]
   },
   "hash": "81ab6893a8d32cb2e60021ee7573be6fb4a8be80a1b2aae4b7350d9b9e675014"
