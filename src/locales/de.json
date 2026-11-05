@@ -1204,7 +1204,9 @@
     "notesRefused": "Einige Notizen überschreiten das Upload-Limit Ihres Kontos und wurden nicht synchronisiert. Alles andere wurde synchronisiert.",
     "accountDisabled": "Ihr Konto ist deaktiviert oder wartet auf Freigabe, daher wurde die Synchronisierung angehalten. Ihre Notizen auf diesem Gerät sind sicher. Wenden Sie sich an Ihren Administrator.",
     "storageQuotaExceeded": "Ihr Konto hat sein Speicherlimit erreicht, daher können Änderungen auf diesem Gerät nicht hochgeladen werden. Löschen Sie einige Notizen oder Anhänge endgültig, um Platz zu schaffen.",
-    "massDeletionHeld": "Der Server wollte {count} Notizen auf einmal löschen. Sie liegen im Papierkorb, falls das nicht von Ihnen kam. Stellen Sie sie dort wieder her oder leeren Sie den Papierkorb, wenn es gewollt war."
+    "massDeletionHeld": "Der Server wollte {count} Notizen auf einmal löschen. Sie liegen im Papierkorb, falls das nicht von Ihnen kam. Stellen Sie sie dort wieder her oder leeren Sie den Papierkorb, wenn es gewollt war.",
+    "clockAhead": "Einige Änderungen wurden nicht synchronisiert, weil ihr Datum mehr als einen Tag vor der Serverzeit liegt. Prüfen Sie Datum und Uhrzeit auf diesem Gerät.",
+    "deviceRevoked": "Dieses Gerät ist nicht mehr mit Ihrem Konto verbunden, daher wurde die Synchronisierung angehalten. Ihre Notizen auf diesem Gerät sind sicher. Verbinden Sie es in den Einstellungen erneut."
   },
   "inbox": {
     "title": "Posteingang",

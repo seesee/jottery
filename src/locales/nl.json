@@ -1204,7 +1204,9 @@
     "notesRefused": "Sommige notities zijn te groot voor de uploadlimiet van je account en zijn niet gesynchroniseerd. De rest wel.",
     "accountDisabled": "Je account is gedeactiveerd of wacht op goedkeuring, dus de synchronisatie is gestopt. Je notities op dit apparaat zijn veilig. Neem contact op met je beheerder.",
     "storageQuotaExceeded": "Je account heeft de opslaglimiet bereikt, dus wijzigingen op dit apparaat kunnen niet worden geüpload. Verwijder enkele notities of bijlagen definitief om ruimte te maken.",
-    "massDeletionHeld": "De server vroeg om {count} notities tegelijk te verwijderen. Ze staan in de prullenbak voor het geval jij dit niet was. Herstel ze daar, of leeg de prullenbak als jij het wel was."
+    "massDeletionHeld": "De server vroeg om {count} notities tegelijk te verwijderen. Ze staan in de prullenbak voor het geval jij dit niet was. Herstel ze daar, of leeg de prullenbak als jij het wel was.",
+    "clockAhead": "Sommige wijzigingen zijn niet gesynchroniseerd, omdat hun datum meer dan een dag op de server voorloopt. Controleer de datum en tijd op dit apparaat.",
+    "deviceRevoked": "Dit apparaat is niet meer met je account verbonden, dus de synchronisatie is gestopt. Je notities op dit apparaat zijn veilig. Verbind het opnieuw via Instellingen."
   },
   "inbox": {
     "title": "Postvak IN",

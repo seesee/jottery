@@ -1204,7 +1204,9 @@
     "notesRefused": "Certaines notes dépassent la limite d'envoi de votre compte et n'ont pas été synchronisées. Tout le reste l'a été.",
     "accountDisabled": "Votre compte est désactivé ou en attente d'approbation, la synchronisation est donc arrêtée. Vos notes sur cet appareil sont en sécurité. Contactez votre administrateur.",
     "storageQuotaExceeded": "Votre compte a atteint sa limite de stockage, les modifications de cet appareil ne peuvent donc pas être envoyées. Supprimez définitivement des notes ou des pièces jointes pour libérer de l'espace.",
-    "massDeletionHeld": "Le serveur a demandé la suppression de {count} notes d'un coup. Elles sont dans la corbeille au cas où cela ne viendrait pas de vous. Restaurez-les depuis celle-ci, ou videz-la si c'était voulu."
+    "massDeletionHeld": "Le serveur a demandé la suppression de {count} notes d'un coup. Elles sont dans la corbeille au cas où cela ne viendrait pas de vous. Restaurez-les depuis celle-ci, ou videz-la si c'était voulu.",
+    "clockAhead": "Certaines modifications n'ont pas été synchronisées, car leur date a plus d'un jour d'avance sur le serveur. Vérifiez la date et l'heure de cet appareil.",
+    "deviceRevoked": "Cet appareil n'est plus connecté à votre compte, la synchronisation est donc arrêtée. Vos notes sur cet appareil sont en sécurité. Reconnectez-le dans les paramètres."
   },
   "inbox": {
     "title": "Boîte de réception",

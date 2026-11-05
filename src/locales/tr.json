@@ -1204,7 +1204,9 @@
     "notesRefused": "Bazı notlar hesabınızın yükleme sınırını aşıyor ve eşitlenmedi. Geri kalan her şey eşitlendi.",
     "accountDisabled": "Hesabınız devre dışı veya onay bekliyor, bu yüzden eşitleme durduruldu. Bu cihazdaki notlarınız güvende. Yöneticinizle iletişime geçin.",
     "storageQuotaExceeded": "Hesabınız depolama sınırına ulaştı, bu yüzden bu cihazdaki değişiklikler yüklenemiyor. Yer açmak için bazı notları veya ekleri kalıcı olarak silin.",
-    "massDeletionHeld": "Sunucu aynı anda {count} notun silinmesini istedi. Siz yapmadıysanız diye geri dönüşüm kutusundalar. Oradan geri yükleyin ya da siz yaptıysanız kutuyu boşaltın."
+    "massDeletionHeld": "Sunucu aynı anda {count} notun silinmesini istedi. Siz yapmadıysanız diye geri dönüşüm kutusundalar. Oradan geri yükleyin ya da siz yaptıysanız kutuyu boşaltın.",
+    "clockAhead": "Tarihleri sunucunun bir günden fazla ilerisinde olduğu için bazı değişiklikler eşitlenmedi. Bu cihazın tarih ve saatini kontrol edin.",
+    "deviceRevoked": "Bu cihaz artık hesabınıza bağlı değil, bu yüzden eşitleme durdu. Bu cihazdaki notlarınız güvende. Ayarlar'dan yeniden bağlayın."
   },
   "inbox": {
     "title": "Gelen Kutusu",

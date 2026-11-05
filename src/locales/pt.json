@@ -1204,7 +1204,9 @@
     "notesRefused": "Algumas notas excedem o limite de envio da sua conta e não foram sincronizadas. Tudo o resto foi.",
     "accountDisabled": "A sua conta está desativada ou a aguardar aprovação, pelo que a sincronização parou. As suas notas neste dispositivo estão seguras. Contacte o seu administrador.",
     "storageQuotaExceeded": "A sua conta atingiu o limite de armazenamento, pelo que as alterações neste dispositivo não podem ser enviadas. Elimine permanentemente algumas notas ou anexos para libertar espaço.",
-    "massDeletionHeld": "O servidor pediu para eliminar {count} notas de uma vez. Estão na reciclagem, caso não tenha sido você. Restaure-as a partir daí, ou esvazie a reciclagem se tiver sido."
+    "massDeletionHeld": "O servidor pediu para eliminar {count} notas de uma vez. Estão na reciclagem, caso não tenha sido você. Restaure-as a partir daí, ou esvazie a reciclagem se tiver sido.",
+    "clockAhead": "Algumas alterações não foram sincronizadas porque a sua data está mais de um dia à frente do servidor. Verifique a data e a hora deste dispositivo.",
+    "deviceRevoked": "Este dispositivo já não está ligado à sua conta, por isso a sincronização parou. As suas notas neste dispositivo estão seguras. Volte a ligá-lo nas Definições."
   },
   "inbox": {
     "title": "Caixa de entrada",

@@ -163,6 +163,8 @@ export function validatePushResponse(value: unknown): SyncPushResponse {
     rejected: optionalList(value.rejected, 'rejected'),
     attachmentWarnings: optionalList(value.attachmentWarnings, 'attachmentWarnings'),
     rejectedDeletions: optionalList<unknown>(value.rejectedDeletions, 'rejectedDeletions').filter(isUuid),
+    skippedDeleted: optionalList<unknown>(value.skippedDeleted, 'skippedDeleted').filter(isUuid),
+    errors: optionalList<unknown>(value.errors, 'errors').filter(item => typeof item === 'string'),
   };
 }
 

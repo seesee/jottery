@@ -1204,7 +1204,9 @@
     "notesRefused": "Niektóre notatki przekraczają limit przesyłania Twojego konta i nie zostały zsynchronizowane. Cała reszta tak.",
     "accountDisabled": "Twoje konto jest dezaktywowane lub oczekuje na zatwierdzenie, więc synchronizacja została zatrzymana. Twoje notatki na tym urządzeniu są bezpieczne. Skontaktuj się z administratorem.",
     "storageQuotaExceeded": "Twoje konto osiągnęło limit miejsca, więc zmian z tego urządzenia nie można przesłać. Trwale usuń niektóre notatki lub załączniki, aby zwolnić miejsce.",
-    "massDeletionHeld": "Serwer zażądał usunięcia naraz tylu notatek: {count}. Są w koszu na wypadek, gdyby to nie było Twoje działanie. Przywróć je stamtąd lub opróżnij kosz, jeśli to Ty."
+    "massDeletionHeld": "Serwer zażądał usunięcia naraz tylu notatek: {count}. Są w koszu na wypadek, gdyby to nie było Twoje działanie. Przywróć je stamtąd lub opróżnij kosz, jeśli to Ty.",
+    "clockAhead": "Niektóre zmiany nie zostały zsynchronizowane, ponieważ ich data wyprzedza serwer o ponad jeden dzień. Sprawdź datę i godzinę na tym urządzeniu.",
+    "deviceRevoked": "To urządzenie nie jest już połączone z Twoim kontem, więc synchronizacja została zatrzymana. Twoje notatki na tym urządzeniu są bezpieczne. Połącz je ponownie w Ustawieniach."
   },
   "inbox": {
     "title": "Skrzynka odbiorcza",

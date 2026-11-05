@@ -127,6 +127,8 @@ export interface SyncPushResponse {
   errors?: string[]; // Optional, for backward compatibility
   /** Deletions refused because the note has a newer edit. Older servers don't send it */
   rejectedDeletions?: string[];
+  /** Notes skipped because they were permanently deleted after this edit. Older servers don't send it */
+  skippedDeleted?: string[];
   attachmentWarnings?: AttachmentWarning[]; // Accepted notes referencing attachment data the server lacks
 }
 

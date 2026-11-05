@@ -1204,7 +1204,9 @@
     "notesRefused": "Alcune note superano il limite di caricamento del tuo account e non sono state sincronizzate. Tutto il resto sì.",
     "accountDisabled": "Il tuo account è disattivato o in attesa di approvazione, quindi la sincronizzazione si è interrotta. Le tue note su questo dispositivo sono al sicuro. Contatta il tuo amministratore.",
     "storageQuotaExceeded": "Il tuo account ha raggiunto il limite di archiviazione, quindi le modifiche su questo dispositivo non possono essere caricate. Elimina definitivamente alcune note o allegati per fare spazio.",
-    "massDeletionHeld": "Il server ha chiesto di eliminare {count} note in una volta. Sono nel cestino nel caso non sia stata una tua azione. Ripristinale da lì, oppure svuota il cestino se è stata tua."
+    "massDeletionHeld": "Il server ha chiesto di eliminare {count} note in una volta. Sono nel cestino nel caso non sia stata una tua azione. Ripristinale da lì, oppure svuota il cestino se è stata tua.",
+    "clockAhead": "Alcune modifiche non sono state sincronizzate perché la loro data è avanti di più di un giorno rispetto al server. Controlla la data e l'ora di questo dispositivo.",
+    "deviceRevoked": "Questo dispositivo non è più collegato al tuo account, quindi la sincronizzazione si è interrotta. Le tue note su questo dispositivo sono al sicuro. Ricollegalo dalle Impostazioni."
   },
   "inbox": {
     "title": "Posta in arrivo",

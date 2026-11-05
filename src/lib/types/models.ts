@@ -35,6 +35,7 @@ export interface Note {
   color?: string; // Semantic color name (e.g., 'red', 'blue') - unencrypted
   serverHash?: string; // Local-only: the hash the server held when this note last became unsynced
   needsSync?: boolean; // Local-only flag indicating note needs to be synced (never sent to server)
+  deletionHeld?: boolean; // Local-only: in the bin because a server deleted too many at once
 }
 
 /**
