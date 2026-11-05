@@ -18,6 +18,10 @@ use tower_http::set_header::SetResponseHeaderLayer;
 
 use crate::{api, config::Config, AppState};
 
+/// Body limit for routes that take small JSON, including every route open to
+/// anonymous callers. Only `/sync/push` needs the large global limit.
+const SMALL_BODY_LIMIT: usize = 64 * 1024;
+
 /// Build CORS layer based on configuration
 ///
 /// If CORS_ALLOWED_ORIGINS is set, only allow those origins.
@@ -67,7 +71,12 @@ pub fn build_app(state: Arc<AppState>) -> Router {
         .route("/api/v1/sync/attachments/:id", get(api::sync::get_attachment))
         .route("/api/v1/sync/notes/:id", delete(api::sync::delete_note))
         .route("/api/v1/sync/device", delete(api::sync::revoke_self))
-        .route("/api/v1/auth/wrapped-key", get(api::auth::get_wrapped_key).put(api::auth::put_wrapped_key))
+        .route(
+            "/api/v1/auth/wrapped-key",
+            get(api::auth::get_wrapped_key)
+                .put(api::auth::put_wrapped_key)
+                .layer(DefaultBodyLimit::max(SMALL_BODY_LIMIT)),
+        )
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             api::middleware::auth_middleware,
@@ -96,7 +105,8 @@ pub fn build_app(state: Arc<AppState>) -> Router {
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             api::middleware::user_auth_middleware,
-        ));
+        ))
+        .layer(DefaultBodyLimit::max(SMALL_BODY_LIMIT));
 
     // Build protected admin routes with session auth middleware
     let admin_routes = Router::new()
@@ -152,13 +162,15 @@ pub fn build_app(state: Arc<AppState>) -> Router {
     // TODO: Re-enable with SmartIpKeyExtractor when running behind reverse proxy
     let auth_routes = Router::new()
         .route("/api/v1/auth/login", post(api::auth::login))
-        .route("/api/v1/user/login", post(api::user::login));
+        .route("/api/v1/user/login", post(api::user::login))
+        .layer(DefaultBodyLimit::max(SMALL_BODY_LIMIT));
 
     // Registration routes (rate limiting disabled - requires proxy-aware key extractor)
     let registration_routes = Router::new()
         .route("/api/v1/auth/register-user", post(api::auth::register_user))
         .route("/api/v1/auth/register-device", post(api::auth::register_device))
-        .route("/api/v1/auth/clone-device", post(api::auth::clone_device));
+        .route("/api/v1/auth/clone-device", post(api::auth::clone_device))
+        .layer(DefaultBodyLimit::max(SMALL_BODY_LIMIT));
 
     // Build main router
     let app = Router::new()

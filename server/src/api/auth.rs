@@ -358,6 +358,14 @@ pub async fn login(
         ));
     }
 
+    // Check if user is approved
+    if user.approved == 0 {
+        tracing::warn!("Login failed: user not approved: {}", req.email);
+        return Err(crate::error::AppError::Forbidden(
+            "Account pending admin approval".to_string(),
+        ));
+    }
+
     // Check if user is active
     if user.is_active == 0 {
         tracing::warn!("Login failed: user deactivated: {}", req.email);
@@ -488,17 +496,35 @@ pub async fn put_wrapped_key_session(
     put_wrapped_key_for_user(&state, &session.user_id, req).await
 }
 
+/// A real blob is a wrapped 32-byte key, a few hundred bytes of JSON. Anything
+/// near this size isn't one, and accounts mustn't be free storage.
+const MAX_WRAPPED_BLOB_BYTES: usize = 8 * 1024;
+
+/// Reject a wrapped key blob of an impossible size.
+pub fn validate_wrapped_blob(blob: &str) -> AppResult<()> {
+    if blob.is_empty() {
+        return Err(crate::error::AppError::BadRequest(
+            "Wrapped key blob cannot be empty".to_string(),
+        ));
+    }
+
+    if blob.len() > MAX_WRAPPED_BLOB_BYTES {
+        return Err(crate::error::AppError::PayloadTooLarge(format!(
+            "Wrapped key blob exceeds maximum size of {} bytes",
+            MAX_WRAPPED_BLOB_BYTES
+        )));
+    }
+
+    Ok(())
+}
+
 /// Shared implementation for storing wrapped key
 async fn put_wrapped_key_for_user(
     state: &AppState,
     user_id: &str,
     req: crate::models::PutWrappedKeyRequest,
 ) -> AppResult<StatusCode> {
-    if req.blob.is_empty() {
-        return Err(crate::error::AppError::BadRequest(
-            "Wrapped key blob cannot be empty".to_string(),
-        ));
-    }
+    validate_wrapped_blob(&req.blob)?;
 
     if req.kdf_version < 1 {
         return Err(crate::error::AppError::BadRequest(

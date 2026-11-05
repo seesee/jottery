@@ -136,7 +136,7 @@ pub mod middleware {
 
         // Verify user is active (but don't check is_admin)
         let user = match sqlx::query!(
-            r#"SELECT id, is_active, must_change_password FROM users WHERE id = ?"#,
+            r#"SELECT id, is_active, approved, must_change_password FROM users WHERE id = ?"#,
             session.user_id
         )
         .fetch_optional(&state.pool)
@@ -156,6 +156,13 @@ pub mod middleware {
         // Check if user is active
         if user.is_active != 1 {
             tracing::warn!("Inactive user attempted access: {}", session.user_id);
+            return Err(StatusCode::FORBIDDEN);
+        }
+
+        // Sessions issued before an account was approved mustn't outlive that
+        // rule: login refuses unapproved accounts.
+        if user.approved != 1 {
+            tracing::warn!("Unapproved user attempted access: {}", session.user_id);
             return Err(StatusCode::FORBIDDEN);
         }
 

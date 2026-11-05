@@ -74,7 +74,7 @@ pub async fn login(
 
     // Get user by email
     let user = sqlx::query!(
-        "SELECT id, email, password_hash, is_admin, must_change_password FROM users WHERE email = ?",
+        "SELECT id, email, password_hash, is_admin, approved, is_active, must_change_password FROM users WHERE email = ?",
         req.email
     )
     .fetch_optional(&state.pool)
@@ -98,6 +98,18 @@ pub async fn login(
     if !password_valid {
         tracing::warn!("Login failed: invalid password for {}", req.email);
         return Err(AppError::Unauthorized);
+    }
+
+    // Registration is open, so a session must wait for an admin's approval.
+    // These come after the password check so they reveal nothing to strangers.
+    if user.approved == 0 {
+        tracing::warn!("Login failed: user not approved: {}", req.email);
+        return Err(AppError::Forbidden("Account pending admin approval".to_string()));
+    }
+
+    if user.is_active == 0 {
+        tracing::warn!("Login failed: user deactivated: {}", req.email);
+        return Err(AppError::Forbidden("Account deactivated".to_string()));
     }
 
     // Update last login
@@ -338,6 +350,10 @@ pub async fn change_password(
     if !password_valid {
         tracing::warn!("Password change failed: invalid current password for user {}", user_id);
         return Err(AppError::Unauthorized);
+    }
+
+    if let Some(blob) = &req.wrapped_blob {
+        crate::api::auth::validate_wrapped_blob(blob)?;
     }
 
     // Validate new password strength based on configured complexity
