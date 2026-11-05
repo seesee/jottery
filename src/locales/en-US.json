@@ -504,7 +504,9 @@
       "duplicateNote": "Duplicate Note",
       "exportNote": "Export Note",
       "pressKey": "Press a key...",
-      "notSet": "Not set"
+      "notSet": "Not set",
+      "needsModifier": "This shortcut works while you type, so it needs Ctrl, Cmd or Alt. Press another key, or Esc to cancel.",
+      "reserved": "That key is reserved. Press another key, or Esc to cancel."
     },
     "syncTab": {
       "enableSync": "Enable Sync",

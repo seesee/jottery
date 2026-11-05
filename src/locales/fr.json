@@ -517,7 +517,9 @@
       "duplicateNote": "Dupliquer la note",
       "exportNote": "Exporter la note",
       "pressKey": "Appuyez sur une touche...",
-      "notSet": "Non défini"
+      "notSet": "Non défini",
+      "needsModifier": "Ce raccourci fonctionne pendant la saisie, il nécessite donc Ctrl, Cmd ou Alt. Appuyez sur une autre touche, ou sur Échap pour annuler.",
+      "reserved": "Cette touche est réservée. Appuyez sur une autre touche, ou sur Échap pour annuler."
     },
     "syncTab": {
       "enableSync": "Activer la synchronisation",

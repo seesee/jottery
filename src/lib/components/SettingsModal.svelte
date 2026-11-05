@@ -18,6 +18,7 @@
   import { GeneralTab, EditorTab, KeyboardTab, SyncTab, AdvancedTab, AboutTab, ColorsTab } from './settings';
   import { toast } from '../utils/toast.svelte';
   import { isSamePassword } from '../utils/passwordRules';
+  import { shortcutProblem, type ShortcutProblem } from '../utils/shortcutRecording';
   import { onboardingErrorKey } from '../utils/onboardingErrors';
   import { isConnectionRestricted } from '../services/cspService';
 
@@ -102,6 +103,7 @@
 
   // Keyboard shortcut recording
   let recordingShortcut: keyof KeyboardShortcuts | null = null;
+  let recordingProblem: ShortcutProblem | null = null;
   let tempShortcuts: KeyboardShortcuts = { ...DEFAULT_KEYBOARD_SHORTCUTS, ...$settings.keyboardShortcuts };
 
   // Documentation and downloads
@@ -691,12 +693,25 @@
 
   function startRecording(shortcutName: keyof KeyboardShortcuts) {
     recordingShortcut = shortcutName;
+    recordingProblem = null;
+
+    const stopRecording = () => {
+      recordingShortcut = null;
+      window.removeEventListener('keydown', handleKeyDown, { capture: true });
+    };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Prevent default browser behavior
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
+
+      // Escape cancels, and has to be caught here: this is where keys get recorded
+      if (e.key === 'Escape') {
+        recordingProblem = null;
+        stopRecording();
+        return;
+      }
 
       // Ignore just modifier keys by themselves
       if (['Control', 'Alt', 'Shift', 'Meta', 'Command'].includes(e.key)) {
@@ -723,29 +738,22 @@
         shift: hasShift || undefined,
       };
 
+      // Keep listening: the user can press something else
+      recordingProblem = shortcutProblem(shortcutName, newShortcut);
+      if (recordingProblem) {
+        return;
+      }
+
       tempShortcuts = {
         ...tempShortcuts,
         [shortcutName]: newShortcut,
       };
 
-      recordingShortcut = null;
-      window.removeEventListener('keydown', handleKeyDown, { capture: true });
-      window.removeEventListener('keyup', handleKeyUp, { capture: true });
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      // Cancel recording on Escape
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        recordingShortcut = null;
-        window.removeEventListener('keydown', handleKeyDown, { capture: true });
-        window.removeEventListener('keyup', handleKeyUp, { capture: true });
-      }
+      stopRecording();
     };
 
     // Use capture phase to intercept before browser shortcuts
     window.addEventListener('keydown', handleKeyDown, { capture: true, passive: false });
-    window.addEventListener('keyup', handleKeyUp, { capture: true, passive: false });
   }
 
   function resetShortcuts() {
@@ -1235,6 +1243,7 @@
           <KeyboardTab
             bind:tempShortcuts
             bind:recordingShortcut
+            {recordingProblem}
             onStartRecording={startRecording}
             onResetShortcuts={resetShortcuts}
             {onOpenShortcutsHelp}

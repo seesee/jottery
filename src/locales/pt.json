@@ -517,7 +517,9 @@
       "duplicateNote": "Duplicar nota",
       "exportNote": "Exportar nota",
       "pressKey": "Pressione uma tecla...",
-      "notSet": "Não definido"
+      "notSet": "Não definido",
+      "needsModifier": "Este atalho funciona enquanto escreve, por isso precisa de Ctrl, Cmd ou Alt. Prima outra tecla, ou Esc para cancelar.",
+      "reserved": "Essa tecla está reservada. Prima outra tecla, ou Esc para cancelar."
     },
     "syncTab": {
       "enableSync": "Ativar sincronização",

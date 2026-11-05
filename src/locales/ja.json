@@ -517,7 +517,9 @@
       "duplicateNote": "ノートを複製",
       "exportNote": "ノートをエクスポート",
       "pressKey": "キーを押してください...",
-      "notSet": "未設定"
+      "notSet": "未設定",
+      "needsModifier": "このショートカットは入力中にも動作するため、Ctrl、Cmd、Altのいずれかが必要です。別のキーを押すか、Escでキャンセルしてください。",
+      "reserved": "そのキーは予約されています。別のキーを押すか、Escでキャンセルしてください。"
     },
     "syncTab": {
       "enableSync": "同期を有効化",

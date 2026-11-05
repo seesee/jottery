@@ -517,7 +517,9 @@
       "duplicateNote": "Duplikuj notatkę",
       "exportNote": "Eksportuj notatkę",
       "pressKey": "Naciśnij klawisz...",
-      "notSet": "Nie ustawiono"
+      "notSet": "Nie ustawiono",
+      "needsModifier": "Ten skrót działa podczas pisania, więc wymaga klawisza Ctrl, Cmd lub Alt. Naciśnij inny klawisz lub Esc, aby anulować.",
+      "reserved": "Ten klawisz jest zarezerwowany. Naciśnij inny klawisz lub Esc, aby anulować."
     },
     "syncTab": {
       "enableSync": "Włącz synchronizację",

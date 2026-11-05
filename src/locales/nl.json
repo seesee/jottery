@@ -517,7 +517,9 @@
       "duplicateNote": "Notitie dupliceren",
       "exportNote": "Notitie exporteren",
       "pressKey": "Druk op een toets...",
-      "notSet": "Niet ingesteld"
+      "notSet": "Niet ingesteld",
+      "needsModifier": "Deze sneltoets werkt tijdens het typen en heeft dus Ctrl, Cmd of Alt nodig. Druk op een andere toets, of op Esc om te annuleren.",
+      "reserved": "Die toets is gereserveerd. Druk op een andere toets, of op Esc om te annuleren."
     },
     "syncTab": {
       "enableSync": "Synchronisatie inschakelen",
