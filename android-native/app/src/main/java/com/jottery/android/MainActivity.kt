@@ -4,6 +4,9 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
+import android.view.KeyboardShortcutGroup
+import android.view.KeyboardShortcutInfo
+import android.view.Menu
 import android.view.MotionEvent
 import android.view.WindowManager
 import androidx.activity.compose.setContent
@@ -26,6 +29,7 @@ import com.jottery.android.ui.navigation.JotteryNavigation
 import com.jottery.android.ui.theme.LocalNoteCategories
 import com.jottery.android.ui.theme.JotteryTheme
 import com.jottery.android.util.AttachmentFiles
+import com.jottery.android.util.KeyboardCommand
 import com.jottery.android.util.QuickAction
 import com.jottery.android.util.ShareIntake
 import com.jottery.android.viewmodel.AppState
@@ -131,6 +135,19 @@ class MainActivity : FragmentActivity() {
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         appState.recordActivity()
+        // Here rather than on a view, so they work wherever the focus is
+        KeyboardCommand.from(event)?.let { if (appState.perform(it)) return true }
         return super.dispatchKeyEvent(event)
+    }
+
+    /** Lists them in the system's keyboard shortcuts helper. */
+    override fun onProvideKeyboardShortcuts(data: MutableList<KeyboardShortcutGroup>, menu: Menu?, deviceId: Int) {
+        super.onProvideKeyboardShortcuts(data, menu, deviceId)
+        data += KeyboardShortcutGroup(
+            getString(R.string.app_name),
+            KeyboardCommand.entries.map {
+                KeyboardShortcutInfo(getString(it.label), it.keyCode, KeyEvent.META_CTRL_ON)
+            },
+        )
     }
 }

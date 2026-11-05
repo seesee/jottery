@@ -279,6 +279,15 @@
     <string name="note_link_missing">此设备上没有那条笔记。</string>
     <string name="note_copied">笔记已复制</string>
     <string name="note_link_copied">链接已复制。请粘贴到另一条笔记中。</string>
+    <string name="format_bold">粗体</string>
+    <string name="format_italic">斜体</string>
+    <string name="format_bullet_list">无序列表</string>
+    <string name="format_link">插入链接</string>
+    <string name="format_insert">插入</string>
+    <string name="format_insert_now">日期和时间</string>
+    <string name="format_insert_date">日期</string>
+    <string name="format_insert_time">时间</string>
+    <string name="format_insert_uuid">唯一 ID</string>
     <string name="editor_placeholder">开始输入…</string>
     <string name="editor_redo">重做</string>
     <string name="editor_find_menu">查找和替换</string>

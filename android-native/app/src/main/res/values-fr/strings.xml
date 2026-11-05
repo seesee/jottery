@@ -297,6 +297,15 @@
     <string name="note_link_missing">Cette note n\'est pas sur cet appareil.</string>
     <string name="note_copied">Note copiée</string>
     <string name="note_link_copied">Lien copié. Collez-le dans une autre note.</string>
+    <string name="format_bold">Gras</string>
+    <string name="format_italic">Italique</string>
+    <string name="format_bullet_list">Liste à puces</string>
+    <string name="format_link">Insérer un lien</string>
+    <string name="format_insert">Insérer</string>
+    <string name="format_insert_now">Date et heure</string>
+    <string name="format_insert_date">Date</string>
+    <string name="format_insert_time">Heure</string>
+    <string name="format_insert_uuid">Identifiant unique</string>
     <string name="editor_placeholder">Commencez à écrire…</string>
     <string name="editor_redo">Rétablir</string>
     <string name="editor_find_menu">Rechercher et remplacer</string>

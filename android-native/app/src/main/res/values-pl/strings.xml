@@ -306,6 +306,15 @@
     <string name="note_link_missing">Tej notatki nie ma na tym urządzeniu.</string>
     <string name="note_copied">Notatka skopiowana</string>
     <string name="note_link_copied">Link skopiowany. Wklej go do innej notatki.</string>
+    <string name="format_bold">Pogrubienie</string>
+    <string name="format_italic">Kursywa</string>
+    <string name="format_bullet_list">Lista punktowana</string>
+    <string name="format_link">Wstaw link</string>
+    <string name="format_insert">Wstaw</string>
+    <string name="format_insert_now">Data i godzina</string>
+    <string name="format_insert_date">Data</string>
+    <string name="format_insert_time">Godzina</string>
+    <string name="format_insert_uuid">Unikalny identyfikator</string>
     <string name="editor_placeholder">Zacznij pisać…</string>
     <string name="editor_redo">Ponów</string>
     <string name="editor_find_menu">Znajdź i zamień</string>

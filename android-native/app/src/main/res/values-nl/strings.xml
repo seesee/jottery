@@ -288,6 +288,15 @@
     <string name="note_link_missing">Die notitie staat niet op dit apparaat.</string>
     <string name="note_copied">Notitie gekopieerd</string>
     <string name="note_link_copied">Link gekopieerd. Plak hem in een andere notitie.</string>
+    <string name="format_bold">Vet</string>
+    <string name="format_italic">Cursief</string>
+    <string name="format_bullet_list">Opsommingslijst</string>
+    <string name="format_link">Link invoegen</string>
+    <string name="format_insert">Invoegen</string>
+    <string name="format_insert_now">Datum en tijd</string>
+    <string name="format_insert_date">Datum</string>
+    <string name="format_insert_time">Tijd</string>
+    <string name="format_insert_uuid">Unieke ID</string>
     <string name="editor_placeholder">Begin met typen…</string>
     <string name="editor_redo">Opnieuw</string>
     <string name="editor_find_menu">Zoeken en vervangen</string>

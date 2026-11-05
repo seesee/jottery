@@ -16,6 +16,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
@@ -87,6 +89,7 @@ import com.jottery.android.R
 import com.jottery.android.model.AttachmentRef
 import com.jottery.android.model.DecryptedNote
 import com.jottery.android.model.NoteVersionRecord
+import com.jottery.android.ui.editor.QuickCommand
 import com.jottery.android.ui.editor.EditHistory
 import com.jottery.android.ui.editor.EditorSearch
 import com.jottery.android.ui.editor.EditorTextArea
@@ -109,7 +112,7 @@ import kotlinx.coroutines.launch
  * Note editor composable with auto-save, context menu, tag input area, and
  * pinch-to-zoom font size.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun NoteEditorView(
     appState: AppState,
@@ -154,6 +157,13 @@ fun NoteEditorView(
     var historyVersion by remember(note.id) { mutableIntStateOf(0) }
     val editorFocus = remember { FocusRequester() }
     var showFind by remember(note.id) { mutableStateOf(false) }
+    val findRequested by appState.findRequested.collectAsState()
+    LaunchedEffect(findRequested) {
+        if (findRequested) {
+            showFind = true
+            appState.findRequestHandled()
+        }
+    }
     var findQuery by remember(note.id) { mutableStateOf("") }
     var replacement by remember(note.id) { mutableStateOf("") }
 
@@ -788,7 +798,9 @@ fun NoteEditorView(
                                     textFieldValue = newValue
                                     history.record(newValue)
                                 }
-                                !isReadOnly && acceptsText(newValue.text) -> applyEdit(newValue)
+                                !isReadOnly && acceptsText(newValue.text) -> {
+                                    applyEdit(QuickCommand.expand(textFieldValue, newValue) ?: newValue)
+                                }
                             }
                         },
                         readOnly = isReadOnly,
@@ -801,6 +813,16 @@ fun NoteEditorView(
                     )
                 }
             }
+        }
+
+        if (isPlainEditor && !isReadOnly && WindowInsets.isImeVisible) {
+            EditorFormatBar(
+                showFormatting = syntaxLanguage == "markdown",
+                onEdit = { change ->
+                    val changed = change(textFieldValue)
+                    if (acceptsText(changed.text)) applyEdit(changed)
+                },
+            )
         }
 
         if (note.attachments.isNotEmpty()) {

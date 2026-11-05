@@ -279,6 +279,15 @@
     <string name="note_link_missing">해당 노트가 이 기기에 없습니다.</string>
     <string name="note_copied">노트를 복사했습니다</string>
     <string name="note_link_copied">링크를 복사했습니다. 다른 노트에 붙여넣으세요.</string>
+    <string name="format_bold">굵게</string>
+    <string name="format_italic">기울임</string>
+    <string name="format_bullet_list">글머리 기호 목록</string>
+    <string name="format_link">링크 삽입</string>
+    <string name="format_insert">삽입</string>
+    <string name="format_insert_now">날짜 및 시간</string>
+    <string name="format_insert_date">날짜</string>
+    <string name="format_insert_time">시간</string>
+    <string name="format_insert_uuid">고유 ID</string>
     <string name="editor_placeholder">입력을 시작하세요…</string>
     <string name="editor_redo">다시 실행</string>
     <string name="editor_find_menu">찾기 및 바꾸기</string>

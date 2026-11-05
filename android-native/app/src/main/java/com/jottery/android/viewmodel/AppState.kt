@@ -70,6 +70,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
+import com.jottery.android.util.KeyboardCommand
 import com.jottery.android.util.QuickAction
 import com.jottery.android.util.SearchSuggestions
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -2336,6 +2337,30 @@ class AppState(application: Application) : AndroidViewModel(application) {
             QuickAction.NEW_NOTE -> createNote()
             QuickAction.SEARCH -> requestSearch()
         }
+    }
+
+    private val _findRequested = MutableStateFlow(false)
+    /** Stays set until the editor has opened its find bar. */
+    val findRequested: StateFlow<Boolean> = _findRequested.asStateFlow()
+
+    fun findRequestHandled() {
+        _findRequested.value = false
+    }
+
+    /** Returns false for anything that doesn't apply yet, so the key goes on as usual. */
+    fun perform(command: KeyboardCommand): Boolean {
+        if (_isLocked.value) return false
+        when (command) {
+            KeyboardCommand.NEW_NOTE -> receiveQuickAction(QuickAction.NEW_NOTE)
+            KeyboardCommand.SEARCH -> receiveQuickAction(QuickAction.SEARCH)
+            KeyboardCommand.SAVE -> viewModelScope.launch { flushPendingEditor() }
+            KeyboardCommand.FIND -> {
+                if (_selectedNoteId.value == null) return false
+                _findRequested.value = true
+            }
+            KeyboardCommand.LOCK -> lock()
+        }
+        return true
     }
 
     /** Leave the open note and put the cursor in the search bar. */

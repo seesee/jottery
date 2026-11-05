@@ -279,6 +279,15 @@
     <string name="note_link_missing">そのノートはこのデバイスにありません。</string>
     <string name="note_copied">ノートをコピーしました</string>
     <string name="note_link_copied">リンクをコピーしました。別のノートに貼り付けてください。</string>
+    <string name="format_bold">太字</string>
+    <string name="format_italic">斜体</string>
+    <string name="format_bullet_list">箇条書き</string>
+    <string name="format_link">リンクを挿入</string>
+    <string name="format_insert">挿入</string>
+    <string name="format_insert_now">日付と時刻</string>
+    <string name="format_insert_date">日付</string>
+    <string name="format_insert_time">時刻</string>
+    <string name="format_insert_uuid">一意のID</string>
     <string name="editor_placeholder">ここに入力…</string>
     <string name="editor_redo">やり直す</string>
     <string name="editor_find_menu">検索と置換</string>

@@ -306,6 +306,15 @@
     <string name="note_link_missing">Этой заметки нет на этом устройстве.</string>
     <string name="note_copied">Заметка скопирована</string>
     <string name="note_link_copied">Ссылка скопирована. Вставьте её в другую заметку.</string>
+    <string name="format_bold">Жирный</string>
+    <string name="format_italic">Курсив</string>
+    <string name="format_bullet_list">Маркированный список</string>
+    <string name="format_link">Вставить ссылку</string>
+    <string name="format_insert">Вставить</string>
+    <string name="format_insert_now">Дата и время</string>
+    <string name="format_insert_date">Дата</string>
+    <string name="format_insert_time">Время</string>
+    <string name="format_insert_uuid">Уникальный ID</string>
     <string name="editor_placeholder">Начните вводить…</string>
     <string name="editor_redo">Повторить</string>
     <string name="editor_find_menu">Найти и заменить</string>

@@ -288,6 +288,15 @@
     <string name="note_link_missing">Bu not bu cihazda yok.</string>
     <string name="note_copied">Not kopyalandı</string>
     <string name="note_link_copied">Bağlantı kopyalandı. Başka bir nota yapıştırın.</string>
+    <string name="format_bold">Kalın</string>
+    <string name="format_italic">İtalik</string>
+    <string name="format_bullet_list">Madde İşaretli Liste</string>
+    <string name="format_link">Bağlantı Ekle</string>
+    <string name="format_insert">Ekle</string>
+    <string name="format_insert_now">Tarih ve saat</string>
+    <string name="format_insert_date">Tarih</string>
+    <string name="format_insert_time">Saat</string>
+    <string name="format_insert_uuid">Benzersiz kimlik</string>
     <string name="editor_placeholder">Yazmaya başlayın…</string>
     <string name="editor_redo">Yinele</string>
     <string name="editor_find_menu">Bul ve değiştir</string>

@@ -297,6 +297,15 @@
     <string name="note_link_missing">Esa nota no está en este dispositivo.</string>
     <string name="note_copied">Nota copiada</string>
     <string name="note_link_copied">Enlace copiado. Péguelo en otra nota.</string>
+    <string name="format_bold">Negrita</string>
+    <string name="format_italic">Cursiva</string>
+    <string name="format_bullet_list">Lista con viñetas</string>
+    <string name="format_link">Insertar enlace</string>
+    <string name="format_insert">Insertar</string>
+    <string name="format_insert_now">Fecha y hora</string>
+    <string name="format_insert_date">Fecha</string>
+    <string name="format_insert_time">Hora</string>
+    <string name="format_insert_uuid">ID único</string>
     <string name="editor_placeholder">Empiece a escribir…</string>
     <string name="editor_redo">Rehacer</string>
     <string name="editor_find_menu">Buscar y reemplazar</string>

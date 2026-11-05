@@ -288,6 +288,15 @@
     <string name="note_link_missing">Diese Notiz ist nicht auf diesem Gerät.</string>
     <string name="note_copied">Notiz kopiert</string>
     <string name="note_link_copied">Link kopiert. Fügen Sie ihn in eine andere Notiz ein.</string>
+    <string name="format_bold">Fett</string>
+    <string name="format_italic">Kursiv</string>
+    <string name="format_bullet_list">Aufzählung</string>
+    <string name="format_link">Link einfügen</string>
+    <string name="format_insert">Einfügen</string>
+    <string name="format_insert_now">Datum und Uhrzeit</string>
+    <string name="format_insert_date">Datum</string>
+    <string name="format_insert_time">Uhrzeit</string>
+    <string name="format_insert_uuid">Eindeutige ID</string>
     <string name="editor_placeholder">Schreiben Sie los…</string>
     <string name="editor_redo">Wiederholen</string>
     <string name="editor_find_menu">Suchen und ersetzen</string>

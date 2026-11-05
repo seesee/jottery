@@ -343,6 +343,15 @@
     <string name="note_link_missing">That note isn\'t on this device.</string>
     <string name="note_copied">Note copied</string>
     <string name="note_link_copied">Link copied. Paste it into another note.</string>
+    <string name="format_bold">Bold</string>
+    <string name="format_italic">Italic</string>
+    <string name="format_bullet_list">Bullet List</string>
+    <string name="format_link">Insert Link</string>
+    <string name="format_insert">Insert</string>
+    <string name="format_insert_now">Date and time</string>
+    <string name="format_insert_date">Date</string>
+    <string name="format_insert_time">Time</string>
+    <string name="format_insert_uuid">Unique ID</string>
     <string name="editor_placeholder">Start typing…</string>
     <string name="editor_redo">Redo</string>
     <string name="editor_find_menu">Find and replace</string>

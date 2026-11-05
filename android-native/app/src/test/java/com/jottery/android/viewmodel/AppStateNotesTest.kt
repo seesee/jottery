@@ -6,6 +6,7 @@ import com.jottery.android.crypto.CryptoService
 import com.jottery.android.database.JotteryDatabase
 import com.jottery.android.model.NoteVersionRecord
 import com.jottery.android.model.NoteCategories
+import com.jottery.android.util.KeyboardCommand
 import com.jottery.android.util.QuickAction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -217,6 +218,38 @@ class AppStateNotesTest {
         appState.lock()
 
         assertTrue(appState.recentSearches.value.isEmpty())
+    }
+
+    @Test fun `a keyboard makes a note, and saves what's being typed`() = runBlocking {
+        assertTrue(appState.perform(KeyboardCommand.NEW_NOTE))
+        withTimeout(5_000) { while (appState.selectedNoteId.value == null) delay(5) }
+        val note = appState.notes.value.single()
+
+        appState.setPendingEditorNote(note.copy(content = "Typed"))
+        assertTrue(appState.perform(KeyboardCommand.SAVE))
+
+        withTimeout(5_000) { while (appState.notes.value.single().content != "Typed") delay(5) }
+    }
+
+    @Test fun `search and find ask the screen for what they need`() = runBlocking {
+        assertFalse("nothing to find in yet", appState.perform(KeyboardCommand.FIND))
+
+        appState.createNote("Open")
+        assertTrue(appState.perform(KeyboardCommand.FIND))
+        assertTrue(appState.findRequested.value)
+        appState.findRequestHandled()
+
+        assertTrue(appState.perform(KeyboardCommand.SEARCH))
+        withTimeout(5_000) { while (!appState.searchRequested.value) delay(5) }
+    }
+
+    @Test fun `a keyboard locks the vault, and does nothing else to a locked one`() = runBlocking {
+        assertTrue(appState.perform(KeyboardCommand.LOCK))
+        assertTrue(appState.isLocked.value)
+
+        assertFalse(appState.perform(KeyboardCommand.NEW_NOTE))
+        appState.unlock(password)
+        assertTrue("nothing was held back for later", appState.notes.value.isEmpty())
     }
 
     @Test fun `restoring a version updates the list the editor reads`() = runBlocking {

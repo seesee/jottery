@@ -288,6 +288,15 @@
     <string name="note_link_missing">Αυτή η σημείωση δεν βρίσκεται σε αυτήν τη συσκευή.</string>
     <string name="note_copied">Η σημείωση αντιγράφηκε</string>
     <string name="note_link_copied">Ο σύνδεσμος αντιγράφηκε. Επικολλήστε τον σε άλλη σημείωση.</string>
+    <string name="format_bold">Έντονα</string>
+    <string name="format_italic">Πλάγια</string>
+    <string name="format_bullet_list">Λίστα με κουκκίδες</string>
+    <string name="format_link">Εισαγωγή συνδέσμου</string>
+    <string name="format_insert">Εισαγωγή</string>
+    <string name="format_insert_now">Ημερομηνία και ώρα</string>
+    <string name="format_insert_date">Ημερομηνία</string>
+    <string name="format_insert_time">Ώρα</string>
+    <string name="format_insert_uuid">Μοναδικό αναγνωριστικό</string>
     <string name="editor_placeholder">Ξεκινήστε να πληκτρολογείτε…</string>
     <string name="editor_redo">Επανάληψη</string>
     <string name="editor_find_menu">Εύρεση και αντικατάσταση</string>
