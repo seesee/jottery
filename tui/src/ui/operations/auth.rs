@@ -69,6 +69,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
                         metadata.client_id = Some(clone_result.client_id);
                         metadata.user_id = Some(clone_result.user_id.clone());
                         metadata.sync_enabled = true;
+                        metadata.forget_server_state();
                         metadata.pending_device_name = None; // Clear pending name
                         sync_repo.update_metadata(&metadata)?;
 
@@ -142,6 +143,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
                         metadata.sync_endpoint = endpoint.to_string();
                         metadata.api_key = Some(encrypted_api_key);
                         metadata.sync_enabled = true;
+                        metadata.forget_server_state();
                         metadata.pending_device_name = None; // Clear pending name
                         sync_repo.update_metadata(&metadata)?;
 
@@ -166,6 +168,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
                         metadata.sync_endpoint = endpoint.to_string();
                         metadata.api_key = Some(encrypted_api_key);
                         metadata.sync_enabled = true;
+                        metadata.forget_server_state();
                         sync_repo.update_metadata(&metadata)?;
 
                         // Update app settings and save to database
@@ -197,6 +200,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
         app.debug_log("Unlock - Color scheme updated");
     }
     app.apply_auto_lock_setting();
+    super::settings::apply_language(app);
 
     // Store password if remember checkbox was enabled
     if app.remember_password_checkbox {
@@ -274,8 +278,19 @@ pub fn toggle_remember_password(app: &mut App) -> Result<()> {
 
 /// Store password for auto-unlock (call after successful unlock when user confirms)
 pub fn store_password_for_autounlock(app: &mut App, password: &str) -> Result<()> {
-    // Store password using the storage backend (keychain or file)
-    app.password_storage.store(password)?;
+    // Store password using the storage backend (keychain or file). A keychain that
+    // doesn't keep it isn't worth keeping either: the file works, and says what it is.
+    if let Err(e) = app.password_storage.store(password) {
+        if !app.password_storage.backend_type().is_secure() {
+            return Err(e);
+        }
+
+        app.debug_log(&format!("Keychain refused the password, falling back to file: {}", e));
+        let config_dir = app.db_path.parent().context("Invalid db path")?;
+        let file_storage = crate::password_storage::create_file_storage(config_dir);
+        file_storage.store(password)?;
+        app.password_storage = file_storage;
+    }
 
     app.debug_log(&format!(
         "Password stored using {} backend",

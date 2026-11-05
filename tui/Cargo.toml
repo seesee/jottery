@@ -58,6 +58,7 @@ tokio = { version = "1.40", features = ["full"] }
 aes-gcm = "0.10"
 pbkdf2 = { version = "0.12", features = ["simple"] }
 sha2 = "0.10"
+hmac = "0.12"
 base64 = "0.22"
 rand = "0.8"
 hex = "0.4"
@@ -72,6 +73,7 @@ urlencoding = "2.1"
 
 # Regex for search parsing
 regex = "1.10"
+unicode-normalization = "0.1"
 
 # Logging
 tracing = "0.1"
@@ -87,7 +89,9 @@ rpassword = "7.5"
 dirs = "5.0"
 
 # OS keychain for secure password storage (optional)
-keyring = { version = "3", optional = true }
+# Without a store chosen here, keyring uses a mock that forgets everything at exit. The
+# Secret Service one is the pure Rust kind, so builds don't need libdbus.
+keyring = { version = "3", optional = true, features = ["apple-native", "windows-native", "async-secret-service", "tokio", "crypto-rust"] }
 
 # Hostname detection
 hostname = "0.4"
@@ -119,6 +123,11 @@ serde_yaml = "0.9"
 shell-words = "1"
 # Compression for backups, which the web app writes with zlib
 flate2 = "1"
+
+[target.'cfg(unix)'.dependencies]
+# Clearing decrypted temporary files when the process is told to stop
+signal-hook = "0.3"
+libc = "0.2"
 
 [dev-dependencies]
 

@@ -118,6 +118,7 @@ editor:
   temp_write_error: Scrittura su file temporaneo fallita
   temp_read_error: Lettura file temporaneo fallita
   default_editor: vi
+  temp_on_disk: "Questa macchina non ha una cartella temporanea in memoria, quindi una nota aperta resta su disco finché non la chiudi."
 attachment:
   add: Aggiungi allegato
   add_failed: "Aggiunta allegato fallita: %{error}"
@@ -176,6 +177,8 @@ settings:
   press_enter_cycle: premi Invio per ciclare
   press_enter_toggle: premi Invio per attivare/disattivare
   disabled: disabilitato
+  sort_order: "Ordinamento"
+  language_auto: "Come il sistema"
 sync:
   push: Invia al server
   pull: Ricevi dal server
@@ -213,6 +216,23 @@ sync:
   notes: note
   skipped_notes: "%{count} elementi dal server non erano leggibili e sono stati saltati"
   rejected_notes: "%{count} note sono in conflitto con il server. Apri Jottery per risolverle."
+  rate_limited: "Il server ha chiesto a Jottery di attendere %{seconds} secondi prima di sincronizzare di nuovo."
+  key_refused: "Il server non ha accettato la chiave API di questo dispositivo. Registra di nuovo il dispositivo."
+  server_busy: "Il server è occupato. Jottery riproverà tra %{seconds} secondi."
+  quota_exceeded: "L'account ha raggiunto il limite di spazio, quindi le modifiche non sono state caricate. Sono al sicuro su questo dispositivo. Svuota il cestino o rimuovi degli allegati per fare spazio."
+  deletions_held_title: "Molte note eliminate"
+  deletions_held: "Il server indica che %{count} note sono state eliminate definitivamente altrove. Sei stato tu?"
+  deletions_held_warning: "y: spostale nel cestino qui. n: conservale e rimettile sul server."
+  deletions_held_cli: "Il server indica che %{count} note sono state eliminate altrove. Sono ancora qui: apri Jottery per decidere."
+  deletions_applied: "%{count} note spostate nel cestino"
+  force_title: "Forza risincronizzazione completa"
+  force_confirm: "Scaricare TUTTE le note e gli allegati dal server?"
+  force_note: "Le modifiche locali non inviate vengono mantenute."
+  disconnect_title: "Disconnetti dalla sincronizzazione"
+  disconnect_confirm: "Disconnettere questo dispositivo dal server?"
+  disconnect_warning: "Le note restano qui. Il dispositivo viene revocato sul server."
+  disconnect_conflicts: "%{count} note hanno conflitti irrisolti. Le loro copie del server verranno dimenticate qui."
+  device_still_registered: "Disconnesso qui, ma non è stato possibile avvisare il server, quindi la chiave di questo dispositivo funziona ancora. Revocala nel portale utente."
 
 # Posta in arrivo
 inbox:
@@ -259,6 +279,7 @@ register:
   cleared: Registrazione cancellata. Puoi ricominciare.
   pending_status: In attesa di approvazione
   password_differs: "Deve essere diversa dalla password delle note."
+  insecure_endpoint: "Questo indirizzo usa HTTP non cifrato, quindi la password dell'account e la chiave del dispositivo potrebbero essere lette lungo il percorso. Usa https:// o inserisci di nuovo questo indirizzo per accettare."
 color_scheme:
   default_dark: Scuro predefinito
   default_light: Chiaro predefinito
@@ -484,6 +505,28 @@ help:
   z_archive_desc: "Archivia la nota selezionata (o ripristinala in modalità archivio)"
   multi_z_archive_key: "z"
   multi_z_archive_desc: "Archivia le note selezionate"
+  search_or_key: "a | b"
+  search_or_desc: "Uno dei due (O)"
+  search_phrase_key: "\"a phrase\""
+  search_phrase_desc: "Queste parole in quest'ordine"
+  search_wildcard_key: "word* / *word"
+  search_wildcard_desc: "Una parola inizia o finisce così"
+  search_exclude_tag_key: "-#tag"
+  search_exclude_tag_desc: "Escludi le note con questo tag"
+  search_attachment_key: "has:attachment"
+  search_attachment_desc: "Note con allegati"
+  search_archived_key: "archived"
+  search_archived_desc: "Cerca nell'archivio"
+  search_created_key: "created:>2024-01-01"
+  search_created_desc: "Creata dopo una data (anche < e a..b)"
+  search_modified_key: "modified:>2024-01-01"
+  search_modified_desc: "Modificata dopo una data (anche < e a..b)"
+  search_words_key: "words:>100"
+  search_words_desc: "Numero di parole (anche < e a..b)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "Rimuovi tag dalle note selezionate"
+  multi_colour_key: "C"
+  multi_colour_desc: "Imposta il colore delle note selezionate"
 cli:
   # Alt (usato in alcuni contesti)
   list: Elenca note
@@ -555,6 +598,13 @@ cli:
   attach_file_help: "File da allegare"
   attachment_number_help: "Quale allegato, secondo la numerazione di show"
   archived_help: "Elenca invece le note archiviate"
+  import_summary: "%{created} aggiunte, %{updated} aggiornate, %{skipped} già aggiornate"
+  import_failed: "Non è stato possibile importare %{count} elementi del file"
+  password_change_required: "Questo account deve prima cambiare la password. Accedi all'app web per farlo, poi riprova."
+  insecure_endpoint: "%{endpoint} usa HTTP non cifrato, quindi la password potrebbe essere letta lungo il percorso. Usa https:// o passa --allow-insecure-http per accettare."
+  allow_insecure_http_help: "Consenti l'invio di una password via HTTP non cifrato a un host pubblico"
+  password_flag_deprecated: "Una password sulla riga di comando è visibile in ps e nella cronologia della shell. Usa invece --password-stdin o JOTTERY_PASSWORD."
+  password_stdin_help: "Leggi le password da stdin, una per riga, invece di chiederle"
 status:
   locked: Bloccato
   unlocked: Sbloccato
@@ -577,6 +627,12 @@ bulk:
   add_tags_to: Aggiungi tag a
   export_notes_to: Esporta
   archived: "%{count} note archiviate"
+  tags_removed: "Tag rimossi da %{count} note: %{tags}"
+  remove_tags_from: "Rimuovi tag da %{count} note"
+  enter_colour: "Inserisci un nome di colore (vuoto per togliere):"
+  colour_of: "Imposta il colore di %{count} note"
+  colour_set: "Colore cambiato su %{count} note"
+  unknown_colour: "Non esiste un colore chiamato %{colour}"
 time:
   just_now: proprio ora
   minutes_ago: "%{count} minuti fa"
@@ -709,3 +765,6 @@ envelope:
   unwrap_failed: "La password delle note non apre la chiave di questo account. Potrebbe essere stata salvata da una versione precedente. Sblocca Jottery su un dispositivo già connesso, che risolverà il problema, poi riprova."
   rekey_failed: "Non è stato possibile spostare le note locali sulla chiave di questo account, quindi non è cambiato nulla: %{error}"
   diverged: "La chiave di questo dispositivo è diversa da quella dell'account. Le note degli altri dispositivi potrebbero non aprirsi qui."
+  password_changed_elsewhere: "La password delle note è stata cambiata su un altro dispositivo, quindi non è stato sovrascritto nulla. Questo dispositivo si sblocca ancora con la vecchia password. Cambiala anche qui perché nuovi dispositivi possano collegarsi."
+  server_update_pending: "La password è stata cambiata su questo dispositivo, ma non è stato possibile aggiornare la copia della chiave sul server. Jottery riproverà. Fino ad allora, un nuovo dispositivo non potrà collegarsi con la nuova password."
+  key_keeps_changing: "La chiave dell'account continua a cambiare sul server, quindi questo dispositivo non l'ha toccata. Riprova tra poco."

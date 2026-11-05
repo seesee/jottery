@@ -130,6 +130,7 @@ editor:
   temp_write_error: "Failed to write to temporary file"
   temp_read_error: "Failed to read temporary file"
   default_editor: "vi"
+  temp_on_disk: "This machine has no memory-backed temp folder, so an open note is on disk until you close it."
 
 # Attachments
 attachment:
@@ -196,6 +197,8 @@ settings:
   press_enter_toggle: "press Enter to toggle"
   disabled: "disabled"
   user_portal: "User Portal"
+  sort_order: "Sort Order"
+  language_auto: "Same as system"
 
 # Sync operations
 sync:
@@ -235,6 +238,23 @@ sync:
     inactive: "Your account has been deactivated. Please contact an administrator."
   skipped_notes: "%{count} items from the server couldn't be read and were skipped"
   rejected_notes: "%{count} notes conflict with the server. Open Jottery to resolve them."
+  rate_limited: "The server asked Jottery to wait %{seconds} seconds before syncing again."
+  key_refused: "The server didn't accept this device's API key. Register the device again."
+  server_busy: "The server is busy. Jottery will try again in %{seconds} seconds."
+  quota_exceeded: "Your account is at its storage limit, so changes here couldn't be uploaded. They're safe on this device. Empty the bin or remove attachments to make room."
+  deletions_held_title: "Many Notes Deleted"
+  deletions_held: "The server says %{count} notes were permanently deleted elsewhere. Did you do this?"
+  deletions_held_warning: "y: move them to the bin here. n: keep them and put them back on the server."
+  deletions_held_cli: "The server says %{count} notes were deleted elsewhere. They're still here: open Jottery to decide."
+  deletions_applied: "%{count} notes moved to the bin"
+  force_title: "Force Full Resync"
+  force_confirm: "Pull ALL notes and attachments from the server?"
+  force_note: "Local changes that haven't been pushed are kept."
+  disconnect_title: "Disconnect From Sync"
+  disconnect_confirm: "Disconnect this device from the server?"
+  disconnect_warning: "Your notes stay here. The device is revoked on the server."
+  disconnect_conflicts: "%{count} notes have unresolved conflicts. The server's copies of them will be forgotten here."
+  device_still_registered: "Disconnected here, but the server couldn't be told, so this device's key still works. Revoke it in the user portal."
 
 # Inbox
 inbox:
@@ -282,6 +302,7 @@ register:
   cleared: "Registration cleared. You can start fresh."
   pending_status: "Pending approval"
   password_differs: "This must be different from your notes password."
+  insecure_endpoint: "This address uses plain HTTP, so your account password and device key could be read on the way. Use https://, or enter this address again to accept that."
 
 # Conflict resolution
 conflict:
@@ -531,6 +552,28 @@ help:
   z_archive_desc: "Archive selected note (or bring it back in archive mode)"
   multi_z_archive_key: "z"
   multi_z_archive_desc: "Archive selected notes"
+  search_or_key: "a | b"
+  search_or_desc: "Match either (OR)"
+  search_phrase_key: "\"a phrase\""
+  search_phrase_desc: "Match these words in this order"
+  search_wildcard_key: "word* / *word"
+  search_wildcard_desc: "A word starts or ends with this"
+  search_exclude_tag_key: "-#tag"
+  search_exclude_tag_desc: "Exclude notes with this tag"
+  search_attachment_key: "has:attachment"
+  search_attachment_desc: "Notes with attachments"
+  search_archived_key: "archived"
+  search_archived_desc: "Search the archive"
+  search_created_key: "created:>2024-01-01"
+  search_created_desc: "Created after a date (also < and a..b)"
+  search_modified_key: "modified:>2024-01-01"
+  search_modified_desc: "Modified after a date (also < and a..b)"
+  search_words_key: "words:>100"
+  search_words_desc: "Word count (also < and a..b)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "Remove tags from selected notes"
+  multi_colour_key: "C"
+  multi_colour_desc: "Set the colour of selected notes"
 
 # CLI commands and help text
 cli:
@@ -604,6 +647,13 @@ cli:
   attach_file_help: "File to attach"
   attachment_number_help: "Which attachment, as numbered by show"
   archived_help: "List archived notes instead"
+  import_summary: "%{created} added, %{updated} updated, %{skipped} already up to date"
+  import_failed: "%{count} items in the file couldn't be imported"
+  password_change_required: "This account has to change its password first. Sign in to the web app to do that, then try again."
+  insecure_endpoint: "%{endpoint} uses plain HTTP, so the password could be read on the way. Use https://, or pass --allow-insecure-http to accept that."
+  allow_insecure_http_help: "Allow sending a password over plain HTTP to a public host"
+  password_flag_deprecated: "A password on the command line shows in ps and shell history. Use --password-stdin or JOTTERY_PASSWORD instead."
+  password_stdin_help: "Read passwords from stdin, one per line, instead of prompting"
 
 # Status messages
 status:
@@ -630,6 +680,12 @@ bulk:
   add_tags_to: "Add tags to"
   export_notes_to: "Export"
   archived: "%{count} notes archived"
+  tags_removed: "Removed tags from %{count} notes: %{tags}"
+  remove_tags_from: "Remove tags from %{count} notes"
+  enter_colour: "Enter a colour name (empty to clear):"
+  colour_of: "Set the colour of %{count} notes"
+  colour_set: "Colour changed on %{count} notes"
+  unknown_colour: "There's no colour called %{colour}"
 
 # Date and time formatting
 time:
@@ -750,3 +806,6 @@ envelope:
   unwrap_failed: "Your notes password can't open this account's key. It may have been saved by an older version. Unlock Jottery on a device that's already connected, which will fix it, then try again."
   rekey_failed: "Your local notes couldn't be moved to this account's key, so nothing has changed: %{error}"
   diverged: "This device's key differs from the account's. Notes from your other devices may not open here."
+  password_changed_elsewhere: "Your notes password was changed on another device, so nothing was overwritten. This device still unlocks with its old password. Change it here to match, so that new devices can join."
+  server_update_pending: "Your password changed on this device, but the server's copy of your key couldn't be updated. Jottery will try again. Until then, a new device can't join with the new password."
+  key_keeps_changing: "The account's key keeps changing on the server, so this device has left it alone. Try again in a moment."

@@ -24,10 +24,7 @@ pub fn view_with_pager(app: &mut App, content: &str, syntax: SyntaxLanguage) -> 
     let extension = syntax_to_extension(syntax);
 
     // Create temp file with appropriate extension
-    let mut temp_file = tempfile::Builder::new()
-        .suffix(&format!(".{}", extension))
-        .tempfile()
-        .context("Failed to create temporary file")?;
+    let mut temp_file = crate::secure_temp::create(&format!(".{}", extension))?;
 
     // Pagers pass some or all escape sequences straight to the terminal, and this
     // is a read-only view, so what they're given is cleaned first.
@@ -65,8 +62,10 @@ fn syntax_to_extension(syntax: SyntaxLanguage) -> &'static str {
         SyntaxLanguage::Plain => "txt",
         SyntaxLanguage::Markdown => "md",
         SyntaxLanguage::Javascript => "js",
+        SyntaxLanguage::Typescript => "ts",
         SyntaxLanguage::Python => "py",
         SyntaxLanguage::Html => "html",
+        SyntaxLanguage::Xml => "xml",
         SyntaxLanguage::Css => "css",
         SyntaxLanguage::Json => "json",
         SyntaxLanguage::Sql => "sql",

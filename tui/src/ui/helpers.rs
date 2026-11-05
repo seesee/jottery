@@ -495,10 +495,12 @@ where
                         // Determine syntax language
                         let lang = match code_block_lang.to_lowercase().as_str() {
                             "javascript" | "js" => SyntaxLanguage::Javascript,
+                            "typescript" | "ts" => SyntaxLanguage::Typescript,
                             "python" | "py" => SyntaxLanguage::Python,
                             "markdown" | "md" => SyntaxLanguage::Markdown,
                             "json" => SyntaxLanguage::Json,
                             "html" => SyntaxLanguage::Html,
+                            "xml" => SyntaxLanguage::Xml,
                             "css" => SyntaxLanguage::Css,
                             "sql" => SyntaxLanguage::Sql,
                             "bash" | "sh" => SyntaxLanguage::Bash,
