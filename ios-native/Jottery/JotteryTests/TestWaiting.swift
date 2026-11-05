@@ -4,6 +4,11 @@ import Foundation
 // so a test must never need one thing to finish before a fixed delay runs out.
 // Waiting for something that will happen goes through `waitUntil`. Keeping
 // something from happening until the test has looked goes through a gate.
+//
+// Never hold a thread in a test. With the pool down to its last thread, nothing
+// on the main actor can wake either, because a resumed continuation goes through
+// the pool to get there. A test that needs to act part way through synchronous
+// work has to do it from inside that work.
 
 /// Waits until `condition` is true, and returns whether it ever was.
 ///
@@ -20,6 +25,12 @@ func waitUntil(
         try? await Task.sleep(for: .milliseconds(20))
     }
     return try await condition()
+}
+
+/// The waits something asked for, for code that takes its pause as a parameter.
+actor PauseLog {
+    private(set) var pauses: [Duration] = []
+    func record(_ pause: Duration) { pauses.append(pause) }
 }
 
 /// Holds whoever calls `wait()` until the test calls `open()`, so that something

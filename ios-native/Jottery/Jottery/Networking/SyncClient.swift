@@ -100,6 +100,11 @@ actor SyncClient {
         return try await get(url: url)
     }
 
+    /// What the server calls this device, fit to show. Nil if it can't say.
+    func deviceName() async -> String? {
+        (try? await status()).flatMap { SyncValidation.displayName($0.deviceName) }
+    }
+
     /// Get a short-lived SSE token.
     func getSSEToken() async throws -> SSETokenResponse {
         let url = try apiURL("sync/events/token")
@@ -109,6 +114,41 @@ actor SyncClient {
     /// Build the SSE URL with the given token.
     func sseURL(token: String) -> URL? {
         URL(string: "\(endpoint)/api/\(apiVersion)/sync/events?token=\(token)")
+    }
+
+    // MARK: - Attachments
+
+    /// One attachment's blob, or nil if the server has none for this user.
+    func fetchAttachment(id: String) async throws -> SyncAttachment? {
+        do {
+            return try await get(url: attachmentURL(id: id))
+        } catch SyncClientError.httpError(let status, _) where status == 404 {
+            return nil
+        }
+    }
+
+    /// Whether the server holds an attachment's blob, without downloading it.
+    /// Anything other than a yes or a no throws. A proxy that won't pass a HEAD
+    /// gets the full request instead.
+    func hasAttachment(id: String) async throws -> Bool {
+        var request = URLRequest(url: try attachmentURL(id: id))
+        request.httpMethod = "HEAD"
+        if let apiKey {
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
+        do {
+            let (data, response) = try await session.data(for: request)
+            try validateResponse(response, data: data)
+            return true
+        } catch SyncClientError.httpError(let status, _) where status == 404 {
+            return false
+        } catch SyncClientError.httpError(let status, _) where status == 405 {
+            return try await fetchAttachment(id: id) != nil
+        }
+    }
+
+    private func attachmentURL(id: String) throws -> URL {
+        try apiURL("sync/attachments/\(SyncEndpoint.encodePathComponent(id))")
     }
 
     // MARK: - Wrapped Key (Envelope Encryption)
@@ -186,15 +226,70 @@ actor SyncClient {
 
     /// Delete or deactivate the account this device syncs with.
     ///
-    /// Uses a session token from `logIn`, not the device API key.
-    func deleteAccount(sessionId: String, mode: AccountDeletionMode) async throws {
+    /// Uses a session token from `logIn`, not the device API key. Sending the
+    /// password means this doesn't depend on having signed in a moment ago. An
+    /// older server ignores it.
+    func deleteAccount(sessionId: String, mode: AccountDeletionMode, currentPassword: String) async throws {
         let url = try apiURL("user/account?mode=\(mode.rawValue)")
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         request.setValue("Bearer \(sessionId)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(DeleteAccountRequest(currentPassword: currentPassword))
 
         let (data, response) = try await session.data(for: request)
         try validateResponse(response, data: data)
+    }
+
+    /// Log in and delete or deactivate the account, with one password for both,
+    /// so the second can't drift from the first.
+    func deleteAccount(email: String, password: String, mode: AccountDeletionMode) async throws {
+        let sessionId = try await logIn(email: email, password: password)
+        try await deleteAccount(sessionId: sessionId, mode: mode, currentPassword: password)
+    }
+
+    /// What the account holds, and how much of its quota that is.
+    func accountInfo(sessionId: String) async throws -> AccountInfo {
+        let (data, response) = try await session.data(for: sessionRequest("user/account", "GET", sessionId))
+        try validateResponse(response, data: data)
+        return try JSONDecoder().decode(AccountInfo.self, from: data)
+    }
+
+    /// Delete every note the account has on the server. Devices keep their
+    /// copies. The password goes with it, as for deleting the account.
+    func deleteServerNotes(sessionId: String, currentPassword: String) async throws {
+        var request = try sessionRequest("user/notes", "DELETE", sessionId)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(DeleteAccountRequest(currentPassword: currentPassword))
+
+        let (data, response) = try await session.data(for: request)
+        try validateResponse(response, data: data)
+    }
+
+    /// A new inbox token, replacing any there was. The server keeps only its
+    /// hash, so this is the only time it's seen. Callers must not log or store it.
+    func generateInboxToken(sessionId: String) async throws -> String {
+        let (data, response) = try await session.data(for: sessionRequest("user/inbox-token", "POST", sessionId))
+        try validateResponse(response, data: data)
+        return try JSONDecoder().decode(InboxTokenResponse.self, from: data).token
+    }
+
+    func revokeInboxToken(sessionId: String) async throws {
+        let (data, response) = try await session.data(for: sessionRequest("user/inbox-token", "DELETE", sessionId))
+        try validateResponse(response, data: data)
+    }
+
+    /// End a session from `logIn`.
+    func logOut(sessionId: String) async throws {
+        let (data, response) = try await session.data(for: sessionRequest("user/logout", "POST", sessionId))
+        try validateResponse(response, data: data)
+    }
+
+    private func sessionRequest(_ path: String, _ method: String, _ sessionId: String) throws -> URLRequest {
+        var request = URLRequest(url: try apiURL(path))
+        request.httpMethod = method
+        request.setValue("Bearer \(sessionId)", forHTTPHeaderField: "Authorization")
+        return request
     }
 
     // MARK: - Inbox
@@ -364,9 +459,9 @@ enum SyncClientError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidResponse: return "Invalid server response"
+        case .invalidResponse: return L.syncErrorInvalidResponse
         case .httpError(let status, let body): return "HTTP \(status): \(body)"
-        case .unauthorized: return "Unauthorised — check API key"
+        case .unauthorized: return L.syncErrorUnauthorised
         case .deviceRevokeUnsupported: return L.syncDisconnectServerTooOld
         case .accountDisabled: return L.syncErrorAccountDisabled
         case .accountPendingApproval: return L.syncErrorAccountPending

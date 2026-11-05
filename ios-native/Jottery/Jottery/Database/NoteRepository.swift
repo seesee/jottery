@@ -87,6 +87,9 @@ struct NoteRepository: Sendable {
         content: String,
         tags: [String] = [],
         fromInbox: Bool = false,
+        copying original: DecryptedNote? = nil,
+        attachments: [AttachmentRef] = [],
+        syntaxLanguage: String? = nil,
         key: SymmetricKey
     ) throws -> DecryptedNote {
         let encContent = try CryptoService.encryptText(content, key: key)
@@ -98,13 +101,23 @@ struct NoteRepository: Sendable {
         var record = NoteRecord.new(encryptedContent: contentJSON, encryptedTags: tagsJSON)
         if let id { record.id = id }
         record.fromInbox = fromInbox
+        if let original {
+            record.syntaxLanguage = original.syntaxLanguage
+            record.wordWrap = original.wordWrap
+            record.showPreview = original.showPreview
+            record.color = original.color
+        }
+        if !attachments.isEmpty {
+            record.attachments = String(decoding: try JSONEncoder().encode(attachments), as: UTF8.self)
+        }
+        if let syntaxLanguage { record.syntaxLanguage = syntaxLanguage }
 
         // Compute content hash using sync-format tags
         let syncTags = try encryptTagsToSyncFormat(tags, key: key)
         let contentHash = HashChainService.computeContentHash(
             encryptedContent: contentJSON,
             encryptedTags: syncTags,
-            attachmentIds: [],
+            attachmentIds: attachments.map(\.id).sorted(),
             pinned: record.pinned,
             archived: record.archived,
             locked: record.locked,
@@ -266,13 +279,17 @@ struct NoteRepository: Sendable {
     func softDelete(ids: [String]) throws {
         let now = Date().iso8601
         try db.dbPool.write { db in
-            for id in ids {
-                try db.execute(sql: """
-                    UPDATE notes SET
-                        deleted = 1, deleted_at = ?, local_deleted_at = ?, modified_at = ?, needs_sync = 1
-                    WHERE id = ?
-                """, arguments: [now, now, now, id])
-            }
+            try Self.softDelete(ids: ids, at: now, in: db)
+        }
+    }
+
+    static func softDelete(ids: [String], at now: String, in db: Database) throws {
+        for id in ids {
+            try db.execute(sql: """
+                UPDATE notes SET
+                    deleted = 1, deleted_at = ?, local_deleted_at = ?, modified_at = ?, needs_sync = 1
+                WHERE id = ?
+            """, arguments: [now, now, now, id])
         }
     }
 
@@ -368,6 +385,31 @@ struct NoteRepository: Sendable {
                 UPDATE notes SET deleted = 1, deleted_at = ?, local_deleted_at = ? WHERE id = ?
             """, arguments: [now, now, id])
             return .movedToBin
+        }
+    }
+
+    /// The server skipped this note because it was deleted for good after the
+    /// edit `sentModifiedAt` was sent. That edit is what's being set aside, so
+    /// unlike `applyServerDeletion` the waiting flag doesn't save it, but a newer
+    /// edit does: that one is later than the deletion, and the next push brings
+    /// the note back.
+    func applySkippedDeletion(id: String, sentModifiedAt: String?) throws -> ServerDeletionResult {
+        let now = Date().iso8601
+        return try db.dbPool.write { db in
+            guard let row = try Row.fetchOne(
+                db, sql: "SELECT deleted, modified_at FROM notes WHERE id = ?", arguments: [id]
+            ) else {
+                return .nothingToDo
+            }
+            let modifiedAt: String = row["modified_at"]
+            guard modifiedAt == sentModifiedAt else { return .keptLocalEdit }
+            let isDeleted: Bool = row["deleted"]
+            try db.execute(sql: """
+                UPDATE notes SET deleted = 1, deleted_at = COALESCE(deleted_at, ?),
+                    local_deleted_at = COALESCE(local_deleted_at, ?), needs_sync = 0
+                WHERE id = ?
+            """, arguments: [now, now, id])
+            return isDeleted ? .nothingToDo : .movedToBin
         }
     }
 
@@ -562,6 +604,15 @@ struct NoteRepository: Sendable {
         }
     }
 
+    /// Write several notes as one change: all of them, or none.
+    func insertOrReplace(_ records: [NoteRecord]) throws {
+        try db.dbPool.write { db in
+            for record in records {
+                try record.save(db)
+            }
+        }
+    }
+
     /// Write a batch of restored notes in one transaction. A note here that's
     /// at least as new as the backup's copy stays as it is: it holds edits the
     /// backup doesn't, and they'd otherwise be overwritten and synced everywhere.
@@ -619,7 +670,7 @@ struct NoteRepository: Sendable {
     }
 
     /// Decrypt a `NoteRecord` to a `DecryptedNote`.
-    private func decrypt(_ record: NoteRecord, key: SymmetricKey) throws -> DecryptedNote {
+    func decrypt(_ record: NoteRecord, key: SymmetricKey) throws -> DecryptedNote {
         let encContent = try CryptoService.parseEncryptedJSON(record.content)
         let content = try CryptoService.decryptText(encContent, key: key)
 

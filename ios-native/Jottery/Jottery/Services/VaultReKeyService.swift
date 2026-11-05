@@ -18,6 +18,7 @@ import GRDB
 ///   in the attachments JSON
 /// - `attachments`: the blob data, which the server then needs again
 /// - `saved_searches`: name and query
+/// - `settings`: category names and tag colours
 /// - `encryption_metadata`: the verification token (replaced with `newMetadata`)
 ///
 /// Values that already open with the new key are left as they are. A vault
@@ -30,6 +31,8 @@ import GRDB
 /// all: plaintext attachment filenames and blobs that are not encrypted JSON
 /// (a backup restore stores those as-is). Content, tags and saved searches are
 /// always encrypted, so anything there that does not parse aborts the re-key.
+/// Settings are the exception: they're only preferences, so one that can't be
+/// read is left as it is rather than stopping a password change.
 ///
 /// Runs synchronously on the caller's thread. Called from the main actor, that
 /// also keeps any other main-actor write (an editor save with the old key, say)
@@ -53,8 +56,8 @@ enum VaultReKeyService {
 
         var errorDescription: String? {
             switch self {
-            case let .unreadable(table, id):
-                return "Could not re-encrypt \(table) \(id); nothing was changed"
+            case .unreadable:
+                return L.vaultReKeyErrorUnreadable
             }
         }
     }
@@ -129,6 +132,13 @@ enum VaultReKeyService {
                 summary.savedSearches += 1
             }
 
+            if let row = try Row.fetchOne(db, sql: "SELECT color_palette, tag_colors FROM settings WHERE id = 1") {
+                try db.execute(
+                    sql: "UPDATE settings SET color_palette = ?, tag_colors = ? WHERE id = 1",
+                    arguments: [keys.preference(row["color_palette"]), keys.preference(row["tag_colors"])]
+                )
+            }
+
             try newMetadata.save(db)
             return summary
         }
@@ -149,6 +159,15 @@ private struct ReKeyer {
         } catch {
             throw VaultReKeyService.ReKeyError.unreadable(table: table, id: id)
         }
+    }
+
+    /// A preference: re-encrypted if it can be, otherwise as it was.
+    func preference(_ json: String?) -> String? {
+        guard let json, let encrypted = try? CryptoService.parseEncryptedJSON(json),
+              let reEncrypted = try? reEncrypt(encrypted) else {
+            return json
+        }
+        return reEncrypted
     }
 
     /// An attachments JSON array: each filename is re-encrypted, except

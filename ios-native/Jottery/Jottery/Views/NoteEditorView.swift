@@ -15,6 +15,8 @@ struct NoteEditorView: View {
     /// Changes when the text is replaced from outside, for a fresh editor: Runestone
     /// ignores new text while it has focus, and would type over it.
     @State private var editorGeneration = 0
+    /// The calc or outliner editor keeps dying on this note, so it's shown as text.
+    @State private var webEditorIsUnusable = false
     @State private var saveTask: Task<Void, Never>?
     @State private var didSaveDuringSession = false
     @State private var showVersionHistory = false
@@ -23,6 +25,8 @@ struct NoteEditorView: View {
     @State private var showPhotoPicker = false
     @State private var pinchBaseScale: Double = 1.0
     @State private var shareFile: ExportFile?
+    @State private var editorCursor = EditorCursor()
+    @State private var isDropTargeted = false
 
     let note: DecryptedNote
 
@@ -40,6 +44,11 @@ struct NoteEditorView: View {
     /// Whether the note is read-only (locked or archived).
     private var isReadOnly: Bool {
         note.locked || note.archived
+    }
+
+    private func fallBackToPlainText() {
+        webEditorIsUnusable = true
+        appState.reportError(L.editorShownAsPlainText)
     }
 
     var body: some View {
@@ -66,17 +75,25 @@ struct NoteEditorView: View {
                         noteTitles: appState.noteTitles(linkedFrom: content),
                         onOpenNote: { appState.openLinkedNote(id: $0) }
                     )
-                } else if syntaxLanguage == "calc" {
-                    WebCalcEditorView(content: $content, fontSize: appState.editorFontSize, isReadOnly: isReadOnly)
-                } else if syntaxLanguage == "outliner" {
-                    WebOutlinerEditorView(content: $content, fontSize: appState.editorFontSize, isReadOnly: isReadOnly)
+                } else if syntaxLanguage == "calc" && !webEditorIsUnusable {
+                    WebCalcEditorView(
+                        content: $content, fontSize: appState.editorFontSize, isReadOnly: isReadOnly,
+                        onUnusable: fallBackToPlainText
+                    )
+                } else if syntaxLanguage == "outliner" && !webEditorIsUnusable {
+                    WebOutlinerEditorView(
+                        content: $content, fontSize: appState.editorFontSize, isReadOnly: isReadOnly,
+                        onUnusable: fallBackToPlainText
+                    )
                 } else {
                     RunestoneEditorView(
                         text: $content,
                         syntaxLanguage: syntaxLanguage,
                         wordWrap: wordWrap,
                         isEditable: !isReadOnly,
-                        fontSize: appState.editorFontSize
+                        fontSize: appState.editorFontSize,
+                        cursor: editorCursor,
+                        onPasteAttachment: pasteFromClipboard
                     )
                 }
             }
@@ -108,6 +125,23 @@ struct NoteEditorView: View {
                 )
             }
         }
+        .overlay {
+            if isDropTargeted && !isReadOnly {
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(.tint, lineWidth: 2)
+                    .padding(2)
+                    .allowsHitTesting(false)
+            }
+        }
+        .dropDestination(for: DroppedAttachment.self) { dropped, _ in
+            guard !isReadOnly, !dropped.isEmpty else {
+                dropped.forEach { $0.incoming.discard() }
+                return false
+            }
+            // Whatever is selected stays: a drop isn't aimed at it, as a paste is.
+            attach(dropped.map(\.incoming), insertingReferences: true, replacingSelection: false)
+            return true
+        } isTargeted: { isDropTargeted = $0 }
         .simultaneousGesture(
             MagnifyGesture()
                 .onChanged { value in
@@ -198,7 +232,7 @@ struct NoteEditorView: View {
                                 color = name
                                 scheduleSave()
                             } label: {
-                                Label(name.capitalized, systemImage: color == name ? "checkmark.circle.fill" : "circle.fill")
+                                Label(appState.noteColours.displayName(for: name), systemImage: color == name ? "checkmark.circle.fill" : "circle.fill")
                             }
                         }
                         Divider()
@@ -228,26 +262,9 @@ struct NoteEditorView: View {
                         }
 
                         // Runestone only pastes text, so images/PDFs on the
-                        // clipboard are attached from here instead.
+                        // clipboard are attached from here too.
                         if PasteboardService.hasAttachableContent {
-                            Button {
-                                var failureCount = 0
-                                for item in PasteboardService.readItems() {
-                                    do {
-                                        try appState.addAttachment(
-                                            to: note.id,
-                                            data: item.data,
-                                            filename: item.filename,
-                                            mimeType: item.mimeType
-                                        )
-                                    } catch {
-                                        failureCount += 1
-                                    }
-                                }
-                                if failureCount > 0 {
-                                    appState.reportError(L.errorCouldntAddAttachment)
-                                }
-                            } label: {
+                            Button(action: pasteFromClipboard) {
                                 Label(L.editorPasteFromClipboard, systemImage: "doc.on.clipboard")
                             }
                         }
@@ -356,6 +373,7 @@ struct NoteEditorView: View {
             }
         }
         .shareTemporaryFile($shareFile)
+        .focusedSceneValue(\.noteEditorCommands, editorCommands)
         .sheet(isPresented: $showVersionHistory) {
             VersionHistoryView(note: note)
         }
@@ -365,19 +383,12 @@ struct NoteEditorView: View {
         .fileImporter(
             isPresented: $showAttachmentPicker,
             allowedContentTypes: [.data],
-            allowsMultipleSelection: false
+            allowsMultipleSelection: true
         ) { result in
             handleFileImport(result)
         }
         .sheet(isPresented: $showPhotoPicker) {
-            PhotoPickerView { url, filename, mimeType in
-                defer { TemporaryFiles.shared.remove(url) }
-                do {
-                    try appState.addAttachment(to: note.id, url: url, filename: filename, mimeType: mimeType)
-                } catch {
-                    appState.reportError(L.errorCouldntAddAttachment)
-                }
-            }
+            PhotoPickerView { attach($0) }
         }
         .onDisappear {
             saveImmediately()
@@ -388,6 +399,23 @@ struct NoteEditorView: View {
                 Task { await appState.triggerSync() }
             }
         }
+    }
+
+    /// For the menus and their shortcuts, which do what this view's own menu does.
+    private var editorCommands: NoteEditorCommands? {
+        guard !isReadOnly else { return nil }
+        return NoteEditorCommands(
+            isPreviewing: showPreview,
+            wrapsWords: wordWrap,
+            togglePreview: {
+                showPreview.toggle()
+                scheduleSave()
+            },
+            toggleWordWrap: {
+                wordWrap.toggle()
+                scheduleSave()
+            }
+        )
     }
 
     // MARK: - Auto-Save
@@ -531,23 +559,48 @@ struct NoteEditorView: View {
     }
 
     private var syntaxLanguages: [String] {
-        ["markdown", "calc", "outliner", "javascript", "typescript", "python", "perl", "json", "xml", "css", "bash", "sql", "plain"]
+        NoteType.all
     }
 
     // MARK: - Attachment Import
 
     private func handleFileImport(_ result: Result<[URL], Error>) {
-        guard case .success(let urls) = result, let url = urls.first else { return }
-        guard url.startAccessingSecurityScopedResource() else { return }
-        defer { url.stopAccessingSecurityScopedResource() }
+        guard case .success(let urls) = result else { return }
+        attach(urls.map(IncomingAttachment.init(pickedFile:)))
+    }
 
-        let filename = url.lastPathComponent
-        let mimeType = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
-        do {
-            try appState.addAttachment(to: note.id, url: url, filename: filename, mimeType: mimeType)
-        } catch {
-            appState.reportError(L.errorCouldntAddAttachment)
+    private func pasteFromClipboard() {
+        let pasted = PasteboardService.readItems().map {
+            IncomingAttachment(filename: $0.filename, mimeType: $0.mimeType, contents: .data($0.data))
         }
+        attach(pasted, insertingReferences: true)
+    }
+
+    /// Add attachments to the open note and say what didn't go in. A paste or a
+    /// drop also puts them in the text, as they were aimed at it. The pickers add
+    /// to the list below, as on the web.
+    private func attach(
+        _ incoming: [IncomingAttachment],
+        insertingReferences: Bool = false,
+        replacingSelection: Bool = true
+    ) {
+        let noteId = baseline.noteId
+        Task {
+            let result = await appState.addAttachments(incoming, to: noteId)
+            if let problem = result.problem { appState.reportError(problem) }
+            // A slow file may arrive after the user has moved on to another note.
+            guard insertingReferences, !result.added.isEmpty, baseline.noteId == noteId else { return }
+            insertReferences(to: result.added, replacingSelection: replacingSelection)
+        }
+    }
+
+    private func insertReferences(to attachments: [AttachmentRef], replacingSelection: Bool) {
+        let markdown = AttachmentMarkdown.references(to: attachments)
+        if editorCursor.insert(markdown, replacingSelection: replacingSelection) { return }
+        // Calc and outliner notes hold data of their own, which a link would break.
+        guard syntaxLanguage != "calc", syntaxLanguage != "outliner" else { return }
+        // The preview has no cursor.
+        content = AttachmentMarkdown.appending(markdown, to: content)
     }
 }
 
@@ -601,13 +654,18 @@ struct NoteShareActions: View {
 import PhotosUI
 
 struct PhotoPickerView: UIViewControllerRepresentable {
-    let onPick: (URL, String, String) -> Void
+    let onPick: ([IncomingAttachment]) -> Void
+
+    /// As many as the user likes, of what can be attached.
+    static var configuration: PHPickerConfiguration {
+        var config = PHPickerConfiguration()
+        config.selectionLimit = 0
+        config.filter = .any(of: [.images, .videos])
+        return config
+    }
 
     func makeUIViewController(context: Context) -> PHPickerViewController {
-        var config = PHPickerConfiguration()
-        config.selectionLimit = 1
-        config.filter = .any(of: [.images, .videos])
-        let picker = PHPickerViewController(configuration: config)
+        let picker = PHPickerViewController(configuration: Self.configuration)
         picker.delegate = context.coordinator
         return picker
     }
@@ -619,40 +677,69 @@ struct PhotoPickerView: UIViewControllerRepresentable {
     }
 
     class Coordinator: NSObject, PHPickerViewControllerDelegate {
-        let onPick: (URL, String, String) -> Void
+        let onPick: ([IncomingAttachment]) -> Void
 
-        init(onPick: @escaping (URL, String, String) -> Void) {
+        init(onPick: @escaping ([IncomingAttachment]) -> Void) {
             self.onPick = onPick
         }
 
         func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
             picker.dismiss(animated: true)
-            guard let result = results.first else { return }
+            guard !results.isEmpty else { return }
 
-            let itemProvider = result.itemProvider
-
-            // Try to load as file URL
-            if itemProvider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
-                load(itemProvider, type: .image, fallbackMimeType: "image/jpeg")
-            } else if itemProvider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
-                load(itemProvider, type: .movie, fallbackMimeType: "video/mp4")
+            let providers = results.map(\.itemProvider)
+            Task {
+                // One at a time, to keep them in the order they were picked.
+                var incoming: [IncomingAttachment] = []
+                for provider in providers {
+                    incoming.append(await Self.load(provider))
+                }
+                onPick(incoming)
             }
         }
 
-        /// The file only exists during the callback, so it's copied somewhere
-        /// the attachment can be read from. `onPick`'s owner removes the copy.
-        private func load(_ itemProvider: NSItemProvider, type: UTType, fallbackMimeType: String) {
-            itemProvider.loadFileRepresentation(forTypeIdentifier: type.identifier) { [weak self] url, error in
-                guard let url, error == nil,
-                      let copy = try? TemporaryFiles.shared.copy(url, named: url.lastPathComponent) else { return }
-                let filename = url.lastPathComponent
-                let mimeType = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? fallbackMimeType
-                DispatchQueue.main.async {
-                    self?.onPick(copy, filename, mimeType)
+        static func load(_ provider: NSItemProvider, files: TemporaryFiles = .shared) async -> IncomingAttachment {
+            if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+                return await load(provider, type: .image, fallbackMimeType: "image/jpeg", files: files)
+            }
+            if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
+                return await load(provider, type: .movie, fallbackMimeType: "video/mp4", files: files)
+            }
+            return unreadable(named: provider.suggestedName)
+        }
+
+        /// The file only exists during the callback, so it's copied somewhere the
+        /// attachment can be read from.
+        private static func load(
+            _ provider: NSItemProvider,
+            type: UTType,
+            fallbackMimeType: String,
+            files: TemporaryFiles
+        ) async -> IncomingAttachment {
+            let suggestedName = provider.suggestedName
+            return await withCheckedContinuation { continuation in
+                provider.loadFileRepresentation(forTypeIdentifier: type.identifier) { url, error in
+                    guard let url, error == nil else {
+                        continuation.resume(returning: unreadable(named: suggestedName))
+                        return
+                    }
+                    let filename = url.lastPathComponent
+                    continuation.resume(returning: .copying(
+                        url,
+                        filename: filename,
+                        mimeType: IncomingAttachment.mimeType(forFilename: filename, fallback: fallbackMimeType),
+                        files: files
+                    ))
                 }
             }
         }
+
+        private static func unreadable(named name: String?) -> IncomingAttachment {
+            IncomingAttachment(
+                filename: name ?? AttachmentFilename.fallback,
+                mimeType: "application/octet-stream",
+                contents: .refused(.unreadable)
+            )
+        }
     }
 }
-
-

@@ -13,6 +13,8 @@ struct WebEditorView: UIViewRepresentable {
     var fontSize: CGFloat = EditorTheme.defaultFontSize
     /// A locked or archived note: shown, but nothing typed may look accepted.
     var isReadOnly = false
+    /// Called once the page has died more often than it's worth reloading.
+    var onUnusable: () -> Void = {}
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -93,6 +95,7 @@ struct WebEditorView: UIViewRepresentable {
         var currentFontSize: CGFloat = 0
         var currentIsReadOnly: Bool?
         var lastSentContent: String?
+        private var restarts = 0
 
         init(parent: WebEditorView) {
             self.parent = parent
@@ -132,6 +135,19 @@ struct WebEditorView: UIViewRepresentable {
             default:
                 break
             }
+        }
+
+        /// The web content process went away, usually for using too much memory,
+        /// which leaves a blank view. Bring it back, and `ready` sends the content
+        /// again. A note that does this every time has to be read some other way.
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            isReady = false
+            restarts += 1
+            guard restarts <= 2 else {
+                parent.onUnusable()
+                return
+            }
+            webView.reload()
         }
 
         // Prevent navigation away from the loaded bundle

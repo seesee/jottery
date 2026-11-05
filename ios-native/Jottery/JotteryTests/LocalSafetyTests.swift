@@ -85,6 +85,35 @@ struct LocalSafetyTests {
         #expect(protected == [dir.path, path, path + "-wal", path + "-shm"])
     }
 
+    /// Before opening for a vault that's already there, and after for one that's
+    /// new, because the first run has only just created the files.
+    @Test func openingTheVaultsDatabaseProtectsItsFilesBothTimes() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("jottery-protection-tests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let path = dir.appendingPathComponent("test.db").path
+        _ = try DatabaseManager(path: path)
+
+        var protected: [String] = []
+        _ = try DatabaseManager(protecting: path) { protected.append($0) }
+
+        #expect(protected.filter { $0 == path }.count == 2)
+    }
+
+    /// What's waiting in the shared inbox is plaintext, and a wipe that left it
+    /// behind would keep what the user asked to have removed.
+    @Test func wipingRemovesWhatTheShareExtensionLeft() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("jottery-wipe-tests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try SharedInboxStore.write(text: "shared", urls: [], files: [], in: root)
+        let state = try makeUnlockedState()
+
+        state.wipeAllData(sharedInboxRoot: root)
+
+        #expect(SharedInboxStore.pendingItems(in: root).isEmpty)
+    }
+
     // MARK: - Filenames at rest (R2-070, R2-092)
 
     @Test func anAttachmentsNameDoesntReachThePlaintextColumn() throws {
@@ -125,6 +154,43 @@ struct LocalSafetyTests {
 
         let names = try upgraded.dbPool.read { try String.fetchAll($0, sql: "SELECT filename FROM attachments") }
         #expect(names == [""])
+    }
+
+    /// A note binned before this device kept its own time only has `deleted_at`,
+    /// which a server chooses. Taking that as the time would let a note it dated
+    /// long ago be purged at the first unlock after the upgrade (R2-168).
+    @Test func aNoteAlreadyInTheBinGetsItsThirtyDaysFromTheUpgrade() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("jottery-migration-tests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let path = dir.appendingPathComponent("test.db").path
+        let key = SymmetricKey(data: Data(repeating: 7, count: 32))
+        let id: String
+        do {
+            let db = try DatabaseManager(path: path)
+            let versionRepo = VersionRepository(db: db)
+            let repo = NoteRepository(db: db, versionRepo: versionRepo)
+            let note = try repo.create(content: "binned by an older version", key: key)
+            id = note.id
+            try db.dbPool.write { db in
+                try db.execute(
+                    sql: "UPDATE notes SET deleted = 1, deleted_at = '2000-01-01T00:00:00Z', needs_sync = 0 WHERE id = ?",
+                    arguments: [note.id]
+                )
+                try db.execute(sql: "ALTER TABLE attachments DROP COLUMN uploaded")
+                try db.execute(sql: "ALTER TABLE notes DROP COLUMN local_deleted_at")
+                try db.execute(sql: "ALTER TABLE notes DROP COLUMN from_inbox")
+                try db.execute(sql: "DELETE FROM grdb_migrations WHERE identifier = 'ios_009_local_sync_tracking'")
+            }
+            try db.dbPool.close()
+        }
+
+        let upgraded = try DatabaseManager(path: path)
+        let repo = NoteRepository(db: upgraded, versionRepo: VersionRepository(db: upgraded))
+
+        #expect(try repo.purgeOldDeletedNotes() == 0, "purged at the first unlock, on the server's word")
+        #expect(try repo.getRaw(id: id)?.deleted == true)
+        #expect(try repo.purgeOldDeletedNotes(olderThan: -3600) == 1, "it does still get purged in the end")
     }
 
     // MARK: - The inbox (jottery-0szd)
@@ -216,6 +282,22 @@ struct LocalSafetyTests {
         let key = try #require(state.keyManager.masterKey)
         #expect(try state.noteRepo?.get(id: note.id, key: key)?.content == "the edit")
         #expect(state.pendingEditorNote == nil)
+    }
+
+    /// It's the only copy of the edit, so failing again mustn't lose it.
+    @Test func aFlushThatFailsKeepsTheEdit() async throws {
+        let state = try makeUnlockedState()
+        let note = try #require(try state.createNote(content: "before"))
+        var fields = NoteEditorFields(note: note)
+        fields.content = "the edit"
+        try await state.db?.dbPool.write { db in
+            try db.execute(sql: "CREATE TRIGGER no_writes BEFORE UPDATE ON notes BEGIN SELECT RAISE(ABORT, 'disk full'); END")
+        }
+        state.saveEditorEdit(fields)
+
+        #expect(!state.flushPendingEditorNote())
+
+        #expect(state.pendingEditorNote?.content == "the edit")
     }
 
     @Test func aSuccessfulSaveClearsWhatWasStaged() throws {

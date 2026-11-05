@@ -158,8 +158,8 @@ struct SearchQueryFixtureTests {
         #expect(ids("color:blue", in: [red]) == [])
     }
 
-    /// Tag colours are a web setting this device doesn't have.
-    @Test func aTagColourFindsNothingHere() {
+    /// With no tag given a colour, `tag` has nothing to go by.
+    @Test func aTagColourFindsNothingWhenNoTagHasOne() {
         #expect(ids("color:red tag", in: [makeNote(id: "red", color: "red")]) == [])
     }
 

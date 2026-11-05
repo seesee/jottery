@@ -16,6 +16,18 @@ enum KeychainService {
     private static let biometricKeyAccount = "biometric-master-key"
     private static let clientIdAccount = "sync-client-id"
 
+    // MARK: - Everything
+
+    /// Remove every item this app has stored. iOS keeps Keychain items when an
+    /// app is deleted, so this is how the next install lets go of them.
+    static func deleteAll() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+
     // MARK: - API Key
 
     /// Store the sync API key.
@@ -90,7 +102,7 @@ enum KeychainService {
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let context = LAContext()
-                context.localizedReason = "Unlock Jottery"
+                context.localizedReason = L.unlockBiometricReason
 
                 let query: [String: Any] = [
                     kSecClass as String: kSecClassGenericPassword,
@@ -200,11 +212,11 @@ enum KeychainError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .accessControlCreationFailed:
-            return "Failed to create access control for Keychain"
+            return L.keychainErrorAccessControl
         case .storeFailed(let status):
-            return "Keychain store failed: \(status)"
+            return L.keychainErrorStore(Int(status))
         case .retrieveFailed(let status):
-            return "Keychain retrieve failed: \(status)"
+            return L.keychainErrorRetrieve(Int(status))
         }
     }
 }

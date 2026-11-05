@@ -186,6 +186,33 @@ struct ConflictAttachmentTests {
         #expect(attachments.map(\.id) == [serverRef.id])
     }
 
+    /// The copy of the local side has its own attachments, so an image in its text
+    /// has to name them, or it breaks when the original's is removed.
+    @Test func keepBothPointsTheCopysTextAtItsOwnAttachments() async throws {
+        let (service, noteRepo, attachmentRepo, key) = try makeServices()
+        let localRef = try makeStoredAttachment(
+            attachmentRepo: attachmentRepo, key: key, filename: "local.png", blobData: Data("picture".utf8)
+        )
+        let note = try noteRepo.create(content: "original", tags: [], key: key)
+        try noteRepo.addAttachment(noteId: note.id, ref: localRef)
+        let conflict = try makeConflict(
+            noteId: note.id,
+            localContent: "![a](attachment:\(localRef.id))",
+            localAttachments: [localRef],
+            serverContent: "the server's copy",
+            serverAttachments: [],
+            key: key
+        )
+        await service.addPendingConflictForTesting(conflict)
+
+        try await service.resolveConflict(noteId: note.id, strategy: .keepBoth)
+
+        let duplicate = try #require(try noteRepo.listActive(key: key).first { $0.id != note.id })
+        let copied = try #require(duplicate.attachments.first)
+        #expect(copied.id != localRef.id)
+        #expect(duplicate.content == "![a](attachment:\(copied.id))")
+    }
+
     @Test func keepLocalLeavesLocalAttachmentsUntouched() async throws {
         let (service, noteRepo, attachmentRepo, key) = try makeServices()
 

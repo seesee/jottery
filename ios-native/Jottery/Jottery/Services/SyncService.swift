@@ -21,8 +21,14 @@ actor SyncService {
     private var postSyncHandler: (@Sendable (SyncChanges) async -> Void)?
     /// Set when the server said to wait. No sync starts until then.
     private var retryNotBefore: Date?
+    /// The times on whatever the last push sent and heard nothing back about.
+    private var unansweredTimes: [String] = []
+    /// The server's clock, from the last pull.
+    private var lastServerTime: Date?
 
-    init(syncClient: SyncClient, noteRepo: NoteRepository, syncRepo: SyncRepository, versionRepo: VersionRepository, attachmentRepo: AttachmentRepository, savedSearchRepo: SavedSearchRepository, key: SymmetricKey) {
+    /// - Parameter sseClient: replaces the live-updates listener. Only used by
+    ///   tests, which need to reach it once the service has gone.
+    init(syncClient: SyncClient, noteRepo: NoteRepository, syncRepo: SyncRepository, versionRepo: VersionRepository, attachmentRepo: AttachmentRepository, savedSearchRepo: SavedSearchRepository, key: SymmetricKey, sseClient: SSEClient? = nil) {
         self.syncClient = syncClient
         self.noteRepo = noteRepo
         self.syncRepo = syncRepo
@@ -30,7 +36,7 @@ actor SyncService {
         self.attachmentRepo = attachmentRepo
         self.savedSearchRepo = savedSearchRepo
         self.key = key
-        self.sseClient = SSEClient(syncClient: syncClient)
+        self.sseClient = sseClient ?? SSEClient(syncClient: syncClient)
     }
 
     /// Set a handler called after SSE-triggered syncs complete.
@@ -49,8 +55,8 @@ actor SyncService {
     /// thrown once the pull is done.
     @discardableResult
     func sync() async throws -> SyncChanges {
-        guard !isSyncing, !isShutDown else { return .none }
-        if let retryNotBefore, Date() < retryNotBefore { return .none }
+        guard !isSyncing, !isShutDown else { return .skipped }
+        if let retryNotBefore, Date() < retryNotBefore { return .skipped }
         isSyncing = true
         lastError = nil
 
@@ -64,6 +70,7 @@ actor SyncService {
             } catch {
                 throw pushError ?? error
             }
+            changes.clockLooksWrong = clockLooksWrong
             try await finalise()
             await postSyncHandler?(changes)
             if let pushError { throw pushError }
@@ -81,6 +88,20 @@ actor SyncService {
             return (try await push(), nil)
         } catch {
             return (.fullReload, error)
+        }
+    }
+
+    /// How far ahead of its clock the server lets a time be (docs/sync-protocol.md).
+    private static let clockTolerance: TimeInterval = 24 * 60 * 60
+
+    /// The server skips anything dated over a day ahead of it, and says so only
+    /// in `errors`, which aren't for parsing. So this looks at what it answered
+    /// nothing about and compares those times with the server's clock, because
+    /// the device's own clock is the one in doubt.
+    private var clockLooksWrong: Bool {
+        guard let limit = lastServerTime?.addingTimeInterval(Self.clockTolerance) else { return false }
+        return unansweredTimes.contains { time in
+            Date(iso8601: time).map { $0 > limit } ?? false
         }
     }
 
@@ -306,6 +327,7 @@ actor SyncService {
     @discardableResult
     func push() async throws -> SyncChanges {
         var changes = SyncChanges()
+        unansweredTimes = []
         let records = try noteRepo.listNeedingSync()
         let deletions = try syncRepo.getPendingDeletions()
         let savedSearchRecords = try savedSearchRepo.listNeedingSync()
@@ -435,23 +457,23 @@ actor SyncService {
                   let record = try noteRepo.getRaw(id: rejected.id) else { continue }
 
             // Decrypt local content for display
-            let (localContent, localTags) = Self.decryptNoteForDisplay(
+            let local = Self.decryptNoteForDisplay(
                 content: record.content, tags: record.tags, key: key
             )
 
             // Decrypt server content for display (tags are in sync format)
-            let (serverContent, serverTags) = Self.decryptServerNoteForDisplay(
+            let server = Self.decryptServerNoteForDisplay(
                 content: rejected.serverContent, syncTags: rejected.serverTags, key: key
             )
 
             pendingConflicts.append(ConflictInfo(
                 id: rejected.id,
-                localContent: localContent,
-                localTags: localTags,
+                localContent: local?.content ?? "",
+                localTags: local?.tags ?? [],
                 localModifiedAt: record.modifiedAt,
                 localAttachments: Self.decodeAttachments(record.attachments),
-                serverContent: serverContent,
-                serverTags: serverTags,
+                serverContent: server?.content ?? "",
+                serverTags: server?.tags ?? [],
                 serverModifiedAt: rejected.serverModifiedAt,
                 serverEncryptedContent: rejected.serverContent,
                 serverEncryptedTags: rejected.serverTags,
@@ -468,8 +490,45 @@ actor SyncService {
                 serverArchivedAt: rejected.serverArchivedAt,
                 serverLocked: rejected.serverLocked,
                 serverLockedAt: rejected.serverLockedAt,
-                serverColor: rejected.serverColor
+                serverColor: rejected.serverColor,
+                serverDeleted: rejected.serverDeleted,
+                serverDeletedAt: rejected.serverDeletedAt,
+                ancestor: ConflictAncestor.decrypted(
+                    content: rejected.ancestorContent, tags: rejected.ancestorTags, key: key
+                ),
+                localUnreadable: local == nil,
+                serverUnreadable: server == nil
             ))
+        }
+
+        try applySkippedNotes(in: response, batch: batch, pushed: pushed, changes: &changes)
+    }
+
+    /// Act on the notes the server left out of `accepted` and `rejected`. Only
+    /// what this batch sent counts: the server can't name other notes here.
+    private func applySkippedNotes(
+        in response: SyncPushResponse,
+        batch: [NoteRecord],
+        pushed: [String: NoteRecord],
+        changes: inout SyncChanges
+    ) throws {
+        let answered = Set(response.accepted.map(\.id)).union(response.rejected.map(\.id))
+        let deletedElsewhere = Set(response.skippedDeleted ?? []).subtracting(answered)
+
+        for record in batch where !answered.contains(record.id) {
+            guard deletedElsewhere.contains(record.id) else {
+                unansweredTimes += [
+                    record.createdAt, record.modifiedAt, record.deletedAt, record.archivedAt, record.lockedAt,
+                ].compactMap { $0 }
+                continue
+            }
+            // A conflict is an edit the user hasn't decided about yet.
+            guard !pendingConflicts.contains(where: { $0.id == record.id }) else { continue }
+            let result = try noteRepo.applySkippedDeletion(id: record.id, sentModifiedAt: pushed[record.id]?.modifiedAt)
+            if result == .movedToBin {
+                changes.deletedIds.insert(record.id)
+                changes.removedByServerIds.insert(record.id)
+            }
         }
     }
 
@@ -506,9 +565,17 @@ actor SyncService {
                 version: record.version
             )
         }
-        _ = try await syncClient.push(SyncPushRequest(
+        let response = try await syncClient.push(SyncPushRequest(
             notes: [], attachments: [], versions: [], savedSearches: syncSavedSearches
         ))
+
+        // Searches are all this request holds, so an error means one was skipped.
+        // Nothing says which, and sending them all again is harmless.
+        if let errors = response.errors, !errors.isEmpty {
+            Log.debug("[Sync] push: the server skipped saved searches: \(errors.count)")
+            unansweredTimes += records.map(\.modifiedAt)
+            return
+        }
 
         let now = Date().iso8601
         for record in records {
@@ -580,12 +647,15 @@ actor SyncService {
         var fullPullPending = fullPullIfCursorsWork
         var startedAt: Date?
         let pendingDeletions = Set(try syncRepo.getPendingDeletions().map(\.id))
+        lastServerTime = nil
 
         for _ in 0..<Self.maxPullPages {
             let requestedAt = Date()
             let page = SyncValidation.sanitised(try await syncClient.pull(request))
             try apply(page, skipping: pendingDeletions, changes: &changes)
-            startedAt = startedAt ?? page.syncedAt.flatMap { Date(iso8601: $0) } ?? requestedAt
+            let serverTime = page.syncedAt.flatMap { Date(iso8601: $0) }
+            lastServerTime = lastServerTime ?? serverTime
+            startedAt = startedAt ?? serverTime ?? requestedAt
 
             let hasMore = page.hasMore ?? false
             if let nextCursor = SyncValidation.opaqueToken(page.nextCursor) {
@@ -678,7 +748,10 @@ actor SyncService {
         for syncVersion in page.versions {
             do {
                 let attachmentsStr = String(data: (try? JSONEncoder().encode(syncVersion.attachments)) ?? Data("[]".utf8), encoding: .utf8) ?? "[]"
-                try versionRepo.insertOrReplace(NoteVersionRecord(
+                // Never over one this device holds. A version key is only unique
+                // per client, so a match can be someone else's revision, and the
+                // server keeps whichever it heard first (R2-076).
+                try versionRepo.insertIfAbsent(NoteVersionRecord(
                     versionKey: syncVersion.versionKey,
                     noteId: syncVersion.noteId,
                     version: syncVersion.version,
@@ -782,21 +855,21 @@ actor SyncService {
 
     /// Build a ConflictInfo for a pull-side conflict.
     private func buildPullConflictInfo(localRecord: NoteRecord, syncNote: SyncNote) -> ConflictInfo {
-        let (localContent, localTags) = Self.decryptNoteForDisplay(
+        let local = Self.decryptNoteForDisplay(
             content: localRecord.content, tags: localRecord.tags, key: key
         )
-        let (serverContent, serverTags) = Self.decryptServerNoteForDisplay(
+        let server = Self.decryptServerNoteForDisplay(
             content: syncNote.content, syncTags: syncNote.tags, key: key
         )
 
         return ConflictInfo(
             id: syncNote.id,
-            localContent: localContent,
-            localTags: localTags,
+            localContent: local?.content ?? "",
+            localTags: local?.tags ?? [],
             localModifiedAt: localRecord.modifiedAt,
             localAttachments: Self.decodeAttachments(localRecord.attachments),
-            serverContent: serverContent,
-            serverTags: serverTags,
+            serverContent: server?.content ?? "",
+            serverTags: server?.tags ?? [],
             serverModifiedAt: syncNote.modifiedAt,
             serverEncryptedContent: syncNote.content,
             serverEncryptedTags: syncNote.tags,
@@ -813,7 +886,11 @@ actor SyncService {
             serverArchivedAt: syncNote.archivedAt,
             serverLocked: syncNote.locked,
             serverLockedAt: syncNote.lockedAt,
-            serverColor: syncNote.color
+            serverColor: syncNote.color,
+            serverDeleted: syncNote.deleted,
+            serverDeletedAt: syncNote.deletedAt,
+            localUnreadable: local == nil,
+            serverUnreadable: server == nil
         )
     }
 
@@ -827,8 +904,15 @@ actor SyncService {
     /// append to `pendingConflicts`) deliberately don't, since `resolveConflict`
     /// triggers its own full reload once the user resolves them.
     private func processNote(_ syncNote: SyncNote, syncedAt: String, changes: inout SyncChanges) throws {
-        // Skip notes with pending conflicts from push — preserve local version
-        if pendingConflicts.contains(where: { $0.id == syncNote.id }) {
+        // A conflict counts as an edit that hasn't been sent, so the note here
+        // stays as it is: it may be the only copy of the local side. The conflict
+        // moves on to the newest server copy, though, because the pull won't
+        // deliver this one again, and Keep Server has to take what's there now.
+        if let waiting = pendingConflicts.firstIndex(where: { $0.id == syncNote.id }) {
+            if syncNote.contentHash != pendingConflicts[waiting].serverContentHash,
+               let localRecord = try noteRepo.getRaw(id: syncNote.id) {
+                pendingConflicts[waiting] = buildPullConflictInfo(localRecord: localRecord, syncNote: syncNote)
+            }
             return
         }
 
@@ -918,6 +1002,7 @@ actor SyncService {
     func resolveConflict(noteId: String, strategy: ConflictResolutionStrategy) throws {
         guard let conflictIndex = pendingConflicts.firstIndex(where: { $0.id == noteId }) else { return }
         let conflict = pendingConflicts[conflictIndex]
+        guard conflict.allows(strategy) else { throw ConflictResolutionError.unreadable }
         let now = Date().iso8601
 
         switch strategy {
@@ -964,12 +1049,20 @@ actor SyncService {
             // Accept server version for the existing note
             let record = try recreateRecordIfMissing(noteId: noteId, conflict: conflict)
             let serverRecord = try Self.applyingServerCopy(from: conflict, to: record, syncedAt: now, key: key)
-            // insertOrReplace (upsert) rather than updateRaw: the record may have
-            // just been recreated in-memory above and doesn't exist in the DB yet.
-            try noteRepo.insertOrReplace(serverRecord)
 
-            // Create a duplicate note with the local content
-            let encContent = try CryptoService.encryptText(conflict.localContent, key: key)
+            // Copy attachment blobs under new ids rather than sharing them with
+            // the original — see copyAttachments' doc comment for why sharing
+            // ids is unsafe (single-attachment removal deletes by explicit id).
+            let duplicateAttachments = try copyAttachments(conflict.localAttachments)
+            let newIds = Dictionary(
+                zip(conflict.localAttachments.map(\.id), duplicateAttachments.map(\.id)),
+                uniquingKeysWith: { first, _ in first }
+            )
+
+            // Create a duplicate note with the local content, whose references
+            // have to name its own attachments.
+            let localContent = NoteCombining.content(conflict.localContent, followingCopies: newIds)
+            let encContent = try CryptoService.encryptText(localContent, key: key)
             let encTags = try CryptoService.encryptStringArray(conflict.localTags, key: key)
             let contentJSON = try CryptoService.serializeEncryptedJSON(encContent)
             let tagsJSON = try CryptoService.serializeEncryptedJSON(encTags)
@@ -979,12 +1072,11 @@ actor SyncService {
             duplicate.wordWrap = record.wordWrap
             duplicate.showPreview = record.showPreview
             duplicate.color = record.color
-            // Copy attachment blobs under new ids rather than sharing them with
-            // the original — see copyAttachments' doc comment for why sharing
-            // ids is unsafe (single-attachment removal deletes by explicit id).
-            let duplicateAttachments = try copyAttachments(conflict.localAttachments)
             duplicate.attachments = Self.encodeAttachments(duplicateAttachments)
-            try noteRepo.insertOrReplace(duplicate)
+            // Together, or stopping between them would lose the local side:
+            // the original overwritten, and no copy made. A copied blob left
+            // behind costs space and nothing else.
+            try noteRepo.insertOrReplace([serverRecord, duplicate])
         }
 
         pendingConflicts.remove(at: conflictIndex)
@@ -1014,6 +1106,11 @@ actor SyncService {
         if let locked = conflict.serverLocked {
             updated.locked = locked
             updated.lockedAt = conflict.serverLockedAt
+        }
+        if let deleted = conflict.serverDeleted {
+            updated.deleted = deleted
+            updated.deletedAt = deleted ? conflict.serverDeletedAt ?? syncedAt : nil
+            updated.localDeletedAt = deleted ? updated.localDeletedAt ?? syncedAt : nil
         }
         updated.syntaxLanguage = conflict.serverSyntaxLanguage ?? updated.syntaxLanguage
         updated.wordWrap = conflict.serverWordWrap ?? updated.wordWrap
@@ -1065,7 +1162,7 @@ actor SyncService {
     // MARK: - Decryption Helpers
 
     /// Decrypt storage-format content and tags for display.
-    private static func decryptNoteForDisplay(content: String, tags: String, key: SymmetricKey) -> (String, [String]) {
+    private static func decryptNoteForDisplay(content: String, tags: String, key: SymmetricKey) -> (content: String, tags: [String])? {
         do {
             let encContent = try CryptoService.parseEncryptedJSON(content)
             let plainContent = try CryptoService.decryptText(encContent, key: key)
@@ -1081,12 +1178,12 @@ actor SyncService {
             }
             return (plainContent, plainTags)
         } catch {
-            return ("", [])
+            return nil
         }
     }
 
     /// Decrypt server content and sync-format tags for display.
-    private static func decryptServerNoteForDisplay(content: String, syncTags: [String], key: SymmetricKey) -> (String, [String]) {
+    private static func decryptServerNoteForDisplay(content: String, syncTags: [String], key: SymmetricKey) -> (content: String, tags: [String])? {
         do {
             let encContent = try CryptoService.parseEncryptedJSON(content)
             let plainContent = try CryptoService.decryptText(encContent, key: key)
@@ -1103,7 +1200,7 @@ actor SyncService {
             }
             return (plainContent, tags)
         } catch {
-            return ("", [])
+            return nil
         }
     }
 
@@ -1197,7 +1294,8 @@ actor SyncService {
                 mimeType: ref.mimeType,
                 size: ref.size,
                 data: newId,
-                thumbnailData: ref.thumbnailData
+                // Would name the original's blob, the sharing this exists to avoid.
+                thumbnailData: nil
             ))
         }
         return copied
@@ -1319,7 +1417,7 @@ enum SyncServiceError: LocalizedError, Equatable {
 }
 
 // Extension to set the callback
-private extension SSEClient {
+extension SSEClient {
     func setOnSyncEvent(_ handler: @escaping @Sendable () async -> Void) {
         self.onSyncEvent = handler
     }

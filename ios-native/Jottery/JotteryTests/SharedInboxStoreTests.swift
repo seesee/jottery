@@ -119,6 +119,21 @@ struct SharedInboxStoreTests {
         #expect(SharedInboxStore.pendingItems(in: root).count == 1)
     }
 
+    /// A shared file is plaintext until the app imports it.
+    @Test func aCopiedFileIsProtected() throws {
+        let root = try makeRoot()
+        let source = root.appendingPathComponent("source.txt")
+        try Data("shared".utf8).write(to: source)
+        let staging = try SharedInboxStore.begin(in: root)
+
+        var protected: [URL] = []
+        let file = try staging.add(copying: source, index: 0, filename: "a.txt", mimeType: "text/plain") {
+            protected.append($0)
+        }
+
+        #expect(protected == [staging.directory.appendingPathComponent(file.storedName)])
+    }
+
     @Test func removeAllTakesEverything() throws {
         let root = try makeRoot()
         try SharedInboxStore.write(text: "gone", urls: [], files: [], in: root)

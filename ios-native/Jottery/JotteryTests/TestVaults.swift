@@ -25,7 +25,7 @@ enum TestVaults {
     static func makeLegacyVault(password: String, iterations: UInt32 = 1_000) async throws -> AppState {
         let state = try makeState()
         let salt = CryptoService.generateSalt()
-        let key = CryptoService.deriveKey(password: password, salt: salt, iterations: iterations)
+        let key = try CryptoService.deriveKey(password: password, salt: salt, iterations: iterations)
         let verification = try CryptoService.serializeEncryptedJSON(
             CryptoService.encryptText(EncryptionMetadata.verificationPlaintext, key: key)
         )

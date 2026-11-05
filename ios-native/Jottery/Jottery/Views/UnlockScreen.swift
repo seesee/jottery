@@ -5,12 +5,15 @@ struct UnlockScreen: View {
     @State private var password = ""
     @State private var error: String?
     @State private var isUnlocking = false
-    @State private var showBiometricPrompt = false
     @State private var failedAttempts = 0
     @State private var showDeleteConfirm = false
     @State private var didAutoAttemptBiometric = false
 
     var body: some View {
+        ScrollableScreen { form }
+    }
+
+    private var form: some View {
         VStack(spacing: 32) {
             Spacer()
 
@@ -95,14 +98,6 @@ struct UnlockScreen: View {
         } message: {
             Text(L.unlockDeleteConfirmMessage(unsyncedNotes: appState.notesOnlyOnThisDevice()))
         }
-        .alert(L.unlockEnableFaceIdTitle, isPresented: $showBiometricPrompt) {
-            Button(L.unlockEnableFaceIdAction) {
-                try? appState.keyManager.enableBiometricUnlock()
-            }
-            Button(L.unlockEnableFaceIdLater, role: .cancel) {}
-        } message: {
-            Text(L.unlockEnableFaceIdMessage)
-        }
     }
 
     private func unlock() {
@@ -115,11 +110,8 @@ struct UnlockScreen: View {
                 password = ""
                 isUnlocking = false
 
-                // Offer to enable biometrics after first successful password unlock
-                if appState.keyManager.isBiometricAvailable
-                    && !appState.keyManager.isBiometricEnabled {
-                    showBiometricPrompt = true
-                }
+                // Offer to enable biometrics after a successful password unlock.
+                appState.offerFaceIDIfUseful()
             } catch AppStateError.wrongPassword {
                 failedAttempts += 1
                 if failedAttempts >= 5 {

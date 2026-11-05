@@ -926,6 +926,597 @@ struct SyncProtocolTests {
         #expect(resolved.locked)
     }
 
+    // MARK: - Notes the server skipped (checklist item 8)
+
+    private func answer(
+        skippedDeleted: [String]? = nil, errors: [String]? = nil
+    ) -> ScriptedServerProtocol.Reply {
+        var response = SyncPushResponse(accepted: [], rejected: [])
+        response.skippedDeleted = skippedDeleted
+        response.errors = errors
+        return .init(body: (try? JSONEncoder().encode(response)) ?? Data())
+    }
+
+    @Test func aNoteDeletedElsewhereGoesToTheBinAndIsNotSentAgain() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "edited before it was deleted elsewhere", key: key)
+        ScriptedServerProtocol.pushHandler = { self.answer(skippedDeleted: $0.notes.map(\.id)) }
+
+        let changes = try await fixture.service.sync()
+
+        let record = try #require(try fixture.repo.getRaw(id: note.id))
+        #expect(record.deleted, "the bin, not gone: nothing the server says can delete a note outright")
+        #expect(!record.needsSync)
+        #expect(record.localDeletedAt != nil, "or the purge wouldn't know when it arrived")
+        #expect(changes.deletedIds.contains(note.id))
+        #expect(changes.removedByServerIds.contains(note.id), "it counts towards the warning about mass removal")
+
+        let requests = ScriptedServerProtocol.pushRequests.count
+        try await fixture.service.sync()
+        #expect(ScriptedServerProtocol.pushRequests.count == requests)
+    }
+
+    @Test func aNoteEditedSinceItWasSentIsKeptAndSentAgain() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "first edit", key: key)
+        let repo = fixture.repo
+        ScriptedServerProtocol.pushHandler = { request in
+            if var record = try? repo.getRaw(id: note.id) {
+                record.modifiedAt = Date(timeIntervalSinceNow: 5).iso8601
+                try? repo.updateRaw(record)
+            }
+            return self.answer(skippedDeleted: request.notes.map(\.id))
+        }
+
+        let changes = try await fixture.service.sync()
+
+        let record = try #require(try fixture.repo.getRaw(id: note.id))
+        #expect(!record.deleted, "this edit is later than the deletion, so it brings the note back")
+        #expect(record.needsSync)
+        #expect(!changes.removedByServerIds.contains(note.id))
+    }
+
+    /// An answer is the server's word on a note, whatever else the response names.
+    @Test func aNoteTheServerAnsweredForIsntBinnedForBeingNamedAsWell() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "accepted and named", key: key)
+        ScriptedServerProtocol.pushHandler = { request in
+            var response = SyncPushResponse(accepted: request.notes.map { SyncAccepted(id: $0.id) }, rejected: [])
+            response.skippedDeleted = request.notes.map(\.id)
+            return .init(body: (try? JSONEncoder().encode(response)) ?? Data())
+        }
+
+        let changes = try await fixture.service.sync()
+
+        #expect(try #require(try fixture.repo.getRaw(id: note.id)).deleted == false)
+        #expect(!changes.removedByServerIds.contains(note.id))
+    }
+
+    /// Every batch after the first would get the same answer.
+    @Test func theQuotaStopsTheBatchesStillToGo() async throws {
+        let fixture = try makeFixture()
+        for index in 0...SyncService.pushChunkSize {
+            _ = try fixture.repo.create(content: "note \(index)", key: key)
+        }
+        ScriptedServerProtocol.pushHandler = { _ in
+            .init(status: 507, body: Data(#"{"error":"x","code":"storage_quota_exceeded"}"#.utf8))
+        }
+
+        await #expect {
+            try await fixture.service.sync()
+        } throws: { error in
+            if case SyncClientError.storageQuotaExceeded = error { return true }
+            return false
+        }
+
+        #expect(ScriptedServerProtocol.pushRequests.count == 1)
+    }
+
+    /// With nothing scheduled, the device would stay quiet until the next edit.
+    @Test @MainActor func aBusyServerIsAskedAgainAfterTheWaitItNamed() async throws {
+        ScriptedServerProtocol.reset()
+        let state = try TestVaults.makeState()
+        state.keyManager.unlockWithKeyData(Data(repeating: 7, count: 32))
+        state.isLocked = false
+        _ = try state.createNote(content: "waiting to go up")
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [ScriptedServerProtocol.self]
+        state.syncService = SyncService(
+            syncClient: SyncClient(endpoint: "https://sync.example.test", apiKey: "device-key", configuration: configuration),
+            noteRepo: try #require(state.noteRepo),
+            syncRepo: try #require(state.syncRepo),
+            versionRepo: try #require(state.versionRepo),
+            attachmentRepo: try #require(state.attachmentRepo),
+            savedSearchRepo: try #require(state.savedSearchRepo),
+            key: try #require(state.keyManager.masterKey)
+        )
+        state.syncEnabled = true
+        let pauses = PauseLog()
+        state.autoSyncPause = { await pauses.record($0) }
+        ScriptedServerProtocol.pushHandler = { _ in .init(status: 503, headers: ["Retry-After": "90"]) }
+
+        await state.triggerSync()
+
+        await waitUntil { await !pauses.pauses.isEmpty }
+        #expect(await pauses.pauses.first == .seconds(90))
+        state.teardownSync()
+    }
+
+    /// A hostile or broken server doesn't get to silence a device for days.
+    @Test func aWaitOverAnHourIsCutToAnHour() async throws {
+        let fixture = try makeFixture()
+        _ = try fixture.repo.create(content: "a note", key: key)
+        ScriptedServerProtocol.pushHandler = { _ in .init(status: 503, headers: ["Retry-After": "999999"]) }
+
+        await #expect {
+            try await fixture.service.sync()
+        } throws: { error in
+            if case SyncClientError.serverBusy(let wait) = error { return wait == 3600 }
+            return false
+        }
+    }
+
+    @Test func theServerCantSkipANoteItWasntSent() async throws {
+        let fixture = try makeFixture()
+        let bystander = try synced(fixture.repo)
+        _ = try fixture.repo.create(content: "the only note pushed", key: key)
+        ScriptedServerProtocol.pushHandler = { _ in self.answer(skippedDeleted: [bystander.id]) }
+
+        try await fixture.service.sync()
+
+        #expect(try #require(try fixture.repo.getRaw(id: bystander.id)).deleted == false)
+    }
+
+    @Test func aNoteInConflictIsLeftForTheUserToDecide() async throws {
+        let fixture = try makeFixture()
+        let record = try synced(fixture.repo)
+        var edited = record
+        edited.needsSync = true
+        try fixture.repo.updateRaw(edited)
+        await fixture.service.addPendingConflictForTesting(try conflict(on: record, archived: nil, locked: nil, color: nil))
+        ScriptedServerProtocol.pushHandler = { self.answer(skippedDeleted: $0.notes.map(\.id)) }
+
+        try await fixture.service.sync()
+
+        #expect(try #require(try fixture.repo.getRaw(id: record.id)).deleted == false)
+    }
+
+    @Test func aNoteAlreadyInTheBinIsNoLongerSent() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "binned here, deleted for good elsewhere", key: key)
+        try fixture.repo.softDelete(id: note.id)
+        ScriptedServerProtocol.pushHandler = { self.answer(skippedDeleted: $0.notes.map(\.id)) }
+
+        let changes = try await fixture.service.sync()
+
+        let record = try #require(try fixture.repo.getRaw(id: note.id))
+        #expect(record.deleted)
+        #expect(!record.needsSync)
+        #expect(!changes.removedByServerIds.contains(note.id), "it wasn't in use")
+    }
+
+    // MARK: - A server that keeps deleting (R2-069, R2-168)
+
+    /// The web's hold had this hole: a note held in the bin counted as not live, so
+    /// the same deletions sent again deleted it from there. Nothing a server says
+    /// may take a note out of the bin, however often it says it.
+    @Test func aRepeatedDeletionCantTakeANoteOutOfTheBin() async throws {
+        let fixture = try makeFixture()
+        let records = try (0..<12).map { _ in try synced(fixture.repo) }
+        let deletions = records.map { SyncDeletion(id: $0.id, deletedAt: "2000-01-01T00:00:00Z") }
+        ScriptedServerProtocol.pullReplies = (0..<4).map { _ in page(deletions: deletions) }
+
+        let first = try await fixture.service.pull()
+        #expect(first.removedByServerIds.count == 12)
+        let binnedAt = try records.map { try fixture.repo.getRaw(id: $0.id)?.localDeletedAt }
+
+        for _ in 0..<3 {
+            let again = try await fixture.service.pull()
+            #expect(again.removedByServerIds.isEmpty, "already in the bin, so not removed again")
+        }
+
+        for (record, time) in zip(records, binnedAt) {
+            let stored = try #require(try fixture.repo.getRaw(id: record.id))
+            #expect(stored.deleted)
+            #expect(stored.localDeletedAt == time, "repeating it can't move the purge")
+        }
+        #expect(try fixture.repo.purgeOldDeletedNotes() == 0)
+        #expect(try records.allSatisfy { try fixture.repo.getRaw(id: $0.id) != nil })
+    }
+
+    /// Every way a server can put a note in the bin, with the oldest date it can.
+    @Test func aDeletionDatedLongAgoNeverPurgesSooner() async throws {
+        let fixture = try makeFixture()
+        let tombstoned = try synced(fixture.repo)
+        let pulled = try synced(fixture.repo)
+        let skipped = try fixture.repo.create(content: "edited, then deleted elsewhere", key: key)
+        let longAgo = "2000-01-01T00:00:00Z"
+        ScriptedServerProtocol.pushHandler = { self.answer(skippedDeleted: $0.notes.map(\.id)) }
+        ScriptedServerProtocol.pullReplies = [page(
+            notes: [try remoteNote(id: pulled.id, ciphertext: pulled.content, deleted: true, deletedAt: longAgo)],
+            deletions: [SyncDeletion(id: tombstoned.id, deletedAt: longAgo)]
+        )]
+
+        try await fixture.service.sync()
+
+        #expect(try fixture.repo.purgeOldDeletedNotes() == 0)
+        for id in [tombstoned.id, pulled.id, skipped.id] {
+            #expect(try fixture.repo.getRaw(id: id)?.deleted == true)
+        }
+    }
+
+    @Test func keepServerWithADateLongAgoDoesntPurgeSooner() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "kept in the bin, for now", key: key)
+        refuse(deleted: true, deletedAt: "2000-01-01T00:00:00Z")
+        try await fixture.service.sync()
+
+        try await fixture.service.resolveConflict(noteId: note.id, strategy: .keepServer)
+
+        #expect(try fixture.repo.purgeOldDeletedNotes() == 0)
+        #expect(try fixture.repo.getRaw(id: note.id) != nil)
+    }
+
+    // MARK: - A server copy that's in the bin
+
+    private func rejection(of note: SyncNote, deleted: Bool? = nil, deletedAt: String? = nil) -> SyncRejected {
+        SyncRejected(
+            id: note.id, reason: "conflict", serverModifiedAt: "2026-11-05T09:00:00Z",
+            serverContent: note.content, serverTags: [], serverVersion: 9, serverAttachments: [],
+            serverPinned: false, serverDeleted: deleted, serverDeletedAt: deletedAt,
+            serverContentHash: "server-hash", serverHashChain: ["server-hash"]
+        )
+    }
+
+    private func refuse(deleted: Bool?, deletedAt: String? = nil) {
+        ScriptedServerProtocol.pushHandler = { request in
+            let rejected = request.notes.map { self.rejection(of: $0, deleted: deleted, deletedAt: deletedAt) }
+            let response = SyncPushResponse(accepted: [], rejected: rejected)
+            return .init(body: (try? JSONEncoder().encode(response)) ?? Data())
+        }
+    }
+
+    /// Later pulls skip a note whose hash matches, so taking the server's copy
+    /// without its place in the bin would leave the two different for good.
+    @Test func keepServerTakesTheServersBin() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "edited while it sat in the bin elsewhere", key: key)
+        refuse(deleted: true, deletedAt: "2026-11-05T09:00:00Z")
+
+        try await fixture.service.sync()
+        try await fixture.service.resolveConflict(noteId: note.id, strategy: .keepServer)
+
+        let record = try #require(try fixture.repo.getRaw(id: note.id))
+        #expect(record.deleted)
+        #expect(record.deletedAt == "2026-11-05T09:00:00Z")
+        #expect(record.localDeletedAt != nil, "or the purge wouldn't know when it arrived")
+    }
+
+    @Test func anOlderServerThatDoesntSayLeavesTheNoteWhereItIs() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "conflict with an older server", key: key)
+        refuse(deleted: nil)
+
+        try await fixture.service.sync()
+        try await fixture.service.resolveConflict(noteId: note.id, strategy: .keepServer)
+
+        #expect(try #require(try fixture.repo.getRaw(id: note.id)).deleted == false)
+    }
+
+    @Test func keepServerBringsANoteOutOfTheBinIfTheServersCopyIsLive() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "binned here, live there", key: key)
+        try fixture.repo.softDelete(id: note.id)
+        refuse(deleted: false)
+
+        try await fixture.service.sync()
+        try await fixture.service.resolveConflict(noteId: note.id, strategy: .keepServer)
+
+        let record = try #require(try fixture.repo.getRaw(id: note.id))
+        #expect(!record.deleted)
+        #expect(record.deletedAt == nil)
+        #expect(record.localDeletedAt == nil)
+    }
+
+    // MARK: - A clock that's badly wrong
+
+    /// Well before any note made by these tests.
+    private let serverLongAgo = "2020-01-01T00:00:00Z"
+
+    @Test func aNoteDatedFarAheadOfTheServerWarnsAboutTheClock() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "dated by a clock years ahead", key: key)
+        ScriptedServerProtocol.pushHandler = { _ in self.answer(errors: ["note: modifiedAt is more than 24 hours ahead"]) }
+        ScriptedServerProtocol.pullReplies = [page(syncedAt: serverLongAgo)]
+
+        let changes = try await fixture.service.sync()
+
+        #expect(changes.clockLooksWrong)
+        #expect(try #require(try fixture.repo.getRaw(id: note.id)).needsSync, "it goes up once the clock is right")
+    }
+
+    /// The server's clock is the judge: the device's own is the one in doubt.
+    @Test func aNoteWithinADayOfTheServerIsNotBlamedOnTheClock() async throws {
+        let fixture = try makeFixture()
+        _ = try fixture.repo.create(content: "skipped for some other reason", key: key)
+        ScriptedServerProtocol.pushHandler = { _ in self.answer(errors: ["something else"]) }
+        ScriptedServerProtocol.pullReplies = [page(syncedAt: Date(timeIntervalSinceNow: -3_600).iso8601)]
+
+        let changes = try await fixture.service.sync()
+
+        #expect(!changes.clockLooksWrong)
+    }
+
+    @Test func aNoteTheServerAnsweredForIsNotBlamedOnTheClock() async throws {
+        let fixture = try makeFixture()
+        _ = try fixture.repo.create(content: "accepted, whatever its date", key: key)
+        ScriptedServerProtocol.pullReplies = [page(syncedAt: serverLongAgo)]
+
+        let changes = try await fixture.service.sync()
+
+        #expect(!changes.clockLooksWrong)
+    }
+
+    @Test func aNoteSkippedAsDeletedIsNotBlamedOnTheClock() async throws {
+        let fixture = try makeFixture()
+        _ = try fixture.repo.create(content: "deleted elsewhere", key: key)
+        ScriptedServerProtocol.pushHandler = { self.answer(skippedDeleted: $0.notes.map(\.id)) }
+        ScriptedServerProtocol.pullReplies = [page(syncedAt: serverLongAgo)]
+
+        let changes = try await fixture.service.sync()
+
+        #expect(!changes.clockLooksWrong)
+    }
+
+    @Test func aPullThatGivesNoServerTimeWarnsOfNothing() async throws {
+        let fixture = try makeFixture()
+        _ = try fixture.repo.create(content: "no time to judge it by", key: key)
+        ScriptedServerProtocol.pushHandler = { _ in self.answer(errors: ["skipped"]) }
+        ScriptedServerProtocol.pullReplies = [page(syncedAt: nil)]
+
+        let changes = try await fixture.service.sync()
+
+        #expect(!changes.clockLooksWrong)
+    }
+
+    /// A search is all that request holds, so an error means one was skipped.
+    /// Nothing says which, and sending them all again is harmless.
+    @Test func aSavedSearchTheServerSkippedStaysQueuedAndWarnsAboutTheClock() async throws {
+        let fixture = try makeFixture()
+        let searches = SavedSearchRepository(db: fixture.db)
+        let search = try searches.create(name: "Dated ahead", query: "#clock", key: key)
+        ScriptedServerProtocol.pushHandler = { _ in self.answer(errors: ["search: modifiedAt is more than 24 hours ahead"]) }
+        ScriptedServerProtocol.pullReplies = [page(syncedAt: serverLongAgo)]
+
+        let changes = try await fixture.service.sync()
+
+        #expect(changes.clockLooksWrong)
+        #expect(try searches.listNeedingSync().map(\.id) == [search.id])
+    }
+
+    // MARK: - Pulling a note with a conflict waiting (web wave 2)
+
+    /// A conflict is an unsent edit: this copy may be the only one of it.
+    @Test func aPullLeavesTheLocalSideOfAConflictAlone() async throws {
+        let fixture = try makeFixture()
+        let record = try synced(fixture.repo)
+        await fixture.service.addPendingConflictForTesting(try conflict(on: record, archived: nil, locked: nil, color: nil))
+        ScriptedServerProtocol.pullReplies = [page(notes: [
+            try remoteNote(id: record.id, content: "newer on the server", contentHash: "newer-hash"),
+        ])]
+
+        try await fixture.service.pull()
+
+        #expect(try #require(try fixture.repo.getRaw(id: record.id)).content == record.content)
+    }
+
+    /// The push's refusal leaves the edit queued, so a restart, which forgets
+    /// conflicts held in memory, finds it again instead of overwriting it.
+    @Test func aRefusedPushStaysAnUnsentEdit() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "refused by the server", key: key)
+        ScriptedServerProtocol.pushHandler = { request in
+            let response = SyncPushResponse(accepted: [], rejected: request.notes.map { self.rejection(of: $0) })
+            return .init(body: (try? JSONEncoder().encode(response)) ?? Data())
+        }
+
+        try await fixture.service.sync()
+
+        #expect(try #require(try fixture.repo.getRaw(id: note.id)).needsSync)
+    }
+
+    /// Keep Server has to take the server as it is now. The cursor has moved past
+    /// this note, so a copy passed over here would never arrive again.
+    @Test func aConflictShowsTheNewestServerCopy() async throws {
+        let fixture = try makeFixture()
+        let record = try synced(fixture.repo)
+        var edited = record
+        edited.needsSync = true
+        try fixture.repo.updateRaw(edited)
+        await fixture.service.addPendingConflictForTesting(try conflict(on: record, archived: nil, locked: nil, color: nil))
+        ScriptedServerProtocol.pullReplies = [page(notes: [
+            try remoteNote(id: record.id, content: "newest on the server", contentHash: "newest-hash"),
+        ])]
+
+        try await fixture.service.pull()
+
+        let waiting = await fixture.service.pendingConflicts
+        #expect(waiting.count == 1)
+        #expect(waiting.first?.serverContent == "newest on the server")
+        #expect(waiting.first?.serverContentHash == "newest-hash")
+
+        try await fixture.service.resolveConflict(noteId: record.id, strategy: .keepServer)
+
+        let resolved = try #require(try fixture.repo.get(id: record.id, key: key))
+        #expect(resolved.content == "newest on the server")
+    }
+
+    // MARK: - A side of a conflict that won't decrypt (R2-071)
+
+    /// Text the server could send, encrypted with some other key.
+    private func undecryptable() throws -> String {
+        let other = SymmetricKey(data: Data(repeating: 9, count: 32))
+        return try CryptoService.serializeEncryptedJSON(CryptoService.encryptText("not for this key", key: other))
+    }
+
+    private func refuseWith(serverContent: String) {
+        ScriptedServerProtocol.pushHandler = { request in
+            let rejected = request.notes.map { note in
+                SyncRejected(
+                    id: note.id, reason: "conflict", serverModifiedAt: "2026-11-05T09:00:00Z",
+                    serverContent: serverContent, serverTags: [], serverVersion: 9,
+                    serverAttachments: [], serverPinned: false,
+                    serverContentHash: "server-hash", serverHashChain: ["server-hash"]
+                )
+            }
+            return .init(body: (try? JSONEncoder().encode(SyncPushResponse(accepted: [], rejected: rejected))) ?? Data())
+        }
+    }
+
+    @Test(arguments: [ConflictResolutionStrategy.keepServer, .keepBoth])
+    func aServerCopyThatWontDecryptCantBeTaken(strategy: ConflictResolutionStrategy) async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "the only readable copy", key: key)
+        refuseWith(serverContent: try undecryptable())
+
+        try await fixture.service.sync()
+
+        let waiting = try #require(await fixture.service.pendingConflicts.first)
+        #expect(waiting.serverUnreadable)
+        await #expect(throws: ConflictResolutionError.unreadable) {
+            try await fixture.service.resolveConflict(noteId: note.id, strategy: strategy)
+        }
+
+        let kept = try #require(try fixture.repo.get(id: note.id, key: key))
+        #expect(kept.content == "the only readable copy")
+        #expect(await fixture.service.pendingConflicts.count == 1, "the conflict stays until it can be settled")
+    }
+
+    @Test func plaintextFromTheServerIsNotTakenForANote() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "the only readable copy", key: key)
+        refuseWith(serverContent: "plaintext chosen by the server")
+
+        try await fixture.service.sync()
+
+        let waiting = try #require(await fixture.service.pendingConflicts.first)
+        #expect(waiting.serverUnreadable)
+        #expect(waiting.serverContent.isEmpty, "never shown as if it were the server's version")
+        await #expect(throws: ConflictResolutionError.unreadable) {
+            try await fixture.service.resolveConflict(noteId: note.id, strategy: .keepBoth)
+        }
+    }
+
+    @Test func aServerCopyThatWontDecryptCanStillBeOverruled() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "kept over a copy nobody can read", key: key)
+        refuseWith(serverContent: try undecryptable())
+        try await fixture.service.sync()
+
+        try await fixture.service.resolveConflict(noteId: note.id, strategy: .keepLocal)
+
+        let record = try #require(try fixture.repo.getRaw(id: note.id))
+        #expect(record.needsSync)
+        #expect(await fixture.service.pendingConflicts.isEmpty)
+    }
+
+    /// Keep Both copies the local side, so a local side that can't be read would
+    /// become an empty note while the original is overwritten.
+    @Test func aLocalCopyThatWontDecryptCantBeKeptAsWell() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "soon unreadable", key: key)
+        var record = try #require(try fixture.repo.getRaw(id: note.id))
+        record.content = try undecryptable()
+        try fixture.repo.updateRaw(record)
+        let serverCopy = try CryptoService.serializeEncryptedJSON(CryptoService.encryptText("the server's copy", key: key))
+        refuseWith(serverContent: serverCopy)
+
+        try await fixture.service.sync()
+
+        let waiting = try #require(await fixture.service.pendingConflicts.first)
+        #expect(waiting.localUnreadable)
+        await #expect(throws: ConflictResolutionError.unreadable) {
+            try await fixture.service.resolveConflict(noteId: note.id, strategy: .keepBoth)
+        }
+        #expect(try fixture.repo.getRaw(id: note.id)?.content == record.content)
+
+        try await fixture.service.resolveConflict(noteId: note.id, strategy: .keepServer)
+        #expect(try fixture.repo.get(id: note.id, key: key)?.content == "the server's copy")
+    }
+
+    /// Keep Both writes two notes. Stopping between them must not leave the
+    /// original overwritten with the local side nowhere.
+    @Test func keepBothWritesBothNotesOrNeither() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "the local side", key: key)
+        let serverCopy = try CryptoService.serializeEncryptedJSON(CryptoService.encryptText("the server's copy", key: key))
+        refuseWith(serverContent: serverCopy)
+        try await fixture.service.sync()
+        // Fails the second of the two writes: the duplicate is a new row.
+        try await fixture.db.dbPool.write { db in
+            try db.execute(sql: """
+                CREATE TRIGGER no_new_notes BEFORE INSERT ON notes
+                WHEN NOT EXISTS (SELECT 1 FROM notes WHERE id = NEW.id)
+                BEGIN SELECT RAISE(ABORT, 'no new notes'); END
+            """)
+        }
+
+        await #expect(throws: (any Error).self) {
+            try await fixture.service.resolveConflict(noteId: note.id, strategy: .keepBoth)
+        }
+
+        #expect(try fixture.repo.get(id: note.id, key: key)?.content == "the local side")
+        #expect(await fixture.service.pendingConflicts.count == 1)
+    }
+
+    // MARK: - Version keys collide across devices (R2-076)
+
+    /// A key is only unique per client, so a pulled version with the same key can
+    /// be someone else's revision. This device's own must survive that.
+    @Test func aPulledVersionNeverReplacesOneThisDeviceHolds() async throws {
+        let fixture = try makeFixture()
+        let record = try synced(fixture.repo)
+        try fixture.versionRepo.createVersion(from: record, reason: "manual")
+        let mine = try #require(try fixture.versionRepo.getVersions(noteId: record.id).first)
+        let response = SyncPullResponse(
+            notes: [], deletions: nil, attachments: [],
+            versions: [SyncNoteVersion(
+                versionKey: mine.versionKey, noteId: record.id, version: mine.version,
+                createdAt: mine.createdAt, syncedAt: "2026-11-05T09:00:00Z",
+                content: "a different device's revision", tags: [], attachments: [],
+                syntaxLanguage: "markdown", wordWrap: true, showPreview: false, reason: "sync"
+            )],
+            syncedAt: "2026-11-05T09:23:45Z", hasMore: false, nextCursor: nil
+        )
+        ScriptedServerProtocol.pullReplies = [.init(body: try JSONEncoder().encode(response))]
+
+        try await fixture.service.pull()
+
+        let kept = try #require(try fixture.versionRepo.getVersions(noteId: record.id).first)
+        #expect(kept.content == mine.content)
+    }
+
+    // MARK: - A sync that didn't run (jottery-bp2j)
+
+    @Test func aSyncThatDidntRunSaysSo() async throws {
+        let fixture = try makeFixture()
+        ScriptedServerProtocol.pushHandler = { _ in .init(status: 429, body: Data(#"{"retryAfter":600}"#.utf8)) }
+        _ = try fixture.repo.create(content: "waiting", key: key)
+        await #expect(throws: (any Error).self) { try await fixture.service.sync() }
+
+        let changes = try await fixture.service.sync()
+
+        #expect(changes.wasSkipped)
+    }
+
+    @Test func aSyncThatRanSaysSoEvenWithNothingToDo() async throws {
+        let fixture = try makeFixture()
+
+        let changes = try await fixture.service.sync()
+
+        #expect(!changes.wasSkipped)
+    }
+
     // MARK: - A note edited many times between syncs (R2-060)
 
     @Test func theServersHashStaysInTheChainHoweverManyEditsThereAre() throws {

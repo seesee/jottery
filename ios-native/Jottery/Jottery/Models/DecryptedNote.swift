@@ -38,10 +38,10 @@ struct DecryptedNote: Identifiable, Equatable, Hashable {
         }
         // Fall back to first non-empty line of content
         let lines = content.split(separator: "\n", omittingEmptySubsequences: true)
-        guard let firstLine = lines.first else { return "Untitled" }
+        guard let firstLine = lines.first else { return L.noteUntitled }
         let trimmed = firstLine.trimmingCharacters(in: .whitespaces)
             .replacingOccurrences(of: "^#+\\s*", with: "", options: .regularExpression)
-        if trimmed.isEmpty { return "Untitled" }
+        if trimmed.isEmpty { return L.noteUntitled }
         return String(trimmed.prefix(80))
     }
 

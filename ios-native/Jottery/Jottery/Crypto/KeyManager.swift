@@ -34,7 +34,9 @@ final class KeyManager {
     /// to its own `lock()` so the UI transitions to the unlock screen.
     var onAutoLock: (() -> Void)?
 
-    private var lastActivityDate = Date()
+    /// Measured on a clock that counts through sleep and can't be moved. On the
+    /// wall clock, setting the date back in Settings would stop auto-lock.
+    private var lastActivity = ContinuousClock.Instant.now
     private var autoLockTimer: Timer?
 
     // MARK: - Unlock
@@ -43,7 +45,7 @@ final class KeyManager {
     func unlockWithKeyData(_ keyData: Data) {
         masterKey = SymmetricKey(data: keyData)
         isUnlocked = true
-        lastActivityDate = Date()
+        lastActivity = .now
         startAutoLockTimer()
     }
 
@@ -55,8 +57,8 @@ final class KeyManager {
     }
 
     /// Record user activity to reset the auto-lock countdown.
-    func recordActivity() {
-        lastActivityDate = Date()
+    func recordActivity(at instant: ContinuousClock.Instant = .now) {
+        lastActivity = instant
     }
 
     // MARK: - Biometric Key Storage
@@ -135,8 +137,7 @@ final class KeyManager {
 
     func checkAutoLock() {
         guard isUnlocked, autoLockTimeout > 0 else { return }
-        let elapsed = Date().timeIntervalSince(lastActivityDate)
-        if elapsed >= autoLockTimeout {
+        if lastActivity.duration(to: .now) >= .seconds(autoLockTimeout) {
             // Use the callback so AppState can lock the full app (show unlock screen,
             // clear notes, stop SSE). The callback calls appState.lock() which in turn
             // calls keyManager.lock().
@@ -164,7 +165,7 @@ enum KeyManagerError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .noKeyLoaded: return "No encryption key loaded"
+        case .noKeyLoaded: return L.keyErrorNoKeyLoaded
         }
     }
 }

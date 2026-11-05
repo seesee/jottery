@@ -49,11 +49,18 @@ enum SharedInboxStore {
 
         /// Copy a file in. Throws if it can't be copied, and the caller decides
         /// what to do with the rest.
-        func add(copying source: URL, index: Int, filename: String, mimeType: String) throws -> Manifest.File {
+        /// - Parameter protect: replaces the attribute being set. Only used by
+        ///   tests, because the simulator doesn't keep it.
+        func add(
+            copying source: URL, index: Int, filename: String, mimeType: String,
+            protect: (URL) throws -> Void = {
+                try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: $0.path)
+            }
+        ) throws -> Manifest.File {
             let name = storedName(index: index, filename: filename)
             let destination = directory.appendingPathComponent(name)
             try FileManager.default.copyItem(at: source, to: destination)
-            try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: destination.path)
+            try protect(destination)
             return Manifest.File(storedName: name, filename: filename, mimeType: mimeType)
         }
 

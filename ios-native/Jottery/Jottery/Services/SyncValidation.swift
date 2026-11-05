@@ -94,6 +94,20 @@ enum SyncValidation {
         return value
     }
 
+    static let maxDisplayNameLength = 100
+
+    /// A name from the server, fit to show: no control characters or the
+    /// overrides that reorder text, and of a sensible length. Nil if nothing's left.
+    static func displayName(_ raw: String) -> String? {
+        let kept = raw.unicodeScalars.filter { scalar in
+            scalar.properties.generalCategory != .control
+                && !(0x202A...0x202E).contains(scalar.value)
+                && !(0x2066...0x2069).contains(scalar.value)
+        }
+        let text = String(String.UnicodeScalarView(kept)).trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? nil : String(text.prefix(maxDisplayNameLength))
+    }
+
     /// `page` with everything that failed removed.
     static func sanitised(_ page: SyncPullResponse) -> SyncPullResponse {
         var clean = page

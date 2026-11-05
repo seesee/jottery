@@ -181,9 +181,12 @@ struct ImportFormatTests {
         let key = SymmetricKey(data: Data(repeating: 9, count: 32))
         let original = try repo.create(content: "the original", key: key)
         try db.dbPool.write { database in
+            // Both, because an insert is what the old order would have tried.
             try database.execute(sql: """
-                CREATE TRIGGER no_writes BEFORE UPDATE ON notes
-                BEGIN SELECT RAISE(ABORT, 'disk full'); END
+                CREATE TRIGGER no_updates BEFORE UPDATE ON notes
+                BEGIN SELECT RAISE(ABORT, 'disk full'); END;
+                CREATE TRIGGER no_inserts BEFORE INSERT ON notes
+                BEGIN SELECT RAISE(ABORT, 'disk full'); END;
             """)
         }
 
@@ -195,6 +198,51 @@ struct ImportFormatTests {
         #expect(result.imported == 0)
         #expect(result.errors.count == 1)
         #expect(try repo.get(id: original.id, key: key)?.content == "the original")
+    }
+
+    /// Puts one attachment on a note, and returns the id of its blob.
+    private func attachBlob(
+        to id: String, repo: NoteRepository, attachmentRepo: AttachmentRepository
+    ) throws -> String {
+        let blobId = UUID().uuidString.lowercased()
+        try attachmentRepo.storeBlob(id: blobId, mimeType: "text/plain", size: 1, data: Data("x".utf8))
+        var record = try #require(try repo.getRaw(id: id))
+        let ref = AttachmentRef(id: UUID().uuidString, filename: "old.txt", mimeType: "text/plain", size: 1, data: blobId)
+        record.attachments = String(decoding: try JSONEncoder().encode([ref]), as: UTF8.self)
+        try repo.updateRaw(record)
+        return blobId
+    }
+
+    /// The version kept from before the import still lists what the original
+    /// had, and restoring it would find nothing if the file had gone.
+    @Test func aReplacementKeepsTheFilesItsVersionStillNeeds() throws {
+        let (_, repo, attachmentRepo) = try makeRepos()
+        let key = SymmetricKey(data: Data(repeating: 9, count: 32))
+        let original = try repo.create(content: "the original", key: key)
+        let blobId = try attachBlob(to: original.id, repo: repo, attachmentRepo: attachmentRepo)
+
+        let result = try ImportService.importNotes(
+            exportData(replacing: original.id, content: "the replacement"),
+            strategy: .replace, noteRepo: repo, attachmentRepo: attachmentRepo, key: key
+        )
+
+        #expect(result.imported == 1)
+        #expect(try attachmentRepo.hasBlob(id: blobId))
+    }
+
+    /// Nothing can reach a file no note or version lists, and it would stay on
+    /// disk for ever.
+    @Test func replacingANoteRemovesAFileNothingElseNeeds() throws {
+        let (_, repo, attachmentRepo) = try makeRepos()
+        let key = SymmetricKey(data: Data(repeating: 9, count: 32))
+        let original = try repo.create(content: "the original", key: key)
+        let blobId = try attachBlob(to: original.id, repo: repo, attachmentRepo: attachmentRepo)
+        var replacement = try #require(try repo.getRaw(id: original.id))
+        replacement.attachments = "[]"
+
+        try repo.replace(with: replacement)
+
+        #expect(try !attachmentRepo.hasBlob(id: blobId))
     }
 
     @Test func aReplacementCarriesOnFromTheNoteItReplaces() throws {

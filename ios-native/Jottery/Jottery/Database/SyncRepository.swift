@@ -207,9 +207,15 @@ struct SyncRepository: Sendable {
         """, arguments: [id, deletedAt])
     }
 
+    /// Deletions to send. A permanent deletion removes the note, so one whose note
+    /// exists again is stale: the note came back from a backup or an import, and
+    /// sending it would delete the note again, on every device.
     func getPendingDeletions() throws -> [(id: String, deletedAt: String)] {
         try db.dbPool.read { db in
-            let rows = try Row.fetchAll(db, sql: "SELECT id, deleted_at FROM note_deletions")
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT id, deleted_at FROM note_deletions
+                WHERE id NOT IN (SELECT id FROM notes)
+            """)
             return rows.map { (id: $0["id"], deletedAt: $0["deleted_at"]) }
         }
     }

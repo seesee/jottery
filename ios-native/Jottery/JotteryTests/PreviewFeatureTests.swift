@@ -32,7 +32,8 @@ struct PreviewFeatureTests {
         }
 
         func wait(until script: String) async throws {
-            let succeeded = try await waitUntil { try await text(script) == "true" }
+            // An exception only means the page isn't there yet: it may be reloading.
+            let succeeded = await waitUntil { (try? await text(script)) == "true" }
             if !succeeded { Issue.record("Timed out waiting for: \(script)") }
         }
     }

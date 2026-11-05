@@ -9,8 +9,11 @@ struct WebOutlinerEditorView: View {
     @Binding var content: String
     var fontSize: CGFloat = EditorTheme.defaultFontSize
     var isReadOnly = false
+    var onUnusable: () -> Void = {}
 
     var body: some View {
-        WebEditorView(bundleName: "outliner", content: $content, fontSize: fontSize, isReadOnly: isReadOnly)
+        WebEditorView(
+            bundleName: "outliner", content: $content, fontSize: fontSize, isReadOnly: isReadOnly, onUnusable: onUnusable
+        )
     }
 }

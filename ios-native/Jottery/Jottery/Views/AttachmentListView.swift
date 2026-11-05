@@ -46,14 +46,17 @@ struct AttachmentListView: View {
                 ForEach(attachments) { attachment in
                     AttachmentRowView(
                         attachment: attachment,
+                        attachmentRepo: attachmentRepo,
+                        encryptionKey: encryptionKey,
                         onTap: { decryptAndPreview(attachment) },
                         onShare: { decryptAndShare(attachment) },
+                        onCopyMarkdown: { copyMarkdown(attachment) },
                         onDelete: onDelete != nil ? { attachmentToDelete = attachment } : nil
                     )
 
                     if attachment.id != attachments.last?.id {
                         Divider()
-                            .padding(.leading, 52)
+                            .padding(.leading, 68)
                     }
                 }
             }
@@ -108,6 +111,11 @@ struct AttachmentListView: View {
                 shareFile = ExportFile(url: url)
             }
         }
+    }
+
+    private func copyMarkdown(_ attachment: AttachmentRef) {
+        UIPasteboard.general.string = AttachmentMarkdown.reference(to: attachment)
+        UIAccessibility.post(notification: .announcement, argument: L.attachmentsMarkdownCopied)
     }
 
     /// Decrypt an attachment blob and write to a temporary file, off the
@@ -165,17 +173,21 @@ private enum AttachmentDecryptError: Error {
 
 private struct AttachmentRowView: View {
     let attachment: AttachmentRef
+    let attachmentRepo: AttachmentRepository
+    let encryptionKey: SymmetricKey
     let onTap: () -> Void
     let onShare: () -> Void
+    let onCopyMarkdown: () -> Void
     var onDelete: (() -> Void)?
 
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
-                Image(systemName: iconName(for: attachment.mimeType))
-                    .font(.title3)
-                    .foregroundStyle(.accent)
-                    .frame(width: 28)
+                AttachmentThumbnailView(
+                    attachment: attachment,
+                    attachmentRepo: attachmentRepo,
+                    encryptionKey: encryptionKey
+                )
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(attachment.filename)
@@ -217,6 +229,67 @@ private struct AttachmentRowView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            Button(action: onCopyMarkdown) {
+                Label(L.attachmentsCopyMarkdown, systemImage: "doc.on.clipboard")
+            }
+            Button(action: onShare) {
+                Label(L.attachmentsShare, systemImage: "square.and.arrow.up")
+            }
+            if let onDelete {
+                Button(role: .destructive, action: onDelete) {
+                    Label(L.attachmentsDeleteAction, systemImage: "trash")
+                }
+            }
+        }
+        .accessibilityAction(named: L.attachmentsCopyMarkdown, onCopyMarkdown)
+    }
+
+    private func formattedSize(_ bytes: Int) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: Int64(bytes))
+    }
+}
+
+// MARK: - Thumbnail
+
+/// A small picture of the attachment, or an icon for its type until there is one
+/// and for anything that can't be drawn. The row's filename says what it is, so
+/// VoiceOver skips this.
+private struct AttachmentThumbnailView: View {
+    let attachment: AttachmentRef
+    let attachmentRepo: AttachmentRepository
+    let encryptionKey: SymmetricKey
+
+    @ScaledMetric(relativeTo: .subheadline) private var side: CGFloat = 40
+    @State private var image: UIImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: iconName(for: attachment.mimeType))
+                    .font(.title3)
+                    .foregroundStyle(.accent)
+            }
+        }
+        .frame(width: side, height: side)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .accessibilityHidden(true)
+        .task(id: attachment.id) {
+            let repo = attachmentRepo
+            let key = encryptionKey
+            let blobId = attachment.data
+            image = await AttachmentThumbnails.shared.image(for: attachment) {
+                guard let blob = try repo.getBlob(id: blobId),
+                      let json = String(data: blob, encoding: .utf8) else { return nil }
+                return try CryptoService.decrypt(CryptoService.parseEncryptedJSON(json), key: key)
+            }
+        }
     }
 
     private func iconName(for mimeType: String) -> String {
@@ -226,11 +299,5 @@ private struct AttachmentRowView: View {
         if mimeType.hasPrefix("video/") { return "film" }
         if mimeType.hasPrefix("audio/") { return "waveform" }
         return "doc"
-    }
-
-    private func formattedSize(_ bytes: Int) -> String {
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .file
-        return formatter.string(fromByteCount: Int64(bytes))
     }
 }

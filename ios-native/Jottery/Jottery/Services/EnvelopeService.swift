@@ -34,7 +34,7 @@ enum EnvelopeService {
     /// `masterKeyData`, wrapped as it is on the server.
     private static func wrappedKeyBlob(password: String, userId: String, masterKeyData: Data) throws -> String {
         // Derive wrapping key from password + userId (1M iterations)
-        let wrappingKey = CryptoService.deriveWrappingKey(password: password, userId: userId)
+        let wrappingKey = try CryptoService.deriveWrappingKey(password: password, userId: userId)
         let serverWrapped = try CryptoService.wrapMasterKey(masterKeyData, with: wrappingKey)
         return try CryptoService.serializeEncryptedJSON(serverWrapped)
     }
@@ -64,6 +64,10 @@ enum EnvelopeService {
         /// older build, so the password was changed on another device: the
         /// server's copy is the newer one and was left alone.
         case passwordChangedElsewhere
+        /// An upload was refused because the key changed, and reading it again
+        /// failed or found it changing still. Whatever it is now, it's no blob
+        /// from an older build, so this device must never repair it.
+        case changedUnderThisDevice
     }
 
     /// Make sure the account's wrapped key can be opened with the notes
@@ -104,7 +108,15 @@ enum EnvelopeService {
         for _ in 0..<2 {
             let write: WrappedKeyWrite
             let outcome: WrappedKeyOutcome
-            switch try await readServerKey(syncClient: syncClient, userId: userId, password: password) {
+            let found: ServerKeyRead
+            do {
+                found = try await readServerKey(syncClient: syncClient, userId: userId, password: password)
+            } catch _ where keyChangedUnderUs {
+                // The refusal was the proof. Losing it to a failed read would
+                // let the next unlock repair over another device's new password.
+                return .changedUnderThisDevice
+            }
+            switch found {
             case .opened:
                 return .leftAlone
             case .absent:
@@ -129,8 +141,9 @@ enum EnvelopeService {
                 keyChangedUnderUs = true
             }
         }
-        // It changed twice in a row. The next unlock looks again.
-        throw SyncClientError.wrappedKeyConflict
+        // It changed twice in a row. The next unlock looks again, as a device
+        // that knows better than to repair it.
+        return .changedUnderThisDevice
     }
 
     // MARK: - Migrate Legacy → Envelope
@@ -194,7 +207,7 @@ enum EnvelopeService {
 
             // Generate device salt and derive device key for local wrapping
             let deviceSalt = CryptoService.generateSalt()
-            let deviceKey = CryptoService.deriveKey(
+            let deviceKey = try CryptoService.deriveKey(
                 password: password,
                 salt: deviceSalt,
                 iterations: CryptoService.defaultIterations
@@ -215,14 +228,9 @@ enum EnvelopeService {
                 envelopeVersion: 1,
                 deviceSalt: deviceSalt.base64EncodedString(),
                 localWrappedMaster: localBlob,
-                wrappingKdfVersion: CryptoService.wrappingKdfVersion
+                wrappingKdfVersion: CryptoService.wrappingKdfVersion,
+                verification: verificationJSON
             )
-
-            // Update verification token
-            if var metadata = try encryptionRepo.get() {
-                metadata.verification = verificationJSON
-                try encryptionRepo.store(metadata)
-            }
 
             Log.debug("[Envelope] Migration complete")
             return true
@@ -292,7 +300,7 @@ enum EnvelopeService {
         guard let serverWrapped = try? CryptoService.parseEncryptedJSON(response.blob) else {
             return .unreadable(updatedAt: response.updatedAt)
         }
-        let wrappingKey = CryptoService.deriveWrappingKey(password: password, userId: userId)
+        let wrappingKey = try CryptoService.deriveWrappingKey(password: password, userId: userId)
         guard let unwrapped = try? CryptoService.unwrapMasterKey(serverWrapped, with: wrappingKey) else {
             return .unreadable(updatedAt: response.updatedAt)
         }
@@ -415,14 +423,9 @@ enum EnvelopeService {
             envelopeVersion: 1,
             deviceSalt: local.deviceSalt,
             localWrappedMaster: local.localWrappedMaster,
-            wrappingKdfVersion: CryptoService.wrappingKdfVersion
+            wrappingKdfVersion: CryptoService.wrappingKdfVersion,
+            verification: local.verification
         )
-
-        // Update verification token
-        if var metadata = try encryptionRepo.get() {
-            metadata.verification = local.verification
-            try encryptionRepo.store(metadata)
-        }
 
         return SymmetricKey(data: masterKeyData)
     }
@@ -456,7 +459,7 @@ enum EnvelopeService {
         localPassword: String
     ) throws -> (deviceSalt: String, localWrappedMaster: String, verification: String) {
         let deviceSalt = CryptoService.generateSalt()
-        let deviceKey = CryptoService.deriveKey(
+        let deviceKey = try CryptoService.deriveKey(
             password: localPassword,
             salt: deviceSalt,
             iterations: CryptoService.defaultIterations
@@ -567,7 +570,7 @@ enum EnvelopeService {
                 )
                 Log.debug("[Envelope] Server key check: \(outcome)")
                 switch outcome {
-                case .published, .leftAlone, .repaired:
+                case .published, .leftAlone, .repaired, .changedUnderThisDevice:
                     try syncRepo.markServerKeyOpened()
                 case .passwordChangedElsewhere:
                     // Set here too for a key that changed under a repair: that
@@ -651,7 +654,7 @@ enum EnvelopeService {
     ) throws {
         // Generate new device salt and derive new device key
         let newDeviceSalt = CryptoService.generateSalt()
-        let newDeviceKey = CryptoService.deriveKey(
+        let newDeviceKey = try CryptoService.deriveKey(
             password: newPassword,
             salt: newDeviceSalt,
             iterations: CryptoService.defaultIterations
@@ -673,14 +676,9 @@ enum EnvelopeService {
             envelopeVersion: 1,
             deviceSalt: newDeviceSalt.base64EncodedString(),
             localWrappedMaster: localBlob,
-            wrappingKdfVersion: CryptoService.wrappingKdfVersion
+            wrappingKdfVersion: CryptoService.wrappingKdfVersion,
+            verification: verificationJSON
         )
-
-        // Update verification token
-        if var metadata = try encryptionRepo.get() {
-            metadata.verification = verificationJSON
-            try encryptionRepo.store(metadata)
-        }
 
         Log.debug("[Envelope] Local password re-wrap complete")
     }
@@ -743,13 +741,13 @@ enum EnvelopeError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .noWrappedKeyOnServer:
-            return "No wrapped key found on server — the source device may not have migrated yet"
+            return L.envelopeErrorNoServerKey
         case .cannotUnwrapServerKey:
-            return "The account's encryption key could not be opened with the notes password"
+            return L.envelopeErrorCantOpenServerKey
         case .invalidMasterKeyLength:
-            return "Invalid master key length after unwrapping"
+            return L.envelopeErrorInvalidKeyLength
         case .notInitialised:
-            return "Encryption repository not initialised"
+            return L.envelopeErrorNotInitialised
         }
     }
 }

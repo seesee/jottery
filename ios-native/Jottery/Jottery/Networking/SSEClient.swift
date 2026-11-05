@@ -11,18 +11,32 @@ actor SSEClient {
     private let maxBackoffSeconds: Double = 30
 
     /// Dedicated session for SSE — long timeouts, no caching.
-    private let sseSession: URLSession = {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 45   // Must receive data within 45 s (heartbeat is 30 s)
-        config.timeoutIntervalForResource = 0   // No overall resource timeout
-        config.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
-        return URLSession(configuration: config)
-    }()
+    private let sseSession: URLSession
+
+    /// Waits out a backoff.
+    private let pause: @Sendable (Duration) async -> Void
 
     var onSyncEvent: (@Sendable () async -> Void)?
 
-    init(syncClient: SyncClient) {
+    /// - Parameters:
+    ///   - configuration: replaces the session's configuration. Only used by
+    ///     tests, to install a stub `URLProtocol`.
+    ///   - pause: replaces the wait between attempts. Only used by tests, which
+    ///     see what was asked for without a clock coming into it.
+    init(
+        syncClient: SyncClient,
+        configuration: URLSessionConfiguration? = nil,
+        pause: @escaping @Sendable (Duration) async -> Void = { try? await Task.sleep(for: $0) }
+    ) {
         self.syncClient = syncClient
+        self.pause = pause
+        self.sseSession = URLSession(configuration: configuration ?? {
+            let config = URLSessionConfiguration.default
+            config.timeoutIntervalForRequest = 45   // Must receive data within 45 s (heartbeat is 30 s)
+            config.timeoutIntervalForResource = 0   // No overall resource timeout
+            config.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+            return config
+        }())
     }
 
     /// Start listening for SSE events.
@@ -43,6 +57,11 @@ actor SSEClient {
         reconnectAttempts = 0
     }
 
+    /// Returns once listening has stopped by itself or been stopped.
+    func waitUntilStopped() async {
+        await task?.value
+    }
+
     // MARK: - Private
 
     private func connectLoop() async {
@@ -50,6 +69,11 @@ actor SSEClient {
             do {
                 try await connect()
                 reconnectAttempts = 0
+            } catch SSEError.tokenRefused where reconnectAttempts == 0 {
+                // The token ran out, or the device is no longer welcome. Asking
+                // for a new one finds out which, with the server's real answer,
+                // so there's nothing to wait for. Any refusal after that backs off.
+                reconnectAttempts = 1
             } catch {
                 if Task.isCancelled { return }
                 // The device or account is no longer welcome, and retrying can't
@@ -62,7 +86,7 @@ actor SSEClient {
                 reconnectAttempts += 1
                 let delay = min(pow(2.0, Double(min(reconnectAttempts, 5))), maxBackoffSeconds)
                 Log.debug("[SSE] connection error (attempt \(reconnectAttempts)), retrying in \(delay)s")
-                try? await Task.sleep(for: .seconds(delay))
+                await pause(.seconds(delay))
             }
         }
     }
@@ -90,7 +114,7 @@ actor SSEClient {
 
         let (bytes, response) = try await sseSession.bytes(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            throw SSEError.connectionFailed
+            throw (response as? HTTPURLResponse)?.statusCode == 401 ? SSEError.tokenRefused : SSEError.connectionFailed
         }
 
         reconnectAttempts = 0
@@ -132,4 +156,6 @@ actor SSEClient {
 enum SSEError: Error {
     case invalidURL
     case connectionFailed
+    /// The stream wouldn't take the token it was given.
+    case tokenRefused
 }

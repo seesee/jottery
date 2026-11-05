@@ -5,6 +5,10 @@ struct SetupScreen: View {
     @State private var selectedTab = 0
 
     var body: some View {
+        ScrollableScreen { form }
+    }
+
+    private var form: some View {
         VStack(spacing: 32) {
             Spacer()
 
@@ -27,6 +31,7 @@ struct SetupScreen: View {
 
             if selectedTab == 0 {
                 NewVaultView()
+                RestoreFromBackupButton()
             } else {
                 ConnectToServerView()
             }
@@ -414,7 +419,7 @@ private struct ConnectToServerView: View {
                 appState.isSyncing = false
 
                 let count = appState.notes.count
-                appState.syncStatusMessage = "Synced — \(count) note\(count == 1 ? "" : "s")"
+                appState.syncStatusMessage = L.syncStatusNotes(count)
                 isWorking = false
 
                 // Clear the status message after a few seconds

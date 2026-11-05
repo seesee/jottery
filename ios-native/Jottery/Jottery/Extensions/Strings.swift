@@ -52,7 +52,7 @@ enum L {
     static var syncSetupErrorAccountKeyUnreadable: String { String(localized: "syncSetupError.accountKeyUnreadable") }
     static var syncSetupErrorNotesPasswordMatchesAccount: String { String(localized: "syncSetupError.notesPasswordMatchesAccount") }
     static func notesPasswordTooShort(_ minimum: Int) -> String {
-        String(format: String(localized: "notesPassword.tooShort"), minimum)
+        String(localized: "notesPassword.tooShort \(minimum)")
     }
 
     // MARK: - Sync Errors
@@ -60,14 +60,15 @@ enum L {
     static var syncErrorAccountPending: String { String(localized: "syncError.accountPending") }
     static var syncErrorPasswordChangeRequired: String { String(localized: "syncError.passwordChangeRequired") }
     static func syncErrorRateLimited(_ seconds: Int) -> String {
-        String(format: String(localized: "syncError.rateLimited"), seconds)
+        String(localized: "syncError.rateLimited \(seconds)")
     }
     static func syncErrorServerBusy(_ seconds: Int) -> String {
-        String(format: String(localized: "syncError.serverBusy"), seconds)
+        String(localized: "syncError.serverBusy \(seconds)")
     }
     static var syncErrorTimedOut: String { String(localized: "syncError.timedOut") }
     static var syncErrorStorageFull: String { String(localized: "syncError.storageFull") }
     static var syncErrorKeyChanged: String { String(localized: "syncError.keyChanged") }
+    static var syncErrorClockAhead: String { String(localized: "syncError.clockAhead") }
     static func syncNotesTooLarge(_ count: Int) -> String {
         String(format: String(localized: "syncError.notesTooLarge"), count)
     }
@@ -252,7 +253,7 @@ enum L {
     static var recycleBinEmptyConfirmTitle: String { String(localized: "recycleBin.emptyConfirmTitle") }
     static var recycleBinEmptyConfirmAction: String { String(localized: "recycleBin.emptyConfirmAction") }
     static func recycleBinEmptyConfirmMessage(_ count: Int) -> String {
-        String(format: String(localized: "recycleBin.emptyConfirmMessage"), count)
+        String(localized: "recycleBin.emptyConfirmMessage \(count)")
     }
     static var recycleBinEmpty: String { String(localized: "recycleBin.empty") }
     static var recycleBinEmptyDescription: String { String(localized: "recycleBin.emptyDescription") }
@@ -340,8 +341,11 @@ enum L {
     static var conflictKeepLocal: String { String(localized: "conflict.keepLocal") }
     static var conflictKeepServer: String { String(localized: "conflict.keepServer") }
     static var conflictKeepBoth: String { String(localized: "conflict.keepBoth") }
+    static var conflictUnreadable: String { String(localized: "conflict.unreadable") }
+    static var editorShownAsPlainText: String { String(localized: "editor.shownAsPlainText") }
+    static var conflictCouldntResolve: String { String(localized: "conflict.couldntResolve") }
     static func conflictBanner(_ count: Int) -> String {
-        String(format: String(localized: "conflict.banner"), count)
+        String(localized: "conflict.banner \(count)")
     }
 
     // MARK: - Bulk Operations
@@ -363,7 +367,7 @@ enum L {
     static var bulkDeleteConfirmTitle: String { String(localized: "bulk.deleteConfirmTitle") }
     static var bulkDeleteConfirmAction: String { String(localized: "bulk.deleteConfirmAction") }
     static func bulkDeleteConfirmMessage(_ count: Int) -> String {
-        String(format: String(localized: "bulk.deleteConfirmMessage"), count)
+        String(localized: "bulk.deleteConfirmMessage \(count)")
     }
 
     // MARK: - Settings (Data)
@@ -442,10 +446,10 @@ enum L {
         String(format: String(localized: "backup.restoreProgress"), completed, total)
     }
     static func backupRestoreKeptNewer(_ count: Int) -> String {
-        String(format: String(localized: "backup.restoreKeptNewer"), count)
+        String(localized: "backup.restoreKeptNewer \(count)")
     }
     static func backupRestoreSkipped(_ count: Int) -> String {
-        String(format: String(localized: "backup.restoreSkipped"), count)
+        String(localized: "backup.restoreSkipped \(count)")
     }
     static var backupRestoreSuccessTitle: String { String(localized: "backup.restoreSuccessTitle") }
     static var backupRestoreSuccessMessage: String { String(localized: "backup.restoreSuccessMessage") }
@@ -492,16 +496,16 @@ enum L {
     }
     static var errorCouldntExport: String { String(localized: "error.couldntExport") }
     static func errorCouldntAddTags(_ count: Int) -> String {
-        String(format: String(localized: "error.couldntAddTags"), count)
+        String(localized: "error.couldntAddTags \(count)")
     }
     static var errorCouldntArchiveNote: String { String(localized: "error.couldntArchiveNote") }
     static func errorCouldntArchiveNotes(_ count: Int) -> String {
-        String(format: String(localized: "error.couldntArchiveNotes"), count)
+        String(localized: "error.couldntArchiveNotes \(count)")
     }
     static var errorCouldntDeleteNote: String { String(localized: "error.couldntDeleteNote") }
     static var errorCouldntDeleteNoteForever: String { String(localized: "error.couldntDeleteNoteForever") }
     static func errorCouldntDeleteNotes(_ count: Int) -> String {
-        String(format: String(localized: "error.couldntDeleteNotes"), count)
+        String(localized: "error.couldntDeleteNotes \(count)")
     }
     static var errorCouldntDuplicateNote: String { String(localized: "error.couldntDuplicateNote") }
     static var errorCouldntEmptyRecycleBin: String { String(localized: "error.couldntEmptyRecycleBin") }
@@ -509,11 +513,11 @@ enum L {
     static var errorCouldntPinNote: String { String(localized: "error.couldntPinNote") }
     static var errorCouldntRemoveAttachment: String { String(localized: "error.couldntRemoveAttachment") }
     static func errorCouldntRemoveTags(_ count: Int) -> String {
-        String(format: String(localized: "error.couldntRemoveTags"), count)
+        String(localized: "error.couldntRemoveTags \(count)")
     }
     static var errorCouldntRestoreNote: String { String(localized: "error.couldntRestoreNote") }
     static func errorCouldntSetColor(_ count: Int) -> String {
-        String(format: String(localized: "error.couldntSetColor"), count)
+        String(localized: "error.couldntSetColor \(count)")
     }
     static var errorCouldntUnarchiveNote: String { String(localized: "error.couldntUnarchiveNote") }
     static var errorCouldntUnlockNote: String { String(localized: "error.couldntUnlockNote") }

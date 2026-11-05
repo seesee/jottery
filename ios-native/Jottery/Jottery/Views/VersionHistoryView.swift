@@ -88,7 +88,7 @@ struct VersionHistoryView: View {
             let enc = try CryptoService.parseEncryptedJSON(version.content)
             previewContent = try CryptoService.decryptText(enc, key: key)
         } catch {
-            previewContent = "(Could not decrypt)"
+            previewContent = L.versionHistoryCouldntDecrypt
         }
     }
 

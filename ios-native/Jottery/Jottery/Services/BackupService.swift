@@ -456,26 +456,7 @@ enum BackupService {
         currentKey: SymmetricKey,
         progress: (@Sendable (Progress) -> Void)? = nil
     ) throws -> RestoreResult {
-        let index: JSONFileScanner.Index
-        do {
-            index = try JSONFileScanner.scan(url, array: "batches")
-        } catch JSONFileScanner.ScanError.malformed {
-            throw BackupError.invalidFormat
-        }
-
-        let decoder = JSONDecoder()
-        guard let typeJSON = index.values["type"], let versionJSON = index.values["version"],
-              let encryptionJSON = index.values["encryption"],
-              let type = try? decoder.decode(String.self, from: typeJSON),
-              let version = try? decoder.decode(String.self, from: versionJSON),
-              let encryption = try? decoder.decode(BackupEncryption.self, from: encryptionJSON),
-              type == formatType else {
-            throw BackupError.invalidFormat
-        }
-        guard version == formatVersion else {
-            throw BackupError.unsupportedVersion(version)
-        }
-
+        let (index, encryption) = try readHeader(of: url)
         let namedKey = try keyNamedByHeader(encryption, password: password)
         let backupKey = namedKey ?? currentKey
 
@@ -486,11 +467,7 @@ enum BackupService {
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
         func batch(at range: Range<UInt64>) throws -> BatchRecord {
-            do {
-                return try decoder.decode(BatchRecord.self, from: JSONFileScanner.read(range, from: handle))
-            } catch {
-                throw BackupError.invalidFormat
-            }
+            try readBatch(at: range, from: handle)
         }
 
         // Verify key by trying to decrypt first batch
@@ -564,9 +541,65 @@ enum BackupService {
         return result
     }
 
+    /// The key a backup's contents are encrypted with, for a device with no key
+    /// of its own to try. Proved against the first batch, so this also tells a
+    /// legacy backup's wrong password from a right one, and it changes nothing.
+    static func masterKey(of url: URL, password: String) throws -> Data {
+        let (index, encryption) = try readHeader(of: url)
+        guard let key = try keyNamedByHeader(encryption, password: password) else {
+            throw BackupError.keyNotInBackup
+        }
+        guard key.bitCount == CryptoService.keyLength * 8 else {
+            throw BackupError.invalidFormat
+        }
+        guard let first = index.elements.first else {
+            throw BackupError.nothingToRestore
+        }
+
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        let record = try readBatch(at: first, from: handle)
+        guard (try? decryptBatchRaw(record.data, key: key)) != nil else {
+            throw BackupError.wrongPassword
+        }
+        return key.withUnsafeBytes { Data($0) }
+    }
+
+    /// Where the file's batches are, and how to get its key. Nothing's decrypted.
+    private static func readHeader(of url: URL) throws -> (index: JSONFileScanner.Index, encryption: BackupEncryption) {
+        let index: JSONFileScanner.Index
+        do {
+            index = try JSONFileScanner.scan(url, array: "batches")
+        } catch JSONFileScanner.ScanError.malformed {
+            throw BackupError.invalidFormat
+        }
+
+        let decoder = JSONDecoder()
+        guard let typeJSON = index.values["type"], let versionJSON = index.values["version"],
+              let encryptionJSON = index.values["encryption"],
+              let type = try? decoder.decode(String.self, from: typeJSON),
+              let version = try? decoder.decode(String.self, from: versionJSON),
+              let encryption = try? decoder.decode(BackupEncryption.self, from: encryptionJSON),
+              type == formatType else {
+            throw BackupError.invalidFormat
+        }
+        guard version == formatVersion else {
+            throw BackupError.unsupportedVersion(version)
+        }
+        return (index, encryption)
+    }
+
+    private static func readBatch(at range: Range<UInt64>, from handle: FileHandle) throws -> BatchRecord {
+        do {
+            return try JSONDecoder().decode(BatchRecord.self, from: JSONFileScanner.read(range, from: handle))
+        } catch {
+            throw BackupError.invalidFormat
+        }
+    }
+
     private static func reEncrypted(_ note: BackupNote, from backupKey: SymmetricKey, to currentKey: SymmetricKey) throws -> NoteRecord {
         let hashChain = try note.hashChain.map { String(decoding: try JSONEncoder().encode($0), as: UTF8.self) }
-        return NoteRecord(
+        var record = NoteRecord(
             id: note.id,
             createdAt: note.createdAt,
             modifiedAt: note.modifiedAt,
@@ -591,6 +624,10 @@ enum BackupService {
             hashChain: hashChain,
             needsSync: true
         )
+        // Its time in the bin starts here. Without one the purge never sees it,
+        // and the date in the file isn't this device's to go by.
+        record.localDeletedAt = note.deleted ? Date().iso8601 : nil
+        return record
     }
 
     private static func reEncrypted(_ version: BackupVersion, from backupKey: SymmetricKey, to currentKey: SymmetricKey) throws -> NoteVersionRecord {
@@ -691,13 +728,17 @@ enum BackupService {
     ///
     /// Backups of envelope vaults made before the header carried the wrapped key
     /// have an empty salt, and only open with the vault's own master key.
+    /// The most PBKDF2 rounds a backup may ask for: seconds of work, not hours.
+    /// Every client writes far fewer.
+    static let maxBackupIterations = 10_000_000
+
     private static func keyNamedByHeader(_ encryption: BackupEncryption, password: String) throws -> SymmetricKey? {
         if encryption.envelopeVersion != nil {
             guard let deviceSalt = encryption.deviceSalt.flatMap({ Data(base64Encoded: $0) }),
                   let wrappedJSON = encryption.localWrappedMaster else {
                 throw BackupError.invalidSalt
             }
-            let deviceKey = CryptoService.deriveKey(
+            let deviceKey = try CryptoService.deriveKey(
                 password: password,
                 salt: deviceSalt,
                 iterations: CryptoService.defaultIterations
@@ -713,10 +754,17 @@ enum BackupService {
               let iterations = encryption.iterations, iterations > 0 else {
             return nil
         }
+        // The file chooses this, before any password is tried. A value above
+        // UInt32's range would crash, and one just below would run for hours.
+        // A low one needs no check: `deriveKey` raises it to the minimum, as it
+        // always has, so an old backup that names one still opens.
+        guard iterations <= maxBackupIterations, let rounds = UInt32(exactly: iterations) else {
+            throw BackupError.invalidFormat
+        }
         guard let saltData = Data(base64Encoded: salt) else {
             throw BackupError.invalidSalt
         }
-        return CryptoService.deriveKey(password: password, salt: saltData, iterations: UInt32(iterations))
+        return try CryptoService.deriveKey(password: password, salt: saltData, iterations: rounds)
     }
 
     // MARK: - JWE Compact Encryption
@@ -969,21 +1017,24 @@ enum BackupError: LocalizedError, Equatable {
     case invalidSalt
     case wrongPassword
     case keyNotInBackup
+    /// It holds no notes, so a vault made from it would be empty.
+    case nothingToRestore
     case invalidJWE
     case compressionFailed
     case decompressionFailed
 
     var errorDescription: String? {
         switch self {
-        case .noVault: return "No vault found"
-        case .invalidFormat: return "Invalid backup file format"
-        case .unsupportedVersion(let v): return "Unsupported backup version: \(v)"
-        case .invalidSalt: return "Invalid encryption salt in backup"
-        case .wrongPassword: return "Incorrect password for this backup"
+        case .noVault: return L.backupErrorNoVault
+        case .invalidFormat: return L.backupErrorInvalidFormat
+        case .unsupportedVersion(let v): return L.backupErrorUnsupportedVersion(v)
+        case .invalidSalt: return L.backupErrorInvalidSalt
+        case .wrongPassword: return L.backupErrorWrongPassword
         case .keyNotInBackup: return L.backupErrorKeyNotInBackup
-        case .invalidJWE: return "Invalid encrypted data in backup"
-        case .compressionFailed: return "Failed to compress backup data"
-        case .decompressionFailed: return "Failed to decompress backup data"
+        case .nothingToRestore: return L.backupErrorNothingToRestore
+        case .invalidJWE: return L.backupErrorInvalidData
+        case .compressionFailed: return L.backupErrorCompressionFailed
+        case .decompressionFailed: return L.backupErrorDecompressionFailed
         }
     }
 }

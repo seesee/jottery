@@ -4,6 +4,7 @@ struct NoteRowView: View {
     let note: DecryptedNote
     var hasConflict: Bool = false
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         HStack(spacing: 12) {
@@ -57,9 +58,7 @@ struct NoteRowView: View {
                     if !note.regularTags.isEmpty {
                         HStack(spacing: 4) {
                             ForEach(note.regularTags.prefix(3), id: \.self) { tag in
-                                Text("#\(tag)")
-                                    .font(.caption)
-                                    .foregroundStyle(.accent)
+                                tagLabel(tag)
                             }
                             if note.regularTags.count > 3 {
                                 Text("+\(note.regularTags.count - 3)")
@@ -78,5 +77,23 @@ struct NoteRowView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    /// A tag with a colour sits on it. The palette is made of pale tints in
+    /// light mode and dark ones in dark mode, so it works as a fill, not as text.
+    @ViewBuilder
+    private func tagLabel(_ tag: String) -> some View {
+        if let key = appState.noteColours.colourKey(forTag: tag),
+           let color = Color.noteColor(named: key, scheme: colorScheme) {
+            Text("#\(tag)")
+                .font(.caption)
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 5)
+                .background(color, in: Capsule())
+        } else {
+            Text("#\(tag)")
+                .font(.caption)
+                .foregroundStyle(.accent)
+        }
     }
 }

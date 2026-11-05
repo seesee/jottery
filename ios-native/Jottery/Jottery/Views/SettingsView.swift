@@ -40,6 +40,18 @@ struct SettingsView: View {
                         }
                     }
 
+                    Picker(L.settingsDefaultNoteType, selection: defaultNoteType) {
+                        ForEach(NoteType.all, id: \.self) { type in
+                            Text(type.capitalized).tag(type)
+                        }
+                    }
+
+                    NavigationLink {
+                        ColoursView()
+                    } label: {
+                        Text(L.coloursTitle)
+                    }
+
                     Picker(L.settingsAutoLock, selection: setting(\.autoLockTimeout)) {
                         Text(L.settingsAutoLock1Min).tag(1)
                         Text(L.settingsAutoLock5Min).tag(5)
@@ -115,6 +127,12 @@ struct SettingsView: View {
                     } label: {
                         Label(L.settingsImport, systemImage: "square.and.arrow.down")
                     }
+
+                    NavigationLink {
+                        VaultHealthView()
+                    } label: {
+                        Label(L.healthTitle, systemImage: "stethoscope")
+                    }
                 } header: {
                     Text(L.settingsData)
                 } footer: {
@@ -129,9 +147,11 @@ struct SettingsView: View {
                     HStack {
                         Text(L.settingsNotes)
                         Spacer()
-                        Text("\(appState.noteCount)")
+                        Text("\(appState.notes.count)")
                             .foregroundStyle(.secondary)
                     }
+
+                    VaultCountRows()
 
                     HStack {
                         Text(L.settingsVersion)
@@ -238,6 +258,8 @@ struct SettingsView: View {
                         .truncationMode(.middle)
                 }
 
+                SyncDeviceRows()
+
                 if let lastSync = appState.lastSyncAt {
                     HStack {
                         Text(L.settingsSyncLastSync)
@@ -285,6 +307,12 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
 
+                NavigationLink {
+                    AccountView()
+                } label: {
+                    Text(L.accountTitle)
+                }
+
                 Button(L.deleteAccountTitle, role: .destructive) {
                     showDeleteAccount = true
                 }
@@ -320,6 +348,14 @@ struct SettingsView: View {
                     appState.reportError(L.errorCouldntSaveSettings)
                 }
             }
+        )
+    }
+
+    private var defaultNoteType: Binding<String> {
+        let stored = setting(\.defaultSyntaxLanguage)
+        return Binding(
+            get: { appState.defaultNoteType ?? NoteType.fallback },
+            set: { stored.wrappedValue = $0 }
         )
     }
 

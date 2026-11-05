@@ -22,24 +22,40 @@ enum SearchService {
 
     /// Filter notes by a search query string. `notes` should hold both active
     /// and archived notes: `archived` can reach either, and without it only
-    /// those matching `archiveMode` count.
-    static func filter(notes: [DecryptedNote], query: String, archiveMode: Bool = false) -> [DecryptedNote] {
+    /// those matching `archiveMode` count. `colours` is what `category:` and
+    /// tag colours go by.
+    static func filter(
+        notes: [DecryptedNote],
+        query: String,
+        archiveMode: Bool = false,
+        colours: NoteColourSettings = NoteColourSettings()
+    ) -> [DecryptedNote] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return notes.filter { $0.archived == archiveMode } }
 
-        let parsed = parseQuery(trimmed)
-        return notes.filter { matchesQuery(note: $0, query: parsed, archiveMode: archiveMode) }
+        let parsed = parseQuery(trimmed, colours: colours)
+        return notes.filter { matchesQuery(note: $0, query: parsed, archiveMode: archiveMode, colours: colours) }
     }
 
     /// Sort notes by the given order, pinned notes always first.
     static func sort(notes: [DecryptedNote], order: SortOrder) -> [DecryptedNote] {
-        notes.sorted { a, b in
+        // A title is built from the note's tags and content, so it's built once
+        // per note here: a comparison runs some n log n times.
+        if order == .alpha {
+            return notes.map { (note: $0, title: $0.title) }
+                .sorted { a, b in
+                    if a.note.pinned != b.note.pinned { return a.note.pinned }
+                    return a.title.localizedCaseInsensitiveCompare(b.title) == .orderedAscending
+                }
+                .map(\.note)
+        }
+        return notes.sorted { a, b in
             if a.pinned != b.pinned { return a.pinned }
             switch order {
             case .recent:  return a.modifiedAt > b.modifiedAt
             case .oldest:  return a.modifiedAt < b.modifiedAt
-            case .alpha:   return a.title.localizedCaseInsensitiveCompare(b.title) == .orderedAscending
             case .created: return a.createdAt > b.createdAt
+            case .alpha:   return false  // Handled above.
             }
         }
     }
@@ -83,11 +99,11 @@ enum SearchService {
 
     // MARK: - Query Parsing
 
-    static func parseQuery(_ raw: String) -> ParsedQuery {
+    static func parseQuery(_ raw: String, colours: NoteColourSettings = NoteColourSettings()) -> ParsedQuery {
         var query = ParsedQuery()
 
         // Modifiers come out of the query string first, as on the web.
-        let remaining = extractModifiers(from: raw, into: &query)
+        let remaining = extractModifiers(from: raw, into: &query, colours: colours)
 
         var currentGroup: Int?
         var joinToCurrent = false
@@ -119,7 +135,11 @@ enum SearchService {
 
     private static let date = #"(\d{4}-\d{2}-\d{2})"#
 
-    private static func extractModifiers(from input: String, into query: inout ParsedQuery) -> String {
+    private static func extractModifiers(
+        from input: String,
+        into query: inout ParsedQuery,
+        colours: NoteColourSettings
+    ) -> String {
         var text = input
 
         if !extract(#"\bhas:attachment\b"#, from: &text).isEmpty {
@@ -137,7 +157,7 @@ enum SearchService {
         (query.modifiedAfter, query.modifiedBefore) = extractDates("modified", from: &text)
         extractWordCount(from: &text, into: &query)
         extractColors(from: &text, into: &query)
-        extractCategories(from: &text, into: &query)
+        extractCategories(from: &text, into: &query, colours: colours)
 
         return text
     }
@@ -173,20 +193,18 @@ enum SearchService {
         }
     }
 
-    private static let paletteColors: Set<String> = [
-        "red", "orange", "yellow", "green", "blue", "purple", "pink", "gray",
-    ]
-
-    /// `category:` goes by display name. The palette's names aren't on this
-    /// device, where a colour's name is its key, so anything else is no filter.
-    private static func extractCategories(from text: inout String, into query: inout ParsedQuery) {
+    /// `category:` goes by display name. A name nothing has is no filter.
+    private static func extractCategories(
+        from text: inout String,
+        into query: inout ParsedQuery,
+        colours: NoteColourSettings
+    ) {
         guard query.colors.isEmpty else { return }
         let name = #"\bcategory:([\w\s-]+)"#
         for (qualifier, target) in [(#"\s+note\b"#, ColorTarget.note), (#"\s+tag\b"#, .tag), (#"\b"#, .both)] {
             let found = extract(name + qualifier, from: &text)
             if !found.isEmpty {
-                let names = found.map { normalise($0[0].trimmingCharacters(in: .whitespaces)) }
-                query.colors = names.filter(paletteColors.contains)
+                query.colors = found.compactMap { colours.colourKey(forCategory: $0[0]) }
                 query.colorTarget = target
                 return
             }
@@ -285,7 +303,7 @@ enum SearchService {
     }
 
     /// The same form of a string, however it's composed and whatever its case.
-    private static func normalise(_ text: String) -> String {
+    static func normalise(_ text: String) -> String {
         text.precomposedStringWithCanonicalMapping.lowercased()
     }
 
@@ -314,7 +332,12 @@ enum SearchService {
         }
     }
 
-    private static func matchesQuery(note: DecryptedNote, query: ParsedQuery, archiveMode: Bool) -> Bool {
+    private static func matchesQuery(
+        note: DecryptedNote,
+        query: ParsedQuery,
+        archiveMode: Bool,
+        colours: NoteColourSettings
+    ) -> Bool {
         guard note.archived == (query.archived ?? archiveMode) else { return false }
 
         let needsWords = query.groups.joined().contains {
@@ -345,14 +368,27 @@ enum SearchService {
         if let min = query.wordCountMin, note.wordCount < min { return false }
         if let max = query.wordCountMax, note.wordCount > max { return false }
 
-        // Colours. Tag colours are a web setting that isn't on this device, so
-        // `tag` finds nothing here, and `both` comes down to the note's colour.
-        if !query.colors.isEmpty {
-            guard query.colorTarget != .tag, let color = note.color else { return false }
-            if !query.colors.contains(normalise(color)) { return false }
+        if !query.colors.isEmpty, !matchesColour(note, query: query, colours: colours) {
+            return false
         }
 
         return true
+    }
+
+    private static func matchesColour(
+        _ note: DecryptedNote,
+        query: ParsedQuery,
+        colours: NoteColourSettings
+    ) -> Bool {
+        let noteMatches = note.color.map { query.colors.contains(normalise($0)) } ?? false
+        let tagMatches = note.tags.contains { tag in
+            colours.colourKey(forTag: tag).map(query.colors.contains) ?? false
+        }
+        switch query.colorTarget {
+        case .note: return noteMatches
+        case .tag: return tagMatches
+        case .both: return noteMatches || tagMatches
+        }
     }
 
     private static func utcDay(_ date: Date) -> String {
