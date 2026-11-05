@@ -372,6 +372,52 @@ class BackupServiceTest {
         assertEquals("#ios", search.query)
     }
 
+    private val tuiBackup by lazy { RepoFile.at("tui/tests/fixtures/tui-v3.jottery-backup") }
+    private val tuiPassword by lazy { java.io.File("${tuiBackup.path}.password").readText().trim() }
+
+    /** What the TUI put in its file, as this vault's [key] reads it. */
+    private suspend fun assertTuiContents(vault: Vault, key: SecretKey) {
+        val notes = vault.notes.listAllRaw().map { vault.notes.get(it.id, key)!! }
+        assertEquals(2, notes.size)
+
+        val note = notes.single { it.content.contains("A note from the TUI") }
+        assertEquals("A note from the TUI, with a caf\u00e9 and \u65e5\u672c\u8a9e\n", note.content)
+        assertEquals(setOf("work", "cross-client"), note.tags.toSet())
+
+        val attachment = note.attachments.single()
+        assertEquals("hello.txt", attachment.filename)
+        val blob = vault.attachments.getBlob(attachment.data)!!
+        assertEquals("attachment body", decrypt(String(blob), key))
+
+        assertTrue(notes.single { it.content.contains("An archived note") }.archived)
+    }
+
+    @Test fun `the real file written by the TUI restores completely`() = runBlocking {
+        val (vault, key) = restoreFile(tuiBackup, tuiPassword)
+
+        assertTuiContents(vault, key)
+    }
+
+    @Test fun `the real file written by the TUI restores into a vault with another key`() = runBlocking {
+        val vault = Vault()
+        val key = vault.seedLegacy()
+        val source = BackupSource { tuiBackup.inputStream() }
+
+        val plan = vault.backup.inspect(source, tuiPassword, key)
+        assertEquals(0, plan.unreadable)
+        vault.backup.restore(source, plan, key)
+
+        assertTuiContents(vault, key)
+    }
+
+    @Test fun `the TUI's file refuses the wrong password`() = runBlocking {
+        val source = BackupSource { tuiBackup.inputStream() }
+
+        val thrown = runCatching { Vault().backup.inspect(source, "not-the-password", null) }.exceptionOrNull()
+
+        assertTrue(thrown is BackupException.WrongPassword)
+    }
+
     @Test fun `the files written by this app on a device read back`() = runBlocking {
         val cases = listOf(
             "android-v3-legacy.jottery-backup" to "notes-password-correct-horse",
