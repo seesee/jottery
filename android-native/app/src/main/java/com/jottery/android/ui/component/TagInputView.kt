@@ -63,7 +63,9 @@ fun TagInputView(
                         )
                     }
                 },
-                modifier = Modifier.heightIn(min = 32.dp),
+                modifier = Modifier
+                    .heightIn(min = 32.dp)
+                    .testTag("tag-chip"),
             )
         }
 
