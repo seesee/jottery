@@ -66,4 +66,18 @@ extension AppState {
         savedSearches = try savedSearchRepo.reorder(moved)
         scheduleAutoSync()
     }
+
+    // MARK: - Searching
+
+    /// Remember the current search, once it's been used: submitted, or a result
+    /// opened. Filtering as each letter goes in doesn't count.
+    func recordRecentSearch() {
+        recentSearches.record(searchQuery)
+    }
+
+    /// Change between the notes and the archive, leaving the search as it is.
+    func toggleArchiveView() {
+        showArchive.toggle()
+        selectedNoteId = nil
+    }
 }

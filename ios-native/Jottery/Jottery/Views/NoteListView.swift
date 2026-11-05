@@ -36,6 +36,14 @@ struct NoteListView: View {
         // As in the editor: search terms stay out of the keyboard's learned words.
         .autocorrectionDisabled()
         .textInputAutocapitalization(.never)
+        .searchSuggestions {
+            let completions = SearchSuggestions.tagCompletions(for: appState.searchQuery, tags: appState.allTags)
+            // Anything here takes the place of the results, so typing shows them.
+            if appState.searchQuery.isEmpty || !completions.isEmpty {
+                SearchSuggestionRows(tagCompletions: completions)
+            }
+        }
+        .onSubmit(of: .search) { appState.recordRecentSearch() }
         .navigationTitle(appState.showArchive ? L.noteListArchiveTitle : L.noteListTitle)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
@@ -86,10 +94,7 @@ struct NoteListView: View {
                 }
 
                 Button {
-                    appState.showArchive.toggle()
-                    appState.selectedNoteId = nil
-                    isSelectMode = false
-                    selectedIds.removeAll()
+                    toggleArchiveView()
                 } label: {
                     Label(
                         appState.showArchive ? L.noteListShowNotes : L.noteListShowArchive,
@@ -211,6 +216,9 @@ struct NoteListView: View {
                 }
             }
         }
+        .onChange(of: appState.selectedNoteId) { _, opened in
+            if opened != nil { appState.recordRecentSearch() }
+        }
         .onChange(of: appState.searchQuery) { _, _ in appState.scheduleSearch() }
         .onChange(of: appState.sortOrder) { _, _ in appState.scheduleSearch() }
         .onChange(of: appState.showArchive) { _, _ in appState.scheduleSearch() }
@@ -234,7 +242,9 @@ struct NoteListView: View {
             }
         }
         .overlay {
-            if appState.showArchive && appState.archivedNotes.isEmpty {
+            if appState.filteredNotes.isEmpty && !appState.searchQuery.isEmpty {
+                noSearchResults
+            } else if appState.showArchive && appState.archivedNotes.isEmpty {
                 ContentUnavailableView(
                     L.noteListArchiveEmpty,
                     systemImage: "archivebox",
@@ -246,10 +256,35 @@ struct NoteListView: View {
                     systemImage: "doc.text",
                     description: Text(L.noteListNoNotesDescription)
                 )
-            } else if appState.filteredNotes.isEmpty && !appState.searchQuery.isEmpty {
-                ContentUnavailableView.search(text: appState.searchQuery)
             }
         }
+    }
+
+    // MARK: - No Results
+
+    /// What a search that found nothing says, with a way to what it would have
+    /// found in the other view.
+    @ViewBuilder
+    private var noSearchResults: some View {
+        let elsewhere = appState.matchesInOtherView
+        if elsewhere > 0 {
+            ContentUnavailableView {
+                Label(L.searchNoResults(appState.searchQuery), systemImage: "magnifyingglass")
+            } actions: {
+                Button(appState.showArchive ? L.searchMatchesInNotes(elsewhere) : L.searchMatchesInArchive(elsewhere)) {
+                    toggleArchiveView()
+                }
+                .buttonStyle(.bordered)
+            }
+        } else {
+            ContentUnavailableView.search(text: appState.searchQuery)
+        }
+    }
+
+    private func toggleArchiveView() {
+        appState.toggleArchiveView()
+        isSelectMode = false
+        selectedIds.removeAll()
     }
 
     // MARK: - Single-Select List (normal navigation)

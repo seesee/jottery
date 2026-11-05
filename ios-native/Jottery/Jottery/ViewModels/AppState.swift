@@ -84,6 +84,14 @@ final class AppState {
     var pendingQuickAction: String?
     var searchFocused: Bool = false
 
+    // MARK: - Note List
+
+    /// Never stored, and cleared at lock (see `RecentSearches`).
+    var recentSearches = RecentSearches()
+    /// How many notes match the search in the view that isn't showing, counted
+    /// when the one that is showing has none.
+    var matchesInOtherView = 0
+
     // MARK: - Lifecycle
 
     var backgroundedAt: ContinuousClock.Instant?
@@ -221,6 +229,7 @@ final class AppState {
         // No debounce needed when query is empty — just sort (cheap).
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
             filteredNotes = SearchService.sort(notes: displayedNotes, order: order)
+            matchesInOtherView = 0
             return
         }
 
@@ -234,13 +243,17 @@ final class AppState {
             guard !Task.isCancelled else { return }
 
             // Run expensive filter + sort off the main thread
-            let results = await Task.detached(priority: .userInitiated) {
+            let (results, elsewhere) = await Task.detached(priority: .userInitiated) {
                 let filtered = SearchService.filter(notes: source, query: query, archiveMode: archiveMode)
-                return SearchService.sort(notes: filtered, order: order)
+                let elsewhere = filtered.isEmpty
+                    ? SearchService.filter(notes: source, query: query, archiveMode: !archiveMode).count
+                    : 0
+                return (SearchService.sort(notes: filtered, order: order), elsewhere)
             }.value
 
             guard !Task.isCancelled else { return }
             self.filteredNotes = results
+            self.matchesInOtherView = elsewhere
         }
     }
 
@@ -796,6 +809,7 @@ final class AppState {
         pendingConflicts = []
         inboxItems = []
         selectedNoteId = nil
+        recentSearches.clear()
     }
 
     /// Stop everything that talks to the server and let go of the sync objects,
@@ -1916,6 +1930,7 @@ final class AppState {
         showArchive = false
         selectedNoteId = nil
         searchQuery = ""
+        recentSearches.clear()
         isSyncing = false
         lastSyncAt = nil
         syncError = nil
