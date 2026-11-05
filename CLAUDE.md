@@ -25,7 +25,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Storage**: IndexedDB (via `idb` wrapper)
 - **Encryption**: Web Crypto API (AES-256-GCM with PBKDF2/Argon2id)
 - **Editor**: CodeMirror 6
-- **Search**: FlexSearch
+- **Search**: Scan of decrypted notes in memory (`searchService.ts`), no search library
 - **Styling**: TailwindCSS (or UnoCSS)
 - **i18n**: svelte-i18n or i18next
 - **Icons**: Lucide Icons or Heroicons
