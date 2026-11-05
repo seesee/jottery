@@ -15,6 +15,17 @@ use crate::models::AttachmentRef;
 
 pub struct AttachmentRepository;
 
+/// What happened to a blob pushed by a client.
+#[derive(Debug, PartialEq, Eq)]
+pub enum BlobStored {
+    /// The user has no such attachment, so nothing was stored.
+    NoMetadata,
+    /// First time the server has held this blob.
+    Added,
+    /// The server already held a blob for this attachment.
+    Replaced,
+}
+
 impl AttachmentRepository {
     /// Record that a note references an attachment, creating or updating the
     /// attachment's metadata.
@@ -107,25 +118,29 @@ impl AttachmentRepository {
             .collect())
     }
 
-    /// Store a blob for an attachment this user has metadata for. Returns false
-    /// if they have none, which leaves other users' attachments out of reach.
+    /// Store a blob for an attachment this user has metadata for. Without
+    /// metadata nothing is stored, which keeps other users' attachments out of
+    /// reach.
     pub async fn store_blob(
         conn: &mut SqliteConnection,
         user_id: &str,
         attachment_id: &str,
         data: &[u8],
         now: &str,
-    ) -> Result<bool, sqlx::Error> {
-        let blob_key = sqlx::query_scalar!(
-            "SELECT id FROM attachments_meta WHERE user_id = ? AND attachment_id = ?",
+    ) -> Result<BlobStored, sqlx::Error> {
+        let existing = sqlx::query!(
+            r#"SELECT m.id AS "blob_key!: String", d.id AS "existing_blob: String"
+               FROM attachments_meta m
+               LEFT JOIN attachments_data d ON d.id = m.id
+               WHERE m.user_id = ? AND m.attachment_id = ?"#,
             user_id,
             attachment_id
         )
         .fetch_optional(&mut *conn)
         .await?;
 
-        let Some(blob_key) = blob_key else {
-            return Ok(false);
+        let Some(existing) = existing else {
+            return Ok(BlobStored::NoMetadata);
         };
 
         sqlx::query!(
@@ -134,14 +149,33 @@ impl AttachmentRepository {
             VALUES (?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET data = excluded.data
             "#,
-            blob_key,
+            existing.blob_key,
             data,
             now
         )
         .execute(&mut *conn)
         .await?;
 
-        Ok(true)
+        Ok(if existing.existing_blob.is_some() {
+            BlobStored::Replaced
+        } else {
+            BlobStored::Added
+        })
+    }
+
+    /// The notes that reference an attachment.
+    pub async fn notes_referencing(
+        conn: &mut SqliteConnection,
+        user_id: &str,
+        attachment_id: &str,
+    ) -> Result<Vec<String>, sqlx::Error> {
+        sqlx::query_scalar!(
+            "SELECT note_id FROM note_attachments WHERE user_id = ? AND attachment_id = ?",
+            user_id,
+            attachment_id
+        )
+        .fetch_all(&mut *conn)
+        .await
     }
 
     /// Fetch the blobs of this user's attachments as `(attachment_id, data)`.

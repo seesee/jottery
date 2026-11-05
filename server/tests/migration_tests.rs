@@ -188,32 +188,43 @@ async fn rebuild_keeps_every_row_of_a_populated_database() {
 }
 
 #[tokio::test]
-async fn rebuild_assigns_one_unique_sequence_in_server_time_order() {
+async fn rebuild_assigns_each_user_one_sequence_in_server_time_order() {
     let db = empty_db().await;
     migrate_to(&db.pool, 15).await;
     seed_v15(&db.pool).await;
 
     run_migrations(&db.pool).await.expect("migrate");
 
+    let alice: String = sqlx::query("SELECT id FROM users WHERE email = 'alice@example.com'")
+        .fetch_one(&db.pool)
+        .await
+        .unwrap()
+        .get(0);
+
+    // Alice has two notes, a version, a tombstone and two saved searches
     let rows: Vec<i64> = sqlx::query(
-        "SELECT change_seq FROM notes UNION ALL SELECT change_seq FROM note_versions
-         UNION ALL SELECT change_seq FROM note_deletions UNION ALL SELECT change_seq FROM saved_searches
+        "SELECT change_seq FROM notes WHERE user_id = ?1
+         UNION ALL SELECT change_seq FROM note_versions WHERE user_id = ?1
+         UNION ALL SELECT change_seq FROM note_deletions WHERE user_id = ?1
+         UNION ALL SELECT change_seq FROM saved_searches WHERE user_id = ?1
          ORDER BY 1",
     )
+    .bind(&alice)
     .fetch_all(&db.pool)
     .await
     .unwrap()
     .iter()
     .map(|r| r.get(0))
     .collect();
-    assert_eq!(rows, (1..=7).collect::<Vec<i64>>(), "every row gets its own sequence number");
+    assert_eq!(rows, (1..=6).collect::<Vec<i64>>(), "every row gets its own sequence number");
 
-    let last: i64 = sqlx::query("SELECT last_seq FROM sync_state")
+    let last: i64 = sqlx::query("SELECT last_seq FROM sync_state WHERE user_id = ?")
+        .bind(&alice)
         .fetch_one(&db.pool)
         .await
         .unwrap()
         .get("last_seq");
-    assert_eq!(last, 7);
+    assert_eq!(last, 6);
 
     // The version predates the notes, so it must sort before them.
     let version_seq: i64 = sqlx::query("SELECT change_seq FROM note_versions")
@@ -221,7 +232,8 @@ async fn rebuild_assigns_one_unique_sequence_in_server_time_order() {
         .await
         .unwrap()
         .get(0);
-    let first_note_seq: i64 = sqlx::query("SELECT MIN(change_seq) FROM notes")
+    let first_note_seq: i64 = sqlx::query("SELECT MIN(change_seq) FROM notes WHERE user_id = ?")
+        .bind(&alice)
         .fetch_one(&db.pool)
         .await
         .unwrap()

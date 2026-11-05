@@ -10,8 +10,9 @@
 --    note reference any of its owner's attachments, and blobs outlive any one note.
 --
 -- It also adds what the pull cursor needs: a change_seq on every synced table,
--- taken from the single counter in sync_state, and a server-set time for
--- tombstones and saved searches.
+-- taken from a per-user counter in sync_state, and a server-set time for
+-- tombstones and saved searches. The counter is per user so that a cursor reveals
+-- nothing about anyone else's activity.
 --
 -- THIS MUST RUN WITH FOREIGN KEYS OFF. DROP TABLE performs an implicit DELETE
 -- that fires ON DELETE CASCADE, and sqlx turns foreign keys on. The usual
@@ -36,10 +37,11 @@ SELECT
     (SELECT COUNT(*) FROM saved_searches) AS saved_searches,
     (SELECT COUNT(*) FROM note_deletions) AS note_deletions;
 
--- 1. One sequence across all synced rows, in server-time order, so that a client
---    moving from lastSyncAt to a cursor only has recent rows re-sent.
+-- 1. One sequence across each user's synced rows, in server-time order, so that a
+--    client moving from lastSyncAt to a cursor only has recent rows re-sent.
 CREATE TEMP TABLE sequence_backfill AS
-SELECT kind, owner, item, ROW_NUMBER() OVER (ORDER BY changed_at, kind, owner, item) AS seq
+SELECT kind, owner, item,
+       ROW_NUMBER() OVER (PARTITION BY owner ORDER BY changed_at, kind, item) AS seq
 FROM (
     SELECT 'note' AS kind, user_id AS owner, id AS item, server_modified_at AS changed_at FROM notes
     UNION ALL
@@ -52,11 +54,12 @@ FROM (
 CREATE UNIQUE INDEX temp.idx_sequence_backfill ON sequence_backfill(kind, owner, item);
 
 CREATE TABLE sync_state (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
-    last_seq INTEGER NOT NULL
+    user_id TEXT PRIMARY KEY NOT NULL,
+    last_seq INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
-INSERT INTO sync_state (id, last_seq)
-SELECT 1, COALESCE(MAX(seq), 0) FROM sequence_backfill;
+INSERT INTO sync_state (user_id, last_seq)
+SELECT owner, MAX(seq) FROM sequence_backfill GROUP BY owner;
 
 -- 2. note_versions: per-user key, device reference survives device deletion
 CREATE TABLE note_versions_new (

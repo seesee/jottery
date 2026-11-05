@@ -161,9 +161,14 @@ pub struct SyncRejected {
 pub struct SyncPullRequest {
     #[serde(rename = "lastSyncAt")]
     pub last_sync_at: Option<String>,
-    #[serde(rename = "knownNoteIds")]
+    /// Opaque position from a previous `nextCursor`. Present, even as an empty
+    /// string, it selects cursor mode, which ignores `offset`. See
+    /// docs/sync-protocol.md.
+    #[serde(default)]
+    pub cursor: Option<String>,
+    #[serde(rename = "knownNoteIds", default)]
     pub known_note_ids: Vec<String>,
-    #[serde(rename = "knownAttachmentIds")]
+    #[serde(rename = "knownAttachmentIds", default)]
     pub known_attachment_ids: Vec<String>,
     // Pagination support for large datasets
     #[serde(default)]
@@ -188,6 +193,10 @@ pub struct SyncPullResponse {
     pub total_count: i64,
     #[serde(rename = "hasMore")]
     pub has_more: bool,
+    /// The position to send as `cursor` next. Only present in cursor mode, so
+    /// its absence tells a client that the server doesn't support cursors.
+    #[serde(rename = "nextCursor", skip_serializing_if = "Option::is_none")]
+    pub next_cursor: Option<String>,
     // Inbox items (unencrypted, pending acceptance)
     #[serde(rename = "inboxItems", skip_serializing_if = "Option::is_none")]
     pub inbox_items: Option<Vec<super::inbox::InboxItemResponse>>,

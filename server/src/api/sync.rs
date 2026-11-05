@@ -4,11 +4,12 @@ use axum::{
     Json,
 };
 use base64::Engine;
+use sqlx::SqliteConnection;
 use std::sync::Arc;
 
 use crate::{
     api::extractors::AuthClient,
-    db::AttachmentRepository,
+    db::{AttachmentRepository, BlobStored},
     error::{AppError, AppResult},
     models::{
         AttachmentRef, SyncAccepted, SyncAttachmentData, SyncNote, SyncPullRequest,
@@ -17,6 +18,49 @@ use crate::{
     utils::validation,
     AppState,
 };
+
+/// Default page size for a pull.
+const DEFAULT_PULL_LIMIT: i64 = 100;
+
+/// Largest page a cursor pull will return.
+const MAX_CURSOR_PULL_LIMIT: i64 = 500;
+
+/// How far a `lastSyncAt` filter reaches back. Clients that haven't moved to the
+/// cursor store a timestamp, and a row can be stamped before that timestamp yet
+/// commit after it, or the client's clock can run ahead. Re-sending recent rows
+/// is harmless: clients recognise them by hash.
+const LAST_SYNC_OVERLAP_MINUTES: i64 = 5;
+
+const CURSOR_PREFIX: &str = "v1.";
+
+fn encode_cursor(seq: i64) -> String {
+    format!("{CURSOR_PREFIX}{seq}")
+}
+
+fn decode_cursor(cursor: &str) -> Option<i64> {
+    cursor
+        .strip_prefix(CURSOR_PREFIX)?
+        .parse()
+        .ok()
+        .filter(|seq| *seq >= 0)
+}
+
+/// Take the next position in a user's change sequence.
+///
+/// Must be called inside the write transaction. SQLite has one writer, so the
+/// transaction holds the lock from here to its commit, which makes sequence
+/// order the same as commit order. That is what lets a pull trust that every
+/// row at or below a sequence it has seen is already visible.
+async fn next_seq(conn: &mut SqliteConnection, user_id: &str) -> Result<i64, sqlx::Error> {
+    sqlx::query_scalar!(
+        "INSERT INTO sync_state (user_id, last_seq) VALUES (?, 1)
+         ON CONFLICT(user_id) DO UPDATE SET last_seq = last_seq + 1
+         RETURNING last_seq",
+        user_id
+    )
+    .fetch_one(conn)
+    .await
+}
 
 pub async fn get_status(
     State(state): State<Arc<AppState>>,
@@ -267,6 +311,8 @@ pub async fn push(
                 .map(|chain| serde_json::to_string(chain).ok())
                 .flatten();
 
+            let change_seq = next_seq(&mut tx, &client_info.user_id).await?;
+
             // Upsert note (with both user_id for access control and client_id for audit)
             // Use composite primary key (id, user_id) to allow same note UUIDs across users
             sqlx::query!(
@@ -275,9 +321,9 @@ pub async fn push(
                     id, user_id, client_id, created_at, modified_at, server_modified_at,
                     content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version,
                     word_wrap, syntax_language, show_preview, color,
-                    content_hash, parent_hash, hash_chain
+                    content_hash, parent_hash, hash_chain, change_seq
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id, user_id) DO UPDATE SET
                     modified_at = excluded.modified_at,
                     server_modified_at = excluded.server_modified_at,
@@ -298,7 +344,8 @@ pub async fn push(
                     color = excluded.color,
                     content_hash = excluded.content_hash,
                     parent_hash = excluded.parent_hash,
-                    hash_chain = excluded.hash_chain
+                    hash_chain = excluded.hash_chain,
+                    change_seq = excluded.change_seq
                 "#,
                 note.id,
                 client_info.user_id,
@@ -323,7 +370,8 @@ pub async fn push(
                 note.color,
                 note.content_hash,
                 note.parent_hash,
-                hash_chain_json
+                hash_chain_json,
+                change_seq
             )
             .execute(&mut *tx)
             .await?;
@@ -484,6 +532,8 @@ pub async fn push(
         let word_wrap = version.word_wrap.map(|w| if w { 1 } else { 0 });
         let show_preview = version.show_preview.map(|p| if p { 1 } else { 0 });
 
+        let change_seq = next_seq(&mut tx, &client_info.user_id).await?;
+
         // Upsert version (insert or replace if exists)
         // Use match to handle potential FK errors gracefully
         let result = sqlx::query!(
@@ -491,14 +541,15 @@ pub async fn push(
             INSERT INTO note_versions (
                 version_key, note_id, user_id, client_id, version, created_at, synced_at,
                 server_synced_at, content, tags, attachments, syntax_language, word_wrap, show_preview, color, reason,
-                content_hash, parent_hash
+                content_hash, parent_hash, change_seq
             )
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)
             ON CONFLICT(user_id, version_key) DO UPDATE SET
                 synced_at = excluded.synced_at,
                 server_synced_at = excluded.server_synced_at,
                 content_hash = excluded.content_hash,
-                parent_hash = excluded.parent_hash
+                parent_hash = excluded.parent_hash,
+                change_seq = excluded.change_seq
             "#,
             version.version_key,
             version.note_id,
@@ -517,7 +568,8 @@ pub async fn push(
             version.color,
             version.reason,
             version.content_hash,
-            version.parent_hash
+            version.parent_hash,
+            change_seq
         )
         .execute(&mut *tx)
         .await;
@@ -551,20 +603,40 @@ pub async fn push(
         )
         .await?;
 
-        if stored {
-            tracing::debug!("Stored attachment: {}", attachment_id);
-        } else {
-            // Expected when the note was rejected: its metadata was never stored.
-            tracing::warn!(
-                "Skipping attachment data {} from client {}: no matching metadata for user {}",
-                attachment_id,
-                client_info.client_id,
-                client_info.user_id
-            );
+        match stored {
+            BlobStored::NoMetadata => {
+                // Expected when the note was rejected: its metadata was never stored.
+                tracing::warn!(
+                    "Skipping attachment data {} from client {}: no matching metadata for user {}",
+                    attachment_id,
+                    client_info.client_id,
+                    client_info.user_id
+                );
+            }
+            BlobStored::Replaced => {
+                tracing::debug!("Replaced attachment: {}", attachment_id);
+            }
+            BlobStored::Added => {
+                tracing::debug!("Stored attachment: {}", attachment_id);
+
+                // A blob that arrives after its note, as a repair push does,
+                // would otherwise never reach devices that already pulled the
+                // note: pull only sends blobs with the notes it returns.
+                let notes = AttachmentRepository::notes_referencing(
+                    &mut tx,
+                    &client_info.user_id,
+                    attachment_id,
+                )
+                .await?;
+                for note_id in notes.iter().filter(|id| !accepted_note_ids.contains(*id)) {
+                    announce_note(&mut tx, &client_info.user_id, note_id, &now).await?;
+                }
+            }
         }
     }
 
     // Store saved searches (similar to notes, with last-write-wins conflict resolution)
+    let mut searches_changed = false;
     for search in push_req.saved_searches {
         // Check if saved search exists for this user
         let existing = sqlx::query!(
@@ -585,15 +657,16 @@ pub async fn push(
 
         if should_accept {
             let deleted = if search.deleted { 1 } else { 0 };
+            let change_seq = next_seq(&mut tx, &client_info.user_id).await?;
 
             // Upsert saved search
             sqlx::query!(
                 r#"
                 INSERT INTO saved_searches (
                     id, user_id, name, query, "order", created_at, modified_at,
-                    synced_at, deleted, deleted_at, version
+                    synced_at, deleted, deleted_at, version, change_seq
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id, user_id) DO UPDATE SET
                     name = excluded.name,
                     query = excluded.query,
@@ -602,7 +675,8 @@ pub async fn push(
                     synced_at = excluded.synced_at,
                     deleted = excluded.deleted,
                     deleted_at = excluded.deleted_at,
-                    version = excluded.version
+                    version = excluded.version,
+                    change_seq = excluded.change_seq
                 "#,
                 search.id,
                 client_info.user_id,
@@ -614,16 +688,19 @@ pub async fn push(
                 now,
                 deleted,
                 search.deleted_at,
-                search.version
+                search.version,
+                change_seq
             )
             .execute(&mut *tx)
             .await?;
 
+            searches_changed = true;
             tracing::debug!("Stored saved search: {}", search.id);
         }
     }
 
     // Process hard deletions (notes permanently removed from client's recycle bin)
+    let mut deletions_applied = false;
     for deletion in push_req.deletions {
         // Delete the note from the notes table
         let delete_result = sqlx::query!(
@@ -638,24 +715,30 @@ pub async fn push(
             // Record the deletion so other clients can pick it up
             // Expires after 30 days (same as cleanup_old_deleted_notes)
             let expires_at = (chrono::Utc::now() + chrono::Duration::days(30)).to_rfc3339();
+            let change_seq = next_seq(&mut tx, &client_info.user_id).await?;
 
             sqlx::query!(
                 r#"
-                INSERT INTO note_deletions (id, user_id, deleted_at, synced_from_client_id, expires_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO note_deletions (id, user_id, deleted_at, synced_from_client_id, expires_at, received_at, change_seq)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(id, user_id) DO UPDATE SET
                     deleted_at = excluded.deleted_at,
-                    synced_from_client_id = excluded.synced_from_client_id
+                    synced_from_client_id = excluded.synced_from_client_id,
+                    received_at = excluded.received_at,
+                    change_seq = excluded.change_seq
                 "#,
                 deletion.id,
                 client_info.user_id,
                 deletion.deleted_at,
                 client_info.client_id,
-                expires_at
+                expires_at,
+                now,
+                change_seq
             )
             .execute(&mut *tx)
             .await?;
 
+            deletions_applied = true;
             tracing::info!("Recorded hard deletion for note {} (user {})", deletion.id, client_info.user_id);
         }
     }
@@ -664,7 +747,7 @@ pub async fn push(
 
     // Broadcast sync notification to other connected devices of this user
     // This triggers real-time sync via SSE for any other connected clients
-    if !accepted.is_empty() {
+    if !accepted.is_empty() || deletions_applied || searches_changed {
         use crate::api::sse::SyncNotification;
         let _ = state.sync_broadcast.send(SyncNotification {
             user_id: client_info.user_id.clone(),
@@ -740,117 +823,371 @@ pub async fn push(
     }))
 }
 
+/// Give a note a fresh place in the change stream without changing it, so that
+/// every device receives it again.
+async fn announce_note(
+    conn: &mut SqliteConnection,
+    user_id: &str,
+    note_id: &str,
+    now: &str,
+) -> Result<(), sqlx::Error> {
+    let change_seq = next_seq(&mut *conn, user_id).await?;
+    sqlx::query!(
+        "UPDATE notes SET change_seq = ?, server_modified_at = ? WHERE id = ? AND user_id = ?",
+        change_seq,
+        now,
+        note_id,
+        user_id
+    )
+    .execute(&mut *conn)
+    .await?;
+    Ok(())
+}
+
+const NOTE_COLUMNS: &str = "id, client_id, created_at, modified_at, server_modified_at, content, \
+     tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, \
+     server_version, word_wrap, syntax_language, show_preview, color, content_hash, parent_hash, \
+     hash_chain";
+
+const VERSION_COLUMNS: &str = "version_key, note_id, version, created_at, synced_at, content, \
+     tags, attachments, syntax_language, word_wrap, show_preview, color, reason, content_hash, \
+     parent_hash";
+
+const SAVED_SEARCH_COLUMNS: &str = r#"id, user_id, name, query, "order", created_at, modified_at,
+     synced_at, deleted, deleted_at, version"#;
+
+#[derive(sqlx::FromRow)]
+struct VersionRow {
+    version_key: String,
+    note_id: String,
+    version: i64,
+    created_at: String,
+    synced_at: String,
+    content: String,
+    tags: String,
+    attachments: String,
+    syntax_language: Option<String>,
+    word_wrap: Option<i64>,
+    show_preview: Option<i64>,
+    color: Option<String>,
+    reason: String,
+    content_hash: Option<String>,
+    parent_hash: Option<String>,
+}
+
+#[derive(sqlx::FromRow)]
+struct DeletionRow {
+    id: String,
+    deleted_at: String,
+}
+
+/// The rows one pull returns, before attachments are added.
+struct PullPage {
+    notes: Vec<crate::models::Note>,
+    deletions: Vec<DeletionRow>,
+    versions: Vec<VersionRow>,
+    saved_searches: Vec<crate::models::SavedSearch>,
+    total_count: i64,
+    has_more: bool,
+    next_cursor: Option<String>,
+}
+
+/// Where a cursor pull starts from. A cursor this server didn't issue, or one
+/// ahead of its sequence because the database was restored from a backup, can't
+/// be trusted, so it restarts just as an empty cursor does. That can only send
+/// too much, never too little.
+async fn cursor_start(
+    conn: &mut SqliteConnection,
+    user_id: &str,
+    cursor: &str,
+    last_sync_at: Option<&str>,
+) -> Result<i64, sqlx::Error> {
+    let last_seq = sqlx::query_scalar!(
+        "SELECT last_seq FROM sync_state WHERE user_id = ?",
+        user_id
+    )
+    .fetch_optional(&mut *conn)
+    .await?
+    .unwrap_or(0);
+
+    if let Some(seq) = decode_cursor(cursor).filter(|seq| *seq <= last_seq) {
+        return Ok(seq);
+    }
+
+    let Some(last_sync_at) = last_sync_at else {
+        return Ok(0);
+    };
+
+    // A client moving over from lastSyncAt: start just before its oldest
+    // change since then. Rows from there on may be older, which is harmless.
+    let since = last_sync_filter(last_sync_at);
+    let oldest_new: Option<i64> = sqlx::query_scalar(
+        "SELECT MIN(seq) FROM (
+             SELECT MIN(change_seq) AS seq FROM notes WHERE user_id = ?1 AND server_modified_at > ?2
+             UNION ALL
+             SELECT MIN(change_seq) FROM note_deletions WHERE user_id = ?1 AND received_at > ?2
+             UNION ALL
+             SELECT MIN(change_seq) FROM note_versions WHERE user_id = ?1 AND server_synced_at > ?2
+             UNION ALL
+             SELECT MIN(change_seq) FROM saved_searches WHERE user_id = ?1 AND synced_at > ?2
+         )",
+    )
+    .bind(user_id)
+    .bind(&since)
+    .fetch_one(&mut *conn)
+    .await?;
+
+    Ok(oldest_new.map_or(last_seq, |seq| seq - 1))
+}
+
+/// One page of changes after `from`.
+///
+/// The end of the page is read first, from committed rows, and every query is
+/// then bounded by it. Sequence order is commit order, so nothing at or below
+/// that bound can still appear: reads need no snapshot and hold no lock, and a
+/// row updated meanwhile simply moves past the bound into the next page.
+async fn cursor_page(
+    conn: &mut SqliteConnection,
+    user_id: &str,
+    from: i64,
+    limit: i64,
+) -> Result<PullPage, sqlx::Error> {
+    let upcoming: Vec<i64> = sqlx::query_scalar(
+        "SELECT seq FROM (
+             SELECT change_seq AS seq FROM notes WHERE user_id = ?1 AND change_seq > ?2
+             UNION ALL
+             SELECT change_seq FROM note_deletions WHERE user_id = ?1 AND change_seq > ?2
+             UNION ALL
+             SELECT change_seq FROM note_versions WHERE user_id = ?1 AND change_seq > ?2
+             UNION ALL
+             SELECT change_seq FROM saved_searches WHERE user_id = ?1 AND change_seq > ?2
+         )
+         ORDER BY seq LIMIT ?3",
+    )
+    .bind(user_id)
+    .bind(from)
+    .bind(limit + 1)
+    .fetch_all(&mut *conn)
+    .await?;
+
+    let has_more = upcoming.len() as i64 > limit;
+    let to = upcoming
+        .iter()
+        .take(limit as usize)
+        .last()
+        .copied()
+        .unwrap_or(from);
+
+    let notes = sqlx::query_as(&format!(
+        "SELECT {NOTE_COLUMNS} FROM notes
+         WHERE user_id = ? AND change_seq > ? AND change_seq <= ? ORDER BY change_seq"
+    ))
+    .bind(user_id)
+    .bind(from)
+    .bind(to)
+    .fetch_all(&mut *conn)
+    .await?;
+
+    let deletions = sqlx::query_as(
+        "SELECT id, deleted_at FROM note_deletions
+         WHERE user_id = ? AND change_seq > ? AND change_seq <= ? ORDER BY change_seq",
+    )
+    .bind(user_id)
+    .bind(from)
+    .bind(to)
+    .fetch_all(&mut *conn)
+    .await?;
+
+    let versions = sqlx::query_as(&format!(
+        "SELECT {VERSION_COLUMNS} FROM note_versions
+         WHERE user_id = ? AND change_seq > ? AND change_seq <= ? ORDER BY change_seq"
+    ))
+    .bind(user_id)
+    .bind(from)
+    .bind(to)
+    .fetch_all(&mut *conn)
+    .await?;
+
+    let saved_searches = sqlx::query_as(&format!(
+        "SELECT {SAVED_SEARCH_COLUMNS} FROM saved_searches
+         WHERE user_id = ? AND change_seq > ? AND change_seq <= ? ORDER BY change_seq"
+    ))
+    .bind(user_id)
+    .bind(from)
+    .bind(to)
+    .fetch_all(&mut *conn)
+    .await?;
+
+    let total_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM notes WHERE user_id = ? AND change_seq > ?")
+            .bind(user_id)
+            .bind(from)
+            .fetch_one(&mut *conn)
+            .await?;
+
+    Ok(PullPage {
+        notes,
+        deletions,
+        versions,
+        saved_searches,
+        total_count,
+        has_more,
+        next_cursor: Some(encode_cursor(to)),
+    })
+}
+
+/// Reach a `lastSyncAt` value back by the overlap. A value that doesn't parse is
+/// compared as it stands, as it always was.
+fn last_sync_filter(last_sync_at: &str) -> String {
+    chrono::DateTime::parse_from_rfc3339(last_sync_at)
+        .map(|time| {
+            (time.with_timezone(&chrono::Utc) - chrono::Duration::minutes(LAST_SYNC_OVERLAP_MINUTES))
+                .to_rfc3339()
+        })
+        .unwrap_or_else(|_| last_sync_at.to_string())
+}
+
+/// One page for a client without a cursor. Every filter uses a time the server
+/// set, because `lastSyncAt` is a point in the server's delivery stream:
+/// comparing it with a client's time loses anything pushed late.
+async fn last_sync_page(
+    conn: &mut SqliteConnection,
+    user_id: &str,
+    last_sync_at: Option<&str>,
+    limit: i64,
+    offset: i64,
+) -> Result<PullPage, sqlx::Error> {
+    // With no timestamp every row matches, which is a full sync
+    let since = last_sync_at.map_or_else(String::new, last_sync_filter);
+
+    let notes: Vec<crate::models::Note> = sqlx::query_as(&format!(
+        "SELECT {NOTE_COLUMNS} FROM notes
+         WHERE user_id = ? AND server_modified_at > ?
+         ORDER BY server_modified_at, id LIMIT ? OFFSET ?"
+    ))
+    .bind(user_id)
+    .bind(&since)
+    .bind(limit)
+    .bind(offset)
+    .fetch_all(&mut *conn)
+    .await?;
+
+    let total_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM notes WHERE user_id = ? AND server_modified_at > ?",
+    )
+    .bind(user_id)
+    .bind(&since)
+    .fetch_one(&mut *conn)
+    .await?;
+
+    let now_for_expiry = chrono::Utc::now().to_rfc3339();
+    let deletions = sqlx::query_as(
+        "SELECT id, deleted_at FROM note_deletions
+         WHERE user_id = ? AND received_at > ? AND expires_at > ?
+         ORDER BY received_at",
+    )
+    .bind(user_id)
+    .bind(&since)
+    .bind(&now_for_expiry)
+    .fetch_all(&mut *conn)
+    .await?;
+
+    let versions = sqlx::query_as(&format!(
+        "SELECT {VERSION_COLUMNS} FROM note_versions
+         WHERE user_id = ? AND server_synced_at > ?
+         ORDER BY note_id, version"
+    ))
+    .bind(user_id)
+    .bind(&since)
+    .fetch_all(&mut *conn)
+    .await?;
+
+    let saved_searches = sqlx::query_as(&format!(
+        r#"SELECT {SAVED_SEARCH_COLUMNS} FROM saved_searches
+           WHERE user_id = ? AND synced_at > ?
+           ORDER BY "order""#
+    ))
+    .bind(user_id)
+    .bind(&since)
+    .fetch_all(&mut *conn)
+    .await?;
+
+    let has_more = offset + (notes.len() as i64) < total_count;
+
+    Ok(PullPage {
+        notes,
+        deletions,
+        versions,
+        saved_searches,
+        total_count,
+        has_more,
+        next_cursor: None,
+    })
+}
+
 pub async fn pull(
     State(state): State<Arc<AppState>>,
     AuthClient(client_info): AuthClient,
     Json(pull_req): Json<SyncPullRequest>,
 ) -> AppResult<Json<SyncPullResponse>> {
+    // Taken before the first read: a client that stores this as lastSyncAt can
+    // then only be sent a row twice, never miss one.
+    let synced_at = chrono::Utc::now().to_rfc3339();
 
-    // Default pagination: 100 notes per page to avoid memory issues
-    let limit = pull_req.limit.unwrap_or(100);
+    let limit = pull_req.limit.unwrap_or(DEFAULT_PULL_LIMIT);
     let offset = pull_req.offset.unwrap_or(0);
 
     tracing::info!(
-        "Pull from user {} (client {}): lastSyncAt={:?}, {} known IDs, limit={}, offset={}",
+        "Pull from user {} (client {}): cursor={:?}, lastSyncAt={:?}, {} known IDs, limit={}, offset={}",
         client_info.user_id,
         client_info.client_id,
+        pull_req.cursor,
         pull_req.last_sync_at,
         pull_req.known_note_ids.len(),
         limit,
         offset
     );
 
-    // Get notes with pagination and total count in a single query using window function
-    // COUNT(*) OVER() gives us the total matching rows without a separate query
-    let (db_notes, total_count): (Vec<crate::models::Note>, i64) = if let Some(last_sync) = &pull_req.last_sync_at {
-        let rows = sqlx::query!(
-            r#"SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color, content_hash, parent_hash, hash_chain, COUNT(*) OVER() as "total_count!: i64" FROM notes WHERE user_id = ? AND server_modified_at > ? ORDER BY server_modified_at LIMIT ? OFFSET ?"#,
-            client_info.user_id,
-            last_sync,
-            limit,
-            offset
-        )
-        .fetch_all(&state.pool)
-        .await?;
+    let mut conn = state.pool.acquire().await?;
 
-        let total = rows.first().map(|r| r.total_count).unwrap_or(0);
-        let notes = rows.into_iter()
-            .map(|row| crate::models::Note {
-                id: row.id,
-                client_id: row.client_id,
-                created_at: row.created_at,
-                modified_at: row.modified_at,
-                server_modified_at: row.server_modified_at,
-                content: row.content,
-                tags: row.tags,
-                pinned: row.pinned,
-                archived: if row.archived { 1 } else { 0 },
-                archived_at: row.archived_at,
-                locked: row.locked,
-                locked_at: row.locked_at,
-                deleted: row.deleted,
-                deleted_at: row.deleted_at,
-                version: row.version,
-                server_version: row.server_version,
-                word_wrap: row.word_wrap,
-                syntax_language: row.syntax_language,
-                show_preview: row.show_preview,
-                color: row.color,
-                content_hash: row.content_hash,
-                parent_hash: row.parent_hash,
-                hash_chain: row.hash_chain,
-            })
-            .collect();
-        (notes, total)
-    } else {
-        let rows = sqlx::query!(
-            r#"SELECT id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, version, server_version, word_wrap, syntax_language, show_preview, color, content_hash, parent_hash, hash_chain, COUNT(*) OVER() as "total_count!: i64" FROM notes WHERE user_id = ? ORDER BY server_modified_at LIMIT ? OFFSET ?"#,
-            client_info.user_id,
-            limit,
-            offset
-        )
-        .fetch_all(&state.pool)
-        .await?;
-
-        let total = rows.first().map(|r| r.total_count).unwrap_or(0);
-        let notes = rows.into_iter()
-            .map(|row| crate::models::Note {
-                id: row.id,
-                client_id: row.client_id,
-                created_at: row.created_at,
-                modified_at: row.modified_at,
-                server_modified_at: row.server_modified_at,
-                content: row.content,
-                tags: row.tags,
-                pinned: row.pinned,
-                archived: if row.archived { 1 } else { 0 },
-                archived_at: row.archived_at,
-                locked: row.locked,
-                locked_at: row.locked_at,
-                deleted: row.deleted,
-                deleted_at: row.deleted_at,
-                version: row.version,
-                server_version: row.server_version,
-                word_wrap: row.word_wrap,
-                syntax_language: row.syntax_language,
-                show_preview: row.show_preview,
-                color: row.color,
-                content_hash: row.content_hash,
-                parent_hash: row.parent_hash,
-                hash_chain: row.hash_chain,
-            })
-            .collect();
-        (notes, total)
+    let page = match &pull_req.cursor {
+        Some(cursor) => {
+            let from = cursor_start(
+                &mut conn,
+                &client_info.user_id,
+                cursor,
+                pull_req.last_sync_at.as_deref(),
+            )
+            .await?;
+            let limit = limit.clamp(1, MAX_CURSOR_PULL_LIMIT);
+            cursor_page(&mut conn, &client_info.user_id, from, limit).await?
+        }
+        None => {
+            last_sync_page(
+                &mut conn,
+                &client_info.user_id,
+                pull_req.last_sync_at.as_deref(),
+                limit,
+                offset,
+            )
+            .await?
+        }
     };
 
-    // Calculate if there are more pages
-    let has_more = offset + (db_notes.len() as i64) < total_count;
+    let PullPage {
+        notes: db_notes,
+        deletions,
+        versions: db_versions,
+        saved_searches: db_saved_searches,
+        total_count,
+        has_more,
+        next_cursor,
+    } = page;
 
     // Collect all note IDs for batch attachment query
     let note_ids: Vec<&str> = db_notes.iter().map(|n| n.id.as_str()).collect();
 
     // Fetch all attachments for all notes in a single query (avoids N+1 problem)
-    let mut conn = state.pool.acquire().await?;
     let all_attachments =
         AttachmentRepository::refs_for_notes(&mut conn, &client_info.user_id, &note_ids).await?;
 
@@ -927,65 +1264,18 @@ pub async fn pull(
                 SyncAttachmentData { id, data: encoded }
             })
             .collect();
-    drop(conn);
 
-    // Get hard deletions that this client needs to apply
-    // Query deletions since last sync (or all if no last sync)
-    let now_for_expiry = chrono::Utc::now().to_rfc3339();
-    let deletions: Vec<crate::models::SyncDeletion> = if let Some(last_sync) = &pull_req.last_sync_at {
-        sqlx::query!(
-            r#"SELECT id, deleted_at FROM note_deletions
-               WHERE user_id = ? AND deleted_at > ? AND expires_at > ?
-               ORDER BY deleted_at"#,
-            client_info.user_id,
-            last_sync,
-            now_for_expiry
-        )
-        .fetch_all(&state.pool)
-        .await?
+    let deletions: Vec<crate::models::SyncDeletion> = deletions
         .into_iter()
         .map(|row| crate::models::SyncDeletion {
             id: row.id,
             deleted_at: row.deleted_at,
         })
-        .collect()
-    } else {
-        // Full sync - return all non-expired deletions
-        sqlx::query!(
-            r#"SELECT id, deleted_at FROM note_deletions
-               WHERE user_id = ? AND expires_at > ?
-               ORDER BY deleted_at"#,
-            client_info.user_id,
-            now_for_expiry
-        )
-        .fetch_all(&state.pool)
-        .await?
-        .into_iter()
-        .map(|row| crate::models::SyncDeletion {
-            id: row.id,
-            deleted_at: row.deleted_at,
-        })
-        .collect()
-    };
+        .collect();
 
     if !deletions.is_empty() {
         tracing::info!("Returning {} deletions to client", deletions.len());
     }
-
-    // Get versions for all notes belonging to this user (shared across devices)
-    let epoch = "1970-01-01T00:00:00Z".to_string();
-    let last_sync_filter = pull_req.last_sync_at.as_ref().unwrap_or(&epoch);
-    let db_versions = sqlx::query!(
-        "SELECT version_key, note_id, version, created_at, synced_at, content, tags, attachments, syntax_language, word_wrap, show_preview, color, reason, content_hash, parent_hash
-         FROM note_versions
-         WHERE user_id = ? AND (? = '1970-01-01T00:00:00Z' OR server_synced_at > ?)
-         ORDER BY note_id, version",
-        client_info.user_id,
-        last_sync_filter,
-        last_sync_filter
-    )
-    .fetch_all(&state.pool)
-    .await?;
 
     // Convert to SyncNoteVersion
     let mut versions_response = Vec::new();
@@ -1026,32 +1316,6 @@ pub async fn pull(
         });
     }
 
-    let synced_at = chrono::Utc::now().to_rfc3339();
-
-    // Fetch saved searches for this user (modified since last sync)
-    let db_saved_searches: Vec<crate::models::SavedSearch> = if let Some(last_sync) = &pull_req.last_sync_at {
-        sqlx::query_as!(
-            crate::models::SavedSearch,
-            r#"SELECT id, user_id, name, query, "order", created_at, modified_at, synced_at, deleted, deleted_at, version
-               FROM saved_searches WHERE user_id = ? AND modified_at > ?
-               ORDER BY "order""#,
-            client_info.user_id,
-            last_sync
-        )
-        .fetch_all(&state.pool)
-        .await?
-    } else {
-        sqlx::query_as!(
-            crate::models::SavedSearch,
-            r#"SELECT id, user_id, name, query, "order", created_at, modified_at, synced_at, deleted, deleted_at, version
-               FROM saved_searches WHERE user_id = ?
-               ORDER BY "order""#,
-            client_info.user_id
-        )
-        .fetch_all(&state.pool)
-        .await?
-    };
-
     // Convert to sync models
     let saved_searches: Vec<crate::models::SyncSavedSearch> = db_saved_searches
         .into_iter()
@@ -1063,7 +1327,7 @@ pub async fn pull(
         "SELECT id, content, tags, created_at, source, size_bytes FROM inbox_items WHERE user_id = ? ORDER BY created_at DESC",
         client_info.user_id
     )
-    .fetch_all(&state.pool)
+    .fetch_all(&mut *conn)
     .await?;
 
     let inbox_count = inbox_rows.len() as i64;
@@ -1108,6 +1372,7 @@ pub async fn pull(
         synced_at,
         total_count,
         has_more,
+        next_cursor,
         inbox_items: inbox_items_opt,
         inbox_count: inbox_count_opt,
     }))

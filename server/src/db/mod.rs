@@ -9,7 +9,7 @@ pub mod attachments;
 pub mod sessions;
 pub mod users;
 
-pub use attachments::AttachmentRepository;
+pub use attachments::{AttachmentRepository, BlobStored};
 pub use sessions::SessionRepository;
 pub use users::UserRepository;
 
