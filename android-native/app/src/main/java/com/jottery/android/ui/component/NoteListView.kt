@@ -1,5 +1,7 @@
 package com.jottery.android.ui.component
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -46,10 +48,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.jottery.android.model.DecryptedNote
 import com.jottery.android.viewmodel.AppState
+import com.jottery.android.viewmodel.defaultExportName
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -67,6 +71,8 @@ fun NoteListView(
     val syncEnabled by appState.syncEnabled.collectAsState()
     val isSyncing by appState.isSyncing.collectAsState()
     val searchQuery by appState.searchQuery.collectAsState()
+    val conflicts by appState.pendingConflicts.collectAsState()
+    val conflictIds = remember(conflicts) { conflicts.map { it.id }.toSet() }
 
     // Derive counts from collected state
     val noteCount = if (showArchive) archivedNotes.size else allNotes.size
@@ -78,6 +84,26 @@ fun NoteListView(
     var isSelectMode by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(emptySet<String>()) }
     var showBulkDeleteConfirm by remember { mutableStateOf(false) }
+
+    var showAddTags by remember { mutableStateOf(false) }
+    var showRemoveTags by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val ids = selectedIds
+        scope.launch {
+            // The selection clears only once the file has really been written
+            val message = appState.exportTo(context, uri, ids)
+            appState.showMessage(message)
+            if (message.isNotEmpty()) {
+                isSelectMode = false
+                selectedIds = emptySet()
+            }
+        }
+    }
 
     // Reset selection when archive mode changes
     LaunchedEffect(showArchive) {
@@ -173,6 +199,7 @@ fun NoteListView(
                                 },
                                 onLongClick = {},
                                 modifier = Modifier.animateItem(),
+                                hasConflict = note.id in conflictIds,
                             )
                         } else {
                             // Normal mode with swipe-to-delete
@@ -211,6 +238,7 @@ fun NoteListView(
                                         isSelectMode = true
                                         selectedIds = setOf(note.id)
                                     },
+                                    hasConflict = note.id in conflictIds,
                                 )
                             }
                         }
@@ -240,17 +268,9 @@ fun NoteListView(
                     selectedIds = emptySet()
                     isSelectMode = false
                 },
-                onAddTags = {
-                    // TODO: Show add tags dialog
-                },
-                onRemoveTags = {
-                    // TODO: Show remove tags dialog
-                },
-                onExport = {
-                    scope.launch { appState.exportNotes(selectedIds) }
-                    isSelectMode = false
-                    selectedIds = emptySet()
-                },
+                onAddTags = { showAddTags = true },
+                onRemoveTags = { showRemoveTags = true },
+                onExport = { exportLauncher.launch(defaultExportName()) },
                 onDelete = { showBulkDeleteConfirm = true },
                 onDone = {
                     isSelectMode = false
@@ -258,6 +278,29 @@ fun NoteListView(
                 },
             )
         }
+    }
+
+    if (showAddTags) {
+        AddTagsSheet(
+            onConfirm = { tags ->
+                showAddTags = false
+                val ids = selectedIds
+                scope.launch { appState.addTagsToNotes(ids, tags) }
+            },
+            onDismiss = { showAddTags = false },
+        )
+    }
+
+    if (showRemoveTags) {
+        RemoveTagsSheet(
+            availableTags = notes.filter { it.id in selectedIds }.flatMap { it.tags }.distinct().sorted(),
+            onConfirm = { tags ->
+                showRemoveTags = false
+                val ids = selectedIds
+                scope.launch { appState.removeTagsFromNotes(ids, tags) }
+            },
+            onDismiss = { showRemoveTags = false },
+        )
     }
 
     // Bulk delete confirmation dialog

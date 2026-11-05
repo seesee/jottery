@@ -30,6 +30,9 @@ interface SavedSearchDao {
     """)
     suspend fun updateEncrypted(id: String, name: String, query: String)
 
+    @Query("UPDATE saved_searches SET needs_sync = 0, synced_at = :syncedAt WHERE id = :id AND modified_at = :modifiedAt")
+    suspend fun markSynced(id: String, syncedAt: String, modifiedAt: String)
+
     @Query("SELECT * FROM saved_searches WHERE needs_sync = 1")
     suspend fun listNeedingSync(): List<SavedSearch>
 }
