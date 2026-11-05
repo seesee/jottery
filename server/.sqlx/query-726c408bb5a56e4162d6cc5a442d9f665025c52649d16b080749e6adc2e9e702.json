@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT wrapped_blob, kdf_version, kdf_iterations, updated_at FROM wrapped_keys WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "wrapped_blob",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "kdf_version",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "kdf_iterations",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "726c408bb5a56e4162d6cc5a442d9f665025c52649d16b080749e6adc2e9e702"
+}

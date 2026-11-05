@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, user_id, deleted_at FROM notes\n             WHERE deleted = 1 AND server_modified_at < ?\n             LIMIT ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_id",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "deleted_at",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "fafdacbf0eca8d5400e6203bde7f09c655736fa062874a2c17ad547b2a517c0b"
+}
