@@ -10,7 +10,9 @@ pub struct Config {
     // Security settings
     pub session_expiry_days: i64,
     pub default_admin_email: String,
-    pub default_admin_password: String,
+    /// `None` when unset. There is deliberately no default: a fresh install gets
+    /// a generated password instead of a published one (see `bootstrap`).
+    pub default_admin_password: Option<String>,
 
     // Password hashing (Argon2id parameters)
     pub argon2_m_cost: u32,  // Memory cost in KiB
@@ -74,7 +76,8 @@ impl Config {
             default_admin_email: env::var("DEFAULT_ADMIN_EMAIL")
                 .unwrap_or_else(|_| "admin@localhost".to_string()),
             default_admin_password: env::var("DEFAULT_ADMIN_PASSWORD")
-                .unwrap_or_else(|_| "changeme".to_string()),
+                .ok()
+                .filter(|password| !password.is_empty()),
 
             // Password hashing (Argon2id parameters)
             argon2_m_cost: env::var("ARGON2_M_COST")

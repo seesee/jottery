@@ -37,6 +37,11 @@ async fn main() {
 
     tracing::info!("Database migrations complete");
 
+    // Never start with the published default admin password
+    jottery_server::bootstrap::ensure_default_admin(&pool, &config)
+        .await
+        .expect("Failed to prepare the admin account");
+
     // Create broadcast channel for SSE sync notifications
     // Capacity of 100 is sufficient - notifications are small and ephemeral
     let (sync_broadcast, _) = broadcast::channel::<SyncNotification>(100);

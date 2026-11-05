@@ -12,11 +12,15 @@ pub mod middleware {
         extract::{Request, State},
         http::{HeaderMap, StatusCode},
         middleware::Next,
-        response::Response,
+        response::{IntoResponse, Response},
     };
     use std::sync::Arc;
 
-    use crate::{utils::crypto::hash_sha256, AppState, db::SessionRepository};
+    use crate::{error::AppError, utils::crypto::hash_sha256, AppState, db::SessionRepository};
+
+    /// The only account routes open to a user who must change their password.
+    const PASSWORD_CHANGE_ALLOWED_PATHS: [&str; 2] =
+        ["/api/v1/user/change-password", "/api/v1/user/logout"];
 
     /// Client information extracted from API key authentication
     /// Contains both client_id (for audit trail) and user_id (for access control)
@@ -113,7 +117,7 @@ pub mod middleware {
 
         // Verify user is active (but don't check is_admin)
         let user = match sqlx::query!(
-            r#"SELECT id, is_active FROM users WHERE id = ?"#,
+            r#"SELECT id, is_active, must_change_password FROM users WHERE id = ?"#,
             session.user_id
         )
         .fetch_optional(&state.pool)
@@ -134,6 +138,13 @@ pub mod middleware {
         if user.is_active != 1 {
             tracing::warn!("Inactive user attempted access: {}", session.user_id);
             return Err(StatusCode::FORBIDDEN);
+        }
+
+        // A session on a password that must be changed can do nothing else
+        if user.must_change_password != 0
+            && !PASSWORD_CHANGE_ALLOWED_PATHS.contains(&request.uri().path())
+        {
+            return Ok(AppError::PasswordChangeRequired.into_response());
         }
 
         // Add session to request extensions for use in handlers

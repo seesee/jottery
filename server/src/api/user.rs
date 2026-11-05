@@ -53,6 +53,8 @@ pub struct LoginResponse {
     pub session_id: String,
     pub expires_at: String,
     pub user: UserInfo,
+    /// The session can only change the password until this is cleared.
+    pub must_change_password: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -72,7 +74,7 @@ pub async fn login(
 
     // Get user by email
     let user = sqlx::query!(
-        "SELECT id, email, password_hash, is_admin FROM users WHERE email = ?",
+        "SELECT id, email, password_hash, is_admin, must_change_password FROM users WHERE email = ?",
         req.email
     )
     .fetch_optional(&state.pool)
@@ -146,6 +148,7 @@ pub async fn login(
                 email: user.email,
                 is_admin: user.is_admin != 0,
             },
+            must_change_password: user.must_change_password != 0,
         }),
     ))
 }
@@ -334,6 +337,13 @@ pub async fn change_password(
         return Err(AppError::BadRequest(msg));
     }
 
+    // "Changing" to the same password would satisfy a forced change
+    if verify_password(&req.new_password, &user.password_hash).unwrap_or(false) {
+        return Err(AppError::BadRequest(
+            "New password must be different from the current one".to_string(),
+        ));
+    }
+
     // Hash new password with configured Argon2 parameters
     let new_password_hash = hash_password_with_params(
         &req.new_password,
@@ -348,7 +358,7 @@ pub async fn change_password(
 
     // Update password
     sqlx::query!(
-        r#"UPDATE users SET password_hash = ? WHERE id = ?"#,
+        r#"UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?"#,
         new_password_hash,
         user_id
     )

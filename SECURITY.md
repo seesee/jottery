@@ -99,10 +99,10 @@ Before deploying Jottery to production, complete this checklist:
 
 ### Required
 
-- [ ] **Change default admin password**
-  - Default: `admin@localhost` / `changeme`
-  - Set via environment variables or change immediately after first login
-  - Use a strong password (12+ characters recommended)
+- [ ] **Set the admin password**
+  - Set `DEFAULT_ADMIN_PASSWORD` before first run, or use the random password the server logs once and change it at first sign-in
+  - An older install still on the old default password can do nothing in the admin dashboard until the password is changed
+  - Use a strong password (12+ characters)
 
 - [ ] **Enable HTTPS/TLS**
   - Deploy behind a reverse proxy (Caddy, Nginx, Traefik)
@@ -143,7 +143,7 @@ Before deploying Jottery to production, complete this checklist:
 
 | Variable | Default | Security Impact |
 |----------|---------|-----------------|
-| `DEFAULT_ADMIN_PASSWORD` | `changeme` | **Critical** — Change immediately |
+| `DEFAULT_ADMIN_PASSWORD` | *(none)* | **Critical** — If unset, a random password is generated and logged once |
 | `SESSION_EXPIRY_DAYS` | `7` | Lower values reduce session hijacking window |
 | `CORS_ALLOWED_ORIGINS` | *(none)* | Restrict to trusted domains |
 | `MAX_PAYLOAD_SIZE` | `5242880` | Limits upload size (DoS prevention) |

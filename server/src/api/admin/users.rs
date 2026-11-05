@@ -547,6 +547,13 @@ pub async fn change_password(
         ));
     }
 
+    // "Changing" to the same password would satisfy a forced change
+    if verify_password(&req.new_password, &user.password_hash).unwrap_or(false) {
+        return Err(crate::error::AppError::BadRequest(
+            "New password must be different from the current one".to_string(),
+        ));
+    }
+
     // Hash new password with configured Argon2 parameters
     let new_password_hash = hash_password_with_params(
         &req.new_password,
@@ -561,7 +568,7 @@ pub async fn change_password(
 
     // Update password
     sqlx::query!(
-        r#"UPDATE users SET password_hash = ? WHERE id = ?"#,
+        r#"UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?"#,
         new_password_hash,
         user_id
     )
@@ -616,7 +623,7 @@ pub async fn reset_user_password(
 
     // Update password
     sqlx::query!(
-        r#"UPDATE users SET password_hash = ? WHERE id = ?"#,
+        r#"UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?"#,
         new_password_hash,
         user_id
     )

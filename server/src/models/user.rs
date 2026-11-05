@@ -19,6 +19,7 @@ pub struct User {
     pub inbox_token_hash: Option<String>,
     pub inbox_max_items: Option<i64>,
     pub inbox_max_size_mb: Option<i64>,
+    pub must_change_password: i64,   // 0/1
 }
 
 /// User registration request (email + password)
@@ -115,6 +116,9 @@ pub struct LoginResponse {
     #[serde(rename = "expiresAt")]
     pub expires_at: String,
     pub user: UserInfo,
+    /// The session can only change the password until this is cleared.
+    #[serde(rename = "mustChangePassword")]
+    pub must_change_password: bool,
 }
 
 /// User info (for login response)

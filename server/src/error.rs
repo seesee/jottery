@@ -16,6 +16,8 @@ pub enum AppError {
     Forbidden(String),
     PayloadTooLarge(String),
     TooManyRequests(String),
+    /// The account must set a new password before it can do anything else.
+    PasswordChangeRequired,
     InternalError(String),
     InternalServerError,
 }
@@ -31,6 +33,7 @@ impl std::fmt::Display for AppError {
             AppError::Forbidden(msg) => write!(f, "Forbidden: {}", msg),
             AppError::PayloadTooLarge(msg) => write!(f, "Payload too large: {}", msg),
             AppError::TooManyRequests(msg) => write!(f, "Too many requests: {}", msg),
+            AppError::PasswordChangeRequired => write!(f, "Password change required"),
             AppError::InternalError(msg) => write!(f, "Internal error: {}", msg),
             AppError::InternalServerError => write!(f, "Internal server error"),
         }
@@ -47,6 +50,14 @@ impl From<sqlx::Error> for AppError {
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
+        if matches!(self, AppError::PasswordChangeRequired) {
+            let body = Json(json!({
+                "error": "You must change your password before continuing",
+                "code": "password_change_required"
+            }));
+            return (StatusCode::FORBIDDEN, body).into_response();
+        }
+
         let (status, error_message) = match self {
             AppError::DatabaseError(e) => {
                 tracing::error!("Database error: {}", e);
@@ -59,6 +70,7 @@ impl IntoResponse for AppError {
             AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
             AppError::PayloadTooLarge(msg) => (StatusCode::PAYLOAD_TOO_LARGE, msg),
             AppError::TooManyRequests(msg) => (StatusCode::TOO_MANY_REQUESTS, msg),
+            AppError::PasswordChangeRequired => unreachable!("handled above"),
             AppError::InternalError(msg) => {
                 tracing::error!("Internal error: {}", msg);
                 (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())

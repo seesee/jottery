@@ -91,12 +91,14 @@ The server includes a web-based admin dashboard for managing users, viewing stat
 
 Navigate to: `http://localhost:3030/admin`
 
-### Default Credentials
+### Admin Credentials
 
-**⚠️ IMPORTANT: Change the default password immediately after first login!**
+The admin account is `admin@localhost` unless you set `DEFAULT_ADMIN_EMAIL`. On first start:
 
-- **Email**: `admin@localhost`
-- **Password**: `changeme`
+- If `DEFAULT_ADMIN_PASSWORD` is set and meets the password policy, it is applied.
+- Otherwise the server generates a random password and prints it once in its log. You must change it at first sign-in. If you lose it before signing in, restart the server to generate another.
+
+**Upgrading an older install:** an admin account still on the old default password keeps working, so you aren't locked out, but every admin route is blocked until the password is changed. Devices keep syncing in the meantime. Setting `DEFAULT_ADMIN_PASSWORD` and restarting also replaces the old password.
 
 ### Admin Features
 
@@ -122,7 +124,7 @@ The admin dashboard provides comprehensive user and system management:
 
 ### Security Recommendations
 
-1. **Change Default Admin Credentials:** Set `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD` in `.env` before deployment, then change password after first login
+1. **Set Admin Credentials:** Set `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD` in `.env` before deployment, or use the random password the server logs once
 2. **Configure CORS:** Set `CORS_ALLOWED_ORIGINS` to your frontend domain(s) in production (comma-separated list)
 3. **HTTPS Only:** Always use HTTPS in production (configure with reverse proxy like Nginx/Caddy)
 4. **Strong Password Hashing:** Adjust `ARGON2_M_COST`, `ARGON2_T_COST`, `ARGON2_P_COST` for your security requirements
@@ -174,7 +176,7 @@ Content-Type: application/json
 
 {
   "email": "admin@localhost",
-  "password": "changeme"
+  "password": "your-admin-password"
 }
 ```
 
@@ -817,9 +819,9 @@ CORS_ALLOWED_ORIGINS=https://example.com
 # Session security
 SESSION_EXPIRY_DAYS=7
 
-# Default admin account (CHANGE IN PRODUCTION!)
+# Admin account. Leave the password unset to have one generated and logged once.
 DEFAULT_ADMIN_EMAIL=admin@localhost
-DEFAULT_ADMIN_PASSWORD=changeme
+DEFAULT_ADMIN_PASSWORD=
 
 # Password hashing (Argon2id)
 ARGON2_M_COST=19456  # Memory in KiB

@@ -133,6 +133,12 @@ pub async fn register_device(
         ));
     }
 
+    // A password that must be changed can't be used to enrol anything
+    if user.must_change_password != 0 {
+        tracing::warn!("Device registration refused: {} must change password", req.email);
+        return Err(crate::error::AppError::PasswordChangeRequired);
+    }
+
     // Generate client ID
     let client_id = Uuid::new_v4().to_string();
 
@@ -398,6 +404,7 @@ pub async fn login(
             email: user.email,
             is_admin: user.is_admin == 1,
         },
+        must_change_password: user.must_change_password != 0,
     };
 
     Ok((StatusCode::OK, Json(response)))

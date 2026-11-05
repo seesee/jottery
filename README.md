@@ -91,8 +91,8 @@ You can configure the server using environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DEFAULT_ADMIN_EMAIL` | `admin@localhost` | Default admin account email |
-| `DEFAULT_ADMIN_PASSWORD` | `changeme` | Default admin account password |
+| `DEFAULT_ADMIN_EMAIL` | `admin@localhost` | Admin account email, applied while the account is unconfigured |
+| `DEFAULT_ADMIN_PASSWORD` | *(none)* | Admin account password. If unset, a random one is generated and logged once |
 | `DATABASE_URL` | `sqlite:jottery.db` | Database file path |
 | `PORT` | `3030` | Internal server port |
 | `SESSION_EXPIRY_DAYS` | `7` | Admin session expiry in days |
@@ -116,11 +116,9 @@ docker run -d \
 
 1.  **Access the admin dashboard:**
 
-    Navigate to `http://localhost:8088/admin` and login with the default credentials:
-    - Email: `admin@localhost`
-    - Password: `changeme`
+    Navigate to `http://localhost:8088/admin` and sign in with the credentials you set through `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD`.
 
-    ⚠️ **IMPORTANT:** Change the default admin password immediately, or set custom credentials via environment variables before first run.
+    If you didn't set a password, the server generates one on first start and prints it once in its log (`docker logs jottery`), with the email `admin@localhost`. You must choose a new password when you first sign in. If you lose it before signing in, restart the server to generate another.
 
 2.  **Create your first user account:**
 
@@ -303,11 +301,9 @@ Jottery supports multi-user deployments with an admin approval workflow:
 
 Access the web-based admin dashboard at `http://your-server:3030/admin`
 
-**Default credentials** (⚠️ CHANGE IMMEDIATELY):
-- Email: `admin@localhost`
-- Password: `changeme`
+Set the admin credentials with `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD` before first run. If you don't, a random password is generated and printed once in the server log. See [Environment Variables](#environment-variables) for details.
 
-When using Docker, set custom admin credentials via environment variables (`DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD`) before first run. See [Environment Variables](#environment-variables) for details.
+**Upgrading an older install:** if the admin account still has the old default password, you can still sign in with it, but every admin action stays blocked until you change it. Device sync keeps working in the meantime. Setting `DEFAULT_ADMIN_PASSWORD` and restarting replaces the old password too.
 
 **Admin Features:**
 - Approve/reject user registrations
