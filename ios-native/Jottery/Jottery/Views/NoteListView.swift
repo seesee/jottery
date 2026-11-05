@@ -265,6 +265,8 @@ struct NoteListView: View {
 
     // MARK: - Note Rows
 
+    private var noteActions: NoteActions { NoteActions(appState: appState) }
+
     @ViewBuilder
     private var noteRows: some View {
         ForEach(appState.filteredNotes) { note in
@@ -274,29 +276,19 @@ struct NoteListView: View {
             )
                 .tag(note.id)
                 .contextMenu {
-                    NoteShareActions(note: note, shareFile: $noteShareFile)
+                    NoteRowMenu(note: note, shareFile: $noteShareFile, isSelecting: isSelectMode)
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     if appState.showArchive {
                         Button {
-                            Task {
-                                do {
-                                    try await appState.unarchiveNote(id: note.id)
-                                } catch {
-                                    appState.reportError(L.errorCouldntUnarchiveNote)
-                                }
-                            }
+                            Task { await noteActions.unarchive(note) }
                         } label: {
                             Label(L.noteListUnarchive, systemImage: "tray.and.arrow.up")
                         }
                         .tint(.blue)
                     } else {
                         Button(role: .destructive) {
-                            do {
-                                try appState.deleteNote(id: note.id)
-                            } catch {
-                                appState.reportError(L.errorCouldntDeleteNote)
-                            }
+                            Task { await noteActions.moveToBin(note) }
                         } label: {
                             Label(L.noteListDelete, systemImage: "trash")
                         }
@@ -307,12 +299,7 @@ struct NoteListView: View {
                         // No pin action in archive mode
                     } else {
                         Button {
-                            let wasPinned = note.pinned
-                            do {
-                                try appState.togglePin(id: note.id)
-                            } catch {
-                                appState.reportError(wasPinned ? L.errorCouldntUnpinNote : L.errorCouldntPinNote)
-                            }
+                            noteActions.togglePin(note)
                         } label: {
                             Label(
                                 note.pinned ? L.noteListUnpin : L.noteListPin,
@@ -322,11 +309,7 @@ struct NoteListView: View {
                         .tint(.orange)
 
                         Button {
-                            do {
-                                try appState.archiveNote(id: note.id)
-                            } catch {
-                                appState.reportError(L.errorCouldntArchiveNote)
-                            }
+                            noteActions.archive(note)
                         } label: {
                             Label(L.noteListArchive, systemImage: "archivebox")
                         }

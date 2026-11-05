@@ -1186,7 +1186,7 @@ final class AppState {
     }
 
     func deleteNote(id: String) throws {
-        guard let noteRepo else { return }
+        guard let noteRepo, saveEditorEdits(toNotes: [id]) else { return }
         try noteRepo.softDelete(id: id)
         changeLists {
             notes.removeAll { $0.id == id }
@@ -1280,7 +1280,7 @@ final class AppState {
     }
 
     func archiveNote(id: String) throws {
-        guard let noteRepo else { return }
+        guard let noteRepo, saveEditorEdits(toNotes: [id]) else { return }
         try noteRepo.archive(id: id)
         changeLists { notes.removeAll { $0.id == id } }
         if selectedNoteId == id { selectedNoteId = nil }
