@@ -87,6 +87,8 @@ struct NoteRepository: Sendable {
         content: String,
         tags: [String] = [],
         fromInbox: Bool = false,
+        copying original: DecryptedNote? = nil,
+        attachments: [AttachmentRef] = [],
         key: SymmetricKey
     ) throws -> DecryptedNote {
         let encContent = try CryptoService.encryptText(content, key: key)
@@ -98,13 +100,22 @@ struct NoteRepository: Sendable {
         var record = NoteRecord.new(encryptedContent: contentJSON, encryptedTags: tagsJSON)
         if let id { record.id = id }
         record.fromInbox = fromInbox
+        if let original {
+            record.syntaxLanguage = original.syntaxLanguage
+            record.wordWrap = original.wordWrap
+            record.showPreview = original.showPreview
+            record.color = original.color
+        }
+        if !attachments.isEmpty {
+            record.attachments = String(decoding: try JSONEncoder().encode(attachments), as: UTF8.self)
+        }
 
         // Compute content hash using sync-format tags
         let syncTags = try encryptTagsToSyncFormat(tags, key: key)
         let contentHash = HashChainService.computeContentHash(
             encryptedContent: contentJSON,
             encryptedTags: syncTags,
-            attachmentIds: [],
+            attachmentIds: attachments.map(\.id).sorted(),
             pinned: record.pinned,
             archived: record.archived,
             locked: record.locked,

@@ -169,7 +169,7 @@ final class AppState {
     /// Draws the next ticket for a refresh operation. Must be called on the
     /// main actor before any `await` in the caller, so it captures start
     /// order.
-    private func nextLoadTicket() -> Int {
+    func nextLoadTicket() -> Int {
         loadTicketCounter += 1
         return loadTicketCounter
     }
@@ -953,10 +953,42 @@ final class AppState {
     /// kinds need this, not just full reloads. Coalesces concurrent drops
     /// into a single follow-up `loadNotes()`.
     private func retryFullReloadIfNeeded() async {
-        guard !isRetryReloadPending else { return }
+        guard !isRetryReloadPending else {
+            // This retry was dropped too, or is about to be. One more covers it.
+            retryWasDropped = true
+            return
+        }
         isRetryReloadPending = true
         defer { isRetryReloadPending = false }
-        try? await loadNotes()
+        for _ in 0..<Self.maxRetryReloads {
+            retryWasDropped = false
+            try? await loadNotes()
+            guard retryWasDropped else { return }
+        }
+    }
+
+    /// Something has to end this, and the next sync catches whatever it missed.
+    private static let maxRetryReloads = 3
+    @ObservationIgnored private var retryWasDropped = false
+
+    /// Apply a change this device just made to the lists. A refresh already
+    /// running read the database before that change, so it mustn't publish over
+    /// it: drawing a ticket drops it, and its retry reads the change back.
+    private func changeLists(_ change: () -> Void) {
+        lastPublishedTicket = nextLoadTicket()
+        change()
+    }
+
+    /// Change a note wherever it's held: it's in one list or the other.
+    private func changeNoteInLists(id: String, _ change: (inout DecryptedNote) -> Void) {
+        changeLists {
+            if let index = notes.firstIndex(where: { $0.id == id }) {
+                change(&notes[index])
+            }
+            if let index = archivedNotes.firstIndex(where: { $0.id == id }) {
+                change(&archivedNotes[index])
+            }
+        }
     }
 
     /// Above this many changed ids, an incremental refresh isn't worth it —
@@ -1064,7 +1096,7 @@ final class AppState {
         guard !isReKeying else { throw AppStateError.vaultBusy }
         guard let noteRepo, let key = keyManager.masterKey else { return nil }
         let note = try noteRepo.create(content: content, tags: tags, key: key)
-        notes.insert(note, at: 0)
+        changeLists { notes.insert(note, at: 0) }
         selectedNoteId = note.id
         scheduleAutoSync()
         return note
@@ -1076,11 +1108,9 @@ final class AppState {
         try noteRepo.update(note, key: key)
 
         // Update in-memory
-        if let index = notes.firstIndex(where: { $0.id == note.id }) {
-            var updated = note
-            updated.modifiedAt = Date()
-            notes[index] = updated
-        }
+        var updated = note
+        updated.modifiedAt = Date()
+        changeNoteInLists(id: note.id) { $0 = updated }
         // The note list renders filteredNotes — recompute so title/preview/tags
         // update immediately, and push the change to the server once edits settle.
         scheduleSearch()
@@ -1120,11 +1150,37 @@ final class AppState {
         try versionRepo.createVersion(from: record, reason: "pre-overwrite")
     }
 
+    /// Make a new note from this one: its type, colour and attachments too, or a
+    /// calc note would come back as plain markdown. Attachments are copied under
+    /// new ids, because removing one deletes its blob, so sharing would take it
+    /// from the other note as well. A pinned, locked or archived note's copy is
+    /// none of those, as on the web.
     func duplicateNote(id: String) throws {
-        guard let noteRepo, let key = keyManager.masterKey else { return }
+        guard !isReKeying else { throw AppStateError.vaultBusy }
+        guard let noteRepo, let attachmentRepo, let key = keyManager.masterKey else { return }
+        // What's in the editor counts, not what was last saved.
+        flushPendingEditorNote()
         guard let original = try noteRepo.get(id: id, key: key) else { return }
-        let duplicate = try noteRepo.create(content: original.content, tags: original.tags, key: key)
-        notes.insert(duplicate, at: 0)
+
+        var attachments: [AttachmentRef] = []
+        for ref in original.attachments {
+            guard let blob = try attachmentRepo.getBlob(id: ref.data) else { continue }
+            let newId = CryptoService.generateUUID()
+            try attachmentRepo.storeBlob(id: newId, mimeType: ref.mimeType, size: ref.size, data: blob)
+            attachments.append(AttachmentRef(
+                id: newId,
+                filename: try AttachmentFilename.encrypted(ref.filename, key: key),
+                mimeType: ref.mimeType,
+                size: ref.size,
+                data: newId,
+                thumbnailData: nil
+            ))
+        }
+
+        let duplicate = try noteRepo.create(
+            content: original.content, tags: original.tags, copying: original, attachments: attachments, key: key
+        )
+        changeLists { notes.insert(duplicate, at: 0) }
         selectedNoteId = duplicate.id
         scheduleAutoSync()
     }
@@ -1132,7 +1188,10 @@ final class AppState {
     func deleteNote(id: String) throws {
         guard let noteRepo else { return }
         try noteRepo.softDelete(id: id)
-        notes.removeAll { $0.id == id }
+        changeLists {
+            notes.removeAll { $0.id == id }
+            archivedNotes.removeAll { $0.id == id }
+        }
         if selectedNoteId == id {
             selectedNoteId = nil
         }
@@ -1215,9 +1274,7 @@ final class AppState {
     func togglePin(id: String) throws {
         guard let noteRepo else { return }
         try noteRepo.togglePin(id: id)
-        if let index = notes.firstIndex(where: { $0.id == id }) {
-            notes[index].pinned.toggle()
-        }
+        changeNoteInLists(id: id) { $0.pinned.toggle() }
         scheduleSearch()
         scheduleAutoSync()
     }
@@ -1225,7 +1282,7 @@ final class AppState {
     func archiveNote(id: String) throws {
         guard let noteRepo else { return }
         try noteRepo.archive(id: id)
-        notes.removeAll { $0.id == id }
+        changeLists { notes.removeAll { $0.id == id } }
         if selectedNoteId == id { selectedNoteId = nil }
         try loadArchivedNotes()
         scheduleAutoSync()
@@ -1234,7 +1291,7 @@ final class AppState {
     func unarchiveNote(id: String) async throws {
         guard let noteRepo else { return }
         try noteRepo.unarchive(id: id)
-        archivedNotes.removeAll { $0.id == id }
+        changeLists { archivedNotes.removeAll { $0.id == id } }
         if selectedNoteId == id { selectedNoteId = nil }
         try await loadNotes()
         scheduleAutoSync()
@@ -1243,13 +1300,9 @@ final class AppState {
     func toggleLock(id: String) throws {
         guard let noteRepo else { return }
         try noteRepo.toggleLock(id: id)
-        if let index = notes.firstIndex(where: { $0.id == id }) {
-            notes[index].locked.toggle()
-            notes[index].lockedAt = notes[index].locked ? Date() : nil
-        }
-        if let index = archivedNotes.firstIndex(where: { $0.id == id }) {
-            archivedNotes[index].locked.toggle()
-            archivedNotes[index].lockedAt = archivedNotes[index].locked ? Date() : nil
+        changeNoteInLists(id: id) {
+            $0.locked.toggle()
+            $0.lockedAt = $0.locked ? Date() : nil
         }
         scheduleSearch()
         scheduleAutoSync()
@@ -1257,7 +1310,8 @@ final class AppState {
 
     func loadArchivedNotes() throws {
         guard let noteRepo, let key = keyManager.masterKey else { return }
-        archivedNotes = try noteRepo.listArchived(key: key)
+        let archived = try noteRepo.listArchived(key: key)
+        changeLists { archivedNotes = archived }
     }
 
     // MARK: - Saved Searches
@@ -1356,12 +1410,7 @@ final class AppState {
     private func refreshNoteFromStore(id: String) {
         guard let noteRepo, let key = keyManager.masterKey else { return }
         guard let fresh = try? noteRepo.get(id: id, key: key) else { return }
-        if let index = notes.firstIndex(where: { $0.id == id }) {
-            notes[index] = fresh
-        }
-        if let index = archivedNotes.firstIndex(where: { $0.id == id }) {
-            archivedNotes[index] = fresh
-        }
+        changeNoteInLists(id: id) { $0 = fresh }
         scheduleSearch()
         scheduleAutoSync()
     }
@@ -1431,7 +1480,7 @@ final class AppState {
         guard let noteRepo, let key = keyManager.masterKey, let syncClient else { return }
         if try noteRepo.getRaw(id: item.id) == nil {
             let note = try noteRepo.create(id: item.id, content: item.content, tags: item.tags, fromInbox: true, key: key)
-            notes.insert(note, at: 0)
+            changeLists { notes.insert(note, at: 0) }
             scheduleAutoSync()
         }
         try await syncClient.deleteInboxItem(id: item.id)
