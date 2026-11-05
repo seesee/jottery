@@ -12,6 +12,11 @@ use crate::models::UserSettings;
 pub fn hex_to_color(hex: &str) -> Option<Color> {
     let hex = hex.trim_start_matches('#');
 
+    // A palette can arrive from another device. The slices below are by byte.
+    if !hex.is_ascii() {
+        return None;
+    }
+
     // Expand shorthand hex (#RGB -> #RRGGBB)
     let hex = if hex.len() == 3 {
         format!(

@@ -61,8 +61,18 @@ data class NoteVersionRecord(
     val parentHash: String? = null,
 ) {
     companion object {
-        fun from(note: NoteRecord, reason: String): NoteVersionRecord {
-            val key = "${note.id}:${note.version}"
+        /** A snapshot of an accepted state, keyed noteId:version like other clients. */
+        fun from(note: NoteRecord, reason: String): NoteVersionRecord =
+            from(note, reason, "${note.id}:${note.version}")
+
+        /**
+         * A local safety snapshot taken before an overwrite. It has its own key,
+         * so it can never replace another snapshot of the same version.
+         */
+        fun safetySnapshot(note: NoteRecord, reason: String): NoteVersionRecord =
+            from(note, reason, "${note.id}:${note.version}:${System.currentTimeMillis()}")
+
+        private fun from(note: NoteRecord, reason: String, key: String): NoteVersionRecord {
             return NoteVersionRecord(
                 versionKey = key,
                 noteId = note.id,

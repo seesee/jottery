@@ -254,7 +254,8 @@
         "title": "Informações do Backup",
         "created": "Criado",
         "records": "Registos"
-      }
+      },
+      "storageFull": "O navegador ficou sem espaço de armazenamento, por isso o restauro não terminou e nada foi mantido. O seu ficheiro de cópia de segurança está bem: liberte espaço e restaure-o novamente."
     }
   },
   "settings": {
@@ -442,8 +443,11 @@
         "hintExisting": "A palavra-passe com que desbloqueia as suas notas nos seus outros dispositivos. Nunca é enviada para o servidor.",
         "required": "Introduza a palavra-passe das suas notas.",
         "incorrect": "Esta não é a palavra-passe que desbloqueia as suas notas neste dispositivo. Introduza a palavra-passe das notas, não a do servidor.",
-        "uploadFailed": "A sincronização está configurada, mas não foi possível guardar a chave de encriptação no servidor, por isso os outros dispositivos ainda não se podem ligar. Será feita nova tentativa no próximo desbloqueio"
-      }
+        "uploadFailed": "A sincronização está configurada, mas não foi possível guardar a chave de encriptação no servidor, por isso os outros dispositivos ainda não se podem ligar. Será feita nova tentativa no próximo desbloqueio",
+        "mustDiffer": "A palavra-passe das notas e a da conta têm de ser diferentes. O servidor de sincronização vê a palavra-passe da conta, por isso, se coincidirem, poderá ler as suas notas. Se forem iguais nos outros dispositivos, altere primeiro aí a palavra-passe das notas.",
+        "matchesAccountWarning": "A palavra-passe das notas é igual à da conta, pelo que o servidor de sincronização poderá ler as suas notas. Altere a palavra-passe das notas para resolver isto."
+      },
+      "existingAccountDetected": "Este e-mail já tem uma conta, por isso este dispositivo irá ligar-se a ela. Introduza a palavra-passe das notas que utiliza nos outros dispositivos."
     },
     "editorTab": {
       "vimMode": "Modo do editor",
@@ -919,7 +923,9 @@
         "emailRequired": "O endereço de e-mail é obrigatório.",
         "serverPasswordRequired": "A palavra-passe do servidor é obrigatória.",
         "notesPasswordMinLength": "A palavra-passe das notas deve ter pelo menos 8 caracteres.",
-        "onboardingFailed": "Falha ao transferir as chaves de encriptação do servidor. Certifique-se de que a palavra-passe das notas corresponde à dos seus outros dispositivos e que o dispositivo de origem foi sincronizado"
+        "onboardingFailed": "Falha ao transferir as chaves de encriptação do servidor. Certifique-se de que a palavra-passe das notas corresponde à dos seus outros dispositivos e que o dispositivo de origem foi sincronizado",
+        "accountKeyUnreadable": "Esta palavra-passe das notas não consegue abrir a chave da sua conta. Verifique a palavra-passe. Se estiver correta, a chave pode ter sido guardada por uma versão anterior do Jottery: desbloquear o Jottery num dispositivo já ligado resolverá o problema. Depois, tente novamente.",
+        "localNotesOrphaned": "As notas deste dispositivo usam uma chave diferente da sua conta, por isso ligar torná-las-ia ilegíveis. Nada foi alterado. Para as manter, exporte as notas, elimine os dados deste dispositivo, ligue-se e depois importe-as."
       },
       "steps": {
         "initialising": "A inicializar encriptação local…",
@@ -1005,6 +1011,11 @@
       "notAvailable": "Visualização não disponível para este tipo de arquivo.",
       "audioNotSupported": "Seu navegador não suporta reprodução de áudio.",
       "videoNotSupported": "Seu navegador não suporta reprodução de vídeo."
+    },
+    "confirmDelete": {
+      "title": "Remover o anexo?",
+      "message": "O ficheiro será removido desta nota. A menos que uma versão anterior da nota ainda o tenha, não poderá ser recuperado.",
+      "confirmButton": "Remover"
     }
   },
   "keyboard": {
@@ -1171,7 +1182,9 @@
     "indicator": "Conflito de sincronização",
     "bannerText": "Esta nota tem um conflito de sincronização que precisa ser resolvido",
     "resolveButton": "Resolver conflito",
-    "syncNotification": "{count, plural, one {1 nota tem um conflito de sincronização} other {{count} notas têm conflitos de sincronização}}"
+    "syncNotification": "{count, plural, one {1 nota tem um conflito de sincronização} other {{count} notas têm conflitos de sincronização}}",
+    "serverUnreadable": "A cópia desta nota no servidor não pode ser lida e pode ter sido alterada. Só é possível manter a sua versão.",
+    "localUnreadable": "A cópia desta nota neste dispositivo não pode ser lida."
   },
   "pullToRefresh": {
     "pull": "Puxe para baixo para sincronizar",
@@ -1420,6 +1433,17 @@
     "openNote": "Abrir esta nota",
     "repairNotOnServer": "Também não está no servidor — abra a nota e remova o anexo",
     "serverMissingTitle": "Ausente no servidor",
-    "serverMissingHint": "O servidor de sincronização não tem cópia destes anexos e este dispositivo também não. Abra a nota e remova o anexo, ou sincronize a partir de um dispositivo que ainda tenha o ficheiro."
+    "serverMissingHint": "O servidor de sincronização não tem cópia destes anexos e este dispositivo também não. Abra a nota e remova o anexo, ou sincronize a partir de um dispositivo que ainda tenha o ficheiro.",
+    "rejectedTitle": "Rejeitado do servidor de sincronização",
+    "rejectedHint": "O servidor de sincronização enviou-os num formato não fiável, por isso não foram guardados. As suas notas existentes não foram afetadas. Se isto continuar a acontecer, verifique quem controla o servidor.",
+    "rejectedKind": {
+      "note": "Nota",
+      "version": "Versão da nota",
+      "conflict": "Conflito de sincronização",
+      "savedSearch": "Pesquisa guardada",
+      "attachment": "Anexo",
+      "inboxItem": "Item da caixa de entrada",
+      "deletion": "Eliminação"
+    }
   }
 }

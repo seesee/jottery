@@ -1,5 +1,6 @@
 package com.jottery.android.crypto
 
+import android.os.SystemClock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -13,6 +14,8 @@ import javax.crypto.spec.SecretKeySpec
  */
 class KeyManager(
     private val scope: CoroutineScope,
+    /** Counts through deep sleep and can't be wound back, unlike the wall clock. */
+    private val clock: () -> Long = SystemClock::elapsedRealtime,
 ) {
     /** The in-memory master key. */
     var masterKey: SecretKey? = null
@@ -21,13 +24,18 @@ class KeyManager(
     var isUnlocked: Boolean = false
         private set
 
-    /** Seconds since last user interaction before auto-locking. Default: 15 minutes. */
+    /** Seconds since last user interaction before auto-locking. 0 means never. */
     var autoLockTimeout: Long = 15 * 60L
+        set(value) {
+            field = value
+            // Leaving "Never" must start the timer without waiting for an unlock
+            if (isUnlocked) startAutoLockTimer()
+        }
 
     /** Called when the auto-lock timer fires. */
     var onAutoLock: (() -> Unit)? = null
 
-    private var lastActivityTime = System.currentTimeMillis()
+    private var lastActivityTime = clock()
     private var autoLockJob: Job? = null
 
     // MARK: - Unlock
@@ -37,7 +45,7 @@ class KeyManager(
         val key = CryptoService.deriveKey(password, salt, iterations)
         masterKey = key
         isUnlocked = true
-        lastActivityTime = System.currentTimeMillis()
+        lastActivityTime = clock()
         startAutoLockTimer()
         return key
     }
@@ -46,7 +54,7 @@ class KeyManager(
     fun unlockWithKeyData(keyData: ByteArray) {
         masterKey = SecretKeySpec(keyData, "AES")
         isUnlocked = true
-        lastActivityTime = System.currentTimeMillis()
+        lastActivityTime = clock()
         startAutoLockTimer()
     }
 
@@ -59,7 +67,7 @@ class KeyManager(
 
     /** Record user activity to reset the auto-lock countdown. */
     fun recordActivity() {
-        lastActivityTime = System.currentTimeMillis()
+        lastActivityTime = clock()
     }
 
     // MARK: - Auto-Lock
@@ -81,10 +89,14 @@ class KeyManager(
         autoLockJob = null
     }
 
+    /** Whether the timeout has passed since the user last did anything. */
+    fun isIdleTimeoutExceeded(): Boolean {
+        if (!isUnlocked || autoLockTimeout <= 0) return false
+        return (clock() - lastActivityTime) / 1000L >= autoLockTimeout
+    }
+
     private fun checkAutoLock() {
-        if (!isUnlocked) return
-        val elapsed = (System.currentTimeMillis() - lastActivityTime) / 1000L
-        if (elapsed >= autoLockTimeout) {
+        if (isIdleTimeoutExceeded()) {
             onAutoLock?.invoke() ?: lock()
         }
     }

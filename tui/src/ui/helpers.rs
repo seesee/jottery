@@ -280,7 +280,7 @@ where
     use pulldown_cmark::{Parser, Event, Tag, TagEnd, CodeBlockKind, Options};
     use ratatui::style::{Style, Modifier, Color};
     use ratatui::text::{Line, Span};
-    use crate::models::SyntaxLanguage;
+    use crate::models::{char_prefix, SyntaxLanguage};
 
     // Helper to write debug messages
     let log_debug = |msg: &str| {
@@ -470,9 +470,9 @@ where
                                     // If no text was provided for the link, try to look up the note title
                                     if !current_link_has_text {
                                         let link_text = if let Some(ref lookup) = note_title_lookup {
-                                            lookup(&note_id).unwrap_or_else(|| format!("[{}...]", &note_id[..8.min(note_id.len())]))
+                                            lookup(&note_id).unwrap_or_else(|| format!("[{}...]", char_prefix(&note_id, 8)))
                                         } else {
-                                            format!("[{}...]", &note_id[..8.min(note_id.len())])
+                                            format!("[{}...]", char_prefix(&note_id, 8))
                                         };
                                         // Add the link text with current (link) style
                                         current_line_spans.push(Span::styled(link_text, current_style));
@@ -735,4 +735,25 @@ where
     }
 
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ui::syntax::SyntaxHighlighter;
+
+    fn render_links(text: &str) -> MarkdownRenderResult {
+        render_markdown_for_terminal(text, &SyntaxHighlighter::new(), &None, None::<fn(&str) -> Option<String>>)
+    }
+
+    #[test]
+    fn a_link_to_a_note_with_a_multi_byte_id_does_not_panic() {
+        let rendered = render_links("[](link:日本語のノートです)");
+        assert_eq!(rendered.note_links.len(), 1);
+    }
+
+    #[test]
+    fn a_link_to_a_short_id_does_not_panic() {
+        assert_eq!(render_links("[](link:ab)").note_links.len(), 1);
+    }
 }

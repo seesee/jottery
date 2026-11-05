@@ -214,7 +214,16 @@ test.describe('Attachments', () => {
       // Find and click the delete button (has 🗑️ emoji)
       const deleteButton = attachmentItem.locator('button').filter({ hasText: '🗑️' });
       await expect(deleteButton).toBeVisible();
+
+      // Cancelling keeps it
       await deleteButton.click();
+      await page.getByRole('dialog').getByRole('button', { name: /^Cancel$/ }).click();
+      await page.waitForTimeout(1500); // Longer than the autosave delay
+      await expect(attachmentItem).toBeVisible();
+
+      // Confirming removes it
+      await deleteButton.click();
+      await page.getByRole('dialog').getByRole('button', { name: /^Remove$/ }).click();
 
       // Wait for the attachment to be removed
       await expect(attachmentItem).not.toBeVisible({ timeout: 5000 });

@@ -13,6 +13,7 @@ import { cryptoService } from './crypto';
 import { fetchAttachment, SyncApiError } from './syncClient';
 import { base64ToArrayBuffer } from '../utils/base64';
 import { getNoteTitle } from '../utils/noteTitle';
+import { isUuid } from './syncValidation';
 
 export interface UndecryptableNote {
   id: string;
@@ -61,6 +62,34 @@ export function reportServerMissingAttachments(warnings: ServerMissingAttachment
   });
 }
 
+/**
+ * Records the sync server sent that failed validation and were dropped. The id
+ * is kept only if it is a real UUID, and the reason never quotes the value, so
+ * nothing the server chose reaches the panel.
+ */
+export type RejectedRecordKind = 'note' | 'version' | 'conflict' | 'savedSearch' | 'attachment' | 'inboxItem' | 'deletion';
+
+export interface RejectedRemoteRecord {
+  kind: RejectedRecordKind;
+  id: string | null;
+  reason: string;
+}
+
+// A server could send any number of these
+const MAX_REJECTED_RECORDS = 100;
+
+export const rejectedRemoteRecords = writable<RejectedRemoteRecord[]>([]);
+
+export function recordRejectedRemoteRecord(kind: RejectedRecordKind, id: unknown, reason: string): void {
+  const safeId = isUuid(id) ? id : null;
+  console.warn(`[VaultHealth] Dropped a ${kind} from the sync server (${reason})`, safeId ?? '(invalid id)');
+  rejectedRemoteRecords.update(entries => {
+    if (entries.length >= MAX_REJECTED_RECORDS) return entries;
+    if (safeId && entries.some(e => e.kind === kind && e.id === safeId)) return entries;
+    return [...entries, { kind, id: safeId, reason }];
+  });
+}
+
 export function recordDecryptFailure(note: Note, error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
   undecryptableNotes.update(entries => {
@@ -78,6 +107,7 @@ export function recordDecryptFailure(note: Note, error: unknown): void {
 export function resetVaultHealth(): void {
   undecryptableNotes.set([]);
   serverMissingAttachments.set([]);
+  rejectedRemoteRecords.set([]);
 }
 
 /**

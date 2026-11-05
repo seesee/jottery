@@ -2,7 +2,7 @@
   import { get } from 'svelte/store';
   import { onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
-  import { versionRepository, noteRepository, cryptoService, keyManager, decryptJSON } from '../services';
+  import { versionRepository, noteRepository, noteService, cryptoService, keyManager, decryptJSON } from '../services';
   import type { DecryptedNoteVersion, NoteVersion } from '../types';
   import { formatDate } from '../utils/dateFormat';
   import ConfirmModal from './ConfirmModal.svelte';
@@ -144,13 +144,7 @@
         });
 
         // Restore version data
-        currentNote.content = version.content;
-        currentNote.tags = version.tags;
-        currentNote.attachments = version.attachments;
-        currentNote.syntaxLanguage = version.syntaxLanguage;
-        currentNote.wordWrap = version.wordWrap;
-
-        await noteRepository.update(currentNote);
+        await noteService.restoreVersion(noteId, version);
       }
       versionToRestore = null;
       onClose();

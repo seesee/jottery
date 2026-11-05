@@ -1,9 +1,21 @@
 package com.jottery.android.ui.component
 
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -11,10 +23,13 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -41,22 +56,35 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.mimeTypes
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jottery.android.R
+import com.jottery.android.model.AttachmentRef
 import com.jottery.android.model.DecryptedNote
 import com.jottery.android.model.NoteVersionRecord
 import com.jottery.android.ui.theme.NoteColors
 import com.jottery.android.ui.webview.MarkdownPreviewView
 import com.jottery.android.ui.webview.WebCalcEditorView
 import com.jottery.android.ui.webview.WebOutlinerEditorView
+import com.jottery.android.ui.webview.isOpenableLink
+import com.jottery.android.util.AttachmentFiles
 import com.jottery.android.viewmodel.AppState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -65,12 +93,13 @@ import kotlinx.coroutines.launch
  * Note editor composable with auto-save, context menu, tag input area, and
  * pinch-to-zoom font size.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun NoteEditorView(
     appState: AppState,
     note: DecryptedNote?,
     onNavigateBack: (() -> Unit)? = null,
+    showAppBar: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     if (note == null) return
@@ -98,6 +127,13 @@ fun NoteEditorView(
     var showPreview by remember(note.id) { mutableStateOf(note.showPreview) }
     var didSaveDuringSession by remember(note.id) { mutableStateOf(false) }
 
+    // The last text this editor wrote. Its own save coming back through the note
+    // must not replace what the user has typed since.
+    var lastSavedContent by remember(note.id) { mutableStateOf(note.content) }
+
+    // onDispose outlives every recomposition, so it must read the current note
+    val latestNote by rememberUpdatedState(note)
+
     var menuExpanded by remember { mutableStateOf(false) }
     var colorMenuExpanded by remember { mutableStateOf(false) }
     var languageMenuExpanded by remember { mutableStateOf(false) }
@@ -113,30 +149,35 @@ fun NoteEditorView(
     var saveJob by remember { mutableStateOf<Job?>(null) }
 
     val isReadOnly = note.locked || note.archived
+    val restoreFailedMessage = stringResource(R.string.version_restore_failed)
 
     // Effective font size (base 14sp * scale)
     val effectiveFontSize = (14f * editorFontScale).coerceIn(8f, 42f).sp
 
     fun hasChanges(): Boolean {
-        return textFieldValue.text != note.content ||
-                tags != note.tags ||
-                syntaxLanguage != note.syntaxLanguage ||
-                wordWrap != note.wordWrap ||
-                color != note.color ||
-                showPreview != note.showPreview
+        val current = latestNote
+        return textFieldValue.text != current.content ||
+                tags != current.tags ||
+                syntaxLanguage != current.syntaxLanguage ||
+                wordWrap != current.wordWrap ||
+                color != current.color ||
+                showPreview != current.showPreview
     }
+
+    fun editedNote() = latestNote.copy(
+        content = textFieldValue.text,
+        tags = tags,
+        syntaxLanguage = syntaxLanguage,
+        wordWrap = wordWrap,
+        color = color,
+        showPreview = showPreview,
+    )
 
     fun saveImmediately() {
         saveJob?.cancel()
         if (!hasChanges()) return
-        val updated = note.copy(
-            content = textFieldValue.text,
-            tags = tags,
-            syntaxLanguage = syntaxLanguage,
-            wordWrap = wordWrap,
-            color = color,
-            showPreview = showPreview,
-        )
+        val updated = editedNote()
+        lastSavedContent = updated.content
         scope.launch {
             appState.saveNote(updated)
             didSaveDuringSession = true
@@ -152,6 +193,86 @@ fun NoteEditorView(
         }
     }
 
+    val context = LocalContext.current
+    var attachmentToRemove by remember { mutableStateOf<AttachmentRef?>(null) }
+    val unreadableMessage = stringResource(R.string.attachment_unreadable)
+    val noAppMessage = stringResource(R.string.attachment_no_app)
+    val tooLargeMessage = stringResource(R.string.attachment_too_large, AttachmentFiles.MAX_ATTACHMENT_BYTES / (1024 * 1024))
+    val addFailedMessage = stringResource(R.string.attachment_add_failed)
+    val noteTooLargeMessage = stringResource(R.string.note_too_large)
+    val nothingToPasteMessage = stringResource(R.string.attachment_nothing_to_paste)
+
+    // A note the server would refuse could never leave this device
+    fun acceptsText(text: String): Boolean {
+        if (text.length <= MAX_NOTE_CHARS) return true
+        appState.showMessage(noteTooLargeMessage)
+        return false
+    }
+
+    fun attach(uris: List<Uri>) {
+        scope.launch {
+            for (uri in uris) {
+                try {
+                    val picked = AttachmentFiles.read(context.contentResolver, uri)
+                    val id = appState.addAttachment(note.id, picked.data, picked.name, picked.mimeType)
+                    if (id != null && picked.mimeType.startsWith("image/") && syntaxLanguage == "markdown") {
+                        val text = textFieldValue.text
+                        val caret = textFieldValue.selection.end.coerceIn(0, text.length)
+                        val insert = "![](attachment:$id)"
+                        textFieldValue = TextFieldValue(
+                            text.substring(0, caret) + insert + text.substring(caret),
+                            TextRange(caret + insert.length),
+                        )
+                        scheduleSave()
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: AttachmentFiles.TooLarge) {
+                    appState.showMessage(tooLargeMessage)
+                } catch (e: Exception) {
+                    appState.showMessage(addFailedMessage)
+                }
+            }
+        }
+    }
+
+    val photoPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia()
+    ) { uris -> attach(uris) }
+    val filePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris -> attach(uris) }
+
+    // Files dragged in from another app, on large screens and in split screen
+    val dropTarget = remember {
+        object : DragAndDropTarget {
+            override fun onDrop(event: DragAndDropEvent): Boolean {
+                val dragEvent = event.toAndroidDragEvent()
+                (context as? Activity)?.requestDragAndDropPermissions(dragEvent)
+                val uris = dragEvent.clipData?.urisOrEmpty().orEmpty()
+                if (uris.isEmpty()) return false
+                attach(uris)
+                return true
+            }
+        }
+    }
+
+    fun handOff(attachment: AttachmentRef, buildIntent: suspend (ByteArray) -> Intent) {
+        scope.launch {
+            val data = appState.attachmentData(attachment)
+            if (data == null) {
+                appState.showMessage(unreadableMessage)
+                return@launch
+            }
+            try {
+                context.startActivity(buildIntent(data))
+            } catch (_: ActivityNotFoundException) {
+                appState.showMessage(noAppMessage)
+            }
+        }
+    }
+
+
     // Save on dispose (navigating away).
     // Uses viewModelScope via appState methods because the composable scope
     // (rememberCoroutineScope) is cancelled when leaving the composition,
@@ -160,15 +281,7 @@ fun NoteEditorView(
         onDispose {
             saveJob?.cancel()
             if (hasChanges()) {
-                val updated = note.copy(
-                    content = textFieldValue.text,
-                    tags = tags,
-                    syntaxLanguage = syntaxLanguage,
-                    wordWrap = wordWrap,
-                    color = color,
-                    showPreview = showPreview,
-                )
-                appState.saveNoteAndSync(updated)
+                appState.saveNoteAndSync(editedNote())
             } else if (didSaveDuringSession && appState.syncEnabledValue) {
                 appState.triggerSyncBackground()
             }
@@ -177,8 +290,16 @@ fun NoteEditorView(
 
     // Sync text state when note changes externally (e.g. sync)
     LaunchedEffect(note.content, note.tags, note.syntaxLanguage, note.wordWrap, note.color, note.showPreview) {
-        if (textFieldValue.text != note.content) {
-            textFieldValue = TextFieldValue(note.content)
+        // Our own save coming back: whatever was typed since is newer
+        if (note.content == lastSavedContent) return@LaunchedEffect
+
+        // A change from elsewhere (sync, restored version). Unsaved typing wins
+        // and goes out in the next save; otherwise show the new text, with the
+        // caret kept where it was as far as the new text allows.
+        if (textFieldValue.text == lastSavedContent) {
+            lastSavedContent = note.content
+            val caret = textFieldValue.selection.end.coerceAtMost(note.content.length)
+            textFieldValue = TextFieldValue(note.content, TextRange(caret))
         }
         tags = note.tags
         syntaxLanguage = note.syntaxLanguage
@@ -187,9 +308,14 @@ fun NoteEditorView(
         showPreview = note.showPreview
     }
 
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier.dragAndDropTarget(
+            shouldStartDragAndDrop = { event -> !isReadOnly && event.mimeTypes().isNotEmpty() },
+            target = dropTarget,
+        ),
+    ) {
         // Top bar with back button (phone) and overflow menu
-        TopAppBar(
+        if (showAppBar) TopAppBar(
             title = {
                 Text(
                     text = note.title,
@@ -255,6 +381,21 @@ fun NoteEditorView(
                         onDuplicate = {
                             scope.launch { appState.duplicateNote(note.id) }
                             menuExpanded = false
+                        },
+                        canAddAttachments = !isReadOnly,
+                        onAddPhoto = {
+                            menuExpanded = false
+                            photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                        },
+                        onAddFile = {
+                            menuExpanded = false
+                            filePicker.launch(arrayOf("*/*"))
+                        },
+                        onPasteAttachment = {
+                            menuExpanded = false
+                            val clipboard = context.getSystemService(ClipboardManager::class.java)
+                            val uris = clipboard?.primaryClip?.urisOrEmpty().orEmpty()
+                            if (uris.isEmpty()) appState.showMessage(nothingToPasteMessage) else attach(uris)
                         },
                         onDelete = {
                             menuExpanded = false
@@ -355,6 +496,8 @@ fun NoteEditorView(
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = MaterialTheme.colorScheme.surface,
             ),
+            // The enclosing Scaffold has already applied the status bar inset
+            windowInsets = WindowInsets(0),
         )
 
         // Tag input area
@@ -423,15 +566,14 @@ fun NoteEditorView(
                             }
                         },
                         onOpenLink = { url ->
-                            try {
-                                val intent = android.content.Intent(
-                                    android.content.Intent.ACTION_VIEW,
-                                    android.net.Uri.parse(url),
-                                )
-                                appState.getApplication<android.app.Application>().startActivity(
-                                    intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                                )
-                            } catch (_: Exception) { }
+                            // A note must not be able to start anything but these
+                            if (isOpenableLink(url)) {
+                                try {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                                } catch (_: ActivityNotFoundException) {
+                                    appState.showMessage(noAppMessage)
+                                }
+                            }
                         },
                         modifier = Modifier.fillMaxSize(),
                     )
@@ -441,7 +583,7 @@ fun NoteEditorView(
                         content = textFieldValue.text,
                         fontSize = 14f * editorFontScale,
                         onContentChanged = { newContent ->
-                            if (!isReadOnly) {
+                            if (!isReadOnly && acceptsText(newContent)) {
                                 textFieldValue = TextFieldValue(newContent)
                                 scheduleSave()
                             }
@@ -454,7 +596,7 @@ fun NoteEditorView(
                         content = textFieldValue.text,
                         fontSize = 14f * editorFontScale,
                         onContentChanged = { newContent ->
-                            if (!isReadOnly) {
+                            if (!isReadOnly && acceptsText(newContent)) {
                                 textFieldValue = TextFieldValue(newContent)
                                 scheduleSave()
                             }
@@ -466,7 +608,7 @@ fun NoteEditorView(
                     BasicTextField(
                         value = textFieldValue,
                         onValueChange = { newValue ->
-                            if (!isReadOnly) {
+                            if (!isReadOnly && acceptsText(newValue.text)) {
                                 textFieldValue = newValue
                                 scheduleSave()
                             }
@@ -501,6 +643,44 @@ fun NoteEditorView(
                 }
             }
         }
+
+        if (note.attachments.isNotEmpty()) {
+            HorizontalDivider()
+            AttachmentListView(
+                attachments = note.attachments,
+                onOpen = { attachment ->
+                    handOff(attachment) { data ->
+                        AttachmentFiles.viewIntent(context, attachment.filename, attachment.mimeType, data)
+                    }
+                },
+                onShare = { attachment ->
+                    handOff(attachment) { data ->
+                        AttachmentFiles.shareIntent(context, attachment.filename, attachment.mimeType, data)
+                    }
+                },
+                onRemove = if (isReadOnly) null else { attachment -> attachmentToRemove = attachment },
+                loadThumbnail = { attachment ->
+                    appState.attachmentData(attachment)?.let { AttachmentFiles.thumbnail(it) }
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+
+    attachmentToRemove?.let { attachment ->
+        ConfirmDialog(
+            title = stringResource(R.string.attachment_remove_title),
+            message = stringResource(
+                R.string.attachment_remove_message,
+                attachment.filename.ifEmpty { stringResource(R.string.attachment_unnamed) },
+            ),
+            confirmText = stringResource(R.string.attachment_remove_confirm),
+            onConfirm = {
+                attachmentToRemove = null
+                scope.launch { appState.removeAttachment(note.id, attachment.id) }
+            },
+            onDismiss = { attachmentToRemove = null },
+        )
     }
 
     // Delete confirmation dialog
@@ -523,8 +703,12 @@ fun NoteEditorView(
         VersionHistoryView(
             versions = versions,
             onRestore = { version ->
+                // Typing still waiting to save must not land on top of the restore
+                saveJob?.cancel()
                 scope.launch {
-                    appState.restoreVersion(note.id, version)
+                    if (!appState.restoreVersion(note.id, version)) {
+                        appState.showMessage(restoreFailedMessage)
+                    }
                 }
                 showVersionHistory = false
             },
@@ -565,6 +749,10 @@ private fun EditorContextMenu(
     onToggleWordWrap: () -> Unit,
     onTogglePreview: () -> Unit,
     onDuplicate: () -> Unit,
+    canAddAttachments: Boolean,
+    onAddPhoto: () -> Unit,
+    onAddFile: () -> Unit,
+    onPasteAttachment: () -> Unit,
     onDelete: () -> Unit,
     onShowColourMenu: () -> Unit,
     onShowLanguageMenu: () -> Unit,
@@ -670,6 +858,24 @@ private fun EditorContextMenu(
             },
         )
 
+        if (canAddAttachments) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.attachment_add_photo)) },
+                onClick = onAddPhoto,
+                leadingIcon = { Icon(Icons.Default.Image, contentDescription = null) },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.attachment_add_file)) },
+                onClick = onAddFile,
+                leadingIcon = { Icon(Icons.Default.AttachFile, contentDescription = null) },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.attachment_paste)) },
+                onClick = onPasteAttachment,
+                leadingIcon = { Icon(Icons.Default.ContentPaste, contentDescription = null) },
+            )
+        }
+
         // Duplicate
         DropdownMenuItem(
             text = { Text("Duplicate") },
@@ -700,6 +906,16 @@ private fun EditorContextMenu(
         )
     }
 }
+
+/**
+ * Encryption and base64 add a third, and the server refuses content over 10 MB
+ * by default, so this is the most that can still sync.
+ */
+private const val MAX_NOTE_CHARS = 7_000_000
+
+/** The files a clip or a drop is carrying. */
+private fun ClipData.urisOrEmpty(): List<Uri> =
+    (0 until itemCount).mapNotNull { getItemAt(it).uri }
 
 /** Supported syntax languages matching the iOS editor. */
 private val syntaxLanguages = listOf(

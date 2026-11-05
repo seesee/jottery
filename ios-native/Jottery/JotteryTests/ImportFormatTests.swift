@@ -125,9 +125,12 @@ struct ImportFormatTests {
         // Use `get`, not `listActive` — the note is archived, and `listActive`
         // excludes archived notes by design.
         let decrypted = try #require(try noteRepo.get(id: created.id, key: key))
-        let exportData = try ExportService.exportAll(notes: [decrypted], attachmentRepo: attachmentRepo, key: key)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("jottery-export-test-\(UUID().uuidString).json")
+        #expect(FileManager.default.createFile(atPath: url.path, contents: nil))
+        defer { try? FileManager.default.removeItem(at: url) }
+        try ExportService.writeExport(notes: [decrypted], to: url, attachmentRepo: attachmentRepo, key: key)
 
-        let export = try ImportService.parse(exportData)
+        let export = try ImportService.parse(Data(contentsOf: url))
         let exportNote = try #require(export.notes.first)
         #expect(exportNote.pinned == true)
         #expect(exportNote.archived == true)

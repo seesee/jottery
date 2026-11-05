@@ -23,11 +23,11 @@ password:
   change_success: 密码修改成功
   change_title: "修改密码"
   change_enter_current: "请输入当前密码："
-  change_enter_new: "请输入新密码（至少12个字符）："
+  change_enter_new: "请输入新密码（至少8个字符）："
   change_confirm_new: "请确认新密码："
   change_current_required: "请输入当前密码"
   change_wrong_current: "当前密码不正确"
-  change_too_short: "新密码必须至少12个字符"
+  change_too_short: "新密码必须至少8个字符"
   change_mismatch: "密码不匹配"
   change_failed: "修改密码失败"
   remember: 记住密码
@@ -46,6 +46,10 @@ password:
   enter_to_enable: "输入密码以启用自动解锁："
   create_title: 创建密码
   unlock_title: 解锁
+  too_short: "密码至少需要 %{min} 个字符"
+  same_as_account: "请使用不同的密码。服务器能看到您的账户密码，因此它不能同时用于打开笔记。"
+  same_as_account_warning: "您的账户密码与笔记密码相同，服务器可能读取您的笔记。请在设置中更改笔记密码。"
+  no_file_encryption: "此版本不加密数据库文件。笔记和标签仍保持加密，但您的邮箱、服务器地址、附件名称和日期不会加密。"
 menu:
   notes: 笔记
   new_note: 新建笔记
@@ -78,6 +82,13 @@ note:
   info: 笔记信息
   info_title: 笔记信息
   untitled: "无标题"
+  save_retry_hint: "q：重试保存 | e：编辑 | Esc：放弃更改"
+  empty_bin_title: "清空回收站"
+  empty_bin_confirm: "要永久删除回收站中的 %{count} 条笔记吗？"
+  empty_bin_warning: "这也会将它们从服务器和您的其他设备中删除，且无法撤销。"
+  bin_emptied: "已永久删除 %{count} 条笔记"
+  locked_cannot_archive: "无法归档已锁定的笔记"
+  unreadable: "此保险库中有 %{count} 条笔记无法读取"
 archive:
   view: "查看归档"
   title: "归档"
@@ -115,6 +126,18 @@ attachment:
   delete: 删除附件
   no_attachments: 无附件
   total: "%{count} 个附件"
+  press_enter: "按 Enter 继续..."
+  opened: "已在默认应用程序中打开文件。"
+  no_opener: "此系统没有可打开文件的程序。请改用 S 保存附件。"
+  delete_failed: "删除附件失败：%{error}"
+  deleted: "已删除：%{name}"
+  exists: "%{path} 已存在。请选择其他名称。"
+  saved: "已保存到 %{path}"
+  save_failed: "保存附件失败：%{error}"
+  added: "已添加附件 %{name}"
+  too_large: "文件过大。上限为 %{max_mb} MB。"
+  unsafe_title: "不会打开此文件"
+  unsafe_body: "打开此类型的文件可能会运行发送者的代码。是否改为保存？"
 version:
   history: 版本历史
   restore: 恢复版本
@@ -188,6 +211,8 @@ sync:
   reload_failed: "同步成功但重新加载笔记失败: %{error}"
   note: 条笔记
   notes: 条笔记
+  skipped_notes: "服务器上的 %{count} 项无法读取，已跳过"
+  rejected_notes: "%{count} 条笔记与服务器冲突。请打开 Jottery 解决。"
 
 # 收件箱
 inbox:
@@ -233,6 +258,7 @@ register:
   device_failed: 设备注册失败
   cleared: 注册已清除。您可以重新开始。
   pending_status: 等待审批
+  password_differs: "必须与笔记密码不同。"
 color_scheme:
   default_dark: 默认深色
   default_light: 默认浅色
@@ -386,8 +412,8 @@ help:
   s_q_close_desc: 关闭设置面板
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: 聚焦附件面板 (j/k 导航，Enter 查看，d 删除)
-  A_add_attachment_key: A
-  A_add_attachment_desc: 添加附件 (输入文件路径)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: 添加附件 (输入文件路径)
   a_view_attachment_key: a + 数字
   a_view_attachment_desc: 查看附件 (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -450,6 +476,14 @@ help:
   click_tags_desc: 进入标签编辑模式
   scroll_key: 滚轮
   scroll_desc: 上下滚动预览
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "锁定 Jottery"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "将所选附件保存到文件"
+  z_archive_key: "z"
+  z_archive_desc: "归档所选笔记（在归档模式下恢复）"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "归档所选笔记"
 cli:
   # 简短命令描述（用于旧版/备用）
   list: 列出笔记
@@ -513,6 +547,14 @@ cli:
   # 输出消息
   notes_count: "%{count} 条笔记"
   results_count: "%{count} 个结果：'%{query}'"
+  attach_about: "将文件附加到笔记"
+  save_attachment_about: "将笔记的附件保存到文件"
+  archive_about: "归档笔记"
+  unarchive_about: "从归档中恢复笔记"
+  note_id_help: "笔记 ID（支持部分匹配）"
+  attach_file_help: "要附加的文件"
+  attachment_number_help: "哪个附件（按 show 的编号）"
+  archived_help: "改为列出已归档的笔记"
 status:
   locked: 已锁定
   unlocked: 已解锁
@@ -534,6 +576,7 @@ bulk:
   enter_export_path: "导出路径:"
   add_tags_to: 添加标签到
   export_notes_to: 导出
+  archived: "已归档 %{count} 条笔记"
 time:
   just_now: 刚刚
   minutes_ago: "%{count} 分钟前"
@@ -568,6 +611,8 @@ backup:
   restoring: "正在恢复数据..."
   restored: "已恢复"
   key_not_in_backup: "此备份由旧版 Jottery 创建，不包含其密钥。只能恢复到其来源的保险库。"
+  incomplete: "此备份不完整：保险库中有 %{count} 项无法读取，已被略过。"
+  records_failed: "此备份中有 %{count} 条记录无法恢复，其余均已恢复。"
 
 # Progress indicators
 progress:
@@ -591,6 +636,12 @@ ui:
   type: "类型："
   modified: "修改时间："
   version: "版本："
+  save_attachment: "保存附件（Tab：补全，↑↓：选择，Enter：确认）"
+  path: "路径"
+  attachments_hint: "附件：（按 Tab 聚焦）"
+  attachments_focused_hint: "附件：（Tab 切换，j/k 移动，Enter 查看，S 保存，d 删除）"
+  attachments_keys_hint: "按 'a' 查看，'+' 添加，'X' 删除所选"
+  attachment_viewer_hint: "↑/↓：移动 │ 1-9：快速选择 │ Enter：查看 │ S：保存 │ +：添加 │ d：删除 │ Esc：关闭"
 
 # 状态栏帮助文本
 status_bar:
@@ -640,8 +691,21 @@ status_bar:
   quick_select: "快速选择"
   view: "查看"
   restore_version: "恢复版本"
+  save: "保存"
+  add: "添加"
 
 # Virtual tags
 tags:
   virtual:
     title: "标题"
+
+calc:
+  line_too_long: "⚠ 此行过长，无法计算（上限 %{max} 字节）"
+  numbers_only: "⚠ Calc 只处理数字：文本、元组和 ; 不会计算"
+  too_deep: "⚠ 括号嵌套过多（上限 %{max}）"
+  gave_up: "此笔记计算耗时过长，因此不显示结果。"
+
+envelope:
+  unwrap_failed: "您的笔记密码无法打开此账户的密钥。它可能由旧版本保存。请在已连接的设备上解锁 Jottery 以修复此问题，然后重试。"
+  rekey_failed: "无法将本地笔记迁移到此账户的密钥，因此未做任何更改：%{error}"
+  diverged: "此设备的密钥与账户密钥不同。来自其他设备的笔记可能无法在此打开。"

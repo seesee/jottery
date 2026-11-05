@@ -5,6 +5,8 @@
  * Password is base64 encoded for minimal obfuscation (NOT encryption)
  */
 
+import { decodeStoredPassword, encodeStoredPassword } from '../utils/storedPassword';
+
 const PASSWORD_KEY = 'jottery_session_password';
 const TIMESTAMP_KEY = 'jottery_session_timestamp';
 
@@ -26,20 +28,23 @@ export function isSessionStorageAvailable(): boolean {
 /**
  * Store password in sessionStorage with base64 encoding and timestamp
  * NOTE: Base64 is NOT encryption, only basic obfuscation
+ *
+ * @returns whether the password was stored
  */
-export function storeSessionPassword(password: string): void {
+export function storeSessionPassword(password: string): boolean {
   if (!isSessionStorageAvailable()) {
     console.warn('[SessionStorage] sessionStorage not available');
-    return;
+    return false;
   }
 
   try {
     // Base64 encode for minimal obfuscation (not security)
-    const encoded = btoa(password);
-    sessionStorage.setItem(PASSWORD_KEY, encoded);
+    sessionStorage.setItem(PASSWORD_KEY, encodeStoredPassword(password));
     sessionStorage.setItem(TIMESTAMP_KEY, Date.now().toString());
+    return true;
   } catch (error) {
     console.error('[SessionStorage] Failed to store session password:', error);
+    return false;
   }
 }
 
@@ -79,7 +84,7 @@ export function getSessionPassword(timeoutMinutes: number): string | null {
 
     // Decode and return
     try {
-      return atob(encoded);
+      return decodeStoredPassword(encoded);
     } catch (decodeError) {
       console.error('[SessionStorage] Failed to decode session password:', decodeError);
       clearSessionPassword();
@@ -134,6 +139,22 @@ export function hasValidSession(timeoutMinutes: number): boolean {
 }
 
 /**
+ * Whether a session was stored at all, expired or not. A session that was never
+ * stored can't have expired: the store may simply have failed.
+ */
+export function hasStoredSession(): boolean {
+  if (!isSessionStorageAvailable()) {
+    return false;
+  }
+
+  try {
+    return sessionStorage.getItem(TIMESTAMP_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Session storage service interface
  */
 export const sessionStorageService = {
@@ -143,4 +164,5 @@ export const sessionStorageService = {
   refresh: refreshSessionTimestamp,
   clear: clearSessionPassword,
   hasValid: hasValidSession,
+  hasStored: hasStoredSession,
 };

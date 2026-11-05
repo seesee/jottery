@@ -362,6 +362,7 @@ struct NoteEditorView: View {
         }
         .sheet(isPresented: $showPhotoPicker) {
             PhotoPickerView { url, filename, mimeType in
+                defer { TemporaryFiles.shared.remove(url) }
                 do {
                     try appState.addAttachment(to: note.id, url: url, filename: filename, mimeType: mimeType)
                 } catch {
@@ -574,34 +575,22 @@ struct PhotoPickerView: UIViewControllerRepresentable {
 
             // Try to load as file URL
             if itemProvider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
-                itemProvider.loadFileRepresentation(forTypeIdentifier: UTType.image.identifier) { [weak self] url, error in
-                    guard let url, error == nil else { return }
-                    let tempDir = FileManager.default.temporaryDirectory
-                        .appendingPathComponent("jottery-import", isDirectory: true)
-                    try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-                    let dest = tempDir.appendingPathComponent(url.lastPathComponent)
-                    try? FileManager.default.removeItem(at: dest)
-                    try? FileManager.default.copyItem(at: url, to: dest)
-                    let filename = url.lastPathComponent
-                    let mimeType = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "image/jpeg"
-                    DispatchQueue.main.async {
-                        self?.onPick(dest, filename, mimeType)
-                    }
-                }
+                load(itemProvider, type: .image, fallbackMimeType: "image/jpeg")
             } else if itemProvider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
-                itemProvider.loadFileRepresentation(forTypeIdentifier: UTType.movie.identifier) { [weak self] url, error in
-                    guard let url, error == nil else { return }
-                    let tempDir = FileManager.default.temporaryDirectory
-                        .appendingPathComponent("jottery-import", isDirectory: true)
-                    try? FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-                    let dest = tempDir.appendingPathComponent(url.lastPathComponent)
-                    try? FileManager.default.removeItem(at: dest)
-                    try? FileManager.default.copyItem(at: url, to: dest)
-                    let filename = url.lastPathComponent
-                    let mimeType = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "video/mp4"
-                    DispatchQueue.main.async {
-                        self?.onPick(dest, filename, mimeType)
-                    }
+                load(itemProvider, type: .movie, fallbackMimeType: "video/mp4")
+            }
+        }
+
+        /// The file only exists during the callback, so it's copied somewhere
+        /// the attachment can be read from. `onPick`'s owner removes the copy.
+        private func load(_ itemProvider: NSItemProvider, type: UTType, fallbackMimeType: String) {
+            itemProvider.loadFileRepresentation(forTypeIdentifier: type.identifier) { [weak self] url, error in
+                guard let url, error == nil,
+                      let copy = try? TemporaryFiles.shared.copy(url, named: url.lastPathComponent) else { return }
+                let filename = url.lastPathComponent
+                let mimeType = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? fallbackMimeType
+                DispatchQueue.main.async {
+                    self?.onPick(copy, filename, mimeType)
                 }
             }
         }

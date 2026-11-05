@@ -22,6 +22,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -34,12 +36,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.jottery.android.R
 import com.jottery.android.model.ConflictInfo
 import com.jottery.android.model.ConflictResolutionStrategy
 import com.jottery.android.viewmodel.AppState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,16 +55,19 @@ fun ConflictResolutionScreen(
 ) {
     val conflicts by appState.pendingConflicts.collectAsState()
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val failedMessage = stringResource(R.string.conflict_resolve_failed)
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Sync Conflicts (${conflicts.size})") },
+                title = { Text(stringResource(R.string.conflict_screen_title, conflicts.size)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.back),
                         )
                     }
                 },
@@ -74,7 +82,7 @@ fun ConflictResolutionScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    "No conflicts to resolve.",
+                    stringResource(R.string.conflict_none),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -94,7 +102,14 @@ fun ConflictResolutionScreen(
                         conflict = conflict,
                         onResolve = { strategy ->
                             scope.launch {
-                                appState.resolveConflict(conflict.id, strategy)
+                                try {
+                                    appState.resolveConflict(conflict.id, strategy)
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    // The conflict stays, so nothing is lost
+                                    snackbarHostState.showSnackbar(failedMessage)
+                                }
                             }
                         },
                     )
@@ -123,7 +138,7 @@ private fun ConflictCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Note: ${conflict.id.take(8)}\u2026",
+                text = conflict.title.ifEmpty { stringResource(R.string.notes_untitled) },
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
             )
@@ -132,17 +147,17 @@ private fun ConflictCard(
             OutlinedCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        "Local version",
+                        stringResource(R.string.conflict_local_version),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
                     Text(
-                        "Modified: ${conflict.localModifiedAt}",
+                        stringResource(R.string.conflict_modified, conflict.localModifiedAt),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     if (conflict.localTags.isNotEmpty()) {
                         Text(
-                            "Tags: ${conflict.localTags.joinToString(", ")}",
+                            stringResource(R.string.conflict_tags, conflict.localTags.joinToString(", ")),
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
@@ -159,22 +174,22 @@ private fun ConflictCard(
             OutlinedCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(
-                        "Server version",
+                        stringResource(R.string.conflict_server_version),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.tertiary,
                     )
                     Text(
-                        "Modified: ${conflict.serverModifiedAt}",
+                        stringResource(R.string.conflict_modified, conflict.serverModifiedAt),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     if (conflict.serverTags.isNotEmpty()) {
                         Text(
-                            "Tags: ${conflict.serverTags.joinToString(", ")}",
+                            stringResource(R.string.conflict_tags, conflict.serverTags.joinToString(", ")),
                             style = MaterialTheme.typography.bodySmall,
                         )
                     }
                     Text(
-                        text = conflict.serverContent,
+                        text = conflict.serverContent ?: stringResource(R.string.conflict_server_unreadable),
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = if (expanded) Int.MAX_VALUE else 3,
                         overflow = TextOverflow.Ellipsis,
@@ -182,8 +197,27 @@ private fun ConflictCard(
                 }
             }
 
+            // What both sides started from, when the server still has it
+            conflict.ancestorContent?.let { ancestor ->
+                OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            stringResource(R.string.conflict_ancestor),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = ancestor,
+                            style = MaterialTheme.typography.bodySmall,
+                            maxLines = if (expanded) Int.MAX_VALUE else 3,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+
             TextButton(onClick = { expanded = !expanded }) {
-                Text(if (expanded) "Show less" else "Show more")
+                Text(stringResource(if (expanded) R.string.conflict_show_less else R.string.conflict_show_more))
             }
 
             // Resolution buttons
@@ -194,17 +228,19 @@ private fun ConflictCard(
                 OutlinedButton(
                     onClick = { onResolve(ConflictResolutionStrategy.KEEP_LOCAL) },
                     modifier = Modifier.weight(1f),
-                ) { Text("Keep Local") }
+                ) { Text(stringResource(R.string.conflict_keep_local)) }
 
                 OutlinedButton(
                     onClick = { onResolve(ConflictResolutionStrategy.KEEP_SERVER) },
+                    enabled = !conflict.serverUnreadable,
                     modifier = Modifier.weight(1f),
-                ) { Text("Keep Server") }
+                ) { Text(stringResource(R.string.conflict_keep_server)) }
 
                 Button(
                     onClick = { onResolve(ConflictResolutionStrategy.KEEP_BOTH) },
+                    enabled = !conflict.serverUnreadable,
                     modifier = Modifier.weight(1f),
-                ) { Text("Keep Both") }
+                ) { Text(stringResource(R.string.conflict_keep_both)) }
             }
         }
     }

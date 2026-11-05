@@ -9,8 +9,48 @@ import { noteService } from './noteService';
 import { keyManager } from './keyManager';
 import { cryptoService, decryptStringArray } from './crypto';
 import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/base64';
+import { isUuid, safeColour, safeLanguage, safeMimeType } from './syncValidation';
+import { toIsoTimestamp } from '../utils/timestamps';
 
 const EXPORT_VERSION = '1.0';
+
+/** A note from an import file, after checking. It has no id if it needs a new one. */
+type ImportedNote = Omit<ExportNote, 'id'> & { id?: string };
+
+/**
+ * Check a note from an import file. The file can come from another app or another
+ * person, so nothing in it is trusted. A bad field is replaced where there's a safe
+ * default. Only something that isn't a note at all is refused.
+ *
+ * showPreview is always off, so an imported note can't render itself on selection.
+ */
+function sanitiseImportedNote(value: unknown): ImportedNote | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+
+  const note = value as Record<string, unknown>;
+  if (typeof note.content !== 'string') return null;
+
+  const now = new Date().toISOString();
+  const rawTags = typeof note.tags === 'string' ? [note.tags] : note.tags;
+
+  return {
+    id: isUuid(note.id) ? note.id : undefined,
+    createdAt: toIsoTimestamp(note.createdAt) ?? now,
+    modifiedAt: toIsoTimestamp(note.modifiedAt) ?? now,
+    content: note.content,
+    tags: Array.isArray(rawTags)
+      ? rawTags.filter((tag): tag is string => typeof tag === 'string' && tag.trim().length > 0)
+      : [],
+    attachments: Array.isArray(note.attachments) ? (note.attachments as ExportAttachment[]) : [],
+    pinned: note.pinned === true,
+    archived: note.archived === true,
+    locked: note.locked === true,
+    wordWrap: typeof note.wordWrap === 'boolean' ? note.wordWrap : undefined,
+    syntaxLanguage: safeLanguage(note.syntaxLanguage),
+    showPreview: false,
+    color: safeColour(note.color),
+  };
+}
 
 /**
  * Progress callback for export operations
@@ -217,21 +257,16 @@ export async function importNotes(
   const totalNotes = data.notes.length;
 
   for (let i = 0; i < data.notes.length; i++) {
-    const exportNote = data.notes[i];
-
-    // Normalize tags to always be an array
-    if (!Array.isArray(exportNote.tags)) {
-      if (typeof exportNote.tags === 'string') {
-        // Handle case where tags is a single string
-        exportNote.tags = exportNote.tags ? [exportNote.tags] : [];
-      } else {
-        exportNote.tags = [];
-      }
+    const exportNote = sanitiseImportedNote(data.notes[i]);
+    if (!exportNote) {
+      errors.push(`Note ${i + 1} is not a valid note and was not imported`);
+      onProgress?.(i + 1, totalNotes);
+      continue;
     }
 
     try {
       // Check if note already exists by ID
-      const existingNote = await noteRepository.getById(exportNote.id);
+      const existingNote = exportNote.id ? await noteRepository.getById(exportNote.id) : null;
 
       // Determine if we should preserve the original ID
       let useOriginalId = true;
@@ -242,7 +277,7 @@ export async function importNotes(
           continue;
         } else if (strategy === 'replace') {
           // Delete existing note, then recreate with same ID
-          await noteRepository.delete(exportNote.id);
+          await noteRepository.delete(existingNote.id);
         } else {
           // For 'merge', import with a new ID to create duplicate
           useOriginalId = false;
@@ -254,6 +289,10 @@ export async function importNotes(
       if (exportNote.attachments && exportNote.attachments.length > 0) {
         for (const exportAttachment of exportNote.attachments) {
           try {
+            if (typeof exportAttachment?.filename !== 'string' || typeof exportAttachment.data !== 'string') {
+              throw new Error('Attachment has no filename or data');
+            }
+
             // Generate new attachment ID
             const attachmentId = cryptoService.generateUUID();
 
@@ -282,12 +321,13 @@ export async function importNotes(
             noteAttachments.push({
               id: attachmentId,
               filename: JSON.stringify(encryptedFilename),
-              mimeType: exportAttachment.mimeType,
+              mimeType: safeMimeType(exportAttachment.mimeType),
               size: fileData.byteLength,
               data: attachmentId, // Reference to blob storage
             });
           } catch (attachmentError) {
             console.error('Failed to import attachment:', attachmentError);
+            errors.push(`An attachment on note ${i + 1} could not be imported`);
             // Continue with other attachments
           }
         }
@@ -314,7 +354,7 @@ export async function importNotes(
       exportNote.tags.forEach(tag => tags.add(tag));
     } catch (error) {
       errors.push(
-        `Failed to import note ${exportNote.id}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to import note ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
 

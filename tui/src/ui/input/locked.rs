@@ -40,6 +40,10 @@ pub fn handle_locked_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     app.error = Some(t!("password.mismatch_error").to_string());
                     return Ok(());
                 }
+                if let Err(e) = crate::vault::check_new_password(&app.password_input) {
+                    app.error = Some(e.to_string());
+                    return Ok(());
+                }
             }
 
             if let Err(e) = operations::auth::unlock(app) {
@@ -67,3 +71,64 @@ pub fn handle_locked_key(app: &mut App, key: KeyEvent) -> Result<()> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn app_creating_a_vault(password: &str) -> App {
+        let dir = tempfile::tempdir().unwrap();
+        let mut app = App::new(dir.path().join("test.db"), None).unwrap();
+        std::mem::forget(dir);
+        app.is_new_database = true;
+        app.password_input = password.to_string();
+        app.password_confirm = password.to_string();
+        app
+    }
+
+    fn press_enter(app: &mut App) {
+        handle_locked_key(app, KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)).unwrap();
+    }
+
+    #[test]
+    fn a_new_vault_refuses_a_short_password() {
+        let mut app = app_creating_a_vault("seven77");
+
+        press_enter(&mut app);
+
+        assert!(matches!(app.state, AppState::Locked));
+        assert!(app.key.is_none());
+        assert!(app.error.is_some());
+    }
+
+    #[test]
+    fn a_new_vault_takes_eight_characters() {
+        let mut app = app_creating_a_vault(&uuid::Uuid::new_v4().to_string()[..8]);
+
+        press_enter(&mut app);
+
+        assert!(matches!(app.state, AppState::NoteList), "{:?}", app.error);
+    }
+
+    #[test]
+    fn unlocking_has_no_minimum_length() {
+        // A vault from before the rule, with a password under it
+        let short = "abc";
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.db");
+        {
+            let db = crate::db::Database::open(&path, short).unwrap();
+            let crypto = crate::crypto::CryptoService::new();
+            let key = crypto.generate_master_key();
+            crate::vault::store_local_envelope(db.connection(), &crypto, short, &key).unwrap();
+        }
+
+        let mut app = App::new(path, None).unwrap();
+        app.is_new_database = false;
+        app.password_input = short.to_string();
+        press_enter(&mut app);
+
+        assert!(matches!(app.state, AppState::NoteList), "{:?}", app.error);
+    }
+}
+

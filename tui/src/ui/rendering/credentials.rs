@@ -68,9 +68,15 @@ pub fn render_input_email_for_status(app: &App, frame: &mut Frame) {
     frame.render_widget(input, chunks[1]);
 
     // Render help text
-    let help = Paragraph::new(t!("help.press_enter_paste"))
-        .alignment(Alignment::Center)
-        .style(Style::default().fg(app.color_scheme.muted));
+    // A refused entry says why, or Enter would just appear to do nothing
+    let help = match &app.error {
+        Some(error) => Paragraph::new(error.as_str())
+            .style(Style::default().fg(app.color_scheme.error))
+            .wrap(ratatui::widgets::Wrap { trim: true }),
+        None => Paragraph::new(t!("help.press_enter_paste"))
+            .style(Style::default().fg(app.color_scheme.muted)),
+    }
+    .alignment(Alignment::Center);
 
     frame.render_widget(help, chunks[2]);
 }
@@ -172,6 +178,7 @@ pub fn render_register_input_password(app: &App, frame: &mut Frame) {
     } else {
         t!("register.enter_password")
     };
+    let prompt = format!("{}\n{}", prompt, t!("register.password_differs"));
 
     render_registration_input_modal(
         app,
@@ -313,10 +320,8 @@ fn render_registration_input_modal(
 
     frame.render_widget(block, modal_area);
 
-    let instruction_widget = Paragraph::new(Line::from(Span::styled(
-        instruction,
-        Style::default().fg(app.color_scheme.accent),
-    )));
+    let instruction_widget = Paragraph::new(instruction.to_string())
+        .style(Style::default().fg(app.color_scheme.accent));
     frame.render_widget(instruction_widget, chunks[0]);
 
     let display_value = if is_password {

@@ -1,57 +1,54 @@
 /**
- * Search service with FlexSearch and query parser
+ * Search service and query parser
  * Supports tag filtering, text search, wildcards, and boolean operators
+ *
+ * Each term is evaluated against the note's text. A word index can't answer these
+ * queries: a plain word has to match inside a longer word, and a phrase has to match
+ * in order, so an index could only ever narrow the candidates, and would miss some.
  */
 
-import FlexSearch from 'flexsearch';
-import type { DecryptedNote, SearchQuery, SortOrder, FlexSearchEnrichedResult, FlexSearchResultItem } from '../types';
+import type { DecryptedNote, SearchQuery, SearchTerm, SortOrder } from '../types';
 import { getTagColor, getColorKeyByDisplayName } from './colorService';
 import { getNoteTitle } from '../utils/noteTitle';
+import { compareTimestamps } from '../utils/timestamps';
 import { normaliseForComparison, localeIncludes, localeSort } from '../utils/stringUtils';
 
-// Create FlexSearch index
-const index = new FlexSearch.Document({
-  document: {
-    id: 'id',
-    index: ['content', 'tags'],
-    store: true,
-  },
-  tokenize: 'forward',
-  cache: true,
-});
+/** A note's text, normalised once so a search doesn't redo it for every keystroke. */
+interface SearchableNote {
+  source: DecryptedNote;
+  content: string;
+  tags: string[];
+  text: string;
+  words?: string[];
+}
 
-// Track indexed note IDs to properly remove stale entries
-const indexedIds = new Set<string>();
+const searchCache = new Map<string, SearchableNote>();
+
+function toSearchable(note: DecryptedNote): SearchableNote {
+  const content = normaliseForComparison(note.content);
+  const tags = note.tags.map(normaliseForComparison);
+  return { source: note, content, tags, text: `${content} ${tags.join(' ')}` };
+}
+
+/** The cached form of a note. A different object means it has changed, so it is rebuilt. */
+function searchableNote(note: DecryptedNote): SearchableNote {
+  const cached = searchCache.get(note.id);
+  if (cached?.source === note) {
+    return cached;
+  }
+
+  const searchable = toSearchable(note);
+  searchCache.set(note.id, searchable);
+  return searchable;
+}
 
 /**
  * Index all notes for search
  * Removes entries for notes that no longer exist in the provided array
  */
 export function indexNotes(notes: DecryptedNote[]): void {
-  try {
-    const newIds = new Set(notes.map(n => n.id));
-
-    // Remove entries for notes that no longer exist
-    for (const id of indexedIds) {
-      if (!newIds.has(id)) {
-        index.remove(id);
-        indexedIds.delete(id);
-      }
-    }
-
-    // Add/update all current notes
-    notes.forEach((note) => {
-      index.add({
-        id: note.id,
-        content: note.content,
-        tags: note.tags.join(' '),
-      });
-      indexedIds.add(note.id);
-    });
-  } catch (error) {
-    console.error('FlexSearch indexing error:', error);
-    // Index state may be inconsistent, but search will fall back to basic filtering
-  }
+  searchCache.clear();
+  notes.forEach(note => searchCache.set(note.id, toSearchable(note)));
 }
 
 /**
@@ -59,28 +56,14 @@ export function indexNotes(notes: DecryptedNote[]): void {
  * This is much faster than re-indexing all notes
  */
 export function updateNote(note: DecryptedNote): void {
-  try {
-    index.add({
-      id: note.id,
-      content: note.content,
-      tags: note.tags.join(' '),
-    });
-    indexedIds.add(note.id);
-  } catch (error) {
-    console.error('FlexSearch update error:', error);
-  }
+  searchCache.set(note.id, toSearchable(note));
 }
 
 /**
  * Remove a note from the search index
  */
 export function removeNote(noteId: string): void {
-  try {
-    index.remove(noteId);
-    indexedIds.delete(noteId);
-  } catch (error) {
-    console.error('FlexSearch remove error:', error);
-  }
+  searchCache.delete(noteId);
 }
 
 /**
@@ -315,8 +298,83 @@ function parseAdvancedModifiers(query: string): { modifiers: Partial<SearchQuery
   return { modifiers, remainingQuery: remaining };
 }
 
+type QueryToken =
+  | { kind: 'or' }
+  | { kind: 'term'; term: SearchTerm }
+  | { kind: 'excludeText'; value: string }
+  | { kind: 'excludeTag'; value: string };
+
+/** Classify a word by its wildcards. A word of only asterisks is a search for them. */
+function classifyWord(word: string): SearchTerm {
+  const value = normaliseForComparison(word.replace(/^\*+|\*+$/g, ''));
+  if (!value) return { type: 'contains', value: word };
+
+  const leading = word.startsWith('*');
+  const trailing = word.endsWith('*');
+  if (leading && !trailing) return { type: 'suffix', value };
+  if (trailing && !leading) return { type: 'prefix', value };
+  return { type: 'contains', value };
+}
+
+function tokeniseWord(word: string): QueryToken {
+  if (word.startsWith('-#') && word.length > 2) {
+    return { kind: 'excludeTag', value: normaliseForComparison(word.slice(2)) };
+  }
+  if (word.startsWith('#') && word.length > 1) {
+    return { kind: 'term', term: { type: 'tag', value: normaliseForComparison(word.slice(1)) } };
+  }
+  if (word.startsWith('-') && word.length > 1) {
+    return { kind: 'excludeText', value: normaliseForComparison(word.slice(1)) };
+  }
+  return { kind: 'term', term: classifyWord(word) };
+}
+
+function tokeniseQuery(query: string): QueryToken[] {
+  const tokens: QueryToken[] = [];
+  let i = 0;
+
+  while (i < query.length) {
+    if (/\s/.test(query[i])) {
+      i++;
+      continue;
+    }
+
+    if (query[i] === '|') {
+      tokens.push({ kind: 'or' });
+      i++;
+      continue;
+    }
+
+    const negatedPhrase = query.startsWith('-"', i);
+    if (query[i] === '"' || negatedPhrase) {
+      // An unclosed quote runs to the end of the query, so a phrase can be typed
+      // and searched for before the closing quote is reached
+      const start = i + (negatedPhrase ? 2 : 1);
+      const end = query.indexOf('"', start);
+      const value = normaliseForComparison(end === -1 ? query.slice(start) : query.slice(start, end));
+      i = end === -1 ? query.length : end + 1;
+
+      if (value) {
+        tokens.push(negatedPhrase ? { kind: 'excludeText', value } : { kind: 'term', term: { type: 'phrase', value } });
+      }
+      continue;
+    }
+
+    let end = i;
+    while (end < query.length && !/\s/.test(query[end]) && query[end] !== '|') {
+      end++;
+    }
+    tokens.push(tokeniseWord(query.slice(i, end)));
+    i = end;
+  }
+
+  return tokens;
+}
+
 /**
- * Parse search query string into structured query
+ * Parse search query string into structured query. Every client follows the same
+ * rules, which are written down with test cases in docs/search-query-fixture.json.
+ *
  * Supports:
  * - #tag - Notes with tag
  * - #tag1 #tag2 - Notes with both tags (AND)
@@ -327,6 +385,9 @@ function parseAdvancedModifiers(query: string): { modifiers: Partial<SearchQuery
  * - text1 | text2 - Contains either (OR)
  * - -text - Does NOT contain text
  * - -#tag - Does NOT have tag
+ * - text*, *text, *text* - Starts with, ends with, contains anywhere
+ *
+ * Handled before this, by parseAdvancedModifiers:
  * - has:attachment - Notes with attachments
  * - created:>DATE, created:<DATE, created:DATE..DATE - Created date filters
  * - modified:>DATE, modified:<DATE, modified:DATE..DATE - Modified date filters
@@ -336,91 +397,30 @@ function parseAdvancedModifiers(query: string): { modifiers: Partial<SearchQuery
  */
 export function parseSearchQuery(query: string): SearchQuery {
   const parsed: SearchQuery = {
-    text: undefined,
-    tags: [],
-    orTags: [],
+    groups: [],
     excludeText: [],
     excludeTags: [],
   };
 
-  if (!query.trim()) return parsed;
+  let currentGroup: SearchTerm[] | undefined;
+  let joinToCurrent = false;
 
-  const tokens: string[] = [];
-  let current = '';
-  let inQuotes = false;
-
-  // Tokenize
-  for (let i = 0; i < query.length; i++) {
-    const char = query[i];
-
-    if (char === '"') {
-      if (inQuotes) {
-        tokens.push(current);
-        current = '';
-      }
-      inQuotes = !inQuotes;
-    } else if (char === ' ' && !inQuotes) {
-      if (current) {
-        tokens.push(current);
-        current = '';
-      }
-    } else {
-      current += char;
-    }
-  }
-
-  if (current) tokens.push(current);
-
-  // Parse tokens
-  const textTerms: string[] = [];
-  const orTextTerms: string[] = [];
-  let expectOr = false;
-
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i];
-
-    // Handle OR operator
-    if (token === '|') {
-      expectOr = true;
-      continue;
-    }
-
-    // Exclude operator
-    if (token.startsWith('-')) {
-      const term = token.slice(1);
-      if (term.startsWith('#')) {
-        parsed.excludeTags!.push(term.slice(1));
+  for (const token of tokeniseQuery(query)) {
+    if (token.kind === 'or') {
+      joinToCurrent = currentGroup !== undefined;
+    } else if (token.kind === 'term') {
+      if (joinToCurrent && currentGroup) {
+        currentGroup.push(token.term);
       } else {
-        parsed.excludeText!.push(term);
+        currentGroup = [token.term];
+        parsed.groups!.push(currentGroup);
       }
-      expectOr = false;
-      continue;
-    }
-
-    // Tag
-    if (token.startsWith('#')) {
-      const tag = token.slice(1);
-      if (expectOr) {
-        parsed.orTags!.push(tag);
-      } else {
-        parsed.tags!.push(tag);
-      }
-      expectOr = false;
-      continue;
-    }
-
-    // Regular text
-    if (expectOr) {
-      orTextTerms.push(token);
+      joinToCurrent = false;
     } else {
-      textTerms.push(token);
+      // An exclusion always applies, so it ends any OR group
+      (token.kind === 'excludeTag' ? parsed.excludeTags! : parsed.excludeText!).push(token.value);
+      joinToCurrent = false;
     }
-    expectOr = false;
-  }
-
-  // Combine text terms
-  if (textTerms.length > 0 || orTextTerms.length > 0) {
-    parsed.text = [...textTerms, ...orTextTerms].join(' ');
   }
 
   return parsed;
@@ -463,19 +463,19 @@ function sortNotes(notes: DecryptedNote[], sortOrder: SortOrder): DecryptedNote[
   let sortFn: (a: DecryptedNote, b: DecryptedNote) => number;
   switch (sortOrder) {
     case 'recent':
-      sortFn = (a, b) => b.modifiedAt.localeCompare(a.modifiedAt);
+      sortFn = (a, b) => compareTimestamps(b.modifiedAt, a.modifiedAt);
       break;
     case 'oldest':
-      sortFn = (a, b) => a.modifiedAt.localeCompare(b.modifiedAt);
+      sortFn = (a, b) => compareTimestamps(a.modifiedAt, b.modifiedAt);
       break;
     case 'created':
-      sortFn = (a, b) => b.createdAt.localeCompare(a.createdAt);
+      sortFn = (a, b) => compareTimestamps(b.createdAt, a.createdAt);
       break;
     case 'alpha':
       sortFn = (a, b) => localeSort(getNoteTitle(a), getNoteTitle(b));
       break;
     default:
-      sortFn = (a, b) => b.modifiedAt.localeCompare(a.modifiedAt);
+      sortFn = (a, b) => compareTimestamps(b.modifiedAt, a.modifiedAt);
   }
 
   // Sort each group
@@ -490,86 +490,34 @@ function sortNotes(notes: DecryptedNote[], sortOrder: SortOrder): DecryptedNote[
 // Search Filter Helpers
 // ============================================================================
 
-/** Perform full-text search using FlexSearch */
-async function filterByFullText(
-  notes: DecryptedNote[],
-  searchText: string
-): Promise<DecryptedNote[]> {
-  try {
-    const searchResults = await index.searchAsync(searchText, {
-      limit: 1000,
-      enrich: true,
-    });
+/** The words of a note, split as every client splits them. */
+function wordsOf(note: SearchableNote): string[] {
+  note.words ??= note.text.split(/[\s\p{P}]+/u).filter(Boolean);
+  return note.words;
+}
 
-    const matchingIds = new Set<string>();
-    if (Array.isArray(searchResults)) {
-      (searchResults as unknown as FlexSearchEnrichedResult[]).forEach((result) => {
-        if (result.result) {
-          result.result.forEach((item: string | FlexSearchResultItem) => {
-            const id = typeof item === 'string' ? item : item.id;
-            if (id) {
-              matchingIds.add(id);
-            }
-          });
-        }
-      });
-    }
-
-    return notes.filter((note) => matchingIds.has(note.id));
-  } catch (error) {
-    console.error('FlexSearch search error, falling back to basic filter:', error);
-    // Graceful degradation: fall back to basic case-insensitive text matching
-    return notes.filter((note) =>
-      localeIncludes(note.content, searchText) ||
-      note.tags.some((tag) => localeIncludes(tag, searchText))
-    );
+function matchesTerm(note: SearchableNote, term: SearchTerm): boolean {
+  switch (term.type) {
+    case 'tag':
+      return note.tags.some(tag => tag.includes(term.value));
+    case 'prefix':
+      return wordsOf(note).some(word => word.startsWith(term.value));
+    case 'suffix':
+      return wordsOf(note).some(word => word.endsWith(term.value));
+    case 'contains':
+    case 'phrase':
+      return note.text.includes(term.value);
   }
 }
 
-/** Filter notes by required tags (AND logic) */
-function filterByRequiredTags(
-  notes: DecryptedNote[],
-  tags: string[]
-): DecryptedNote[] {
-  return notes.filter((note) =>
-    tags.every((tag) =>
-      note.tags.some((noteTag) => localeIncludes(noteTag, tag))
-    )
-  );
+/** Every group has to match, through any one of its terms. */
+function matchesGroups(note: SearchableNote, groups: SearchTerm[][]): boolean {
+  return groups.every(group => group.some(term => matchesTerm(note, term)));
 }
 
-/** Filter notes by optional tags (OR logic) */
-function filterByOptionalTags(
-  notes: DecryptedNote[],
-  tags: string[]
-): DecryptedNote[] {
-  return notes.filter((note) =>
-    tags.some((tag) =>
-      note.tags.some((noteTag) => localeIncludes(noteTag, tag))
-    )
-  );
-}
-
-/** Filter out notes containing excluded text */
-function filterByExcludedText(
-  notes: DecryptedNote[],
-  excludeTerms: string[]
-): DecryptedNote[] {
-  return notes.filter((note) =>
-    excludeTerms.every((term) => !localeIncludes(note.content, term))
-  );
-}
-
-/** Filter out notes with excluded tags */
-function filterByExcludedTags(
-  notes: DecryptedNote[],
-  excludeTags: string[]
-): DecryptedNote[] {
-  return notes.filter((note) =>
-    excludeTags.every((tag) =>
-      !note.tags.some((noteTag) => localeIncludes(noteTag, tag))
-    )
-  );
+function matchesExclusions(note: SearchableNote, excludeText: string[], excludeTags: string[]): boolean {
+  return excludeText.every(term => !note.content.includes(term))
+    && excludeTags.every(term => !note.tags.some(tag => tag.includes(term)));
 }
 
 /** Filter notes by date constraints */
@@ -685,9 +633,7 @@ function hasSearchModifiers(parsed: SearchQuery): boolean {
 /** Check if the parsed query is empty (no search criteria) */
 function isEmptyQuery(parsed: SearchQuery): boolean {
   return (
-    !parsed.text &&
-    (!parsed.tags || parsed.tags.length === 0) &&
-    (!parsed.orTags || parsed.orTags.length === 0) &&
+    (!parsed.groups || parsed.groups.length === 0) &&
     (!parsed.excludeText || parsed.excludeText.length === 0) &&
     (!parsed.excludeTags || parsed.excludeTags.length === 0) &&
     !hasSearchModifiers(parsed)
@@ -695,7 +641,7 @@ function isEmptyQuery(parsed: SearchQuery): boolean {
 }
 
 /**
- * Search notes using FlexSearch and structured query
+ * Search notes using a structured query
  */
 export async function searchNotes(
   query: string,
@@ -714,24 +660,15 @@ export async function searchNotes(
     return sortNotes(filteredNotes, sortOrder);
   }
 
-  let results = [...allNotes];
+  const groups = parsed.groups ?? [];
+  const excludeText = parsed.excludeText ?? [];
+  const excludeTags = parsed.excludeTags ?? [];
 
   // Apply text and tag filters
-  if (parsed.text) {
-    results = await filterByFullText(results, parsed.text);
-  }
-  if (parsed.tags && parsed.tags.length > 0) {
-    results = filterByRequiredTags(results, parsed.tags);
-  }
-  if (parsed.orTags && parsed.orTags.length > 0) {
-    results = filterByOptionalTags(results, parsed.orTags);
-  }
-  if (parsed.excludeText && parsed.excludeText.length > 0) {
-    results = filterByExcludedText(results, parsed.excludeText);
-  }
-  if (parsed.excludeTags && parsed.excludeTags.length > 0) {
-    results = filterByExcludedTags(results, parsed.excludeTags);
-  }
+  let results = allNotes.filter((candidate) => {
+    const note = searchableNote(candidate);
+    return matchesGroups(note, groups) && matchesExclusions(note, excludeText, excludeTags);
+  });
 
   // Apply modifier filters
   if (parsed.hasAttachment) {

@@ -3,6 +3,7 @@
   import {
     undecryptableNotes,
     serverMissingAttachments,
+    rejectedRemoteRecords,
     scanMissingAttachments,
     repairAttachment,
     deleteUndecryptableNote,
@@ -72,7 +73,7 @@
     return `${bytes} B`;
   }
 
-  $: healthy = scanned && !scanning && $undecryptableNotes.length === 0 && missing.length === 0 && $serverMissingAttachments.length === 0;
+  $: healthy = scanned && !scanning && $undecryptableNotes.length === 0 && missing.length === 0 && $serverMissingAttachments.length === 0 && $rejectedRemoteRecords.length === 0;
 
   rescan();
 </script>
@@ -159,6 +160,27 @@
             </p>
             <p class="font-mono text-xs text-gray-500 dark:text-gray-400 mt-1">
               {warning.attachmentIds.map(id => id.slice(0, 8) + '…').join(', ')}
+            </p>
+          </li>
+        {/each}
+      </ul>
+    </div>
+  {/if}
+
+  {#if $rejectedRemoteRecords.length > 0}
+    <div class="mb-4" data-testid="vault-health-rejected">
+      <h5 class="text-sm font-medium text-red-800 dark:text-red-200 mb-1">
+        {$_('vaultHealth.rejectedTitle')} ({$rejectedRemoteRecords.length})
+      </h5>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+        {$_('vaultHealth.rejectedHint')}
+      </p>
+      <ul class="space-y-2">
+        {#each $rejectedRemoteRecords as record}
+          <li class="border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 rounded-md p-3 text-sm">
+            <p>{$_(`vaultHealth.rejectedKind.${record.kind}`)}</p>
+            <p class="font-mono text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {record.id ? `${record.id.slice(0, 8)}…` : '—'} · {record.reason}
             </p>
           </li>
         {/each}

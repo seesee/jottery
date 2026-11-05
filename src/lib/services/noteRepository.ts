@@ -5,7 +5,9 @@
 import type { NoteRepository } from '../types';
 import type { Note } from '../types';
 import { getDB, STORES } from './db';
+import { advanceContentHash } from './crypto';
 import { NotFoundError } from '../errors';
+import { compareTimestamps } from '../utils/timestamps';
 
 class IndexedDBNoteRepository implements NoteRepository {
   /**
@@ -155,6 +157,7 @@ class IndexedDBNoteRepository implements NoteRepository {
     }
     note.archived = true;
     note.archivedAt = new Date().toISOString();
+    await advanceContentHash(note);
     await this.update(note);
   }
 
@@ -168,6 +171,7 @@ class IndexedDBNoteRepository implements NoteRepository {
     }
     note.archived = false;
     note.archivedAt = undefined;
+    await advanceContentHash(note);
     await this.update(note);
   }
 
@@ -181,6 +185,7 @@ class IndexedDBNoteRepository implements NoteRepository {
     }
     note.locked = true;
     note.lockedAt = new Date().toISOString();
+    await advanceContentHash(note);
     await this.update(note);
   }
 
@@ -194,6 +199,7 @@ class IndexedDBNoteRepository implements NoteRepository {
     }
     note.locked = false;
     note.lockedAt = undefined;
+    await advanceContentHash(note);
     await this.update(note);
   }
 
@@ -342,7 +348,7 @@ class IndexedDBNoteRepository implements NoteRepository {
     const notes = await db.getAll(STORES.NOTES);
     return notes
       .filter((note) => !note.deleted)
-      .sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+      .sort((a, b) => compareTimestamps(b.modifiedAt, a.modifiedAt));
   }
 
   /**

@@ -209,9 +209,28 @@ impl Note {
 }
 
 
+/// The first `max_chars` characters of `text`.
+///
+/// Ids and timestamps arrive from servers and imports, so they can be shorter than
+/// expected or hold multi-byte text. Slicing bytes would panic on either.
+pub fn char_prefix(text: &str, max_chars: usize) -> &str {
+    match text.char_indices().nth(max_chars) {
+        Some((end, _)) => &text[..end],
+        None => text,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_prefix_never_splits_a_character() {
+        assert_eq!(char_prefix("日本語のノート", 3), "日本語");
+        assert_eq!(char_prefix("abc", 8), "abc");
+        assert_eq!(char_prefix("", 8), "");
+        assert_eq!(char_prefix("12345678-rest", 8), "12345678");
+    }
 
     #[test]
     fn test_note_creation() {
