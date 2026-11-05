@@ -49,8 +49,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.jottery.android.R
 import com.jottery.android.model.DecryptedNote
 import com.jottery.android.viewmodel.AppState
 import com.jottery.android.viewmodel.defaultExportName
@@ -87,8 +90,17 @@ fun NoteListView(
 
     var showAddTags by remember { mutableStateOf(false) }
     var showRemoveTags by remember { mutableStateOf(false) }
+    var showColours by remember { mutableStateOf(false) }
+    var showCombineConfirm by remember { mutableStateOf(false) }
+
+    fun endSelection() {
+        isSelectMode = false
+        selectedIds = emptySet()
+    }
 
     val context = LocalContext.current
+    val protectedMessage = stringResource(R.string.note_protected)
+    val cantCombineMessage = stringResource(R.string.bulk_combine_needs_two)
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
@@ -207,9 +219,15 @@ fun NoteListView(
                                 confirmValueChange = { value ->
                                     when (value) {
                                         SwipeToDismissBoxValue.EndToStart -> {
-                                            // Swipe left to delete
-                                            scope.launch { appState.deleteNote(note.id) }
-                                            true
+                                            // A swipe is easy to make by accident, so
+                                            // protected notes refuse and the rest can be undone
+                                            if (note.pinned || note.locked) {
+                                                appState.showMessage(protectedMessage)
+                                                false
+                                            } else {
+                                                scope.launch { appState.deleteNoteWithUndo(note) }
+                                                true
+                                            }
                                         }
                                         SwipeToDismissBoxValue.StartToEnd -> {
                                             // Swipe right to pin/unpin
@@ -262,22 +280,56 @@ fun NoteListView(
         ) {
             BulkOperationsToolbar(
                 selectedCount = selectedIds.size,
-                totalCount = notes.size,
-                onSelectAll = { selectedIds = notes.map { it.id }.toSet() },
-                onDeselectAll = {
-                    selectedIds = emptySet()
-                    isSelectMode = false
-                },
                 onAddTags = { showAddTags = true },
                 onRemoveTags = { showRemoveTags = true },
+                onSetColour = { showColours = true },
+                onArchive = if (showArchive) null else { ->
+                    val ids = selectedIds
+                    endSelection()
+                    scope.launch {
+                        val skipped = appState.archiveNotes(ids)
+                        if (skipped > 0) {
+                            appState.showMessage(
+                                context.resources.getQuantityString(R.plurals.bulk_skipped_locked, skipped, skipped)
+                            )
+                        }
+                    }
+                },
                 onExport = { exportLauncher.launch(defaultExportName()) },
                 onDelete = { showBulkDeleteConfirm = true },
-                onDone = {
-                    isSelectMode = false
-                    selectedIds = emptySet()
-                },
+                onCombine = if (selectedIds.size < 2) null else { -> showCombineConfirm = true },
+                onSelectAll = { selectedIds = notes.map { it.id }.toSet() },
+                onDone = { endSelection() },
             )
         }
+    }
+
+    if (showColours) {
+        ColourSheet(
+            onChoose = { colour ->
+                showColours = false
+                val ids = selectedIds
+                scope.launch { appState.setColourOnNotes(ids, colour) }
+            },
+            onDismiss = { showColours = false },
+        )
+    }
+
+    if (showCombineConfirm) {
+        ConfirmDialog(
+            title = stringResource(R.string.bulk_combine),
+            message = pluralStringResource(R.plurals.bulk_combine_message, selectedIds.size, selectedIds.size),
+            confirmText = stringResource(R.string.bulk_combine),
+            onConfirm = {
+                showCombineConfirm = false
+                val ids = selectedIds
+                endSelection()
+                scope.launch {
+                    if (appState.combineNotes(ids) == null) appState.showMessage(cantCombineMessage)
+                }
+            },
+            onDismiss = { showCombineConfirm = false },
+        )
     }
 
     if (showAddTags) {
@@ -306,18 +358,21 @@ fun NoteListView(
     // Bulk delete confirmation dialog
     if (showBulkDeleteConfirm) {
         ConfirmDialog(
-            title = "Delete Notes",
-            message = "Are you sure you want to delete ${selectedIds.size} note${if (selectedIds.size == 1) "" else "s"}? They will be moved to the recycle bin.",
-            confirmText = "Delete",
+            title = stringResource(R.string.bulk_delete_title),
+            message = pluralStringResource(R.plurals.bulk_delete_message, selectedIds.size, selectedIds.size),
+            confirmText = stringResource(R.string.action_delete),
             onConfirm = {
-                scope.launch {
-                    for (id in selectedIds) {
-                        appState.deleteNote(id)
-                    }
-                    isSelectMode = false
-                    selectedIds = emptySet()
-                }
                 showBulkDeleteConfirm = false
+                val ids = selectedIds
+                endSelection()
+                scope.launch {
+                    val skipped = appState.deleteNotes(ids)
+                    if (skipped > 0) {
+                        appState.showMessage(
+                            context.resources.getQuantityString(R.plurals.bulk_skipped_protected, skipped, skipped)
+                        )
+                    }
+                }
             },
             onDismiss = { showBulkDeleteConfirm = false },
         )
@@ -358,94 +413,5 @@ private fun SwipeToDismissBackground(
             tint = color,
             modifier = Modifier.size(24.dp),
         )
-    }
-}
-
-/**
- * Toolbar shown at the bottom of the list during multi-select mode.
- */
-@Composable
-private fun BulkOperationsToolbar(
-    selectedCount: Int,
-    totalCount: Int,
-    onSelectAll: () -> Unit,
-    onDeselectAll: () -> Unit,
-    onAddTags: () -> Unit,
-    onRemoveTags: () -> Unit,
-    onExport: () -> Unit,
-    onDelete: () -> Unit,
-    onDone: () -> Unit,
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        HorizontalDivider()
-
-        // Header row: count + selection controls + done
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "$selectedCount selected",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            TextButton(
-                onClick = onSelectAll,
-                contentPadding = PaddingValues(horizontal = 8.dp),
-            ) {
-                Text("Select All", style = MaterialTheme.typography.labelSmall)
-            }
-
-            TextButton(
-                onClick = onDone,
-                contentPadding = PaddingValues(horizontal = 8.dp),
-            ) {
-                Text("Done", style = MaterialTheme.typography.labelSmall)
-            }
-        }
-
-        // Action buttons row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            IconButton(onClick = onAddTags) {
-                Icon(
-                    Icons.Default.Label,
-                    contentDescription = "Add tags",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = onRemoveTags) {
-                Icon(
-                    Icons.Default.LabelOff,
-                    contentDescription = "Remove tags",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = onExport) {
-                Icon(
-                    Icons.Default.Share,
-                    contentDescription = "Export",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = onDelete) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error,
-                )
-            }
-        }
     }
 }

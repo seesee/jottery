@@ -108,6 +108,7 @@ fun JotteryNavigation(
                 onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
                 onNavigateToConflicts = { navController.navigate(Routes.CONFLICT_RESOLUTION) },
                 onNavigateToInbox = { navController.navigate(Routes.INBOX) },
+                onNavigateToSavedSearches = { navController.navigate(Routes.SAVED_SEARCHES) },
             )
         }
 

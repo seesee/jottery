@@ -198,6 +198,10 @@ class AppState(application: Application) : AndroidViewModel(application) {
         _userMessage.value = null
     }
 
+    /** A note just deleted by swipe, which the user can still undo. */
+    private val _undoableDelete = MutableStateFlow<String?>(null)
+    val undoableDelete: StateFlow<String?> = _undoableDelete.asStateFlow()
+
     // MARK: - Internal
 
     private var db: JotteryDatabase? = null
@@ -252,10 +256,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         get() = _inboxItems.value.size
 
     val selectedNote: DecryptedNote?
-        get() {
-            val id = _selectedNoteId.value ?: return null
-            return _notes.value.firstOrNull { it.id == id }
-        }
+        get() = resolveSelectedNote(_selectedNoteId.value, _notes.value, _archivedNotes.value)
 
     /** All unique tags across all notes, sorted alphabetically. */
     val allTags: List<String>
@@ -776,6 +777,21 @@ class AppState(application: Application) : AndroidViewModel(application) {
     }
 
     /**
+     * Delete a note from a gesture, which is easy to make by accident. Pinned and
+     * locked notes are protected: returns false, changing nothing, for those.
+     */
+    suspend fun deleteNoteWithUndo(note: DecryptedNote): Boolean {
+        if (note.pinned || note.locked) return false
+        deleteNote(note.id)
+        _undoableDelete.value = note.id
+        return true
+    }
+
+    fun clearUndoableDelete() {
+        _undoableDelete.value = null
+    }
+
+    /**
      * Restore a soft-deleted note.
      */
     suspend fun restoreNote(id: String) {
@@ -1013,8 +1029,31 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun saveSearch(name: String, query: String) {
         val repo = savedSearchRepo ?: return
         val key = keyManager.masterKey ?: return
-        val search = repo.create(name = name, query = query, key = key)
+        val order = (_savedSearches.value.maxOfOrNull { it.displayOrder } ?: -1) + 1
+        val search = repo.create(name = name, query = query, key = key, order = order)
         _savedSearches.value = _savedSearches.value + search
+        scheduleDebouncedSync()
+    }
+
+    /** Give a saved search a new name. */
+    suspend fun renameSavedSearch(id: String, name: String) {
+        val repo = savedSearchRepo ?: return
+        val key = keyManager.masterKey ?: return
+        repo.rename(id, name, key)
+        _savedSearches.value = _savedSearches.value.map { if (it.id == id) it.copy(name = name) else it }
+        scheduleDebouncedSync()
+    }
+
+    /** Move a saved search up or down the list. */
+    suspend fun moveSavedSearch(id: String, offset: Int) {
+        val repo = savedSearchRepo ?: return
+        val searches = _savedSearches.value.toMutableList()
+        val from = searches.indexOfFirst { it.id == id }
+        val to = from + offset
+        if (from < 0 || to !in searches.indices) return
+        searches.add(to, searches.removeAt(from))
+        repo.setOrder(searches.map { it.id })
+        _savedSearches.value = searches.mapIndexed { index, search -> search.copy(displayOrder = index) }
         scheduleDebouncedSync()
     }
 
@@ -2268,7 +2307,82 @@ class AppState(application: Application) : AndroidViewModel(application) {
         val repo = noteRepo ?: return
         val key = keyManager.masterKey ?: return
         ids.forEach { repo.changeTags(it, key, change) }
-        ids.forEach { refreshNote(it) }
+        afterBulkChange()
+    }
+
+    /** Set or clear the colour of several notes. Locked ones are left alone. */
+    suspend fun setColourOnNotes(ids: Set<String>, colour: String?) {
+        val repo = noteRepo ?: return
+        val key = keyManager.masterKey ?: return
+        for (id in ids) {
+            val note = repo.get(id, key) ?: continue
+            if (!note.locked && note.color != colour) repo.update(note.copy(color = colour), key)
+        }
+        afterBulkChange()
+    }
+
+    /** Archive several notes. Returns how many were left because they're locked. */
+    suspend fun archiveNotes(ids: Set<String>): Int {
+        val repo = noteRepo ?: return 0
+        val key = keyManager.masterKey ?: return 0
+        var skipped = 0
+        for (id in ids) {
+            val note = repo.get(id, key) ?: continue
+            if (note.locked) skipped++ else if (!note.archived) repo.archive(id)
+        }
+        if (_selectedNoteId.value in ids) _selectedNoteId.value = null
+        afterBulkChange()
+        return skipped
+    }
+
+    /**
+     * Delete several notes to the bin, as web does: pinned and locked ones stay.
+     * Returns how many were left.
+     */
+    suspend fun deleteNotes(ids: Set<String>): Int {
+        val repo = noteRepo ?: return 0
+        val key = keyManager.masterKey ?: return 0
+        var skipped = 0
+        for (id in ids) {
+            val note = repo.get(id, key) ?: continue
+            if (note.pinned || note.locked) skipped++ else repo.softDelete(id)
+        }
+        if (_selectedNoteId.value in ids) _selectedNoteId.value = null
+        afterBulkChange()
+        return skipped
+    }
+
+    /**
+     * Combine notes into one, oldest first, and move the originals to the bin.
+     * Locked notes take no part. Returns the new note, or null if fewer than two
+     * notes could be used, having changed nothing.
+     */
+    suspend fun combineNotes(ids: Set<String>): DecryptedNote? {
+        val repo = noteRepo ?: return null
+        val key = keyManager.masterKey ?: return null
+        val sources = ids.mapNotNull { repo.get(it, key) }
+            .filter { !it.locked }
+            .sortedBy { it.createdAt }
+        if (sources.size < 2) return null
+
+        val combined = repo.create(
+            content = sources.joinToString(COMBINED_NOTE_SEPARATOR) { it.content },
+            tags = sources.flatMap { it.tags }.distinct(),
+            key = key,
+        )
+        val refs = sources.flatMap { repo.rawAttachmentRefs(it.id) }.distinctBy { it.id }
+        if (refs.isNotEmpty()) repo.setAttachments(combined.id, refs, key)
+        sources.forEach { repo.softDelete(it.id) }
+
+        _selectedNoteId.value = combined.id
+        afterBulkChange()
+        return combined
+    }
+
+    /** One reload for the whole batch, rather than one per note. */
+    private suspend fun afterBulkChange() {
+        notesRevision.incrementAndGet()
+        loadNotes()
         scheduleDebouncedSync()
     }
 
@@ -2404,7 +2518,19 @@ class AppState(application: Application) : AndroidViewModel(application) {
         private const val KEY_SCREEN_SECURITY = "screenSecurity"
         private const val MAX_LOAD_ATTEMPTS = 3
         private const val DEFAULT_SYNC_MINUTES = 5
+
+        /** What web puts between notes it combines. */
+        private const val COMBINED_NOTE_SEPARATOR = "\n\n---\n\n"
     }
+}
+
+/** The note a selection refers to, wherever it is and whatever the search shows. */
+fun resolveSelectedNote(
+    id: String?,
+    notes: List<DecryptedNote>,
+    archived: List<DecryptedNote>,
+): DecryptedNote? = id?.let { wanted ->
+    notes.firstOrNull { it.id == wanted } ?: archived.firstOrNull { it.id == wanted }
 }
 
 /** A default name for an export file. */

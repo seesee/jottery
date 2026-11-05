@@ -186,4 +186,132 @@ class AppStateNotesTest {
         assertFalse("the vault opened", appState.isLocked.value)
         assertTrue(appState.syncError.value != null)
     }
+
+    // MARK: - Selection
+
+    @Test fun `an open note stays open when it stops matching the search`() = runBlocking {
+        val note = appState.createNote("todo: buy milk")!!
+        appState.setSearchQuery("todo")
+        shown(note.id)
+        appState.setSelectedNoteId(note.id)
+
+        appState.saveNote(note.copy(content = "buy milk"))
+        withTimeout(5_000) { while (appState.filteredNotes.value.isNotEmpty()) delay(5) }
+
+        assertEquals(note.id, appState.selectedNote?.id)
+    }
+
+    @Test fun `a new note opens during a search, though it matches nothing yet`() = runBlocking {
+        appState.setSearchQuery("anything")
+
+        val note = appState.createNote()!!
+
+        assertEquals(note.id, appState.selectedNote?.id)
+    }
+
+    @Test fun `an archived note can stay selected`() = runBlocking {
+        val note = appState.createNote("keep me")!!
+        appState.archiveNote(note.id)
+        appState.setSelectedNoteId(note.id)
+        withTimeout(5_000) { while (appState.selectedNote == null) delay(5) }
+    }
+
+    // MARK: - Protected notes
+
+    @Test fun `a pinned or locked note can't be swiped away, and others can be undone`() = runBlocking {
+        val pinned = appState.createNote("pinned")!!
+        appState.togglePin(pinned.id)
+        val locked = appState.createNote("locked")!!
+        appState.toggleLock(locked.id)
+        val plain = appState.createNote("plain")!!
+
+        fun current(id: String) = appState.notes.value.first { it.id == id }
+
+        assertFalse(appState.deleteNoteWithUndo(current(pinned.id)))
+        assertFalse(appState.deleteNoteWithUndo(current(locked.id)))
+        assertEquals(3, appState.notes.value.size)
+
+        assertTrue(appState.deleteNoteWithUndo(current(plain.id)))
+        assertEquals(plain.id, appState.undoableDelete.value)
+        assertEquals(2, appState.notes.value.size)
+
+        appState.restoreNote(plain.id)
+        withTimeout(5_000) { while (appState.notes.value.size != 3) delay(5) }
+    }
+
+    // MARK: - Bulk
+
+    @Test fun `a bulk delete leaves pinned and locked notes and says how many`() = runBlocking {
+        val pinned = appState.createNote("pinned")!!
+        appState.togglePin(pinned.id)
+        val locked = appState.createNote("locked")!!
+        appState.toggleLock(locked.id)
+        val plain = appState.createNote("plain")!!
+
+        val skipped = appState.deleteNotes(setOf(pinned.id, locked.id, plain.id))
+
+        assertEquals(2, skipped)
+        withTimeout(5_000) { while (appState.notes.value.size != 2) delay(5) }
+        assertEquals(1, appState.loadDeletedNotes().size)
+    }
+
+    @Test fun `colour and archive reach every selected note`() = runBlocking {
+        val a = appState.createNote("a")!!
+        val b = appState.createNote("b")!!
+        val locked = appState.createNote("locked")!!
+        appState.toggleLock(locked.id)
+        val ids = setOf(a.id, b.id, locked.id)
+
+        appState.setColourOnNotes(ids, "green")
+        withTimeout(5_000) { while (appState.notes.value.count { it.color == "green" } != 2) delay(5) }
+
+        assertEquals(1, appState.archiveNotes(ids))
+        withTimeout(5_000) { while (appState.archivedNotes.value.size != 2) delay(5) }
+        assertEquals(listOf(locked.id), appState.notes.value.map { it.id })
+    }
+
+    @Test fun `notes combine oldest first, keeping tags and attachments`() = runBlocking {
+        val first = appState.createNote("first", listOf("a", "shared"))!!
+        delay(5)
+        val second = appState.createNote("second", listOf("shared", "b"))!!
+        appState.addAttachment(second.id, byteArrayOf(1, 2, 3), "file.bin", "application/octet-stream")
+
+        val combined = appState.combineNotes(setOf(second.id, first.id))!!
+
+        withTimeout(5_000) { while (appState.notes.value.size != 1) delay(5) }
+        val note = appState.notes.value.single()
+        assertEquals(combined.id, note.id)
+        assertEquals("first\n\n---\n\nsecond", note.content)
+        assertEquals(listOf("a", "shared", "b"), note.tags)
+        assertEquals("file.bin", note.attachments.single().filename)
+        assertEquals(byteArrayOf(1, 2, 3).toList(), appState.attachmentData(note.attachments.single())!!.toList())
+        assertEquals(2, appState.loadDeletedNotes().size)
+    }
+
+    @Test fun `locked notes take no part in a combine`() = runBlocking {
+        val locked = appState.createNote("locked")!!
+        appState.toggleLock(locked.id)
+        val plain = appState.createNote("plain")!!
+
+        assertEquals(null, appState.combineNotes(setOf(locked.id, plain.id)))
+        assertEquals(2, appState.notes.value.size)
+    }
+
+    // MARK: - Saved searches
+
+    @Test fun `saved searches keep their order, and a rename reaches the list`() = runBlocking {
+        appState.saveSearch("One", "#one")
+        appState.saveSearch("Two", "#two")
+        val two = appState.savedSearches.value.last()
+
+        appState.moveSavedSearch(two.id, -1)
+        appState.renameSavedSearch(two.id, "Second")
+
+        assertEquals(listOf("Second", "One"), appState.savedSearches.value.map { it.name })
+
+        appState.lock()
+        appState.unlock(password)
+        withTimeout(5_000) { while (appState.savedSearches.value.size != 2) delay(5) }
+        assertEquals(listOf("Second", "One"), appState.savedSearches.value.map { it.name })
+    }
 }

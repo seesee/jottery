@@ -503,6 +503,15 @@ class NoteRepository(
         changeAttachments(noteId, key) { it + ref }
     }
 
+    /** The references as stored, with filenames still encrypted. */
+    suspend fun rawAttachmentRefs(noteId: String): List<AttachmentRef> =
+        getRaw(noteId)?.let { refs(it.attachments) } ?: emptyList()
+
+    /** Replace a note's references. */
+    suspend fun setAttachments(noteId: String, refs: List<AttachmentRef>, key: SecretKey) {
+        changeAttachments(noteId, key) { refs }
+    }
+
     /** Remove an attachment reference from a note. */
     suspend fun removeAttachment(noteId: String, attachmentId: String, key: SecretKey) {
         changeAttachments(noteId, key) { refs -> refs.filter { it.id != attachmentId } }

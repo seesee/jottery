@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.jottery.android.model.DecryptedNote
 import com.jottery.android.ui.navigation.JotteryNavigation
 import com.jottery.android.ui.theme.JotteryTheme
 import com.jottery.android.viewmodel.AppState
@@ -28,6 +29,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        DecryptedNote.untitled = getString(R.string.note_untitled)
         // Set before the first frame, so a decrypted note is never captured
         applyScreenSecurity(appState.screenSecurity.value)
         enableEdgeToEdge()

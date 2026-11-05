@@ -10,6 +10,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -19,6 +20,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -59,6 +62,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draganddrop.DragAndDropEvent
 import androidx.compose.ui.draganddrop.DragAndDropTarget
 import androidx.compose.ui.draganddrop.mimeTypes
@@ -78,6 +82,7 @@ import com.jottery.android.model.AttachmentRef
 import com.jottery.android.model.DecryptedNote
 import com.jottery.android.model.NoteVersionRecord
 import com.jottery.android.ui.theme.NoteColors
+import com.jottery.android.ui.theme.noteColourLabel
 import com.jottery.android.ui.webview.MarkdownPreviewView
 import com.jottery.android.ui.webview.WebCalcEditorView
 import com.jottery.android.ui.webview.WebOutlinerEditorView
@@ -440,7 +445,7 @@ fun NoteEditorView(
                     ) {
                         NoteColors.allColors.forEach { (name, noteColor) ->
                             DropdownMenuItem(
-                                text = { Text(name.replaceFirstChar { it.uppercase() }) },
+                                text = { Text(noteColourLabel(name)) },
                                 onClick = {
                                     color = name
                                     scheduleSave()
@@ -449,14 +454,10 @@ fun NoteEditorView(
                                 leadingIcon = {
                                     Box(
                                         modifier = Modifier
-                                            .padding(4.dp)
-                                            .then(
-                                                Modifier
-                                                    .fillMaxSize()
-                                            ),
-                                    ) {
-                                        // Simple colour indicator would go here
-                                    }
+                                            .size(16.dp)
+                                            .clip(CircleShape)
+                                            .background(noteColor),
+                                    )
                                 },
                             )
                         }

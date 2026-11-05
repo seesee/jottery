@@ -94,12 +94,7 @@
     <string name="sync_clone">Import Credentials</string>
 
     <!-- Bulk Operations -->
-    <string name="bulk_add_tags">Add Tags</string>
-    <string name="bulk_remove_tags">Remove Tags</string>
-    <string name="bulk_set_colour">Set Colour</string>
-    <string name="bulk_export">Export</string>
     <string name="bulk_delete">Delete</string>
-    <string name="bulk_select_all">Select All</string>
 
     <!-- Dialogs -->
     <string name="dialog_cancel">Cancel</string>
@@ -136,9 +131,6 @@
     <string name="change_password_button">Change Password</string>
 
     <!-- Saved Searches -->
-    <string name="saved_searches_title">Saved Searches</string>
-    <string name="saved_searches_empty">No saved searches</string>
-    <string name="saved_searches_save">Save Current Search</string>
 
     <!-- Sort Order -->
     <string name="sort_recent">Most Recent</string>
@@ -293,6 +285,62 @@
     </plurals>
     <string name="sync_full_in_progress">Full sync in progress…</string>
     <string name="sync_full_done">Full sync complete</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_done">Done</string>
+    <string name="action_more">More</string>
+    <string name="action_back">Back</string>
+    <string name="note_deleted">Note moved to the bin</string>
+    <string name="note_protected">Pinned and locked notes can\'t be swiped away.</string>
+    <string name="note_untitled">Untitled</string>
+    <plurals name="bulk_selected">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
+    <string name="bulk_add_tags">Add tags</string>
+    <string name="bulk_remove_tags">Remove tags</string>
+    <string name="bulk_set_colour">Set colour</string>
+    <string name="bulk_clear_colour">No colour</string>
+    <string name="bulk_archive">Archive</string>
+    <string name="bulk_export">Export</string>
+    <string name="bulk_combine">Combine notes</string>
+    <string name="bulk_select_all">Select all</string>
+    <string name="bulk_delete_title">Delete notes</string>
+    <plurals name="bulk_delete_message">
+        <item quantity="one">Move %1$d note to the bin? Pinned and locked notes are left where they are.</item>
+        <item quantity="other">Move %1$d notes to the bin? Pinned and locked notes are left where they are.</item>
+    </plurals>
+    <plurals name="bulk_combine_message">
+        <item quantity="one">Combine %1$d note into a new note?</item>
+        <item quantity="other">Combine %1$d notes into a new note, oldest first? The originals move to the bin, and locked notes are left out.</item>
+    </plurals>
+    <string name="bulk_combine_needs_two">Choose at least two unlocked notes to combine.</string>
+    <plurals name="bulk_skipped_protected">
+        <item quantity="one">%1$d pinned or locked note was left where it is.</item>
+        <item quantity="other">%1$d pinned or locked notes were left where they are.</item>
+    </plurals>
+    <plurals name="bulk_skipped_locked">
+        <item quantity="one">%1$d locked note was left where it is.</item>
+        <item quantity="other">%1$d locked notes were left where they are.</item>
+    </plurals>
+    <string name="colour_red">Red</string>
+    <string name="colour_orange">Orange</string>
+    <string name="colour_yellow">Yellow</string>
+    <string name="colour_green">Green</string>
+    <string name="colour_teal">Teal</string>
+    <string name="colour_blue">Blue</string>
+    <string name="colour_purple">Purple</string>
+    <string name="colour_pink">Pink</string>
+    <string name="saved_searches_title">Saved searches</string>
+    <string name="saved_searches_empty">No saved searches.</string>
+    <string name="saved_searches_empty_hint">Search for something, then tap the bookmark to keep it here.</string>
+    <string name="saved_search_save_title">Save search</string>
+    <string name="saved_search_name">Name</string>
+    <string name="saved_search_rename">Rename</string>
+    <string name="saved_search_move_up">Move up</string>
+    <string name="saved_search_move_down">Move down</string>
     <string name="bin_delete_title">Delete permanently?</string>
     <string name="bin_delete_message">This note will be deleted on all your devices. This can\'t be undone.</string>
     <string name="bin_delete_confirm">Delete</string>

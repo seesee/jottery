@@ -1,14 +1,17 @@
 package com.jottery.android.ui.component
 
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -20,8 +23,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.jottery.android.R
 
 /**
  * Search bar with text input, search icon, match count display, and clear button.
@@ -33,6 +38,7 @@ import androidx.compose.ui.unit.dp
 fun SearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
+    onSave: () -> Unit,
     matchCount: Int,
     totalCount: Int,
     showCounts: Boolean,
@@ -96,6 +102,18 @@ fun SearchBar(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 4.dp),
                 )
+            }
+
+            if (query.isNotBlank()) {
+                IconButton(onClick = onSave, modifier = Modifier.size(24.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.BookmarkAdd,
+                        contentDescription = stringResource(R.string.saved_search_save_title),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
             }
 
             // Clear button
