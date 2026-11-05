@@ -6,8 +6,7 @@ on:
     paths:
       - 'tui/**'
       - '.github/workflows/tui-tests.yml'
-  push:
-    tags: ['v*']  # Run on release tags
+  workflow_call:  # Run before publishing, from build-multiarch.yml
   workflow_dispatch:  # Manual trigger
 
 permissions:

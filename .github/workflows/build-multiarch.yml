@@ -4,8 +4,9 @@ on:
   push:
     tags:
       - "v*"
-  # Manual runs build the binaries only; the Docker image and GitHub release
-  # jobs are gated on a tag ref below
+  # Manual runs are a rehearsal: they run the tests, build the binaries and check
+  # the Docker image, but publish nothing. The Docker push and GitHub release jobs
+  # are gated on a tag ref below.
   workflow_dispatch:
 
 # Read-only by default. Every job here runs third-party build code (npm packages,
@@ -17,6 +18,36 @@ env:
   SQLX_OFFLINE: "true"
 
 jobs:
+  # Every suite must pass before anything is published: docker-build needs them all,
+  # and make-release needs docker-build. A failed run can be retried with "Re-run
+  # failed jobs".
+  repo-checks:
+    uses: ./.github/workflows/repo-checks.yml
+
+  web-tests:
+    uses: ./.github/workflows/test.yml
+
+  server-tests:
+    uses: ./.github/workflows/server-tests.yml
+
+  admin-tests:
+    uses: ./.github/workflows/admin-tests.yml
+
+  tui-tests:
+    uses: ./.github/workflows/tui-tests.yml
+
+  ios-tests:
+    uses: ./.github/workflows/ios-tests.yml
+
+  android-tests:
+    uses: ./.github/workflows/android-tests.yml
+
+  # A tag builds the image in docker-build. A rehearsal doesn't reach that job, so
+  # it builds the image here instead, without pushing.
+  docker-check:
+    if: github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/docker-check.yml
+
   linux-tui:
     name: Build Linux TUI Binaries
     runs-on: ubuntu-latest
@@ -164,7 +195,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: '20'
+          node-version-file: .nvmrc
           cache: 'npm'
 
       # Lifecycle scripts stay off: nothing here needs them, and a compromised
@@ -247,7 +278,15 @@ jobs:
 
   docker-build:
     name: Build Multi-Arch Docker Image
-    needs: collect-tui
+    needs:
+      - collect-tui
+      - repo-checks
+      - web-tests
+      - server-tests
+      - admin-tests
+      - tui-tests
+      - ios-tests
+      - android-tests
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
