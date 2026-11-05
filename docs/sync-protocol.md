@@ -138,7 +138,7 @@ The rules:
 
 - **`cursor` is opaque.** Store it and send it back. Don't parse it, compare it or construct one, other than the empty string. It is a short ASCII string.
 - **One page is one range of the sequence.** Every kind of change in that range is in the response, and nothing is sent twice unless it changed again.
-- **`limit` counts changes of every kind**, not just notes. It is clamped to 1–500.
+- **`limit` counts changes of every kind**, not just notes. It is clamped to 1–500. A page can also end sooner, once its blobs reach about 16 MB, so don't expect it to be full.
 - **`hasMore: true` means pull again at once with `nextCursor`.** Use `hasMore` alone to decide. A page can hold no notes at all and still have more behind it, because it might be all versions.
 - **Save `nextCursor` only after the page is applied.** If a client stops between applying and saving, it gets the same page again, which is harmless as long as applying is idempotent. Saving first can lose a page.
 - **Every cursor-mode response has `nextCursor`, even an empty one.** It then equals the cursor sent.
@@ -161,7 +161,8 @@ This is how released clients pull, and it keeps working. It has known weaknesses
 
 - `lastSyncAt` selects rows the **server** stamped after that time. It is reached back two minutes first, to cover a row stamped before the client's timestamp but committed after it, and modest clock skew. Rows in that window are sent again.
 - Omitting it, or sending `null`, selects everything.
-- Notes are paged with `limit` and `offset`, ordered by server time. `limit` counts notes only, and `totalCount` is the number of matching notes across all pages.
+- Notes are paged with `limit` and `offset`, ordered by server time. `limit` counts notes only, and `totalCount` is the number of matching notes across all pages. `limit` is clamped to 1–500.
+- A page can hold fewer than `limit` notes, because it ends once its blobs reach about 16 MB. The first note with blobs is always sent, however large, so a page with `hasMore: true` always has a note in it. Advance `offset` by the number of notes received, not by `limit`.
 - `deletions`, `versions` and `savedSearches` aren't paged: all of them are sent on every page.
 - `deletions` leaves out tombstones older than 30 days, so a client offline for longer misses them. Cursor mode has no such limit.
 

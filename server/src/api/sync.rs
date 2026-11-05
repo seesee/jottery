@@ -5,7 +5,10 @@ use axum::{
 };
 use base64::Engine;
 use sqlx::SqliteConnection;
-use std::sync::Arc;
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use crate::{
     api::extractors::AuthClient,
@@ -22,8 +25,15 @@ use crate::{
 /// Default page size for a pull.
 const DEFAULT_PULL_LIMIT: i64 = 100;
 
-/// Largest page a cursor pull will return.
-const MAX_CURSOR_PULL_LIMIT: i64 = 500;
+/// Largest page a pull will return. It also keeps the queries that list a page's
+/// notes well inside SQLite's limit on bound parameters.
+const MAX_PULL_LIMIT: i64 = 500;
+
+/// How many bytes of blobs one pull page may carry. A page holds them raw, as
+/// base64 and as JSON at once, and the real vault's notes average nearly 2 MB, so
+/// a page of 100 would otherwise take hundreds of MB per request. The first note
+/// with blobs is always sent, so that a large attachment still gets through.
+pub const PULL_BLOB_BUDGET_BYTES: usize = 16 * 1024 * 1024;
 
 /// How far a `lastSyncAt` filter reaches back. Clients that haven't moved to the
 /// cursor store a timestamp, and a row can be stamped before that timestamp yet
@@ -1005,6 +1015,43 @@ async fn cursor_start(
     Ok(oldest_new.map_or(last_seq, |seq| seq - 1))
 }
 
+/// How many of `notes`, in order, fit in one page's blob budget. Blobs the client
+/// holds aren't sent, so they cost nothing, and a blob two notes share is sent once.
+async fn notes_within_budget(
+    conn: &mut SqliteConnection,
+    user_id: &str,
+    notes: &[crate::models::Note],
+    known_attachments: &HashSet<&str>,
+) -> Result<usize, sqlx::Error> {
+    let note_ids: Vec<&str> = notes.iter().map(|n| n.id.as_str()).collect();
+    let mut blobs: HashMap<String, Vec<(String, usize)>> = HashMap::new();
+    for (note_id, attachment_id, size) in
+        AttachmentRepository::blob_sizes(conn, user_id, &note_ids).await?
+    {
+        blobs.entry(note_id).or_default().push((attachment_id, size));
+    }
+
+    let mut counted = HashSet::new();
+    let mut total = 0;
+    for (index, note_id) in note_ids.iter().enumerate() {
+        let mut size = 0;
+        for (attachment_id, blob_size) in blobs.get(*note_id).into_iter().flatten() {
+            if !known_attachments.contains(attachment_id.as_str())
+                && counted.insert(attachment_id.as_str())
+            {
+                size += blob_size;
+            }
+        }
+
+        if total > 0 && total + size > PULL_BLOB_BUDGET_BYTES {
+            return Ok(index);
+        }
+        total += size;
+    }
+
+    Ok(notes.len())
+}
+
 /// One page of changes after `from`.
 ///
 /// The end of the page is read first, from committed rows, and every query is
@@ -1016,6 +1063,7 @@ async fn cursor_page(
     user_id: &str,
     from: i64,
     limit: i64,
+    known_attachments: &HashSet<&str>,
 ) -> Result<PullPage, sqlx::Error> {
     let upcoming: Vec<i64> = sqlx::query_scalar(
         "SELECT seq FROM (
@@ -1035,15 +1083,15 @@ async fn cursor_page(
     .fetch_all(&mut *conn)
     .await?;
 
-    let has_more = upcoming.len() as i64 > limit;
-    let to = upcoming
+    let mut has_more = upcoming.len() as i64 > limit;
+    let mut to = upcoming
         .iter()
         .take(limit as usize)
         .last()
         .copied()
         .unwrap_or(from);
 
-    let notes = sqlx::query_as(&format!(
+    let mut notes: Vec<crate::models::Note> = sqlx::query_as(&format!(
         "SELECT {NOTE_COLUMNS} FROM notes
          WHERE user_id = ? AND change_seq > ? AND change_seq <= ? ORDER BY change_seq"
     ))
@@ -1052,6 +1100,22 @@ async fn cursor_page(
     .bind(to)
     .fetch_all(&mut *conn)
     .await?;
+
+    // A page is a range of the sequence, so ending it early means ending the range
+    // just before the first note that doesn't fit. Everything else in the range
+    // moves to the next page with that note.
+    let fitting = notes_within_budget(&mut *conn, user_id, &notes, known_attachments).await?;
+    if fitting < notes.len() {
+        let first_left_out = &notes[fitting].id;
+        let seq: i64 = sqlx::query_scalar("SELECT change_seq FROM notes WHERE id = ? AND user_id = ?")
+            .bind(first_left_out)
+            .bind(user_id)
+            .fetch_one(&mut *conn)
+            .await?;
+        to = seq - 1;
+        has_more = true;
+        notes.truncate(fitting);
+    }
 
     let deletions = sqlx::query_as(
         "SELECT id, deleted_at FROM note_deletions
@@ -1121,11 +1185,12 @@ async fn last_sync_page(
     last_sync_at: Option<&str>,
     limit: i64,
     offset: i64,
+    known_attachments: &HashSet<&str>,
 ) -> Result<PullPage, sqlx::Error> {
     // With no timestamp every row matches, which is a full sync
     let since = last_sync_at.map_or_else(String::new, last_sync_filter);
 
-    let notes: Vec<crate::models::Note> = sqlx::query_as(&format!(
+    let mut notes: Vec<crate::models::Note> = sqlx::query_as(&format!(
         "SELECT {NOTE_COLUMNS} FROM notes
          WHERE user_id = ? AND server_modified_at > ?
          ORDER BY server_modified_at, id LIMIT ? OFFSET ?"
@@ -1136,6 +1201,10 @@ async fn last_sync_page(
     .bind(offset)
     .fetch_all(&mut *conn)
     .await?;
+
+    // Clients advance `offset` by the notes they received, so a short page is safe
+    let fitting = notes_within_budget(&mut *conn, user_id, &notes, known_attachments).await?;
+    notes.truncate(fitting);
 
     let total_count: i64 = sqlx::query_scalar(
         "SELECT COUNT(*) FROM notes WHERE user_id = ? AND server_modified_at > ?",
@@ -1199,8 +1268,13 @@ pub async fn pull(
     // then only be sent a row twice, never miss one.
     let synced_at = chrono::Utc::now().to_rfc3339();
 
-    let limit = pull_req.limit.unwrap_or(DEFAULT_PULL_LIMIT);
-    let offset = pull_req.offset.unwrap_or(0);
+    let limit = pull_req
+        .limit
+        .unwrap_or(DEFAULT_PULL_LIMIT)
+        .clamp(1, MAX_PULL_LIMIT);
+    let offset = pull_req.offset.unwrap_or(0).max(0);
+    let known_attachments: HashSet<&str> =
+        pull_req.known_attachment_ids.iter().map(String::as_str).collect();
 
     tracing::info!(
         "Pull from user {} (client {}): cursor={:?}, lastSyncAt={:?}, {} known IDs, limit={}, offset={}",
@@ -1224,8 +1298,7 @@ pub async fn pull(
                 pull_req.last_sync_at.as_deref(),
             )
             .await?;
-            let limit = limit.clamp(1, MAX_CURSOR_PULL_LIMIT);
-            cursor_page(&mut conn, &client_info.user_id, from, limit).await?
+            cursor_page(&mut conn, &client_info.user_id, from, limit, &known_attachments).await?
         }
         None => {
             last_sync_page(
@@ -1234,6 +1307,7 @@ pub async fn pull(
                 pull_req.last_sync_at.as_deref(),
                 limit,
                 offset,
+                &known_attachments,
             )
             .await?
         }
@@ -1314,7 +1388,7 @@ pub async fn pull(
     // Filter out known attachments first, then batch fetch remaining
     let unknown_attachments: Vec<&str> = needed_attachments
         .iter()
-        .filter(|att_id| !pull_req.known_attachment_ids.contains(*att_id))
+        .filter(|att_id| !known_attachments.contains(att_id.as_str()))
         .map(|s| s.as_str())
         .collect();
 
