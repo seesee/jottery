@@ -6,6 +6,7 @@ mod export;
 mod models;
 mod password_storage;
 mod repository;
+mod search;
 mod sse;
 mod terminal_text;
 mod ui;
@@ -821,15 +822,14 @@ fn run() -> Result<()> {
             let key = derive_key_from_db(&db, &password)?;
 
             let note_repo = NoteRepository::new(db.connection());
-            let notes = note_repo.list(false, &key)?;
+            let notes = note_repo.list_not_deleted(&key)?.notes;
+            let settings = repository::SettingsRepository::new(db.connection()).get()?;
 
-            // Simple search implementation
-            let query_lower = query.to_lowercase();
+            // The same query language as the TUI, with the same answer about the archive
+            let parsed = search::SearchQuery::parse(&query, &settings);
+            let archived = parsed.archived().unwrap_or(false);
             let results: Vec<_> = notes.into_iter()
-                .filter(|n| {
-                    n.content.to_lowercase().contains(&query_lower) ||
-                    n.tags.iter().any(|t| t.to_lowercase().contains(&query_lower))
-                })
+                .filter(|note| note.archived == archived && parsed.matches(note, &settings))
                 .take(limit)
                 .collect();
 

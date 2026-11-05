@@ -73,6 +73,7 @@ urlencoding = "2.1"
 
 # Regex for search parsing
 regex = "1.10"
+unicode-normalization = "0.1"
 
 # Logging
 tracing = "0.1"

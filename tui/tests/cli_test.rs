@@ -344,6 +344,26 @@ fn a_new_vault_needs_a_password_of_eight_characters() {
 }
 
 #[test]
+fn the_search_command_speaks_the_query_language() {
+    let (_temp_dir, db) = create_test_env();
+    let password = uuid::Uuid::new_v4().to_string();
+    vault_with_note(&db, &password, "The quick brown fox");
+    vault_with_note(&db, &password, "brown quick fox");
+
+    let (ok, stdout, stderr) = run_on(&db, &["search", "\"quick brown\"", "-p", &password]);
+    assert!(ok, "{stderr}");
+    assert!(stdout.contains("The quick brown fox"));
+    assert!(!stdout.contains("brown quick fox"));
+
+    let (_, stdout, _) = run_on(&db, &["search", "fox -quick", "-p", &password]);
+    assert!(!stdout.contains("brown quick fox"), "{stdout}");
+    assert!(!stdout.contains("The quick brown fox"), "{stdout}");
+
+    let (_, stdout, _) = run_on(&db, &["search", "created:>2001-01-01 brown", "-p", &password]);
+    assert!(stdout.contains("The quick brown fox"), "{stdout}");
+}
+
+#[test]
 fn output_to_a_pipe_keeps_the_note_exact() {
     let (dir, _) = create_test_env();
     let db = dir.path().join("test.db");

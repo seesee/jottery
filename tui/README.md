@@ -279,6 +279,7 @@ The search bar supports powerful query syntax:
 #tagname                    # Notes with this tag
 #tag1 #tag2                 # Notes with both tags (AND)
 #tag1 | #tag2               # Notes with either tag (OR)
+-#tagname                   # Notes without this tag
 ```
 
 ### Text Search
@@ -288,13 +289,27 @@ dog                         # Contains "dog"
 dog cat                     # Contains both words (AND)
 dog | cat                   # Contains either word (OR)
 -cat                        # Does NOT contain "cat"
+-"exact phrase"             # Does NOT contain this phrase
 ```
 
 ### Wildcards
 ```
-dog*                        # Starts with "dog"
-*dog                        # Ends with "dog"
+dog*                        # A word starts with "dog"
+*dog                        # A word ends with "dog"
 *dog*                       # Contains "dog" anywhere
+```
+
+### Modifiers
+```
+has:attachment              # Notes with attachments
+archived                    # Search the archive (archived:false for active notes)
+created:>2024-01-01         # Created after a date
+created:<2024-06-30         # Created before a date
+created:2024-01-01..2024-06-30  # Created in a date range
+modified:>2024-01-01        # The same for the modified date
+words:>100                  # More than 100 words (also words:<50, words:50..200)
+color:red                   # This colour on the note or a tag (add note or tag to narrow it)
+category:important          # The same, by a colour's name
 ```
 
 ### Combined Queries
@@ -302,6 +317,9 @@ dog*                        # Starts with "dog"
 #work project -meeting      # Tagged #work, contains "project", not "meeting"
 #personal "family vacation" # Tagged #personal with exact phrase
 ```
+
+`jottery search` takes the same queries. The rules are shared with the other clients, and
+written down with test cases in `docs/search-query-fixture.json`.
 
 ## Markdown Rendering
 
