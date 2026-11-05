@@ -363,6 +363,36 @@ fn the_search_command_speaks_the_query_language() {
     assert!(stdout.contains("The quick brown fox"), "{stdout}");
 }
 
+/// A real backup written by this client, kept so that a change to the format shows up
+/// here. The web app's restore has been run against this file too.
+#[test]
+fn a_backup_this_client_wrote_restores() {
+    let fixtures = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+    let backup = fixtures.join("tui-v3.jottery-backup");
+    let password = fs::read_to_string(fixtures.join("tui-v3.jottery-backup.password")).unwrap();
+
+    let (dir, db) = create_test_env();
+    let (ok, stdout, stderr) = run_on(&db, &[
+        "restore-backup", "-i", backup.to_str().unwrap(), "-p", &password,
+    ]);
+    assert!(ok, "{stdout}\n{stderr}");
+
+    let (ok, stdout, stderr) = run_on(&db, &["show", "0424546f", "-p", &password]);
+    assert!(ok, "{stderr}");
+    assert!(stdout.contains("A note from the TUI, with a café and 日本語"), "{stdout}");
+    assert!(stdout.contains("work, cross-client"), "{stdout}");
+
+    let saved = dir.path().join("hello.txt");
+    let (ok, _, stderr) = run_on(&db, &[
+        "save-attachment", "0424546f", "-o", saved.to_str().unwrap(), "-p", &password,
+    ]);
+    assert!(ok, "{stderr}");
+    assert_eq!(fs::read_to_string(saved).unwrap(), "attachment body");
+
+    let (_, stdout, _) = run_on(&db, &["list", "--archived", "-p", &password]);
+    assert!(stdout.contains("An archived note"), "{stdout}");
+}
+
 #[test]
 fn output_to_a_pipe_keeps_the_note_exact() {
     let (dir, _) = create_test_env();
