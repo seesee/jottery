@@ -1,8 +1,10 @@
 package com.jottery.android.crypto
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import java.security.KeyStore
@@ -17,6 +19,7 @@ import javax.crypto.spec.GCMParameterSpec
  */
 object KeystoreService {
 
+    private const val TAG = "KeystoreService"
     private const val PREFS_NAME = "jottery_secure_prefs"
     private const val KEY_API_KEY = "api_key"
     private const val KEY_CLIENT_ID = "client_id"
@@ -29,7 +32,28 @@ object KeystoreService {
 
     // MARK: - Encrypted SharedPreferences (API Key / Client ID)
 
-    private fun getEncryptedPrefs(context: Context) = EncryptedSharedPreferences.create(
+    @Volatile private var encryptedPrefs: SharedPreferences? = null
+
+    /**
+     * Built once. If the file can't be opened it's useless, as when it arrived
+     * without its Keystore key, so it's deleted and the device registers again.
+     */
+    @Synchronized
+    private fun getEncryptedPrefs(context: Context): SharedPreferences {
+        encryptedPrefs?.let { return it }
+        val app = context.applicationContext
+        val prefs = try {
+            openEncryptedPrefs(app)
+        } catch (e: Exception) {
+            Log.w(TAG, "Secure preferences unreadable, starting again: ${e.javaClass.simpleName}")
+            app.deleteSharedPreferences(PREFS_NAME)
+            openEncryptedPrefs(app)
+        }
+        encryptedPrefs = prefs
+        return prefs
+    }
+
+    private fun openEncryptedPrefs(context: Context) = EncryptedSharedPreferences.create(
         context,
         PREFS_NAME,
         MasterKey.Builder(context)

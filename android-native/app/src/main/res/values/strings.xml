@@ -280,6 +280,19 @@
         <item quantity="one">Your server deleted %1$d note. It\'s in the bin for 30 days if you didn\'t expect this.</item>
         <item quantity="other">Your server deleted %1$d notes. They\'re in the bin for 30 days if you didn\'t expect this.</item>
     </plurals>
+    <string name="sync_error_setup">Sync couldn\'t start on this device. Your notes are fine: open Sync Setup in Settings to check it.</string>
+    <string name="sync_error_device_removed">This device is no longer registered. Connect it again in Sync Setup.</string>
+    <string name="sync_error_account_disabled">Sync has stopped: your account has been deactivated or isn\'t approved. Your notes are safe on this device.</string>
+    <string name="sync_error_rate_limited">The server is busy. Jottery will try again shortly.</string>
+    <string name="sync_error_offline">Couldn\'t reach the server. Jottery will try again.</string>
+    <string name="sync_error_failed">Sync failed. Jottery will try again.</string>
+    <string name="sync_done">Synced</string>
+    <plurals name="sync_done_new_notes">
+        <item quantity="one">Synced: %1$d new note</item>
+        <item quantity="other">Synced: %1$d new notes</item>
+    </plurals>
+    <string name="sync_full_in_progress">Full sync in progress…</string>
+    <string name="sync_full_done">Full sync complete</string>
     <string name="bin_delete_title">Delete permanently?</string>
     <string name="bin_delete_message">This note will be deleted on all your devices. This can\'t be undone.</string>
     <string name="bin_delete_confirm">Delete</string>

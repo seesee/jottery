@@ -138,4 +138,52 @@ class AppStateNotesTest {
         appState.lock()
         assertTrue(appState.unlock(password))
     }
+
+    @Test fun `typing not yet saved survives a lock`() = runBlocking {
+        val note = appState.createNote("saved")!!
+        appState.setPendingEditorNote(note.copy(content = "typed a moment before the lock"))
+
+        appState.lock()
+        appState.unlock(password)
+
+        withTimeout(5_000) { while (shown(note.id).content != "typed a moment before the lock") delay(5) }
+    }
+
+    @Test fun `a lock leaves nothing decrypted behind`() = runBlocking {
+        appState.createNote("private")
+        appState.saveSearch("Work", "#work")
+        appState.setSearchQuery("private")
+        val key = appState.keyManager.masterKey!!
+
+        appState.lock()
+
+        withTimeout(5_000) { while (!key.isDestroyed) delay(5) }
+        assertTrue(appState.savedSearches.value.isEmpty())
+        assertEquals("", appState.searchQuery.value)
+        assertTrue(appState.notes.value.isEmpty())
+        assertTrue(appState.filteredNotes.value.isEmpty())
+    }
+
+    @Test fun `a search from before a lock can't republish notes after it`() = runBlocking {
+        appState.createNote("private")
+        appState.setSearchQuery("private")
+
+        appState.lock()
+        delay(300) // Longer than the search debounce
+
+        assertTrue(appState.filteredNotes.value.isEmpty())
+    }
+
+    @Test fun `a failed setup after the key is proved isn't reported as a wrong password`() = runBlocking {
+        // syncEnabled with no credentials: the keystore can't be reached under
+        // Robolectric, so setup throws where a real device's Keystore might.
+        val settings = appState.settings.value
+        appState.updateSettings(settings.copy(syncEnabled = true, syncEndpoint = "http://localhost:1"))
+        appState.lock()
+
+        assertTrue(appState.unlock(password))
+
+        assertFalse("the vault opened", appState.isLocked.value)
+        assertTrue(appState.syncError.value != null)
+    }
 }

@@ -110,16 +110,9 @@ class SyncService(
 
     // MARK: - SSE
 
-    suspend fun startSSE() {
-        try {
-            val tokenResponse = withContext(Dispatchers.IO) {
-                syncClient.getSSEToken()
-            }
-            sseClient.start(tokenResponse.token)
-            Log.d(TAG, "SSE started with token")
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to start SSE: ${e.message}")
-        }
+    fun startSSE() {
+        sseClient.tokenProvider = { withContext(Dispatchers.IO) { syncClient.getSSEToken().token } }
+        sseClient.start()
     }
 
     fun stopSSE() {

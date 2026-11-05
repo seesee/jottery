@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.room.withTransaction
 import com.jottery.android.crypto.CryptoService
 import com.jottery.android.crypto.KeyManager
+import com.jottery.android.crypto.KeyWipedException
 import com.jottery.android.crypto.KeystoreService
 import com.jottery.android.database.JotteryDatabase
 import com.jottery.android.database.repository.AttachmentRepository
@@ -50,14 +51,17 @@ import com.jottery.android.service.ImportService
 import com.jottery.android.service.ImportStrategy
 import com.jottery.android.service.NotePurger
 import com.jottery.android.service.SearchService
+import com.jottery.android.service.SyncRetryPolicy
 import com.jottery.android.service.SyncValidator
 import com.jottery.android.service.SyncService
 import javax.crypto.spec.SecretKeySpec
 import com.jottery.android.util.AttachmentFiles
+import com.jottery.android.util.ConnectivityMonitor
 import com.jottery.android.util.DateUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -215,6 +219,10 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
     private var searchJob: Job? = null
     private var syncDebounceJob: Job? = null
+    private var syncRetryJob: Job? = null
+    private var periodicSyncJob: Job? = null
+    private var syncRetryAttempt = 0
+    private var connectivityMonitor: ConnectivityMonitor? = null
     private var isBackgrounded = false
 
     /** The user hears once per session that a password change hasn't reached the server. */
@@ -395,8 +403,8 @@ class AppState(application: Application) : AndroidViewModel(application) {
                 throw AppStateError.WrongPassword
             }
 
-            key = SecretKeySpec(masterKeyData, "AES")
-            keyManager.unlockWithKeyData(masterKeyData)
+            key = keyManager.unlockWithKeyData(masterKeyData)
+            masterKeyData.fill(0)
 
             // Verify with token if available
             if (metadata.verification != null) {
@@ -432,7 +440,27 @@ class AppState(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        loadNotes()
+        finishUnlock(key, metadata, password)
+        return true
+    }
+
+    /**
+     * Everything after the key is proved. A failure here is never a wrong password,
+     * so nothing here may be mistaken for one or leave the key loaded on the lock
+     * screen. Sync is optional: its problems are reported and the vault still opens.
+     *
+     * @param notesPassword null for an unlock that doesn't use it, such as a
+     *   biometric one, which therefore can't reconcile the account's wrapped key.
+     */
+    private suspend fun finishUnlock(key: SecretKey, metadata: EncryptionMetadata, notesPassword: String?) {
+        try {
+            loadNotes()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            keyManager.lock()
+            throw e
+        }
 
         // Auto-purge deleted notes older than 30 days
         try {
@@ -445,7 +473,14 @@ class AppState(application: Application) : AndroidViewModel(application) {
         }
 
         Log.d(TAG, "[Sync] unlock: calling setupSync()")
-        setupSync()
+        try {
+            setupSync()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "[Sync] Setup failed: ${e.javaClass.simpleName}")
+            _syncError.value = text(R.string.sync_error_setup)
+        }
 
         // Upgrade old vaults: store a verification token if missing
         if (metadata.verification == null) {
@@ -468,14 +503,12 @@ class AppState(application: Application) : AndroidViewModel(application) {
         }
 
         // Keep the account's wrapped key in step, in the background
-        if (_settings.value.syncEnabled) {
-            viewModelScope.launch { reconcileAccountKey(password) }
+        if (notesPassword != null && _settings.value.syncEnabled) {
+            viewModelScope.launch { reconcileAccountKey(notesPassword) }
         }
 
         // Last: this leaves the unlock screen, which cancels the caller's scope
         _isLocked.value = false
-
-        return true
     }
 
     /**
@@ -540,34 +573,70 @@ class AppState(application: Application) : AndroidViewModel(application) {
     fun lock() {
         Log.d(TAG, "[Sync] lock: clearing sync state, syncEnabled=false")
 
-        // Flush any pending editor save while the key is still available
+        // The key leaves KeyManager now, so nothing new can start with it, but is
+        // kept until the last of the typing has been written.
         val pending = _pendingEditorNote.value
-        val key = keyManager.masterKey
-        if (pending != null && key != null) {
-            viewModelScope.launch {
-                try {
-                    noteRepo?.update(pending, key)
-                } catch (_: Exception) { /* ignore */ }
-            }
-            _pendingEditorNote.value = null
-        }
+        _pendingEditorNote.value = null
+        val key = keyManager.release()
+        val repo = noteRepo
 
-        // Stop SSE and release sync objects
-        sseClientInstance?.stop()
-        syncClientInstance = null
-        syncServiceInstance = null
-        sseClientInstance = null
-        _syncEnabled.value = false
+        stopSync()
+        searchJob?.cancel()
+        syncDebounceJob?.cancel()
 
         AttachmentFiles.clear(getApplication())
-        keyManager.lock()
         _isLocked.value = true
         _notes.value = emptyList()
         _archivedNotes.value = emptyList()
         _filteredNotes.value = emptyList()
+        _savedSearches.value = emptyList()
         _pendingConflicts.value = emptyList()
         _inboxItems.value = emptyList()
         _selectedNoteId.value = null
+        _searchQuery.value = ""
+        _userMessage.value = null
+
+        viewModelScope.launch(NonCancellable) {
+            try {
+                if (pending != null && key != null) repo?.update(pending, key)
+            } catch (e: Exception) {
+                Log.w(TAG, "[Lock] Couldn't save the last edit: ${e.javaClass.simpleName}")
+            } finally {
+                key?.destroy()
+            }
+        }
+    }
+
+    /** Stop everything sync runs, leaving what's stored as it is. */
+    private fun stopSync() {
+        sseClientInstance?.stop()
+        syncClientInstance = null
+        syncServiceInstance = null
+        sseClientInstance = null
+        syncRetryJob?.cancel()
+        periodicSyncJob?.cancel()
+        connectivityMonitor?.stop()
+        connectivityMonitor = null
+        syncRetryAttempt = 0
+        _syncEnabled.value = false
+    }
+
+    /** The activity is finishing for good, so anything running goes with it. */
+    override fun onCleared() {
+        val pending = _pendingEditorNote.value
+        val key = keyManager.release()
+        stopSync()
+        try {
+            // viewModelScope is about to go, and this is the user's last keystrokes
+            if (pending != null && key != null) {
+                kotlinx.coroutines.runBlocking { noteRepo?.update(pending, key) }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "[Lock] Couldn't save the last edit: ${e.javaClass.simpleName}")
+        } finally {
+            key?.destroy()
+        }
+        super.onCleared()
     }
 
     // MARK: - Notes CRUD
@@ -651,7 +720,12 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun saveNote(note: DecryptedNote) {
         val repo = noteRepo ?: return
         val key = keyManager.masterKey ?: return
-        if (!repo.update(note, key)) return
+        try {
+            if (!repo.update(note, key)) return
+        } catch (_: KeyWipedException) {
+            // Locked mid-save. The lock wrote this same text from the pending note.
+            return
+        }
         refreshNote(note.id)
         scheduleDebouncedSync()
     }
@@ -788,19 +862,13 @@ class AppState(application: Application) : AndroidViewModel(application) {
         }
         val order = _sortOrder.value
 
-        // No debounce needed when query is empty -- just sort (cheap)
-        if (query.isBlank()) {
-            _filteredNotes.value = SearchService.sort(source, order)
-            return
-        }
-
         searchJob = viewModelScope.launch {
-            // Debounce while typing
-            delay(150)
+            // Debounce while typing. With no query there's nothing to wait for.
+            if (query.isNotBlank()) delay(150)
 
-            // Run expensive filter + sort
             _filteredNotes.value = withContext(Dispatchers.Default) {
-                SearchService.sort(SearchService.filter(source, query).notes, order)
+                val matches = if (query.isBlank()) source else SearchService.filter(source, query).notes
+                SearchService.sort(matches, order)
             }
         }
     }
@@ -877,8 +945,25 @@ class AppState(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { triggerSync() }
     }
 
+    /** Typing not yet saved, which a lock or a sync must write first. */
     fun setPendingEditorNote(note: DecryptedNote?) {
         _pendingEditorNote.value = note
+    }
+
+    /** The editor has saved [note], unless it has been typing since. */
+    fun clearPendingEditorNote(note: DecryptedNote) {
+        if (_pendingEditorNote.value === note) _pendingEditorNote.value = null
+    }
+
+    /**
+     * Write unsaved typing so a pull can see it. Otherwise a remote change would
+     * land in the row first, and the save after it would silently replace that
+     * change rather than raise the conflict it is.
+     */
+    private suspend fun flushPendingEditor() {
+        val pending = _pendingEditorNote.value ?: return
+        saveNote(pending)
+        clearPendingEditorNote(pending)
     }
 
     fun setEditorFontScale(scale: Float) {
@@ -1161,9 +1246,13 @@ class AppState(application: Application) : AndroidViewModel(application) {
     fun wipeAllData() {
         val context = getApplication<Application>()
 
-        // Clear secure storage
-        KeystoreService.deleteAPIKey(context)
-        KeystoreService.deleteClientId(context)
+        // Clear secure storage. Failing here can't be allowed to stop a wipe.
+        try {
+            KeystoreService.deleteAPIKey(context)
+            KeystoreService.deleteClientId(context)
+        } catch (e: Exception) {
+            Log.w(TAG, "[Wipe] Secure preferences: ${e.javaClass.simpleName}")
+        }
         KeystoreService.deleteBiometricKey(context)
 
         // Close and clear the database singleton before deleting the file
@@ -1173,10 +1262,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         context.deleteDatabase("jottery.db")
 
         // Stop sync and SSE
-        sseClientInstance?.stop()
-        syncClientInstance = null
-        syncServiceInstance = null
-        sseClientInstance = null
+        stopSync()
 
         // Reset all in-memory state
         db = null
@@ -1658,13 +1744,13 @@ class AppState(application: Application) : AndroidViewModel(application) {
         val resolvedApiKey = apiKey ?: KeystoreService.getAPIKey(context)
         if (resolvedApiKey.isNullOrEmpty()) {
             Log.d(TAG, "[Sync] setupSync: no API key in Keystore")
-            _syncError.value = "No API key found. Please re-register the device."
+            _syncError.value = text(R.string.sync_error_device_removed)
             return
         }
         val clientId = KeystoreService.getClientId(context)
         if (clientId.isNullOrEmpty()) {
             Log.d(TAG, "[Sync] setupSync: no client ID in Keystore")
-            _syncError.value = "No client ID found. Please re-register the device."
+            _syncError.value = text(R.string.sync_error_device_removed)
             return
         }
 
@@ -1719,6 +1805,8 @@ class AppState(application: Application) : AndroidViewModel(application) {
         _syncEnabled.value = true
         _syncError.value = null
 
+        startSyncTriggers(sse)
+
         // Start SSE and run initial sync
         viewModelScope.launch {
             // Conflicts are kept across lock and restart
@@ -1728,13 +1816,60 @@ class AppState(application: Application) : AndroidViewModel(application) {
             } catch (e: Exception) {
                 Log.w(TAG, "[Sync] Couldn't load conflicts: ${e.javaClass.simpleName}")
             }
-            try { service.startSSE() } catch (e: Exception) {
-                Log.w(TAG, "[Sync] SSE start failed: ${e.message}")
-            }
+            service.startSSE()
             try { triggerSync() } catch (e: Exception) {
                 Log.w(TAG, "[Sync] Initial sync failed: ${e.message}")
             }
         }
+    }
+
+    /**
+     * What keeps changes moving when nobody edits: the network returning, and a
+     * periodic sync while the app is open, for when SSE is down. Both stop on lock.
+     * With the vault locked nothing can sync, so there's no background job.
+     */
+    private fun startSyncTriggers(sse: SSEClient) {
+        connectivityMonitor?.stop()
+        connectivityMonitor = ConnectivityMonitor(getApplication()).also { monitor ->
+            monitor.onConnected = {
+                viewModelScope.launch {
+                    if (!isBackgrounded) {
+                        sse.reconnectNow()
+                        triggerSync()
+                    }
+                }
+            }
+            monitor.start()
+        }
+
+        periodicSyncJob?.cancel()
+        periodicSyncJob = viewModelScope.launch {
+            val minutes = syncRepo?.getSyncMetadata()?.autoSyncInterval?.takeIf { it > 0 } ?: DEFAULT_SYNC_MINUTES
+            while (true) {
+                delay(minutes * 60_000L)
+                if (!isBackgrounded) triggerSync()
+            }
+        }
+    }
+
+    /** Try a failed sync again after a while, if that could help. */
+    private fun scheduleSyncRetry(error: Exception) {
+        val seconds = SyncRetryPolicy.delaySeconds(error, syncRetryAttempt) ?: return
+        syncRetryAttempt++
+        syncRetryJob?.cancel()
+        syncRetryJob = viewModelScope.launch {
+            delay(seconds * 1000)
+            triggerSync()
+        }
+    }
+
+    /** Why a sync failed. Never raw server text, which isn't trusted. */
+    private fun syncFailureText(e: Exception): String = when {
+        e is SyncClientException && e.statusCode == 401 -> text(R.string.sync_error_device_removed)
+        e is SyncClientException && e.statusCode == 403 -> text(R.string.sync_error_account_disabled)
+        e is SyncClientException && e.statusCode == 429 -> text(R.string.sync_error_rate_limited)
+        e is java.io.IOException -> text(R.string.sync_error_offline)
+        else -> text(R.string.sync_error_failed)
     }
 
     /**
@@ -1768,30 +1903,45 @@ class AppState(application: Application) : AndroidViewModel(application) {
         _syncError.value = null
 
         try {
+            flushPendingEditor()
             uploadPendingRewrap()
             val newCount = withContext(Dispatchers.IO) { service.fullSync() }
             _isSyncing.value = false
             _lastSyncAt.value = Instant.now()
+            syncRetryAttempt = 0
+            syncRetryJob?.cancel()
             _syncStatusMessage.value = if (newCount > 0) {
-                "Synced \u2014 $newCount new note${if (newCount == 1) "" else "s"}"
+                getApplication<Application>().resources
+                    .getQuantityString(R.plurals.sync_done_new_notes, newCount, newCount)
             } else {
-                "Synced \u2014 up to date"
+                text(R.string.sync_done)
             }
             loadNotes()
             // A pull can move the server's side of a conflict on
-            _pendingConflicts.value = withContext(Dispatchers.Default) { service.loadConflicts() }
+            val conflicts = withContext(Dispatchers.Default) { service.loadConflicts() }
+            if (syncServiceInstance === service) _pendingConflicts.value = conflicts
             loadInboxItems()
-        } catch (e: Exception) {
-            Log.e(TAG, "[Sync] triggerSync failed: ${e.message}", e)
+        } catch (e: kotlinx.coroutines.CancellationException) {
             _isSyncing.value = false
-            _syncError.value = "Sync failed: ${e.message}"
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "[Sync] triggerSync failed: ${e.javaClass.simpleName}")
+            _isSyncing.value = false
             _syncStatusMessage.value = null
+            // A lock during a sync isn't a failure worth reporting
+            if (syncServiceInstance === service) {
+                _syncError.value = syncFailureText(e)
+                scheduleSyncRetry(e)
+            }
         }
 
+        clearStatusAfterAWhile(text(R.string.sync_done))
+    }
+
+    private fun clearStatusAfterAWhile(message: String) {
         viewModelScope.launch {
             delay(4_000)
-            val current = _syncStatusMessage.value
-            if (current != null && current.startsWith("Synced")) {
+            if (_syncStatusMessage.value?.startsWith(message) == true) {
                 _syncStatusMessage.value = null
             }
         }
@@ -1803,29 +1953,31 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun forceFullSync() {
         val service = syncServiceInstance
         if (service == null || !_syncEnabled.value) return
-        _isSyncing.value = true
-        _syncError.value = null
-        _syncStatusMessage.value = "Full sync in progress\u2026"
 
-        try {
-            withContext(Dispatchers.IO) { service.fullSync(fullPull = true) }
-            _isSyncing.value = false
-            _lastSyncAt.value = Instant.now()
-            _syncStatusMessage.value = "Full sync complete"
-            loadNotes()
-        } catch (e: Exception) {
-            Log.e(TAG, "[Sync] forceFullSync failed: ${e.message}", e)
-            _isSyncing.value = false
-            _syncError.value = "Full sync failed: ${e.message}"
-            _syncStatusMessage.value = null
-        }
+        syncMutex.withLock {
+            _isSyncing.value = true
+            _syncError.value = null
+            _syncStatusMessage.value = text(R.string.sync_full_in_progress)
 
-        viewModelScope.launch {
-            delay(4_000)
-            if (_syncStatusMessage.value == "Full sync complete") {
+            try {
+                flushPendingEditor()
+                withContext(Dispatchers.IO) { service.fullSync(fullPull = true) }
+                _isSyncing.value = false
+                _lastSyncAt.value = Instant.now()
+                _syncStatusMessage.value = text(R.string.sync_full_done)
+                loadNotes()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                _isSyncing.value = false
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "[Sync] forceFullSync failed: ${e.javaClass.simpleName}")
+                _isSyncing.value = false
+                _syncError.value = syncFailureText(e)
                 _syncStatusMessage.value = null
             }
         }
+
+        clearStatusAfterAWhile(text(R.string.sync_full_done))
     }
 
     /**
@@ -2236,7 +2388,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         // Restart SSE and catch up on what was missed
         if (_syncEnabled.value) {
             viewModelScope.launch {
-                try { syncServiceInstance?.startSSE() } catch (_: Exception) {}
+                syncServiceInstance?.startSSE()
                 triggerSync()
             }
         }
@@ -2251,6 +2403,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         private const val KEY_EDITOR_FONT_SCALE = "editorFontScale"
         private const val KEY_SCREEN_SECURITY = "screenSecurity"
         private const val MAX_LOAD_ATTEMPTS = 3
+        private const val DEFAULT_SYNC_MINUTES = 5
     }
 }
 

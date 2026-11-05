@@ -178,14 +178,18 @@ fun NoteEditorView(
         if (!hasChanges()) return
         val updated = editedNote()
         lastSavedContent = updated.content
+        appState.setPendingEditorNote(updated)
         scope.launch {
             appState.saveNote(updated)
+            appState.clearPendingEditorNote(updated)
             didSaveDuringSession = true
         }
     }
 
     fun scheduleSave() {
         appState.recordActivity()
+        // Kept current, so a lock or a sync in the next second can't lose this
+        appState.setPendingEditorNote(editedNote())
         saveJob?.cancel()
         saveJob = scope.launch {
             delay(1000L) // 1-second debounce
@@ -280,6 +284,7 @@ fun NoteEditorView(
     DisposableEffect(note.id) {
         onDispose {
             saveJob?.cancel()
+            appState.setPendingEditorNote(null)
             if (hasChanges()) {
                 appState.saveNoteAndSync(editedNote())
             } else if (didSaveDuringSession && appState.syncEnabledValue) {
