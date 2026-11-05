@@ -956,7 +956,11 @@ fn take_remote_note(
     local_note.hash_chain = remote_note.hash_chain.clone();
     local_note.needs_sync = false;
 
-    run.note_repo().store(&local_note, run.key)
+    run.note_repo().store(&local_note, run.key)?;
+    if remote_note.deleted {
+        run.note_repo().mark_arrived_in_bin(&remote_note.id)?;
+    }
+    Ok(())
 }
 
 /// Add a note this device hasn't seen.
@@ -993,7 +997,11 @@ fn create_remote_note(page: &PullPage<'_>, remote_note: &SyncNote, attachments: 
     new_note.hash_chain = remote_note.hash_chain.clone();
     new_note.needs_sync = false;
 
-    run.note_repo().create(&new_note, run.key)
+    run.note_repo().create(&new_note, run.key)?;
+    if remote_note.deleted {
+        run.note_repo().mark_arrived_in_bin(&remote_note.id)?;
+    }
+    Ok(())
 }
 
 /// Apply one pulled note.
@@ -3339,6 +3347,26 @@ mod tests {
         assert_eq!(conflict.server_content_hash.as_deref(), Some("remote-hash"));
         assert_eq!(conflict.ancestor_hash.as_deref(), Some("ancestor-hash"));
         assert!(conflict.ancestor_content.is_some());
+    }
+
+    /// A compromised server could send every note deleted decades ago.
+    #[test]
+    fn a_note_pulled_into_the_bin_starts_its_time_there_now() {
+        let mut gone = remote_notes(1).remove(0);
+        gone["deleted"] = json!(true);
+        gone["deletedAt"] = json!("2001-01-01T00:00:00Z");
+        let server = StubServer::start(vec![gone], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let repo = NoteRepository::new(db.connection());
+        let thirty_days_ago = Utc::now() - chrono::Duration::days(30);
+        repo.purge_expired_bin(thirty_days_ago).unwrap();
+        repo.purge_remote_deletions(thirty_days_ago).unwrap();
+
+        assert!(repo.get(&note_id(0), key()).unwrap().is_some());
     }
 
     /// A pending note, as the server's skip list would name it.

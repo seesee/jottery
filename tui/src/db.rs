@@ -150,6 +150,7 @@ impl Database {
             (21, include_str!("../migrations/021_language_follows_system.sql")),
             (22, include_str!("../migrations/022_add_saved_searches.sql")),
             (23, include_str!("../migrations/023_clear_stored_password.sql")),
+            (24, include_str!("../migrations/024_restart_the_bins_clock.sql")),
         ];
 
         // Run pending migrations
@@ -357,6 +358,27 @@ mod tests {
         assert_eq!(stored, None);
     }
 
+    /// A synced note's deletion date is the server's word, so it can't start the clock.
+    #[test]
+    fn upgrading_restarts_the_bins_clock_for_what_a_server_could_have_dated() {
+        let conn = Connection::open_in_memory().unwrap();
+        let mut db = Database { conn };
+        db.migrate_to(23).unwrap();
+        db.conn.execute_batch(
+            "INSERT INTO notes (id, created_at, modified_at, content, tags, attachments, version, deleted, deleted_at, synced_at)
+                 VALUES ('synced', '2020-01-01T00:00:00+00:00', '2020-01-01T00:00:00+00:00', 'c', 't', '[]', 1, 1, '2020-01-02T00:00:00+00:00', '2020-01-02T00:00:00+00:00'),
+                        ('local', '2020-01-01T00:00:00+00:00', '2020-01-01T00:00:00+00:00', 'c', 't', '[]', 1, 1, '2020-01-02T00:00:00+00:00', NULL);",
+        ).unwrap();
+
+        db.run_migrations().unwrap();
+
+        let clock = |id: &str| -> Option<String> {
+            db.conn.query_row("SELECT remote_deleted_at FROM notes WHERE id = ?1", [id], |row| row.get(0)).unwrap()
+        };
+        assert!(clock("synced").is_some());
+        assert_eq!(clock("local"), None);
+    }
+
     #[test]
     fn upgrading_keeps_every_note_and_finds_what_was_waiting_to_be_pushed() {
         let mut db = database_before_sync_state();
@@ -388,7 +410,7 @@ mod tests {
     fn test_in_memory_database() {
         let db = Database::in_memory(&test_password()).unwrap();
         assert!(db.is_initialized().unwrap() == false);
-        assert_eq!(db.schema_version().unwrap(), 23);
+        assert_eq!(db.schema_version().unwrap(), 24);
         assert_eq!(db.count_notes(false).unwrap(), 0);
     }
 
@@ -451,13 +473,13 @@ mod tests {
         // Create and close database
         {
             let db = Database::open(&db_path, &password).unwrap();
-            assert_eq!(db.schema_version().unwrap(), 23);
+            assert_eq!(db.schema_version().unwrap(), 24);
         }
 
         // Reopen and verify
         {
             let db = Database::open(&db_path, &password).unwrap();
-            assert_eq!(db.schema_version().unwrap(), 23);
+            assert_eq!(db.schema_version().unwrap(), 24);
         }
     }
 }

@@ -7,12 +7,15 @@ use zeroize::{Zeroize, Zeroizing};
 
 use crate::{
     db::Database,
-    repository::{SettingsRepository, sync::SyncRepository},
+    repository::{NoteRepository, SettingsRepository, sync::SyncRepository},
     vault,
 };
 
 use super::super::app::App;
 use super::super::state::AppState;
+
+/// How long a note stays in the bin.
+const BIN_RETENTION_DAYS: i64 = 30;
 
 /// Unlock the database with the password stored in app.password_input
 pub fn unlock(app: &mut App) -> Result<()> {
@@ -181,6 +184,15 @@ pub fn unlock(app: &mut App) -> Result<()> {
                     }
                 }
             }
+        }
+    }
+
+    // What's been in the bin long enough goes now, on every client. Not being able to
+    // doesn't stop the unlock, and the next one tries again.
+    if let Some(db) = &app.db {
+        let cutoff = chrono::Utc::now() - chrono::Duration::days(BIN_RETENTION_DAYS);
+        if let Err(e) = NoteRepository::new(db.connection()).purge_expired_bin(cutoff) {
+            app.debug_log(&format!("Unlock - Could not empty the old part of the bin: {e}"));
         }
     }
 
