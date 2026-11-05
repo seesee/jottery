@@ -231,12 +231,16 @@ class WebCryptoService implements CryptoService {
    * Used only during onboarding/migration — not for daily unlock.
    * The userId serves as a deterministic, per-user salt.
    */
-  async deriveWrappingKey(password: string, userId: string): Promise<CryptoKey> {
+  async deriveWrappingKey(
+    password: string,
+    userId: string,
+    iterations: number = CRYPTO_WRAPPING_ITERATIONS
+  ): Promise<CryptoKey> {
     const salt = stringToArrayBuffer(userId);
     return this.deriveKey({
       password,
       salt: new Uint8Array(salt),
-      iterations: CRYPTO_WRAPPING_ITERATIONS,
+      iterations,
       extractable: false,
     });
   }

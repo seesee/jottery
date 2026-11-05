@@ -97,6 +97,9 @@ export const CRYPTO_WRAPPING_ITERATIONS = 1_000_000;
  */
 export const CRYPTO_WRAPPING_KDF_VERSION = 1;
 
+/** The most iterations a blob may ask for: enough to cover a real increase, not to hang the app */
+export const CRYPTO_WRAPPING_MAX_ITERATIONS = 20_000_000;
+
 // =============================================================================
 // Security Constants
 // =============================================================================

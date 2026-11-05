@@ -17,7 +17,7 @@ import { passwordStorageService } from './passwordStorageService';
 import { AuthApiError, authService } from './authService';
 import type { WrappedKeyResponse, WrappedKeyWrite } from './authService';
 import { arrayBufferToBase64, base64ToUint8Array } from '../utils/base64';
-import { CRYPTO_PBKDF2_ITERATIONS, CRYPTO_WRAPPING_ITERATIONS, CRYPTO_WRAPPING_KDF_VERSION } from '../constants';
+import { CRYPTO_PBKDF2_ITERATIONS, CRYPTO_WRAPPING_ITERATIONS, CRYPTO_WRAPPING_KDF_VERSION, CRYPTO_WRAPPING_MAX_ITERATIONS } from '../constants';
 import type { EncryptionResult } from '../types/crypto';
 import { restoreFromBackup as restoreBackupData, verifyBackupContents, verifyBackupPassword } from './backupService';
 import { backupSchedulerService } from './backupSchedulerService';
@@ -172,26 +172,9 @@ export async function unlock(password: string): Promise<void> {
     throw new Error('Invalid encryption metadata: neither envelope nor legacy fields found');
   }
 
-  // Verify the key is correct by attempting to decrypt an existing note
-  // This prevents the UI from loading with a wrong password
-  const notes = await noteRepository.getAllActive();
-  console.log('[Unlock] Active notes count:', notes.length);
-
-  if (notes.length > 0) {
-    try {
-      console.log('[Unlock] Verifying password by decrypting first note...');
-      // Try to decrypt the first note's content as a verification
-      const testNote = notes[0];
-      const encryptedContent = JSON.parse(testNote.content);
-      await cryptoService.decryptText(encryptedContent, key);
-      console.log('[Unlock] ✓ Password verified (note decrypted successfully)');
-    } catch (error) {
-      console.error('[Unlock] Password verification failed:', error);
-      throw new Error('Incorrect password');
-    }
-  } else {
-    console.log('[Unlock] ⚠️ No notes to verify password against - skipping verification');
-  }
+  // An envelope vault's key was authenticated by unwrapping it. A legacy vault has
+  // nothing to check a derived key against but its own notes.
+  const legacyKeyVerified = metadata.envelopeVersion ? true : await legacyKeyOpensNotes(key);
 
   // Store the master key with bytes for JWE operations
   const masterKey: MasterKey = {
@@ -216,8 +199,9 @@ export async function unlock(password: string): Promise<void> {
     restrictConnections(connectionMetadata.syncEndpoint);
   }
 
-  // Attempt migration from legacy to envelope encryption
-  if (!metadata.envelopeVersion) {
+  // Attempt migration from legacy to envelope encryption. An unverified key could be
+  // any password at all, and migrating would make it the vault's key for good.
+  if (!metadata.envelopeVersion && legacyKeyVerified) {
     await tryMigrateToEnvelope(password, keyBytes);
   }
 
@@ -238,6 +222,27 @@ export async function unlock(password: string): Promise<void> {
   console.log('[Unlock] ✓ Backup scheduler started');
 
   console.log('[Unlock] ✓ Unlock complete!');
+}
+
+/**
+ * Check a legacy vault's derived key against its notes, one at a time, so that one
+ * corrupt note can't lock anyone out of a healthy vault.
+ *
+ * @returns false if there was nothing to check it against
+ * @throws if no note opens with it
+ */
+async function legacyKeyOpensNotes(key: CryptoKey): Promise<boolean> {
+  const notes = await noteRepository.getAll();
+  if (notes.length === 0) {
+    return false;
+  }
+
+  for (const note of notes) {
+    if (await noteOpensWith(note, key)) {
+      return true;
+    }
+  }
+  throw new Error('Incorrect password');
 }
 
 /**
@@ -709,7 +714,7 @@ export async function ensureServerWrappedKey(notesPassword: string): Promise<voi
       return;
     }
 
-    if (await unwrapServerBlob(existing.blob, notesPassword, syncMetadata.userId)) {
+    if (await unwrapServerBlob(existing, notesPassword, syncMetadata.userId)) {
       if (!syncMetadata.serverKeyVerified || syncMetadata.serverKeyStale) {
         await syncRepository.updateMetadata({ serverKeyVerified: true, serverKeyStale: false });
       }
@@ -801,14 +806,34 @@ export async function tryMigrateToEnvelope(password: string, masterKeyBytes: Uin
  * This must only ever be given the notes password. The server receives the account
  * password in plaintext, so it could wrap a key of its own choosing under that one.
  */
-async function unwrapServerBlob(blob: string, password: string, userId: string): Promise<Uint8Array | null> {
+async function unwrapServerBlob(wrapped: WrappedKeyResponse, password: string, userId: string): Promise<Uint8Array | null> {
+  const iterations = serverWrappingIterations(wrapped);
+  if (iterations === null) {
+    return null;
+  }
+
   try {
-    const serverWrapped: EncryptionResult = JSON.parse(blob);
-    const wrappingKey = await cryptoService.deriveWrappingKey(password, userId);
+    const serverWrapped: EncryptionResult = JSON.parse(wrapped.blob);
+    const wrappingKey = await cryptoService.deriveWrappingKey(password, userId, iterations);
     return await cryptoService.unwrapMasterKey(wrappingKey, serverWrapped);
   } catch {
     return null;
   }
+}
+
+/**
+ * The iterations a blob says it was wrapped with, or null if they can't be accepted.
+ * A later client may raise them, and this one must still open that blob. They are the
+ * server's word, though, so an unknown scheme is refused, and so is anything below
+ * what clients use or high enough to hang the app. Wrapping never uses this value.
+ */
+function serverWrappingIterations({ kdfVersion, kdfIterations }: WrappedKeyResponse): number | null {
+  if (kdfVersion !== CRYPTO_WRAPPING_KDF_VERSION || !Number.isInteger(kdfIterations)) {
+    return null;
+  }
+  return kdfIterations >= CRYPTO_WRAPPING_ITERATIONS && kdfIterations <= CRYPTO_WRAPPING_MAX_ITERATIONS
+    ? kdfIterations
+    : null;
 }
 
 async function noteOpensWith(note: Note, key: CryptoKey): Promise<boolean> {
@@ -861,7 +886,7 @@ export async function onboardFromServer(
     throw new Error('No wrapped key found on server. The source device may not have migrated to envelope encryption yet.');
   }
 
-  const masterKeyBytes = await unwrapServerBlob(wrappedKeyResponse.blob, password, userId);
+  const masterKeyBytes = await unwrapServerBlob(wrappedKeyResponse, password, userId);
   if (!masterKeyBytes) {
     throw new AccountKeyUnreadableError();
   }

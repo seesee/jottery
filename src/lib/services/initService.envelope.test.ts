@@ -44,7 +44,7 @@ import { toast } from '../utils/toast.svelte';
 import { closeDB, deleteDB, getDB, initDB, STORES } from './db';
 import { createTestNote } from '../../test/db-utils';
 import { AccountKeyExistsError, AccountKeyUnreadableError, LocalNotesOrphanedError, ValidationError } from '../errors';
-import { base64ToUint8Array } from '../utils/base64';
+import { arrayBufferToBase64, base64ToUint8Array } from '../utils/base64';
 import { CRYPTO_PBKDF2_ITERATIONS } from '../constants';
 import type { PutWrappedKeyRequest, WrappedKeyResponse, WrappedKeyWrite } from './authService';
 
@@ -98,7 +98,7 @@ async function wrapOnServer(password: string, keyBytes: Uint8Array): Promise<voi
   const wrapped = await cryptoService.wrapMasterKey(wrappingKey, keyBytes);
   serverBlob = {
     blob: JSON.stringify(wrapped),
-    kdfVersion: 2,
+    kdfVersion: 1,
     kdfIterations: 1_000_000,
     updatedAt: olderServer ? undefined : stamp(),
   };
@@ -536,6 +536,139 @@ describe('server-wrapped master key', () => {
 
       expect((await syncRepository.getMetadata())?.apiKey).toBe('');
       expect((await syncRepository.getMetadata())?.syncEnabled).toBe(false);
+    }, 60_000);
+  });
+
+  describe('the parameters a blob claims', () => {
+    async function connect(): Promise<Promise<void>> {
+      return onboardFromServer(NOTES_PASSWORD, ENDPOINT, USER_ID, API_KEY, NOTES_PASSWORD);
+    }
+
+    async function serverBlobWrapped(iterations: number, kdfVersion = 1): Promise<Uint8Array> {
+      const key = crypto.getRandomValues(new Uint8Array(32));
+      const wrappingKey = await cryptoService.deriveWrappingKey(NOTES_PASSWORD, USER_ID, iterations);
+      serverBlob = { blob: JSON.stringify(await cryptoService.wrapMasterKey(wrappingKey, key)), kdfVersion, kdfIterations: iterations };
+      return key;
+    }
+
+    it('are honoured for a real increase, so a later client can raise them', async () => {
+      await initialize(NOTES_PASSWORD);
+      const key = await serverBlobWrapped(1_500_000);
+
+      await connect();
+
+      expect(Array.from(bytesOf())).toEqual(Array.from(key));
+    }, 60_000);
+
+    it('refuse anything weaker than clients use, whatever the server claims', async () => {
+      await initialize(NOTES_PASSWORD);
+      await serverBlobWrapped(1000);
+
+      await expect(connect()).rejects.toBeInstanceOf(AccountKeyUnreadableError);
+    }, 60_000);
+
+    it('refuse a scheme this client does not know', async () => {
+      await initialize(NOTES_PASSWORD);
+      await serverBlobWrapped(1_000_000, 99);
+
+      await expect(connect()).rejects.toBeInstanceOf(AccountKeyUnreadableError);
+    }, 60_000);
+
+    it('refuse a count high enough to hang the app', async () => {
+      await initialize(NOTES_PASSWORD);
+      serverBlob = { blob: '{}', kdfVersion: 1, kdfIterations: 2_000_000_000 };
+      const derive = vi.spyOn(cryptoService, 'deriveWrappingKey');
+
+      await expect(connect()).rejects.toBeInstanceOf(AccountKeyUnreadableError);
+
+      expect(derive).not.toHaveBeenCalled();
+    }, 60_000);
+
+    it('are never used to wrap a key', async () => {
+      await setUpFirstDevice();
+      const derive = vi.spyOn(cryptoService, 'deriveWrappingKey');
+      serverBlob = null;
+
+      await uploadWrappedKeyToServer(NOTES_PASSWORD);
+
+      expect(derive).toHaveBeenCalledWith(NOTES_PASSWORD, USER_ID);
+      expect(JSON.parse(JSON.stringify(serverBlob)).kdfIterations).toBe(1_000_000);
+    }, 60_000);
+  });
+
+  describe('unlocking', () => {
+    async function legacyVault(password: string): Promise<CryptoKey> {
+      const salt = cryptoService.generateSalt();
+      await encryptionRepository.setMetadata({
+        salt: arrayBufferToBase64(salt), iterations: 1000, createdAt: new Date().toISOString(), algorithm: 'AES-256-GCM',
+      } as never);
+      return cryptoService.deriveKey({ password, salt, iterations: 1000, algorithm: 'PBKDF2', extractable: true });
+    }
+
+    const noteHolding = async (key: CryptoKey, text: string) => createTestNote({
+      content: JSON.stringify(await cryptoService.encryptText(text, key)),
+    });
+
+    it('is not stopped by a corrupt note in an envelope vault', async () => {
+      await initialize(NOTES_PASSWORD);
+      await noteRepository.create(createTestNote({ content: 'not ciphertext' }));
+      lock();
+
+      await expect(unlock(NOTES_PASSWORD)).resolves.toBeUndefined();
+    }, 60_000);
+
+    it('still refuses a wrong password in an envelope vault', async () => {
+      await initialize(NOTES_PASSWORD);
+      lock();
+
+      await expect(unlock('wrong password')).rejects.toThrow('Incorrect password');
+    }, 60_000);
+
+    it('reads no notes in an envelope vault, which slowed every unlock', async () => {
+      await initialize(NOTES_PASSWORD);
+      lock();
+      const active = vi.spyOn(noteRepository, 'getAllActive');
+      const all = vi.spyOn(noteRepository, 'getAll');
+
+      await unlock(NOTES_PASSWORD);
+
+      expect(active).not.toHaveBeenCalled();
+      expect(all).not.toHaveBeenCalled();
+    }, 60_000);
+
+    it('accepts a legacy vault whose first note is corrupt, if another one opens', async () => {
+      const key = await legacyVault(NOTES_PASSWORD);
+      await noteRepository.create(createTestNote({ content: 'not ciphertext' }));
+      await noteRepository.create(await noteHolding(key, 'readable'));
+
+      await expect(unlock(NOTES_PASSWORD)).resolves.toBeUndefined();
+    }, 60_000);
+
+    it('refuses a legacy vault when no note opens', async () => {
+      const key = await legacyVault(NOTES_PASSWORD);
+      await noteRepository.create(await noteHolding(key, 'readable'));
+
+      await expect(unlock('wrong password')).rejects.toThrow('Incorrect password');
+    }, 60_000);
+
+    it('does not migrate a legacy vault it could not verify', async () => {
+      // With no notes any password appears to work, and migrating would keep it. The
+      // API key opens with what was typed, so nothing but the check can stop it.
+      await legacyVault(NOTES_PASSWORD);
+      const metadata = await encryptionRepository.getMetadata();
+      const typed = await cryptoService.deriveKey({
+        password: 'any password at all', salt: base64ToUint8Array(metadata!.salt!), iterations: 1000, algorithm: 'PBKDF2', extractable: true,
+      });
+      await syncRepository.updateMetadata({
+        syncEnabled: true,
+        syncEndpoint: ENDPOINT,
+        userId: USER_ID,
+        apiKey: JSON.stringify(await cryptoService.encryptText(API_KEY, typed)),
+      });
+
+      await unlock('any password at all');
+
+      expect((await encryptionRepository.getMetadata())?.envelopeVersion).toBeFalsy();
     }, 60_000);
   });
 
