@@ -44,13 +44,38 @@ android-native/app/schemas/
 android-native/build/
 android-native/local.properties
 
-# Server runtime database
-jottery.db
-# ...including SQLite sidecars and any dated/branch-suffixed copies kept around
-# during development. Without these, `git add -A` sweeps a multi-hundred-MB dev
-# database into a commit and the push is rejected by GitHub's 100 MB file limit.
-jottery.db-*
-jottery.db.*
+# Databases, wherever they are, including SQLite sidecars and dated copies. A
+# real server backup went out in release v0.6.7 because only the exact name
+# jottery.db was ignored, so these match by extension, and everything under
+# server/ matches on any .db suffix. scripts/check-tracked-files.sh enforces the
+# same rule in CI, for files that were added before they were ignored.
+*.db
+*.db-*
+*.db.*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+server/**/*.db*
+!demo-generation/demo-server/jottery-demo.db
+
+# Environment files and signing material
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+*.pem
+*.key
+*.jks
+*.keystore
+*.mobileprovision
+
+# Backups and exports from a real vault. A decrypted export would be a far worse
+# leak than a database, and secret scanning can't see into either.
+*.jwe
+*.enex
+*export*.json
 
 # Editor directories and files
 .vscode/*
