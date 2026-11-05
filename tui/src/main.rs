@@ -458,139 +458,23 @@ fn open_editor(initial_content: &str) -> Result<String> {
     Ok(content)
 }
 
-/// Perform sync from CLI (simplified version of TUI sync)
-fn perform_cli_sync(db: &Database, key: &[u8; 32], mut metadata: models::sync::SyncMetadata) -> Result<usize> {
-    use models::sync::*;
-    use repository::sync::SyncRepository;
-    use chrono::Utc;
-    use sha2::{Sha256, Digest};
+/// Sync from the CLI, the same way the TUI does: a push and a full pull.
+fn perform_cli_sync(db_path: &Path, db: Database, key: [u8; 32]) -> Result<ui::operations::sync::SyncOutcome> {
+    let mut app = App::headless(db_path.to_path_buf(), db, key)?;
+    ui::operations::notes::load_notes(&mut app)?;
+    ui::operations::sync::perform_sync(&mut app, false)
+}
 
-    let crypto = CryptoService::new();
-    let sync_repo = SyncRepository::new(db.connection());
-    let note_repo = NoteRepository::new(db.connection());
-
-    // Get and decrypt API key
-    let encrypted_api_key = metadata.api_key.as_ref()
-        .ok_or_else(|| anyhow::anyhow!("No API key configured"))?;
-    let api_key_encrypted: crypto::EncryptedData = serde_json::from_str(encrypted_api_key)?;
-    let api_key = crypto.decrypt_text(&api_key_encrypted, key)?;
-
-    let endpoint = metadata.sync_endpoint.clone();
-
-    // PUSH: Get notes modified since last sync
-    let notes_to_push = if let Some(last_sync) = metadata.last_sync_at {
-        note_repo.get_modified_after(last_sync, key)?
-    } else {
-        note_repo.list(false, key)?
-    };
-
-    let sync_count = notes_to_push.len();
-
-    if !notes_to_push.is_empty() {
-        // Convert notes to sync format
-        let sync_notes: Result<Vec<SyncNote>> = notes_to_push.iter().map(|note| {
-            let encrypted_content = crypto.encrypt_text(&note.content, key)?;
-            let content_json = serde_json::to_string(&encrypted_content)?;
-
-            let encrypted_tags: Result<Vec<String>> = note.tags.iter()
-                .map(|tag| {
-                    let tag_json = serde_json::to_string(tag)?;
-                    let encrypted_tag = crypto.encrypt_text(&tag_json, key)?;
-                    Ok(serde_json::to_string(&encrypted_tag)?)
-                })
-                .collect();
-
-            Ok(SyncNote {
-                id: note.id.clone(),
-                created_at: note.created_at,
-                modified_at: note.modified_at,
-                content: content_json,
-                tags: encrypted_tags?,
-                attachments: vec![], // Simplified: skip attachments for CLI
-                pinned: note.pinned,
-                archived: note.archived,
-                archived_at: note.archived_at,
-                locked: note.locked,
-                locked_at: note.locked_at,
-                deleted: note.deleted,
-                deleted_at: note.deleted_at,
-                version: note.version,
-                word_wrap: Some(note.word_wrap),
-                syntax_language: Some(note.syntax_language.to_string()),
-                color: note.color.clone(),
-                // Hash chain fields for git-like conflict detection
-                content_hash: note.content_hash.clone(),
-                parent_hash: note.parent_hash.clone(),
-                hash_chain: note.hash_chain.clone(),
-            })
-        }).collect();
-
-        let push_request = SyncPushRequest {
-            notes: sync_notes?,
-            attachments: vec![],
-            versions: vec![],
-            deletions: vec![],
-        };
-
-        // Send push request
-        let client = reqwest::blocking::Client::new();
-        let push_url = format!("{}/api/v1/sync/push", endpoint);
-        let response = client
-            .post(&push_url)
-            .header("Authorization", format!("Bearer {}", api_key))
-            .json(&push_request)
-            .send()
-            .context("Failed to send push request")?;
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
-
-            // Provide user-friendly error messages
-            let error_msg = if status == 403 {
-                t!("sync.account_deactivated").to_string()
-            } else if status == 401 {
-                t!("sync.invalid_key").to_string()
-            } else if status == 409 {
-                t!("sync.conflict").to_string()
-            } else {
-                error_body
-            };
-
-            anyhow::bail!("{}: {}", t!("sync.failed", error = ""), error_msg);
-        }
-
-        let push_response: SyncPushResponse = response.json()
-            .context("Failed to parse push response")?;
-
-        // Update sync metadata for accepted notes
-        let now = Utc::now();
-        for accepted in push_response.accepted {
-            // Compute sync hash using SHA-256
-            let mut hasher = Sha256::new();
-            hasher.update(accepted.id.as_bytes());
-            let sync_hash = format!("{:x}", hasher.finalize());
-
-            let note_metadata = NoteSyncMetadata {
-                note_id: accepted.id.clone(),
-                synced_at: accepted.synced_at,
-                sync_hash,
-                server_version: accepted.server_version,
-                last_sync_status: SyncStatus::Synced,
-                error_message: None,
-                conflict_data: None,
-            };
-            sync_repo.update_note_metadata(&note_metadata)?;
-        }
-
-        metadata.last_push_at = Some(now);
-        metadata.last_sync_at = Some(now);
-        sync_repo.update_metadata(&metadata)?;
+/// Say what a finished sync did, including anything it couldn't do.
+fn report_sync(outcome: &ui::operations::sync::SyncOutcome) {
+    // codeql[rust/cleartext-logging] these are note counts; CodeQL taints the sync result via the `?` on the api_key
+    outln!("✓ {}: {}", t!("sync.success"), outcome.synced);
+    if outcome.rejected > 0 {
+        errln!("⚠ {}", t!("sync.rejected_notes", count = outcome.rejected));
     }
-
-    // This only pushes. The pull cursor is left alone, so the next full sync
-    // still fetches what other devices changed in the meantime.
-    Ok(sync_count)
+    if outcome.skipped > 0 {
+        errln!("⚠ {}", t!("sync.skipped_notes", count = outcome.skipped));
+    }
 }
 
 /// Format a note for display
@@ -738,15 +622,12 @@ fn run() -> Result<()> {
             outln!("✓ {}: {}", t!("cli.new"), models::char_prefix(&note.id, 8));
 
             // Auto-sync if configured
-            let sync_repo = SyncRepository::new(db.connection());
-            if let Ok(Some(metadata)) = sync_repo.get_metadata() {
+            let metadata = SyncRepository::new(db.connection()).get_metadata();
+            if let Ok(Some(metadata)) = metadata {
                 if metadata.sync_enabled {
                     outln!("{} {}...", t!("sync.pushing"), metadata.sync_endpoint);
-                    match perform_cli_sync(&db, &key, metadata) {
-                        Ok(count) => {
-                            // codeql[rust/cleartext-logging] count is a note count; CodeQL taints perform_cli_sync's Result via the `?` on the api_key
-                            outln!("✓ {}: {}", t!("sync.success"), count);
-                        }
+                    match perform_cli_sync(&db_path, db, key) {
+                        Ok(outcome) => report_sync(&outcome),
                         Err(e) => {
                             errln!("⚠ {}: {}", t!("sync.failed", error = ""), e);
                             errln!("  {}", t!("sync.request_failed"));
@@ -1092,17 +973,14 @@ fn run() -> Result<()> {
             // Derive key using stored salt
             let key = derive_key_from_db(&db, &password)?;
 
-            let sync_repo = SyncRepository::new(db.connection());
-            match sync_repo.get_metadata()? {
+            let metadata = SyncRepository::new(db.connection()).get_metadata()?;
+            match metadata {
                 Some(metadata) if metadata.sync_enabled => {
                     outln!("{} {}...", t!("sync.pushing"), metadata.sync_endpoint);
 
                     // Perform sync using helper function
-                    match perform_cli_sync(&db, &key, metadata) {
-                        Ok(count) => {
-                            // codeql[rust/cleartext-logging] count is a note count; CodeQL taints perform_cli_sync's Result via the `?` on the api_key
-                            outln!("✓ {}: {}", t!("sync.success"), count);
-                        }
+                    match perform_cli_sync(&db_path, db, key) {
+                        Ok(outcome) => report_sync(&outcome),
                         Err(e) => {
                             errln!("✗ {}: {}", t!("sync.failed", error = ""), e);
                             std::process::exit(1);
