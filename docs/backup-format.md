@@ -261,6 +261,8 @@ one on iOS, then back up again.
 
 ## Testing
 
-`src/test/fixtures/ios-v3.jottery-backup` is a real file written by the iOS app, and
-`backupService.crossclient.test.ts` restores it. The Android tests read fixtures written
-by web, in `android-native/app/src/test/resources/backup/`.
+`src/test/fixtures/` holds a real file from each other client: iOS, the TUI, and Android
+from a legacy and an envelope vault. Each password sits beside its file, in a
+`.password` file. `backupService.crossclient.test.ts` restores them all, through both
+readers, and unlocks the result. The Android tests read fixtures written by web, in
+`android-native/app/src/test/resources/backup/`.
