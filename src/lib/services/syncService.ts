@@ -82,8 +82,21 @@ const TIMED_OUT_RETRY_SECONDS = 15;
 // A timer can fire a moment before the time it was set for
 const RETRY_MARGIN_MS = 100;
 
+// A pull that deletes more live notes than this is held for the user to look at.
+// Nothing authenticates the deletions list, so without this a compromised server
+// could wipe every device. Emptying a bin elsewhere doesn't count: those notes are in
+// the bin here too.
+const MASS_DELETION_MINIMUM = 10;
+const MASS_DELETION_SHARE = 0.25;
+
 // How often to repeat that the account is full: this comes back on every sync
 const QUOTA_NOTICE_INTERVAL_MS = 60 * 60 * 1000;
+
+/** Live notes deleted so far in one pull, and how many that may reach */
+interface DeletionBudget {
+  limit: number | null;
+  used: number;
+}
 
 interface PushOutcome {
   accepted: number;
@@ -1378,19 +1391,47 @@ class SyncService {
     return valid;
   }
 
-  /** Process hard deletions from server */
-  private async processRemoteDeletions(deletions: Array<{ id: string }>): Promise<void> {
-    for (const deletion of deletions) {
-      if (!isUuid(deletion?.id)) {
-        recordRejectedRemoteRecord('deletion', deletion?.id, 'invalid id');
-        continue;
-      }
+  /**
+   * Process hard deletions from server. Past the limit, a note goes to the recycle bin
+   * instead, so that a pull like that can be undone.
+   *
+   * @returns How many notes were held in the bin
+   */
+  private async processRemoteDeletions(deletions: Array<{ id: string }>, budget: DeletionBudget): Promise<number> {
+    const valid = deletions.filter(deletion => {
+      if (isUuid(deletion?.id)) return true;
+      recordRejectedRemoteRecord('deletion', deletion?.id, 'invalid id');
+      return false;
+    });
 
-      const wasDeleted = await noteService.applyRemoteDeletion(deletion.id);
-      if (wasDeleted) {
+    const live: Note[] = [];
+    for (const deletion of valid) {
+      const note = await noteRepository.getById(deletion.id);
+      if (note && !note.deleted) live.push(note);
+    }
+
+    if (budget.limit === null && live.length > 0) {
+      const notes = await noteRepository.getAllNonDeleted();
+      budget.limit = Math.max(MASS_DELETION_MINIMUM, Math.floor(notes.length * MASS_DELETION_SHARE));
+    }
+
+    // Judged by the page, so one that is suspicious as a whole is held as a whole
+    budget.used += live.length;
+    const held = budget.limit !== null && budget.used > budget.limit ? new Set(live.map(note => note.id)) : new Set<string>();
+
+    for (const note of live) {
+      if (held.has(note.id)) {
+        await noteRepository.update({ ...note, deleted: true, deletedAt: new Date().toISOString(), needsSync: false }, false, true);
+      }
+    }
+
+    for (const deletion of valid) {
+      if (!held.has(deletion.id) && await noteService.applyRemoteDeletion(deletion.id)) {
         console.log(`[SyncService] Hard deleted note ${deletion.id} (from server)`);
       }
     }
+
+    return held.size;
   }
 
   /**
@@ -1419,6 +1460,8 @@ class SyncService {
     let totalNotes = 0;
     let totalAttachments = 0;
     let totalDeletions = 0;
+    let heldDeletions = 0;
+    const deletionBudget: DeletionBudget = { limit: null, used: 0 };
     let fullPullDone = metadata?.cursorFullPullDone ?? false;
     let storedCursor = metadata?.pullCursor;
 
@@ -1477,7 +1520,7 @@ class SyncService {
         await this.processSavedSearchesFromServer(result.savedSearches, syncedAt);
       }
       if (result.deletions) {
-        await this.processRemoteDeletions(result.deletions);
+        heldDeletions += await this.processRemoteDeletions(result.deletions, deletionBudget);
       }
 
       // The server sends the whole inbox on every page, or nothing if it's empty
@@ -1517,6 +1560,11 @@ class SyncService {
         }
         request.offset = (request.offset ?? 0) + result.notes.length;
       }
+    }
+
+    if (heldDeletions > 0) {
+      toast.error(get(_)('sync.massDeletionHeld', { values: { count: String(heldDeletions) } }));
+      totalNotes += heldDeletions; // So the list refreshes
     }
 
     console.log(`[SyncService] Pulled ${totalNotes} notes, ${totalAttachments} attachments, ${totalDeletions} deletions`);

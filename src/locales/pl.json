@@ -642,7 +642,8 @@
       "aboutDescription": "Jottery to aplikacja do notatek zorientowana na prywatność, samodzielnie hostowana, do przechwytywania, organizowania i przeszukiwania notatek z bogatą treścią, podświetlaniem składni i szyfrowaniem.",
       "viewOnGithub": "Zobacz na GitHub",
       "license": "Licencjonowane na licencji MIT."
-    }
+    },
+    "exportIncomplete": "Eksport jest niekompletny: nie udało się odczytać i pominięto notatki ({notes}) oraz załączniki ({attachments})."
   },
   "landing": {
     "languagePicker": {
@@ -1202,7 +1203,8 @@
     "syncProgress": "Synchronizacja: {percentage}% ukończono",
     "notesRefused": "Niektóre notatki przekraczają limit przesyłania Twojego konta i nie zostały zsynchronizowane. Cała reszta tak.",
     "accountDisabled": "Twoje konto jest dezaktywowane lub oczekuje na zatwierdzenie, więc synchronizacja została zatrzymana. Twoje notatki na tym urządzeniu są bezpieczne. Skontaktuj się z administratorem.",
-    "storageQuotaExceeded": "Twoje konto osiągnęło limit miejsca, więc zmian z tego urządzenia nie można przesłać. Trwale usuń niektóre notatki lub załączniki, aby zwolnić miejsce."
+    "storageQuotaExceeded": "Twoje konto osiągnęło limit miejsca, więc zmian z tego urządzenia nie można przesłać. Trwale usuń niektóre notatki lub załączniki, aby zwolnić miejsce.",
+    "massDeletionHeld": "Serwer zażądał usunięcia naraz tylu notatek: {count}. Są w koszu na wypadek, gdyby to nie było Twoje działanie. Przywróć je stamtąd lub opróżnij kosz, jeśli to Ty."
   },
   "inbox": {
     "title": "Skrzynka odbiorcza",

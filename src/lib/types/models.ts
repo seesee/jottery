@@ -323,6 +323,8 @@ export interface ExportData {
     colorPalette?: ColorPalette;
     tagColors?: Record<string, string>;
   };
+  /** What couldn't be read, so an export is never quietly incomplete */
+  skipped?: { notes: number; attachments: number };
 }
 
 /**

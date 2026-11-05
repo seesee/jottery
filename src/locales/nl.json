@@ -642,7 +642,8 @@
       "aboutDescription": "Jottery is een privacy-gerichte, zelf-gehoste kladblokapplicatie voor het vastleggen, organiseren en doorzoeken van notities met rijke inhoud, syntaxisaccentuering en versleuteling.",
       "viewOnGithub": "Bekijken op GitHub",
       "license": "Gelicentieerd onder de MIT-licentie."
-    }
+    },
+    "exportIncomplete": "De export is onvolledig: {notes} notities en {attachments} bijlagen konden niet worden gelezen en zijn weggelaten."
   },
   "landing": {
     "languagePicker": {
@@ -1202,7 +1203,8 @@
     "syncProgress": "Synchroniseren: {percentage}% voltooid",
     "notesRefused": "Sommige notities zijn te groot voor de uploadlimiet van je account en zijn niet gesynchroniseerd. De rest wel.",
     "accountDisabled": "Je account is gedeactiveerd of wacht op goedkeuring, dus de synchronisatie is gestopt. Je notities op dit apparaat zijn veilig. Neem contact op met je beheerder.",
-    "storageQuotaExceeded": "Je account heeft de opslaglimiet bereikt, dus wijzigingen op dit apparaat kunnen niet worden geüpload. Verwijder enkele notities of bijlagen definitief om ruimte te maken."
+    "storageQuotaExceeded": "Je account heeft de opslaglimiet bereikt, dus wijzigingen op dit apparaat kunnen niet worden geüpload. Verwijder enkele notities of bijlagen definitief om ruimte te maken.",
+    "massDeletionHeld": "De server vroeg om {count} notities tegelijk te verwijderen. Ze staan in de prullenbak voor het geval jij dit niet was. Herstel ze daar, of leeg de prullenbak als jij het wel was."
   },
   "inbox": {
     "title": "Postvak IN",

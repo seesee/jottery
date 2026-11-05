@@ -1045,6 +1045,12 @@
         if (progress.current) progressCurrent = progress.current;
       });
       await downloadExport(data);
+      if (data.skipped) {
+        toast.error($_('settings.exportIncomplete', { values: {
+          notes: String(data.skipped.notes),
+          attachments: String(data.skipped.attachments),
+        } }));
+      }
     } catch (error) {
       console.error('Failed to export notes:', error);
       toast.error($_('settings.exportFailed', { values: { error: error instanceof Error ? error.message : String(error) } }));

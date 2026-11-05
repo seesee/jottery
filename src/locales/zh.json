@@ -642,7 +642,8 @@
       "aboutDescription": "Jottery 是一个注重隐私、自托管的便签应用程序,用于捕获、组织和搜索具有丰富内容、语法高亮和加密的笔记。",
       "viewOnGithub": "在 GitHub 上查看",
       "license": "使用 MIT 许可证授权。"
-    }
+    },
+    "exportIncomplete": "导出不完整：{notes} 条笔记和 {attachments} 个附件无法读取，已被略过。"
   },
   "landing": {
     "languagePicker": {
@@ -1202,7 +1203,8 @@
     "syncProgress": "同步中: {percentage}% 已完成",
     "notesRefused": "部分笔记超出了您账户的上传限制，未能同步。其余内容均已同步。",
     "accountDisabled": "您的账户已停用或正在等待批准，因此同步已停止。此设备上的笔记是安全的。请联系您的管理员。",
-    "storageQuotaExceeded": "您的账户已达到存储上限，因此无法上传此设备上的更改。请永久删除一些笔记或附件以释放空间。"
+    "storageQuotaExceeded": "您的账户已达到存储上限，因此无法上传此设备上的更改。请永久删除一些笔记或附件以释放空间。",
+    "massDeletionHeld": "服务器要求一次删除 {count} 条笔记。它们已被移至回收站，以防这不是您的操作。请从那里恢复，如果确实是您的操作，请清空回收站。"
   },
   "inbox": {
     "title": "收件箱",

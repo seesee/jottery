@@ -642,7 +642,8 @@
       "aboutDescription": "Jottery ist eine datenschutzorientierte, selbst gehostete Notizblock-Anwendung zum Erfassen, Organisieren und Durchsuchen von Notizen mit reichhaltigem Inhalt, Syntaxhervorhebung und Verschlüsselung.",
       "viewOnGithub": "Auf GitHub ansehen",
       "license": "Lizenziert unter der MIT-Lizenz."
-    }
+    },
+    "exportIncomplete": "Der Export ist unvollständig: {notes} Notizen und {attachments} Anhänge konnten nicht gelesen werden und fehlen."
   },
   "landing": {
     "languagePicker": {
@@ -1202,7 +1203,8 @@
     "syncProgress": "Synchronisierung: {percentage}% abgeschlossen",
     "notesRefused": "Einige Notizen überschreiten das Upload-Limit Ihres Kontos und wurden nicht synchronisiert. Alles andere wurde synchronisiert.",
     "accountDisabled": "Ihr Konto ist deaktiviert oder wartet auf Freigabe, daher wurde die Synchronisierung angehalten. Ihre Notizen auf diesem Gerät sind sicher. Wenden Sie sich an Ihren Administrator.",
-    "storageQuotaExceeded": "Ihr Konto hat sein Speicherlimit erreicht, daher können Änderungen auf diesem Gerät nicht hochgeladen werden. Löschen Sie einige Notizen oder Anhänge endgültig, um Platz zu schaffen."
+    "storageQuotaExceeded": "Ihr Konto hat sein Speicherlimit erreicht, daher können Änderungen auf diesem Gerät nicht hochgeladen werden. Löschen Sie einige Notizen oder Anhänge endgültig, um Platz zu schaffen.",
+    "massDeletionHeld": "Der Server wollte {count} Notizen auf einmal löschen. Sie liegen im Papierkorb, falls das nicht von Ihnen kam. Stellen Sie sie dort wieder her oder leeren Sie den Papierkorb, wenn es gewollt war."
   },
   "inbox": {
     "title": "Posteingang",

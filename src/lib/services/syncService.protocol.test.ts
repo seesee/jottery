@@ -1029,6 +1029,70 @@ describe('sync protocol', () => {
     });
   });
 
+  describe('a pull that deletes a large part of the vault', () => {
+    /** Nothing authenticates the deletions list, so this is all that bounds the damage */
+    async function vaultOf(count: number, overrides: Partial<Note> = {}): Promise<void> {
+      for (let n = 1; n <= count; n++) {
+        await noteRepository.create(createTestNote({ id: ID(n), tags: [], content: await encrypted('x'), needsSync: false, ...overrides }));
+      }
+    }
+
+    const deletionsOf = (count: number) => Array.from({ length: count }, (_, i) => ({ id: ID(i + 1), deletedAt: NOW }));
+
+    it('moves them to the recycle bin, where they can be restored, and says so', async () => {
+      const error = vi.spyOn(toast, 'error');
+      await vaultOf(30);
+      serve(() => ({ deletions: deletionsOf(30) }));
+
+      await syncService.syncNow();
+
+      const notes = await noteRepository.getAll();
+      expect(notes).toHaveLength(30);
+      expect(notes.every(note => note.deleted)).toBe(true);
+      expect(error).toHaveBeenCalledWith('sync.massDeletionHeld');
+    });
+
+    it('marks them with this device\'s clock, so the server can\'t have them purged at once', async () => {
+      await vaultOf(30);
+      serve(() => ({ deletions: deletionsOf(30) }));
+
+      await syncService.syncNow();
+
+      const [note] = await noteRepository.getAll();
+      expect(Date.now() - Date.parse(note.deletedAt as string)).toBeLessThan(60_000);
+    });
+
+    it('applies an ordinary deletion straight away', async () => {
+      await vaultOf(30);
+      serve(() => ({ deletions: deletionsOf(3) }));
+
+      await syncService.syncNow();
+
+      expect(await noteRepository.getAll()).toHaveLength(27);
+    });
+
+    it('does not mistake emptying a bin for one, because those notes are in the bin here too', async () => {
+      await vaultOf(30, { deleted: true, deletedAt: NOW });
+      serve(() => ({ deletions: deletionsOf(30) }));
+
+      await syncService.syncNow();
+
+      expect(await noteRepository.getAll()).toHaveLength(0);
+    });
+
+    it('counts across pages', async () => {
+      await vaultOf(40);
+      await onCursor('c0');
+      serve((_, index) => (index < 3
+        ? { hasMore: true, nextCursor: `c${index + 1}`, deletions: deletionsOf(40).slice(index * 8, index * 8 + 8) }
+        : { nextCursor: 'done', deletions: deletionsOf(40).slice(24) }));
+
+      await syncService.syncNow();
+
+      expect((await noteRepository.getAll()).length).toBeGreaterThanOrEqual(16);
+    });
+  });
+
   describe('the inbox', () => {
     const item = { id: ID(50), content: 'x', tags: [], createdAt: NOW, sizeBytes: 1 };
 

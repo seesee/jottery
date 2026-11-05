@@ -642,7 +642,8 @@
       "aboutDescription": "Jottery, zengin içerik, sözdizimi vurgulama ve şifreleme ile notları yakalamak, düzenlemek ve aramak için gizlilik odaklı, kendi barındırılan bir not defteri uygulamasıdır.",
       "viewOnGithub": "GitHub'da Görüntüle",
       "license": "MIT Lisansı altında lisanslanmıştır."
-    }
+    },
+    "exportIncomplete": "Dışa aktarma eksik: {notes} not ve {attachments} ek okunamadı ve dışarıda bırakıldı."
   },
   "landing": {
     "languagePicker": {
@@ -1202,7 +1203,8 @@
     "syncProgress": "Senkronizasyon: %{percentage} tamamlandı",
     "notesRefused": "Bazı notlar hesabınızın yükleme sınırını aşıyor ve eşitlenmedi. Geri kalan her şey eşitlendi.",
     "accountDisabled": "Hesabınız devre dışı veya onay bekliyor, bu yüzden eşitleme durduruldu. Bu cihazdaki notlarınız güvende. Yöneticinizle iletişime geçin.",
-    "storageQuotaExceeded": "Hesabınız depolama sınırına ulaştı, bu yüzden bu cihazdaki değişiklikler yüklenemiyor. Yer açmak için bazı notları veya ekleri kalıcı olarak silin."
+    "storageQuotaExceeded": "Hesabınız depolama sınırına ulaştı, bu yüzden bu cihazdaki değişiklikler yüklenemiyor. Yer açmak için bazı notları veya ekleri kalıcı olarak silin.",
+    "massDeletionHeld": "Sunucu aynı anda {count} notun silinmesini istedi. Siz yapmadıysanız diye geri dönüşüm kutusundalar. Oradan geri yükleyin ya da siz yaptıysanız kutuyu boşaltın."
   },
   "inbox": {
     "title": "Gelen Kutusu",

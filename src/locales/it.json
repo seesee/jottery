@@ -642,7 +642,8 @@
       "aboutDescription": "Jottery è un'applicazione scratch pad self-hosted incentrata sulla privacy per catturare, organizzare e cercare note con contenuti ricchi, evidenziazione della sintassi e crittografia.",
       "viewOnGithub": "Visualizza su GitHub",
       "license": "Licenza MIT."
-    }
+    },
+    "exportIncomplete": "L'esportazione è incompleta: {notes} note e {attachments} allegati non sono stati letti e sono stati omessi."
   },
   "landing": {
     "languagePicker": {
@@ -1202,7 +1203,8 @@
     "syncProgress": "Sincronizzazione: {percentage}% completato",
     "notesRefused": "Alcune note superano il limite di caricamento del tuo account e non sono state sincronizzate. Tutto il resto sì.",
     "accountDisabled": "Il tuo account è disattivato o in attesa di approvazione, quindi la sincronizzazione si è interrotta. Le tue note su questo dispositivo sono al sicuro. Contatta il tuo amministratore.",
-    "storageQuotaExceeded": "Il tuo account ha raggiunto il limite di archiviazione, quindi le modifiche su questo dispositivo non possono essere caricate. Elimina definitivamente alcune note o allegati per fare spazio."
+    "storageQuotaExceeded": "Il tuo account ha raggiunto il limite di archiviazione, quindi le modifiche su questo dispositivo non possono essere caricate. Elimina definitivamente alcune note o allegati per fare spazio.",
+    "massDeletionHeld": "Il server ha chiesto di eliminare {count} note in una volta. Sono nel cestino nel caso non sia stata una tua azione. Ripristinale da lì, oppure svuota il cestino se è stata tua."
   },
   "inbox": {
     "title": "Posta in arrivo",

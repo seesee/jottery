@@ -674,7 +674,8 @@
       "aboutDescription": "Jottery is a personal, local-first scratch pad for capturing, organising, and searching notes. Available for web and terminal, with optional sync across devices.",
       "viewOnGithub": "View on GitHub",
       "license": "Licensed under the MIT License."
-    }
+    },
+    "exportIncomplete": "The export is incomplete: {notes} notes and {attachments} attachments couldn't be read and were left out."
   },
   "landing": {
     "languagePicker": {
@@ -1298,7 +1299,8 @@
     "syncProgress": "Syncing: {percentage}% complete",
     "notesRefused": "Some notes are too large for your account's upload limit and weren't synced. Everything else was.",
     "accountDisabled": "Your account is deactivated or waiting for approval, so sync has stopped. Your notes on this device are safe. Contact your administrator.",
-    "storageQuotaExceeded": "Your account has reached its storage limit, so changes on this device can't be uploaded. Permanently delete some notes or attachments to make room."
+    "storageQuotaExceeded": "Your account has reached its storage limit, so changes on this device can't be uploaded. Permanently delete some notes or attachments to make room.",
+    "massDeletionHeld": "The server asked to delete {count} notes at once. They're in the recycle bin in case that wasn't you. Restore them there, or empty the bin if it was."
   },
   "pullToRefresh": {
     "pull": "Pull down to sync",

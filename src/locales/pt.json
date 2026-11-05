@@ -642,7 +642,8 @@
       "aboutDescription": "Jottery é um aplicativo de bloco de notas auto-hospedado focado em privacidade para capturar, organizar e pesquisar notas com conteúdo rico, realce de sintaxe e criptografia.",
       "viewOnGithub": "Ver no GitHub",
       "license": "Licenciado sob a Licença MIT."
-    }
+    },
+    "exportIncomplete": "A exportação está incompleta: {notes} notas e {attachments} anexos não puderam ser lidos e foram omitidos."
   },
   "landing": {
     "languagePicker": {
@@ -1202,7 +1203,8 @@
     "syncProgress": "Sincronizando: {percentage}% concluído",
     "notesRefused": "Algumas notas excedem o limite de envio da sua conta e não foram sincronizadas. Tudo o resto foi.",
     "accountDisabled": "A sua conta está desativada ou a aguardar aprovação, pelo que a sincronização parou. As suas notas neste dispositivo estão seguras. Contacte o seu administrador.",
-    "storageQuotaExceeded": "A sua conta atingiu o limite de armazenamento, pelo que as alterações neste dispositivo não podem ser enviadas. Elimine permanentemente algumas notas ou anexos para libertar espaço."
+    "storageQuotaExceeded": "A sua conta atingiu o limite de armazenamento, pelo que as alterações neste dispositivo não podem ser enviadas. Elimine permanentemente algumas notas ou anexos para libertar espaço.",
+    "massDeletionHeld": "O servidor pediu para eliminar {count} notas de uma vez. Estão na reciclagem, caso não tenha sido você. Restaure-as a partir daí, ou esvazie a reciclagem se tiver sido."
   },
   "inbox": {
     "title": "Caixa de entrada",

@@ -35,6 +35,7 @@ class NoteService {
       modifiedAt?: string;
       pinned?: boolean;
       locked?: boolean;
+      archived?: boolean;
       wordWrap?: boolean;
       syntaxLanguage?: string;
       showPreview?: boolean;
@@ -61,6 +62,8 @@ class NoteService {
       modifiedAt: options?.modifiedAt || now,
       pinned: options?.pinned || false,
       locked: options?.locked || false,
+      archived: options?.archived || false,
+      archivedAt: options?.archived ? (options.modifiedAt ?? now) : undefined,
       wordWrap: options?.wordWrap ?? true,
       syntaxLanguage: options?.syntaxLanguage || 'markdown',
       showPreview: options?.showPreview ?? false,
