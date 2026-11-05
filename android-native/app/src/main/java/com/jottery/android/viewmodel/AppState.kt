@@ -42,6 +42,7 @@ import com.jottery.android.service.backup.keyBytes
 import com.jottery.android.service.EnvelopeException
 import com.jottery.android.service.EnvelopeService
 import com.jottery.android.service.ImportService
+import com.jottery.android.service.SearchService
 import com.jottery.android.service.SyncService
 import javax.crypto.spec.SecretKeySpec
 import com.jottery.android.util.DateUtils
@@ -53,9 +54,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.time.Instant
+import java.util.concurrent.atomic.AtomicLong
 import javax.crypto.SecretKey
 
 /**
@@ -140,6 +143,23 @@ class AppState(application: Application) : AndroidViewModel(application) {
     )
     val editorFontScale: StateFlow<Float> = _editorFontScale.asStateFlow()
 
+    // MARK: - Screen Security
+
+    private val _screenSecurity = MutableStateFlow(
+        application.getSharedPreferences(PREFS_NAME, 0).getBoolean(KEY_SCREEN_SECURITY, true)
+    )
+    /** Keep notes out of screenshots, screen recording and the recents thumbnail. */
+    val screenSecurity: StateFlow<Boolean> = _screenSecurity.asStateFlow()
+
+    fun setScreenSecurity(enabled: Boolean) {
+        _screenSecurity.value = enabled
+        getApplication<Application>()
+            .getSharedPreferences(PREFS_NAME, 0)
+            .edit()
+            .putBoolean(KEY_SCREEN_SECURITY, enabled)
+            .apply()
+    }
+
     // MARK: - Settings
 
     private val _settings = MutableStateFlow(UserSettings.defaults)
@@ -185,7 +205,15 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
     private var searchJob: Job? = null
     private var syncDebounceJob: Job? = null
-    private var backgroundedAt: Instant? = null
+    private var isBackgrounded = false
+
+    /** Bumped by every local change to the note lists, so a slow load can see it. */
+    private val notesRevision = AtomicLong()
+    private val loadTicket = AtomicLong()
+
+    /** One sync at a time; a request during a sync runs once more afterwards. */
+    private val syncMutex = Mutex()
+    @Volatile private var syncRequested = false
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -297,7 +325,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         val iterations = existingIterations ?: CryptoService.DEFAULT_ITERATIONS
 
         // Derive key first so we can create the verification token
-        val key = keyManager.unlock(password, salt, iterations)
+        val key = withContext(Dispatchers.Default) { keyManager.unlock(password, salt, iterations) }
 
         // Encrypt a known plaintext to verify the password later
         val verificationEncrypted = CryptoService.encryptText(
@@ -338,7 +366,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
             val deviceSalt = android.util.Base64.decode(deviceSaltB64, android.util.Base64.NO_WRAP)
             val wrappedJSON = metadata.localWrappedMaster ?: throw AppStateError.InvalidSalt
 
-            val deviceKey = CryptoService.deriveKey(password, deviceSalt, CryptoService.DEFAULT_ITERATIONS)
+            val deviceKey = withContext(Dispatchers.Default) {
+                CryptoService.deriveKey(password, deviceSalt, CryptoService.DEFAULT_ITERATIONS)
+            }
             val wrapped = CryptoService.parseEncryptedJSON(wrappedJSON)
             val masterKeyData: ByteArray
             try {
@@ -364,11 +394,13 @@ class AppState(application: Application) : AndroidViewModel(application) {
             // Legacy unlock path — derive key directly from password + salt
             val saltData = metadata.saltData ?: throw AppStateError.InvalidSalt
 
-            key = keyManager.unlock(
-                password = password,
-                salt = saltData,
-                iterations = metadata.iterations ?: CryptoService.DEFAULT_ITERATIONS,
-            )
+            key = withContext(Dispatchers.Default) {
+                keyManager.unlock(
+                    password = password,
+                    salt = saltData,
+                    iterations = metadata.iterations ?: CryptoService.DEFAULT_ITERATIONS,
+                )
+            }
 
             // Verify password
             val verified = if (metadata.verification != null) {
@@ -522,11 +554,39 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun loadNotes() {
         val repo = noteRepo ?: return
         val key = keyManager.masterKey ?: return
+        val ticket = loadTicket.incrementAndGet()
 
-        val result = repo.listActiveWithStats(key)
+        // Anything saved during the read must not be overwritten by it, so a read
+        // that a local write overtook starts again.
+        repeat(MAX_LOAD_ATTEMPTS) {
+            val revision = notesRevision.get()
+            val loaded = withContext(Dispatchers.Default) {
+                LoadedNotes(
+                    active = repo.listActiveWithStats(key),
+                    archived = repo.listArchived(key),
+                    searches = savedSearchRepo?.listActive(key) ?: emptyList(),
+                )
+            }
+            // A newer load owns the result, and a locked vault shows nothing
+            if (ticket != loadTicket.get() || keyManager.masterKey !== key) return
+            if (revision == notesRevision.get()) {
+                publish(loaded)
+                return
+            }
+        }
+    }
+
+    private class LoadedNotes(
+        val active: NoteRepository.ListResult,
+        val archived: List<DecryptedNote>,
+        val searches: List<DecryptedSavedSearch>,
+    )
+
+    private fun publish(loaded: LoadedNotes) {
+        val result = loaded.active
         _notes.value = result.notes
-        _archivedNotes.value = repo.listArchived(key)
-        _savedSearches.value = savedSearchRepo?.listActive(key) ?: emptyList()
+        _archivedNotes.value = loaded.archived
+        _savedSearches.value = loaded.searches
 
         Log.d(TAG, "[loadNotes] ${result.notes.size} decrypted, " +
             "${result.failedCount} failed, ${result.totalRecords} total in DB")
@@ -551,6 +611,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         val repo = noteRepo ?: return null
         val key = keyManager.masterKey ?: return null
         val note = repo.create(content = content, tags = tags, key = key)
+        notesRevision.incrementAndGet()
         _notes.value = listOf(note) + _notes.value
         _selectedNoteId.value = note.id
         scheduleSearch()
@@ -576,6 +637,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
     private suspend fun refreshNote(id: String) {
         val repo = noteRepo ?: return
         val key = keyManager.masterKey ?: return
+        notesRevision.incrementAndGet()
         val fresh = repo.get(id = id, key = key) ?: return
         _notes.value = _notes.value.map { if (it.id == id) fresh else it }
         _archivedNotes.value = _archivedNotes.value.map { if (it.id == id) fresh else it }
@@ -590,6 +652,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         val key = keyManager.masterKey ?: return
         val original = repo.get(id = id, key = key) ?: return
         val duplicate = repo.create(content = original.content, tags = original.tags, key = key)
+        notesRevision.incrementAndGet()
         _notes.value = listOf(duplicate) + _notes.value
         _selectedNoteId.value = duplicate.id
         scheduleSearch()
@@ -602,7 +665,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun deleteNote(id: String) {
         val repo = noteRepo ?: return
         repo.softDelete(id)
+        notesRevision.incrementAndGet()
         _notes.value = _notes.value.filter { it.id != id }
+        _archivedNotes.value = _archivedNotes.value.filter { it.id != id }
         if (_selectedNoteId.value == id) {
             _selectedNoteId.value = null
         }
@@ -636,6 +701,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun archiveNote(id: String) {
         val repo = noteRepo ?: return
         repo.archive(id)
+        notesRevision.incrementAndGet()
         _notes.value = _notes.value.filter { it.id != id }
         if (_selectedNoteId.value == id) {
             _selectedNoteId.value = null
@@ -651,6 +717,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun unarchiveNote(id: String) {
         val repo = noteRepo ?: return
         repo.unarchive(id)
+        notesRevision.incrementAndGet()
         _archivedNotes.value = _archivedNotes.value.filter { it.id != id }
         if (_selectedNoteId.value == id) {
             _selectedNoteId.value = null
@@ -693,7 +760,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
         // No debounce needed when query is empty -- just sort (cheap)
         if (query.isBlank()) {
-            _filteredNotes.value = sortNotes(source, order)
+            _filteredNotes.value = SearchService.sort(source, order)
             return
         }
 
@@ -702,9 +769,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
             delay(150)
 
             // Run expensive filter + sort
-            val filtered = filterNotes(source, query)
-            val results = sortNotes(filtered, order)
-            _filteredNotes.value = results
+            _filteredNotes.value = withContext(Dispatchers.Default) {
+                SearchService.sort(SearchService.filter(source, query).notes, order)
+            }
         }
     }
 
@@ -719,196 +786,6 @@ class AppState(application: Application) : AndroidViewModel(application) {
             delay(3_000)
             triggerSync()
         }
-    }
-
-    /**
-     * Filter notes by a search query string.
-     * Supports tags (#tagname), negation (-term), exact phrases ("..."),
-     * and plain text matching.
-     */
-    private fun filterNotes(notes: List<DecryptedNote>, query: String): List<DecryptedNote> {
-        val trimmed = query.trim()
-        if (trimmed.isEmpty()) return notes
-
-        // Parse query into tokens
-        val tokens = mutableListOf<SearchToken>()
-        var remaining = trimmed
-
-        while (remaining.isNotEmpty()) {
-            remaining = remaining.trimStart()
-            if (remaining.isEmpty()) break
-
-            when {
-                // Tag filter: #tagname
-                remaining.startsWith("#") -> {
-                    val tagEnd = remaining.indexOfFirst { it == ' ' || it == '|' }.let {
-                        if (it < 0) remaining.length else it
-                    }
-                    val tag = remaining.substring(1, tagEnd)
-                    if (tag.isNotEmpty()) {
-                        tokens.add(SearchToken.Tag(tag))
-                    }
-                    remaining = remaining.substring(tagEnd)
-                }
-                // Negation: -term
-                remaining.startsWith("-") && remaining.length > 1 && remaining[1] != ' ' -> {
-                    val termEnd = remaining.indexOf(' ').let {
-                        if (it < 0) remaining.length else it
-                    }
-                    val term = remaining.substring(1, termEnd)
-                    if (term.isNotEmpty()) {
-                        tokens.add(SearchToken.Negation(term))
-                    }
-                    remaining = remaining.substring(termEnd)
-                }
-                // Exact phrase: "..."
-                remaining.startsWith("\"") -> {
-                    val closeIdx = remaining.indexOf('"', 1)
-                    if (closeIdx > 0) {
-                        val phrase = remaining.substring(1, closeIdx)
-                        if (phrase.isNotEmpty()) {
-                            tokens.add(SearchToken.Phrase(phrase))
-                        }
-                        remaining = remaining.substring(closeIdx + 1)
-                    } else {
-                        // No closing quote -- treat rest as phrase
-                        val phrase = remaining.substring(1)
-                        if (phrase.isNotEmpty()) {
-                            tokens.add(SearchToken.Phrase(phrase))
-                        }
-                        remaining = ""
-                    }
-                }
-                // OR operator
-                remaining.startsWith("|") -> {
-                    tokens.add(SearchToken.Or)
-                    remaining = remaining.substring(1)
-                }
-                // Has modifier
-                remaining.startsWith("has:") -> {
-                    val modEnd = remaining.indexOf(' ').let {
-                        if (it < 0) remaining.length else it
-                    }
-                    val modifier = remaining.substring(4, modEnd)
-                    tokens.add(SearchToken.HasModifier(modifier))
-                    remaining = remaining.substring(modEnd)
-                }
-                // Plain word
-                else -> {
-                    val wordEnd = remaining.indexOf(' ').let {
-                        if (it < 0) remaining.length else it
-                    }
-                    val word = remaining.substring(0, wordEnd)
-                    if (word.isNotEmpty()) {
-                        tokens.add(SearchToken.Word(word))
-                    }
-                    remaining = remaining.substring(wordEnd)
-                }
-            }
-        }
-
-        return notes.filter { note ->
-            matchesTokens(note, tokens)
-        }
-    }
-
-    /**
-     * Check if a note matches the parsed search tokens.
-     */
-    private fun matchesTokens(note: DecryptedNote, tokens: List<SearchToken>): Boolean {
-        val contentLower = note.content.lowercase()
-        val tagsLower = note.tags.map { it.lowercase() }
-
-        // Group tokens by OR boundaries
-        var i = 0
-        while (i < tokens.size) {
-            val token = tokens[i]
-
-            // Look ahead for OR
-            if (i + 2 < tokens.size && tokens[i + 1] is SearchToken.Or) {
-                val left = matchesSingleToken(note, token, contentLower, tagsLower)
-                val right = matchesSingleToken(note, tokens[i + 2], contentLower, tagsLower)
-                if (!left && !right) return false
-                i += 3
-                continue
-            }
-
-            if (token is SearchToken.Or) {
-                i++
-                continue
-            }
-
-            if (!matchesSingleToken(note, token, contentLower, tagsLower)) {
-                return false
-            }
-            i++
-        }
-        return true
-    }
-
-    /**
-     * Check if a note matches a single search token.
-     */
-    private fun matchesSingleToken(
-        note: DecryptedNote,
-        token: SearchToken,
-        contentLower: String,
-        tagsLower: List<String>,
-    ): Boolean {
-        return when (token) {
-            is SearchToken.Tag -> tagsLower.any { it == token.name.lowercase() }
-            is SearchToken.Negation -> !contentLower.contains(token.term.lowercase())
-            is SearchToken.Phrase -> contentLower.contains(token.text.lowercase())
-            is SearchToken.Word -> {
-                val lower = token.text.lowercase()
-                when {
-                    lower.startsWith("*") && lower.endsWith("*") -> {
-                        val inner = lower.trim('*')
-                        contentLower.contains(inner) || tagsLower.any { it.contains(inner) }
-                    }
-                    lower.startsWith("*") -> {
-                        val suffix = lower.removePrefix("*")
-                        contentLower.contains(suffix) || tagsLower.any { it.endsWith(suffix) }
-                    }
-                    lower.endsWith("*") -> {
-                        val prefix = lower.removeSuffix("*")
-                        contentLower.contains(prefix) || tagsLower.any { it.startsWith(prefix) }
-                    }
-                    else -> contentLower.contains(lower) || tagsLower.any { it.contains(lower) }
-                }
-            }
-            is SearchToken.HasModifier -> {
-                when (token.modifier.lowercase()) {
-                    "attachment" -> note.attachments.isNotEmpty()
-                    else -> true
-                }
-            }
-            is SearchToken.Or -> true
-        }
-    }
-
-    /**
-     * Sort notes by the given order, respecting pinned-first.
-     */
-    private fun sortNotes(notes: List<DecryptedNote>, order: SortOrder): List<DecryptedNote> {
-        val pinned = notes.filter { it.pinned }
-        val unpinned = notes.filter { !it.pinned }
-
-        val sortedPinned = when (order) {
-            SortOrder.RECENT -> pinned.sortedByDescending { it.modifiedAt }
-            SortOrder.OLDEST -> pinned.sortedBy { it.modifiedAt }
-            SortOrder.ALPHA -> pinned.sortedBy { it.title.lowercase() }
-            SortOrder.CREATED -> pinned.sortedByDescending { it.createdAt }
-        }
-
-        val sortedUnpinned = when (order) {
-            SortOrder.RECENT -> unpinned.sortedByDescending { it.modifiedAt }
-            SortOrder.OLDEST -> unpinned.sortedBy { it.modifiedAt }
-            SortOrder.ALPHA -> unpinned.sortedBy { it.title.lowercase() }
-            SortOrder.CREATED -> unpinned.sortedByDescending { it.createdAt }
-        }
-
-        return sortedPinned + sortedUnpinned
     }
 
     // MARK: - State Setters
@@ -1735,9 +1612,6 @@ class AppState(application: Application) : AndroidViewModel(application) {
         service.onConflictDetected = { conflict ->
             _pendingConflicts.value = _pendingConflicts.value.filter { it.id != conflict.id } + conflict
         }
-        service.onSyncComplete = { _ ->
-            viewModelScope.launch { loadNotes() }
-        }
 
         // Wire SSE to trigger sync on server-sent events
         sse.onSyncNeeded = {
@@ -1765,6 +1639,23 @@ class AppState(application: Application) : AndroidViewModel(application) {
      * Trigger a sync cycle (push then pull).
      */
     suspend fun triggerSync() {
+        // Overlapping cycles interleave pushes and pulls, so a request that
+        // arrives during a sync just asks for one more run afterwards.
+        if (!syncMutex.tryLock()) {
+            syncRequested = true
+            return
+        }
+        try {
+            do {
+                syncRequested = false
+                runSyncCycle()
+            } while (syncRequested)
+        } finally {
+            syncMutex.unlock()
+        }
+    }
+
+    private suspend fun runSyncCycle() {
         val service = syncServiceInstance
         if (service == null || !_syncEnabled.value) {
             Log.d(TAG, "[Sync] triggerSync: sync not enabled or no service -- aborting")
@@ -2275,60 +2166,46 @@ class AppState(application: Application) : AndroidViewModel(application) {
     // MARK: - Lifecycle
 
     /**
-     * Handle foreground/background transitions.
-     * Call with started=true when app comes to foreground, false when going to background.
+     * Handle foreground/background transitions, called from MainActivity. The
+     * timeout counts from the last user activity, so time in the background and
+     * idle time before it both count, and timers that froze don't matter.
      */
     fun handleLifecycleEvent(started: Boolean) {
         if (!started) {
-            // Going to background -- record timestamp for auto-lock
-            if (backgroundedAt == null) {
-                backgroundedAt = Instant.now()
-            }
+            isBackgrounded = true
             sseClientInstance?.stop()
-        } else {
-            // Coming to foreground
-            if (_isLocked.value) return
+            return
+        }
 
-            // Check auto-lock (timeout 0 means "never")
-            val bg = backgroundedAt
-            if (bg != null && keyManager.autoLockTimeout > 0) {
-                val elapsedSeconds = java.time.Duration.between(bg, Instant.now()).seconds
-                if (elapsedSeconds >= keyManager.autoLockTimeout) {
-                    lock()
-                    backgroundedAt = null
-                    return
-                }
-            }
-            val wasBackgrounded = backgroundedAt != null
-            backgroundedAt = null
-            keyManager.recordActivity()
+        if (!isBackgrounded) return
+        isBackgrounded = false
+        if (_isLocked.value) return
 
-            // Restart SSE and sync when returning from genuine background
-            if (wasBackgrounded && _syncEnabled.value) {
-                viewModelScope.launch {
-                    try { syncServiceInstance?.startSSE() } catch (_: Exception) {}
-                    triggerSync()
-                }
+        if (keyManager.isIdleTimeoutExceeded()) {
+            lock()
+            return
+        }
+        keyManager.recordActivity()
+
+        // Restart SSE and catch up on what was missed
+        if (_syncEnabled.value) {
+            viewModelScope.launch {
+                try { syncServiceInstance?.startSSE() } catch (_: Exception) {}
+                triggerSync()
             }
         }
     }
 
     companion object {
+        /** New notes passwords only: existing short passwords must keep working. */
+        const val MIN_NOTES_PASSWORD_LENGTH = 8
+
         private const val TAG = "AppState"
         private const val PREFS_NAME = "jottery_prefs"
         private const val KEY_EDITOR_FONT_SCALE = "editorFontScale"
+        private const val KEY_SCREEN_SECURITY = "screenSecurity"
+        private const val MAX_LOAD_ATTEMPTS = 3
     }
-}
-
-// MARK: - Search Token Types
-
-private sealed class SearchToken {
-    data class Tag(val name: String) : SearchToken()
-    data class Negation(val term: String) : SearchToken()
-    data class Phrase(val text: String) : SearchToken()
-    data class Word(val text: String) : SearchToken()
-    data class HasModifier(val modifier: String) : SearchToken()
-    data object Or : SearchToken()
 }
 
 // MARK: - Error Types

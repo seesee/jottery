@@ -10,8 +10,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.jottery.android.R
 import com.jottery.android.model.SortOrder
 import com.jottery.android.model.ThemeMode
 import com.jottery.android.viewmodel.AppState
@@ -26,7 +28,9 @@ fun SettingsScreen(
     onNavigateToBackup: () -> Unit,
     onNavigateToImport: () -> Unit,
     onNavigateToSavedSearches: () -> Unit,
+    onNavigateToChangePassword: () -> Unit,
 ) {
+    val screenSecurity by appState.screenSecurity.collectAsState()
     val settings by appState.settings.collectAsState()
     val syncEnabled by appState.syncEnabled.collectAsState()
     val lastSyncAt by appState.lastSyncAt.collectAsState()
@@ -94,6 +98,22 @@ fun SettingsScreen(
             SettingsRow(
                 title = "Lock now",
                 onClick = { appState.lock() },
+            )
+            SettingsRow(
+                title = stringResource(R.string.settings_change_password),
+                onClick = onNavigateToChangePassword,
+            )
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_screen_security)) },
+                supportingContent = {
+                    Text(
+                        stringResource(R.string.settings_screen_security_detail),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+                trailingContent = {
+                    Switch(checked = screenSecurity, onCheckedChange = appState::setScreenSecurity)
+                },
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

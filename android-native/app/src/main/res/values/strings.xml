@@ -182,6 +182,11 @@
     <string name="cancel">Cancel</string>
     <string name="back">Back</string>
 
+    <!-- Security -->
+    <string name="settings_screen_security">Hide from screenshots and recents</string>
+    <string name="settings_screen_security_detail">Blocks screenshots, screen recording and the app preview in recents</string>
+    <string name="password_too_short">Use at least %1$d characters.</string>
+
     <!-- Version history -->
     <string name="version_restore_failed">This version can\'t be read, so it wasn\'t restored.</string>
 

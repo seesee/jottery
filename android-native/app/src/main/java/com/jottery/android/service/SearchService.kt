@@ -87,6 +87,8 @@ object SearchService {
         val requiredText: MutableList<TextMatch> = mutableListOf(),
         // Text terms (OR groups)
         val orTextGroups: MutableList<List<TextMatch>> = mutableListOf(),
+        // Alternatives with more than one term each: `#work dog | cat`
+        val orClauses: MutableList<ParsedQuery> = mutableListOf(),
         // Text to exclude
         val excludeText: MutableList<String> = mutableListOf(),
 
@@ -294,6 +296,19 @@ object SearchService {
         data object OrSeparator : RawToken()
     }
 
+    private fun addAndTerms(tokens: List<RawToken>, query: ParsedQuery) {
+        for (token in tokens) {
+            when (token) {
+                is RawToken.Tag -> query.requiredTags.add(token.name)
+                is RawToken.ExcludeTag -> query.excludeTags.add(token.name)
+                is RawToken.Exclude -> query.excludeText.add(token.term)
+                is RawToken.Text -> query.requiredText.add(classifyTextMatch(token.term))
+                is RawToken.Phrase -> query.requiredText.add(TextMatch.Exact(token.phrase.lowercase()))
+                is RawToken.OrSeparator -> { /* already handled */ }
+            }
+        }
+    }
+
     private fun tokenize(input: String, query: ParsedQuery) {
         val tokens = splitTokens(input)
 
@@ -318,8 +333,18 @@ object SearchService {
             val allTags = groups.all { group ->
                 group.size == 1 && group[0] is RawToken.Tag
             }
+            val allSimpleText = groups.all { group ->
+                group.size == 1 && textMatchFromToken(group[0]) != null
+            }
 
-            if (allTags) {
+            if (!allTags && !allSimpleText) {
+                // Mixed: every term in every alternative counts
+                for (group in groups) {
+                    val clause = ParsedQuery()
+                    addAndTerms(group, clause)
+                    query.orClauses.add(clause)
+                }
+            } else if (allTags) {
                 // OR tag group
                 val tagNames = groups.mapNotNull { group ->
                     val token = group.firstOrNull()
@@ -338,16 +363,7 @@ object SearchService {
             }
         } else {
             // No OR -- treat as AND
-            for (token in currentGroup) {
-                when (token) {
-                    is RawToken.Tag -> query.requiredTags.add(token.name)
-                    is RawToken.ExcludeTag -> query.excludeTags.add(token.name)
-                    is RawToken.Exclude -> query.excludeText.add(token.term)
-                    is RawToken.Text -> query.requiredText.add(classifyTextMatch(token.term))
-                    is RawToken.Phrase -> query.requiredText.add(TextMatch.Exact(token.phrase.lowercase()))
-                    is RawToken.OrSeparator -> { /* already handled */ }
-                }
-            }
+            addAndTerms(currentGroup, query)
         }
     }
 
@@ -469,6 +485,11 @@ object SearchService {
         // Excluded text
         for (term in query.excludeText) {
             if (lowerContent.contains(term)) return false
+        }
+
+        // Alternatives of several terms: at least one must hold in full
+        if (query.orClauses.isNotEmpty() && query.orClauses.none { matchesQuery(note, it) }) {
+            return false
         }
 
         // has:attachment

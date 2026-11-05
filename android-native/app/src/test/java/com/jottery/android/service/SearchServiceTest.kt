@@ -235,4 +235,25 @@ class SearchServiceTest {
         color = color,
         needsSync = false,
     )
+
+    @Test fun `mixed OR keeps every term in each alternative`() {
+        val tagged = makeNote(content = "dog here", tags = listOf("work"))
+        val untagged = makeNote(content = "dog here", tags = emptyList())
+        val cat = makeNote(content = "a cat", tags = emptyList())
+
+        val result = SearchService.filter(listOf(tagged, untagged, cat), "#work dog | cat").notes
+
+        assertTrue(tagged in result)
+        assertTrue(cat in result)
+        assertFalse("the tag must not be dropped", untagged in result)
+    }
+
+    @Test fun `three way text OR needs only one`() {
+        val c = makeNote(content = "gamma only", tags = emptyList())
+        val none = makeNote(content = "nothing", tags = emptyList())
+
+        val result = SearchService.filter(listOf(c, none), "alpha | beta | gamma").notes
+
+        assertEquals(listOf(c), result)
+    }
 }

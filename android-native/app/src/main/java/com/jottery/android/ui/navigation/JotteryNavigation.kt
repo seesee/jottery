@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.jottery.android.ui.screen.BackupScreen
+import com.jottery.android.ui.screen.ChangePasswordScreen
 import com.jottery.android.ui.screen.ConflictResolutionScreen
 import com.jottery.android.ui.screen.ImportScreen
 import com.jottery.android.ui.screen.InboxScreen
@@ -29,6 +30,7 @@ object Routes {
     const val RECYCLE_BIN = "recycle_bin"
     const val SETTINGS = "settings"
     const val SYNC_SETUP = "sync_setup"
+    const val CHANGE_PASSWORD = "change_password"
     const val BACKUP = "backup"
     const val IMPORT = "import"
     const val SAVED_SEARCHES = "saved_searches"
@@ -128,6 +130,14 @@ fun JotteryNavigation(
                 onNavigateToBackup = { navController.navigate(Routes.BACKUP) },
                 onNavigateToImport = { navController.navigate(Routes.IMPORT) },
                 onNavigateToSavedSearches = { navController.navigate(Routes.SAVED_SEARCHES) },
+                onNavigateToChangePassword = { navController.navigate(Routes.CHANGE_PASSWORD) },
+            )
+        }
+
+        composable(Routes.CHANGE_PASSWORD) {
+            ChangePasswordScreen(
+                appState = appState,
+                onBack = { navController.popBackStack() },
             )
         }
 
