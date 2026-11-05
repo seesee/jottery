@@ -171,19 +171,16 @@ struct NoteListView: View {
         }
         .alert(L.bulkDeleteConfirmTitle, isPresented: $showBulkDeleteConfirm) {
             Button(L.bulkDeleteConfirmAction, role: .destructive) {
-                var failureCount = 0
-                for id in selectedIds {
-                    do {
-                        try appState.deleteNote(id: id)
-                    } catch {
-                        failureCount += 1
-                    }
-                }
-                if failureCount > 0 {
-                    appState.reportError(L.errorCouldntDeleteNotes(failureCount))
-                }
+                let ids = selectedIds
                 isSelectMode = false
                 selectedIds.removeAll()
+                Task {
+                    do {
+                        try await appState.deleteNotes(ids: ids)
+                    } catch {
+                        appState.reportError(L.errorCouldntDeleteNotes(ids.count))
+                    }
+                }
             }
             Button(L.commonCancel, role: .cancel) {}
         } message: {
@@ -391,19 +388,16 @@ struct NoteListView: View {
 
                     if !appState.showArchive {
                         Button {
-                            var failureCount = 0
-                            for id in selectedIds {
-                                do {
-                                    try appState.archiveNote(id: id)
-                                } catch {
-                                    failureCount += 1
-                                }
-                            }
-                            if failureCount > 0 {
-                                appState.reportError(L.errorCouldntArchiveNotes(failureCount))
-                            }
+                            let ids = selectedIds
                             isSelectMode = false
                             selectedIds.removeAll()
+                            Task {
+                                do {
+                                    try await appState.archiveNotes(ids: ids)
+                                } catch {
+                                    appState.reportError(L.errorCouldntArchiveNotes(ids.count))
+                                }
+                            }
                         } label: {
                             Label(L.noteListArchive, systemImage: "archivebox")
                         }

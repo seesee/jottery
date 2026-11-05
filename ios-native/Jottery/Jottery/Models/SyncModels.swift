@@ -16,6 +16,23 @@ struct RegisterDeviceResponse: Codable {
     let deviceName: String
 }
 
+// MARK: - Account Registration
+
+struct RegisterUserResponse: Codable {
+    let userId: String
+    let email: String
+    let status: String  // "pending_approval" or "approved"
+
+    var isApproved: Bool { status == "approved" }
+}
+
+/// Where an account has got to. Whether it can connect a device is `isApproved`.
+struct UserStatusResponse: Codable {
+    let exists: Bool
+    let isApproved: Bool
+    let isActive: Bool
+}
+
 // MARK: - Sync Push
 
 struct SyncPushRequest: Codable {

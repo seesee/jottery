@@ -824,6 +824,58 @@ struct SyncProtocolTests {
         }
     }
 
+    // MARK: - Version history tags, in both forms (R2-063)
+
+    private func versionTags(of tags: [String], fixture: Fixture, noteId: String) async throws -> [String] {
+        let version = SyncNoteVersion(
+            versionKey: "\(noteId):1", noteId: noteId, version: 1,
+            createdAt: "2026-11-05T09:00:00Z", syncedAt: "2026-11-05T09:00:00Z",
+            content: try CryptoService.serializeEncryptedJSON(CryptoService.encryptText("old text", key: key)),
+            tags: tags, attachments: [], reason: "sync"
+        )
+        let response = SyncPullResponse(notes: [], attachments: [], versions: [version])
+        ScriptedServerProtocol.pullReplies = [.init(body: try JSONEncoder().encode(response))]
+        try await fixture.service.pull()
+
+        let stored = try #require(try fixture.versionRepo.getVersions(noteId: noteId).first)
+        return try CryptoService.decryptStringArray(CryptoService.parseEncryptedJSON(stored.tags), key: key)
+    }
+
+    /// Web and Android write one blob holding the whole array.
+    @Test func aVersionFromTheWebKeepsAllItsTags() async throws {
+        let fixture = try makeFixture()
+        let blob = try CryptoService.serializeEncryptedJSON(CryptoService.encryptStringArray(["a", "b"], key: key))
+
+        #expect(try await versionTags(of: [blob], fixture: fixture, noteId: UUID().uuidString) == ["a", "b"])
+    }
+
+    /// iOS and the TUI write one ciphertext per tag, which is the canonical form.
+    @Test func aVersionWithATagPerEntryKeepsAllItsTags() async throws {
+        let fixture = try makeFixture()
+        let tags = try ["a", "b"].map { try CryptoService.encryptTagForSync($0, key: key) }
+
+        #expect(try await versionTags(of: tags, fixture: fixture, noteId: UUID().uuidString) == ["a", "b"])
+    }
+
+    /// Storing it would leave a raw value in the vault, and fail on every load.
+    @Test func aVersionWhoseTagsWontDecryptIsDropped() async throws {
+        let fixture = try makeFixture()
+        let noteId = UUID().uuidString
+        let other = SymmetricKey(data: Data(repeating: 9, count: 32))
+        let foreign = try CryptoService.serializeEncryptedJSON(CryptoService.encryptStringArray(["x"], key: other))
+        let version = SyncNoteVersion(
+            versionKey: "\(noteId):1", noteId: noteId, version: 1,
+            createdAt: "2026-11-05T09:00:00Z", syncedAt: "2026-11-05T09:00:00Z",
+            content: foreign, tags: [foreign], attachments: [], reason: "sync"
+        )
+        let response = SyncPullResponse(notes: [], attachments: [], versions: [version])
+        ScriptedServerProtocol.pullReplies = [.init(body: try JSONEncoder().encode(response))]
+
+        try await fixture.service.pull()
+
+        #expect(try fixture.versionRepo.getVersions(noteId: noteId).isEmpty)
+    }
+
     // MARK: - Keep Server takes all of the server's copy (jottery-2xeq)
 
     private func conflict(on record: NoteRecord, archived: Bool?, locked: Bool?, color: String?) throws -> ConflictInfo {

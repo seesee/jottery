@@ -16,7 +16,6 @@ struct JotteryApp: App {
         WindowGroup {
             ContentView()
                 .environment(appState)
-                .environment(\.locale, resolvedLocale)
         }
         .commands {
             CommandGroup(after: .newItem) {
@@ -31,16 +30,6 @@ struct JotteryApp: App {
                 }
                 .keyboardShortcut("l", modifiers: .command)
             }
-        }
-    }
-
-    private var resolvedLocale: Locale {
-        switch appState.settings.language {
-        // "en-US" is no longer offered in Settings, but keep resolving it so
-        // anyone who selected it before the option was removed is unaffected.
-        case "en-US": return Locale(identifier: "en_US")
-        case "en-GB": return Locale(identifier: "en_GB")
-        default: return .current  // "system"
         }
     }
 }
@@ -98,6 +87,16 @@ struct ContentView: View {
         .animation(.default, value: appState.isLocked)
         .animation(.default, value: appState.isFirstLaunch)
         .preferredColorScheme(appState.settings.themeMode.colorScheme)
+        // Nothing can be saved until this is done, so nothing can be touched.
+        .overlay {
+            if appState.isReKeying {
+                ZStack {
+                    Color.clear.background(.ultraThinMaterial)
+                    ProgressView(L.vaultReKeying)
+                }
+                .ignoresSafeArea()
+            }
+        }
         .onAppear {
             appState.initialise()
             pickUpPendingShortcut()

@@ -46,6 +46,43 @@ actor SyncClient {
         return try await post(url: url, body: body, authenticated: false)
     }
 
+    // MARK: - Account Registration
+
+    /// Create an account. Most servers then hold it for an administrator to
+    /// approve, and a device can't connect until they have.
+    func registerUser(email: String, password: String) async throws -> RegisterUserResponse {
+        let url = try apiURL("auth/register-user")
+        do {
+            return try await post(url: url, body: UserLoginRequest(email: email, password: password), authenticated: false)
+        } catch SyncClientError.httpError(let status, let body) where status == 409 || status == 400 {
+            throw status == 409 ? SyncClientError.accountExists : SyncClientError.refused(Self.message(in: body))
+        }
+    }
+
+    /// Where the account has got to. Asks with the password where the server
+    /// can, which tells nobody else whether the address has an account.
+    func userStatus(email: String, password: String) async throws -> UserStatusResponse {
+        do {
+            return try await post(
+                url: try apiURL("user/status"),
+                body: UserLoginRequest(email: email, password: password),
+                authenticated: false
+            )
+        } catch SyncClientError.httpError(let status, _) where status == 404 || status == 405 {
+            var components = URLComponents(url: try apiURL("user/status"), resolvingAgainstBaseURL: false)
+            components?.queryItems = [URLQueryItem(name: "email", value: email)]
+            guard let url = components?.url else { throw SyncClientError.invalidResponse }
+            return try await get(url: url)
+        }
+    }
+
+    /// The server's own words for a refusal, which only it can give: its
+    /// password rules are configurable. Plain text, kept short.
+    private static func message(in body: String) -> String {
+        let error = (try? JSONDecoder().decode(ErrorBody.self, from: Data(body.utf8)))?.error
+        return String((error ?? body).prefix(200))
+    }
+
     // MARK: - Sync Operations
 
     func push(_ request: SyncPushRequest) async throws -> SyncPushResponse {
@@ -312,6 +349,10 @@ enum SyncClientError: LocalizedError {
     case storageQuotaExceeded
     /// 409 to a wrapped key upload: the key isn't as this device last read it.
     case wrappedKeyConflict
+    /// 409 to creating an account: the address has one.
+    case accountExists
+    /// 400 to creating an account, with the server's reason.
+    case refused(String)
 
     /// How long the server asked for it to be left alone, if it did.
     var requestedWait: TimeInterval? {
@@ -335,6 +376,8 @@ enum SyncClientError: LocalizedError {
         case .requestTimedOut: return L.syncErrorTimedOut
         case .storageQuotaExceeded: return L.syncErrorStorageFull
         case .wrappedKeyConflict: return L.syncErrorKeyChanged
+        case .accountExists: return L.syncErrorAccountExists
+        case .refused(let reason): return reason
         }
     }
 }

@@ -65,7 +65,7 @@ struct RecycleBinView: View {
                 }
                 Button(L.commonCancel, role: .cancel) {}
             } message: {
-                Text("This will permanently delete \(deletedNotes.count) note\(deletedNotes.count == 1 ? "" : "s"). This cannot be undone.")
+                Text(L.recycleBinEmptyConfirmMessage(deletedNotes.count))
             }
             .overlay {
                 if deletedNotes.isEmpty {

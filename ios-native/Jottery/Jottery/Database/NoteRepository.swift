@@ -262,6 +262,20 @@ struct NoteRepository: Sendable {
         }
     }
 
+    /// Soft-delete many notes in one transaction.
+    func softDelete(ids: [String]) throws {
+        let now = Date().iso8601
+        try db.dbPool.write { db in
+            for id in ids {
+                try db.execute(sql: """
+                    UPDATE notes SET
+                        deleted = 1, deleted_at = ?, local_deleted_at = ?, modified_at = ?, needs_sync = 1
+                    WHERE id = ?
+                """, arguments: [now, now, now, id])
+            }
+        }
+    }
+
     /// Restore a soft-deleted note.
     func restore(id: String) throws {
         try db.dbPool.write { db in
@@ -364,6 +378,18 @@ struct NoteRepository: Sendable {
             try db.execute(sql: """
                 UPDATE notes SET archived = 1, archived_at = ?, modified_at = ?, needs_sync = 1 WHERE id = ?
             """, arguments: [now, now, id])
+        }
+    }
+
+    /// Archive many notes in one transaction.
+    func archive(ids: [String]) throws {
+        let now = Date().iso8601
+        try db.dbPool.write { db in
+            for id in ids {
+                try db.execute(sql: """
+                    UPDATE notes SET archived = 1, archived_at = ?, modified_at = ?, needs_sync = 1 WHERE id = ?
+                """, arguments: [now, now, id])
+            }
         }
     }
 

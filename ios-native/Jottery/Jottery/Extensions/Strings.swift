@@ -25,8 +25,7 @@ enum L {
     static var settingsSecurity: String { String(localized: "settings.security") }
     static var settingsBiometric: String { String(localized: "settings.biometric") }
     static var settingsLanguage: String { String(localized: "settings.language") }
-    static var settingsLanguageSystem: String { String(localized: "settings.languageSystem") }
-    static var settingsLanguageEnGB: String { String(localized: "settings.languageEnGB") }
+    static var settingsLanguageHint: String { String(localized: "settings.languageHint") }
     static var settingsAbout: String { String(localized: "settings.about") }
     static var settingsNotes: String { String(localized: "settings.notes") }
     static var settingsVersion: String { String(localized: "settings.version") }
@@ -252,6 +251,9 @@ enum L {
     static var recycleBinDeleteForever: String { String(localized: "recycleBin.deleteForever") }
     static var recycleBinEmptyConfirmTitle: String { String(localized: "recycleBin.emptyConfirmTitle") }
     static var recycleBinEmptyConfirmAction: String { String(localized: "recycleBin.emptyConfirmAction") }
+    static func recycleBinEmptyConfirmMessage(_ count: Int) -> String {
+        String(format: String(localized: "recycleBin.emptyConfirmMessage"), count)
+    }
     static var recycleBinEmpty: String { String(localized: "recycleBin.empty") }
     static var recycleBinEmptyDescription: String { String(localized: "recycleBin.emptyDescription") }
 
@@ -273,6 +275,13 @@ enum L {
     static var accountKeyPasswordMatchesAccountMessage: String { String(localized: "accountKey.passwordMatchesAccountMessage") }
     static var changePasswordServerKeyPending: String { String(localized: "changePassword.serverKeyPending") }
     static var syncSetupRegisterAction: String { String(localized: "syncSetup.registerAction") }
+    static var syncSetupAccountChoice: String { String(localized: "syncSetup.accountChoice") }
+    static var syncSetupExistingAccount: String { String(localized: "syncSetup.existingAccount") }
+    static var syncSetupNewAccount: String { String(localized: "syncSetup.newAccount") }
+    static var syncSetupCreateAccountAction: String { String(localized: "syncSetup.createAccountAction") }
+    static var syncSetupAwaitingApproval: String { String(localized: "syncSetup.awaitingApproval") }
+    static var syncSetupCheckApproval: String { String(localized: "syncSetup.checkApproval") }
+    static var syncErrorAccountExists: String { String(localized: "syncError.accountExists") }
     static var syncSetupSuccess: String { String(localized: "syncSetup.success") }
     static var syncSetupDone: String { String(localized: "syncSetup.done") }
     static var syncSetupCancel: String { String(localized: "syncSetup.cancel") }
@@ -461,6 +470,8 @@ enum L {
 
     static var errorCouldntAddAttachment: String { String(localized: "error.couldntAddAttachment") }
     static var errorCouldntSaveNote: String { String(localized: "error.couldntSaveNote") }
+    static var vaultReKeying: String { String(localized: "vault.reKeying") }
+    static var vaultBusy: String { String(localized: "vault.busy") }
     static var editorCopy: String { String(localized: "editor.copy") }
     static var editorCopyLink: String { String(localized: "editor.copyLink") }
     static var editorShare: String { String(localized: "editor.share") }

@@ -49,14 +49,18 @@ struct SettingsView: View {
                         Text(L.settingsAutoLockNever).tag(0)
                     }
 
-                    // Only en-GB is translated. Offering en-US changed date and
-                    // number formatting but left the copy in British English,
-                    // which reads as a bug; "System" already covers users who
-                    // want their own regional formats.
-                    Picker(L.settingsLanguage, selection: setting(\.language)) {
-                        Text(L.settingsLanguageSystem).tag("system")
-                        Text(L.settingsLanguageEnGB).tag("en-GB")
+                    // The system's per-app language, not a picker of our own.
+                    Button {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        LabeledContent(L.settingsLanguage, value: Locale.current.localizedString(
+                            forLanguageCode: Locale.current.language.languageCode?.identifier ?? "en"
+                        ) ?? "")
                     }
+                    .foregroundStyle(.primary)
+                    .accessibilityHint(L.settingsLanguageHint)
                 }
 
                 // Security

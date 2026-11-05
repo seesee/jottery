@@ -85,6 +85,48 @@ struct LocalSafetyTests {
         #expect(protected == [dir.path, path, path + "-wal", path + "-shm"])
     }
 
+    // MARK: - Filenames at rest (R2-070, R2-092)
+
+    @Test func anAttachmentsNameDoesntReachThePlaintextColumn() throws {
+        let state = try makeUnlockedState()
+        let note = try #require(try state.createNote(content: "with a file"))
+
+        try state.addAttachment(to: note.id, data: Data("x".utf8), filename: "divorce-petition.pdf", mimeType: "application/pdf")
+
+        let names = try state.db?.dbPool.read { try String.fetchAll($0, sql: "SELECT filename FROM attachments") }
+        #expect(names == [""])
+        let stored = try #require(try state.noteRepo?.getRaw(id: note.id)?.attachments)
+        #expect(!stored.contains("divorce-petition"))
+        #expect(state.displayedNote(id: note.id)?.attachments.first?.filename == "divorce-petition.pdf")
+    }
+
+    /// Runs the real migration over a name an older build left behind.
+    @Test func upgradingClearsNamesAlreadyInTheColumn() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("jottery-migration-tests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let path = dir.appendingPathComponent("test.db").path
+        do {
+            let db = try DatabaseManager(path: path)
+            try db.dbPool.write { db in
+                try db.execute(sql: """
+                    INSERT INTO attachments (id, filename, mime_type, size, data)
+                    VALUES ('a', 'passport-scan.jpg', 'image/jpeg', 1, x'00')
+                """)
+                try db.execute(sql: "ALTER TABLE attachments DROP COLUMN uploaded")
+                try db.execute(sql: "ALTER TABLE notes DROP COLUMN local_deleted_at")
+                try db.execute(sql: "ALTER TABLE notes DROP COLUMN from_inbox")
+                try db.execute(sql: "DELETE FROM grdb_migrations WHERE identifier = 'ios_009_local_sync_tracking'")
+            }
+            try db.dbPool.close()
+        }
+
+        let upgraded = try DatabaseManager(path: path)
+
+        let names = try upgraded.dbPool.read { try String.fetchAll($0, sql: "SELECT filename FROM attachments") }
+        #expect(names == [""])
+    }
+
     // MARK: - The inbox (jottery-0szd)
 
     private func makeInboxState() throws -> (AppState, InboxItem) {
@@ -203,5 +245,161 @@ struct LocalSafetyTests {
         #expect(ThemeMode.dark.colorScheme == .dark)
         #expect(ThemeMode.light.colorScheme == .light)
         #expect(ThemeMode.auto.colorScheme == nil)
+    }
+}
+
+/// Working on many notes at once (jottery-6jn7).
+@MainActor
+struct BulkOperationTests {
+
+    private func makeState() throws -> (AppState, [DecryptedNote]) {
+        let state = try TestVaults.makeState()
+        state.keyManager.unlockWithKeyData(Data(repeating: 7, count: 32))
+        state.isLocked = false
+        let notes = try (0..<3).compactMap { try state.createNote(content: "note \($0)", tags: ["old"]) }
+        return (state, notes)
+    }
+
+    @Test func manyNotesGoToTheBinTogether() async throws {
+        let (state, notes) = try makeState()
+        state.selectedNoteId = notes[0].id
+
+        try await state.deleteNotes(ids: [notes[0].id, notes[1].id])
+
+        #expect(state.notes.map(\.id) == [notes[2].id])
+        #expect(state.selectedNoteId == nil)
+        #expect(try state.noteRepo?.getRaw(id: notes[0].id)?.localDeletedAt != nil)
+    }
+
+    @Test func manyNotesAreArchivedTogether() async throws {
+        let (state, notes) = try makeState()
+
+        try await state.archiveNotes(ids: Set(notes.map(\.id)))
+
+        #expect(state.notes.isEmpty)
+        #expect(state.archivedNotes.count == 3)
+    }
+
+    /// One transaction, so a failure can't leave some of them changed.
+    @Test func aBatchThatFailsChangesNothing() async throws {
+        let (state, notes) = try makeState()
+        try await state.db?.dbPool.write { db in
+            try db.execute(sql: """
+                CREATE TRIGGER no_archive BEFORE UPDATE ON notes WHEN NEW.id = '\(notes[2].id)'
+                BEGIN SELECT RAISE(ABORT, 'disk full'); END
+            """)
+        }
+
+        await #expect(throws: (any Error).self) {
+            try await state.archiveNotes(ids: Set(notes.map(\.id)))
+        }
+
+        try await state.loadNotes()
+        #expect(state.archivedNotes.isEmpty)
+    }
+
+    @Test func aChangeReachesEveryNoteAndSkipsTheOnesItDoesntApplyTo() async throws {
+        let (state, notes) = try makeState()
+        let modified = try #require(try state.noteRepo?.getRaw(id: notes[2].id)?.contentHash)
+
+        let failures = try await state.updateNotes(ids: Set(notes.map(\.id))) { note in
+            guard note.content != "note 2" else { return false }
+            note.tags.append("new")
+            return true
+        }
+
+        #expect(failures == 0)
+        #expect(state.notes.filter { $0.tags.contains("new") }.count == 2)
+        #expect(try state.noteRepo?.getRaw(id: notes[2].id)?.contentHash == modified)
+    }
+}
+
+/// Moving the vault onto a new key off the main thread (jottery-emoe).
+@MainActor
+@Suite(.serialized)
+struct ReKeyInProgressTests {
+
+    private func makeVault() async throws -> AppState {
+        let state = try TestVaults.makeState()
+        try await state.createVault(password: "notes-password-correct-horse")
+        return state
+    }
+
+    @Test func nothingCanBeSavedWhileTheVaultIsBeingReEncrypted() async throws {
+        let state = try await makeVault()
+        let note = try #require(try state.createNote(content: "before"))
+
+        state.isReKeying = true
+        defer { state.isReKeying = false }
+
+        #expect(throws: AppStateError.self) { try state.saveNote(note) }
+        #expect(throws: AppStateError.self) { try state.createNote(content: "new") }
+    }
+
+    /// Saved under the old key, it would be unreadable after the switch.
+    @Test func anEditHeldBackDuringAReKeyIsSavedUnderTheNewKey() async throws {
+        let state = try await makeVault()
+        let note = try #require(try state.createNote(content: "before"))
+        var fields = NoteEditorFields(note: note)
+        fields.content = "held back"
+        let gate = AsyncGate()
+        state.willReKey = { await gate.wait() }
+
+        let keySwitch = Task {
+            try await state.switchVaultToMasterKey(CryptoService.generateMasterKey(), notesPassword: "notes-password-correct-horse")
+        }
+        await waitUntil { await gate.waitingCount == 1 }
+        #expect(!state.saveEditorEdit(fields))
+        await gate.open()
+        try await keySwitch.value
+
+        let key = try #require(state.keyManager.masterKey)
+        #expect(try state.noteRepo?.get(id: note.id, key: key)?.content == "held back")
+        #expect(state.pendingEditorNote == nil)
+    }
+
+    @Test func aReKeyLeavesTheVaultUnlockedAndNoLongerBusy() async throws {
+        let state = try await makeVault()
+        _ = try state.createNote(content: "kept")
+
+        try await state.switchVaultToMasterKey(CryptoService.generateMasterKey(), notesPassword: "notes-password-correct-horse")
+
+        #expect(!state.isReKeying)
+        #expect(state.notes.map(\.content) == ["kept"])
+    }
+
+    /// The app can lock while this runs off the main thread, and the new key
+    /// mustn't then appear in memory behind the lock screen.
+    @Test func lockingDuringAReKeyLeavesNoKeyBehind() async throws {
+        let state = try await makeVault()
+        _ = try state.createNote(content: "kept")
+        let gate = AsyncGate()
+        state.willReKey = { await gate.wait() }
+
+        let keySwitch = Task {
+            try await state.switchVaultToMasterKey(CryptoService.generateMasterKey(), notesPassword: "notes-password-correct-horse")
+        }
+        await waitUntil { await gate.waitingCount == 1 }
+        #expect(state.isReKeying)
+        state.lock()
+        await gate.open()
+        try await keySwitch.value
+
+        #expect(state.keyManager.masterKey == nil)
+        #expect(state.isLocked)
+
+        try await state.unlock(password: "notes-password-correct-horse")
+        #expect(state.notes.map(\.content) == ["kept"])
+    }
+}
+
+/// Key bytes in `Data` (jottery-dm2m).
+struct KeyWipeTests {
+    @Test func wipingOverwritesEveryByte() {
+        var bytes = Data(repeating: 7, count: 32)
+
+        bytes.wipe()
+
+        #expect(bytes == Data(repeating: 0, count: 32))
     }
 }
