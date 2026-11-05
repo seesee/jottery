@@ -193,6 +193,9 @@ export async function unlock(password: string): Promise<void> {
 
   await encryptLegacySavedSearches();
 
+  // Moves anything an older version left in plaintext into the encrypted settings
+  await settingsRepository.update({});
+
   // Decrypted notes exist from here on, so limit where they could be sent
   const connectionMetadata = await syncRepository.getMetadata();
   if (connectionMetadata?.syncEnabled && connectionMetadata.syncEndpoint) {
