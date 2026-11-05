@@ -64,4 +64,15 @@ data class SyncMetadata(
      */
     @ColumnInfo(name = "pending_wrapped_key")
     val pendingWrappedKey: String? = null,
+
+    /** The server's opaque position in this account's changes. Never parsed. */
+    @ColumnInfo(name = "pull_cursor")
+    val pullCursor: String? = null,
+
+    /**
+     * The one-off full pull has been done since this server started offering a
+     * cursor. Timestamp pulls can skip changes silently, and that repairs it.
+     */
+    @ColumnInfo(name = "cursor_adopted", defaultValue = "0")
+    val cursorAdopted: Boolean = false,
 )

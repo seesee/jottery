@@ -37,8 +37,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.jottery.android.R
 import com.jottery.android.model.DecryptedNote
 import com.jottery.android.ui.component.ConfirmDialog
 import com.jottery.android.viewmodel.AppState
@@ -57,6 +59,7 @@ fun RecycleBinScreen(
     val scope = rememberCoroutineScope()
     var deletedNotes by remember { mutableStateOf(emptyList<DecryptedNote>()) }
     var showEmptyBinConfirm by remember { mutableStateOf(false) }
+    var noteToDelete by remember { mutableStateOf<DecryptedNote?>(null) }
 
     // Load deleted notes on appear
     LaunchedEffect(Unit) {
@@ -143,12 +146,9 @@ fun RecycleBinScreen(
                                         true
                                     }
                                     SwipeToDismissBoxValue.EndToStart -> {
-                                        // Swipe left to permanently delete
-                                        scope.launch {
-                                            appState.permanentlyDeleteNote(note.id)
-                                            deletedNotes = deletedNotes.filter { it.id != note.id }
-                                        }
-                                        true
+                                        // This can't be undone, so the row stays until confirmed
+                                        noteToDelete = note
+                                        false
                                     }
                                     SwipeToDismissBoxValue.Settled -> false
                                 }
@@ -184,14 +184,28 @@ fun RecycleBinScreen(
             confirmText = "Empty Bin",
             onConfirm = {
                 scope.launch {
-                    for (note in deletedNotes) {
-                        appState.permanentlyDeleteNote(note.id)
-                    }
+                    appState.permanentlyDeleteNotes(deletedNotes.map { it.id })
                     deletedNotes = emptyList()
                 }
                 showEmptyBinConfirm = false
             },
             onDismiss = { showEmptyBinConfirm = false },
+        )
+    }
+
+    noteToDelete?.let { note ->
+        ConfirmDialog(
+            title = stringResource(R.string.bin_delete_title),
+            message = stringResource(R.string.bin_delete_message),
+            confirmText = stringResource(R.string.bin_delete_confirm),
+            onConfirm = {
+                scope.launch {
+                    appState.permanentlyDeleteNotes(listOf(note.id))
+                    deletedNotes = deletedNotes.filter { it.id != note.id }
+                }
+                noteToDelete = null
+            },
+            onDismiss = { noteToDelete = null },
         )
     }
 }

@@ -40,11 +40,27 @@ class SyncService(
 ) {
     companion object {
         private const val TAG = "SyncService"
+        private const val HTTP_NOT_FOUND = 404
         private const val HTTP_PAYLOAD_TOO_LARGE = 413
 
         /** Comfortably under the server's default 5 MB limit per request. */
         internal const val PUSH_CHUNK_BYTES = 3L * 1024 * 1024
         internal const val PUSH_CHUNK_NOTES = 50
+
+        internal const val PULL_PAGE_SIZE = 100
+
+        /** A page holding this much base64 makes the next page smaller. */
+        internal const val PULL_PAGE_BYTES = 16L * 1024 * 1024
+
+        /** Stops a server that always says there's more. A million changes at full size. */
+        private const val MAX_PULL_PAGES = 10_000
+        private const val MAX_CURSOR_LENGTH = 1024
+
+        /** Blobs fetched one at a time per sync. The rest wait for the next one. */
+        internal const val MAX_BLOB_FETCHES = 20
+
+        /** This many notes binned in one pull is worth telling the user about. */
+        internal const val NOTABLE_BIN_COUNT = 10
 
         /**
          * The attachments-only repair payload for server attachment warnings:
@@ -79,6 +95,15 @@ class SyncService(
     /** Notes from the server that were dropped because they couldn't be read. */
     var onNotesQuarantined: ((Int) -> Unit)? = null
     private var quarantined = 0
+
+    /** Notes the server moved to the bin in one pull, when it was a lot of them. */
+    var onManyNotesBinned: ((Int) -> Unit)? = null
+    private var binned = 0
+
+    /** Blobs the server has said it doesn't hold, so they aren't asked for again. */
+    private val unavailableBlobs = mutableSetOf<String>()
+
+    private val purger = NotePurger(noteRepo, versionRepo, attachmentRepo, syncRepo, transaction)
 
     private fun requireKey(): SecretKey =
         keyProvider() ?: throw IllegalStateException("Vault is locked")
@@ -177,7 +202,12 @@ class SyncService(
         // Notes go first, without their blobs: the server only stores a blob
         // whose note it knows, and a blob can be most of a request by itself.
         val response = syncClient.push(
-            SyncPushRequest(notes = syncNotes, attachments = emptyList(), versions = syncVersions)
+            SyncPushRequest(
+                notes = syncNotes,
+                attachments = emptyList(),
+                versions = syncVersions,
+                attachmentsAuthoritative = records.all { refsAreReadable(it.attachments) },
+            )
         )
 
         // Rejections first: the conflict is built from the local row while that
@@ -191,7 +221,7 @@ class SyncService(
             val modifiedAt = pushedModifiedAt[accepted.id] ?: continue
             val cleared = noteRepo.markSynced(
                 id = accepted.id,
-                syncedAt = accepted.syncedAt ?: now,
+                syncedAt = accepted.syncedAt?.takeIf { DateUtils.parseISO8601(it) != null } ?: now,
                 serverVersion = accepted.serverVersion,
                 pushedModifiedAt = modifiedAt,
             )
@@ -339,7 +369,7 @@ class SyncService(
     /** Deletions and saved searches go in one small request after the notes. */
     private suspend fun pushOthers(deletions: List<NoteDeletion>, searches: List<SavedSearch>) {
         if (deletions.isEmpty() && searches.isEmpty()) return
-        syncClient.push(
+        val response = syncClient.push(
             SyncPushRequest(
                 notes = emptyList(),
                 attachments = emptyList(),
@@ -360,6 +390,11 @@ class SyncService(
                 },
             )
         )
+        // A refused deletion is dropped like an accepted one. Sending it again would
+        // only re-announce the note to every device, and it returns through the pull.
+        response.rejectedDeletions?.takeIf { it.isNotEmpty() }?.let {
+            Log.i(TAG, "${it.size} deletion(s) refused: those notes have newer edits")
+        }
         deletions.forEach { syncRepo.removeDeletion(it.id) }
         val now = DateUtils.nowISO8601()
         searches.forEach { savedSearchRepo.markSynced(it.id, now, it.modifiedAt) }
@@ -367,43 +402,89 @@ class SyncService(
 
     // MARK: - Pull
 
+    /** What applying one page needs, and what it leaves for afterwards. */
+    private class PullPage(
+        val syncedAt: String?,
+        val key: SecretKey,
+        val conflictsById: MutableMap<String, StoredConflict>,
+        val pendingDeletions: Map<String, NoteDeletion>,
+    ) {
+        val raised = mutableListOf<StoredConflict>()
+        val droppedBlobs = mutableSetOf<String>()
+    }
+
     /**
-     * Fetch remote changes. Every page is checked at the boundary and written in
-     * one transaction. The watermark moves only after every page has succeeded,
-     * and it is the server's clock, because the server filters on its own.
+     * Fetch remote changes, following "Moving a client to the cursor" in
+     * docs/sync-protocol.md. Each page is checked at the boundary and written in one
+     * transaction, along with the cursor, so a crash repeats at most one page. Against
+     * a server with no cursor the same loop pages by offset, and the watermark moves
+     * only once every page has succeeded. The watermark is always the server's clock,
+     * because the server filters on its own.
      *
-     * @param fullPull ignore the watermark and fetch everything again.
+     * @param fullPull ignore the cursor and watermark and fetch everything again.
      */
     suspend fun pull(fullPull: Boolean = false): Int {
         onSyncStatusChanged?.invoke("Pulling…")
         try {
             val key = requireKey()
             quarantined = 0
+            binned = 0
             val syncMeta = syncRepo.getSyncMetadata()
-            val lastSyncAt = if (fullPull) null else syncMeta?.lastSyncAt
-            val knownNoteIds = noteRepo.listIdsAndAttachmentBlobIds().map { it.first }.toMutableList()
+            var cursor = if (fullPull) "" else syncMeta?.pullCursor.orEmpty()
+            var lastSyncAt = if (fullPull) null else syncMeta?.lastSyncAt
+            // Nothing to repair if this already fetches everything, or it's been done
+            var fullPullDone = lastSyncAt == null || syncMeta?.cursorAdopted == true
             // Blobs actually held, not ones merely referenced: a note can arrive
             // before its blob, and the server skips whatever is listed here.
             val knownBlobIds = attachmentRepo.listBlobIds().toMutableList()
+            val pendingDeletions = syncRepo.listDeletions().associateBy { it.id }
             var watermark: String? = null
             val conflictsById = syncRepo.listStoredConflicts().associateBy { it.id }.toMutableMap()
 
             var offset = 0
+            var limit = PULL_PAGE_SIZE
             var hasMore = true
+            var finished = true
+            var pages = 0
             var totalNewCount = 0
 
             while (hasMore) {
+                if (++pages > MAX_PULL_PAGES) {
+                    Log.w(TAG, "Stopped a pull after $MAX_PULL_PAGES pages")
+                    finished = false
+                    break
+                }
                 val request = SyncPullRequest(
+                    cursor = cursor,
                     lastSyncAt = lastSyncAt,
-                    knownNoteIds = knownNoteIds,
+                    knownNoteIds = emptyList(),
                     knownAttachmentIds = knownBlobIds,
-                    limit = 100,
+                    limit = limit,
                     offset = offset,
                 )
 
-                val response = syncClient.pull(request)
+                val response = try {
+                    syncClient.pull(request)
+                } catch (e: OutOfMemoryError) {
+                    // A page of large blobs. Fewer changes per page is the only way on
+                    if (limit == 1) throw java.io.IOException("A single change is too large to pull")
+                    limit = (limit / 4).coerceAtLeast(1)
+                    Log.w(TAG, "Pull page too large for memory, trying $limit at a time")
+                    continue
+                }
+                val nextCursor = response.nextCursor?.takeIf(::isUsableCursor)
 
-                Log.d(TAG, "Pull page: offset=$offset, notes=${response.notes.size}, " +
+                // First sight of a cursor. Timestamp pulls can have skipped changes
+                // silently, so this once start again from nothing. Sending that any
+                // earlier would make an older server re-send everything on every sync.
+                if (nextCursor != null && !fullPullDone) {
+                    fullPullDone = true
+                    cursor = ""
+                    lastSyncAt = null
+                    continue
+                }
+
+                Log.d(TAG, "Pull page: notes=${response.notes.size}, " +
                     "attachments=${response.attachments.size}, hasMore=${response.hasMore}")
 
                 // The first page's time: later pages can't have missed anything
@@ -412,9 +493,10 @@ class SyncService(
                     watermark = response.syncedAt?.takeIf { DateUtils.parseISO8601(it) != null }
                 }
 
-                val raised = mutableListOf<StoredConflict>()
+                val page = PullPage(response.syncedAt, key, conflictsById, pendingDeletions)
 
-                // One transaction per page: a note never lands without its blobs
+                // One transaction per page: a note never lands without its blobs,
+                // and the cursor never moves past something that wasn't applied.
                 transaction {
                     for (syncNote in response.notes) {
                         if (!SyncValidator.isValidNote(syncNote)) {
@@ -422,11 +504,9 @@ class SyncService(
                             quarantined++
                             continue
                         }
-                        val sanitised = SyncValidator.sanitised(syncNote)
-                        if (processNote(sanitised, response.syncedAt, key, conflictsById, raised)) {
+                        if (processNote(SyncValidator.sanitised(syncNote), page)) {
                             totalNewCount++
                         }
-                        knownNoteIds.add(sanitised.id)
                     }
 
                     for (syncAtt in response.attachments) {
@@ -478,36 +558,55 @@ class SyncService(
 
                     response.savedSearches?.forEach { applySavedSearch(it) }
 
-                    response.deletions?.forEach { deletion ->
-                        if (!SyncValidator.isUuid(deletion.id)) return@forEach
-                        // A note with unsynced edits outranks the remote deletion
-                        if (!noteRepo.hardDeleteIfSynced(deletion.id)) {
-                            Log.d(TAG, "Kept note ${deletion.id}: local edits outrank the remote deletion")
-                        }
+                    response.deletions?.forEach { applyDeletion(it, page) }
+
+                    purger.deleteUnreferencedBlobs(page.droppedBlobs)
+
+                    if (nextCursor != null) {
+                        syncRepo.savePullCursor(nextCursor)
+                    } else {
+                        // An older server, or one that lost support: rely on the watermark
+                        syncRepo.clearPullCursor()
                     }
                 }
 
                 // Only announce conflicts once the page has committed
-                for (stored in raised) {
+                for (stored in page.raised) {
                     onConflictDetected?.invoke(describe(stored, key))
                 }
 
                 hasMore = response.hasMore ?: false
-                offset += response.notes.size
+                val madeNoProgress = if (nextCursor != null) {
+                    // A page can hold no notes and still have more behind it, so
+                    // the cursor is the only sign of progress.
+                    nextCursor == cursor
+                } else {
+                    response.notes.isEmpty()
+                }
+                if (nextCursor != null) cursor = nextCursor else offset += response.notes.size
 
-                // Safety: avoid infinite loop if server returns hasMore but no notes
-                if (hasMore && response.notes.isEmpty()) {
-                    Log.w(TAG, "Server says hasMore but returned 0 notes — breaking")
+                val pageBytes = response.attachments.sumOf { it.data.length.toLong() }
+                limit = when {
+                    pageBytes > PULL_PAGE_BYTES -> (limit / 2).coerceAtLeast(1)
+                    pageBytes < PULL_PAGE_BYTES / 4 -> (limit * 2).coerceAtMost(PULL_PAGE_SIZE)
+                    else -> limit
+                }
+
+                if (hasMore && madeNoProgress) {
+                    Log.w(TAG, "Server says there's more but made no progress: stopping")
+                    finished = false
                     break
                 }
             }
 
-            val now = DateUtils.nowISO8601()
-            syncRepo.updateLastPullAt(now)
-            watermark?.let { syncRepo.updateLastSyncAt(it) }
+            syncRepo.updateLastPullAt(DateUtils.nowISO8601())
+            if (finished) watermark?.let { syncRepo.updateLastSyncAt(it) }
 
-            Log.d(TAG, "Pull complete: $totalNewCount new notes across ${offset} total")
+            fetchMissingBlobs()
+
+            Log.d(TAG, "Pull complete: $totalNewCount new notes")
             if (quarantined > 0) onNotesQuarantined?.invoke(quarantined)
+            if (binned >= NOTABLE_BIN_COUNT) onManyNotesBinned?.invoke(binned)
             return totalNewCount
         } catch (e: Exception) {
             Log.e(TAG, "Pull failed: ${e.message}")
@@ -515,30 +614,95 @@ class SyncService(
         }
     }
 
+    private fun isUsableCursor(cursor: String): Boolean =
+        cursor.length <= MAX_CURSOR_LENGTH && cursor.all { it.code in 0x20..0x7E }
+
+    /**
+     * Fetch blobs that notes refer to but this device doesn't hold, such as a
+     * reference adopted from a conflict: a pull only sends blobs for the notes in
+     * it, so nothing else would ever bring them. Never fails the sync.
+     */
+    private suspend fun fetchMissingBlobs() {
+        val missing = noteRepo.allBlobIds() - attachmentRepo.listBlobIds().toSet() - unavailableBlobs
+        for (id in missing.take(MAX_BLOB_FETCHES)) {
+            try {
+                if (!SyncValidator.isUuid(id)) {
+                    unavailableBlobs += id
+                    continue
+                }
+                val attachment = syncClient.getAttachment(id)
+                val data = SyncValidator.decodeBlob(attachment)?.takeIf { attachment.id == id }
+                if (data == null) {
+                    unavailableBlobs += id
+                    continue
+                }
+                attachmentRepo.insertOrReplace(
+                    com.jottery.android.model.AttachmentRecord(
+                        id = id, filename = "", mimeType = "", size = data.size, data = data, uploaded = true,
+                    )
+                )
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: SyncClientException) {
+                if (e.statusCode == HTTP_NOT_FOUND) unavailableBlobs += id else return
+            } catch (e: Exception) {
+                Log.w(TAG, "Couldn't fetch a blob: ${e.javaClass.simpleName}")
+                return
+            }
+        }
+    }
+
+    /**
+     * Apply a deletion from the server, which isn't trusted: it could list every
+     * note. So the note goes to the bin rather than away, where it stays for the
+     * usual time by this device's clock. The same rule as the server's applies to a
+     * local edit: one made after the deletion wins, and goes back up with the next
+     * push. One made before it loses, but the bin still keeps it.
+     */
+    private suspend fun applyDeletion(deletion: SyncDeletion, page: PullPage) {
+        if (!SyncValidator.isUuid(deletion.id) || deletion.id in page.conflictsById) return
+        val deletedAt = DateUtils.parseISO8601(deletion.deletedAt) ?: return // Keeping can be undone
+        val local = noteRepo.getRaw(deletion.id) ?: return
+        if (local.needsSync) {
+            val editedAt = DateUtils.parseISO8601(local.modifiedAt)
+            if (editedAt == null || editedAt.isAfter(deletedAt)) {
+                Log.d(TAG, "Kept note ${deletion.id}: an edit here is newer than its deletion")
+                return
+            }
+        }
+        if (local.deleted && !local.needsSync) return
+        noteRepo.moveToBinForServer(deletion.id, local.deletedAt ?: deletion.deletedAt)
+        if (!local.deleted) binned++
+    }
+
     /**
      * Apply one pulled note. Returns true if it is new to this device.
      *
      * Nothing here may destroy a local edit: see [PullDecision].
      */
-    private suspend fun processNote(
-        syncNote: SyncNote,
-        syncedAt: String?,
-        key: SecretKey,
-        conflictsById: MutableMap<String, StoredConflict>,
-        raised: MutableList<StoredConflict>,
-    ): Boolean {
+    private suspend fun processNote(syncNote: SyncNote, page: PullPage): Boolean {
+        val key = page.key
+
+        // Deleted here and not yet pushed. A later edit from elsewhere still comes
+        // back, as it would on the server.
+        page.pendingDeletions[syncNote.id]?.let { deletion ->
+            val editedAt = DateUtils.parseISO8601(syncNote.modifiedAt)
+            val deletedAt = DateUtils.parseISO8601(deletion.deletedAt)
+            if (editedAt != null && deletedAt != null && !editedAt.isAfter(deletedAt)) return false
+        }
+
         // A note awaiting a decision stays as it is. The stored server side is
         // kept current, so choosing it can't adopt a version already overtaken.
-        conflictsById[syncNote.id]?.let { existing ->
+        page.conflictsById[syncNote.id]?.let { existing ->
             val updated = conflictFrom(syncNote, existing)
             syncRepo.saveConflict(updated)
-            conflictsById[syncNote.id] = updated
+            page.conflictsById[syncNote.id] = updated
             return false
         }
 
         val local = noteRepo.getRaw(syncNote.id)
         if (local == null) {
-            noteRepo.insertOrReplace(buildRecord(syncNote, syncedAt, key) ?: return false)
+            noteRepo.insertOrReplace(buildRecord(syncNote, page.syncedAt, key, null) ?: return false)
             return true
         }
 
@@ -562,36 +726,47 @@ class SyncService(
         when (action) {
             PullAction.SKIP -> Unit
             PullAction.FAST_FORWARD -> {
-                noteRepo.insertOrReplace(buildRecord(syncNote, syncedAt, key) ?: return false)
+                val remote = buildRecord(syncNote, page.syncedAt, key, local) ?: return false
+                noteRepo.insertOrReplace(remote)
+                recordReplaced(local, remote, page)
             }
             PullAction.FAST_FORWARD_KEEP_FLAGS -> {
-                val remote = buildRecord(syncNote, syncedAt, key) ?: return false
-                noteRepo.insertOrReplace(
-                    remote.copy(
-                        pinned = local.pinned,
-                        archived = local.archived,
-                        archivedAt = local.archivedAt,
-                        locked = local.locked,
-                        lockedAt = local.lockedAt,
-                        deleted = local.deleted,
-                        deletedAt = local.deletedAt,
-                        needsSync = true,
-                    )
+                val remote = buildRecord(syncNote, page.syncedAt, key, local) ?: return false
+                val merged = remote.copy(
+                    pinned = local.pinned,
+                    archived = local.archived,
+                    archivedAt = local.archivedAt,
+                    locked = local.locked,
+                    lockedAt = local.lockedAt,
+                    deleted = local.deleted,
+                    deletedAt = local.deletedAt,
+                    localDeletedAt = local.localDeletedAt,
+                    needsSync = true,
                 )
+                noteRepo.insertOrReplace(merged)
+                recordReplaced(local, merged, page)
             }
             PullAction.REPLACE_WITH_SNAPSHOT -> {
-                val remote = buildRecord(syncNote, syncedAt, key) ?: return false
+                val remote = buildRecord(syncNote, page.syncedAt, key, local) ?: return false
                 versionRepo.insertOrReplace(NoteVersionRecord.safetySnapshot(local, "pre-sync-overwrite"))
                 noteRepo.insertOrReplace(remote)
+                recordReplaced(local, remote, page)
             }
             PullAction.CONFLICT -> {
                 val stored = conflictFrom(syncNote, null)
                 syncRepo.saveConflict(stored)
-                conflictsById[syncNote.id] = stored
-                raised.add(stored)
+                page.conflictsById[syncNote.id] = stored
+                page.raised.add(stored)
             }
         }
         return false
+    }
+
+    /** Note what a replacement left behind: blobs to clear, and any move to the bin. */
+    private fun recordReplaced(before: NoteRecord, after: NoteRecord, page: PullPage) {
+        page.droppedBlobs += decodeRefs(before.attachments).map { it.data } -
+            decodeRefs(after.attachments).map { it.data }.toSet()
+        if (after.deleted && !before.deleted) binned++
     }
 
     private fun flagsDiffer(local: NoteRecord, remote: SyncNote): Boolean =
@@ -602,14 +777,21 @@ class SyncService(
             local.color != remote.color ||
             local.wordWrap != (remote.wordWrap ?: local.wordWrap) ||
             local.syntaxLanguage != (remote.syntaxLanguage ?: local.syntaxLanguage) ||
-            local.showPreview != (remote.showPreview ?: local.showPreview)
+            local.showPreview != (remote.showPreview ?: local.showPreview) ||
+            // Clients aren't consistent about advancing the hash for these either
+            decodeRefs(local.attachments).map { it.id }.toSet() != remote.attachments.map { it.id }.toSet()
 
     /**
      * Build a local row from a pulled note, or null to quarantine it: a note that
      * can't be read under this key must not replace anything or be stored with
      * its tags missing. Force Full Sync fetches it again.
      */
-    private fun buildRecord(syncNote: SyncNote, syncedAt: String?, key: SecretKey): NoteRecord? {
+    private fun buildRecord(
+        syncNote: SyncNote,
+        syncedAt: String?,
+        key: SecretKey,
+        local: NoteRecord?,
+    ): NoteRecord? {
         val tagsBlob = try {
             CryptoService.decrypt(CryptoService.parseEncryptedJSON(syncNote.content), key)
             syncTagsToStorageTags(syncNote.tags, key)
@@ -643,6 +825,12 @@ class SyncService(
             parentHash = syncNote.parentHash,
             hashChain = syncNote.hashChain?.let { json.encodeToString(it) },
             needsSync = false,
+            // Its time in the bin runs from when this device saw it go there
+            localDeletedAt = when {
+                !syncNote.deleted -> null
+                local?.deleted == true -> local.localDeletedAt ?: DateUtils.nowISO8601()
+                else -> DateUtils.nowISO8601()
+            },
         )
     }
 
@@ -835,8 +1023,16 @@ class SyncService(
                             stored.serverHashChain.orEmpty()
                         ).distinct().take(CryptoService.MAX_HASH_CHAIN_LENGTH)
 
+                    // This push will be authoritative, and keeping the local text
+                    // says nothing about attachments another device has added.
+                    val localRefs = decodeRefs(localRecord.attachments)
+                    val refs = localRefs + stored.serverAttachments.filter { server ->
+                        localRefs.none { it.id == server.id }
+                    }
+
                     noteRepo.updateRaw(
                         localRecord.copy(
+                            attachments = json.encodeToString(refs),
                             version = stored.serverVersion + 1,
                             parentHash = stored.serverContentHash,
                             hashChain = json.encodeToString(merged),
@@ -912,6 +1108,14 @@ class SyncService(
         json.decodeFromString(attachments)
     } catch (_: Exception) {
         emptyList()
+    }
+
+    /** A list that can't be read goes out empty, so it can't be called complete. */
+    private fun refsAreReadable(attachments: String): Boolean = try {
+        json.decodeFromString<List<AttachmentRef>>(attachments)
+        true
+    } catch (_: Exception) {
+        false
     }
 
     private suspend fun copyAttachment(ref: AttachmentRef): AttachmentRef {

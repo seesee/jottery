@@ -24,6 +24,12 @@ interface SyncMetadataDao {
     @Query("UPDATE sync_metadata SET last_pull_at = :pulledAt WHERE id = 1")
     suspend fun updateLastPullAt(pulledAt: String)
 
+    @Query("UPDATE sync_metadata SET pull_cursor = :cursor, cursor_adopted = 1 WHERE id = 1")
+    suspend fun savePullCursor(cursor: String)
+
+    @Query("UPDATE sync_metadata SET pull_cursor = NULL WHERE id = 1")
+    suspend fun clearPullCursor()
+
     @Query("UPDATE sync_metadata SET wrapped_key_opened = 1 WHERE id = 1")
     suspend fun markWrappedKeyOpened()
 

@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 5,
-    "identityHash": "1dd8b9b3130798a2756c5e5030fff50c",
+    "identityHash": "18fe1e3d3714822c0ea9533b3a9c9562",
     "entities": [
       {
         "tableName": "notes",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `created_at` TEXT NOT NULL, `modified_at` TEXT NOT NULL, `synced_at` TEXT, `content` TEXT NOT NULL, `tags` TEXT NOT NULL, `attachments` TEXT NOT NULL, `pinned` INTEGER NOT NULL, `archived` INTEGER NOT NULL, `archived_at` TEXT, `locked` INTEGER NOT NULL, `locked_at` TEXT, `deleted` INTEGER NOT NULL, `deleted_at` TEXT, `version` INTEGER NOT NULL, `word_wrap` INTEGER NOT NULL, `syntax_language` TEXT NOT NULL, `show_preview` INTEGER NOT NULL, `color` TEXT, `content_hash` TEXT, `parent_hash` TEXT, `hash_chain` TEXT, `needs_sync` INTEGER NOT NULL, `sync_hash` TEXT, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `created_at` TEXT NOT NULL, `modified_at` TEXT NOT NULL, `synced_at` TEXT, `content` TEXT NOT NULL, `tags` TEXT NOT NULL, `attachments` TEXT NOT NULL, `pinned` INTEGER NOT NULL, `archived` INTEGER NOT NULL, `archived_at` TEXT, `locked` INTEGER NOT NULL, `locked_at` TEXT, `deleted` INTEGER NOT NULL, `deleted_at` TEXT, `version` INTEGER NOT NULL, `word_wrap` INTEGER NOT NULL, `syntax_language` TEXT NOT NULL, `show_preview` INTEGER NOT NULL, `color` TEXT, `content_hash` TEXT, `parent_hash` TEXT, `hash_chain` TEXT, `needs_sync` INTEGER NOT NULL, `sync_hash` TEXT, `local_deleted_at` TEXT, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -141,6 +141,11 @@
           {
             "fieldPath": "syncHash",
             "columnName": "sync_hash",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "localDeletedAt",
+            "columnName": "local_deleted_at",
             "affinity": "TEXT"
           }
         ],
@@ -452,7 +457,7 @@
       },
       {
         "tableName": "sync_metadata",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `last_sync_at` TEXT, `last_push_at` TEXT, `last_pull_at` TEXT, `api_key` TEXT, `client_id` TEXT, `sync_enabled` INTEGER NOT NULL, `sync_endpoint` TEXT, `auto_sync_interval` INTEGER, `user_email` TEXT, `pending_registration_email` TEXT, `pending_device_name` TEXT, `user_id` TEXT, `wrapped_key_opened` INTEGER NOT NULL DEFAULT 0, `pending_wrapped_key` TEXT, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `last_sync_at` TEXT, `last_push_at` TEXT, `last_pull_at` TEXT, `api_key` TEXT, `client_id` TEXT, `sync_enabled` INTEGER NOT NULL, `sync_endpoint` TEXT, `auto_sync_interval` INTEGER, `user_email` TEXT, `pending_registration_email` TEXT, `pending_device_name` TEXT, `user_id` TEXT, `wrapped_key_opened` INTEGER NOT NULL DEFAULT 0, `pending_wrapped_key` TEXT, `pull_cursor` TEXT, `cursor_adopted` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -532,6 +537,18 @@
             "fieldPath": "pendingWrappedKey",
             "columnName": "pending_wrapped_key",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "pullCursor",
+            "columnName": "pull_cursor",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cursorAdopted",
+            "columnName": "cursor_adopted",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
           }
         ],
         "primaryKey": {
@@ -709,7 +726,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1dd8b9b3130798a2756c5e5030fff50c')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '18fe1e3d3714822c0ea9533b3a9c9562')"
     ]
   }
 }

@@ -33,6 +33,10 @@ class SyncRepository(
 
     suspend fun updateLastPullAt(pulledAt: String) = syncMetadataDao.updateLastPullAt(pulledAt)
 
+    suspend fun savePullCursor(cursor: String) = syncMetadataDao.savePullCursor(cursor)
+
+    suspend fun clearPullCursor() = syncMetadataDao.clearPullCursor()
+
     suspend fun markWrappedKeyOpened() = syncMetadataDao.markWrappedKeyOpened()
 
     suspend fun setPendingWrappedKey(blob: String?) = syncMetadataDao.setPendingWrappedKey(blob)

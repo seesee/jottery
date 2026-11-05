@@ -56,6 +56,8 @@ data class SyncPushRequest(
     val versions: List<SyncNoteVersion>,
     val deletions: List<SyncDeletion> = emptyList(),
     val savedSearches: List<SyncSavedSearch> = emptyList(),
+    /** Every note here carries its complete list, so the server can drop the rest. */
+    val attachmentsAuthoritative: Boolean = false,
 )
 
 @Serializable
@@ -68,6 +70,11 @@ data class SyncPushResponse(
      * Absent on older servers; the client re-pushes blobs it has (self-heal).
      */
     val attachmentWarnings: List<AttachmentWarning>? = null,
+    /**
+     * Deletions refused because the note has a newer edit, which comes back on
+     * the next pull. Absent on older servers, which never refuse one.
+     */
+    val rejectedDeletions: List<String>? = null,
 )
 
 /** One accepted note whose attachment references have no data on the server. */
@@ -114,6 +121,8 @@ data class SyncRejected(
 
 @Serializable
 data class SyncPullRequest(
+    /** Selects cursor mode, even when empty. An older server ignores it. */
+    val cursor: String? = null,
     val lastSyncAt: String? = null,
     val knownNoteIds: List<String>,
     val knownAttachmentIds: List<String>,
@@ -131,6 +140,8 @@ data class SyncPullResponse(
     val syncedAt: String? = null,
     val totalCount: Int? = null,
     val hasMore: Boolean? = null,
+    /** Only from a server that supports the cursor. Sent on every page if so. */
+    val nextCursor: String? = null,
 )
 
 // MARK: - Sync Note

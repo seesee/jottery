@@ -131,12 +131,20 @@ abstract class JotteryDatabase : RoomDatabase() {
 
         /**
          * Migration 4→5: remember what this device knows about the account's
-         * wrapped key. Every value starts empty, so existing rows are untouched.
+         * wrapped key and how far it has pulled, and when each note in the bin
+         * arrived there. Notes already in the bin get today, because their
+         * deleted_at may have come from the server: they stay a little longer.
          */
         internal val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE sync_metadata ADD COLUMN wrapped_key_opened INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE sync_metadata ADD COLUMN pending_wrapped_key TEXT")
+                db.execSQL("ALTER TABLE sync_metadata ADD COLUMN pull_cursor TEXT")
+                db.execSQL("ALTER TABLE sync_metadata ADD COLUMN cursor_adopted INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE notes ADD COLUMN local_deleted_at TEXT")
+                db.execSQL(
+                    "UPDATE notes SET local_deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE deleted = 1"
+                )
             }
         }
 

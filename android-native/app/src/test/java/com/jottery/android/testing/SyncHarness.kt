@@ -10,6 +10,7 @@ import com.jottery.android.database.repository.SavedSearchRepository
 import com.jottery.android.database.repository.SyncRepository
 import com.jottery.android.database.repository.VersionRepository
 import com.jottery.android.model.NoteRecord
+import com.jottery.android.model.SyncAttachment
 import com.jottery.android.model.SyncNote
 import com.jottery.android.model.SyncPullResponse
 import com.jottery.android.model.SyncPushResponse
@@ -44,6 +45,10 @@ class SyncHarness {
 
     var onPush: (String) -> SyncPushResponse = { SyncPushResponse(emptyList(), emptyList()) }
     var onPull: (String) -> SyncPullResponse = { emptyPull() }
+
+    /** Blobs the server will hand over one at a time, by id. */
+    val serverBlobs = mutableMapOf<String, String>()
+    val blobRequests = mutableListOf<String>()
     val pushBodies = mutableListOf<String>()
     val pullBodies = mutableListOf<String>()
 
@@ -60,7 +65,13 @@ class SyncHarness {
                         pullBodies += body
                         MockResponse().setBody(json.encodeToString(onPull(body)))
                     }
-                    else -> MockResponse().setResponseCode(404).setBody("{}")
+                    else -> {
+                        val id = request.path.orEmpty().substringAfter("/api/v1/sync/attachments/", "")
+                        blobRequests += id
+                        serverBlobs[id]?.let { data ->
+                            MockResponse().setBody(json.encodeToString(SyncAttachment(id, data)))
+                        } ?: MockResponse().setResponseCode(404).setBody("{}")
+                    }
                 }
             }
         }
@@ -70,7 +81,9 @@ class SyncHarness {
     val endpoint: String get() = server.url("/").toString().trimEnd('/')
     val client = SyncClient(endpoint, "test-api-key", "test-client")
 
-    fun service(): SyncService = SyncService(
+    fun service(
+        transaction: suspend (suspend () -> Unit) -> Unit = { block -> db.withTransaction { block() } },
+    ): SyncService = SyncService(
         syncClient = client,
         sseClient = SSEClient(endpoint, CoroutineScope(Dispatchers.Unconfined)),
         noteRepo = noteRepo,
@@ -80,7 +93,7 @@ class SyncHarness {
         savedSearchRepo = savedSearchRepo,
         keyProvider = { key },
         scope = CoroutineScope(Dispatchers.Unconfined),
-        transaction = { block -> db.withTransaction { block() } },
+        transaction = transaction,
     )
 
     fun close() {

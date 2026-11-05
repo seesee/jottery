@@ -1,12 +1,16 @@
 package com.jottery.android.network
 
 import com.jottery.android.model.*
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromStream
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import java.util.concurrent.TimeUnit
 
 /**
@@ -47,8 +51,30 @@ class SyncClient(
         return post("/api/v1/sync/push", request)
     }
 
+    /**
+     * Pull one page. The response can hold many blobs as base64, so it is decoded
+     * from the stream rather than read into a string first.
+     */
+    @OptIn(ExperimentalSerializationApi::class)
     suspend fun pull(request: SyncPullRequest): SyncPullResponse {
-        return post("/api/v1/sync/pull", request)
+        val body = json.encodeToString(request).toRequestBody(jsonMediaType)
+        val httpRequest = buildAuthRequest("/api/v1/sync/pull").post(body).build()
+        return client.newCall(httpRequest).execute().use { response ->
+            if (!response.isSuccessful) throw failure(response)
+            val stream = response.body?.byteStream() ?: throw SyncClientException("Empty response body")
+            json.decodeFromStream(stream)
+        }
+    }
+
+    /** A blob a pull didn't send. A caller must have checked [id] is a UUID. */
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun getAttachment(id: String): SyncAttachment {
+        val httpRequest = buildAuthRequest("/api/v1/sync/attachments/$id").get().build()
+        return client.newCall(httpRequest).execute().use { response ->
+            if (!response.isSuccessful) throw failure(response)
+            val stream = response.body?.byteStream() ?: throw SyncClientException("Empty response body")
+            json.decodeFromStream(stream)
+        }
     }
 
     suspend fun status(): SyncStatusResponse {
@@ -102,10 +128,8 @@ class SyncClient(
     suspend fun putWrappedKey(request: PutWrappedKeyRequest) {
         val jsonBody = json.encodeToString(request).toRequestBody(jsonMediaType)
         val httpRequest = buildAuthRequest("/api/v1/auth/wrapped-key").put(jsonBody).build()
-        val response = client.newCall(httpRequest).execute()
-        if (!response.isSuccessful) {
-            val body = response.body?.string() ?: ""
-            throw SyncClientException("HTTP ${response.code}: $body", response.code)
+        client.newCall(httpRequest).execute().use { response ->
+            if (!response.isSuccessful) throw failure(response)
         }
     }
 
@@ -132,44 +156,78 @@ class SyncClient(
 
     private inline fun <reified R> get(path: String): R {
         val request = buildAuthRequest(path).get().build()
-        val response = client.newCall(request).execute()
-        val body = response.body?.string() ?: throw SyncClientException("Empty response body")
-        if (!response.isSuccessful) {
-            throw SyncClientException("HTTP ${response.code}: $body", response.code)
-        }
-        return json.decodeFromString(body)
+        return decoded(client.newCall(request).execute())
     }
 
     private inline fun <reified T, reified R> post(path: String, payload: T): R {
         val jsonBody = json.encodeToString(payload).toRequestBody(jsonMediaType)
         val request = buildAuthRequest(path).post(jsonBody).build()
-        val response = client.newCall(request).execute()
-        val body = response.body?.string() ?: throw SyncClientException("Empty response body")
-        if (!response.isSuccessful) {
-            throw SyncClientException("HTTP ${response.code}: $body", response.code)
-        }
-        return json.decodeFromString(body)
+        return decoded(client.newCall(request).execute())
     }
 
     private inline fun <reified T, reified R> postUnauthenticated(path: String, payload: T): R {
         val jsonBody = json.encodeToString(payload).toRequestBody(jsonMediaType)
         val request = buildUnauthRequest(path).post(jsonBody).build()
-        val response = client.newCall(request).execute()
-        val body = response.body?.string() ?: throw SyncClientException("Empty response body")
-        if (!response.isSuccessful) {
-            throw SyncClientException("HTTP ${response.code}: $body", response.code)
-        }
-        return json.decodeFromString(body)
+        return decoded(client.newCall(request).execute())
+    }
+
+    private inline fun <reified R> decoded(response: Response): R = response.use {
+        if (!it.isSuccessful) throw failure(it)
+        val body = it.body?.string() ?: throw SyncClientException("Empty response body")
+        json.decodeFromString(body)
     }
 
     private fun delete(path: String) {
         val request = buildAuthRequest(path).delete().build()
-        val response = client.newCall(request).execute()
-        if (!response.isSuccessful) {
-            val body = response.body?.string() ?: ""
-            throw SyncClientException("HTTP ${response.code}: $body", response.code)
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw failure(response)
         }
+    }
+
+    /** Errors look like `{ error, code?, retryAfter? }`, but none of that is guaranteed. */
+    private fun failure(response: Response): SyncClientException {
+        val body = try {
+            response.body?.string().orEmpty()
+        } catch (_: java.io.IOException) {
+            ""
+        }
+        val parsed = try {
+            json.decodeFromString<ErrorBody>(body)
+        } catch (_: Exception) {
+            null
+        }
+        val retryAfter = response.header("Retry-After")?.trim()?.toLongOrNull() ?: parsed?.retryAfter
+        return SyncClientException(
+            message = "HTTP ${response.code}",
+            statusCode = response.code,
+            retryAfterSeconds = retryAfter?.takeIf { it > 0 }?.coerceAtMost(MAX_RETRY_AFTER_SECONDS),
+            code = parsed?.code?.take(MAX_CODE_LENGTH),
+            // Shown to the user, and the server is not trusted
+            serverMessage = parsed?.error?.filterNot { it.isISOControl() }?.take(MAX_MESSAGE_LENGTH),
+        )
+    }
+
+    @Serializable
+    private data class ErrorBody(
+        val error: String? = null,
+        val code: String? = null,
+        val retryAfter: Long? = null,
+    )
+
+    private companion object {
+        const val MAX_RETRY_AFTER_SECONDS = 3600L
+        const val MAX_MESSAGE_LENGTH = 300
+        const val MAX_CODE_LENGTH = 64
     }
 }
 
-class SyncClientException(message: String, val statusCode: Int? = null) : Exception(message)
+class SyncClientException(
+    message: String,
+    val statusCode: Int? = null,
+    /** How long the server asked us to wait, from a 429. */
+    val retryAfterSeconds: Long? = null,
+    /** The server's stable error code, if it sent one. */
+    val code: String? = null,
+    /** The server's own wording, cleaned for display. */
+    val serverMessage: String? = null,
+) : Exception(message)

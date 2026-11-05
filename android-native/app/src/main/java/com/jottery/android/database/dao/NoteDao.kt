@@ -19,7 +19,7 @@ private const val NOTE_COLUMNS = """id, created_at, modified_at, synced_at,
     CASE WHEN length(content) > $INLINE_CONTENT_LIMIT THEN '' ELSE content END AS content,
     tags, attachments, pinned, archived, archived_at, locked, locked_at, deleted, deleted_at,
     version, word_wrap, syntax_language, show_preview, color, content_hash, parent_hash,
-    hash_chain, needs_sync, sync_hash"""
+    hash_chain, needs_sync, sync_hash, local_deleted_at"""
 
 @Dao
 interface NoteDao {
@@ -59,13 +59,20 @@ interface NoteDao {
     suspend fun hardDelete(id: String)
 
     @Query("""
-        UPDATE notes SET deleted = 1, deleted_at = :deletedAt,
+        UPDATE notes SET deleted = 1, deleted_at = :deletedAt, local_deleted_at = :deletedAt,
         modified_at = :modifiedAt, needs_sync = 1 WHERE id = :id
     """)
     suspend fun softDelete(id: String, deletedAt: String, modifiedAt: String)
 
+    /** A deletion from the server: into the bin, with nothing left to send. */
     @Query("""
-        UPDATE notes SET deleted = 0, deleted_at = NULL,
+        UPDATE notes SET deleted = 1, deleted_at = :deletedAt, local_deleted_at = :localDeletedAt,
+        needs_sync = 0 WHERE id = :id
+    """)
+    suspend fun moveToBinForServer(id: String, deletedAt: String, localDeletedAt: String)
+
+    @Query("""
+        UPDATE notes SET deleted = 0, deleted_at = NULL, local_deleted_at = NULL,
         modified_at = :modifiedAt, needs_sync = 1 WHERE id = :id
     """)
     suspend fun restore(id: String, modifiedAt: String)
@@ -104,19 +111,23 @@ interface NoteDao {
         pushedModifiedAt: String,
     ): Int
 
-    /** Remote deletions must never destroy an edit the server has not seen. */
-    @Query("DELETE FROM notes WHERE id = :id AND needs_sync = 0")
-    suspend fun hardDeleteIfSynced(id: String): Int
-
     @Query("SELECT id, attachments FROM notes")
     suspend fun listIdsAndAttachments(): List<NoteIdAttachments>
 
     @Query("SELECT $NOTE_COLUMNS FROM notes")
     suspend fun listAll(): List<NoteRecord>
 
-    @Query("DELETE FROM notes WHERE deleted = 1 AND deleted_at < :cutoff")
-    suspend fun purgeOldDeleted(cutoff: String): Int
+    @Query("""
+        SELECT id, deleted_at AS deletedAt FROM notes
+        WHERE deleted = 1 AND COALESCE(local_deleted_at, deleted_at) < :cutoff
+    """)
+    suspend fun listExpiredDeleted(cutoff: String): List<ExpiredNote>
 }
+
+data class ExpiredNote(
+    val id: String,
+    val deletedAt: String?,
+)
 
 data class NoteIdAttachments(
     val id: String,

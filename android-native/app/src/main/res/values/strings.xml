@@ -276,6 +276,13 @@
     <string name="password_mismatch">Those passwords don\'t match.</string>
     <string name="connect_confirm_password">Confirm encryption password</string>
     <string name="connect_confirm_password_help">This account has no encryption key yet, so this password is new. It can\'t be recovered if lost.</string>
+    <plurals name="sync_notes_binned">
+        <item quantity="one">Your server deleted %1$d note. It\'s in the bin for 30 days if you didn\'t expect this.</item>
+        <item quantity="other">Your server deleted %1$d notes. They\'re in the bin for 30 days if you didn\'t expect this.</item>
+    </plurals>
+    <string name="bin_delete_title">Delete permanently?</string>
+    <string name="bin_delete_message">This note will be deleted on all your devices. This can\'t be undone.</string>
+    <string name="bin_delete_confirm">Delete</string>
     <plurals name="sync_notes_quarantined">
         <item quantity="one">%1$d note from the server couldn\'t be read and was skipped. It may have been encrypted with a different key.</item>
         <item quantity="other">%1$d notes from the server couldn\'t be read and were skipped. They may have been encrypted with a different key.</item>

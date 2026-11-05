@@ -48,6 +48,7 @@ import com.jottery.android.service.VaultReKeyService
 import com.jottery.android.service.ExportService
 import com.jottery.android.service.ImportService
 import com.jottery.android.service.ImportStrategy
+import com.jottery.android.service.NotePurger
 import com.jottery.android.service.SearchService
 import com.jottery.android.service.SyncValidator
 import com.jottery.android.service.SyncService
@@ -435,11 +436,13 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
         // Auto-purge deleted notes older than 30 days
         try {
-            val purged = noteRepo?.purgeOldDeletedNotes() ?: 0
+            val purged = purger()?.purgeExpired() ?: 0
             if (purged > 0) {
                 Log.i(TAG, "[Purge] Removed $purged deleted note(s) older than 30 days")
             }
-        } catch (_: Exception) { /* ignore */ }
+        } catch (e: Exception) {
+            Log.w(TAG, "[Purge] Failed: ${e.javaClass.simpleName}")
+        }
 
         Log.d(TAG, "[Sync] unlock: calling setupSync()")
         setupSync()
@@ -897,11 +900,24 @@ class AppState(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Permanently delete a note (hard delete, no recovery).
+     * Permanently delete notes: no recovery here, and a tombstone for every other
+     * device. Everything that went with them goes too.
      */
-    suspend fun permanentlyDeleteNote(id: String) {
-        val repo = noteRepo ?: return
-        repo.hardDelete(id)
+    suspend fun permanentlyDeleteNotes(ids: Collection<String>) {
+        val service = purger() ?: return
+        service.deletePermanently(ids)
+        scheduleDebouncedSync()
+    }
+
+    private fun purger(): NotePurger? {
+        val database = db ?: return null
+        return NotePurger(
+            noteRepo = noteRepo ?: return null,
+            versionRepo = versionRepo ?: return null,
+            attachmentRepo = attachmentRepo ?: return null,
+            syncRepo = syncRepo ?: return null,
+            transaction = { block -> database.withTransaction { block() } },
+        )
     }
 
     // MARK: - Saved Searches
@@ -967,7 +983,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             size = data.size,
             data = attachmentId,
         )
-        noteRepository.addAttachment(noteId = noteId, ref = ref)
+        noteRepository.addAttachment(noteId = noteId, ref = ref, key = key)
 
         refreshNote(noteId)
         scheduleDebouncedSync()
@@ -1004,11 +1020,11 @@ class AppState(application: Application) : AndroidViewModel(application) {
         val ref = note.attachments.firstOrNull { it.id == attachmentId } ?: return
 
         // Remove from note
-        noteRepository.removeAttachment(noteId = noteId, attachmentId = attachmentId)
+        noteRepository.removeAttachment(noteId = noteId, attachmentId = attachmentId, key = key)
 
-        // Delete blob
+        // The blob goes only if nothing else needs it: restoring a version might
         try {
-            attachmentRepository.delete(ref.data)
+            purger()?.deleteUnreferencedBlobs(setOf(ref.data))
         } catch (_: Exception) { /* ignore */ }
 
         refreshNote(noteId)
@@ -1404,6 +1420,8 @@ class AppState(application: Application) : AndroidViewModel(application) {
                 syncMeta.copy(
                     userId = connection.userId,
                     lastSyncAt = null,
+                    pullCursor = null,
+                    cursorAdopted = false,
                     wrappedKeyOpened = openedBlob,
                     pendingWrappedKey = null,
                 )
@@ -1682,6 +1700,12 @@ class AppState(application: Application) : AndroidViewModel(application) {
         }
         service.onConflictDetected = { conflict ->
             _pendingConflicts.value = _pendingConflicts.value.filter { it.id != conflict.id } + conflict
+        }
+        service.onManyNotesBinned = { count ->
+            showMessage(
+                getApplication<Application>().resources
+                    .getQuantityString(R.plurals.sync_notes_binned, count, count)
+            )
         }
 
         // Wire SSE to trigger sync on server-sent events
