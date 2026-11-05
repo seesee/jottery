@@ -351,7 +351,7 @@ final class AppState {
             let iterations = existingIterations ?? CryptoService.defaultIterations
 
             let (keyData, verificationJSON) = try await Task.detached(priority: .userInitiated) {
-                let key = CryptoService.deriveKey(password: password, salt: salt, iterations: iterations)
+                let key = try CryptoService.deriveKey(password: password, salt: salt, iterations: iterations)
 
                 let verificationEncrypted = try CryptoService.encryptText(
                     EncryptionMetadata.verificationPlaintext, key: key
@@ -377,7 +377,7 @@ final class AppState {
             let deviceSalt = CryptoService.generateSalt()
 
             let (localBlob, verificationJSON) = try await Task.detached(priority: .userInitiated) {
-                let deviceKey = CryptoService.deriveKey(
+                let deviceKey = try CryptoService.deriveKey(
                     password: password,
                     salt: deviceSalt,
                     iterations: CryptoService.defaultIterations
@@ -480,7 +480,7 @@ final class AppState {
                     #if DEBUG
                     let deriveStart = CFAbsoluteTimeGetCurrent()
                     #endif
-                    let deviceKey = CryptoService.deriveKey(
+                    let deviceKey = try CryptoService.deriveKey(
                         password: password,
                         salt: deviceSalt,
                         iterations: CryptoService.defaultIterations
@@ -534,7 +534,7 @@ final class AppState {
                     #if DEBUG
                     let deriveStart = CFAbsoluteTimeGetCurrent()
                     #endif
-                    let key = CryptoService.deriveKey(password: password, salt: saltData, iterations: iterations)
+                    let key = try CryptoService.deriveKey(password: password, salt: saltData, iterations: iterations)
                     #if DEBUG
                     Log.debug(String(format: "[Unlock] derive: %.1fms", (CFAbsoluteTimeGetCurrent() - deriveStart) * 1000))
                     let verifyStart = CFAbsoluteTimeGetCurrent()
@@ -678,11 +678,11 @@ final class AppState {
             let verificationJSON = metadata.verification
 
             return await Task.detached(priority: .userInitiated) {
-                let deviceKey = CryptoService.deriveKey(
+                guard let deviceKey = try? CryptoService.deriveKey(
                     password: password,
                     salt: deviceSalt,
                     iterations: CryptoService.defaultIterations
-                )
+                ) else { return false }
                 guard let wrapped = try? CryptoService.parseEncryptedJSON(wrappedJSON),
                       let unwrapped = try? CryptoService.unwrapMasterKey(wrapped, with: deviceKey) else {
                     return false
@@ -698,7 +698,9 @@ final class AppState {
             let db = self.db
 
             return await Task.detached(priority: .userInitiated) {
-                let key = CryptoService.deriveKey(password: password, salt: saltData, iterations: iterations)
+                guard let key = try? CryptoService.deriveKey(password: password, salt: saltData, iterations: iterations) else {
+                    return false
+                }
                 if let verificationJSON {
                     return AppState.verifyWithToken(verificationJSON, key: key)
                 }
@@ -1891,7 +1893,7 @@ final class AppState {
             }
 
             // Verify current password by unwrapping the master key
-            let currentDeviceKey = CryptoService.deriveKey(
+            let currentDeviceKey = try CryptoService.deriveKey(
                 password: currentPassword,
                 salt: deviceSalt,
                 iterations: CryptoService.defaultIterations
@@ -1947,8 +1949,8 @@ final class AppState {
 
             // Verify current password
             let currentIterations = UInt32(metadata.iterations)
-            let currentKey = await Task.detached(priority: .userInitiated) {
-                CryptoService.deriveKey(password: currentPassword, salt: saltData, iterations: currentIterations)
+            let currentKey = try await Task.detached(priority: .userInitiated) {
+                try CryptoService.deriveKey(password: currentPassword, salt: saltData, iterations: currentIterations)
             }.value
             if let verificationJSON = metadata.verification {
                 guard AppState.verifyWithToken(verificationJSON, key: currentKey) else {
@@ -1963,8 +1965,8 @@ final class AppState {
             // Generate new salt and derive new key
             let newSalt = CryptoService.generateSalt()
             let iterations = UInt32(metadata.iterations)
-            let newKey = await Task.detached(priority: .userInitiated) {
-                CryptoService.deriveKey(password: newPassword, salt: newSalt, iterations: iterations)
+            let newKey = try await Task.detached(priority: .userInitiated) {
+                try CryptoService.deriveKey(password: newPassword, salt: newSalt, iterations: iterations)
             }.value
 
             // Re-encrypt everything under the new key and store the new salt

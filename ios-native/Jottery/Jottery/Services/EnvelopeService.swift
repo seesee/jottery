@@ -34,7 +34,7 @@ enum EnvelopeService {
     /// `masterKeyData`, wrapped as it is on the server.
     private static func wrappedKeyBlob(password: String, userId: String, masterKeyData: Data) throws -> String {
         // Derive wrapping key from password + userId (1M iterations)
-        let wrappingKey = CryptoService.deriveWrappingKey(password: password, userId: userId)
+        let wrappingKey = try CryptoService.deriveWrappingKey(password: password, userId: userId)
         let serverWrapped = try CryptoService.wrapMasterKey(masterKeyData, with: wrappingKey)
         return try CryptoService.serializeEncryptedJSON(serverWrapped)
     }
@@ -207,7 +207,7 @@ enum EnvelopeService {
 
             // Generate device salt and derive device key for local wrapping
             let deviceSalt = CryptoService.generateSalt()
-            let deviceKey = CryptoService.deriveKey(
+            let deviceKey = try CryptoService.deriveKey(
                 password: password,
                 salt: deviceSalt,
                 iterations: CryptoService.defaultIterations
@@ -305,7 +305,7 @@ enum EnvelopeService {
         guard let serverWrapped = try? CryptoService.parseEncryptedJSON(response.blob) else {
             return .unreadable(updatedAt: response.updatedAt)
         }
-        let wrappingKey = CryptoService.deriveWrappingKey(password: password, userId: userId)
+        let wrappingKey = try CryptoService.deriveWrappingKey(password: password, userId: userId)
         guard let unwrapped = try? CryptoService.unwrapMasterKey(serverWrapped, with: wrappingKey) else {
             return .unreadable(updatedAt: response.updatedAt)
         }
@@ -469,7 +469,7 @@ enum EnvelopeService {
         localPassword: String
     ) throws -> (deviceSalt: String, localWrappedMaster: String, verification: String) {
         let deviceSalt = CryptoService.generateSalt()
-        let deviceKey = CryptoService.deriveKey(
+        let deviceKey = try CryptoService.deriveKey(
             password: localPassword,
             salt: deviceSalt,
             iterations: CryptoService.defaultIterations
@@ -664,7 +664,7 @@ enum EnvelopeService {
     ) throws {
         // Generate new device salt and derive new device key
         let newDeviceSalt = CryptoService.generateSalt()
-        let newDeviceKey = CryptoService.deriveKey(
+        let newDeviceKey = try CryptoService.deriveKey(
             password: newPassword,
             salt: newDeviceSalt,
             iterations: CryptoService.defaultIterations

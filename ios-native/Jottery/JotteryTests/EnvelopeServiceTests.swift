@@ -146,15 +146,15 @@ struct EnvelopeServiceTests {
     }
 
     private func wrap(_ masterKey: Data, with password: String) throws -> String {
-        let wrappingKey = CryptoService.deriveWrappingKey(password: password, userId: userId)
+        let wrappingKey = try CryptoService.deriveWrappingKey(password: password, userId: userId)
         return try CryptoService.serializeEncryptedJSON(
             CryptoService.wrapMasterKey(masterKey, with: wrappingKey)
         )
     }
 
     private func unwrap(_ blob: String, with password: String) -> Data? {
-        let wrappingKey = CryptoService.deriveWrappingKey(password: password, userId: userId)
-        guard let encrypted = try? CryptoService.parseEncryptedJSON(blob) else { return nil }
+        guard let wrappingKey = try? CryptoService.deriveWrappingKey(password: password, userId: userId),
+              let encrypted = try? CryptoService.parseEncryptedJSON(blob) else { return nil }
         return try? CryptoService.unwrapMasterKey(encrypted, with: wrappingKey)
     }
 

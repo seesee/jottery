@@ -697,7 +697,7 @@ enum BackupService {
                   let wrappedJSON = encryption.localWrappedMaster else {
                 throw BackupError.invalidSalt
             }
-            let deviceKey = CryptoService.deriveKey(
+            let deviceKey = try CryptoService.deriveKey(
                 password: password,
                 salt: deviceSalt,
                 iterations: CryptoService.defaultIterations
@@ -716,7 +716,7 @@ enum BackupService {
         guard let saltData = Data(base64Encoded: salt) else {
             throw BackupError.invalidSalt
         }
-        return CryptoService.deriveKey(password: password, salt: saltData, iterations: UInt32(iterations))
+        return try CryptoService.deriveKey(password: password, salt: saltData, iterations: UInt32(iterations))
     }
 
     // MARK: - JWE Compact Encryption

@@ -8,10 +8,30 @@ struct CryptoServiceTests {
 
     // MARK: - Key Derivation
 
-    @Test func keyDerivationDeterministic() {
+    // MARK: - What can't be allowed to fail quietly (R2-074)
+
+    /// A failure used to leave the output buffer as it was, which is a key of
+    /// zeros, and nothing would ever have shown it.
+    @Test func aKeyThatCantBeDerivedIsAnErrorNotAKeyOfZeros() throws {
+        #expect(throws: CryptoError.keyDerivationFailed) {
+            try CryptoService.deriveKey(password: "password", salt: Data(), iterations: 600_000)
+        }
+    }
+
+    @Test func randomKeysAndSaltsAreFullLengthAndDiffer() {
+        let keys = (0..<4).map { _ in CryptoService.generateMasterKey() }
+        let salts = (0..<4).map { _ in CryptoService.generateSalt() }
+
+        #expect(keys.allSatisfy { $0.count == CryptoService.keyLength })
+        #expect(salts.allSatisfy { $0.count == CryptoService.saltLength })
+        #expect(Set(keys + salts).count == 8)
+        #expect(!keys.contains(Data(count: CryptoService.keyLength)))
+    }
+
+    @Test func keyDerivationDeterministic() throws {
         let salt = CryptoService.generateSalt()
-        let key1 = CryptoService.deriveKey(password: "test-password", salt: salt, iterations: 100_000)
-        let key2 = CryptoService.deriveKey(password: "test-password", salt: salt, iterations: 100_000)
+        let key1 = try CryptoService.deriveKey(password: "test-password", salt: salt, iterations: 100_000)
+        let key2 = try CryptoService.deriveKey(password: "test-password", salt: salt, iterations: 100_000)
 
         // Same password + salt → same key
         let data1 = key1.withUnsafeBytes { Data($0) }
@@ -19,21 +39,21 @@ struct CryptoServiceTests {
         #expect(data1 == data2)
     }
 
-    @Test func keyDerivationDifferentPasswords() {
+    @Test func keyDerivationDifferentPasswords() throws {
         let salt = CryptoService.generateSalt()
-        let key1 = CryptoService.deriveKey(password: "password-a", salt: salt, iterations: 100_000)
-        let key2 = CryptoService.deriveKey(password: "password-b", salt: salt, iterations: 100_000)
+        let key1 = try CryptoService.deriveKey(password: "password-a", salt: salt, iterations: 100_000)
+        let key2 = try CryptoService.deriveKey(password: "password-b", salt: salt, iterations: 100_000)
 
         let data1 = key1.withUnsafeBytes { Data($0) }
         let data2 = key2.withUnsafeBytes { Data($0) }
         #expect(data1 != data2)
     }
 
-    @Test func keyDerivationDifferentSalts() {
+    @Test func keyDerivationDifferentSalts() throws {
         let salt1 = CryptoService.generateSalt()
         let salt2 = CryptoService.generateSalt()
-        let key1 = CryptoService.deriveKey(password: "same-password", salt: salt1, iterations: 100_000)
-        let key2 = CryptoService.deriveKey(password: "same-password", salt: salt2, iterations: 100_000)
+        let key1 = try CryptoService.deriveKey(password: "same-password", salt: salt1, iterations: 100_000)
+        let key2 = try CryptoService.deriveKey(password: "same-password", salt: salt2, iterations: 100_000)
 
         let data1 = key1.withUnsafeBytes { Data($0) }
         let data2 = key2.withUnsafeBytes { Data($0) }
@@ -43,7 +63,7 @@ struct CryptoServiceTests {
     // MARK: - Encrypt / Decrypt Text
 
     @Test func textRoundTrip() throws {
-        let key = testKey()
+        let key = try testKey()
         let plaintext = "Hello, World! This is a test message."
 
         let encrypted = try CryptoService.encryptText(plaintext, key: key)
@@ -53,14 +73,14 @@ struct CryptoServiceTests {
     }
 
     @Test func emptyStringRoundTrip() throws {
-        let key = testKey()
+        let key = try testKey()
         let encrypted = try CryptoService.encryptText("", key: key)
         let decrypted = try CryptoService.decryptText(encrypted, key: key)
         #expect(decrypted == "")
     }
 
     @Test func unicodeRoundTrip() throws {
-        let key = testKey()
+        let key = try testKey()
         let plaintext = "日本語テスト 🎉 Ñoño"
         let encrypted = try CryptoService.encryptText(plaintext, key: key)
         let decrypted = try CryptoService.decryptText(encrypted, key: key)
@@ -68,8 +88,8 @@ struct CryptoServiceTests {
     }
 
     @Test func decryptWithWrongKeyFails() throws {
-        let key1 = CryptoService.deriveKey(password: "key-one", salt: CryptoService.generateSalt(), iterations: 100_000)
-        let key2 = CryptoService.deriveKey(password: "key-two", salt: CryptoService.generateSalt(), iterations: 100_000)
+        let key1 = try CryptoService.deriveKey(password: "key-one", salt: CryptoService.generateSalt(), iterations: 100_000)
+        let key2 = try CryptoService.deriveKey(password: "key-two", salt: CryptoService.generateSalt(), iterations: 100_000)
 
         let encrypted = try CryptoService.encryptText("secret", key: key1)
 
@@ -81,7 +101,7 @@ struct CryptoServiceTests {
     // MARK: - Wire Format
 
     @Test func encryptedDataFormat() throws {
-        let key = testKey()
+        let key = try testKey()
         let encrypted = try CryptoService.encryptText("test", key: key)
 
         // Ciphertext should be valid base64
@@ -97,7 +117,7 @@ struct CryptoServiceTests {
     }
 
     @Test func jsonSerialisation() throws {
-        let key = testKey()
+        let key = try testKey()
         let encrypted = try CryptoService.encryptText("test", key: key)
 
         let json = try CryptoService.serializeEncryptedJSON(encrypted)
@@ -115,7 +135,7 @@ struct CryptoServiceTests {
     // MARK: - JSON Helpers
 
     @Test func jsonRoundTrip() throws {
-        let key = testKey()
+        let key = try testKey()
         let data = ["tag1", "tag2", "tag3"]
 
         let encrypted = try CryptoService.encryptStringArray(data, key: key)
@@ -200,8 +220,8 @@ struct CryptoServiceTests {
 
     // MARK: - Helpers
 
-    private func testKey() -> SymmetricKey {
+    private func testKey() throws -> SymmetricKey {
         let salt = Data(repeating: 0xAB, count: 32)
-        return CryptoService.deriveKey(password: "test-password", salt: salt, iterations: 100_000)
+        return try CryptoService.deriveKey(password: "test-password", salt: salt, iterations: 100_000)
     }
 }
