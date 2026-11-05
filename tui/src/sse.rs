@@ -369,7 +369,7 @@ mod tests {
     }
 
     fn config(endpoint: String) -> SseConfig {
-        SseConfig { endpoint, api_key: "device-api-key".to_string() }
+        SseConfig { endpoint, api_key: uuid::Uuid::new_v4().to_string() }
     }
 
     /// A token runs out after five minutes, so a reconnect can find it refused.

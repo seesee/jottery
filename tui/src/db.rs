@@ -54,6 +54,23 @@ impl Database {
 
         restrict_to_owner(path)?;
 
+        let mut db = Self::connect(path, password)?;
+
+        // Always run migrations (will skip already-applied migrations)
+        db.run_migrations()?;
+
+        Ok(db)
+    }
+
+    /// A second connection to a database this process already has open, for a thread of
+    /// its own. It leaves migrations alone: reading the schema version while the first
+    /// connection is busy could read as version 0, and start them all over again.
+    pub fn open_another(path: &Path, password: &str) -> Result<Self> {
+        Self::connect(path, password)
+    }
+
+    /// Open the file and give it its key.
+    fn connect(path: &Path, password: &str) -> Result<Self> {
         let conn = Connection::open_with_flags(
             path,
             OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_CREATE,
@@ -75,12 +92,7 @@ impl Database {
 
         debug!("SQLCipher encryption enabled");
 
-        let mut db = Self { conn };
-
-        // Always run migrations (will skip already-applied migrations)
-        db.run_migrations()?;
-
-        Ok(db)
+        Ok(Self { conn })
     }
 
     /// Whether this build encrypts the database file.

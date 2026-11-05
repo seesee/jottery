@@ -1275,7 +1275,12 @@ fn fetch_missing_blobs(run: &Run<'_>, limit: usize) {
                 }
             }
             Ok(None) => tracing::warn!("The server has no usable file for attachment {}", attachment.id),
-            Err(e) => tracing::warn!("Could not fetch attachment {}: {e}", attachment.id),
+            // A server that isn't answering won't answer the next one either, and each
+            // try could take as long as a request is allowed
+            Err(e) => {
+                tracing::warn!("Could not fetch attachment {}: {e}", attachment.id);
+                break;
+            }
         }
     }
 }
@@ -1489,7 +1494,7 @@ struct SyncJob {
 impl SyncJob {
     /// Do the work, on a database connection of this thread's own.
     fn run(self) -> Result<SyncReport> {
-        let db = Database::open(&self.db_path, &self.password)?;
+        let db = Database::open_another(&self.db_path, &self.password)?;
         let crypto = CryptoService::new();
         let log = |message: &str| crate::ui::app::write_debug_log(&self.debug_log, message);
 

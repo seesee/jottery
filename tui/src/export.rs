@@ -275,6 +275,11 @@ fn create_from_file(
     note.show_preview = Some(false);
 
     repo.create(&note, key)?;
+
+    // A date in a file says nothing about how long the note has been in this bin
+    if note.deleted {
+        repo.mark_arrived_in_bin(&note.id)?;
+    }
     Ok(failed)
 }
 

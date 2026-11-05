@@ -1036,6 +1036,12 @@ pub fn restore_backup(
 
                 let stored = note_repo.create(&note, &keys.vault_key)
                     .or_else(|_| note_repo.store(&note, &keys.vault_key));
+                // A backup can be old, and a note in its bin shouldn't vanish at the next
+                // unlock, with a tombstone behind it, because of a date from back then
+                let stored = stored.and_then(|()| match note.deleted {
+                    true => note_repo.mark_arrived_in_bin(&note.id),
+                    false => Ok(()),
+                });
                 match stored {
                     Ok(()) => summary.notes += 1,
                     Err(e) => {
@@ -1404,6 +1410,27 @@ mod tests {
             .unwrap();
 
         write_backup(&create_backup(&db, &keys.vault_key, None).unwrap(), &path).unwrap();
+    }
+
+    #[test]
+    fn a_restored_note_in_the_bin_gets_its_30_days_again() {
+        let (db, key, password) = envelope_vault();
+        let mut old = Note::new("Binned long ago".to_string());
+        old.deleted = true;
+        old.deleted_at = Some(Utc::now() - chrono::Duration::days(365));
+        let repo = NoteRepository::new(db.connection());
+        repo.create(&old, &key).unwrap();
+        repo.store(&old, &key).unwrap();
+        let backup = create_backup(&db, &key, None).unwrap();
+
+        let restored = empty_database();
+        restore_with(&restored, &backup, &password);
+
+        let repo = NoteRepository::new(restored.connection());
+        repo.purge_expired_bin(Utc::now() - chrono::Duration::days(30)).unwrap();
+        repo.purge_remote_deletions(Utc::now() - chrono::Duration::days(30)).unwrap();
+        assert!(repo.get(&old.id, &key).unwrap().is_some());
+        assert!(repo.get_pending_deletions().unwrap().is_empty());
     }
 
     /// Older web clients kept these in plaintext, and a backup holds what they kept.
