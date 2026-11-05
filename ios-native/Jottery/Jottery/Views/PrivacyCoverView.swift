@@ -63,6 +63,7 @@ final class PrivacyCoverController: NSObject {
         center.addObserver(self, selector: #selector(sceneWillDeactivate), name: UIScene.willDeactivateNotification, object: nil)
         center.addObserver(self, selector: #selector(sceneDidEnterBackground), name: UIScene.didEnterBackgroundNotification, object: nil)
         center.addObserver(self, selector: #selector(sceneDidActivate), name: UIScene.didActivateNotification, object: nil)
+        center.addObserver(self, selector: #selector(sceneDidDisconnect), name: UIScene.didDisconnectNotification, object: nil)
     }
 
     @objc private func sceneWillDeactivate(_ notification: Notification) {
@@ -80,6 +81,13 @@ final class PrivacyCoverController: NSObject {
     @objc private func sceneDidActivate(_ notification: Notification) {
         guard let scene = notification.object as? UIWindowScene else { return }
         lift(from: scene)
+    }
+
+    @objc private func sceneDidDisconnect(_ notification: Notification) {
+        guard let scene = notification.object as? UIWindowScene else { return }
+        let id = ObjectIdentifier(scene)
+        pendingLifts.removeValue(forKey: id)?.cancel()
+        windows[id] = nil
     }
 
     /// The window currently covering `scene`, if any.
