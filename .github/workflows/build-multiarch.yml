@@ -8,8 +8,10 @@ on:
   # jobs are gated on a tag ref below
   workflow_dispatch:
 
+# Read-only by default. Every job here runs third-party build code (npm packages,
+# crate build scripts, proc macros), and only make-release needs to write.
 permissions:
-  contents: write
+  contents: read
 
 env:
   SQLX_OFFLINE: "true"
@@ -28,6 +30,8 @@ jobs:
     # The Linux TUI uses bundled SQLite and rustls, so no C libraries are needed.
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Install Rust targets
         run: |
@@ -76,6 +80,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: Swatinem/rust-cache@v2
 
       - name: Install SQLCipher
@@ -102,6 +108,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: Swatinem/rust-cache@v2
 
       - name: Build Windows TUI
@@ -126,6 +134,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -133,8 +143,10 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      # Lifecycle scripts stay off: nothing here needs them, and a compromised
+      # package could otherwise alter dist before it's zipped.
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Build web app
         run: npm run build
@@ -175,6 +187,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -220,6 +234,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Prepare releases directory
         run: mkdir -p releases
@@ -264,11 +280,15 @@ jobs:
     needs: [collect-tui, docker-build, web-app]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.run_number) }}
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Download release ZIP and TUI files
         uses: actions/download-artifact@v4

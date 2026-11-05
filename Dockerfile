@@ -13,7 +13,8 @@ ENV npm_config_fetch_retries=5 \
 
 # Only copy web client deps first for caching
 COPY package.json package-lock.json ./
-# Use --ignore-scripts to skip Electron postinstall scripts (not needed for Docker builds)
+# Lifecycle scripts stay off: the build doesn't need them, and they would run
+# third-party code with access to everything in this stage.
 RUN npm ci --ignore-scripts || npm ci --ignore-scripts
 
 # Copy rest of web client source
@@ -43,7 +44,7 @@ ENV npm_config_fetch_retries=5 \
 
 # Copy admin dashboard deps first for caching
 COPY admin/package.json admin/package-lock.json ./
-RUN npm ci || npm ci
+RUN npm ci --ignore-scripts || npm ci --ignore-scripts
 
 # Copy rest of admin dashboard source
 COPY admin/src ./src

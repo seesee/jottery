@@ -23,6 +23,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       # Package.resolved holds the Runestone pin, which the iOS 26 SDK needs,
       # so resolution must not move it.
