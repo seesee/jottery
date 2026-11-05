@@ -270,6 +270,32 @@ jottery
 - Manual sync: Press `s` → navigate to "Sync Now" → press `Enter`
 - Sync settings available in the settings panel (`s` key)
 
+## Passwords on the Command Line
+
+Commands prompt for a password when they need one. For scripts, pipe it in with
+`--password-stdin` (one password per line, ahead of anything else on stdin), or set
+`JOTTERY_PASSWORD`, `JOTTERY_ACCOUNT_PASSWORD` or `JOTTERY_KEY_PASSWORD`.
+
+`--password` still works, but it's visible in `ps` and your shell history, so it's
+deprecated and says so.
+
+## Temporary Files
+
+An editor, a pager or a viewer can only work on a file, so a note or attachment leaves the
+vault while it's open. It goes in a private folder (`0700`), under `$XDG_RUNTIME_DIR` or
+`/dev/shm` where there is one, so that it stays in memory. Elsewhere, including macOS, it's
+in the system temp folder on disk, and Jottery says so the first time.
+
+The folder is emptied when the file closes, and if Jottery gets SIGHUP, SIGTERM or SIGINT,
+as it does when an SSH connection drops. If it's killed outright, or the power goes, the
+next run clears up.
+
+vim and neovim are started with swap, backup, undo and viminfo turned off. Other editors
+keep their own copies, and those are up to you. Side files beside the note go with the
+folder, such as nano's `.save` and emacs's `file~` and `#file#`, but anything an editor
+keeps elsewhere doesn't. Check your editor's settings if that matters, for example
+`backup-directory-alist` and `auto-save-file-name-transforms` in emacs.
+
 ## Search Syntax
 
 The search bar supports powerful query syntax:
@@ -279,6 +305,7 @@ The search bar supports powerful query syntax:
 #tagname                    # Notes with this tag
 #tag1 #tag2                 # Notes with both tags (AND)
 #tag1 | #tag2               # Notes with either tag (OR)
+-#tagname                   # Notes without this tag
 ```
 
 ### Text Search
@@ -288,13 +315,27 @@ dog                         # Contains "dog"
 dog cat                     # Contains both words (AND)
 dog | cat                   # Contains either word (OR)
 -cat                        # Does NOT contain "cat"
+-"exact phrase"             # Does NOT contain this phrase
 ```
 
 ### Wildcards
 ```
-dog*                        # Starts with "dog"
-*dog                        # Ends with "dog"
+dog*                        # A word starts with "dog"
+*dog                        # A word ends with "dog"
 *dog*                       # Contains "dog" anywhere
+```
+
+### Modifiers
+```
+has:attachment              # Notes with attachments
+archived                    # Search the archive (archived:false for active notes)
+created:>2024-01-01         # Created after a date
+created:<2024-06-30         # Created before a date
+created:2024-01-01..2024-06-30  # Created in a date range
+modified:>2024-01-01        # The same for the modified date
+words:>100                  # More than 100 words (also words:<50, words:50..200)
+color:red                   # This colour on the note or a tag (add note or tag to narrow it)
+category:important          # The same, by a colour's name
 ```
 
 ### Combined Queries
@@ -302,6 +343,9 @@ dog*                        # Starts with "dog"
 #work project -meeting      # Tagged #work, contains "project", not "meeting"
 #personal "family vacation" # Tagged #personal with exact phrase
 ```
+
+`jottery search` takes the same queries. The rules are shared with the other clients, and
+written down with test cases in `docs/search-query-fixture.json`.
 
 ## Markdown Rendering
 

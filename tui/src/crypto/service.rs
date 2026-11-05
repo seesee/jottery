@@ -7,6 +7,7 @@ use aes_gcm::{
 };
 use anyhow::{Context, Result};
 use base64::{engine::general_purpose, Engine as _};
+use hmac::{Hmac, Mac};
 use pbkdf2::pbkdf2_hmac_array;
 use sha2::{Digest, Sha256};
 
@@ -223,9 +224,13 @@ impl CryptoService {
         general_purpose::STANDARD.encode(result)
     }
 
-    /// Compute content hash for a note (for git-like conflict detection)
-    /// Matches web client implementation in src/lib/services/crypto.ts
-    pub fn compute_content_hash(&self, note: &crate::models::Note) -> String {
+    /// Compute content hash for a note (for git-like conflict detection).
+    ///
+    /// Other clients hash a note's ciphertext. Nothing compares a hash with what's in a
+    /// note, only with other hashes, so the value just has to change when the note does
+    /// and stay opaque. This device holds plaintext, and a plain hash of that would let
+    /// the server test guesses at short notes, so this one is keyed.
+    pub fn compute_content_hash(&self, note: &crate::models::Note, key: &[u8; KEY_LENGTH]) -> String {
         use serde_json::json;
 
         // Get sorted attachment IDs for consistent hashing
@@ -234,17 +239,24 @@ impl CryptoService {
             .collect();
         attachment_ids.sort();
 
-        // Build hash data matching web client structure
+        // The same fields as the web client's: everything that counts as a change
         let hash_data = json!({
             "content": note.content,
             "tags": note.tags,
             "attachments": attachment_ids,
             "pinned": note.pinned,
-            "syntaxLanguage": note.syntax_language.to_string(),
+            "archived": note.archived,
+            "locked": note.locked,
+            "syntaxLanguage": note.syntax_name(),
             "wordWrap": note.word_wrap,
+            "showPreview": note.show_preview.unwrap_or(false),
+            "color": note.color,
         });
 
-        self.hash(&hash_data.to_string())
+        let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(key).expect("HMAC takes a key of any length");
+        mac.update(b"jottery.content-hash\0");
+        mac.update(hash_data.to_string().as_bytes());
+        general_purpose::STANDARD.encode(mac.finalize().into_bytes())
     }
 
     // === Envelope Encryption Methods ===
@@ -644,6 +656,27 @@ mod tests {
         assert_ne!(key1, key3);
     }
 
+    /// One key for the tests below, generated at runtime as a key should be.
+    fn hash_key() -> &'static [u8; KEY_LENGTH] {
+        static KEY: std::sync::OnceLock<[u8; KEY_LENGTH]> = std::sync::OnceLock::new();
+        KEY.get_or_init(|| CryptoService::new().generate_master_key())
+    }
+
+    /// The server sees this hash. A plain hash of the text would let it test guesses.
+    #[test]
+    fn a_content_hash_depends_on_the_key() {
+        use crate::models::Note;
+
+        let service = CryptoService::new();
+        let note = Note::new("Short note".to_string());
+        let other_key = service.generate_master_key();
+
+        assert_ne!(
+            service.compute_content_hash(&note, hash_key()),
+            service.compute_content_hash(&note, &other_key),
+        );
+    }
+
     #[test]
     fn test_compute_content_hash_deterministic() {
         use crate::models::Note;
@@ -651,8 +684,8 @@ mod tests {
         let service = CryptoService::new();
         let note = Note::new("Test content".to_string());
 
-        let hash1 = service.compute_content_hash(&note);
-        let hash2 = service.compute_content_hash(&note);
+        let hash1 = service.compute_content_hash(&note, hash_key());
+        let hash2 = service.compute_content_hash(&note, hash_key());
 
         // Same note should produce same hash
         assert_eq!(hash1, hash2);
@@ -673,8 +706,8 @@ mod tests {
         // Use same ID to isolate content difference
         note2.id = note1.id.clone();
 
-        let hash1 = service.compute_content_hash(&note1);
-        let hash2 = service.compute_content_hash(&note2);
+        let hash1 = service.compute_content_hash(&note1, hash_key());
+        let hash2 = service.compute_content_hash(&note2, hash_key());
 
         assert_ne!(hash1, hash2);
     }
@@ -692,8 +725,8 @@ mod tests {
         note2.id = note1.id.clone();
         note2.tags = vec!["tag2".to_string()];
 
-        let hash1 = service.compute_content_hash(&note1);
-        let hash2 = service.compute_content_hash(&note2);
+        let hash1 = service.compute_content_hash(&note1, hash_key());
+        let hash2 = service.compute_content_hash(&note2, hash_key());
 
         assert_ne!(hash1, hash2);
     }
@@ -711,8 +744,8 @@ mod tests {
         note2.id = note1.id.clone();
         note2.pinned = true;
 
-        let hash1 = service.compute_content_hash(&note1);
-        let hash2 = service.compute_content_hash(&note2);
+        let hash1 = service.compute_content_hash(&note1, hash_key());
+        let hash2 = service.compute_content_hash(&note2, hash_key());
 
         assert_ne!(hash1, hash2);
     }
@@ -730,8 +763,8 @@ mod tests {
         note2.created_at = note1.created_at + Duration::hours(1);
         note2.modified_at = note1.modified_at + Duration::hours(1);
 
-        let hash1 = service.compute_content_hash(&note1);
-        let hash2 = service.compute_content_hash(&note2);
+        let hash1 = service.compute_content_hash(&note1, hash_key());
+        let hash2 = service.compute_content_hash(&note2, hash_key());
 
         // Timestamps should not affect hash
         assert_eq!(hash1, hash2);

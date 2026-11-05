@@ -17,13 +17,15 @@
     "status": "Durum",
     "created": "Oluşturulma",
     "saving": "Kaydediliyor...",
-    "deleting": "Siliniyor..."
+    "deleting": "Siliniyor...",
+    "passwordRules": "En az 12 karakter. Sunucu ayrıca büyük ve küçük harf, rakam ve sembol karışımı da isteyebilir."
   },
   "nav": {
     "dashboard": "Panel",
     "users": "Kullanıcılar",
     "settings": "Ayarlar",
-    "logout": "Çıkış yap"
+    "logout": "Çıkış yap",
+    "audit": "Denetim Günlüğü"
   },
   "login": {
     "title": "Jottery Admin",
@@ -54,7 +56,25 @@
     "rateLimited": "Çok fazla deneme yapıldı. {seconds} saniye sonra tekrar deneyin.",
     "tooManyAttempts": "Çok fazla deneme yapıldı. Lütfen bekleyip tekrar deneyin.",
     "passwordTooShort": "Yeni parola en az 12 karakter uzunluğunda olmalıdır",
-    "passwordSameAsCurrent": "Yeni parola mevcut paroladan farklı olmalıdır"
+    "passwordSameAsCurrent": "Yeni parola mevcut paroladan farklı olmalıdır",
+    "ownAdminRole": "Kendi yönetici yetkilerinizi kaldıramazsınız.",
+    "lastAdminDemote": "Son yöneticinin yetkisi düşürülemez.",
+    "ownAccountDelete": "Kendi hesabınızı buradan silemezsiniz.",
+    "lastAdminDelete": "Son yönetici silinemez.",
+    "userNotFound": "Kullanıcı bulunamadı.",
+    "deviceNotFound": "Cihaz bulunamadı.",
+    "quotaRange": "Depolama kotası 1 ile 100000 MB arasında olmalıdır.",
+    "maxUploadRange": "Maksimum yükleme boyutu 1 ile 1000 MB arasında olmalıdır.",
+    "inboxItemsRange": "Maksimum gelen kutusu öğesi 1 ile 10000 arasında olmalıdır.",
+    "inboxSizeRange": "Maksimum gelen kutusu boyutu 1 ile 1000 MB arasında olmalıdır.",
+    "passwordComplexity": "Parola, 4 karakter türünden en az {required} tanesini içermelidir. Eksik: {missing}.",
+    "passwordClass": {
+      "uppercase": "büyük harf",
+      "lowercase": "küçük harf",
+      "number": "rakam",
+      "special": "sembol"
+    },
+    "passwordTooLong": "Parola çok uzun."
   },
   "session": {
     "expired": "Oturumunuzun süresi doldu. Lütfen tekrar oturum açın."
@@ -146,7 +166,6 @@
       "newPasswordPlaceholder": "Yeni parolayı girin",
       "confirmPassword": "Parolayı Onayla",
       "confirmPasswordPlaceholder": "Yeni parolayı onaylayın",
-      "passwordRequirement": "En az 12 karakter",
       "passwordTooShort": "Parola en az 12 karakter uzunluğunda olmalıdır",
       "passwordMismatch": "Parolalar eşleşmiyor",
       "passwordResetSuccess": "{email} için parola başarıyla sıfırlandı",
@@ -156,7 +175,9 @@
       "passwordResetWarning": "Bu sadece hesap giriş parolasını değiştirir. Not şifrelemesini etkilemez. Kullanıcı şifreleme parolasını unutmuşsa, notları kurtarılamaz.",
       "inboxMaxItems": "Maks. gelen kutusu öğeleri",
       "inboxMaxSize": "Maks. gelen kutusu boyutu",
-      "items": "öğe"
+      "items": "öğe",
+      "passwordResetDevices": "Anahtarları parolaya bağlı olmadığı için bu kullanıcının cihazları sıfırlamadan sonra da senkronize olmaya devam eder.",
+      "revokeDevicesOption": "Hesap ele geçirilmiş olabilirse bu kullanıcının tüm cihaz anahtarlarını da iptal et"
     },
     "filters": {
       "all": "Tümü",
@@ -197,11 +218,15 @@
       "promoteToAdmin": "Yöneticiye terfi ettir",
       "demoteFromAdmin": "Yöneticiden indir",
       "messages": {
-        "delete": "{email} kullanıcısını kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+        "approve": "{email} onaylansın mı? Giriş yapabilecek ve cihaz kaydedebilecek.",
+        "deactivate": "{email} devre dışı bırakılsın mı? Yeniden etkinleştirilene kadar giriş yapamayacak ve senkronizasyon yapamayacak.",
+        "activate": "{email} etkinleştirilsin mi? Yeniden giriş yapabilecek ve senkronizasyon yapabilecek.",
+        "delete": "Bu işlem {email} kullanıcısını ve sunucunun bu kullanıcı için tuttuğu her şeyi kalıcı olarak siler: notlar, ekler, cihazlar ve hesap anahtarı. Geri alınamaz.",
         "promoteToAdmin": "{email} kullanıcısını yöneticiye terfi ettirmek istediğinizden emin misiniz? Tüm yönetim işlevlerine tam erişim elde edecekler.",
-        "demoteFromAdmin": "{email} kullanıcısının yönetici ayrıcalıklarını kaldırmak istediğinizden emin misiniz?",
-        "genericAction": "{email} kullanıcısı için {action} işlemini yapmak istediğinizden emin misiniz?"
-      }
+        "demoteFromAdmin": "{email} kullanıcısının yönetici ayrıcalıklarını kaldırmak istediğinizden emin misiniz?"
+      },
+      "deleteCounts": "Notlar: {notes} · Cihazlar: {devices}",
+      "typeEmail": "Onaylamak için kullanıcının e-posta adresini yazın:"
     },
     "toast": {
       "approved": "Kullanıcı {email} başarıyla onaylandı",
@@ -210,8 +235,14 @@
       "deleted": "Kullanıcı {email} silindi",
       "promotedToAdmin": "Kullanıcı {email} yöneticiye terfi ettirildi",
       "demotedFromAdmin": "Kullanıcı {email} yöneticiden indirildi",
-      "failedToAction": "Kullanıcı {action} işlemi başarısız oldu: {error}",
-      "failedGeneric": "Kullanıcı {action} işlemi başarısız oldu"
+      "failed": {
+        "approve": "Kullanıcı onaylanamadı: {error}",
+        "deactivate": "Kullanıcı devre dışı bırakılamadı: {error}",
+        "activate": "Kullanıcı etkinleştirilemedi: {error}",
+        "delete": "Kullanıcı silinemedi: {error}",
+        "promote": "Kullanıcı yöneticiye terfi ettirilemedi: {error}",
+        "demote": "Kullanıcının yönetici yetkileri kaldırılamadı: {error}"
+      }
     }
   },
   "settings": {
@@ -303,8 +334,15 @@
         "revoke": "Jetonu iptal et",
         "revokeConfirmTitle": "Gelen kutusu jetonunu iptal et",
         "revokeConfirmMessage": "Gelen kutusu jetonunuzu iptal etmek istiyor musunuz? Onu kullanan tüm entegrasyonlar çalışmayı durduracak.",
-        "cancel": "İptal"
-      }
+        "cancel": "İptal",
+        "generateSuccess": "Gelen kutusu jetonu oluşturuldu",
+        "generateFailed": "Jeton oluşturulamadı: {error}",
+        "revokeSuccess": "Gelen kutusu jetonu iptal edildi",
+        "revokeFailed": "Jeton iptal edilemedi, bu yüzden hâlâ çalışıyor: {error}",
+        "copySuccess": "Jeton kopyalandı",
+        "copyUnavailable": "Burada kopyalanamıyor. Jetonu seçip kendiniz kopyalayın."
+      },
+      "storageUsedNote": "Notları, not geçmişini ve ekleri içerir."
     },
     "devices": {
       "title": "Cihazlarınız",
@@ -334,7 +372,6 @@
       "currentPassword": "Mevcut parola",
       "newPassword": "Yeni parola",
       "confirmPassword": "Parolayı onayla",
-      "passwordHint": "Parola en az 12 karakter uzunluğunda olmalıdır",
       "updatePassword": "Parolayı güncelle",
       "passwordChanged": "Parola başarıyla değiştirildi",
       "dangerZone": "Tehlikeli bölge",
@@ -359,7 +396,42 @@
       "deleteNotesButton": "Delete Notes",
       "deleteNotesConfirmTitle": "Delete All Notes",
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
-      "notesDeleted": "All notes have been deleted from the server"
+      "notesDeleted": "All notes have been deleted from the server",
+      "passwordToConfirm": "Onaylamak için parolanızı girin:"
+    }
+  },
+  "audit": {
+    "title": "Denetim Günlüğü",
+    "description": "Yöneticilerin bu sunucuda yaptıklarının kalıcı kaydı.",
+    "loading": "Denetim günlüğü yükleniyor...",
+    "failedToLoad": "Denetim günlüğü yüklenemedi",
+    "empty": "Henüz hiçbir şey kaydedilmedi.",
+    "allActions": "Tüm işlemler",
+    "filterLabel": "Göster",
+    "commandLine": "Komut satırı",
+    "range": "{total} kayıttan {from}–{to}",
+    "previous": "Önceki",
+    "next": "Sonraki",
+    "table": {
+      "time": "Ne zaman",
+      "action": "İşlem",
+      "admin": "Yönetici",
+      "target": "Etkilenen",
+      "address": "Adres"
+    },
+    "actions": {
+      "userApprove": "Kullanıcı onaylandı",
+      "userDeactivate": "Kullanıcı devre dışı bırakıldı",
+      "userActivate": "Kullanıcı etkinleştirildi",
+      "userDelete": "Kullanıcı silindi",
+      "userPasswordReset": "Parola sıfırlandı",
+      "userAdminGrant": "Yöneticiye terfi ettirildi",
+      "userAdminRevoke": "Yöneticilikten indirildi",
+      "userSettingsUpdate": "Kullanıcı ayarları değiştirildi",
+      "deviceRevoke": "Cihaz iptal edildi",
+      "deviceDelete": "Cihaz silindi",
+      "deviceRename": "Cihaz yeniden adlandırıldı",
+      "adminPasswordChange": "Kendi parolasını değiştirdi"
     }
   }
 }

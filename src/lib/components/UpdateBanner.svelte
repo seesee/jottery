@@ -2,16 +2,19 @@
   import { _ } from 'svelte-i18n';
   import { updateAvailable, newVersionInfo, appUpdateService } from '../services';
   import { createBatchedBackup, downloadBackup } from '../services/backupService';
+  import { flushPendingSave } from '../utils/pendingSave';
 
   let isBackingUp = false;
 
-  function handleReload() {
+  async function handleReload() {
+    await flushPendingSave();
     appUpdateService.reloadApp();
   }
 
   async function handleBackupAndReload() {
     isBackingUp = true;
     try {
+      await flushPendingSave();
       const backup = await createBatchedBackup();
       downloadBackup(backup);
       // Give the download a moment to start before reloading

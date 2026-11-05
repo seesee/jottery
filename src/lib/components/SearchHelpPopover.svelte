@@ -15,7 +15,8 @@
   }
 
   function handleKeyDown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
+    // This stays mounted while closed, and must leave Escape to everything else then
+    if (show && event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
       onClose();

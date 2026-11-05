@@ -111,6 +111,16 @@ impl PasswordStorage for KeychainStorage {
         self.entry
             .set_password(password)
             .context("Failed to store password in keychain")?;
+
+        // Read it back through a new entry, as the next run would. A store that doesn't
+        // persist says it worked, and the user finds out at the next start.
+        let stored = Entry::new(SERVICE_NAME, ACCOUNT_NAME)
+            .and_then(|entry| entry.get_password())
+            .context("The keychain didn't keep the password")?;
+        if stored != password {
+            anyhow::bail!("The keychain didn't keep the password");
+        }
+
         Ok(())
     }
 

@@ -15,6 +15,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.jottery.android.R
 import com.jottery.android.viewmodel.AppState
+import com.jottery.android.viewmodel.AppStateError
 import kotlinx.coroutines.launch
 
 private val passwordKeyboard = KeyboardOptions(
@@ -36,14 +37,18 @@ fun ChangePasswordScreen(
     var successMessage by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val tooShortMessage = stringResource(R.string.password_too_short, AppState.MIN_NOTES_PASSWORD_LENGTH)
+    val mismatchMessage = stringResource(R.string.password_mismatch)
+    val doneMessage = stringResource(R.string.change_password_done)
+    val failedMessage = stringResource(R.string.change_password_failed)
+    val wrongPasswordMessage = stringResource(R.string.unlock_wrong_password)
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Change Password") },
+                title = { Text(stringResource(R.string.settings_change_password)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
             )
@@ -60,7 +65,7 @@ fun ChangePasswordScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
-                "All notes will be re-encrypted with the new password. This may take a moment.",
+                stringResource(R.string.change_password_detail),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -68,7 +73,7 @@ fun ChangePasswordScreen(
             OutlinedTextField(
                 value = currentPassword,
                 onValueChange = { currentPassword = it; errorMessage = null },
-                label = { Text("Current password") },
+                label = { Text(stringResource(R.string.change_password_current_password)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
@@ -78,7 +83,7 @@ fun ChangePasswordScreen(
             OutlinedTextField(
                 value = newPassword,
                 onValueChange = { newPassword = it; errorMessage = null },
-                label = { Text("New password") },
+                label = { Text(stringResource(R.string.change_password_new_password)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
@@ -88,7 +93,7 @@ fun ChangePasswordScreen(
             OutlinedTextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it; errorMessage = null },
-                label = { Text("Confirm new password") },
+                label = { Text(stringResource(R.string.change_password_confirm_new_password)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
@@ -106,7 +111,7 @@ fun ChangePasswordScreen(
             Button(
                 onClick = {
                     if (newPassword != confirmPassword) {
-                        errorMessage = "Passwords do not match."
+                        errorMessage = mismatchMessage
                         return@Button
                     }
                     if (newPassword.length < AppState.MIN_NOTES_PASSWORD_LENGTH) {
@@ -118,12 +123,16 @@ fun ChangePasswordScreen(
                     scope.launch {
                         try {
                             appState.changePassword(currentPassword, newPassword)
-                            successMessage = "Password changed successfully."
+                            successMessage = doneMessage
                             currentPassword = ""
                             newPassword = ""
                             confirmPassword = ""
+                        } catch (_: AppStateError.WrongPassword) {
+                            errorMessage = wrongPasswordMessage
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
                         } catch (e: Exception) {
-                            errorMessage = e.message ?: "Password change failed."
+                            errorMessage = failedMessage
                         } finally {
                             isChanging = false
                         }
@@ -137,7 +146,7 @@ fun ChangePasswordScreen(
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
                 }
-                Text("Change Password")
+                Text(stringResource(R.string.settings_change_password))
             }
         }
     }

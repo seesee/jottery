@@ -444,7 +444,7 @@
         "required": "Veuillez saisir le mot de passe de vos notes.",
         "incorrect": "Ce n'est pas le mot de passe qui déverrouille vos notes sur cet appareil. Saisissez le mot de passe des notes, pas celui du serveur.",
         "uploadFailed": "La synchronisation est configurée, mais la clé de chiffrement n'a pas pu être enregistrée sur le serveur, donc les autres appareils ne peuvent pas encore se connecter. Une nouvelle tentative aura lieu au prochain déverrouillage",
-        "mustDiffer": "Votre mot de passe des notes et celui de votre compte doivent être différents. Le serveur de synchronisation voit le mot de passe de votre compte : s'ils sont identiques, il pourrait lire vos notes. S'ils sont identiques sur vos autres appareils, changez d'abord le mot de passe des notes sur ceux-ci.",
+        "mustDiffer": "Votre mot de passe des notes et celui de votre compte doivent être différents. Le serveur de synchronisation voit le mot de passe de votre compte : s'ils sont identiques, il pourrait lire vos notes.",
         "matchesAccountWarning": "Votre mot de passe des notes est identique à celui de votre compte : le serveur de synchronisation pourrait donc lire vos notes. Changez votre mot de passe des notes pour corriger cela."
       },
       "existingAccountDetected": "Cette adresse e-mail a déjà un compte : cet appareil va donc s'y connecter. Saisissez le mot de passe des notes que vous utilisez sur vos autres appareils."
@@ -517,7 +517,9 @@
       "duplicateNote": "Dupliquer la note",
       "exportNote": "Exporter la note",
       "pressKey": "Appuyez sur une touche...",
-      "notSet": "Non défini"
+      "notSet": "Non défini",
+      "needsModifier": "Ce raccourci fonctionne pendant la saisie, il nécessite donc Ctrl, Cmd ou Alt. Appuyez sur une autre touche, ou sur Échap pour annuler.",
+      "reserved": "Cette touche est réservée. Appuyez sur une autre touche, ou sur Échap pour annuler."
     },
     "syncTab": {
       "enableSync": "Activer la synchronisation",
@@ -570,7 +572,8 @@
         "changing": "Modification du mot de passe...",
         "button": "Modifier le mot de passe",
         "success": "Mot de passe modifié avec succès",
-        "error": "Échec de la modification du mot de passe : {error}"
+        "error": "Échec de la modification du mot de passe : {error}",
+        "serverKeyFailed": "Votre mot de passe a été modifié sur cet appareil, mais le serveur n'a pas pu être mis à jour. Une nouvelle tentative aura lieu au prochain déverrouillage. D'ici là, un nouvel appareil aurait besoin de votre ancien mot de passe."
       },
       "connectionDetails": {
         "title": "Détails de connexion",
@@ -606,11 +609,12 @@
         "dangerZone": "Zone dangereuse",
         "deleteNotesDescription": "Supprimez toutes vos notes du serveur de synchronisation. Cette action ne peut pas être annulée. Vos notes locales NE seront PAS supprimées.",
         "deleteNotesButton": "Supprimer toutes les notes du serveur"
-      }
+      },
+      "disconnectNotRevoked": "Cet appareil est déconnecté, mais le serveur n'a pas pu être prévenu : il y figure toujours et sa clé fonctionne encore. Révoquez-le dans le portail utilisateur."
     },
     "advancedTab": {
       "importExport": "Importer/Exporter",
-      "exportDescription": "Exportez les notes au format JSON déchiffré. L'importation fusionnera les notes avec les données existantes.",
+      "exportDescription": "L'exportation crée une copie JSON non chiffrée pour déplacer vos notes ailleurs : toute personne ayant le fichier peut la lire. Pour une copie chiffrée, utilisez la sauvegarde. L'importation fusionne les notes avec celles déjà présentes.",
       "downloadClient": "Télécharger le client terminal/HTML",
       "downloadTerminalClient": "Télécharger le client terminal",
       "clientDescription": "Téléchargez le client terminal pour l'accès en ligne de commande, ou le client HTML pour une exécution locale depuis le système de fichiers",
@@ -638,7 +642,8 @@
       "aboutDescription": "Jottery est une application de bloc-notes auto-hébergée axée sur la confidentialité pour capturer, organiser et rechercher des notes avec du contenu riche, de la coloration syntaxique et du chiffrement.",
       "viewOnGithub": "Voir sur GitHub",
       "license": "Sous licence MIT."
-    }
+    },
+    "exportIncomplete": "L'exportation est incomplète : {notes} notes et {attachments} pièces jointes n'ont pas pu être lues et ont été omises."
   },
   "landing": {
     "languagePicker": {
@@ -934,7 +939,8 @@
         "encrypting": "Sécurisation des identifiants…",
         "syncing": "Démarrage de la synchronisation initiale…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "Votre mot de passe des notes a été modifié sur un autre appareil. Cet appareil se déverrouille toujours avec l'ancien mot de passe et vos notes sont en sécurité, mais les nouveaux appareils auront besoin du nouveau."
   },
   "lock": {
     "title": "Verrouiller l'application",
@@ -1194,7 +1200,11 @@
   },
   "sync": {
     "syncing": "Synchronisation...",
-    "syncProgress": "Synchronisation : {percentage}% terminé"
+    "syncProgress": "Synchronisation : {percentage}% terminé",
+    "notesRefused": "Certaines notes dépassent la limite d'envoi de votre compte et n'ont pas été synchronisées. Tout le reste l'a été.",
+    "accountDisabled": "Votre compte est désactivé ou en attente d'approbation, la synchronisation est donc arrêtée. Vos notes sur cet appareil sont en sécurité. Contactez votre administrateur.",
+    "storageQuotaExceeded": "Votre compte a atteint sa limite de stockage, les modifications de cet appareil ne peuvent donc pas être envoyées. Supprimez définitivement des notes ou des pièces jointes pour libérer de l'espace.",
+    "massDeletionHeld": "Le serveur a demandé la suppression de {count} notes d'un coup. Elles sont dans la corbeille au cas où cela ne viendrait pas de vous. Restaurez-les depuis celle-ci, ou videz-la si c'était voulu."
   },
   "inbox": {
     "title": "Boîte de réception",

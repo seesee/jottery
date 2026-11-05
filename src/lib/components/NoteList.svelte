@@ -56,6 +56,7 @@
   // Conflict resolution state
   let conflictNoteIds: Set<string> = new Set();
   let showConflictModal = false;
+  let conflictsLoaded = false;
   let conflictNoteId: string | undefined = undefined;
 
   // Load notes with conflicts - optimised to avoid blocking UI
@@ -63,6 +64,7 @@
     // Only check for conflicts if sync is enabled
     if (!$settings.syncEnabled) {
       conflictNoteIds = new Set();
+      conflictsLoaded = true;
       return;
     }
 
@@ -87,6 +89,7 @@
     }
 
     conflictNoteIds = conflicts;
+    conflictsLoaded = true;
   }
 
   function handleConflictClick(note: DecryptedNote) {
@@ -102,15 +105,29 @@
     }
   }
 
-  // Auto-trigger conflict resolution when selecting a conflicted note
-  $: if ($selectedNoteId && conflictNoteIds.has($selectedNoteId) && !showConflictModal) {
-    // Delay slightly to ensure the note selection completes first
-    setTimeout(() => {
-      if ($selectedNoteId && conflictNoteIds.has($selectedNoteId)) {
-        conflictNoteId = $selectedNoteId;
-        showConflictModal = true;
-      }
-    }, 100);
+  // Offer conflict resolution when a conflicted note is selected. This reacts to the
+  // selection changing, not to the state: otherwise closing the dialog reopens it, and
+  // a conflict arriving from a sync interrupts typing. The list badge opens it after that.
+  let lastSelectedNoteId: string | null = null;
+  let conflictOfferPending = false;
+  $: if ($selectedNoteId !== lastSelectedNoteId) {
+    lastSelectedNoteId = $selectedNoteId;
+    conflictOfferPending = !!$selectedNoteId;
+  }
+
+  // Waits for the list of conflicts, which a note restored at startup can arrive before
+  $: if (conflictOfferPending && conflictsLoaded) {
+    conflictOfferPending = false;
+    if ($selectedNoteId && conflictNoteIds.has($selectedNoteId) && !showConflictModal) {
+      const selected = $selectedNoteId;
+      // Delay slightly to ensure the note selection completes first
+      setTimeout(() => {
+        if ($selectedNoteId === selected) {
+          conflictNoteId = selected;
+          showConflictModal = true;
+        }
+      }, 100);
+    }
   }
 
   // Subscribe to sync state changes to reload conflicts after sync completes
@@ -609,6 +626,7 @@
             <div>
               {#if loadingNotes}
                 <!-- Loading state with progress -->
+                <span class="sr-only" role="status">{$_('common.loading')}</span>
                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <p class="text-lg mb-2">{$_('common.loading')}</p>
                 {#if loadingProgress.total > 0}
@@ -736,6 +754,7 @@
           <div>
             {#if loadingNotes}
               <!-- Loading state with progress -->
+              <span class="sr-only" role="status">{$_('common.loading')}</span>
               <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
               <p class="text-lg mb-2">{$_('common.loading')}</p>
               {#if loadingProgress.total > 0}

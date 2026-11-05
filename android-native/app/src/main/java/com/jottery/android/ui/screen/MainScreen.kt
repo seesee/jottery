@@ -22,11 +22,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -36,7 +38,11 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -57,6 +63,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -67,7 +74,10 @@ import com.jottery.android.model.SortOrder
 import com.jottery.android.ui.component.NoteEditorView
 import com.jottery.android.ui.component.NoteListView
 import com.jottery.android.ui.component.SearchBar
+import com.jottery.android.ui.component.enableBiometricUnlock
+import com.jottery.android.ui.component.sortOrderLabel
 import com.jottery.android.viewmodel.AppState
+import com.jottery.android.viewmodel.resolveSelectedNote
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -78,6 +88,7 @@ fun MainScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToConflicts: () -> Unit,
     onNavigateToInbox: () -> Unit,
+    onNavigateToSavedSearches: () -> Unit,
 ) {
     val conflicts by appState.pendingConflicts.collectAsState()
     val inboxItems by appState.inboxItems.collectAsState()
@@ -93,6 +104,7 @@ fun MainScreen(
     val syncEnabled by appState.syncEnabled.collectAsState()
     val showArchive by appState.showArchive.collectAsState()
     val userMessage by appState.userMessage.collectAsState()
+    val undoableDelete by appState.undoableDelete.collectAsState()
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -101,6 +113,19 @@ fun MainScreen(
             snackbarHostState.showSnackbar(it)
             appState.clearMessage()
         }
+    }
+
+    val deletedMessage = stringResource(R.string.note_deleted)
+    val undoLabel = stringResource(R.string.action_undo)
+    LaunchedEffect(undoableDelete) {
+        val id = undoableDelete ?: return@LaunchedEffect
+        val result = snackbarHostState.showSnackbar(
+            message = deletedMessage,
+            actionLabel = undoLabel,
+            duration = SnackbarDuration.Short,
+        )
+        if (result == SnackbarResult.ActionPerformed) appState.restoreNote(id)
+        appState.clearUndoableDelete()
     }
 
     // Derive counts from collected state
@@ -112,6 +137,12 @@ fun MainScreen(
     }
 
     var searchVisible by remember { mutableStateOf(false) }
+    var showSaveSearch by remember { mutableStateOf(false) }
+
+    // A saved search applied from its own screen has to be visible, and clearable
+    LaunchedEffect(searchQuery) {
+        if (searchQuery.isNotEmpty()) searchVisible = true
+    }
     var sortMenuExpanded by remember { mutableStateOf(false) }
     var overflowMenuExpanded by remember { mutableStateOf(false) }
 
@@ -124,9 +155,10 @@ fun MainScreen(
     val keyboardNeedsTheSpace = WindowInsets.isImeVisible &&
         windowSizeClass.windowHeightSizeClass == WindowHeightSizeClass.COMPACT
 
-    // Selected note for editor
-    val selectedNote = remember(selectedNoteId, notes) {
-        notes.firstOrNull { it.id == selectedNoteId }
+    // Selected note for editor. Not from the filtered list: a note must stay open
+    // when an edit stops it matching the search, and a new one matches nothing yet.
+    val selectedNote = remember(selectedNoteId, allNotes, archivedNotes) {
+        resolveSelectedNote(selectedNoteId, allNotes, archivedNotes)
     }
 
     // On narrow screens, back from editor deselects note
@@ -145,7 +177,7 @@ fun MainScreen(
             if (showListOnNarrow && !(keyboardNeedsTheSpace && selectedNote != null)) {
                 TopAppBar(
                     title = {
-                        Text(if (showArchive) "Archive" else "Jottery")
+                        Text(if (showArchive) stringResource(R.string.editor_archive) else "Jottery")
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,
@@ -153,13 +185,20 @@ fun MainScreen(
                     actions = {
                         // Search toggle
                         IconButton(onClick = { searchVisible = !searchVisible }) {
-                            Icon(Icons.Default.Search, contentDescription = "Search")
+                            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search_bar_search))
+                        }
+
+                        IconButton(onClick = onNavigateToSavedSearches) {
+                            Icon(
+                                Icons.Default.Bookmarks,
+                                contentDescription = stringResource(R.string.saved_searches_title),
+                            )
                         }
 
                         // Sort menu
                         Box {
                             IconButton(onClick = { sortMenuExpanded = true }) {
-                                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort")
+                                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(R.string.main_sort))
                             }
                             DropdownMenu(
                                 expanded = sortMenuExpanded,
@@ -167,7 +206,7 @@ fun MainScreen(
                             ) {
                                 SortOrder.entries.forEach { order ->
                                     DropdownMenuItem(
-                                        text = { Text(order.displayName) },
+                                        text = { Text(sortOrderLabel(order)) },
                                         onClick = {
                                             appState.setSortOrder(order)
                                             sortMenuExpanded = false
@@ -186,7 +225,7 @@ fun MainScreen(
                         // Overflow menu (settings, recycle bin, archive toggle, lock)
                         Box {
                             IconButton(onClick = { overflowMenuExpanded = true }) {
-                                Icon(Icons.Default.Settings, contentDescription = "More")
+                                Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.action_more))
                             }
                             DropdownMenu(
                                 expanded = overflowMenuExpanded,
@@ -194,7 +233,7 @@ fun MainScreen(
                             ) {
                                 DropdownMenuItem(
                                     text = {
-                                        Text(if (showArchive) "Show Notes" else "Show Archive")
+                                        Text(if (showArchive) stringResource(R.string.main_show_notes) else stringResource(R.string.main_show_archive))
                                     },
                                     onClick = {
                                         appState.toggleArchiveView()
@@ -217,7 +256,7 @@ fun MainScreen(
                                     )
                                 }
                                 DropdownMenuItem(
-                                    text = { Text("Recycle Bin") },
+                                    text = { Text(stringResource(R.string.recycle_bin_title)) },
                                     onClick = {
                                         overflowMenuExpanded = false
                                         onNavigateToRecycleBin()
@@ -227,7 +266,7 @@ fun MainScreen(
                                     },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Settings") },
+                                    text = { Text(stringResource(R.string.settings_title)) },
                                     onClick = {
                                         overflowMenuExpanded = false
                                         onNavigateToSettings()
@@ -237,7 +276,7 @@ fun MainScreen(
                                     },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Lock") },
+                                    text = { Text(stringResource(R.string.editor_lock)) },
                                     onClick = {
                                         overflowMenuExpanded = false
                                         appState.lock()
@@ -262,7 +301,7 @@ fun MainScreen(
                 ) {
                     Icon(
                         Icons.Default.Add,
-                        contentDescription = "New note",
+                        contentDescription = stringResource(R.string.main_new_note),
                         tint = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
@@ -286,6 +325,7 @@ fun MainScreen(
                 SearchBar(
                     query = searchQuery,
                     onQueryChange = { appState.setSearchQuery(it) },
+                    onSave = { showSaveSearch = true },
                     matchCount = filteredCount,
                     totalCount = noteCount,
                     showCounts = searchQuery.isNotEmpty(),
@@ -341,7 +381,7 @@ fun MainScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = "Select a note to edit",
+                                text = stringResource(R.string.main_select_a_note_to_edit),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -396,6 +436,70 @@ fun MainScreen(
             )
         }
     }
+
+    val offerBiometric by appState.offerBiometric.collectAsState()
+    if (offerBiometric) {
+        val context = LocalContext.current
+        AlertDialog(
+            onDismissRequest = { appState.dismissBiometricOffer() },
+            title = { Text(stringResource(R.string.biometric_offer_title)) },
+            text = { Text(stringResource(R.string.biometric_offer_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    appState.dismissBiometricOffer()
+                    enableBiometricUnlock(context, appState) { appState.showMessage(it) }
+                }) { Text(stringResource(R.string.biometric_offer_accept)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { appState.dismissBiometricOffer() }) {
+                    Text(stringResource(R.string.biometric_offer_decline))
+                }
+            },
+        )
+    }
+
+    if (showSaveSearch) {
+        SaveSearchDialog(
+            query = searchQuery,
+            onSave = { name ->
+                showSaveSearch = false
+                scope.launch { appState.saveSearch(name, searchQuery) }
+            },
+            onDismiss = { showSaveSearch = false },
+        )
+    }
+}
+
+/**
+ * Asks what to call a search before saving it.
+ */
+@Composable
+private fun SaveSearchDialog(
+    query: String,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var name by remember { mutableStateOf(query) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.saved_search_save_title)) },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(stringResource(R.string.saved_search_name)) },
+                singleLine = true,
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(name.trim()) }, enabled = name.isNotBlank()) {
+                Text(stringResource(R.string.action_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
 }
 
 /**

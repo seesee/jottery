@@ -20,6 +20,14 @@
 	}
 	respond @adminDenied 403
 
+	# Turn away an oversized request here rather than stream it to the server. The server
+	# has its own limits, far smaller on most routes. This matches the largest of them,
+	# the sync push: the entrypoint sets it from MAX_PAYLOAD_SIZE, so raising that raises
+	# both.
+	request_body {
+		max_size {$JOTTERY_MAX_BODY_SIZE:104857600}
+	}
+
 	# Security headers for the web client, the part that holds the decrypted vault.
 	# Proxied routes are left out because the server sets its own, and Caddy would
 	# otherwise send both.

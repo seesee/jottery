@@ -209,6 +209,26 @@ test.describe('Outliner Mode', () => {
 		await expect(page.locator('.outliner-editor')).toBeVisible();
 	});
 
+	test('should merge a line with text into the one before it on Backspace', async ({ page }) => {
+		const jp = new JotteryPage(page);
+		await jp.newNoteButton.click();
+		const languageSelect = page.locator('select').filter({ has: page.locator('option[value="outliner"]') });
+		await languageSelect.selectOption('outliner');
+
+		const firstNode = page.locator('.outliner-editor .content').first();
+		await typeInContentEditable(page, firstNode, 'first line');
+		await page.keyboard.press('Enter');
+		await page.waitForTimeout(200);
+		await page.keyboard.insertText('second line');
+		await page.keyboard.press('Home');
+
+		await page.keyboard.press('Backspace');
+
+		const nodes = page.locator('.outliner-editor .content');
+		await expect(nodes).toHaveCount(1);
+		await expect(nodes.first()).toHaveText('first linesecond line');
+	});
+
 	test('should delete empty node with Backspace', async ({ page }) => {
 		const jp = new JotteryPage(page);
 

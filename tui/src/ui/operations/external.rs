@@ -29,12 +29,42 @@ pub fn editor_command() -> String {
         .unwrap_or_else(|| t!("editor.default_editor").to_string())
 }
 
+/// Options that stop an editor keeping copies of the note outside the vault, for the
+/// editors known to take them. A swap file, a backup, undo history and viminfo all hold
+/// the text, and all of them outlive the temporary file.
+fn private_editing_args(program: &str) -> &'static [&'static str] {
+    const VIM: &[&str] = &["-n", "-i", "NONE", "--cmd", "set nobackup nowritebackup noundofile"];
+
+    let name = Path::new(program).file_stem().and_then(|name| name.to_str()).unwrap_or("");
+    match name {
+        "vim" | "nvim" | "gvim" | "mvim" => VIM,
+        // vi is often vim under another name, but a smaller vi would refuse these
+        "vi" if is_really_vim(program) => VIM,
+        _ => &[],
+    }
+}
+
+/// Whether the `vi` that would run is vim.
+fn is_really_vim(program: &str) -> bool {
+    let path = if program.contains(std::path::MAIN_SEPARATOR) {
+        Some(PathBuf::from(program))
+    } else {
+        find_on_path(program)
+    };
+
+    path.and_then(|path| std::fs::canonicalize(path).ok())
+        .and_then(|path| path.file_name().map(|name| name.to_string_lossy().contains("vim")))
+        .unwrap_or(false)
+}
+
 /// Open `file` in `editor` and wait for it to finish.
 pub fn run_editor(editor: &str, file: &Path) -> Result<()> {
     let (program, args) = parse_command(editor)?;
+    let private_args = private_editing_args(&program);
 
     let status = Command::new(program)
         .args(args)
+        .args(private_args)
         .arg(file)
         .status()
         .with_context(|| t!("editor.external_failed", error = editor).to_string())?;
@@ -103,6 +133,46 @@ mod tests {
     #[test]
     fn unbalanced_quotes_are_an_error() {
         assert!(parse_command("vi 'oops").is_err());
+    }
+
+    /// Vim's swap, backup, undo and viminfo files all hold the note's text.
+    #[test]
+    fn vim_is_told_to_keep_no_copies() {
+        for program in ["vim", "nvim", "/usr/local/bin/vim", "gvim"] {
+            let args = private_editing_args(program);
+            assert!(args.contains(&"-n"), "{program}");
+            assert!(args.contains(&"NONE"), "{program}");
+            assert!(args.iter().any(|arg| arg.contains("noundofile")), "{program}");
+        }
+    }
+
+    #[test]
+    fn an_editor_that_might_refuse_those_options_gets_none() {
+        for program in ["nano", "emacs", "code", "ed", "/opt/not-vim/editor"] {
+            assert!(private_editing_args(program).is_empty(), "{program}");
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_vi_that_is_not_vim_gets_none() {
+        let folder = tempfile::tempdir().unwrap();
+        let vi = folder.path().join("vi");
+        std::fs::write(&vi, "#!/bin/sh\n").unwrap();
+
+        assert!(private_editing_args(vi.to_str().unwrap()).is_empty());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_vi_that_is_vim_under_another_name_is_recognised() {
+        let folder = tempfile::tempdir().unwrap();
+        let vim = folder.path().join("vim");
+        std::fs::write(&vim, "#!/bin/sh\n").unwrap();
+        let vi = folder.path().join("vi");
+        std::os::unix::fs::symlink(&vim, &vi).unwrap();
+
+        assert!(!private_editing_args(vi.to_str().unwrap()).is_empty());
     }
 
     #[test]

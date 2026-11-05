@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { sanitiseHtml, escapeAttribute, escapeHtml } from './htmlSanitiser';
+import { FORBIDDEN_ELEMENTS, HOSTILE_HTML } from '../../test/hostileHtml';
 
 function parse(html: string): HTMLElement {
   return new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html').body;
@@ -37,6 +38,13 @@ describe('sanitiseHtml: elements', () => {
     const depth = 500;
     const html = '<div>'.repeat(depth) + '<img src=x onerror=1>' + '</div>'.repeat(depth);
     expect(sanitiseHtml(html)).not.toContain('onerror');
+  });
+
+  it('removes form controls and embeds along with what they hold', () => {
+    const elements = ['form', 'button', 'select', 'canvas', 'dialog', 'marquee', 'object', 'applet', 'datalist'];
+    for (const tag of elements) {
+      expect(sanitiseHtml(`a<${tag}>inside</${tag}>b`), tag).toBe('ab');
+    }
   });
 
   it('removes inputs other than checkboxes', () => {
@@ -77,6 +85,56 @@ describe('sanitiseHtml: attributes', () => {
   it('removes a target other than _blank', () => {
     const a = parse(sanitiseHtml('<a href="https://example.com" target="_top">x</a>')).querySelector('a');
     expect(a?.hasAttribute('target')).toBe(false);
+  });
+});
+
+describe('sanitiseHtml: what the preview depends on', () => {
+  it('keeps a heading id that is also the name of a document property', () => {
+    // `# Title` renders as id="title", and in-note anchors scroll to it
+    for (const id of ['title', 'body', 'images', 'links', 'forms', 'location']) {
+      expect(parse(sanitiseHtml(`<h2 id="${id}">x</h2>`)).querySelector('h2')?.id).toBe(id);
+    }
+  });
+
+  it('keeps data attributes whose values look like URLs', () => {
+    const body = parse(sanitiseHtml('<a href="note:x" data-note-id="Plans: 2026">y</a>'));
+    expect(body.querySelector('a')?.getAttribute('data-note-id')).toBe('Plans: 2026');
+  });
+
+  it('keeps plain attributes whose values contain a colon', () => {
+    const body = parse(sanitiseHtml('<time datetime="ten:30">x</time><p title="note: this">y</p><img alt="a: b" src="https://example.com/x.png">'));
+    expect(body.querySelector('time')?.getAttribute('datetime')).toBe('ten:30');
+    expect(body.querySelector('p')?.getAttribute('title')).toBe('note: this');
+    expect(body.querySelector('img')?.getAttribute('alt')).toBe('a: b');
+  });
+
+  it('removes data and aria attributes that are not on the list', () => {
+    const p = parse(sanitiseHtml('<p data-evil="1" aria-label="x">y</p>')).querySelector('p');
+    expect(p?.attributes.length).toBe(0);
+  });
+
+  it('removes an attribute allowed on one element from another', () => {
+    expect(parse(sanitiseHtml('<p href="https://example.com" src="https://example.com/x.png">x</p>')).querySelector('p')?.attributes.length).toBe(0);
+    expect(parse(sanitiseHtml('<div open colspan="2">x</div>')).querySelector('div')?.attributes.length).toBe(0);
+  });
+
+  it('keeps the markup syntax highlighting and task lists produce', () => {
+    const html = '<pre><code class="hljs language-ts"><span class="hljs-keyword">const</span> x</code></pre>'
+      + '<ul><li><input type="checkbox" checked disabled> done</li></ul>';
+    const body = parse(sanitiseHtml(html));
+    expect(body.querySelector('span.hljs-keyword')?.textContent).toBe('const');
+    expect(body.querySelector('input')?.hasAttribute('checked')).toBe(true);
+  });
+
+  it('keeps tables whole', () => {
+    const body = parse(sanitiseHtml('<table><colgroup><col span="2"></colgroup><thead><tr><th scope="col">a</th></tr></thead><tbody><tr><td colspan="2">b</td></tr></tbody></table>'));
+    expect(body.querySelector('thead th')?.textContent).toBe('a');
+    expect(body.querySelector('td')?.getAttribute('colspan')).toBe('2');
+    expect(body.querySelector('col')?.getAttribute('span')).toBe('2');
+  });
+
+  it('leaves escaped markup in code as text', () => {
+    expect(sanitiseHtml('<code>&lt;img src=x onerror=1&gt;</code>')).toBe('<code>&lt;img src=x onerror=1&gt;</code>');
   });
 });
 
@@ -125,6 +183,19 @@ describe('sanitiseHtml: URLs', () => {
   it('drops a javascript image source', () => {
     expect(parse(sanitiseHtml('<img src="javascript:1">')).querySelector('img')?.hasAttribute('src')).toBe(false);
   });
+
+  it('keeps the blob URLs attachments are shown from, on images only', () => {
+    const src = 'blob:https://example.com/abc';
+    expect(parse(sanitiseHtml(`<img src="${src}">`)).querySelector('img')?.getAttribute('src')).toBe(src);
+  });
+
+  it('drops an image source that is only valid for a link', () => {
+    expect(parse(sanitiseHtml('<img src="mailto:a@example.com">')).querySelector('img')?.hasAttribute('src')).toBe(false);
+  });
+
+  it('keeps an empty image source, which an unresolved attachment uses', () => {
+    expect(parse(sanitiseHtml('<img src="" data-attachment-id="x">')).querySelector('img')?.getAttribute('data-attachment-id')).toBe('x');
+  });
 });
 
 describe('sanitiseHtml: stability', () => {
@@ -148,6 +219,38 @@ describe('sanitiseHtml: stability', () => {
       )).toBe(false);
     });
   }
+});
+
+describe('sanitiseHtml: hostile markup', () => {
+  for (const sample of HOSTILE_HTML) {
+    it(`leaves nothing active in ${sample}`, () => {
+      const body = parse(sanitiseHtml(sample));
+      expect(body.querySelector(FORBIDDEN_ELEMENTS)).toBeNull();
+      for (const element of Array.from(body.querySelectorAll('*'))) {
+        expect(Array.from(element.attributes).filter(a => a.name.startsWith('on'))).toEqual([]);
+        expect(element.getAttribute('href') ?? '').not.toMatch(/^\s*(javascript|data):/i);
+        expect(element.getAttribute('src') ?? '').not.toMatch(/^\s*(javascript|data:text)/i);
+      }
+    });
+  }
+});
+
+describe('sanitiseHtml: without a usable DOM', () => {
+  it('escapes everything rather than handing the input back', async () => {
+    // DOMPurify returns its input untouched when it can't run. Failing open is
+    // the one thing a sanitiser mustn't do.
+    vi.resetModules();
+    vi.doMock('dompurify', () => ({
+      default: () => ({ isSupported: false, addHook: () => undefined, sanitize: (dirty: string) => dirty }),
+    }));
+    try {
+      const { sanitiseHtml: unsupported } = await import('./htmlSanitiser');
+      expect(unsupported('<img src=x onerror=1>')).toBe('&lt;img src=x onerror=1&gt;');
+    } finally {
+      vi.doUnmock('dompurify');
+      vi.resetModules();
+    }
+  });
 });
 
 describe('escaping helpers', () => {

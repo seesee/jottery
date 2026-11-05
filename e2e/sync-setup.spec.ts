@@ -69,6 +69,16 @@ async function wrappedRandomKey(page: Page, password: string): Promise<string> {
   }, { password, userId: USER_ID });
 }
 
+/** The account's real key: the one this vault already uses, wrapped with this password. */
+async function wrappedLocalKey(page: Page, password: string): Promise<string> {
+  return page.evaluate(async ({ password, userId }) => {
+    const { cryptoService } = await import('/src/lib/services/crypto.ts' as string);
+    const { keyManager } = await import('/src/lib/services/keyManager.ts' as string);
+    const wrappingKey = await cryptoService.deriveWrappingKey(password, userId);
+    return JSON.stringify(await cryptoService.wrapMasterKey(wrappingKey, keyManager.getMasterKey().keyBytes));
+  }, { password, userId: USER_ID });
+}
+
 test.describe('Sync setup', () => {
   let app: JotteryPage;
 
@@ -127,14 +137,18 @@ test.describe('Sync setup', () => {
       expect(server.calls.filter(call => call.includes('/auth/'))).toEqual([]);
     });
 
-    test('connecting is refused before anything reaches the server', async ({ page }) => {
+    test('connecting to an account where they already match warns, and connects', async ({ page }) => {
+      // Refusing would stop these users adding a device at all. They didn't choose
+      // either password here, and changing one is possible once they're in.
       const server = await fakeServer(page);
+      server.wrappedKey = await wrappedLocalKey(page, NOTES_PASSWORD);
       await openSetup(page);
 
       await fillExistingAccount(page, NOTES_PASSWORD, NOTES_PASSWORD);
 
-      await expect(page.getByText(/must be different/i)).toBeVisible({ timeout: 5000 });
-      expect(server.calls.filter(call => call.includes('/auth/'))).toEqual([]);
+      await expect(page.getByText(/same as your account password/i)).toBeVisible({ timeout: 15000 });
+      await expect(page.getByText(/must be different/i)).toHaveCount(0);
+      expect(await syncIsConfigured(page)).toBe(true);
     });
   });
 
@@ -240,3 +254,57 @@ test.describe('Sync setup', () => {
     });
   });
 });
+
+test.describe('Connecting a new device from the first screen', () => {
+  const blobFor = (page: Page, password: string) => wrappedRandomKey(page, password);
+
+  async function openConnectForm(page: Page) {
+    await page.getByText('Already using Jottery?').click();
+    await page.getByRole('button', { name: /Connect existing account/i }).first().click();
+    await page.locator('#connect-endpoint').fill(ENDPOINT);
+    await page.locator('#connect-email').fill('a@example.test');
+    await page.locator('#connect-server-password').fill(ACCOUNT_PASSWORD);
+  }
+
+  const submit = (page: Page, notesPassword: string) => async () => {
+    await page.locator('#connect-notes-password').fill(notesPassword);
+    await page.getByRole('button', { name: /Connect & Sync/ }).click();
+  };
+
+  test('survives a mistyped notes password, which is the likeliest mistake here', async ({ page }) => {
+    await page.goto('', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('#app', { state: 'attached' });
+    const server = await fakeServer(page);
+    server.wrappedKey = await blobFor(page, NOTES_PASSWORD);
+    await openConnectForm(page);
+
+    await submit(page, 'mistyped-password')();
+    await expect(page.getByText(/could not|couldn't|older version/i).first()).toBeVisible({ timeout: 15000 });
+
+    await submit(page, NOTES_PASSWORD)();
+
+    await expect(page.locator('#connect-notes-password')).toHaveCount(0, { timeout: 15000 });
+    expect(server.calls.filter(call => call.endsWith('/auth/register-device'))).toHaveLength(1);
+    expect(await page.evaluate(async () => {
+      const { syncRepository } = await import('/src/lib/services/syncRepository.ts' as string);
+      return (await syncRepository.getMetadata())?.serverKeyVerified;
+    })).toBe(true);
+  });
+
+  test('writes nothing locally when the key does not open', async ({ page }) => {
+    await page.goto('', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('#app', { state: 'attached' });
+    const server = await fakeServer(page);
+    server.wrappedKey = await blobFor(page, NOTES_PASSWORD);
+    await openConnectForm(page);
+
+    await submit(page, 'mistyped-password')();
+    await expect(page.getByText(/could not|couldn't|older version/i).first()).toBeVisible({ timeout: 15000 });
+
+    expect(await page.evaluate(async () => {
+      const { encryptionRepository } = await import('/src/lib/services/encryptionRepository.ts' as string);
+      return !!(await encryptionRepository.getMetadata());
+    })).toBe(false);
+  });
+});
+

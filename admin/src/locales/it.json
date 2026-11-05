@@ -17,13 +17,15 @@
     "status": "Stato",
     "created": "Creato",
     "saving": "Salvataggio...",
-    "deleting": "Eliminazione..."
+    "deleting": "Eliminazione...",
+    "passwordRules": "Almeno 12 caratteri. Il server può anche richiedere un mix di maiuscole, minuscole, numeri e simboli."
   },
   "nav": {
     "dashboard": "Dashboard",
     "users": "Utenti",
     "settings": "Impostazioni",
-    "logout": "Esci"
+    "logout": "Esci",
+    "audit": "Registro di controllo"
   },
   "login": {
     "title": "Jottery Admin",
@@ -54,7 +56,25 @@
     "rateLimited": "Troppi tentativi. Riprova tra {seconds} secondi.",
     "tooManyAttempts": "Troppi tentativi. Attendi e riprova.",
     "passwordTooShort": "La nuova password deve essere di almeno 12 caratteri",
-    "passwordSameAsCurrent": "La nuova password deve essere diversa da quella attuale"
+    "passwordSameAsCurrent": "La nuova password deve essere diversa da quella attuale",
+    "ownAdminRole": "Non puoi rimuovere i tuoi diritti admin.",
+    "lastAdminDemote": "L'ultimo admin non può essere retrocesso.",
+    "ownAccountDelete": "Non puoi eliminare il tuo account da qui.",
+    "lastAdminDelete": "L'ultimo admin non può essere eliminato.",
+    "userNotFound": "Utente non trovato.",
+    "deviceNotFound": "Dispositivo non trovato.",
+    "quotaRange": "La quota di archiviazione deve essere compresa tra 1 e 100000 MB.",
+    "maxUploadRange": "La dimensione massima di caricamento deve essere compresa tra 1 e 1000 MB.",
+    "inboxItemsRange": "Il numero massimo di elementi in arrivo deve essere compreso tra 1 e 10000.",
+    "inboxSizeRange": "La dimensione massima in arrivo deve essere compresa tra 1 e 1000 MB.",
+    "passwordComplexity": "La password richiede almeno {required} tipi di carattere su 4. Mancano: {missing}.",
+    "passwordClass": {
+      "uppercase": "lettera maiuscola",
+      "lowercase": "lettera minuscola",
+      "number": "numero",
+      "special": "simbolo"
+    },
+    "passwordTooLong": "La password è troppo lunga."
   },
   "session": {
     "expired": "La sessione è scaduta. Accedi di nuovo."
@@ -146,7 +166,6 @@
       "newPasswordPlaceholder": "Inserisci nuova password",
       "confirmPassword": "Conferma password",
       "confirmPasswordPlaceholder": "Conferma nuova password",
-      "passwordRequirement": "Minimo 12 caratteri",
       "passwordTooShort": "La password deve avere almeno 12 caratteri",
       "passwordMismatch": "Le password non corrispondono",
       "passwordResetSuccess": "Password di {email} reimpostata con successo",
@@ -156,7 +175,9 @@
       "passwordResetWarning": "Questo cambia solo la password di accesso. Non influisce sulla crittografia delle note. Se l'utente ha dimenticato la password di crittografia, le sue note non possono essere recuperate.",
       "inboxMaxItems": "Max elementi in arrivo",
       "inboxMaxSize": "Dimensione max in arrivo",
-      "items": "elementi"
+      "items": "elementi",
+      "passwordResetDevices": "I dispositivi di questo utente continuano a sincronizzare dopo il ripristino, perché le loro chiavi non dipendono dalla password.",
+      "revokeDevicesOption": "Revoca anche tutte le chiavi dei dispositivi di questo utente, se l'account potrebbe essere compromesso"
     },
     "filters": {
       "all": "Tutti",
@@ -197,11 +218,15 @@
       "promoteToAdmin": "Promuovi ad admin",
       "demoteFromAdmin": "Retrocedi da admin",
       "messages": {
-        "delete": "Sei sicuro di voler eliminare definitivamente l'utente {email}? Questa azione non può essere annullata.",
+        "approve": "Approvare {email}? Potrà accedere e registrare dispositivi.",
+        "deactivate": "Disattivare {email}? Non potrà accedere né sincronizzare finché non verrà riattivato.",
+        "activate": "Attivare {email}? Potrà di nuovo accedere e sincronizzare.",
+        "delete": "Questa azione elimina definitivamente {email} e tutto ciò che il server conserva per questo utente: note, allegati, dispositivi e chiave dell'account. Non può essere annullata.",
         "promoteToAdmin": "Sei sicuro di voler promuovere {email} ad amministratore? Avrà accesso completo a tutte le funzioni di amministrazione.",
-        "demoteFromAdmin": "Sei sicuro di voler rimuovere i privilegi di amministratore da {email}?",
-        "genericAction": "Sei sicuro di voler {action} l'utente {email}?"
-      }
+        "demoteFromAdmin": "Sei sicuro di voler rimuovere i privilegi di amministratore da {email}?"
+      },
+      "deleteCounts": "Note: {notes} · Dispositivi: {devices}",
+      "typeEmail": "Digita l'indirizzo email dell'utente per confermare:"
     },
     "toast": {
       "approved": "Utente {email} approvato con successo",
@@ -210,8 +235,14 @@
       "deleted": "Utente {email} eliminato",
       "promotedToAdmin": "Utente {email} promosso ad admin",
       "demotedFromAdmin": "Utente {email} retrocesso da admin",
-      "failedToAction": "Impossibile {action} utente: {error}",
-      "failedGeneric": "Impossibile {action} utente"
+      "failed": {
+        "approve": "Impossibile approvare l'utente: {error}",
+        "deactivate": "Impossibile disattivare l'utente: {error}",
+        "activate": "Impossibile attivare l'utente: {error}",
+        "delete": "Impossibile eliminare l'utente: {error}",
+        "promote": "Impossibile promuovere l'utente ad admin: {error}",
+        "demote": "Impossibile rimuovere i diritti admin dell'utente: {error}"
+      }
     }
   },
   "settings": {
@@ -303,8 +334,15 @@
         "revoke": "Revoca token",
         "revokeConfirmTitle": "Revoca token posta in arrivo",
         "revokeConfirmMessage": "Revocare il token della posta in arrivo? Le integrazioni che lo utilizzano smetteranno di funzionare.",
-        "cancel": "Annulla"
-      }
+        "cancel": "Annulla",
+        "generateSuccess": "Token posta in arrivo generato",
+        "generateFailed": "Impossibile generare il token: {error}",
+        "revokeSuccess": "Token posta in arrivo revocato",
+        "revokeFailed": "Impossibile revocare il token, che quindi funziona ancora: {error}",
+        "copySuccess": "Token copiato",
+        "copyUnavailable": "Impossibile copiare qui. Seleziona il token e copialo manualmente."
+      },
+      "storageUsedNote": "Include note, cronologia delle note e allegati."
     },
     "devices": {
       "title": "I tuoi dispositivi",
@@ -334,7 +372,6 @@
       "currentPassword": "Password attuale",
       "newPassword": "Nuova password",
       "confirmPassword": "Conferma password",
-      "passwordHint": "La password deve essere di almeno 12 caratteri",
       "updatePassword": "Aggiorna password",
       "passwordChanged": "Password cambiata con successo",
       "dangerZone": "Zona pericolosa",
@@ -366,7 +403,42 @@
       "deleteNotesButton": "Delete Notes",
       "deleteNotesConfirmTitle": "Delete All Notes",
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
-      "notesDeleted": "All notes have been deleted from the server"
+      "notesDeleted": "All notes have been deleted from the server",
+      "passwordToConfirm": "Inserisci la password per confermare:"
+    }
+  },
+  "audit": {
+    "title": "Registro di controllo",
+    "description": "Una registrazione permanente di ciò che gli admin hanno fatto su questo server.",
+    "loading": "Caricamento del registro di controllo...",
+    "failedToLoad": "Impossibile caricare il registro di controllo",
+    "empty": "Non è stato ancora registrato nulla.",
+    "allActions": "Tutte le azioni",
+    "filterLabel": "Mostra",
+    "commandLine": "Riga di comando",
+    "range": "{from}–{to} di {total}",
+    "previous": "Precedente",
+    "next": "Successiva",
+    "table": {
+      "time": "Quando",
+      "action": "Azione",
+      "admin": "Admin",
+      "target": "Interessato",
+      "address": "Indirizzo"
+    },
+    "actions": {
+      "userApprove": "Utente approvato",
+      "userDeactivate": "Utente disattivato",
+      "userActivate": "Utente attivato",
+      "userDelete": "Utente eliminato",
+      "userPasswordReset": "Password ripristinata",
+      "userAdminGrant": "Promosso ad admin",
+      "userAdminRevoke": "Admin rimosso",
+      "userSettingsUpdate": "Impostazioni utente modificate",
+      "deviceRevoke": "Dispositivo revocato",
+      "deviceDelete": "Dispositivo eliminato",
+      "deviceRename": "Dispositivo rinominato",
+      "adminPasswordChange": "Password personale modificata"
     }
   }
 }

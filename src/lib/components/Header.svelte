@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { lockApplication } from '../services/lockService';
   import { onMount, onDestroy } from 'svelte';
-  import { searchQuery, isLocked, isLocking, settings, isDraftMode, searchResultCount, notes, isSyncing, syncProgress, archiveMode, toggleArchiveMode } from '../stores/appStore';
-  import { lock, passwordStorageService, settingsRepository, syncService, syncRepository } from '../services';
+  import { searchQuery, settings, isDraftMode, searchResultCount, notes, isSyncing, syncProgress, archiveMode, toggleArchiveMode } from '../stores/appStore';
+  import { passwordStorageService, settingsRepository, syncRepository } from '../services';
   import { getCurrentNotebook } from '../utils/notebookPath';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
@@ -140,28 +141,7 @@
   }
 
   async function handleLockNow() {
-    isLocking.set(true);
-
-    try {
-      // Give any pending auto-saves time to complete (EditorPane has 1s debounce)
-      await new Promise(resolve => setTimeout(resolve, 1200));
-
-      // Trigger sync if enabled (will save all notes to server)
-      if ($settings.syncEnabled) {
-        const syncMetadata = await syncRepository.getMetadata();
-        if (syncMetadata?.apiKey) {
-          await syncService.syncNow();
-        }
-      }
-    } catch (error) {
-      console.error('[Header] Error during pre-lock save/sync:', error);
-      // Continue with lock even if sync fails
-    }
-
-    // Lock the application
-    lock();
-    isLocked.set(true);
-    isLocking.set(false);
+    await lockApplication();
   }
 
   async function handleDisableRememberPasswordConfirm() {

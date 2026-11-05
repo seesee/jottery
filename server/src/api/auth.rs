@@ -17,7 +17,7 @@ use crate::{
         RegisterUserResponse, UserInfo,
     },
     utils::{
-        crypto::hash_sha256,
+        crypto::{hash_sha256, log_id},
         password::{hash_for_storage, validate_password_strength, verify_sign_in},
         validation,
     },
@@ -30,11 +30,12 @@ pub async fn register_user(
     State(state): State<Arc<AppState>>,
     Json(req): Json<RegisterUserRequest>,
 ) -> AppResult<(StatusCode, Json<RegisterUserResponse>)> {
-    tracing::info!("User registration request: email={}", req.email);
+    // Tidied before anything else sees it, so that one mailbox is one account
+    let email = req.email.trim().to_ascii_lowercase();
 
     // Validate email format
-    if !is_valid_email(&req.email) {
-        tracing::warn!("Invalid email format: {}", req.email);
+    if !is_valid_email(&email) {
+        tracing::warn!("Registration refused: invalid email format");
         return Err(crate::error::AppError::BadRequest(
             "Invalid email format".to_string(),
         ));
@@ -42,16 +43,18 @@ pub async fn register_user(
 
     // Validate password strength based on configured complexity
     if let Err(msg) = validate_password_strength(&req.password, &state.config.password_complexity) {
-        tracing::warn!("Password validation failed for {}: {}", req.email, msg);
+        tracing::warn!("Registration refused: {}", msg);
         return Err(crate::error::AppError::BadRequest(msg));
     }
 
     // Check if email already exists
-    if UserRepository::email_exists(&state.pool, &req.email).await? {
-        tracing::warn!("Email already registered: {}", req.email);
-        return Err(crate::error::AppError::Conflict(
-            "Email already registered".to_string(),
-        ));
+    let email_taken = || {
+        tracing::warn!("Registration refused: address {} is taken", log_id(&email));
+        crate::error::AppError::Conflict("Email already registered".to_string())
+    };
+
+    if UserRepository::email_exists(&state.pool, &email).await? {
+        return Err(email_taken());
     }
 
     // Hash password with configured Argon2 parameters
@@ -63,13 +66,11 @@ pub async fn register_user(
         })?;
 
     // Create user (approved=false by default)
-    let user = UserRepository::create(&state.pool, &req.email, &password_hash).await?;
+    let user = UserRepository::create(&state.pool, &email, &password_hash, &state.config)
+        .await?
+        .ok_or_else(email_taken)?;
 
-    tracing::info!(
-        "User registered successfully: id={}, email={}, pending approval",
-        user.id,
-        user.email
-    );
+    tracing::info!("User registered: id={}, pending approval", user.id);
 
     let response = RegisterUserResponse {
         user_id: user.id,
@@ -87,12 +88,6 @@ pub async fn register_device(
     State(state): State<Arc<AppState>>,
     Json(req): Json<RegisterDeviceRequest>,
 ) -> AppResult<(StatusCode, Json<RegisterDeviceResponse>)> {
-    tracing::info!(
-        "Device registration request: email={}, device={}",
-        req.email,
-        req.device_name
-    );
-
     // Validate device name
     validation::validate_device_name(&req.device_name, &state.config)?;
 
@@ -114,7 +109,7 @@ pub async fn register_device(
     })?;
 
     let Some(user) = user.filter(|_| password_valid) else {
-        tracing::warn!("Device registration failed: bad credentials for {}", req.email);
+        tracing::warn!("Device registration failed: bad credentials for {}", log_id(&req.email));
         state.login_throttle.record_failure(&req.email);
         return Err(crate::error::AppError::Unauthorized);
     };
@@ -122,10 +117,7 @@ pub async fn register_device(
 
     // Check if user is approved
     if user.approved == 0 {
-        tracing::warn!(
-            "Device registration failed: user not approved: {}",
-            req.email
-        );
+        tracing::warn!("Device registration failed: user not approved: {}", user.id);
         return Err(crate::error::AppError::Forbidden(
             "Account pending admin approval".to_string(),
         ));
@@ -133,7 +125,7 @@ pub async fn register_device(
 
     // Check if user is active
     if user.is_active == 0 {
-        tracing::warn!("Device registration failed: user deactivated: {}", req.email);
+        tracing::warn!("Device registration failed: user deactivated: {}", user.id);
         return Err(crate::error::AppError::Forbidden(
             "Account deactivated".to_string(),
         ));
@@ -141,7 +133,7 @@ pub async fn register_device(
 
     // A password that must be changed can't be used to enrol anything
     if user.must_change_password != 0 {
-        tracing::warn!("Device registration refused: {} must change password", req.email);
+        tracing::warn!("Device registration refused: {} must change password", user.id);
         return Err(crate::error::AppError::PasswordChangeRequired);
     }
 
@@ -175,7 +167,7 @@ pub async fn register_device(
     .await?;
 
     tracing::info!(
-        "Device registered successfully: client_id={}, user_id={}, device={}",
+        "Device registered successfully: client_id={}, user_id={}, device={:?}",
         client_id,
         user.id,
         req.device_name
@@ -198,12 +190,6 @@ pub async fn clone_device(
     State(state): State<Arc<AppState>>,
     Json(req): Json<CloneDeviceRequest>,
 ) -> AppResult<(StatusCode, Json<CloneDeviceResponse>)> {
-    tracing::info!(
-        "Clone device request: device_name={}, device_type={}",
-        req.device_name,
-        req.device_type
-    );
-
     // Validate device name
     validation::validate_device_name(&req.device_name, &state.config)?;
 
@@ -248,10 +234,7 @@ pub async fn clone_device(
 
     // Check if user is approved
     if user.approved != 1 {
-        tracing::warn!(
-            "Clone device failed: user not approved: {}",
-            user.email
-        );
+        tracing::warn!("Clone device failed: user not approved: {}", user.id);
         return Err(crate::error::AppError::Forbidden(
             "Account pending admin approval".to_string(),
         ));
@@ -259,7 +242,7 @@ pub async fn clone_device(
 
     // Check if user is active
     if user.is_active != 1 {
-        tracing::warn!("Clone device failed: user deactivated: {}", user.email);
+        tracing::warn!("Clone device failed: user deactivated: {}", user.id);
         return Err(crate::error::AppError::Forbidden(
             "Account deactivated".to_string(),
         ));
@@ -292,7 +275,7 @@ pub async fn clone_device(
     .await?;
 
     tracing::info!(
-        "Device cloned successfully: new_client_id={}, user_id={}, device={}, from_client={}",
+        "Device cloned successfully: new_client_id={}, user_id={}, device={:?}, from_client={}",
         client_id,
         user.id,
         req.device_name,
@@ -317,8 +300,6 @@ pub async fn login(
     headers: axum::http::HeaderMap,
     Json(req): Json<LoginRequest>,
 ) -> AppResult<(StatusCode, axum::http::HeaderMap, Json<LoginResponse>)> {
-    tracing::info!("Admin login request: email={}", req.email);
-
     // Extract client info for audit trail
     let user_agent = headers
         .get(axum::http::header::USER_AGENT)
@@ -351,7 +332,7 @@ pub async fn login(
     })?;
 
     let Some(user) = user.filter(|_| password_valid) else {
-        tracing::warn!("Login failed: bad credentials for {}", req.email);
+        tracing::warn!("Login failed: bad credentials for {}", log_id(&req.email));
         state.login_throttle.record_failure(&req.email);
         return Err(crate::error::AppError::Unauthorized);
     };
@@ -359,7 +340,7 @@ pub async fn login(
 
     // Check if user is admin
     if user.is_admin == 0 {
-        tracing::warn!("Login failed: user is not admin: {}", req.email);
+        tracing::warn!("Login failed: user is not admin: {}", user.id);
         return Err(crate::error::AppError::Forbidden(
             "Admin access required".to_string(),
         ));
@@ -367,7 +348,7 @@ pub async fn login(
 
     // Check if user is approved
     if user.approved == 0 {
-        tracing::warn!("Login failed: user not approved: {}", req.email);
+        tracing::warn!("Login failed: user not approved: {}", user.id);
         return Err(crate::error::AppError::Forbidden(
             "Account pending admin approval".to_string(),
         ));
@@ -375,7 +356,7 @@ pub async fn login(
 
     // Check if user is active
     if user.is_active == 0 {
-        tracing::warn!("Login failed: user deactivated: {}", req.email);
+        tracing::warn!("Login failed: user deactivated: {}", user.id);
         return Err(crate::error::AppError::Forbidden(
             "Account deactivated".to_string(),
         ));
@@ -384,7 +365,7 @@ pub async fn login(
     // Generate session token
     let session_token = generate_session_token();
 
-    // Calculate expiry (configurable, default 7 days)
+    // Calculate expiry (configurable, default 1 day)
     let expires_at = chrono::Utc::now() + chrono::Duration::days(state.config.session_expiry_days);
     let expires_at_str = expires_at.to_rfc3339();
 
@@ -404,12 +385,7 @@ pub async fn login(
     // Update last login timestamp
     UserRepository::update_last_login(&state.pool, &user.id).await?;
 
-    tracing::info!(
-        "Login successful: user_id={}, session_id={}, email={}",
-        user.id,
-        session.id,
-        user.email
-    );
+    tracing::info!("Login successful: user_id={}, session_id={}", user.id, session.id);
 
     let grant = grant_session(&state.config, CookieScope::Admin, req.cookie_session, session_token);
 

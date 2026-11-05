@@ -98,6 +98,19 @@ interface UserDetail {
   devices: Device[];
 }
 
+interface AuditEntry {
+  id: string;
+  // Null for actions taken with jottery-admin, which has no account
+  adminUserId: string | null;
+  action: string;
+  targetUserId: string | null;
+  targetResourceId: string | null;
+  createdAt: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  metadata: unknown;
+}
+
 interface UpdateUserSettingsRequest {
   storageQuotaMb?: number;
   maxUploadSizeMb?: number;
@@ -210,15 +223,25 @@ class ApiClient {
     return this.request('PATCH', `/api/v1/admin/users/${id}/settings`, settings);
   }
 
-  async resetUserPassword(id: string, newPassword: string): Promise<void> {
+  async resetUserPassword(id: string, newPassword: string, revokeDevices: boolean): Promise<void> {
     return this.request('POST', `/api/v1/admin/users/${id}/reset-password`, {
       new_password: newPassword,
+      revokeDevices,
     });
   }
 
   // Admin - Stats
   async getStats(): Promise<StatsResponse> {
     return this.request('GET', '/api/v1/admin/stats');
+  }
+
+  // Admin - Audit log, newest first
+  async getAuditLog(query: { limit: number; offset: number; action?: string }): Promise<{ logs: AuditEntry[]; total: number }> {
+    const params = new URLSearchParams({ limit: String(query.limit), offset: String(query.offset) });
+    if (query.action) {
+      params.set('action', query.action);
+    }
+    return this.request('GET', `/api/v1/admin/audit?${params}`);
   }
 
   // Admin - Password
@@ -232,4 +255,4 @@ class ApiClient {
 
 export const api = new ApiClient();
 export { ApiError };
-export type { LoginResponse, UserListItem, UserDetail, Device, StatsResponse };
+export type { LoginResponse, UserListItem, UserDetail, Device, StatsResponse, AuditEntry };

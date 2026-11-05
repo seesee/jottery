@@ -6,6 +6,8 @@ mod export;
 mod models;
 mod password_storage;
 mod repository;
+mod search;
+mod secure_temp;
 mod sse;
 mod terminal_text;
 mod ui;
@@ -19,10 +21,10 @@ use rust_i18n::t;
 use clap::{Parser, Subcommand, CommandFactory, FromArgMatches};
 use std::path::{Path, PathBuf};
 use std::fs::OpenOptions;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::io::{self, Read, Write};
 use std::env;
-use tempfile::NamedTempFile;
 use tracing::info;
 
 use crypto::CryptoService;
@@ -34,23 +36,8 @@ use ui::{App, EventHandler, Tui};
 
 /// Detect and set locale from environment
 fn detect_locale() {
-    if let Ok(lang) = env::var("LANG") {
-        // LANG is typically in format like "en_GB.UTF-8" or "fr_FR.UTF-8"
-        // Extract just the locale part (before the dot)
-        let locale_part = lang.split('.').next().unwrap_or("en-GB");
-
-        // For most languages, use just the language code (fr, es, de, etc.)
-        // For en_GB, keep the full locale code as en-GB
-        let locale = if locale_part.starts_with("en_GB") || locale_part.starts_with("en-GB") {
-            "en-GB"
-        } else {
-            // Extract just the language code (first part before _ or -)
-            locale_part.split('_').next()
-                .or_else(|| locale_part.split('-').next())
-                .unwrap_or("en-GB")
-        };
-
-        rust_i18n::set_locale(locale);
+    if let Some(locale) = models::system_locale() {
+        rust_i18n::set_locale(&locale);
     }
 }
 
@@ -68,6 +55,8 @@ fn build_translated_cli() -> clap::Command {
     cmd = cmd.mut_arg("debug", |a| a.help(t!("cli.debug_help").to_string()));
     cmd = cmd.mut_arg("debug_log", |a| a.help(t!("cli.debug_log_help").to_string()));
     cmd = cmd.mut_arg("reset", |a| a.help(t!("cli.reset_help").to_string()));
+    cmd = cmd.mut_arg("allow_insecure_http", |a| a.help(t!("cli.allow_insecure_http_help").to_string()));
+    cmd = cmd.mut_arg("password_stdin", |a| a.help(t!("cli.password_stdin_help").to_string()));
 
     // Update subcommands
     cmd = cmd.mut_subcommand("note", |sub| {
@@ -223,6 +212,14 @@ struct Cli {
     #[arg(long)]
     reset: bool,
 
+    /// Allow sending a password over plain HTTP to a public host
+    #[arg(long, global = true)]
+    allow_insecure_http: bool,
+
+    /// Read passwords from stdin, one per line, instead of prompting
+    #[arg(long, global = true)]
+    password_stdin: bool,
+
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -374,9 +371,9 @@ enum Commands {
         #[arg(short, long)]
         output: PathBuf,
 
-        /// Password for decryption
+        /// Password for decryption (will prompt if not provided)
         #[arg(short, long)]
-        password: String,
+        password: Option<String>,
     },
     /// Import notes from JSON file
     Import {
@@ -384,9 +381,9 @@ enum Commands {
         #[arg(short, long)]
         input: PathBuf,
 
-        /// Password for encryption
+        /// Password for encryption (will prompt if not provided)
         #[arg(short, long)]
-        password: String,
+        password: Option<String>,
     },
     /// Create encrypted backup (compatible with web app)
     Backup {
@@ -394,9 +391,9 @@ enum Commands {
         #[arg(short, long)]
         output: PathBuf,
 
-        /// Password for encryption
+        /// Password for encryption (will prompt if not provided)
         #[arg(short, long)]
-        password: String,
+        password: Option<String>,
     },
     /// Manage inbox API token
     InboxToken {
@@ -409,9 +406,9 @@ enum Commands {
         #[arg(short, long)]
         input: PathBuf,
 
-        /// Password for decryption (backup password)
+        /// Password for decryption (backup password, will prompt if not provided)
         #[arg(short, long)]
-        password: String,
+        password: Option<String>,
 
         /// Local database encryption password (defaults to backup password)
         #[arg(short = 'k', long)]
@@ -419,9 +416,9 @@ enum Commands {
     },
     /// Store password for auto-unlock (used for demo/testing automation)
     StorePassword {
-        /// Password to store
+        /// Password to store (will prompt if not provided)
         #[arg(short, long)]
-        password: String,
+        password: Option<String>,
     },
 }
 
@@ -471,12 +468,123 @@ enum InboxTokenAction {
     },
 }
 
+/// Open the debug log for this user alone. What it holds is meant to be safe, but it
+/// says when notes were touched and how a vault is set up, which is nobody else's.
+fn open_debug_log(path: &Path) -> Result<Arc<Mutex<std::fs::File>>> {
+    let mut options = OpenOptions::new();
+    options.create(true).append(true);
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+
+    let file = options.open(path)
+        .with_context(|| format!("Failed to open debug log: {}", path.display()))?;
+
+    // An existing log keeps its permissions when opened, so they're set here as well
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        file.set_permissions(std::fs::Permissions::from_mode(0o600))
+            .context("Failed to restrict the debug log")?;
+    }
+
+    Ok(Arc::new(Mutex::new(file)))
+}
+
+/// The debug log as a place for tracing to write, shared with the app's own lines.
+#[derive(Clone)]
+struct SharedLog(Arc<Mutex<std::fs::File>>);
+
+impl Write for SharedLog {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        match self.0.lock() {
+            Ok(mut file) => file.write(bytes),
+            Err(_) => Ok(bytes.len()),
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        match self.0.lock() {
+            Ok(mut file) => file.flush(),
+            Err(_) => Ok(()),
+        }
+    }
+}
+
+impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for SharedLog {
+    type Writer = SharedLog;
+
+    fn make_writer(&'a self) -> Self::Writer {
+        self.clone()
+    }
+}
+
+/// Set by --password-stdin
+static PASSWORD_ON_STDIN: AtomicBool = AtomicBool::new(false);
+
 /// Prompt for password from stdin
 fn prompt_password() -> Result<String> {
     print!("{}", t!("password.prompt"));
     io::stdout().flush()?;
     let password = rpassword::read_password()?;
     Ok(password)
+}
+
+/// The next password piped in with --password-stdin, one per line.
+fn password_from_stdin() -> Result<Option<String>> {
+    if !PASSWORD_ON_STDIN.load(Ordering::Relaxed) {
+        return Ok(None);
+    }
+
+    // Byte by byte, because anything read past the line belongs to the command, such as
+    // a note piped in after the password
+    let mut line = Vec::new();
+    let mut byte = [0u8; 1];
+    while io::stdin().read(&mut byte)? == 1 && byte[0] != b'\n' {
+        line.push(byte[0]);
+    }
+
+    let line = String::from_utf8(line).context("The password on stdin isn't valid UTF-8")?;
+    Ok(Some(line.trim_end_matches('\r').to_string()))
+}
+
+/// A password given without a prompt. On the command line it's visible in `ps` and shell
+/// history, so that still works for existing scripts but says so.
+fn supplied_password(flag: Option<String>, env_var: &str) -> Result<Option<String>> {
+    if let Some(password) = flag {
+        errln!("⚠ {}", t!("cli.password_flag_deprecated"));
+        return Ok(Some(password));
+    }
+
+    if let Some(password) = password_from_stdin()? {
+        return Ok(Some(password));
+    }
+
+    Ok(env::var(env_var).ok().filter(|password| !password.is_empty()))
+}
+
+/// The notes password, if it was given without a prompt.
+fn supplied_notes_password(flag: Option<String>) -> Result<Option<String>> {
+    supplied_password(flag, "JOTTERY_PASSWORD")
+}
+
+/// The account password, from wherever it was given, or by asking.
+fn account_password(flag: Option<String>) -> Result<String> {
+    match supplied_password(flag, "JOTTERY_ACCOUNT_PASSWORD")? {
+        Some(password) => Ok(password),
+        None => prompt_password(),
+    }
+}
+
+/// A password that has no stored copy to fall back on.
+fn required_password(flag: Option<String>) -> Result<String> {
+    match supplied_notes_password(flag)? {
+        Some(password) => Ok(password),
+        None => prompt_password(),
+    }
 }
 
 /// Try to load stored password using the password storage backend
@@ -498,7 +606,7 @@ fn try_load_stored_password(db_path: &Path) -> Result<Option<String>> {
 
 /// Get or prompt for password, checking stored password first
 fn get_password(password_opt: Option<String>, db_path: &Path) -> Result<String> {
-    match password_opt {
+    match supplied_notes_password(password_opt)? {
         Some(pwd) => Ok(pwd),
         None => {
             // Try to load stored password first
@@ -519,16 +627,23 @@ fn derive_key_from_db(db: &Database, password: &str) -> Result<[u8; 32]> {
 /// Open $EDITOR with content and return the edited result
 fn open_editor(initial_content: &str) -> Result<String> {
     // Create temporary file
-    let mut temp_file = NamedTempFile::new()
+    let mut temp_file = secure_temp::create("")
         .context(t!("editor.temp_file_error"))?;
     temp_file
         .write_all(initial_content.as_bytes())
         .context(t!("editor.temp_write_error"))?;
     temp_file.flush()?;
 
+    if secure_temp::take_disk_warning() {
+        errln!("⚠ {}", t!("editor.temp_on_disk"));
+    }
+
     let temp_path = temp_file.path();
 
-    ui::operations::external::run_editor(&ui::operations::external::editor_command(), temp_path)?;
+    secure_temp::set_child_has_terminal(true);
+    let edited = ui::operations::external::run_editor(&ui::operations::external::editor_command(), temp_path);
+    secure_temp::set_child_has_terminal(false);
+    edited?;
 
     // Read the edited content
     let content = std::fs::read_to_string(temp_path)
@@ -600,6 +715,12 @@ fn report_sync(outcome: &ui::operations::sync::SyncOutcome) {
     if outcome.skipped > 0 {
         errln!("⚠ {}", t!("sync.skipped_notes", count = outcome.skipped));
     }
+    if outcome.quota_exceeded {
+        errln!("⚠ {}", t!("sync.quota_exceeded"));
+    }
+    if outcome.deletions_held > 0 {
+        errln!("⚠ {}", t!("sync.deletions_held_cli", count = outcome.deletions_held));
+    }
 }
 
 /// Format a note for display
@@ -637,7 +758,10 @@ fn format_note_preview(note: &Note, show_content: bool) -> String {
 fn main() {
     // Reported here, not by returning the error, because a failure can quote
     // whatever a server sent and Rust's default report would print it raw.
-    if let Err(error) = run() {
+    let result = run();
+    secure_temp::remove_everything();
+
+    if let Err(error) = result {
         errln!("Error: {:?}", error);
         std::process::exit(1);
     }
@@ -653,15 +777,26 @@ fn run() -> Result<()> {
     let matches = cmd.get_matches();
     let cli = Cli::from_arg_matches(&matches)?;
 
-    // Initialize logging
-    // If debug-log is specified, automatically enable debug level
-    let log_level = if cli.debug || cli.debug_log.is_some() { "debug" } else { "info" };
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive(format!("jottery_tui={}", log_level).parse()?),
-        )
-        .init();
+    // Initialize logging. With a log file it all goes there, and otherwise to stderr,
+    // because stdout is a command's output and the terminal is the TUI's. This crate is
+    // called jottery, whatever the package is called.
+    let debug_log = cli.debug_log.as_deref().map(open_debug_log).transpose()?;
+
+    let log_level = if cli.debug || debug_log.is_some() { "debug" } else { "error" };
+    let filter = tracing_subscriber::EnvFilter::from_default_env()
+        .add_directive(format!("jottery={}", log_level).parse()?);
+
+    match &debug_log {
+        Some(file) => tracing_subscriber::fmt()
+            .with_env_filter(filter)
+            .with_ansi(false)
+            .with_writer(SharedLog(file.clone()))
+            .init(),
+        None => tracing_subscriber::fmt()
+            .with_env_filter(filter)
+            .with_writer(io::stderr)
+            .init(),
+    }
 
     info!("Jottery TUI v{}", env!("CARGO_PKG_VERSION"));
 
@@ -711,10 +846,18 @@ fn run() -> Result<()> {
         return Ok(());
     }
 
+    // Whatever a killed run left behind goes first. A command only needs the handler
+    // for its editor. The TUI also has a terminal to put back.
+    secure_temp::sweep_leftovers();
+    secure_temp::install_signal_cleanup(cli.command.is_none());
+
     // The TUI says this on its unlock screen. A script only needs telling once.
     if cli.command.is_some() && !db_path.exists() && !Database::encrypts_files() {
         errln!("⚠ {}", t!("password.no_file_encryption"));
     }
+
+    let allow_insecure_http = cli.allow_insecure_http;
+    PASSWORD_ON_STDIN.store(cli.password_stdin, Ordering::Relaxed);
 
     // Handle subcommands
     match cli.command {
@@ -821,15 +964,14 @@ fn run() -> Result<()> {
             let key = derive_key_from_db(&db, &password)?;
 
             let note_repo = NoteRepository::new(db.connection());
-            let notes = note_repo.list(false, &key)?;
+            let notes = note_repo.list_not_deleted(&key)?.notes;
+            let settings = repository::SettingsRepository::new(db.connection()).get()?;
 
-            // Simple search implementation
-            let query_lower = query.to_lowercase();
+            // The same query language as the TUI, with the same answer about the archive
+            let parsed = search::SearchQuery::parse(&query, &settings);
+            let archived = parsed.archived().unwrap_or(false);
             let results: Vec<_> = notes.into_iter()
-                .filter(|n| {
-                    n.content.to_lowercase().contains(&query_lower) ||
-                    n.tags.iter().any(|t| t.to_lowercase().contains(&query_lower))
-                })
+                .filter(|note| note.archived == archived && parsed.matches(note, &settings))
                 .take(limit)
                 .collect();
 
@@ -908,15 +1050,10 @@ fn run() -> Result<()> {
         Some(Commands::RegisterUser { server, email, password }) => {
             use api::AuthClient;
 
+            api::require_safe_endpoint(&server, allow_insecure_http)?;
+
             // Get password
-            let password = match password {
-                Some(pwd) => pwd,
-                None => {
-                    print!("{}", t!("password.prompt"));
-                    io::stdout().flush()?;
-                    rpassword::read_password()?
-                }
-            };
+            let password = account_password(password)?;
 
             // Validate password strength
             if password.len() < 12 {
@@ -959,18 +1096,13 @@ fn run() -> Result<()> {
         Some(Commands::RegisterDevice { server, email, password, device_name, key_password }) => {
             use api::AuthClient;
 
+            api::require_safe_endpoint(&server, allow_insecure_http)?;
+
             // Get user password
-            let password = match password {
-                Some(pwd) => pwd,
-                None => {
-                    print!("{}", t!("password.prompt"));
-                    io::stdout().flush()?;
-                    rpassword::read_password()?
-                }
-            };
+            let password = account_password(password)?;
 
             // Get encryption password for local database
-            let key_password = match key_password {
+            let key_password = match supplied_notes_password(key_password)? {
                 Some(pwd) => pwd,
                 None => {
                     print!("{}", t!("password.enter"));
@@ -987,14 +1119,26 @@ fn run() -> Result<()> {
                 }
             };
 
-            // The server will see the account password, so it mustn't be the one for the notes
-            vault::check_passwords_differ(&key_password, &password)?;
+            // The server sees the account password, so a notes password being chosen
+            // now mustn't match it. An existing vault has already chosen, and refusing
+            // would stop this person adding a device, so that only warns.
+            let passwords_differ = vault::check_passwords_differ(&key_password, &password);
+            if !db_path.exists() {
+                passwords_differ.as_ref().map_err(|e| anyhow::anyhow!("{e}"))?;
+            }
 
             // Open the vault before involving the server, so a wrong password leaves
             // no stray device behind
             let db = Database::open(&db_path, &key_password)
                 .context("Failed to create database")?;
+            let vault_exists = repository::EncryptionRepository::new(db.connection()).get()?.is_some();
+            if !vault_exists {
+                passwords_differ.as_ref().map_err(|e| anyhow::anyhow!("{e}"))?;
+            }
             let local_key = derive_key_from_db(&db, &key_password)?;
+            if passwords_differ.is_err() {
+                errln!("⚠ {}", t!("password.same_as_account_warning"));
+            }
 
             outln!("{} '{}' {}...", t!("cli.register"), device_name, email);
 
@@ -1032,9 +1176,6 @@ fn run() -> Result<()> {
             // Store sync configuration
             let sync_repo = SyncRepository::new(db.connection());
             let sync_metadata = models::sync::SyncMetadata {
-                last_sync_at: None,
-                last_push_at: None,
-                last_pull_at: None,
                 api_key: Some(api_key_json),
                 client_id: Some(response.client_id),
                 user_email: Some(email.clone()),
@@ -1042,8 +1183,9 @@ fn run() -> Result<()> {
                 sync_enabled: true,
                 sync_endpoint: server.clone(),
                 auto_sync_interval: Some(1),
-                pending_registration_email: None,
-                pending_device_name: None,
+                // Adopting the key above recorded what this device knows about it
+                server_key_seen: sync_repo.get_metadata()?.and_then(|stored| stored.server_key_seen),
+                ..Default::default()
             };
 
             sync_repo.update_metadata(&sync_metadata)?;
@@ -1088,15 +1230,9 @@ fn run() -> Result<()> {
                     }
                 }
             };
+            api::require_safe_endpoint(&server, allow_insecure_http)?;
 
-            let password = match password {
-                Some(pwd) => pwd,
-                None => {
-                    print!("{}", t!("password.prompt"));
-                    io::stdout().flush()?;
-                    rpassword::read_password()?
-                }
-            };
+            let password = account_password(password)?;
 
             // Both passwords being in hand is a chance to spot a dangerous reuse. It's
             // an existing account, so this warns: refusing would help nobody.
@@ -1173,6 +1309,7 @@ fn run() -> Result<()> {
         }
         Some(Commands::Export { output, password }) => {
             info!("{}: {}", t!("cli.export"), output.display());
+            let password = get_password(password, &db_path)?;
             let db = Database::open(&db_path, &password)
                 .context(t!("password.unlock_failed", error = ""))?;
 
@@ -1185,18 +1322,27 @@ fn run() -> Result<()> {
         }
         Some(Commands::Import { input, password }) => {
             info!("{}: {}", t!("cli.import"), input.display());
+            let password = get_password(password, &db_path)?;
             let db = Database::open(&db_path, &password)
                 .context(t!("password.unlock_failed", error = ""))?;
 
             // Derive key using stored salt
             let key = derive_key_from_db(&db, &password)?;
 
-            let count = export::import_notes(&db, &key, &input)?;
-            outln!("✓ {}: {} {}", t!("cli.import"), count, input.display());
+            let summary = export::import_notes(&db, &key, &input)?;
+            outln!(
+                "✓ {}: {}",
+                input.display(),
+                t!("cli.import_summary", created = summary.created, updated = summary.updated, skipped = summary.skipped),
+            );
+            if summary.failed > 0 {
+                errln!("⚠ {}", t!("cli.import_failed", count = summary.failed));
+            }
             return Ok(());
         }
         Some(Commands::Backup { output, password }) => {
             info!("{}: {}", t!("backup.created"), output.display());
+            let password = get_password(password, &db_path)?;
             let db = Database::open(&db_path, &password)
                 .context(t!("password.unlock_failed", error = ""))?;
 
@@ -1244,6 +1390,9 @@ fn run() -> Result<()> {
                 t!("backup.records")
             );
 
+            let password = required_password(password)?;
+            let key_password = supplied_password(key_password, "JOTTERY_KEY_PASSWORD")?;
+
             // Use key_password for local database if provided, otherwise use backup password
             let local_password = key_password.as_ref().unwrap_or(&password);
 
@@ -1279,6 +1428,8 @@ fn run() -> Result<()> {
             return Ok(());
         }
         Some(Commands::StorePassword { password }) => {
+            let password = required_password(password)?;
+
             // Store password for auto-unlock (used for demo/testing automation)
             // First verify the password works with the database
             if db_path.exists() {
@@ -1305,18 +1456,6 @@ fn run() -> Result<()> {
             // Run interactive TUI
         }
     }
-
-    // Open debug log file if specified
-    let debug_log = if let Some(log_path) = cli.debug_log {
-        let file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&log_path)
-            .context(format!("Failed to open debug log: {}", log_path.display()))?;
-        Some(Arc::new(Mutex::new(file)))
-    } else {
-        None
-    };
 
     // Create TUI
     ui::install_panic_hook();
@@ -1457,7 +1596,7 @@ fn run() -> Result<()> {
                                     app.search_input = format!("#{}", tag);
                                     app.invalidate_filter_cache();
                                     app.search_active = true;
-                                    app.selected_note = 0;
+                                    app.select_note_at(0);
                                 } else {
                                     // Click on "Tags:" label or empty area: enter tag mode
                                     let filtered = app.filtered_notes();

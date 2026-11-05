@@ -13,6 +13,7 @@
   import { conflictService } from '../services/conflictService';
   import type { Attachment, KeyboardShortcut, CodeEditorRef, HighlightJsInstance, DecryptedNote } from '../types';
   import VersionHistoryModal from './VersionHistoryModal.svelte';
+  import { registerPendingSave } from '../utils/pendingSave';
   import AttachmentPreviewModal from './AttachmentPreviewModal.svelte';
   import ConflictResolutionModal from './ConflictResolutionModal.svelte';
   import ConfirmModal from './ConfirmModal.svelte';
@@ -1154,7 +1155,26 @@
 
   let themeObserver: MutationObserver | null = null;
 
+  /** Save now if a debounced save is waiting. Closing the page won't wait for it. */
+  async function saveNowIfPending() {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+      await handleSave();
+    }
+  }
+
+  function handlePageHidden() {
+    if (document.visibilityState === 'hidden') {
+      void saveNowIfPending();
+    }
+  }
+
+  let stopFlushing: (() => void) | undefined;
+
   onMount(() => {
+    stopFlushing = registerPendingSave(saveNowIfPending);
+    window.addEventListener('pagehide', saveNowIfPending);
+    document.addEventListener('visibilitychange', handlePageHidden);
     window.addEventListener('keydown', handleEditorKeydown);
     window.addEventListener('command-palette-action', handleCommandPaletteAction);
 
@@ -1188,6 +1208,9 @@
       saveTimeout = null;
     }
 
+    stopFlushing?.();
+    window.removeEventListener('pagehide', saveNowIfPending);
+    document.removeEventListener('visibilitychange', handlePageHidden);
     window.removeEventListener('keydown', handleEditorKeydown);
     window.removeEventListener('command-palette-action', handleCommandPaletteAction);
 
@@ -1230,7 +1253,7 @@
 {#if isEditing && ($selectedNote || $isDraftMode)}
   <div
     class="h-full flex flex-col bg-white dark:bg-gray-900"
-    use:dropzone={{ onDrop: handleFileUpload, onDragStateChange: handleDragStateChange }}
+    use:dropzone={{ onDrop: handleFileUpload, onDragStateChange: handleDragStateChange, disabled: isReadOnly }}
     role="region"
     aria-label="Note editor"
   >
@@ -1306,6 +1329,7 @@
     <!-- Attachments Section - Only show if attachments exist or dragging files (hidden on mobile) -->
     {#if !forceMobileLayout && (attachments.length > 0 || isDraggingFile)}
       <AttachmentsPanel
+        readOnly={isReadOnly}
         {attachments}
         isExpanded={isAttachmentsExpanded}
         {isDraggingFile}
@@ -1357,6 +1381,7 @@
 <!-- Version History Modal -->
 <VersionHistoryModal
   show={showVersionHistory}
+  readOnly={isReadOnly}
   noteId={$selectedNote?.id}
   currentVersion={$selectedNote?.version}
   onClose={() => showVersionHistory = false}
@@ -1412,6 +1437,7 @@
 
 <!-- Attachments Modal (Mobile) -->
 <MobileAttachmentsModal
+  readOnly={isReadOnly}
   show={showAttachmentsModal}
   {forceMobileLayout}
   {attachments}

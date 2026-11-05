@@ -96,6 +96,10 @@ pub struct SyncPushResponse {
     /// stays, and comes back to the pushing device on its next pull.
     #[serde(rename = "rejectedDeletions")]
     pub rejected_deletions: Vec<String>,
+    /// Pushed notes skipped because they were permanently deleted after this edit.
+    /// They're gone for good, so a client should stop sending them.
+    #[serde(rename = "skippedDeleted")]
+    pub skipped_deleted: Vec<String>,
 }
 
 /// One accepted note whose attachment references have no stored data.
@@ -129,6 +133,10 @@ pub struct SyncRejected {
     pub server_tags: Vec<String>,
     #[serde(rename = "serverVersion")]
     pub server_version: i64,
+    #[serde(rename = "serverDeleted")]
+    pub server_deleted: bool,
+    #[serde(rename = "serverDeletedAt")]
+    pub server_deleted_at: Option<String>,
     #[serde(rename = "serverAttachments")]
     pub server_attachments: Vec<AttachmentRef>,
     #[serde(rename = "serverPinned")]

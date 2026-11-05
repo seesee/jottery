@@ -120,16 +120,15 @@ fi
 echo "All tests passed! Setting version to $VERSION across all components..."
 echo ""
 
-# Update package.json (web client)
-if command -v jq &> /dev/null; then
-    # Use jq if available for safer JSON editing
-    jq ".version = \"$VERSION\"" package.json > package.json.tmp && mv package.json.tmp package.json
-    echo "✓ Updated package.json"
-else
-    # Fallback to sed (less safe but works)
-    sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" package.json && rm package.json.bak
-    echo "✓ Updated package.json (using sed)"
-fi
+# One build number for both mobile stores, which need it to rise with every release:
+# major×10000 + minor×100 + patch
+IFS='.' read -r V_MAJOR V_MINOR V_PATCH <<< "$VERSION"
+BUILD_NUMBER=$(( V_MAJOR * 10000 + V_MINOR * 100 + V_PATCH ))
+
+# Update package.json and package-lock.json (web client). This writes only those two
+# files, and --allow-same-version lets a failed run be repeated.
+npm version "$VERSION" --no-git-tag-version --allow-same-version --ignore-scripts > /dev/null
+echo "✓ Updated package.json and package-lock.json"
 
 # Update Cargo.toml (TUI client)
 sed -i.bak "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" tui/Cargo.toml && rm tui/Cargo.toml.bak
@@ -147,16 +146,9 @@ echo "✓ Updated tui/Cargo.lock"
 sed -i.bak "s/^version = \"[^\"]*\"/version = \"$VERSION\"/" server/Cargo.toml && rm server/Cargo.toml.bak
 echo "✓ Updated server/Cargo.toml"
 
-# Update package.json (admin dashboard)
-if command -v jq &> /dev/null; then
-    # Use jq if available for safer JSON editing
-    jq ".version = \"$VERSION\"" admin/package.json > admin/package.json.tmp && mv admin/package.json.tmp admin/package.json
-    echo "✓ Updated admin/package.json"
-else
-    # Fallback to sed (less safe but works)
-    sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" admin/package.json && rm admin/package.json.bak
-    echo "✓ Updated admin/package.json (using sed)"
-fi
+# Update package.json and package-lock.json (admin dashboard)
+(cd admin && npm version "$VERSION" --no-git-tag-version --allow-same-version --ignore-scripts > /dev/null)
+echo "✓ Updated admin/package.json and admin/package-lock.json"
 
 # Update the image Compose users get. The tag only exists once the release is built.
 sed -i.bak "s|ghcr.io/seesee/jottery:v[0-9][^[:space:]]*|ghcr.io/seesee/jottery:v$VERSION|" docker-compose.yml && rm docker-compose.yml.bak
@@ -165,15 +157,23 @@ echo "✓ Updated docker-compose.yml"
 # Update Xcode project (iOS client)
 IOS_PBXPROJ="ios-native/Jottery/Jottery.xcodeproj/project.pbxproj"
 if [ -f "$IOS_PBXPROJ" ]; then
-    # Derive build number: major×10000 + minor×100 + patch
-    IFS='.' read -r V_MAJOR V_MINOR V_PATCH <<< "$VERSION"
-    BUILD_NUMBER=$(( V_MAJOR * 10000 + V_MINOR * 100 + V_PATCH ))
-
     sed -i.bak "s/MARKETING_VERSION = [^;]*/MARKETING_VERSION = $VERSION/" "$IOS_PBXPROJ" && rm "$IOS_PBXPROJ.bak"
     sed -i.bak "s/CURRENT_PROJECT_VERSION = [^;]*/CURRENT_PROJECT_VERSION = $BUILD_NUMBER/" "$IOS_PBXPROJ" && rm "$IOS_PBXPROJ.bak"
     echo "✓ Updated $IOS_PBXPROJ (version=$VERSION, build=$BUILD_NUMBER)"
 else
     echo "⚠ iOS project not found at $IOS_PBXPROJ — skipping"
+fi
+
+# Update the Android build
+ANDROID_GRADLE="android-native/app/build.gradle.kts"
+if [ -f "$ANDROID_GRADLE" ]; then
+    sed -i.bak -E \
+        -e "s/^([[:space:]]*versionCode = )[0-9]+/\1$BUILD_NUMBER/" \
+        -e "s/^([[:space:]]*versionName = )\"[^\"]*\"/\1\"$VERSION\"/" \
+        "$ANDROID_GRADLE" && rm "$ANDROID_GRADLE.bak"
+    echo "✓ Updated $ANDROID_GRADLE (version=$VERSION, build=$BUILD_NUMBER)"
+else
+    echo "⚠ Android build not found at $ANDROID_GRADLE — skipping"
 fi
 
 echo ""
@@ -186,12 +186,13 @@ echo "✓ SQLx query cache regenerated with new version"
 echo ""
 
 echo "Version updated to $VERSION in:"
-echo "  - package.json (web client)"
+echo "  - package.json and package-lock.json (web client)"
 echo "  - tui/Cargo.toml and tui/Cargo.lock (TUI client)"
 echo "  - server/Cargo.toml (server)"
-echo "  - admin/package.json (admin dashboard)"
+echo "  - admin/package.json and admin/package-lock.json (admin dashboard)"
 echo "  - docker-compose.yml (image tag)"
 echo "  - ios-native/Jottery/Jottery.xcodeproj (iOS client)"
+echo "  - android-native/app/build.gradle.kts (Android client)"
 echo ""
 echo "SQLx query cache updated for Docker builds"
 echo ""
@@ -204,7 +205,7 @@ echo ""
 echo "To commit and open a pull request (copy and paste this):"
 echo ""
 echo "git checkout -b release/v$VERSION"
-echo "git add package.json admin/package.json docker-compose.yml tui/Cargo.toml tui/Cargo.lock server/Cargo.toml server/Cargo.lock server/.sqlx $IOS_PBXPROJ"
+echo "git add package.json package-lock.json admin/package.json admin/package-lock.json docker-compose.yml tui/Cargo.toml tui/Cargo.lock server/Cargo.toml server/Cargo.lock server/.sqlx $IOS_PBXPROJ $ANDROID_GRADLE"
 echo "git commit -m \"jottery release v$VERSION\""
 echo "git push -u origin release/v$VERSION"
 echo "gh pr create --fill"

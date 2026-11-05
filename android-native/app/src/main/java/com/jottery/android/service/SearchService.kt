@@ -468,8 +468,8 @@ object SearchService {
     // ------------------------------------------------------------------ //
 
     private fun matchesQuery(note: DecryptedNote, query: ParsedQuery): Boolean {
-        val lowerContent = note.content.lowercase()
-        val lowerTags = note.tags.map { it.lowercase() }
+        val lowerContent = note.searchableContent
+        val lowerTags = note.searchableTags
         val searchableText = lowerContent + " " + lowerTags.joinToString(" ")
 
         // Required tags (AND). #tag matches any tag containing that text.

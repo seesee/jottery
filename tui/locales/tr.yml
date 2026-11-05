@@ -118,6 +118,7 @@ editor:
   temp_write_error: Geçici dosyaya yazma başarısız
   temp_read_error: Geçici dosya okuma başarısız
   default_editor: vi
+  temp_on_disk: "Bu makinede bellek tabanlı geçici klasör yok, bu yüzden açık bir not siz kapatana kadar diskte durur."
 attachment:
   add: Ek ekle
   add_failed: "Ek ekleme başarısız: %{error}"
@@ -176,6 +177,8 @@ settings:
   press_enter_cycle: değiştirmek için Enter tuşuna basın
   press_enter_toggle: açıp kapatmak için Enter tuşuna basın
   disabled: devre dışı
+  sort_order: "Sıralama"
+  language_auto: "Sistemle aynı"
 sync:
   push: Sunucuya gönder
   pull: Sunucudan çek
@@ -213,6 +216,23 @@ sync:
   notes: not
   skipped_notes: "Sunucudan gelen %{count} öğe okunamadı ve atlandı"
   rejected_notes: "%{count} not sunucuyla çakışıyor. Çözmek için Jottery uygulamasını açın."
+  rate_limited: "Sunucu, Jottery'den yeniden eşitlemeden önce %{seconds} saniye beklemesini istedi."
+  key_refused: "Sunucu bu cihazın API anahtarını kabul etmedi. Cihazı yeniden kaydedin."
+  server_busy: "Sunucu meşgul. Jottery %{seconds} saniye sonra yeniden deneyecek."
+  quota_exceeded: "Hesabınız depolama sınırına ulaştı, bu yüzden değişiklikler yüklenemedi. Bu cihazda güvendeler. Yer açmak için çöp kutusunu boşaltın veya ekleri kaldırın."
+  deletions_held_title: "Çok sayıda not silindi"
+  deletions_held: "Sunucuya göre %{count} not başka bir yerde kalıcı olarak silindi. Bunu siz mi yaptınız?"
+  deletions_held_warning: "y: burada çöp kutusuna taşı. n: sakla ve sunucuya geri koy."
+  deletions_held_cli: "Sunucuya göre %{count} not başka bir yerde silindi. Hâlâ buradalar: karar vermek için Jottery'yi açın."
+  deletions_applied: "%{count} not çöp kutusuna taşındı"
+  force_title: "Tam yeniden eşitlemeyi zorla"
+  force_confirm: "TÜM notlar ve ekler sunucudan çekilsin mi?"
+  force_note: "Gönderilmemiş yerel değişiklikler korunur."
+  disconnect_title: "Eşitleme bağlantısını kes"
+  disconnect_confirm: "Bu cihazın sunucuyla bağlantısı kesilsin mi?"
+  disconnect_warning: "Notlarınız burada kalır. Cihaz sunucuda iptal edilir."
+  disconnect_conflicts: "%{count} notta çözülmemiş çakışma var. Sunucu kopyaları burada unutulacak."
+  device_still_registered: "Burada bağlantı kesildi, ancak sunucuya bildirilemedi, bu yüzden bu cihazın anahtarı hâlâ çalışıyor. Kullanıcı portalından iptal edin."
 
 # Gelen Kutusu
 inbox:
@@ -259,6 +279,7 @@ register:
   cleared: Kayıt temizlendi. Yeniden başlayabilirsiniz.
   pending_status: Onay bekleniyor
   password_differs: "Not parolanızdan farklı olmalıdır."
+  insecure_endpoint: "Bu adres şifresiz HTTP kullanıyor, bu yüzden hesap parolanız ve cihaz anahtarınız yolda okunabilir. https:// kullanın veya bunu kabul etmek için bu adresi yeniden girin."
 color_scheme:
   default_dark: Varsayılan koyu
   default_light: Varsayılan açık
@@ -484,6 +505,28 @@ help:
   z_archive_desc: "Seçili notu arşivle (arşiv modunda geri getir)"
   multi_z_archive_key: "z"
   multi_z_archive_desc: "Seçili notları arşivle"
+  search_or_key: "a | b"
+  search_or_desc: "İkisinden biri (VEYA)"
+  search_phrase_key: "\"a phrase\""
+  search_phrase_desc: "Bu sözcükler bu sırayla"
+  search_wildcard_key: "word* / *word"
+  search_wildcard_desc: "Bir sözcük bununla başlar veya biter"
+  search_exclude_tag_key: "-#tag"
+  search_exclude_tag_desc: "Bu etiketli notları hariç tut"
+  search_attachment_key: "has:attachment"
+  search_attachment_desc: "Eki olan notlar"
+  search_archived_key: "archived"
+  search_archived_desc: "Arşivde ara"
+  search_created_key: "created:>2024-01-01"
+  search_created_desc: "Bir tarihten sonra oluşturuldu (< ve a..b de olur)"
+  search_modified_key: "modified:>2024-01-01"
+  search_modified_desc: "Bir tarihten sonra değiştirildi (< ve a..b de olur)"
+  search_words_key: "words:>100"
+  search_words_desc: "Sözcük sayısı (< ve a..b de olur)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "Seçili notlardan etiket kaldır"
+  multi_colour_key: "C"
+  multi_colour_desc: "Seçili notların rengini ayarla"
 cli:
   # Eski (bazı yerlerde kullanılıyor)
   list: Notları listele
@@ -555,6 +598,13 @@ cli:
   attach_file_help: "Eklenecek dosya"
   attachment_number_help: "Hangi ek (show numaralandırmasına göre)"
   archived_help: "Bunun yerine arşivlenmiş notları listele"
+  import_summary: "%{created} eklendi, %{updated} güncellendi, %{skipped} zaten güncel"
+  import_failed: "Dosyadaki %{count} öğe içe aktarılamadı"
+  password_change_required: "Bu hesabın önce parolasını değiştirmesi gerekiyor. Bunun için web uygulamasında oturum açın ve yeniden deneyin."
+  insecure_endpoint: "%{endpoint} şifresiz HTTP kullanıyor, bu yüzden parola yolda okunabilir. https:// kullanın veya bunu kabul etmek için --allow-insecure-http verin."
+  allow_insecure_http_help: "Parolanın şifresiz HTTP ile herkese açık bir sunucuya gönderilmesine izin ver"
+  password_flag_deprecated: "Komut satırındaki parola ps ve kabuk geçmişinde görünür. Bunun yerine --password-stdin veya JOTTERY_PASSWORD kullanın."
+  password_stdin_help: "Sormak yerine parolaları stdin'den satır satır oku"
 status:
   locked: Kilitli
   unlocked: Kilitsiz
@@ -577,6 +627,12 @@ bulk:
   add_tags_to: Etiket ekle
   export_notes_to: Dışa aktar
   archived: "%{count} not arşivlendi"
+  tags_removed: "%{count} nottan etiketler kaldırıldı: %{tags}"
+  remove_tags_from: "%{count} nottan etiket kaldır"
+  enter_colour: "Renk adı girin (temizlemek için boş bırakın):"
+  colour_of: "%{count} notun rengini ayarla"
+  colour_set: "%{count} notun rengi değişti"
+  unknown_colour: "%{colour} adında bir renk yok"
 time:
   just_now: az önce
   minutes_ago: "%{count} dakika önce"
@@ -709,3 +765,6 @@ envelope:
   unwrap_failed: "Not parolanız bu hesabın anahtarını açamıyor. Anahtar eski bir sürüm tarafından kaydedilmiş olabilir. Zaten bağlı bir cihazda Jottery kilidini açın, bu sorunu düzeltir, sonra yeniden deneyin."
   rekey_failed: "Yerel notlarınız bu hesabın anahtarına taşınamadı, bu yüzden hiçbir şey değişmedi: %{error}"
   diverged: "Bu cihazın anahtarı hesabın anahtarından farklı. Diğer cihazlarınızdaki notlar burada açılmayabilir."
+  password_changed_elsewhere: "Not parolanız başka bir cihazda değiştirildi, bu yüzden hiçbir şeyin üzerine yazılmadı. Bu cihazın kilidi hâlâ eski parolayla açılıyor. Yeni cihazların bağlanabilmesi için parolayı burada da değiştirin."
+  server_update_pending: "Parolanız bu cihazda değişti, ancak anahtarınızın sunucudaki kopyası güncellenemedi. Jottery yeniden deneyecek. O zamana kadar yeni bir cihaz yeni parolayla bağlanamaz."
+  key_keeps_changing: "Hesabın anahtarı sunucuda sürekli değişiyor, bu yüzden bu cihaz ona dokunmadı. Birazdan yeniden deneyin."

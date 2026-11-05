@@ -11,6 +11,7 @@ import com.jottery.android.ui.theme.LocalIsDarkTheme
 fun WebCalcEditorView(
     content: String,
     fontSize: Float = 16f,
+    readOnly: Boolean = false,
     onContentChanged: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -19,6 +20,7 @@ fun WebCalcEditorView(
         content = content,
         isDark = LocalIsDarkTheme.current,
         fontSize = fontSize,
+        readOnly = readOnly,
         onContentChanged = onContentChanged,
         modifier = modifier,
     )

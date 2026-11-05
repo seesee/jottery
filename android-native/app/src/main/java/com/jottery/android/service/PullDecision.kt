@@ -21,10 +21,10 @@ enum class PullAction {
 }
 
 /**
- * The hash-chain rules that keep a pull from destroying local work. Ported from
- * iOS `SyncService.processNote` and web `syncService.ts`, with one tightening:
- * a row with unsent changes is never overwritten unless the remote provably
- * descends from it.
+ * The hash-chain rules that keep a pull from destroying local work, as set out
+ * under "Applying a pulled note" in docs/sync-protocol.md: a row with unsent
+ * changes is never overwritten unless the remote provably descends from it, and a
+ * row with none takes whatever the server says is current.
  */
 object PullDecision {
 
@@ -48,14 +48,17 @@ object PullDecision {
             if (localHash == remoteHash) {
                 return if (flagsDiffer && !localNeedsSync) PullAction.FAST_FORWARD else PullAction.SKIP
             }
+            // The remote is an older state of this note: an echo of a push that
+            // has since been overtaken by a local edit. Checked before the test
+            // for a descendant, so a queued edit can never lose to its own past.
+            val isOlderThanLocal = remoteHash == local.parentHash || remoteHash in local.hashChain
+            if (localNeedsSync && isOlderThanLocal) return PullAction.SKIP
+
             // Every text edit advances the hash, so if the remote descends from
             // the current local hash the only thing still queued here is flags.
             if (localHash == remote.parentHash || localHash in remote.hashChain) {
                 return if (localNeedsSync) PullAction.FAST_FORWARD_KEEP_FLAGS else PullAction.FAST_FORWARD
             }
-            // The remote is an older state of this note: an echo of a push that
-            // has since been overtaken by a local edit.
-            if (remoteHash in local.hashChain) return PullAction.SKIP
             return if (localNeedsSync) PullAction.CONFLICT else PullAction.REPLACE_WITH_SNAPSHOT
         }
 

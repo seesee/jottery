@@ -11,7 +11,9 @@ import { versionRepository } from './versionRepository';
 import { advanceContentHash, cryptoService, encryptStringArray, decryptStringArray, updateHashChain } from './crypto';
 import { recordDecryptFailure } from './vaultHealthService';
 import { keyManager } from './keyManager';
-import { ApplicationLockedError, NotFoundError, CryptoError } from '../errors';
+import { ApplicationLockedError, NotFoundError, NoteReadOnlyError, CryptoError } from '../errors';
+import { syncToStorage } from './tagConversionService';
+import { syncRepository } from './syncRepository';
 import { backupSchedulerService } from './backupSchedulerService';
 import { getNoteTitle } from '../utils/noteTitle';
 import { localeIncludes, localeSort } from '../utils/stringUtils';
@@ -33,6 +35,7 @@ class NoteService {
       modifiedAt?: string;
       pinned?: boolean;
       locked?: boolean;
+      archived?: boolean;
       wordWrap?: boolean;
       syntaxLanguage?: string;
       showPreview?: boolean;
@@ -59,6 +62,8 @@ class NoteService {
       modifiedAt: options?.modifiedAt || now,
       pinned: options?.pinned || false,
       locked: options?.locked || false,
+      archived: options?.archived || false,
+      archivedAt: options?.archived ? (options.modifiedAt ?? now) : undefined,
       wordWrap: options?.wordWrap ?? true,
       syntaxLanguage: options?.syntaxLanguage || 'markdown',
       showPreview: options?.showPreview ?? false,
@@ -347,6 +352,7 @@ class NoteService {
 
     // Track if actual content changed (not just UI state)
     let hasContentChange = false;
+    let changesWhatItHolds = false;
     let removedAttachmentIds: string[] = [];
 
     // Decrypt current content to compare
@@ -372,6 +378,7 @@ class NoteService {
       );
       note.content = JSON.stringify(encryptedContent);
       hasContentChange = true;
+      changesWhatItHolds = true;
     }
 
     // Update tags if provided and changed
@@ -384,6 +391,7 @@ class NoteService {
         const encryptedTags = await encryptStringArray(updates.tags, masterKey.key);
         note.tags = [JSON.stringify(encryptedTags)];
         hasContentChange = true;
+        changesWhatItHolds = true;
       }
     }
 
@@ -400,7 +408,14 @@ class NoteService {
         removedAttachmentIds = [...oldAttachmentIds].filter(id => !newAttachmentIds.has(id));
         note.attachments = updates.attachments;
         hasContentChange = true;
+        changesWhatItHolds = true;
       }
+    }
+
+    // The one place this is enforced: read-only is otherwise only a matter of which
+    // controls the UI shows. A save that changes nothing, such as an autosave, is fine.
+    if (changesWhatItHolds && (note.locked || note.archived)) {
+      throw new NoteReadOnlyError(id);
     }
 
     // Update pinned status if provided and changed
@@ -435,15 +450,7 @@ class NoteService {
 
     // Update hash chain if content changed
     if (hasContentChange) {
-      // Store old hash as parent
-      const oldContentHash = note.contentHash;
-      const oldHashChain = note.hashChain || [];
-
-      // Compute new content hash
-      const newContentHash = await cryptoService.computeContentHash(note);
-      note.contentHash = newContentHash;
-      note.parentHash = oldContentHash || null;
-      note.hashChain = updateHashChain(newContentHash, oldHashChain);
+      await advanceContentHash(note);
     }
 
     // Update modifiedAt for any change (content or UI state) so it syncs properly
@@ -474,8 +481,18 @@ class NoteService {
       throw new NotFoundError('Note', id);
     }
 
+    if (note.locked || note.archived) {
+      throw new NoteReadOnlyError(id);
+    }
+
+    const masterKey = keyManager.getMasterKey();
+    if (!masterKey) {
+      throw new ApplicationLockedError();
+    }
+
     note.content = version.content;
-    note.tags = version.tags;
+    // Versions pulled by older clients can hold the sync format
+    note.tags = await syncToStorage(version.tags, masterKey.key);
     note.attachments = version.attachments;
     note.syntaxLanguage = version.syntaxLanguage;
     note.wordWrap = version.wordWrap;
@@ -602,9 +619,25 @@ class NoteService {
     // Its versions can't be reached once the note has gone, and they would keep its
     // attachments in use for good
     await versionRepository.deleteVersionsForNote(id);
+    await syncRepository.deleteNoteSyncMetadata(id);
     await noteRepository.permanentDelete(id);
 
     await deleteUnreferencedAttachments(note?.attachments.map(attachment => attachment.id) ?? []);
+  }
+
+  /**
+   * Remove a note another device permanently deleted, and everything kept for it here
+   * @returns Whether this device had the note
+   */
+  async applyRemoteDeletion(id: string): Promise<boolean> {
+    const note = await noteRepository.getById(id);
+
+    await versionRepository.deleteVersionsForNote(id);
+    await syncRepository.deleteNoteSyncMetadata(id);
+    const deleted = await noteRepository.applyRemoteDeletion(id);
+
+    await deleteUnreferencedAttachments(note?.attachments.map(attachment => attachment.id) ?? []);
+    return deleted;
   }
 
   /**

@@ -118,6 +118,7 @@ editor:
   temp_write_error: 写入临时文件失败
   temp_read_error: 读取临时文件失败
   default_editor: vi
+  temp_on_disk: "此计算机没有内存临时文件夹，因此打开的笔记在关闭前都保存在磁盘上。"
 attachment:
   add: 添加附件
   add_failed: "添加附件失败: %{error}"
@@ -176,6 +177,8 @@ settings:
   press_enter_cycle: 按 Enter 循环
   press_enter_toggle: 按 Enter 切换
   disabled: 禁用
+  sort_order: "排序"
+  language_auto: "跟随系统"
 sync:
   push: 推送到服务器
   pull: 从服务器拉取
@@ -213,6 +216,23 @@ sync:
   notes: 条笔记
   skipped_notes: "服务器上的 %{count} 项无法读取，已跳过"
   rejected_notes: "%{count} 条笔记与服务器冲突。请打开 Jottery 解决。"
+  rate_limited: "服务器要求 Jottery 等待 %{seconds} 秒后再同步。"
+  key_refused: "服务器未接受此设备的 API 密钥。请重新注册设备。"
+  server_busy: "服务器繁忙。Jottery 将在 %{seconds} 秒后重试。"
+  quota_exceeded: "您的账户已达到存储上限，因此无法上传更改。更改已安全保存在此设备上。请清空回收站或移除附件以腾出空间。"
+  deletions_held_title: "大量笔记被删除"
+  deletions_held: "服务器称有 %{count} 条笔记已在别处被永久删除。这是您的操作吗？"
+  deletions_held_warning: "y：在此移至回收站。n：保留并放回服务器。"
+  deletions_held_cli: "服务器称有 %{count} 条笔记已在别处被删除。它们仍在这里：请打开 Jottery 决定。"
+  deletions_applied: "已将 %{count} 条笔记移至回收站"
+  force_title: "强制完全重新同步"
+  force_confirm: "要从服务器拉取所有笔记和附件吗？"
+  force_note: "尚未推送的本地更改将被保留。"
+  disconnect_title: "断开同步"
+  disconnect_confirm: "要断开此设备与服务器的连接吗？"
+  disconnect_warning: "您的笔记保留在此处。此设备将在服务器上被撤销。"
+  disconnect_conflicts: "%{count} 条笔记存在未解决的冲突。其服务器副本将在此处被遗忘。"
+  device_still_registered: "已在此处断开，但无法通知服务器，因此此设备的密钥仍然有效。请在用户门户中撤销。"
 
 # 收件箱
 inbox:
@@ -259,6 +279,7 @@ register:
   cleared: 注册已清除。您可以重新开始。
   pending_status: 等待审批
   password_differs: "必须与笔记密码不同。"
+  insecure_endpoint: "此地址使用未加密的 HTTP，您的账户密码和设备密钥可能在传输途中被读取。请使用 https://，或再次输入此地址以接受此风险。"
 color_scheme:
   default_dark: 默认深色
   default_light: 默认浅色
@@ -484,6 +505,28 @@ help:
   z_archive_desc: "归档所选笔记（在归档模式下恢复）"
   multi_z_archive_key: "z"
   multi_z_archive_desc: "归档所选笔记"
+  search_or_key: "a | b"
+  search_or_desc: "匹配任一项（或）"
+  search_phrase_key: "\"a phrase\""
+  search_phrase_desc: "按此顺序匹配这些词"
+  search_wildcard_key: "word* / *word"
+  search_wildcard_desc: "词以此开头或结尾"
+  search_exclude_tag_key: "-#tag"
+  search_exclude_tag_desc: "排除带此标签的笔记"
+  search_attachment_key: "has:attachment"
+  search_attachment_desc: "有附件的笔记"
+  search_archived_key: "archived"
+  search_archived_desc: "搜索归档"
+  search_created_key: "created:>2024-01-01"
+  search_created_desc: "在某日期之后创建（也可用 < 和 a..b）"
+  search_modified_key: "modified:>2024-01-01"
+  search_modified_desc: "在某日期之后修改（也可用 < 和 a..b）"
+  search_words_key: "words:>100"
+  search_words_desc: "字数（也可用 < 和 a..b）"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "从所选笔记中移除标签"
+  multi_colour_key: "C"
+  multi_colour_desc: "设置所选笔记的颜色"
 cli:
   # 简短命令描述（用于旧版/备用）
   list: 列出笔记
@@ -555,6 +598,13 @@ cli:
   attach_file_help: "要附加的文件"
   attachment_number_help: "哪个附件（按 show 的编号）"
   archived_help: "改为列出已归档的笔记"
+  import_summary: "已添加 %{created} 条，已更新 %{updated} 条，%{skipped} 条已是最新"
+  import_failed: "文件中有 %{count} 项无法导入"
+  password_change_required: "此账户需要先更改密码。请登录 Web 应用进行更改，然后重试。"
+  insecure_endpoint: "%{endpoint} 使用未加密的 HTTP，密码可能在传输途中被读取。请使用 https://，或指定 --allow-insecure-http 接受此风险。"
+  allow_insecure_http_help: "允许通过未加密的 HTTP 将密码发送到公共主机"
+  password_flag_deprecated: "命令行上的密码会显示在 ps 和 shell 历史记录中。请改用 --password-stdin 或 JOTTERY_PASSWORD。"
+  password_stdin_help: "从 stdin 逐行读取密码，而不是提示输入"
 status:
   locked: 已锁定
   unlocked: 已解锁
@@ -577,6 +627,12 @@ bulk:
   add_tags_to: 添加标签到
   export_notes_to: 导出
   archived: "已归档 %{count} 条笔记"
+  tags_removed: "已从 %{count} 条笔记中移除标签：%{tags}"
+  remove_tags_from: "从 %{count} 条笔记中移除标签"
+  enter_colour: "输入颜色名称（留空以清除）："
+  colour_of: "设置 %{count} 条笔记的颜色"
+  colour_set: "已更改 %{count} 条笔记的颜色"
+  unknown_colour: "没有名为 %{colour} 的颜色"
 time:
   just_now: 刚刚
   minutes_ago: "%{count} 分钟前"
@@ -709,3 +765,6 @@ envelope:
   unwrap_failed: "您的笔记密码无法打开此账户的密钥。它可能由旧版本保存。请在已连接的设备上解锁 Jottery 以修复此问题，然后重试。"
   rekey_failed: "无法将本地笔记迁移到此账户的密钥，因此未做任何更改：%{error}"
   diverged: "此设备的密钥与账户密钥不同。来自其他设备的笔记可能无法在此打开。"
+  password_changed_elsewhere: "您的笔记密码已在另一台设备上更改，因此没有覆盖任何内容。此设备仍使用旧密码解锁。请在此处改为相同的密码，以便新设备可以加入。"
+  server_update_pending: "此设备上的密码已更改，但无法更新服务器上的密钥副本。Jottery 将重试。在此之前，新设备无法使用新密码加入。"
+  key_keeps_changing: "服务器上的账户密钥一直在变化，因此此设备未作更改。请稍后重试。"

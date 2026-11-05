@@ -74,8 +74,17 @@ data class NoteRecord(
     @ColumnInfo(name = "needs_sync")
     var needsSync: Boolean = true,
 
+    /** The content hash the server holds for this note, as far as this device knows. */
     @ColumnInfo(name = "sync_hash")
     var syncHash: String? = null,
+
+    /**
+     * When this device saw the note go into the bin, by its own clock. [deletedAt]
+     * can come from the server, which could date it long ago to have it purged at
+     * once, so the time left in the bin is counted from here.
+     */
+    @ColumnInfo(name = "local_deleted_at")
+    var localDeletedAt: String? = null,
 ) {
     companion object {
         fun new(encryptedContent: String, encryptedTags: String): NoteRecord {

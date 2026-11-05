@@ -42,7 +42,7 @@ fun ImportScreen(
                 val json = withContext(Dispatchers.IO) {
                     context.contentResolver.openInputStream(uri)?.use { input ->
                         input.bufferedReader().readText()
-                    } ?: throw Exception("Could not read file")
+                    } ?: throw Exception(context.getString(R.string.import_could_not_read_file))
                 }
                 val result = appState.importNotes(json, strategy)
                 statusMessage = buildString {
@@ -58,7 +58,7 @@ fun ImportScreen(
                     null
                 }
             } catch (e: Exception) {
-                errorMessage = "Import failed: ${e.message}"
+                errorMessage = context.getString(R.string.import_failed, e.message.orEmpty())
             } finally {
                 isImporting = false
             }
@@ -68,10 +68,10 @@ fun ImportScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Import Notes") },
+                title = { Text(stringResource(R.string.import_import_notes)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
             )
@@ -85,7 +85,7 @@ fun ImportScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
-                "Import notes from a JSON export file. Notes will be encrypted with your current vault password.",
+                stringResource(R.string.import_import_notes_from_a_json),
                 style = MaterialTheme.typography.bodyMedium,
             )
 
@@ -117,7 +117,7 @@ fun ImportScreen(
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
                 }
-                Text("Select JSON File")
+                Text(stringResource(R.string.import_select_json_file))
             }
 
             statusMessage?.let {

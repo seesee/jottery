@@ -66,7 +66,8 @@
   }
 
   function handleToggleCollapse() {
-    if (hasChildren) {
+    // Collapsed state is saved in the note's text
+    if (hasChildren && !readonly) {
       dispatch('toggleCollapse', { id: node.id });
     }
   }

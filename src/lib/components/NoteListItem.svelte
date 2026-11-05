@@ -14,7 +14,7 @@
   } from '../stores/appStore';
   import { getColorHex, getTagColor } from '../services/colorService';
   import { formatTimestamp } from '../utils/timezone';
-  import { stripMarkdownSignifiers, isMarkdownLanguage } from '../utils/markdownStrip';
+  import { notePreview } from '../utils/markdownStrip';
   import { getNoteTitle, getTitleTagValue } from '../utils/noteTitle';
   import { getRegularTags } from '../utils/virtualTags';
   import {
@@ -140,10 +140,7 @@
   $: showDeleteBtn = shouldShowDeleteButton(visibilityState);
 
   // Strip markdown from preview only for markdown language
-  $: rawPreview = note.content.split('\n').slice(1).join(' ');
-  $: preview = isMarkdownLanguage(note.syntaxLanguage)
-    ? stripMarkdownSignifiers(rawPreview).slice(0, previewLength)
-    : rawPreview.slice(0, previewLength);
+  $: preview = notePreview(note.content, note.syntaxLanguage, previewLength);
 
   $: formattedDateStore = formatTimestamp(note.modifiedAt, 'date');
 
@@ -394,6 +391,7 @@
       class="note-list-item w-full text-left p-4 min-h-[60px] border-b border-gray-200 dark:border-gray-700 relative {isSelected ? 'border-l-4 border-l-blue-500' : ''} {isMultiSelected ? 'bg-blue-100 dark:bg-blue-900/40' : noteBackgroundColor ? '' : 'bg-white dark:bg-gray-900'}"
       style="transform: translateX({swipeTransform}px); transition: {isSwipeActive ? 'none' : 'transform 0.2s ease-out'}; {noteBackgroundColor && !isMultiSelected ? `background-color: ${noteBackgroundColor};` : ''}"
       data-testid="note-list-item"
+      aria-current={isSelected ? 'true' : undefined}
     >
       <div class="flex items-start justify-between mb-1">
         <div class="flex items-center gap-2 flex-1 min-w-0">
@@ -503,6 +501,7 @@
     class="note-list-item w-full text-left p-4 min-h-[60px] border-b border-gray-200 dark:border-gray-700 active:bg-gray-100 dark:active:bg-gray-700 transition-colors relative {isSelected ? 'border-l-4 border-l-blue-500' : ''} {isMultiSelected ? 'bg-blue-100 dark:bg-blue-900/40' : ''}"
     style:background-color={!isMultiSelected && noteBackgroundColor ? noteBackgroundColor : undefined}
     data-testid="note-list-item"
+    aria-current={isSelected ? 'true' : undefined}
   >
     <div class="flex items-start justify-between mb-1">
       <div class="flex items-center gap-2 flex-1 min-w-0">

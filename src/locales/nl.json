@@ -444,7 +444,7 @@
         "required": "Voer je notitiewachtwoord in.",
         "incorrect": "Dat is niet het wachtwoord dat je notities op dit apparaat ontgrendelt. Voer je notitiewachtwoord in, niet je serverwachtwoord.",
         "uploadFailed": "Synchronisatie is ingesteld, maar de versleutelingssleutel kon niet op de server worden opgeslagen, dus andere apparaten kunnen nog geen verbinding maken. Bij de volgende ontgrendeling wordt het opnieuw geprobeerd",
-        "mustDiffer": "Je notitiewachtwoord en accountwachtwoord moeten verschillen. De synchronisatieserver ziet je accountwachtwoord, dus als ze gelijk zijn, kan de server je notities lezen. Zijn ze gelijk op je andere apparaten, wijzig dan eerst daar je notitiewachtwoord.",
+        "mustDiffer": "Je notitiewachtwoord en accountwachtwoord moeten verschillen. De synchronisatieserver ziet je accountwachtwoord, dus als ze gelijk zijn, kan de server je notities lezen.",
         "matchesAccountWarning": "Je notitiewachtwoord is gelijk aan je accountwachtwoord, dus de synchronisatieserver kan je notities lezen. Wijzig je notitiewachtwoord om dit op te lossen."
       },
       "existingAccountDetected": "Dit e-mailadres heeft al een account, dus dit apparaat maakt daarmee verbinding. Voer het notitiewachtwoord in dat je op je andere apparaten gebruikt."
@@ -517,7 +517,9 @@
       "duplicateNote": "Notitie dupliceren",
       "exportNote": "Notitie exporteren",
       "pressKey": "Druk op een toets...",
-      "notSet": "Niet ingesteld"
+      "notSet": "Niet ingesteld",
+      "needsModifier": "Deze sneltoets werkt tijdens het typen en heeft dus Ctrl, Cmd of Alt nodig. Druk op een andere toets, of op Esc om te annuleren.",
+      "reserved": "Die toets is gereserveerd. Druk op een andere toets, of op Esc om te annuleren."
     },
     "syncTab": {
       "enableSync": "Synchronisatie inschakelen",
@@ -570,7 +572,8 @@
         "changing": "Wachtwoord wijzigen...",
         "button": "Wachtwoord wijzigen",
         "success": "Wachtwoord succesvol gewijzigd",
-        "error": "Kan wachtwoord niet wijzigen: {error}"
+        "error": "Kan wachtwoord niet wijzigen: {error}",
+        "serverKeyFailed": "Je wachtwoord is op dit apparaat gewijzigd, maar de server kon niet worden bijgewerkt. Dit wordt opnieuw geprobeerd wanneer je de volgende keer ontgrendelt. Tot die tijd heeft een nieuw apparaat je oude wachtwoord nodig."
       },
       "connectionDetails": {
         "title": "Verbindingsdetails",
@@ -606,11 +609,12 @@
         "dangerZone": "Gevarenzone",
         "deleteNotesDescription": "Verwijder al uw notities van de synchronisatieserver. Deze actie kan niet ongedaan worden gemaakt. Uw lokale notities worden NIET verwijderd.",
         "deleteNotesButton": "Alle notities van server verwijderen"
-      }
+      },
+      "disconnectNotRevoked": "Dit apparaat is losgekoppeld, maar de server kon niet worden ingelicht, dus het staat daar nog vermeld en de sleutel werkt nog. Trek het in via het gebruikersportaal."
     },
     "advancedTab": {
       "importExport": "Importeren/Exporteren",
-      "exportDescription": "Exporteer notities als ontsleutelde JSON. Import zal notities samenvoegen met bestaande gegevens.",
+      "exportDescription": "Exporteren maakt een onversleutelde JSON-kopie om notities elders te gebruiken: iedereen met het bestand kan het lezen. Gebruik Back-up voor een versleutelde kopie. Importeren voegt notities samen met wat er al is.",
       "downloadClient": "Terminal/HTML-client downloaden",
       "downloadTerminalClient": "Terminalclient downloaden",
       "clientDescription": "Download de terminalclient voor opdrachtregeltoegang, of de HTML-client om lokaal vanuit het bestandssysteem uit te voeren",
@@ -638,7 +642,8 @@
       "aboutDescription": "Jottery is een privacy-gerichte, zelf-gehoste kladblokapplicatie voor het vastleggen, organiseren en doorzoeken van notities met rijke inhoud, syntaxisaccentuering en versleuteling.",
       "viewOnGithub": "Bekijken op GitHub",
       "license": "Gelicentieerd onder de MIT-licentie."
-    }
+    },
+    "exportIncomplete": "De export is onvolledig: {notes} notities en {attachments} bijlagen konden niet worden gelezen en zijn weggelaten."
   },
   "landing": {
     "languagePicker": {
@@ -934,7 +939,8 @@
         "encrypting": "Inloggegevens beveiligen…",
         "syncing": "Eerste synchronisatie starten…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "Je notitiewachtwoord is op een ander apparaat gewijzigd. Dit apparaat ontgrendelt nog steeds met het oude wachtwoord en je notities zijn veilig, maar nieuwe apparaten hebben het nieuwe wachtwoord nodig."
   },
   "lock": {
     "title": "Applicatie vergrendelen",
@@ -1194,7 +1200,11 @@
   },
   "sync": {
     "syncing": "Synchroniseren...",
-    "syncProgress": "Synchroniseren: {percentage}% voltooid"
+    "syncProgress": "Synchroniseren: {percentage}% voltooid",
+    "notesRefused": "Sommige notities zijn te groot voor de uploadlimiet van je account en zijn niet gesynchroniseerd. De rest wel.",
+    "accountDisabled": "Je account is gedeactiveerd of wacht op goedkeuring, dus de synchronisatie is gestopt. Je notities op dit apparaat zijn veilig. Neem contact op met je beheerder.",
+    "storageQuotaExceeded": "Je account heeft de opslaglimiet bereikt, dus wijzigingen op dit apparaat kunnen niet worden geüpload. Verwijder enkele notities of bijlagen definitief om ruimte te maken.",
+    "massDeletionHeld": "De server vroeg om {count} notities tegelijk te verwijderen. Ze staan in de prullenbak voor het geval jij dit niet was. Herstel ze daar, of leeg de prullenbak als jij het wel was."
   },
   "inbox": {
     "title": "Postvak IN",

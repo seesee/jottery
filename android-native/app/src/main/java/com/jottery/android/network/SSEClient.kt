@@ -1,6 +1,7 @@
 package com.jottery.android.network
 
 import android.util.Log
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -17,57 +18,89 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Server-Sent Events client for real-time sync notifications.
- * Connects to the SSE endpoint and notifies on changes.
- * Includes exponential backoff reconnection.
+ *
+ * Every connection uses a fresh token: they last five minutes, so one kept for a
+ * reconnect is refused for ever. Failures back off exponentially, and retrying
+ * stops once the API key itself is refused.
  */
 class SSEClient(
     private val baseUrl: String,
     private val scope: CoroutineScope,
+    private val initialBackoffMs: Long = 1000L,
 ) {
     companion object {
         private const val TAG = "SSEClient"
-        private const val INITIAL_BACKOFF_MS = 1000L
         private const val MAX_BACKOFF_MS = 60_000L
+        private const val HTTP_UNAUTHORIZED = 401
+        private const val HTTP_FORBIDDEN = 403
     }
 
     var onSyncNeeded: (() -> Unit)? = null
 
+    /** Exchanges the API key for a token. Throws if that fails. */
+    var tokenProvider: (suspend () -> String)? = null
+
     private var eventSource: EventSource? = null
     private var reconnectJob: Job? = null
-    private var currentBackoff = INITIAL_BACKOFF_MS
-    private var sseToken: String? = null
-    private var isRunning = false
+    private var currentBackoff = initialBackoffMs
+
+    @Volatile private var isRunning = false
+    @Volatile private var isConnected = false
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(0, TimeUnit.SECONDS) // No timeout for SSE
         .build()
 
-    fun start(token: String) {
-        sseToken = token
+    fun start() {
         isRunning = true
-        connect()
+        reconnectNow()
     }
 
     fun stop() {
         isRunning = false
+        isConnected = false
         reconnectJob?.cancel()
         reconnectJob = null
         eventSource?.cancel()
         eventSource = null
-        currentBackoff = INITIAL_BACKOFF_MS
+        currentBackoff = initialBackoffMs
     }
 
-    fun updateToken(token: String) {
-        sseToken = token
-        // Reconnect with new token
-        eventSource?.cancel()
-        connect()
+    /** The network came back: there's no reason to sit out the rest of a backoff. */
+    fun reconnectNow() {
+        if (!isRunning || isConnected) return
+        currentBackoff = initialBackoffMs
+        reconnectJob?.cancel()
+        reconnectJob = scope.launch(Dispatchers.IO) { connectWithFreshToken() }
     }
 
-    private fun connect() {
+    private suspend fun connectWithFreshToken() {
+        val provider = tokenProvider ?: return
+        val token = try {
+            provider()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: SyncClientException) {
+            if (e.statusCode == HTTP_UNAUTHORIZED || e.statusCode == HTTP_FORBIDDEN) {
+                // No token will come until the device is registered or the account
+                // restored, and a normal sync reports that to the user.
+                Log.w(TAG, "SSE stopped: the server refused the API key")
+                stop()
+            } else {
+                scheduleReconnect()
+            }
+            return
+        } catch (e: Exception) {
+            Log.w(TAG, "SSE token failed: ${e.javaClass.simpleName}")
+            scheduleReconnect()
+            return
+        }
+        connect(token)
+    }
+
+    private fun connect(token: String) {
         if (!isRunning) return
-        val token = sseToken ?: return
 
         val request = Request.Builder()
             .url("$baseUrl/api/v1/sync/events?token=$token")
@@ -75,10 +108,12 @@ class SSEClient(
             .build()
 
         val factory = EventSources.createFactory(client)
+        eventSource?.cancel()
         eventSource = factory.newEventSource(request, object : EventSourceListener() {
             override fun onOpen(eventSource: EventSource, response: Response) {
                 Log.d(TAG, "SSE connected")
-                currentBackoff = INITIAL_BACKOFF_MS
+                isConnected = true
+                currentBackoff = initialBackoffMs
             }
 
             override fun onEvent(
@@ -87,7 +122,6 @@ class SSEClient(
                 type: String?,
                 data: String,
             ) {
-                Log.d(TAG, "SSE event: type=$type data=$data")
                 when (type) {
                     "sync", "change", "note_changed" -> {
                         onSyncNeeded?.invoke()
@@ -97,6 +131,7 @@ class SSEClient(
 
             override fun onClosed(eventSource: EventSource) {
                 Log.d(TAG, "SSE closed")
+                isConnected = false
                 scheduleReconnect()
             }
 
@@ -105,7 +140,8 @@ class SSEClient(
                 t: Throwable?,
                 response: Response?,
             ) {
-                Log.w(TAG, "SSE failure: ${t?.message}")
+                Log.w(TAG, "SSE failure: ${response?.code ?: t?.javaClass?.simpleName}")
+                isConnected = false
                 scheduleReconnect()
             }
         })
@@ -117,9 +153,7 @@ class SSEClient(
         reconnectJob = scope.launch(Dispatchers.IO) {
             delay(currentBackoff)
             currentBackoff = (currentBackoff * 2).coerceAtMost(MAX_BACKOFF_MS)
-            if (isActive && isRunning) {
-                connect()
-            }
+            if (isActive && isRunning) connectWithFreshToken()
         }
     }
 }

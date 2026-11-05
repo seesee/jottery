@@ -8,7 +8,6 @@ use std::{
     path::PathBuf,
     process::Command,
 };
-use tempfile::NamedTempFile;
 
 use crate::{
     models::Attachment,
@@ -220,10 +219,7 @@ pub fn view_attachment(app: &mut App, attachment: &Attachment) -> Result<()> {
         .get(&attachment.id, key)?
         .context("Attachment not found in database")?;
 
-    let temp_file = tempfile::Builder::new()
-        .suffix(&format!(".{}", suffix))
-        .tempfile()
-        .context("Failed to create temporary file")?;
+    let temp_file = crate::secure_temp::create(&format!(".{}", suffix))?;
 
     // Write decrypted data to temp file
     std::fs::write(temp_file.path(), &data)
@@ -454,11 +450,10 @@ pub fn add_attachment(app: &mut App, note_id: &str, file_path: &str) -> Result<(
         }
     };
 
-    log_debug(&format!("add_attachment: Starting with path: {}", file_path));
+    log_debug("add_attachment: Starting");
 
     // Expand tilde in path
     let expanded_path = expand_tilde(file_path)?;
-    log_debug(&format!("add_attachment: Expanded path: {:?}", expanded_path));
 
     // Validate file exists
     if !expanded_path.exists() {
@@ -601,12 +596,15 @@ pub fn remove_attachment_from_current_note(app: &mut App) -> Result<()> {
 /// Edit note content with external $EDITOR
 pub fn edit_with_external_editor(app: &mut App) -> Result<String> {
     // Create temporary file with current note content
-    let mut temp_file = NamedTempFile::new()
-        .context("Failed to create temporary file")?;
+    let mut temp_file = crate::secure_temp::create("")?;
     temp_file
         .write_all(app.note_input.as_bytes())
         .context("Failed to write to temporary file")?;
     temp_file.flush()?;
+
+    if crate::secure_temp::take_disk_warning() {
+        app.notify(t!("editor.temp_on_disk").to_string());
+    }
 
     let temp_path = temp_file.path();
     let editor = external::editor_command();
@@ -723,7 +721,7 @@ mod tests {
 
         view_attachment(&mut app, &attachment).unwrap();
 
-        assert_eq!(app.attachment_to_confirm.unwrap().filename, "page.html");
+        assert_eq!(app.attachment_to_confirm.as_ref().unwrap().filename, "page.html");
     }
 
     #[test]

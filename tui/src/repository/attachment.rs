@@ -82,6 +82,20 @@ impl<'a> AttachmentRepository<'a> {
         }
     }
 
+    /// Note that the server has this attachment's file, so a push needn't send it.
+    pub fn mark_pushed(&self, id: &str) -> Result<()> {
+        self.conn.execute("UPDATE attachments SET pushed = 1 WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    /// Whether the server is known to have this attachment's file
+    pub fn is_pushed(&self, id: &str) -> Result<bool> {
+        let pushed = self.conn
+            .query_row("SELECT pushed FROM attachments WHERE id = ?1", params![id], |row| row.get::<_, i32>(0))
+            .optional()?;
+        Ok(pushed.is_some_and(|pushed| pushed != 0))
+    }
+
     /// Every attachment's id
     pub fn list_ids(&self) -> Result<Vec<String>> {
         let mut stmt = self.conn.prepare("SELECT id FROM attachments")?;

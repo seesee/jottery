@@ -21,14 +21,15 @@ object BiometricHelper {
     }
 
     /**
-     * Show biometric prompt for decryption.
-     * The cipher must be initialised for DECRYPT_MODE with the Keystore key.
+     * Show the biometric prompt. [cipher] is unusable until it succeeds, which is what
+     * ties the key to the biometric rather than to an app that says one happened.
      */
     fun authenticate(
         activity: FragmentActivity,
         cipher: Cipher,
-        title: String = "Unlock Jottery",
-        subtitle: String = "Use your fingerprint or face to unlock",
+        title: String,
+        subtitle: String,
+        negativeButton: String,
         onSuccess: (Cipher) -> Unit,
         onError: (String) -> Unit,
         onCancel: () -> Unit = {},
@@ -39,12 +40,13 @@ object BiometricHelper {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 result.cryptoObject?.cipher?.let { authenticatedCipher ->
                     onSuccess(authenticatedCipher)
-                } ?: onError("No cipher returned from biometric prompt")
+                } ?: onCancel()
             }
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                 if (errorCode == BiometricPrompt.ERROR_USER_CANCELED ||
-                    errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON
+                    errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON ||
+                    errorCode == BiometricPrompt.ERROR_CANCELED
                 ) {
                     onCancel()
                 } else {
@@ -62,7 +64,7 @@ object BiometricHelper {
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
             .setTitle(title)
             .setSubtitle(subtitle)
-            .setNegativeButtonText("Use password")
+            .setNegativeButtonText(negativeButton)
             .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
             .build()
 

@@ -195,14 +195,19 @@ object CryptoService {
     // MARK: - Hash Chain
 
     /** Update hash chain by prepending new hash and trimming. */
-    fun updateHashChain(currentHash: String, parentChain: List<String> = emptyList()): List<String> {
-        val newChain = mutableListOf(currentHash)
-        newChain.addAll(parentChain)
-        return if (newChain.size > MAX_HASH_CHAIN_LENGTH) {
-            newChain.take(MAX_HASH_CHAIN_LENGTH)
-        } else {
-            newChain
-        }
+    fun updateHashChain(
+        currentHash: String,
+        parentChain: List<String> = emptyList(),
+        keep: String? = null,
+    ): List<String> {
+        val chain = listOf(currentHash) + parentChain
+        if (chain.size <= MAX_HASH_CHAIN_LENGTH) return chain
+
+        // The server only accepts a push whose chain holds the hash it has, so
+        // however many saves come between syncs, that one can't age out. A gap
+        // before it does no harm: a chain is only ever searched.
+        val trimmed = chain.take(MAX_HASH_CHAIN_LENGTH)
+        return if (keep == null || keep in trimmed) trimmed else trimmed.dropLast(1) + keep
     }
 
     /** Find common ancestor between two hash chains. */

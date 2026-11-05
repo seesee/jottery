@@ -231,12 +231,16 @@ class WebCryptoService implements CryptoService {
    * Used only during onboarding/migration — not for daily unlock.
    * The userId serves as a deterministic, per-user salt.
    */
-  async deriveWrappingKey(password: string, userId: string): Promise<CryptoKey> {
+  async deriveWrappingKey(
+    password: string,
+    userId: string,
+    iterations: number = CRYPTO_WRAPPING_ITERATIONS
+  ): Promise<CryptoKey> {
     const salt = stringToArrayBuffer(userId);
     return this.deriveKey({
       password,
       salt: new Uint8Array(salt),
-      iterations: CRYPTO_WRAPPING_ITERATIONS,
+      iterations,
       extractable: false,
     });
   }
@@ -334,14 +338,17 @@ export async function decryptStringArray(
  *
  * @param currentHash - The new content hash to add
  * @param parentChain - The previous hash chain (or empty array for new notes)
+ * @param keepThrough - A hash that must stay in the chain, however far back it is
  * @returns Updated hash chain with current hash prepended
  */
 export function updateHashChain(
   currentHash: string,
-  parentChain: string[] = []
+  parentChain: string[] = [],
+  keepThrough?: string
 ): string[] {
   const newChain = [currentHash, ...parentChain];
-  return newChain.slice(0, MAX_HASH_CHAIN_LENGTH);
+  const needed = keepThrough ? newChain.indexOf(keepThrough) + 1 : 0;
+  return newChain.slice(0, Math.max(MAX_HASH_CHAIN_LENGTH, needed));
 }
 
 /**
@@ -355,7 +362,14 @@ export async function advanceContentHash(note: Note): Promise<void> {
     return;
   }
 
-  note.hashChain = updateHashChain(contentHash, note.hashChain ?? []);
+  // The server accepts a push only if its hash appears in the chain. A clean note's
+  // hash is what the server holds, so it has to survive every save until the next
+  // sync, or a long writing session would come back as a conflict with itself.
+  if (!note.needsSync && note.contentHash) {
+    note.serverHash = note.contentHash;
+  }
+
+  note.hashChain = updateHashChain(contentHash, note.hashChain ?? [], note.serverHash);
   note.parentHash = note.contentHash ?? null;
   note.contentHash = contentHash;
 }

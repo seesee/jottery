@@ -179,17 +179,109 @@ test.describe('Keyboard Shortcuts', () => {
     expect(true).toBe(true);
   });
 
-  test('should close note with Escape', async ({ page }) => {
-    // Create a note
-    await createNoteViaButton(page, 'Escape close test');
+  test.describe('Escape and the open note', () => {
+    test.beforeEach(async ({ page }) => {
+      await createNoteViaButton(page, 'Escape close test');
+    });
 
-    // Press Escape to close the note
-    await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
+    test('closes the note', async ({ page }) => {
+      await page.keyboard.press('Escape');
 
-    // Note should be deselected (no editor visible or editor hidden)
-    // The Escape key clears selection when no modal is open
-    expect(true).toBe(true);
+      await expect(jp.editorContent).toBeHidden({ timeout: 5000 });
+    });
+
+    test('closes the note while a toast is showing', async ({ page }) => {
+      // The toast container is what used to count as an open modal
+      await page.evaluate(async () => {
+        const { toast } = await import('/src/lib/utils/toast.svelte.ts' as string);
+        toast.info('something happened');
+      });
+      await expect(page.getByText('something happened')).toBeVisible();
+
+      await page.keyboard.press('Escape');
+
+      await expect(jp.editorContent).toBeHidden({ timeout: 5000 });
+    });
+
+    test('closes a dialog first, and leaves the note open', async ({ page }) => {
+      await jp.openSettings();
+
+      await page.keyboard.press('Escape');
+
+      await expect(page.getByRole('dialog')).toHaveCount(0);
+      await expect(jp.editorContent).toBeVisible();
+    });
+
+    test('closes a menu first, and leaves the note open', async ({ page }) => {
+      await page.getByRole('button', { name: 'More actions' }).click();
+      const undo = page.getByRole('button', { name: /Undo/ });
+      await expect(undo).toBeVisible();
+
+      await page.keyboard.press('Escape');
+
+      await expect(undo).toHaveCount(0);
+      await expect(page.getByRole('region', { name: 'Note editor' })).toBeVisible();
+      await expect(jp.editorContent).toBeVisible();
+    });
+
+    test('leaves the note open when it only clears the search box', async ({ page }) => {
+      await jp.searchInput.click();
+
+      await page.keyboard.press('Escape');
+
+      await expect(jp.editorContent).toBeVisible();
+    });
+
+    test('leaves the note open in vim insert mode, where it means leave insert mode', async ({ page }) => {
+      await page.evaluate(async () => {
+        const { settings } = await import('/src/lib/stores/appStore.ts' as string);
+        settings.update((s: Record<string, unknown>) => ({ ...s, vimMode: true }));
+      });
+      await jp.editorContent.click();
+      await page.keyboard.press('i');
+
+      await page.keyboard.press('Escape');
+
+      await expect(jp.editorContent).toBeVisible();
+    });
+  });
+
+  test.describe('recording a shortcut', () => {
+    async function openKeyboardTab(page: any) {
+      await jp.openSettings();
+      await jp.dialog.first().locator('button, [role="tab"]').filter({ hasText: /Keyboard|Shortcuts/ }).first().click();
+    }
+
+    /** The button showing the Lock Application shortcut */
+    const lockShortcut = (page: any) => page.locator('div', { hasText: /^Lock Application/ }).last().locator('button').first();
+
+    test('Escape cancels it, and does not become the shortcut', async ({ page }) => {
+      await openKeyboardTab(page);
+      const button = lockShortcut(page);
+      const before = await button.textContent();
+
+      await button.click();
+      await expect(button).toContainText(/press/i);
+      await page.keyboard.press('Escape');
+
+      await expect(button).toHaveText(before as string);
+      await expect(page.getByRole('dialog')).toBeVisible();
+    });
+
+    test('a bare letter is refused for a shortcut that fires while typing', async ({ page }) => {
+      await openKeyboardTab(page);
+      const button = lockShortcut(page);
+      const before = await button.textContent();
+
+      await button.click();
+      await page.keyboard.press('q');
+
+      await expect(page.getByRole('alert')).toContainText(/Ctrl, Cmd or Alt/);
+      await expect(button).toContainText(/press/i);
+
+      await page.keyboard.press('Escape');
+      await expect(button).toHaveText(before as string);
+    });
   });
 
   test('should copy note content with Ctrl+Shift+C', async ({ page }) => {

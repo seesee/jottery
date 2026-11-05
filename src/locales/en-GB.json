@@ -490,7 +490,7 @@
         "required": "Please enter your notes password.",
         "incorrect": "That is not the password that unlocks your notes on this device. Enter your notes password, not your server password.",
         "uploadFailed": "Sync is set up, but the encryption key could not be stored on the server, so other devices cannot connect yet. It will be retried the next time you unlock",
-        "mustDiffer": "Your notes password and account password must be different. The sync server sees your account password, so if they match it could read your notes. If they're the same on your other devices, change your notes password there first.",
+        "mustDiffer": "Your notes password and account password must be different. The sync server sees your account password, so if they match it could read your notes.",
         "matchesAccountWarning": "Your notes password is the same as your account password, so the sync server could read your notes. Change your notes password to fix this."
       },
       "existingAccountDetected": "This email already has an account, so this device will connect to it. Enter the notes password you use on your other devices."
@@ -563,7 +563,9 @@
       "duplicateNote": "Duplicate Note",
       "exportNote": "Export Note",
       "pressKey": "Press a key...",
-      "notSet": "Not set"
+      "notSet": "Not set",
+      "needsModifier": "This shortcut works while you type, so it needs Ctrl, Cmd or Alt. Press another key, or Esc to cancel.",
+      "reserved": "That key is reserved. Press another key, or Esc to cancel."
     },
     "syncTab": {
       "enableSync": "Enable Sync",
@@ -602,7 +604,8 @@
         "changing": "Changing password...",
         "button": "Change Password",
         "success": "Password changed successfully",
-        "error": "Failed to change password: {error}"
+        "error": "Failed to change password: {error}",
+        "serverKeyFailed": "Your password was changed on this device, but the server couldn't be updated. It will try again the next time you unlock. Until then, a new device would need your old password."
       },
       "connectionDetails": {
         "title": "Connection Details",
@@ -638,11 +641,12 @@
         "dangerZone": "Danger Zone",
         "deleteNotesDescription": "Delete all your notes from the sync server. This action cannot be undone. Your local notes will NOT be deleted.",
         "deleteNotesButton": "Delete All Notes from Server"
-      }
+      },
+      "disconnectNotRevoked": "This device is disconnected, but the server couldn't be told, so it's still listed there and its key still works. Revoke it in the user portal."
     },
     "advancedTab": {
       "importExport": "Import/Export",
-      "exportDescription": "Export notes as decrypted JSON. Import will merge notes with existing data.",
+      "exportDescription": "Export makes an unencrypted JSON copy for moving notes elsewhere: anyone with the file can read it. For an encrypted copy, use Backup. Import merges notes with what's already here.",
       "downloadClient": "Download Terminal/HTML Client",
       "downloadTerminalClient": "Download Terminal Client",
       "clientDescription": "Download the terminal client for command-line access, or the HTML client to run locally from the filesystem",
@@ -670,7 +674,8 @@
       "aboutDescription": "Jottery is a personal, local-first scratch pad for capturing, organising, and searching notes. Available for web and terminal, with optional sync across devices.",
       "viewOnGithub": "View on GitHub",
       "license": "Licensed under the MIT License."
-    }
+    },
+    "exportIncomplete": "The export is incomplete: {notes} notes and {attachments} attachments couldn't be read and were left out."
   },
   "landing": {
     "languagePicker": {
@@ -966,7 +971,8 @@
         "encrypting": "Securing credentials…",
         "syncing": "Starting initial sync…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "Your notes password was changed on another device. This device still unlocks with its old password and your notes are safe, but new devices will need the new one."
   },
   "lock": {
     "title": "Lock Application",
@@ -1290,7 +1296,11 @@
   },
   "sync": {
     "syncing": "Syncing...",
-    "syncProgress": "Syncing: {percentage}% complete"
+    "syncProgress": "Syncing: {percentage}% complete",
+    "notesRefused": "Some notes are too large for your account's upload limit and weren't synced. Everything else was.",
+    "accountDisabled": "Your account is deactivated or waiting for approval, so sync has stopped. Your notes on this device are safe. Contact your administrator.",
+    "storageQuotaExceeded": "Your account has reached its storage limit, so changes on this device can't be uploaded. Permanently delete some notes or attachments to make room.",
+    "massDeletionHeld": "The server asked to delete {count} notes at once. They're in the recycle bin in case that wasn't you. Restore them there, or empty the bin if it was."
   },
   "pullToRefresh": {
     "pull": "Pull down to sync",

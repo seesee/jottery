@@ -31,6 +31,21 @@ class PullDecisionTest {
     @Test fun `an older remote state is skipped, even when the local note is queued`() =
         assertEquals(PullAction.SKIP, decide(side("c", "b", listOf("c", "b", "a")), side("b"), needsSync = true))
 
+    @Test fun `the parent of a queued edit is older, even if the chain was trimmed`() =
+        assertEquals(PullAction.SKIP, decide(side("c", "b", listOf("c")), side("b"), needsSync = true))
+
+    @Test fun `a shared ancestor alone doesn't make the remote newer`() =
+        assertEquals(
+            PullAction.CONFLICT,
+            decide(side("b", "a", listOf("b", "a")), side("c", "a", listOf("c", "a")), needsSync = true),
+        )
+
+    @Test fun `an older remote with no queued edit is what the server now holds`() =
+        assertEquals(
+            PullAction.REPLACE_WITH_SNAPSHOT,
+            decide(side("c", "b", listOf("c", "b", "a")), side("b"), needsSync = false),
+        )
+
     @Test fun `diverged with queued edits is a conflict`() =
         assertEquals(PullAction.CONFLICT, decide(side("b", "a", listOf("b", "a")), side("c", "a", listOf("c", "a")), needsSync = true))
 
