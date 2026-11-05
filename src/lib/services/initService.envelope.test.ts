@@ -29,7 +29,7 @@ import {
   lock,
   unlock,
 } from './initService';
-import { authService } from './authService';
+import { AuthApiError, authService } from './authService';
 import { cryptoService } from './crypto';
 import { keyManager } from './keyManager';
 import { encryptionRepository } from './encryptionRepository';
@@ -425,6 +425,73 @@ describe('server-wrapped master key', () => {
       expect((await getDB().get(STORES.SAVED_SEARCHES, ROW.id)).name).toBe('Old name');
       const [read] = await savedSearchRepository.getAll();
       expect(read.name).not.toBe('Old name');
+    }, 60_000);
+  });
+
+  describe('credentials restored from a backup', () => {
+    const restoredMetadata = async () => {
+      const key = keyManager.getMasterKey()!.key;
+      await syncRepository.updateMetadata({
+        syncEnabled: true,
+        syncEndpoint: ENDPOINT,
+        apiKey: 'RESTORE:' + JSON.stringify(await cryptoService.encryptText(API_KEY, key)),
+      });
+      const marker = (await syncRepository.getMetadata())?.apiKey;
+      lock();
+      return marker;
+    };
+
+    beforeEach(() => {
+      vi.spyOn(authService, 'getWrappedKey').mockResolvedValue(null);
+    });
+
+    it('stay in place when the device is offline, and work at the next unlock', async () => {
+      await initialize(NOTES_PASSWORD);
+      const marker = await restoredMetadata();
+      const clone = vi.spyOn(authService, 'cloneDevice').mockRejectedValueOnce(new TypeError('Failed to fetch'));
+
+      await unlock(NOTES_PASSWORD);
+
+      expect((await syncRepository.getMetadata())?.apiKey).toBe(marker);
+      expect((await syncRepository.getMetadata())?.syncEnabled).toBe(true);
+
+      lock();
+      clone.mockResolvedValueOnce({ clientId: 'new', apiKey: 'new-key', userId: USER_ID, deviceName: 'd' });
+      await unlock(NOTES_PASSWORD);
+
+      expect((await syncRepository.getMetadata())?.apiKey?.startsWith('RESTORE:')).toBe(false);
+      expect((await syncRepository.getMetadata())?.clientId).toBe('new');
+    }, 60_000);
+
+    it('stay in place when the server is failing', async () => {
+      await initialize(NOTES_PASSWORD);
+      const marker = await restoredMetadata();
+      vi.spyOn(authService, 'cloneDevice').mockRejectedValueOnce(new AuthApiError('down', 503));
+
+      await unlock(NOTES_PASSWORD);
+
+      expect((await syncRepository.getMetadata())?.apiKey).toBe(marker);
+    }, 60_000);
+
+    it('stay in place when the account is disabled, because the key still works', async () => {
+      await initialize(NOTES_PASSWORD);
+      const marker = await restoredMetadata();
+      vi.spyOn(authService, 'cloneDevice').mockRejectedValueOnce(new AuthApiError('disabled', 403));
+
+      await unlock(NOTES_PASSWORD);
+
+      expect((await syncRepository.getMetadata())?.apiKey).toBe(marker);
+    }, 60_000);
+
+    it('are cleared when the server says the key is no good', async () => {
+      await initialize(NOTES_PASSWORD);
+      await restoredMetadata();
+      vi.spyOn(authService, 'cloneDevice').mockRejectedValueOnce(new AuthApiError('bad key', 401));
+
+      await unlock(NOTES_PASSWORD);
+
+      expect((await syncRepository.getMetadata())?.apiKey).toBe('');
+      expect((await syncRepository.getMetadata())?.syncEnabled).toBe(false);
     }, 60_000);
   });
 

@@ -1293,7 +1293,8 @@
   "sync": {
     "syncing": "Syncing...",
     "syncProgress": "Syncing: {percentage}% complete",
-    "notesRefused": "Some notes are too large for your account's upload limit and weren't synced. Everything else was."
+    "notesRefused": "Some notes are too large for your account's upload limit and weren't synced. Everything else was.",
+    "accountDisabled": "Your account is deactivated or waiting for approval, so sync has stopped. Your notes on this device are safe. Contact your administrator."
   },
   "pullToRefresh": {
     "pull": "Pull down to sync",

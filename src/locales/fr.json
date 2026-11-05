@@ -1197,7 +1197,8 @@
   "sync": {
     "syncing": "Synchronisation...",
     "syncProgress": "Synchronisation : {percentage}% terminé",
-    "notesRefused": "Certaines notes dépassent la limite d'envoi de votre compte et n'ont pas été synchronisées. Tout le reste l'a été."
+    "notesRefused": "Certaines notes dépassent la limite d'envoi de votre compte et n'ont pas été synchronisées. Tout le reste l'a été.",
+    "accountDisabled": "Votre compte est désactivé ou en attente d'approbation, la synchronisation est donc arrêtée. Vos notes sur cet appareil sont en sécurité. Contactez votre administrateur."
   },
   "inbox": {
     "title": "Boîte de réception",

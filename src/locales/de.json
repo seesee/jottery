@@ -1197,7 +1197,8 @@
   "sync": {
     "syncing": "Synchronisiere...",
     "syncProgress": "Synchronisierung: {percentage}% abgeschlossen",
-    "notesRefused": "Einige Notizen überschreiten das Upload-Limit Ihres Kontos und wurden nicht synchronisiert. Alles andere wurde synchronisiert."
+    "notesRefused": "Einige Notizen überschreiten das Upload-Limit Ihres Kontos und wurden nicht synchronisiert. Alles andere wurde synchronisiert.",
+    "accountDisabled": "Ihr Konto ist deaktiviert oder wartet auf Freigabe, daher wurde die Synchronisierung angehalten. Ihre Notizen auf diesem Gerät sind sicher. Wenden Sie sich an Ihren Administrator."
   },
   "inbox": {
     "title": "Posteingang",

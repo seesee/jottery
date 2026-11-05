@@ -13,7 +13,7 @@ import { savedSearchRepository } from './savedSearchRepository';
 import { cryptoService } from './crypto';
 import { keyManager, setupActivityListeners } from './keyManager';
 import { sessionStorageService } from './sessionStorageService';
-import { authService } from './authService';
+import { AuthApiError, authService } from './authService';
 import { arrayBufferToBase64, base64ToUint8Array } from '../utils/base64';
 import { CRYPTO_PBKDF2_ITERATIONS, CRYPTO_WRAPPING_ITERATIONS, CRYPTO_WRAPPING_KDF_VERSION } from '../constants';
 import type { EncryptionResult } from '../types/crypto';
@@ -239,6 +239,18 @@ export async function unlock(password: string): Promise<void> {
 }
 
 /**
+ * Only a 401 says the restored key is no good. A 403 means the account is disabled,
+ * and reactivating it restores the key. A TypeError is fetch failing to connect.
+ * Anything else means the marker itself is unusable.
+ */
+function canRetryRestoredDevice(error: unknown): boolean {
+  if (error instanceof AuthApiError) {
+    return error.status !== 401;
+  }
+  return error instanceof TypeError;
+}
+
+/**
  * Handle imported credentials after successful unlock
  * Detects RESTORE: marker from backup restore, calls clone-device to register as new device
  */
@@ -294,6 +306,13 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
 
         console.log('[ImportHandler] ✓✓✓ Restored credentials processed successfully! Registered as new device.');
       } catch (restoreError) {
+        // Being offline, or the server being down, says nothing about the credentials.
+        // Keep the marker and try again at the next unlock.
+        if (canRetryRestoredDevice(restoreError)) {
+          console.warn('[ImportHandler] Could not re-register restored device (will retry next unlock):', restoreError);
+          return;
+        }
+
         console.error('[ImportHandler] Failed to re-register restored device:', restoreError);
         // Clear the invalid data so sync is disabled but app still works
         await syncRepository.updateMetadata({

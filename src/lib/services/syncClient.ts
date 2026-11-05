@@ -46,11 +46,21 @@ export class SyncApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
-    public readonly responseText: string
+    public readonly responseText: string,
+    /** From Retry-After on a 429 */
+    public readonly retryAfterSeconds?: number
   ) {
     super(message);
     this.name = 'SyncApiError';
   }
+}
+
+/** Bounded, because a server shouldn't be able to stop a client syncing for a year */
+const MAX_RETRY_AFTER_SECONDS = 3600;
+
+function retryAfterSeconds(response: Response): number | undefined {
+  const seconds = Number(response.headers.get('Retry-After'));
+  return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, MAX_RETRY_AFTER_SECONDS) : undefined;
 }
 
 /**
@@ -70,7 +80,8 @@ function handleHttpError(response: Response, errorText: string, operation: strin
   throw new SyncApiError(
     `${operation} failed: ${response.statusText} - ${errorText}`,
     response.status,
-    errorText
+    errorText,
+    response.status === 429 ? retryAfterSeconds(response) : undefined
   );
 }
 

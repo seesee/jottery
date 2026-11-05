@@ -122,6 +122,7 @@ class SyncService {
   private sseFailedOver = false; // True when SSE failed and we're using periodic sync as fallback
   private networkListenersAttached = false;
   private restoreInProgress = false; // True during backup restore to prevent sync
+  private retryNotBefore = 0; // Set by a 429: no sync before this time
 
   /**
    * Set restore-in-progress flag to disable sync during backup restore
@@ -322,6 +323,11 @@ class SyncService {
       return { success: false, error: 'Restore in progress' };
     }
 
+    if (Date.now() < this.retryNotBefore) {
+      console.log('[SyncService] Skipping sync - rate limited');
+      return { success: false, error: 'Rate limited' };
+    }
+
     // Check network availability before attempting sync
     if (!this.isOnline()) {
       console.log('[SyncService] Skipping sync - network offline');
@@ -455,6 +461,9 @@ class SyncService {
       console.error('[SyncService] Sync failed:', error);
       // Clear refresh flag immediately on error (no batches loading)
       isSyncRefreshing.set(false);
+      if (error instanceof SyncApiError) {
+        this.handleServerRefusal(error);
+      }
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -465,6 +474,22 @@ class SyncService {
       isSyncingStore.set(false);
       // Reset progress after sync completes
       syncProgress.set({ total: 0, completed: 0 });
+    }
+  }
+
+  /**
+   * A 403 means the account is deactivated or not approved, not that the device was
+   * removed. The key is still valid and reactivating the account restores it, so the
+   * credentials stay. Background sync stops until the app next starts, or a manual
+   * sync succeeds.
+   */
+  private handleServerRefusal(error: SyncApiError): void {
+    if (error.status === 403) {
+      this.disableAutoSync();
+      this.disconnectFromSyncEvents();
+      toast.error(get(_)('sync.accountDisabled'));
+    } else if (error.status === 429) {
+      this.retryNotBefore = Date.now() + (error.retryAfterSeconds ?? 60) * 1000;
     }
   }
 

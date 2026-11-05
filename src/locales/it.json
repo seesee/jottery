@@ -1197,7 +1197,8 @@
   "sync": {
     "syncing": "Sincronizzazione...",
     "syncProgress": "Sincronizzazione: {percentage}% completato",
-    "notesRefused": "Alcune note superano il limite di caricamento del tuo account e non sono state sincronizzate. Tutto il resto sì."
+    "notesRefused": "Alcune note superano il limite di caricamento del tuo account e non sono state sincronizzate. Tutto il resto sì.",
+    "accountDisabled": "Il tuo account è disattivato o in attesa di approvazione, quindi la sincronizzazione si è interrotta. Le tue note su questo dispositivo sono al sicuro. Contatta il tuo amministratore."
   },
   "inbox": {
     "title": "Posta in arrivo",

@@ -1197,7 +1197,8 @@
   "sync": {
     "syncing": "Sincronizando...",
     "syncProgress": "Sincronizando: {percentage}% completado",
-    "notesRefused": "Algunas notas superan el límite de subida de tu cuenta y no se han sincronizado. Todo lo demás sí."
+    "notesRefused": "Algunas notas superan el límite de subida de tu cuenta y no se han sincronizado. Todo lo demás sí.",
+    "accountDisabled": "Tu cuenta está desactivada o pendiente de aprobación, así que la sincronización se ha detenido. Tus notas en este dispositivo están a salvo. Ponte en contacto con tu administrador."
   },
   "inbox": {
     "title": "Bandeja de entrada",

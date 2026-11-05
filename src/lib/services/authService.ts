@@ -53,6 +53,30 @@ export interface PutWrappedKeyRequest {
   kdfIterations: number;
 }
 
+/** A refusal from the server, as opposed to not reaching it at all */
+export class AuthApiError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message);
+    this.name = 'AuthApiError';
+  }
+}
+
+/**
+ * The wait a rate limit asks for, in the server's own words. Those are shown as
+ * text and limited in length, because the server is untrusted.
+ */
+function rateLimitMessage(errorText: string): string {
+  try {
+    const { error } = JSON.parse(errorText);
+    if (typeof error === 'string' && error.length > 0 && error.length <= 200) {
+      return error;
+    }
+  } catch {
+    // Not JSON, so fall through to the general message
+  }
+  return 'Too many attempts. Please wait and try again.';
+}
+
 class AuthService {
   /**
    * Normalize endpoint URL by removing trailing slash
@@ -104,6 +128,9 @@ class AuthService {
 
     if (!response.ok) {
       const errorText = await response.text();
+      if (response.status === 429) {
+        throw new AuthApiError(rateLimitMessage(errorText), 429);
+      }
       throw new Error(`User registration failed: ${errorText}`);
     }
 
@@ -146,13 +173,16 @@ class AuthService {
 
       // Provide user-friendly error messages
       if (status === 403) {
-        throw new Error(
-          'Your account is pending admin approval or has been deactivated. Please contact the administrator.'
+        throw new AuthApiError(
+          'Your account is pending admin approval or has been deactivated. Please contact the administrator.',
+          status
         );
       } else if (status === 401) {
-        throw new Error('Invalid email or password.');
+        throw new AuthApiError('Invalid email or password.', status);
+      } else if (status === 429) {
+        throw new AuthApiError(rateLimitMessage(errorText), status);
       } else {
-        throw new Error(`Device registration failed: ${errorText}`);
+        throw new AuthApiError(`Device registration failed: ${errorText}`, status);
       }
     }
 
@@ -192,13 +222,16 @@ class AuthService {
       const errorText = await response.text();
 
       if (status === 403) {
-        throw new Error(
-          'Your account is pending admin approval or has been deactivated. Please contact the administrator.'
+        throw new AuthApiError(
+          'Your account is pending admin approval or has been deactivated. Please contact the administrator.',
+          status
         );
       } else if (status === 401) {
-        throw new Error('Invalid API key or device is inactive.');
+        throw new AuthApiError('Invalid API key or device is inactive.', status);
+      } else if (status === 429) {
+        throw new AuthApiError(rateLimitMessage(errorText), status);
       } else {
-        throw new Error(`Device cloning failed: ${errorText}`);
+        throw new AuthApiError(`Device cloning failed: ${errorText}`, status);
       }
     }
 

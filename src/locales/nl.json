@@ -1197,7 +1197,8 @@
   "sync": {
     "syncing": "Synchroniseren...",
     "syncProgress": "Synchroniseren: {percentage}% voltooid",
-    "notesRefused": "Sommige notities zijn te groot voor de uploadlimiet van je account en zijn niet gesynchroniseerd. De rest wel."
+    "notesRefused": "Sommige notities zijn te groot voor de uploadlimiet van je account en zijn niet gesynchroniseerd. De rest wel.",
+    "accountDisabled": "Je account is gedeactiveerd of wacht op goedkeuring, dus de synchronisatie is gestopt. Je notities op dit apparaat zijn veilig. Neem contact op met je beheerder."
   },
   "inbox": {
     "title": "Postvak IN",

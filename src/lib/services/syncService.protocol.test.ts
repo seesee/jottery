@@ -20,6 +20,7 @@ import { keyManager } from './keyManager';
 import { cryptoService } from './crypto';
 import { initTestDB, cleanupTestDB, createTestNote } from '../../test/db-utils';
 import { inboxItems, settings } from '../stores/appStore';
+import { toast } from '../utils/toast.svelte';
 import { DEFAULT_SETTINGS } from '../types';
 import type { Note, SyncNote, SyncPullRequest, SyncPullResponse, SyncPushRequest, SyncPushResponse } from '../types';
 
@@ -663,6 +664,52 @@ describe('sync protocol', () => {
 
       const repairs = pushes.filter(p => p.notes.length === 0);
       expect(repairs).toHaveLength(2);
+    });
+  });
+
+  describe('being refused by the server', () => {
+    function refuseEverything(status: number, headers: Record<string, string> = {}) {
+      server.use(
+        http.get(`${ENDPOINT}/api/v1/sync/status`, () => HttpResponse.json({ serverTime: NOW })),
+        http.post(`${ENDPOINT}/api/v1/sync/pull`, () => new HttpResponse('refused', { status, headers })),
+      );
+    }
+
+    afterEach(() => {
+      (syncService as unknown as { retryNotBefore: number }).retryNotBefore = 0;
+      vi.useRealTimers();
+    });
+
+    it('keeps the credentials on a 403, says why, and stops background sync', async () => {
+      const error = vi.spyOn(toast, 'error');
+      const stop = vi.spyOn(syncService, 'disableAutoSync');
+      refuseEverything(403);
+      const before = await metadata();
+
+      await syncService.syncNow();
+
+      expect((await metadata())?.apiKey).toBe(before?.apiKey);
+      expect((await metadata())?.syncEnabled).toBe(true);
+      expect(stop).toHaveBeenCalled();
+      expect(error).toHaveBeenCalledWith('sync.accountDisabled');
+    });
+
+    it('waits as long as a 429 asks before trying again', async () => {
+      refuseEverything(429, { 'Retry-After': '30' });
+      await syncService.syncNow();
+
+      expect((await syncService.syncNow()).error).toBe('Rate limited');
+
+      vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 31_000);
+      expect((await syncService.syncNow()).error).not.toBe('Rate limited');
+    });
+
+    it('does not let a server stop it syncing for a year', async () => {
+      refuseEverything(429, { 'Retry-After': String(365 * 24 * 3600) });
+      await syncService.syncNow();
+
+      vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 3601_000);
+      expect((await syncService.syncNow()).error).not.toBe('Rate limited');
     });
   });
 
