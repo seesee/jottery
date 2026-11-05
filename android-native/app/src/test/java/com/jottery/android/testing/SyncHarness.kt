@@ -32,7 +32,12 @@ import javax.crypto.spec.SecretKeySpec
  * Real SyncService, real Room (in memory), real OkHttp, stub HTTP server.
  * Each test sets [onPush] and [onPull] to script the server.
  */
-class SyncHarness {
+class SyncHarness(
+    /** Talk to a real server rather than the stub: its address and this device's key. */
+    private val realServer: RealServer? = null,
+) {
+    class RealServer(val endpoint: String, val apiKey: String, val clientId: String)
+
     val key = SecretKeySpec(ByteArray(32) { it.toByte() }, "AES")
     val db: JotteryDatabase = JotteryDatabase.buildInMemory(ApplicationProvider.getApplicationContext())
     val noteRepo = NoteRepository(db.noteDao(), db.noteVersionDao()) { block -> db.withTransaction { block() } }
@@ -87,8 +92,8 @@ class SyncHarness {
 
     fun storageFull() = HttpRefusal(507, """{"error":"Your account is full","code":"storage_quota_exceeded"}""")
 
-    val endpoint: String get() = server.url("/").toString().trimEnd('/')
-    val client = SyncClient(endpoint, "test-api-key", "test-client")
+    val endpoint: String get() = realServer?.endpoint ?: server.url("/").toString().trimEnd('/')
+    val client = SyncClient(endpoint, realServer?.apiKey ?: "test-api-key", realServer?.clientId ?: "test-client")
 
     fun service(
         transaction: suspend (suspend () -> Unit) -> Unit = { block -> db.withTransaction { block() } },
