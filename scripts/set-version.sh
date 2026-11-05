@@ -158,6 +158,10 @@ else
     echo "✓ Updated admin/package.json (using sed)"
 fi
 
+# Update the image Compose users get. The tag only exists once the release is built.
+sed -i.bak "s|ghcr.io/seesee/jottery:v[0-9][^[:space:]]*|ghcr.io/seesee/jottery:v$VERSION|" docker-compose.yml && rm docker-compose.yml.bak
+echo "✓ Updated docker-compose.yml"
+
 # Update Xcode project (iOS client)
 IOS_PBXPROJ="ios-native/Jottery/Jottery.xcodeproj/project.pbxproj"
 if [ -f "$IOS_PBXPROJ" ]; then
@@ -186,6 +190,7 @@ echo "  - package.json (web client)"
 echo "  - tui/Cargo.toml and tui/Cargo.lock (TUI client)"
 echo "  - server/Cargo.toml (server)"
 echo "  - admin/package.json (admin dashboard)"
+echo "  - docker-compose.yml (image tag)"
 echo "  - ios-native/Jottery/Jottery.xcodeproj (iOS client)"
 echo ""
 echo "SQLx query cache updated for Docker builds"
@@ -199,7 +204,7 @@ echo ""
 echo "To commit and open a pull request (copy and paste this):"
 echo ""
 echo "git checkout -b release/v$VERSION"
-echo "git add package.json admin/package.json tui/Cargo.toml tui/Cargo.lock server/Cargo.toml server/Cargo.lock server/.sqlx $IOS_PBXPROJ"
+echo "git add package.json admin/package.json docker-compose.yml tui/Cargo.toml tui/Cargo.lock server/Cargo.toml server/Cargo.lock server/.sqlx $IOS_PBXPROJ"
 echo "git commit -m \"jottery release v$VERSION\""
 echo "git push -u origin release/v$VERSION"
 echo "gh pr create --fill"
