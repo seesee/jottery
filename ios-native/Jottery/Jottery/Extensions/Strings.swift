@@ -387,8 +387,15 @@ enum L {
     static var backupRestoreDescription: String { String(localized: "backup.restoreDescription") }
     static var backupCreating: String { String(localized: "backup.creating") }
     static var backupRestoring: String { String(localized: "backup.restoring") }
-    static var backupSuccessTitle: String { String(localized: "backup.successTitle") }
-    static var backupSuccessMessage: String { String(localized: "backup.successMessage") }
+    static func backupProgress(_ completed: Int, _ total: Int) -> String {
+        String(format: String(localized: "backup.progress"), completed, total)
+    }
+    static func restoreProgress(_ completed: Int, _ total: Int) -> String {
+        String(format: String(localized: "backup.restoreProgress"), completed, total)
+    }
+    static func backupRestoreSkipped(_ count: Int) -> String {
+        String(format: String(localized: "backup.restoreSkipped"), count)
+    }
     static var backupRestoreSuccessTitle: String { String(localized: "backup.restoreSuccessTitle") }
     static var backupRestoreSuccessMessage: String { String(localized: "backup.restoreSuccessMessage") }
     static var backupRestoreWarning: String { String(localized: "backup.restoreWarning") }
@@ -411,6 +418,7 @@ enum L {
     // MARK: - Errors (Toasts)
 
     static var errorCouldntAddAttachment: String { String(localized: "error.couldntAddAttachment") }
+    static var errorCouldntExport: String { String(localized: "error.couldntExport") }
     static func errorCouldntAddTags(_ count: Int) -> String {
         String(format: String(localized: "error.couldntAddTags"), count)
     }

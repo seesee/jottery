@@ -205,6 +205,17 @@
         }
       }
     },
+    "backup.progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backing up %lld of %lld…"
+          }
+        }
+      }
+    },
     "backup.restore": {
       "extractionState": "manual",
       "localizations": {
@@ -223,6 +234,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Restore notes from an encrypted backup file."
+          }
+        }
+      }
+    },
+    "backup.restoreProgress": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restoring part %lld of %lld…"
+          }
+        }
+      }
+    },
+    "backup.restoreSkipped": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld items in the backup couldn't be read and were left out."
           }
         }
       }
@@ -267,28 +300,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Restoring backup…"
-          }
-        }
-      }
-    },
-    "backup.successMessage": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your encrypted backup is ready to share."
-          }
-        }
-      }
-    },
-    "backup.successTitle": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Backup Created"
           }
         }
       }
@@ -1191,6 +1202,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn't empty recycle bin"
+          }
+        }
+      }
+    },
+    "error.couldntExport": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't export your notes."
           }
         }
       }

@@ -11,8 +11,7 @@ struct AttachmentListView: View {
 
     @State private var isExpanded = true
     @State private var previewURL: URL?
-    @State private var shareURL: URL?
-    @State private var showingShareSheet = false
+    @State private var shareFile: ExportFile?
     @State private var errorMessage: String?
 
     var body: some View {
@@ -68,11 +67,10 @@ struct AttachmentListView: View {
         }
         .background(Color(.systemGroupedBackground).opacity(0.5))
         .quickLookPreview($previewURL)
-        .sheet(isPresented: $showingShareSheet) {
-            if let shareURL {
-                ShareSheet(url: shareURL)
-            }
+        .onChange(of: previewURL) { closed, _ in
+            if let closed { TemporaryFiles.shared.remove(closed) }
         }
+        .shareTemporaryFile($shareFile)
     }
 
     // MARK: - Decrypt & Preview
@@ -90,8 +88,7 @@ struct AttachmentListView: View {
         errorMessage = nil
         Task { @MainActor in
             if let url = await decryptToTempFile(attachment) {
-                shareURL = url
-                showingShareSheet = true
+                shareFile = ExportFile(url: url)
             }
         }
     }
@@ -125,14 +122,7 @@ struct AttachmentListView: View {
                 let decryptedData = try CryptoService.decrypt(encrypted, key: key)
 
                 // Write to temp file with the correct filename
-                let tempDir = FileManager.default.temporaryDirectory
-                    .appendingPathComponent("jottery-attachments", isDirectory: true)
-                try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-
-                let fileURL = tempDir.appendingPathComponent(filename)
-                try decryptedData.write(to: fileURL)
-
-                return fileURL
+                return try TemporaryFiles.shared.write(decryptedData, named: filename)
             }.value
         } catch AttachmentDecryptError.dataNotAvailable {
             await MainActor.run { errorMessage = L.attachmentsDataNotAvailable }
@@ -220,16 +210,4 @@ private struct AttachmentRowView: View {
         formatter.countStyle = .file
         return formatter.string(fromByteCount: Int64(bytes))
     }
-}
-
-// MARK: - Share Sheet
-
-private struct ShareSheet: UIViewControllerRepresentable {
-    let url: URL
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: [url], applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

@@ -158,9 +158,7 @@ struct NoteListView: View {
                 selectedIds.removeAll()
             }
         }
-        .sheet(item: $bulkExportFile) { file in
-            ActivityView(activityItems: [file.url])
-        }
+        .shareTemporaryFile($bulkExportFile)
         .alert(L.bulkDeleteConfirmTitle, isPresented: $showBulkDeleteConfirm) {
             Button(L.bulkDeleteConfirmAction, role: .destructive) {
                 var failureCount = 0
@@ -423,18 +421,19 @@ struct NoteListView: View {
 
     private func exportSelectedNotes() {
         guard let key = appState.keyManager.masterKey else { return }
-        let allNotes = appState.notes + appState.archivedNotes
-        guard let data = try? ExportService.exportSelected(
-            notes: allNotes,
-            ids: selectedIds,
-            attachmentRepo: appState.attachmentRepo,
-            key: key
-        ) else { return }
-
-        let filename = ExportService.defaultFilename()
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
-        try? data.write(to: tempURL)
-        bulkExportFile = ExportFile(url: tempURL)
+        let selected = (appState.notes + appState.archivedNotes).filter { selectedIds.contains($0.id) }
+        Task {
+            do {
+                let url = try await ExportService.exportToTemporaryFile(
+                    notes: selected,
+                    attachmentRepo: appState.attachmentRepo,
+                    key: key
+                )
+                bulkExportFile = ExportFile(url: url)
+            } catch {
+                appState.reportError(L.errorCouldntExport)
+            }
+        }
     }
 
     // MARK: - Conflict Banner

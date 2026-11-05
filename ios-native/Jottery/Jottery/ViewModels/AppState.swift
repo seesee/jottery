@@ -96,6 +96,8 @@ final class AppState {
     /// Current unsaved editor state — NoteEditorView keeps this updated so
     /// `lock()` can flush pending changes before wiping the encryption key.
     @ObservationIgnored var pendingEditorNote: DecryptedNote?
+    /// Swept at launch, lock and wipe, so nothing decrypted outlives the session.
+    @ObservationIgnored var temporaryFiles = TemporaryFiles.shared
     @ObservationIgnored private var networkMonitor: NWPathMonitor?
     @ObservationIgnored private var networkWasSatisfied = true
     @ObservationIgnored private var autoSyncTask: Task<Void, Never>?
@@ -258,12 +260,20 @@ final class AppState {
     func initialise() {
         guard db == nil else { return }  // Already initialised
 
+        removeTemporaryFiles()
+
         do {
             try initialise(database: DatabaseManager())
         } catch {
             // Database init failed — stay on first launch screen
             isFirstLaunch = true
         }
+    }
+
+    /// Remove every file that held something on its way in or out of the vault.
+    private func removeTemporaryFiles() {
+        temporaryFiles.removeAll()
+        TemporaryFiles.removeLeftovers()
     }
 
     /// Wire repositories to a specific database. Internal so tests can
@@ -755,6 +765,7 @@ final class AppState {
 
         keyManager.lock()
         isLocked = true
+        removeTemporaryFiles()
         needsNotesPasswordForAccountKey = false
         pendingAccountKeyMerge = nil
         notes = []
@@ -1601,6 +1612,8 @@ final class AppState {
         KeychainService.deleteAPIKey()
         KeychainService.deleteClientId()
         KeychainService.deleteBiometricKey()
+
+        removeTemporaryFiles()
 
         // Delete database file
         let fm = FileManager.default

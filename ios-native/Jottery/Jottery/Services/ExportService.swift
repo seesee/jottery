@@ -64,7 +64,7 @@ enum ExportService {
         /// jottery-demo-notes-*.json for real examples). A plain synthesized
         /// decode would throw `keyNotFound` on the first missing key and abort
         /// the entire import, so default every genuinely-optional field here.
-        /// Export writing is unaffected — `exportAll` always populates every
+        /// Export writing is unaffected — `writeExport` always populates every
         /// field via the memberwise initializer above.
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -93,54 +93,77 @@ enum ExportService {
 
     // MARK: - Export
 
-    /// Export all active notes as JSON matching the web format.
-    static func exportAll(
+    /// Write `notes` to `url` as JSON matching the web format, one note at a
+    /// time: with their attachments they can be far larger than memory. Run
+    /// this off the main actor. Stops with `CancellationError` if the current
+    /// task is cancelled.
+    static func writeExport(
         notes: [DecryptedNote],
+        to url: URL,
         attachmentRepo: AttachmentRepository?,
-        key: SymmetricKey
-    ) throws -> Data {
-        let exportNotes = notes.map { note in
-            ExportNote(
-                id: note.id,
-                createdAt: note.createdAt.iso8601,
-                modifiedAt: note.modifiedAt.iso8601,
-                content: note.content,
-                tags: note.tags,
-                attachments: exportAttachments(note.attachments, repo: attachmentRepo, key: key),
-                pinned: note.pinned,
-                archived: note.archived,
-                locked: note.locked,
-                wordWrap: note.wordWrap,
-                syntaxLanguage: note.syntaxLanguage,
-                showPreview: note.showPreview,
-                color: note.color
-            )
-        }
-
-        let export = ExportData(
-            version: "1.0",
-            exportDate: Date().iso8601,
-            notes: exportNotes
-        )
+        key: SymmetricKey,
+        progress: (@Sendable (_ completed: Int, _ total: Int) -> Void)? = nil
+    ) throws {
+        let handle = try FileHandle(forWritingTo: url)
+        defer { try? handle.close() }
+        try handle.truncate(atOffset: 0)
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        return try encoder.encode(export)
+
+        try handle.write(contentsOf: Data("{\n\"version\": \"1.0\",\n\"exportDate\": \"\(Date().iso8601)\",\n\"notes\": [\n".utf8))
+        for (index, note) in notes.enumerated() {
+            try Task.checkCancellation()
+            try autoreleasepool {
+                let exportNote = ExportNote(
+                    id: note.id,
+                    createdAt: note.createdAt.iso8601,
+                    modifiedAt: note.modifiedAt.iso8601,
+                    content: note.content,
+                    tags: note.tags,
+                    attachments: exportAttachments(note.attachments, repo: attachmentRepo, key: key),
+                    pinned: note.pinned,
+                    archived: note.archived,
+                    locked: note.locked,
+                    wordWrap: note.wordWrap,
+                    syntaxLanguage: note.syntaxLanguage,
+                    showPreview: note.showPreview,
+                    color: note.color
+                )
+                if index > 0 {
+                    try handle.write(contentsOf: Data(",\n".utf8))
+                }
+                try handle.write(contentsOf: encoder.encode(exportNote))
+            }
+            progress?(index + 1, notes.count)
+        }
+        try handle.write(contentsOf: Data("\n]\n}\n".utf8))
     }
 
-    /// Export a subset of notes by IDs.
-    static func exportSelected(
+    /// `writeExport` into a new temporary file, for the share sheet. The caller
+    /// removes the file when it's finished with it.
+    static func exportToTemporaryFile(
         notes: [DecryptedNote],
-        ids: Set<String>,
         attachmentRepo: AttachmentRepository?,
-        key: SymmetricKey
-    ) throws -> Data {
-        let selected = notes.filter { ids.contains($0.id) }
-        return try exportAll(notes: selected, attachmentRepo: attachmentRepo, key: key)
+        key: SymmetricKey,
+        files: TemporaryFiles = .shared
+    ) async throws -> URL {
+        let url = try files.createFile(named: defaultFilename())
+        do {
+            try await offMainActor {
+                try writeExport(notes: notes, to: url, attachmentRepo: attachmentRepo, key: key)
+            }
+            return url
+        } catch {
+            files.remove(url)
+            throw error
+        }
     }
 
     // MARK: - Private
 
+    /// An attachment that fails to decrypt is left out. Its ciphertext isn't
+    /// the file, so it has no place in an export of decrypted data.
     private static func exportAttachments(
         _ refs: [AttachmentRef],
         repo: AttachmentRepository?,
@@ -148,22 +171,16 @@ enum ExportService {
     ) -> [ExportAttachment] {
         guard let repo else { return [] }
         return refs.compactMap { ref -> ExportAttachment? in
-            guard let blob = try? repo.getBlob(id: ref.id) else { return nil }
-            // Attempt to decrypt the blob
-            if let encJSON = String(data: blob, encoding: .utf8),
-               let enc = try? CryptoService.parseEncryptedJSON(encJSON),
-               let decrypted = try? CryptoService.decrypt(enc, key: key) {
-                return ExportAttachment(
-                    filename: ref.filename,
-                    mimeType: ref.mimeType,
-                    data: decrypted.base64EncodedString()
-                )
+            guard let blob = try? repo.getBlob(id: ref.id),
+                  let encrypted = try? CryptoService.parseEncryptedJSON(String(decoding: blob, as: UTF8.self)),
+                  let decrypted = try? CryptoService.decrypt(encrypted, key: key) else {
+                Log.debug("[Export] Leaving out attachment \(ref.id): it couldn't be decrypted")
+                return nil
             }
-            // Fallback: raw base64
             return ExportAttachment(
                 filename: ref.filename,
                 mimeType: ref.mimeType,
-                data: blob.base64EncodedString()
+                data: decrypted.base64EncodedString()
             )
         }
     }

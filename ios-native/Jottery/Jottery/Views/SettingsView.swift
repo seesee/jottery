@@ -11,6 +11,8 @@ struct SettingsView: View {
     @State private var showBackup = false
     @State private var showForceSyncConfirmation = false
     @State private var exportFile: ExportFile?
+    @State private var isExporting = false
+    @State private var exportError: String?
     @State private var isDisconnecting = false
     @State private var disconnectWarning: String?
     @State private var showDeleteAccount = false
@@ -83,7 +85,7 @@ struct SettingsView: View {
                 syncSection
 
                 // Data
-                Section(L.settingsData) {
+                Section {
                     Button {
                         showBackup = true
                     } label: {
@@ -93,13 +95,28 @@ struct SettingsView: View {
                     Button {
                         exportAllNotes()
                     } label: {
-                        Label(L.settingsExportAll, systemImage: "square.and.arrow.up")
+                        HStack {
+                            Label(L.settingsExportAll, systemImage: "square.and.arrow.up")
+                            Spacer()
+                            if isExporting {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
+                        }
                     }
+                    .disabled(isExporting)
 
                     Button {
                         showImport = true
                     } label: {
                         Label(L.settingsImport, systemImage: "square.and.arrow.down")
+                    }
+                } header: {
+                    Text(L.settingsData)
+                } footer: {
+                    if let exportError {
+                        Text(exportError)
+                            .foregroundStyle(.red)
                     }
                 }
 
@@ -177,9 +194,7 @@ struct SettingsView: View {
             .sheet(isPresented: $showImport) {
                 ImportView()
             }
-            .sheet(item: $exportFile) { file in
-                ActivityView(activityItems: [file.url])
-            }
+            .shareTemporaryFile($exportFile)
             .sheet(isPresented: $showChangePassword) {
                 ChangePasswordView()
             }
@@ -292,16 +307,21 @@ struct SettingsView: View {
     private func exportAllNotes() {
         guard let key = appState.keyManager.masterKey else { return }
         let allNotes = appState.notes + appState.archivedNotes
-        guard let data = try? ExportService.exportAll(
-            notes: allNotes,
-            attachmentRepo: appState.attachmentRepo,
-            key: key
-        ) else { return }
-
-        let filename = ExportService.defaultFilename()
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
-        try? data.write(to: tempURL)
-        exportFile = ExportFile(url: tempURL)
+        exportError = nil
+        isExporting = true
+        Task {
+            defer { isExporting = false }
+            do {
+                let url = try await ExportService.exportToTemporaryFile(
+                    notes: allNotes,
+                    attachmentRepo: appState.attachmentRepo,
+                    key: key
+                )
+                exportFile = ExportFile(url: url)
+            } catch {
+                exportError = L.errorCouldntExport
+            }
+        }
     }
 
     /// Clear local sync state after the server account has been deleted.
@@ -361,20 +381,3 @@ struct SettingsView: View {
 }
 
 // MARK: - Export File Wrapper
-
-struct ExportFile: Identifiable {
-    let id = UUID()
-    let url: URL
-}
-
-// MARK: - Activity View (Share Sheet)
-
-struct ActivityView: UIViewControllerRepresentable {
-    let activityItems: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}

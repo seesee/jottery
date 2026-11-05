@@ -236,11 +236,9 @@ struct SyncEqualHashTests {
 }
 
 /// Older builds pushed attachment filenames in plaintext, so a pull can bring
-/// them in. A server can also send any name it likes in that field.
-@Suite(.serialized)
-struct PulledAttachmentFilenameTests {
-
-    private let key = SymmetricKey(data: Data(repeating: 7, count: 32))
+/// them in. A server can also send any name it likes in that field. In the same
+/// suite because the stub's response is shared, and suites run side by side.
+extension SyncEqualHashTests {
 
     private func pullNote(withFilename filename: String) async throws -> (repo: NoteRepository, id: String) {
         let dir = FileManager.default.temporaryDirectory
