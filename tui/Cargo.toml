@@ -18,6 +18,9 @@ path = "scripts/find-untranslated.rs"
 default = ["sqlite", "keychain"]
 sqlite = ["rusqlite/bundled"]              # normal SQLite
 sqlcipher = ["rusqlite/sqlcipher", "native-tls", "openssl", "openssl-sys"]
+# SQLCipher and OpenSSL compiled in, for release binaries that have to run on a
+# machine without Homebrew. Plain `sqlcipher` links the system library instead.
+sqlcipher-vendored = ["sqlcipher", "rusqlite/bundled-sqlcipher-vendored-openssl"]
 keychain = ["keyring"]                     # OS keychain for secure password storage
 
 [dependencies]

@@ -99,6 +99,8 @@ You can configure the server using environment variables:
 | `DEFAULT_STORAGE_QUOTA_MB` | `1000` | Default user storage quota in MB |
 | `MAX_PAYLOAD_SIZE` | `5242880` | Max upload size in bytes (5MB) |
 | `CORS_ALLOWED_ORIGINS` | *(none)* | Comma-separated list of allowed CORS origins |
+| `ENABLE_HSTS` | `false` | Send `Strict-Transport-Security`, on the web client as well as the server's routes. Set to `true` only when clients reach the site over HTTPS |
+| `ADMIN_ALLOWED_IPS` | *(everyone)* | Space-separated addresses or CIDR ranges allowed to reach `/admin` and the admin API; everyone else gets a 403. Behind another proxy, every request appears to come from that proxy, so restrict access there instead. If it's set but empty, nobody can reach them. The notes app, sync and the user portal aren't affected |
 
 Example with custom admin credentials:
 
@@ -359,6 +361,18 @@ Download the standalone web application for local use from the [Releases](https:
 ### TUI Client
 
 Pre-compiled binaries for the TUI client (Linux, macOS, Windows) are available from the [Releases](https://github.com/seesee/jottery/releases) page.
+
+### Verifying a Download
+
+Each release includes a `SHA256SUMS` file. Download it alongside the files you want, then check them:
+
+```bash
+sha256sum --check --ignore-missing SHA256SUMS
+```
+
+On macOS, use `shasum -a 256 --check --ignore-missing SHA256SUMS`.
+
+The checksums come from the same release as the files, so they detect a corrupted or incomplete download. They don't prove who published the release.
 
 ## Import/Export Format
 

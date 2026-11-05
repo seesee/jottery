@@ -13,7 +13,8 @@ ENV npm_config_fetch_retries=5 \
 
 # Only copy web client deps first for caching
 COPY package.json package-lock.json ./
-# Use --ignore-scripts to skip Electron postinstall scripts (not needed for Docker builds)
+# Lifecycle scripts stay off: the build doesn't need them, and they would run
+# third-party code with access to everything in this stage.
 RUN npm ci --ignore-scripts || npm ci --ignore-scripts
 
 # Copy rest of web client source
@@ -43,7 +44,7 @@ ENV npm_config_fetch_retries=5 \
 
 # Copy admin dashboard deps first for caching
 COPY admin/package.json admin/package-lock.json ./
-RUN npm ci || npm ci
+RUN npm ci --ignore-scripts || npm ci --ignore-scripts
 
 # Copy rest of admin dashboard source
 COPY admin/src ./src
@@ -60,7 +61,8 @@ RUN npm run build
 # -----------------------------
 FROM rust:1.85 AS chef
 WORKDIR /app
-RUN cargo install cargo-chef
+# 0.1.75 is the newest cargo-chef whose lock file builds on Rust 1.85
+RUN cargo install cargo-chef --locked --version 0.1.75
 
 FROM chef AS planner
 WORKDIR /app/server
@@ -75,11 +77,11 @@ ENV SQLX_OFFLINE=true
 
 # Copy the recipe and build dependencies (this layer will be cached)
 COPY --from=planner /app/server/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
+RUN cargo chef cook --release --locked --recipe-path recipe.json
 
 # Now copy the actual source code and build
 COPY server/ .
-RUN cargo build --release --bin jottery-server
+RUN cargo build --release --locked --bin jottery-server
 
 # -----------------------------
 # Stage 4: Final unified runtime image (Caddy + Server)

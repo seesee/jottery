@@ -2,21 +2,22 @@
 // Note: Testing Svelte 5 runes requires special handling as $state is compile-time transformed
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
-// Mock localStorage
-const localStorageMock = {
+// Mock sessionStorage, where the session lives
+const sessionStorageMock = {
   store: {} as Record<string, string>,
-  getItem: vi.fn((key: string) => localStorageMock.store[key] || null),
+  getItem: vi.fn((key: string) => sessionStorageMock.store[key] || null),
   setItem: vi.fn((key: string, value: string) => {
-    localStorageMock.store[key] = value;
+    sessionStorageMock.store[key] = value;
   }),
   removeItem: vi.fn((key: string) => {
-    delete localStorageMock.store[key];
+    delete sessionStorageMock.store[key];
   }),
   clear: vi.fn(() => {
-    localStorageMock.store = {};
+    sessionStorageMock.store = {};
   }),
 };
-vi.stubGlobal('localStorage', localStorageMock);
+vi.stubGlobal('sessionStorage', sessionStorageMock);
+vi.stubGlobal('localStorage', { removeItem: vi.fn() });
 
 // Mock fetch for userApi
 const mockFetch = vi.fn();
@@ -32,7 +33,7 @@ async function createFreshAuthStore() {
 describe('UserAuthStore', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorageMock.store = {};
+    sessionStorageMock.store = {};
   });
 
   afterEach(() => {
@@ -40,14 +41,14 @@ describe('UserAuthStore', () => {
   });
 
   describe('initial state', () => {
-    it('isAuthenticated is false when no token in localStorage', async () => {
+    it('isAuthenticated is false when no token in sessionStorage', async () => {
       const userAuth = await createFreshAuthStore();
 
       expect(userAuth.isAuthenticated).toBe(false);
     });
 
-    it('isAuthenticated is true when token exists in localStorage', async () => {
-      localStorageMock.store['user_session_token'] = 'existing-token';
+    it('isAuthenticated is true when token exists in sessionStorage', async () => {
+      sessionStorageMock.store['user_session_token'] = 'existing-token';
       const userAuth = await createFreshAuthStore();
 
       expect(userAuth.isAuthenticated).toBe(true);
@@ -119,7 +120,7 @@ describe('UserAuthStore', () => {
 
   describe('logout', () => {
     it('sets isAuthenticated to false', async () => {
-      localStorageMock.store['user_session_token'] = 'existing-token';
+      sessionStorageMock.store['user_session_token'] = 'existing-token';
       const userAuth = await createFreshAuthStore();
 
       // Login first to set user

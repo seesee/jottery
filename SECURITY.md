@@ -83,6 +83,7 @@ These parameters follow OWASP recommendations for server-side password storage.
 - User portal sessions use the same mechanism
 - Default session expiry: 7 days (configurable via `SESSION_EXPIRY_DAYS`)
 - Sessions are invalidated on logout
+- The admin dashboard and user portal keep their session in `sessionStorage`, so it belongs to one browser tab and ends when the tab closes. They share an origin with the web client, so a script running in the web client in another tab can't read it, but one running in that same tab could. Don't use a dashboard tab for your notes
 
 ### SSE Token Security
 
@@ -138,6 +139,7 @@ Before deploying Jottery to production, complete this checklist:
 - [ ] **Restrict network access**
   - Use firewall rules to limit access
   - Consider VPN for internal deployments
+  - Limit the admin dashboard to known addresses with `ADMIN_ALLOWED_IPS`. Behind another proxy, restrict `/admin`, `/api/v1/admin` and `/api/v1/auth/login` there instead
 
 ### Environment Variables
 
@@ -147,6 +149,8 @@ Before deploying Jottery to production, complete this checklist:
 | `SESSION_EXPIRY_DAYS` | `7` | Lower values reduce session hijacking window |
 | `CORS_ALLOWED_ORIGINS` | *(none)* | Restrict to trusted domains |
 | `MAX_PAYLOAD_SIZE` | `5242880` | Limits upload size (DoS prevention) |
+| `ENABLE_HSTS` | `false` | Set to `true` on HTTPS deployments so browsers refuse to downgrade to plain HTTP |
+| `ADMIN_ALLOWED_IPS` | *(everyone)* | Limits who can reach the admin dashboard and its API |
 
 ## Known Limitations
 

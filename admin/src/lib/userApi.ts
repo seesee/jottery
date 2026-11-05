@@ -1,5 +1,7 @@
 // API client for Jottery User Portal
 
+import { DashboardSession } from './session';
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 interface LoginRequest {
@@ -8,7 +10,9 @@ interface LoginRequest {
 }
 
 interface LoginResponse {
-  sessionId: string;
+  // Absent when the server keeps the session in an HttpOnly cookie
+  sessionId?: string;
+  cookieSession?: boolean;
   expiresAt: string;
   user: {
     id: string;
@@ -66,12 +70,8 @@ class ApiError extends Error {
 }
 
 class UserApiClient {
-  private sessionToken: string | null = null;
-
-  constructor() {
-    // Try to load session token from localStorage (separate from admin token)
-    this.sessionToken = localStorage.getItem('user_session_token');
-  }
+  // Separate from the admin session
+  private session = new DashboardSession('user_session_token');
 
   private async request<T>(
     method: string,
@@ -80,12 +80,8 @@ class UserApiClient {
   ): Promise<T> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      ...this.session.authHeaders(),
     };
-
-    // Add session token to Authorization header if available
-    if (this.sessionToken) {
-      headers['Authorization'] = `Bearer ${this.sessionToken}`;
-    }
 
     const response = await fetch(`${API_BASE}${path}`, {
       method,
@@ -112,11 +108,11 @@ class UserApiClient {
     const response = await this.request<LoginResponse>('POST', '/api/v1/user/login', {
       email,
       password,
+      // Servers without cookie sessions ignore this and return a token
+      cookieSession: true,
     });
 
-    // Store session token
-    this.sessionToken = response.sessionId;
-    localStorage.setItem('user_session_token', response.sessionId);
+    this.session.start(response);
 
     return response;
   }
@@ -128,12 +124,11 @@ class UserApiClient {
       // Ignore errors during logout - we'll clear local state anyway
       console.warn('Logout request failed:', e);
     }
-    this.sessionToken = null;
-    localStorage.removeItem('user_session_token');
+    this.session.clear();
   }
 
   isAuthenticated(): boolean {
-    return this.sessionToken !== null;
+    return this.session.isActive;
   }
 
   // Account information
@@ -158,16 +153,14 @@ class UserApiClient {
   async deactivateAccount(): Promise<void> {
     await this.request('DELETE', '/api/v1/user/account?mode=deactivate');
     // Clear local session since account is now inactive
-    this.sessionToken = null;
-    localStorage.removeItem('user_session_token');
+    this.session.clear();
   }
 
   // Permanently delete account and all data
   async deleteAccount(): Promise<void> {
     await this.request('DELETE', '/api/v1/user/account?mode=delete');
     // Clear local session since account no longer exists
-    this.sessionToken = null;
-    localStorage.removeItem('user_session_token');
+    this.session.clear();
   }
 
   // Device management
