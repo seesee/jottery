@@ -27,10 +27,16 @@ fun MarkdownPreviewView(
     fontSize: Float = 16f,
     onRequestAttachment: (id: String, callback: (String) -> Unit) -> Unit = { _, _ -> },
     onOpenLink: (String) -> Unit = {},
+    /** Note ids and titles, for resolving links between notes. */
+    noteTitles: Map<String, String> = emptyMap(),
+    onOpenNote: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val currentOnRequestAttachment by rememberUpdatedState(onRequestAttachment)
     val currentOnOpenLink by rememberUpdatedState(onOpenLink)
+    val currentOnOpenNote by rememberUpdatedState(onOpenNote)
+    val currentNoteTitles by rememberUpdatedState(noteTitles)
+    val sentNoteTitles = remember { arrayOf<Map<String, String>>(emptyMap()) }
     val currentContent by rememberUpdatedState(content)
     val currentIsDark by rememberUpdatedState(isDark)
     val currentFontSize by rememberUpdatedState(fontSize)
@@ -49,6 +55,12 @@ fun MarkdownPreviewView(
             onOpenLink = { url ->
                 if (SystemClock.uptimeMillis() - lastTouch[0] < LINK_TAP_WINDOW_MS) {
                     currentOnOpenLink(url)
+                }
+            },
+            // The same goes for moving the reader to another note
+            onOpenNote = { id ->
+                if (SystemClock.uptimeMillis() - lastTouch[0] < LINK_TAP_WINDOW_MS) {
+                    currentOnOpenNote(id)
                 }
             },
             onRequestAttachment = { id ->
@@ -90,6 +102,12 @@ fun MarkdownPreviewView(
                         val dark = currentIsDark
                         val size = currentFontSize
                         val jsonContent = org.json.JSONObject.quote(text)
+                        // Before the content, which is what renders the links
+                        sentNoteTitles[0] = currentNoteTitles
+                        view?.evaluateJavascript(
+                            "window.bridge.setNoteTitles(${titlesJson(sentNoteTitles[0])})",
+                            null,
+                        )
                         view?.evaluateJavascript(
                             "window.bridge.setContent($jsonContent, $dark)",
                             null,
@@ -117,8 +135,13 @@ fun MarkdownPreviewView(
             if (pageState.fontSizeChanged(fontSize)) {
                 webView.evaluateJavascript("window.bridge.setFontSize($fontSize)", null)
             }
+            val titlesChanged = sentNoteTitles[0] != noteTitles
+            if (titlesChanged) {
+                sentNoteTitles[0] = noteTitles
+                webView.evaluateJavascript("window.bridge.setNoteTitles(${titlesJson(noteTitles)})", null)
+            }
             // The preview never edits, so any change comes from outside
-            if (pageState.isExternalChange(content)) {
+            if (pageState.isExternalChange(content) || titlesChanged) {
                 val jsonContent = org.json.JSONObject.quote(content)
                 webView.evaluateJavascript("window.bridge.setContent($jsonContent, $isDark)", null)
             }
@@ -126,3 +149,5 @@ fun MarkdownPreviewView(
         modifier = modifier,
     )
 }
+
+private fun titlesJson(titles: Map<String, String>): String = org.json.JSONObject(titles).toString()

@@ -514,6 +514,8 @@ class BackupService(
             hashChain = hashChainFrom(item["hashChain"]),
             // Pushed on the next sync, so every client converges on what's here
             needsSync = true,
+            // A restore mustn't hand the purge a date from long ago
+            localDeletedAt = if (item.bool("deleted") == true) now else null,
         )
     }
 

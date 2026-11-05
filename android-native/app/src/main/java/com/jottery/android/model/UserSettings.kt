@@ -63,11 +63,11 @@ enum class ThemeMode(val value: String) {
     }
 }
 
-enum class SortOrder(val value: String, val displayName: String) {
-    RECENT("recent", "Most Recent"),
-    OLDEST("oldest", "Oldest First"),
-    ALPHA("alpha", "Alphabetical"),
-    CREATED("created", "Date Created");
+enum class SortOrder(val value: String) {
+    RECENT("recent"),
+    OLDEST("oldest"),
+    ALPHA("alpha"),
+    CREATED("created");
 
     companion object {
         fun fromString(value: String): SortOrder =

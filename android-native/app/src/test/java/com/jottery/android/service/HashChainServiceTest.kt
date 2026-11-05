@@ -105,4 +105,23 @@ class HashChainServiceTest {
         val ancestorHead = ancestorChain.first()
         return ancestorHead in descendantChain
     }
+
+    @Test fun `a chain at its limit keeps the hash it was told to`() {
+        val full = (1..50).map { "h$it" }
+
+        val chain = com.jottery.android.crypto.CryptoService.updateHashChain("new", full, keep = "h50")
+
+        assertEquals(50, chain.size)
+        assertEquals("new", chain.first())
+        assertEquals("h50", chain.last())
+    }
+
+    @Test fun `a hash still inside the chain isn't added twice`() {
+        val full = (1..50).map { "h$it" }
+
+        val chain = com.jottery.android.crypto.CryptoService.updateHashChain("new", full, keep = "h3")
+
+        assertEquals(1, chain.count { it == "h3" })
+        assertEquals(50, chain.size)
+    }
 }

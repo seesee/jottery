@@ -2,6 +2,7 @@ package com.jottery.android.database.repository
 
 import android.util.Log
 import com.jottery.android.crypto.CryptoService
+import com.jottery.android.database.dao.ExpiredNote
 import com.jottery.android.database.dao.INLINE_CONTENT_LIMIT
 import com.jottery.android.database.dao.NoteDao
 import com.jottery.android.database.dao.NoteVersionDao
@@ -14,7 +15,6 @@ import com.jottery.android.service.ExportService
 import com.jottery.android.util.DateUtils
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.time.Duration
 import java.time.Instant
 import javax.crypto.SecretKey
 
@@ -33,7 +33,6 @@ class NoteRepository(
 
     companion object {
         private const val TAG = "NoteRepo"
-        private val DEFAULT_PURGE_INTERVAL: Duration = Duration.ofDays(30)
         private const val READ_CHUNK = 512 * 1024
     }
 
@@ -184,6 +183,20 @@ class NoteRepository(
             }
             Pair(row.id, blobIds)
         }
+    }
+
+    /** The blobs one note refers to. */
+    suspend fun blobIdsOf(id: String): Set<String> =
+        getRaw(id)?.let { refs(it.attachments).mapTo(mutableSetOf()) { ref -> ref.data } } ?: emptySet()
+
+    /** The blobs any note refers to, in or out of the bin. */
+    suspend fun allBlobIds(): Set<String> =
+        listIdsAndAttachmentBlobIds().flatMapTo(mutableSetOf()) { it.second }
+
+    private fun refs(attachments: String): List<AttachmentRef> = try {
+        json.decodeFromString(attachments)
+    } catch (_: Exception) {
+        emptyList()
     }
 
     /** Count of active notes. */
@@ -340,7 +353,11 @@ class NoteRepository(
                 color = note.color,
             )
         )
-        val hashChainStr = json.encodeToString(CryptoService.updateHashChain(contentHash, previousChain))
+        // What the server holds: this row itself, if nothing is waiting to go
+        val serverHash = current.syncHash ?: current.contentHash.takeIf { !current.needsSync }
+        val hashChainStr = json.encodeToString(
+            CryptoService.updateHashChain(contentHash, previousChain, keep = serverHash)
+        )
 
         // First-edit snapshot: when version is 0, create a snapshot of the original state
         // then advance version to 1
@@ -365,6 +382,7 @@ class NoteRepository(
                 parentHash = current.contentHash,
                 hashChain = hashChainStr,
                 needsSync = true,
+                syncHash = serverHash,
             )
         )
     }
@@ -386,16 +404,18 @@ class NoteRepository(
         noteDao.restore(id, modifiedAt = now)
     }
 
-    /** Hard-delete a note (permanent). */
+    /** Remove the row. Anything else needs NotePurger, which calls this. */
     suspend fun hardDelete(id: String) {
         noteDao.hardDelete(id)
     }
 
     /**
-     * Hard-delete a note only if it has no unsynced local changes.
-     * Returns true if the note was removed.
+     * Honour a deletion from the server by moving the note to the bin, where it
+     * can still be restored. A server that lied can't then wipe this device.
      */
-    suspend fun hardDeleteIfSynced(id: String): Boolean = noteDao.hardDeleteIfSynced(id) > 0
+    suspend fun moveToBinForServer(id: String, deletedAt: String) {
+        noteDao.moveToBinForServer(id, deletedAt, DateUtils.nowISO8601())
+    }
 
     /** Archive a note. */
     suspend fun archive(id: String) {
@@ -453,7 +473,10 @@ class NoteRepository(
         syncedAt: String,
         serverVersion: Int?,
         pushedModifiedAt: String,
+        pushedHash: String?,
     ): Boolean {
+        // True even if the note has moved on: this is now what the server holds
+        pushedHash?.let { noteDao.setSyncHash(id, it) }
         val updated = if (serverVersion != null) {
             noteDao.markSyncedWithVersionIfUnchanged(id, syncedAt, serverVersion, pushedModifiedAt)
         } else {
@@ -461,6 +484,9 @@ class NoteRepository(
         }
         return updated > 0
     }
+
+    /** Send a note again without changing it. */
+    suspend fun requeue(id: String) = noteDao.requeue(id)
 
     // MARK: - Attachment Management
 
@@ -471,38 +497,39 @@ class NoteRepository(
         if (tags != note.tags) update(note.copy(tags = tags), key)
     }
 
-    /** Add an attachment reference to a note's attachments JSON array. */
-    suspend fun addAttachment(noteId: String, ref: AttachmentRef) {
-        val record = getRaw(noteId) ?: return
-        val attachments: MutableList<AttachmentRef> = try {
-            json.decodeFromString<List<AttachmentRef>>(record.attachments).toMutableList()
-        } catch (_: Exception) {
-            mutableListOf()
-        }
-        attachments.add(ref)
-        val updated = record.copy(
-            attachments = json.encodeToString(attachments),
-            modifiedAt = DateUtils.nowISO8601(),
-            needsSync = true,
-        )
-        noteDao.update(updated)
+    /**
+     * Add an attachment reference to a note. This is an edit like any other, so it
+     * advances the hash: otherwise a remote edit pulled before the next push would
+     * look like a descendant and replace the list.
+     */
+    suspend fun addAttachment(noteId: String, ref: AttachmentRef, key: SecretKey) {
+        changeAttachments(noteId, key) { it + ref }
     }
 
-    /** Remove an attachment reference from a note's attachments JSON array. */
-    suspend fun removeAttachment(noteId: String, attachmentId: String) {
-        val record = getRaw(noteId) ?: return
-        val attachments: MutableList<AttachmentRef> = try {
-            json.decodeFromString<List<AttachmentRef>>(record.attachments).toMutableList()
-        } catch (_: Exception) {
-            mutableListOf()
+    /** The references as stored, with filenames still encrypted. */
+    suspend fun rawAttachmentRefs(noteId: String): List<AttachmentRef> =
+        getRaw(noteId)?.let { refs(it.attachments) } ?: emptyList()
+
+    /** Replace a note's references. */
+    suspend fun setAttachments(noteId: String, refs: List<AttachmentRef>, key: SecretKey) {
+        changeAttachments(noteId, key) { refs }
+    }
+
+    /** Remove an attachment reference from a note. */
+    suspend fun removeAttachment(noteId: String, attachmentId: String, key: SecretKey) {
+        changeAttachments(noteId, key) { refs -> refs.filter { it.id != attachmentId } }
+    }
+
+    private suspend fun changeAttachments(
+        noteId: String,
+        key: SecretKey,
+        change: (List<AttachmentRef>) -> List<AttachmentRef>,
+    ) {
+        runInTransaction {
+            val record = getRaw(noteId) ?: return@runInTransaction
+            val changed = record.copy(attachments = json.encodeToString(change(refs(record.attachments))))
+            write(changed, decrypt(changed, key), key)
         }
-        attachments.removeAll { it.id == attachmentId }
-        val updated = record.copy(
-            attachments = json.encodeToString(attachments),
-            modifiedAt = DateUtils.nowISO8601(),
-            needsSync = true,
-        )
-        noteDao.update(updated)
     }
 
     // MARK: - Insert Raw (for sync pull)
@@ -563,17 +590,9 @@ class NoteRepository(
 
     // MARK: - Purge
 
-    /**
-     * Permanently delete notes that have been in the recycle bin longer than the given interval.
-     * Returns the number of notes purged.
-     */
-    suspend fun purgeOldDeletedNotes(
-        olderThan: Duration = DEFAULT_PURGE_INTERVAL,
-    ): Int {
-        val cutoff = Instant.now().minus(olderThan)
-        val cutoffStr = DateUtils.formatISO8601(cutoff)
-        return noteDao.purgeOldDeleted(cutoffStr)
-    }
+    /** Notes whose time in the bin ran out before [cutoff]. See NotePurger. */
+    suspend fun listExpiredDeleted(cutoff: String): List<ExpiredNote> =
+        noteDao.listExpiredDeleted(cutoff)
 
     // MARK: - Private
 

@@ -73,6 +73,7 @@ fun SyncSetupScreen(
     var credentialString by remember { mutableStateOf("") }
     var isRegistering by remember { mutableStateOf(false) }
     var registerError by remember { mutableStateOf<String?>(null) }
+    var showCreateAccount by remember { mutableStateOf(false) }
 
     val connectState by appState.connectState.collectAsState()
     val scope = rememberCoroutineScope()
@@ -160,6 +161,9 @@ fun SyncSetupScreen(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                     )
+                    TextButton(onClick = { showCreateAccount = true }) {
+                        Text(stringResource(R.string.create_account_title))
+                    }
                 }
 
                 SyncSetupMode.Import -> {
@@ -235,7 +239,7 @@ fun SyncSetupScreen(
                                 result.onSuccess { connection ->
                                     appState.connectExistingVault(connection, notesPassword)
                                 }.onFailure { e ->
-                                    registerError = e.message
+                                    registerError = appState.describeAccountFailure(e)
                                 }
                             }
                         }
@@ -271,6 +275,20 @@ fun SyncSetupScreen(
 
             Spacer(Modifier.height(32.dp))
         }
+    }
+
+    if (showCreateAccount) {
+        CreateAccountDialog(
+            appState = appState,
+            initialServer = serverUrl,
+            onApproved = { server, newEmail, password ->
+                showCreateAccount = false
+                serverUrl = server
+                email = newEmail
+                accountPassword = password
+            },
+            onDismiss = { showCreateAccount = false },
+        )
     }
 
     if (connectState is AppState.ConnectState.NeedsMerge) {

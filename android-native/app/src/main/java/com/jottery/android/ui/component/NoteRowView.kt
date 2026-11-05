@@ -56,7 +56,7 @@ fun NoteRowView(
 ) {
     val noteColor = NoteColors.fromString(note.color)
     val relativeDate = remember(note.modifiedAt) {
-        formatRelativeDate(note.modifiedAt)
+        relativeTime(note.modifiedAt)
     }
 
     Surface(
@@ -125,7 +125,7 @@ fun NoteRowView(
                     if (note.pinned) {
                         Icon(
                             imageVector = Icons.Default.PushPin,
-                            contentDescription = "Pinned",
+                            contentDescription = stringResource(R.string.note_info_pinned),
                             modifier = Modifier
                                 .size(14.dp)
                                 .padding(end = 2.dp),
@@ -138,7 +138,7 @@ fun NoteRowView(
                     if (note.locked) {
                         Icon(
                             imageVector = Icons.Default.Lock,
-                            contentDescription = "Locked",
+                            contentDescription = stringResource(R.string.note_info_locked),
                             modifier = Modifier
                                 .size(14.dp)
                                 .padding(end = 2.dp),
@@ -215,39 +215,13 @@ fun NoteRowView(
                     if (note.attachments.isNotEmpty()) {
                         Icon(
                             imageVector = Icons.Default.AttachFile,
-                            contentDescription = "Has attachments",
+                            contentDescription = stringResource(R.string.note_row_has_attachments),
                             modifier = Modifier.size(14.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
                     }
                 }
             }
-        }
-    }
-}
-
-/**
- * Format an Instant as a relative date string (e.g. "2h ago", "3d ago", "Jan 15").
- */
-private fun formatRelativeDate(instant: Instant): String {
-    val now = Instant.now()
-    val duration = Duration.between(instant, now)
-
-    return when {
-        duration.isNegative -> "just now"
-        duration.seconds < 60 -> "just now"
-        duration.toMinutes() < 60 -> "${duration.toMinutes()}m ago"
-        duration.toHours() < 24 -> "${duration.toHours()}h ago"
-        duration.toDays() < 7 -> "${duration.toDays()}d ago"
-        duration.toDays() < 365 -> {
-            val formatter = DateTimeFormatter.ofPattern("d MMM")
-                .withZone(ZoneId.systemDefault())
-            formatter.format(instant)
-        }
-        else -> {
-            val formatter = DateTimeFormatter.ofPattern("d MMM yyyy")
-                .withZone(ZoneId.systemDefault())
-            formatter.format(instant)
         }
     }
 }

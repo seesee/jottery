@@ -33,8 +33,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.jottery.android.R
 import com.jottery.android.model.InboxItem
 import com.jottery.android.ui.component.ConfirmDialog
 import com.jottery.android.viewmodel.AppState
@@ -57,12 +60,12 @@ fun InboxScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Inbox (${items.size})") },
+                title = { Text(stringResource(R.string.inbox_menu, items.size)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.back),
                         )
                     }
                 },
@@ -71,7 +74,7 @@ fun InboxScreen(
                         IconButton(onClick = { showDeleteAllConfirm = true }) {
                             Icon(
                                 Icons.Default.DeleteSweep,
-                                contentDescription = "Delete all",
+                                contentDescription = stringResource(R.string.inbox_delete_all2),
                             )
                         }
                     }
@@ -87,7 +90,7 @@ fun InboxScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    "No items in your inbox.",
+                    stringResource(R.string.inbox_no_items_in_your_inbox),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -117,9 +120,9 @@ fun InboxScreen(
     // Delete all confirmation dialog
     if (showDeleteAllConfirm) {
         ConfirmDialog(
-            title = "Delete All Inbox Items",
-            message = "This will permanently remove all ${items.size} item${if (items.size == 1) "" else "s"} from your inbox.",
-            confirmText = "Delete All",
+            title = stringResource(R.string.inbox_delete_all_inbox_items),
+            message = pluralStringResource(R.plurals.inbox_delete_all_message, items.size, items.size),
+            confirmText = stringResource(R.string.inbox_delete_all),
             onConfirm = {
                 showDeleteAllConfirm = false
                 scope.launch { appState.deleteAllInboxItems() }
@@ -145,7 +148,7 @@ private fun InboxItemRow(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = item.content.lines().firstOrNull()?.take(100) ?: "Empty note",
+                text = item.content.lines().firstOrNull()?.take(100) ?: stringResource(R.string.inbox_empty_note),
                 style = MaterialTheme.typography.titleSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -175,12 +178,12 @@ private fun InboxItemRow(
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = "Delete",
+                        contentDescription = stringResource(R.string.editor_delete),
                         tint = MaterialTheme.colorScheme.error,
                     )
                 }
                 Button(onClick = onAccept) {
-                    Text("Accept")
+                    Text(stringResource(R.string.inbox_accept))
                 }
             }
         }

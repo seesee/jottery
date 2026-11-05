@@ -2,6 +2,7 @@ package com.jottery.android.viewmodel
 
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
+import com.jottery.android.R
 import com.jottery.android.crypto.CryptoService
 import com.jottery.android.database.JotteryDatabase
 import com.jottery.android.model.RegisterDeviceResponse
@@ -131,6 +132,24 @@ class ConnectFlowTest {
 
         assertTrue(settled() is AppState.ConnectState.Failed)
         assertNothingCreated()
+    }
+
+    @Test fun `a matching password that already opens the account's key is only warned about`() = runBlocking {
+        // D2: an existing password can't be refused, or these users can't add a device
+        blob = CryptoService.serializeEncryptedJSON(
+            CryptoService.wrapMasterKey(
+                CryptoService.generateSalt(),
+                CryptoService.deriveWrappingKey(accountPassword, userId),
+            )
+        )
+        register()
+
+        appState.connectNewVault(accountPassword)
+
+        withTimeout(60_000) { appState.userMessage.first { it != null } }
+        val app = ApplicationProvider.getApplicationContext<Application>()
+        assertEquals(app.getString(R.string.password_matches_account_warning), appState.userMessage.value)
+        withTimeout(60_000) { while (vault() == null) kotlinx.coroutines.delay(10) }
     }
 
     @Test fun `a short password is refused for a new account key`() = runBlocking {

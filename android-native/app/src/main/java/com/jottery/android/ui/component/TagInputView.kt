@@ -24,8 +24,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import com.jottery.android.R
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -53,7 +55,7 @@ fun TagInputView(
                     ) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = "Remove tag",
+                            contentDescription = stringResource(R.string.tag_input_remove_tag),
                             modifier = Modifier.size(12.dp),
                         )
                     }
@@ -86,7 +88,7 @@ fun TagInputView(
                 decorationBox = { inner ->
                     if (inputText.isEmpty()) {
                         Text(
-                            "Add tag\u2026",
+                            stringResource(R.string.tag_input_add_tag),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )

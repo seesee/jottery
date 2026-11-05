@@ -18,6 +18,7 @@ import com.jottery.android.ui.screen.RecycleBinScreen
 import com.jottery.android.ui.screen.SavedSearchesScreen
 import com.jottery.android.ui.screen.SettingsScreen
 import com.jottery.android.ui.screen.SetupScreen
+import com.jottery.android.ui.screen.SyncAccountScreen
 import com.jottery.android.ui.screen.SyncSetupScreen
 import com.jottery.android.ui.screen.UnlockScreen
 import com.jottery.android.viewmodel.AppState
@@ -108,6 +109,7 @@ fun JotteryNavigation(
                 onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
                 onNavigateToConflicts = { navController.navigate(Routes.CONFLICT_RESOLUTION) },
                 onNavigateToInbox = { navController.navigate(Routes.INBOX) },
+                onNavigateToSavedSearches = { navController.navigate(Routes.SAVED_SEARCHES) },
             )
         }
 
@@ -138,10 +140,18 @@ fun JotteryNavigation(
         }
 
         composable(Routes.SYNC_SETUP) {
-            SyncSetupScreen(
-                appState = appState,
-                onBack = { navController.popBackStack() },
-            )
+            val syncEnabled by appState.syncEnabled.collectAsState()
+            if (syncEnabled) {
+                SyncAccountScreen(
+                    appState = appState,
+                    onBack = { navController.popBackStack() },
+                )
+            } else {
+                SyncSetupScreen(
+                    appState = appState,
+                    onBack = { navController.popBackStack() },
+                )
+            }
         }
 
         composable(Routes.BACKUP) {

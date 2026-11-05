@@ -118,7 +118,7 @@ class SyncConflictTest {
         assertEquals("LOCAL", localText())
     }
 
-    @Test fun `a remote deletion removes a clean note`() = runBlocking {
+    @Test fun `a remote deletion moves a clean note to the bin, with nothing left to push`() = runBlocking {
         h.seedSynced(noteId, "BASE", "hash-base")
         h.onPull = {
             SyncHarness.emptyPull().copy(deletions = listOf(SyncDeletion(noteId, "2026-02-01T00:00:00.000Z")))
@@ -126,7 +126,11 @@ class SyncConflictTest {
 
         h.service().pull()
 
-        assertNull(h.noteRepo.getRaw(noteId))
+        val note = h.noteRepo.getRaw(noteId)!!
+        assertTrue(note.deleted)
+        assertFalse(note.needsSync)
+        assertNotNull(note.localDeletedAt)
+        assertEquals("BASE", localText())
     }
 
     @Test fun `a clean note fast-forwards to the remote version`() = runBlocking {

@@ -76,7 +76,7 @@ class NoteRepositoryTest {
     @Test fun `a save from an old copy keeps attachments added elsewhere`() = runBlocking {
         h.seedSynced(id, "BASE", "h0")
         val stale = h.noteRepo.get(id, h.key)!!
-        h.noteRepo.addAttachment(id, AttachmentRef("a1", h.encrypt("new.png"), "image/png", 1, "a1"))
+        h.noteRepo.addAttachment(id, AttachmentRef("a1", h.encrypt("new.png"), "image/png", 1, "a1"), h.key)
 
         h.noteRepo.update(stale.copy(content = "typed"), h.key)
 
