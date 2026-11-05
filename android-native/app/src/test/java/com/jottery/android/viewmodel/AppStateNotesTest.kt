@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.jottery.android.crypto.CryptoService
 import com.jottery.android.database.JotteryDatabase
 import com.jottery.android.model.NoteVersionRecord
+import com.jottery.android.util.QuickAction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -15,6 +16,7 @@ import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -48,6 +50,37 @@ class AppStateNotesTest {
             while (appState.filteredNotes.value.none { it.id == id }) delay(5)
             appState.filteredNotes.value.first { it.id == id }
         }
+
+    @Test fun `the new note shortcut waits for the vault to open`() = runBlocking {
+        appState.lock()
+
+        appState.receiveQuickAction(QuickAction.NEW_NOTE)
+        assertNull(appState.selectedNoteId.value)
+
+        appState.unlock(password)
+        withTimeout(5_000) { while (appState.selectedNoteId.value == null) delay(5) }
+        assertEquals(1, appState.notes.value.size)
+    }
+
+    @Test fun `the new note shortcut needs no waiting when the vault is open`() = runBlocking {
+        appState.receiveQuickAction(QuickAction.NEW_NOTE)
+
+        withTimeout(5_000) { while (appState.selectedNoteId.value == null) delay(5) }
+    }
+
+    @Test fun `the search shortcut leaves the note, and waits for the screen to take it up`() = runBlocking {
+        val note = appState.createNote("Open")!!
+        assertEquals(note.id, appState.selectedNoteId.value)
+        appState.lock()
+
+        appState.receiveQuickAction(QuickAction.SEARCH)
+        appState.unlock(password)
+
+        withTimeout(5_000) { while (!appState.searchRequested.value) delay(5) }
+        assertNull(appState.selectedNoteId.value)
+        appState.searchRequestHandled()
+        assertFalse(appState.searchRequested.value)
+    }
 
     @Test fun `restoring a version updates the list the editor reads`() = runBlocking {
         val note = appState.createNote("original")!!

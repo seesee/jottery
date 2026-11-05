@@ -61,6 +61,10 @@ fun JotteryNavigation(
     // React to state changes (e.g. wipeAllData sets isFirstLaunch=true while on
     // the unlock screen). NavHost's startDestination only affects initial composition,
     // so we must navigate explicitly when the auth state changes.
+    LaunchedEffect(Unit) {
+        appState.showNotesRequests.collect { navController.popBackStack(Routes.MAIN, inclusive = false) }
+    }
+
     LaunchedEffect(isFirstLaunch, isLocked) {
         val currentRoute = navController.currentBackStackEntry?.destination?.route
         when {

@@ -68,8 +68,12 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
+import com.jottery.android.util.QuickAction
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -275,7 +279,12 @@ class AppState(application: Application) : AndroidViewModel(application) {
     init {
         initialise()
         viewModelScope.launch {
-            _isLocked.collect { locked -> if (!locked) applyPendingShare() }
+            _isLocked.collect { locked ->
+                if (!locked) {
+                    applyPendingShare()
+                    applyPendingQuickAction()
+                }
+            }
         }
     }
 
@@ -2201,6 +2210,44 @@ class AppState(application: Application) : AndroidViewModel(application) {
             if (addAttachment(note.id, file.data, file.name, file.mimeType) == null) failed++
         }
         showMessage(text(if (failed == 0) R.string.share_saved else R.string.share_file_failed))
+    }
+
+    // MARK: - Quick Actions
+
+    /** Held until the vault is open, like a share. */
+    private var pendingQuickAction: QuickAction? = null
+
+    private val _searchRequested = MutableStateFlow(false)
+    /** Stays set until the screen has taken it up, which may not exist yet. */
+    val searchRequested: StateFlow<Boolean> = _searchRequested.asStateFlow()
+
+    private val _showNotesRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    /** A quick action can arrive with any screen showing. */
+    val showNotesRequests: SharedFlow<Unit> = _showNotesRequests.asSharedFlow()
+
+    fun receiveQuickAction(action: QuickAction) {
+        pendingQuickAction = action
+        if (!_isLocked.value) viewModelScope.launch { applyPendingQuickAction() }
+    }
+
+    private suspend fun applyPendingQuickAction() {
+        val action = pendingQuickAction ?: return
+        pendingQuickAction = null
+        _showNotesRequests.tryEmit(Unit)
+        when (action) {
+            QuickAction.NEW_NOTE -> createNote()
+            QuickAction.SEARCH -> requestSearch()
+        }
+    }
+
+    /** Leave the open note and put the cursor in the search bar. */
+    fun requestSearch() {
+        _selectedNoteId.value = null
+        _searchRequested.value = true
+    }
+
+    fun searchRequestHandled() {
+        _searchRequested.value = false
     }
 
     // MARK: - Leaving and Managing an Account

@@ -22,6 +22,7 @@ import com.jottery.android.model.DecryptedNote
 import com.jottery.android.ui.navigation.JotteryNavigation
 import com.jottery.android.ui.theme.JotteryTheme
 import com.jottery.android.util.AttachmentFiles
+import com.jottery.android.util.QuickAction
 import com.jottery.android.util.ShareIntake
 import com.jottery.android.viewmodel.AppState
 import kotlinx.coroutines.CancellationException
@@ -56,11 +57,16 @@ class MainActivity : FragmentActivity() {
         }
 
         // Not after a rotation, which would deliver the same share twice
-        if (savedInstanceState == null) receiveShare(intent)
+        if (savedInstanceState == null) receive(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        receive(intent)
+    }
+
+    private fun receive(intent: Intent) {
+        QuickAction.from(intent.data)?.let(appState::receiveQuickAction)
         receiveShare(intent)
     }
 

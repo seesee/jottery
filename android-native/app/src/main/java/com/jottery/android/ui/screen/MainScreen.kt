@@ -137,6 +137,10 @@ fun MainScreen(
     }
 
     var searchVisible by remember { mutableStateOf(false) }
+    val searchRequested by appState.searchRequested.collectAsState()
+    LaunchedEffect(searchRequested) {
+        if (searchRequested) searchVisible = true
+    }
     var showSaveSearch by remember { mutableStateOf(false) }
 
     // A saved search applied from its own screen has to be visible, and clearable
@@ -329,6 +333,8 @@ fun MainScreen(
                     matchCount = filteredCount,
                     totalCount = noteCount,
                     showCounts = searchQuery.isNotEmpty(),
+                    focusRequested = searchRequested,
+                    onFocusHandled = appState::searchRequestHandled,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),

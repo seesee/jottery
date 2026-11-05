@@ -20,8 +20,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -43,8 +47,18 @@ fun SearchBar(
     totalCount: Int,
     showCounts: Boolean,
     modifier: Modifier = Modifier,
+    focusRequested: Boolean = false,
+    onFocusHandled: () -> Unit = {},
 ) {
     val focusManager = LocalFocusManager.current
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(focusRequested) {
+        if (focusRequested) {
+            focusRequester.requestFocus()
+            onFocusHandled()
+        }
+    }
 
     Surface(
         shape = RoundedCornerShape(12.dp),
@@ -81,6 +95,7 @@ fun SearchBar(
                 ),
                 modifier = Modifier
                     .weight(1f)
+                    .focusRequester(focusRequester)
                     .padding(horizontal = 8.dp, vertical = 8.dp),
                 decorationBox = { innerTextField ->
                     if (query.isEmpty()) {
