@@ -286,3 +286,52 @@ async fn deleting_a_user_from_the_command_line_takes_all_their_data() {
         assert_eq!(rows, 0, "{table} kept a row");
     }
 }
+
+async fn toggle(app: &axum::Router, token: &str, user_id: &str, is_admin: bool) -> StatusCode {
+    let (status, _) = call(
+        app,
+        "POST",
+        &format!("/api/v1/admin/users/{user_id}/toggle-admin"),
+        Some(token),
+        Some(json!({ "is_admin": is_admin })),
+    )
+    .await;
+    status
+}
+
+async fn session_works(app: &axum::Router, token: &str) -> bool {
+    let (status, _) = call(app, "GET", "/api/v1/user/account", Some(token), None).await;
+    status == StatusCode::OK
+}
+
+#[tokio::test]
+async fn a_change_of_role_ends_that_users_sessions() {
+    // A token captured before a promotion mustn't become an admin token
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let (_, admin_email, admin_password) = add_admin(&db.pool).await;
+    let admin_token = login(&app, "/api/v1/auth/login", &admin_email, &admin_password).await;
+    let (id, email, password) = add_user(&db.pool).await;
+
+    let before_promotion = login(&app, "/api/v1/user/login", &email, &password).await;
+    assert_eq!(toggle(&app, &admin_token, &id, true).await, StatusCode::NO_CONTENT);
+    assert!(!session_works(&app, &before_promotion).await);
+
+    let before_demotion = login(&app, "/api/v1/user/login", &email, &password).await;
+    assert_eq!(toggle(&app, &admin_token, &id, false).await, StatusCode::NO_CONTENT);
+    assert!(!session_works(&app, &before_demotion).await);
+
+    assert!(session_works(&app, &admin_token).await, "the acting admin stays signed in");
+}
+
+#[tokio::test]
+async fn asking_for_the_role_a_user_already_has_changes_nothing() {
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let (admin, email, password) = add_admin(&db.pool).await;
+    let token = login(&app, "/api/v1/auth/login", &email, &password).await;
+
+    assert_eq!(toggle(&app, &token, &admin, true).await, StatusCode::NO_CONTENT);
+
+    assert!(session_works(&app, &token).await);
+}

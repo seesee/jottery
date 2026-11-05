@@ -361,6 +361,12 @@ pub async fn toggle_admin(
     .execute(&mut *tx)
     .await?;
 
+    // A session keeps no record of the role it was issued for, so a token captured
+    // before a promotion would otherwise become an admin token
+    if (user.is_admin == 1) != req.is_admin {
+        SessionRepository::delete_all_for_user(&mut tx, &user_id).await?;
+    }
+
     tx.commit().await?;
 
     let action = if req.is_admin { "promoted to admin" } else { "demoted from admin" };
