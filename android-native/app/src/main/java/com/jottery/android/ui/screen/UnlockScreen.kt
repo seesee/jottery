@@ -35,6 +35,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -42,7 +43,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.jottery.android.ui.component.ConfirmDialog
+import com.jottery.android.R
 import com.jottery.android.viewmodel.AppState
+import com.jottery.android.viewmodel.AppStateError
 import kotlinx.coroutines.launch
 
 @Composable
@@ -57,6 +60,7 @@ fun UnlockScreen(
     var failedAttempts by remember { mutableIntStateOf(0) }
     var showWipeConfirm by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     fun attemptUnlock() {
         if (password.isEmpty()) {
@@ -77,11 +81,15 @@ fun UnlockScreen(
                     error = "Incorrect password"
                     password = ""
                 }
-            } catch (_: Exception) {
+            } catch (_: AppStateError.WrongPassword) {
                 isUnlocking = false
                 failedAttempts++
                 error = "Incorrect password"
                 password = ""
+            } catch (e: Exception) {
+                // Not a password problem, so it must not count towards the wipe offer
+                isUnlocking = false
+                error = context.getString(R.string.unlock_failed, e.message ?: e.javaClass.simpleName)
             }
         }
     }

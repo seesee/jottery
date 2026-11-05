@@ -403,6 +403,55 @@ class NoteRepository(
         noteDao.insertOrReplace(record)
     }
 
+    // MARK: - Repair
+
+    /**
+     * Earlier builds wrote decrypted filenames into the attachments JSON and
+     * pushed them. Encrypt any still there and queue the note, so the server's
+     * copy is replaced as well. Returns the number of notes repaired.
+     */
+    suspend fun repairPlaintextFilenames(key: SecretKey): Int {
+        var repaired = 0
+        for (row in noteDao.listIdsAndAttachments()) {
+            if (row.attachments == "[]") continue
+            val refs: List<AttachmentRef> = try {
+                json.decodeFromString(row.attachments)
+            } catch (_: Exception) {
+                continue
+            }
+            val fixed = refs.map { ref ->
+                try {
+                    CryptoService.parseEncryptedJSON(ref.filename)
+                    ref
+                } catch (_: Exception) {
+                    ref.copy(
+                        filename = CryptoService.serializeEncryptedJSON(CryptoService.encryptText(ref.filename, key))
+                    )
+                }
+            }
+            if (fixed != refs) {
+                runInTransaction {
+                    noteDao.getById(row.id)?.let {
+                        noteDao.update(it.copy(attachments = json.encodeToString(fixed), needsSync = true))
+                    }
+                }
+                repaired++
+            }
+        }
+        return repaired
+    }
+
+    /** Whether every note, in or out of the bin, opens with [key]. */
+    suspend fun allNotesOpenWith(key: SecretKey): Boolean =
+        noteDao.listAll().all { record ->
+            try {
+                decrypt(record, key)
+                true
+            } catch (_: Exception) {
+                false
+            }
+        }
+
     // MARK: - Purge
 
     /**
@@ -485,14 +534,19 @@ class NoteRepository(
             emptyList()
         }
 
-        // Decrypt attachment filenames (stored as encrypted JSON strings)
+        // Decrypt attachment filenames (stored as encrypted JSON strings). A name
+        // that won't open is blanked, never shown as raw ciphertext; one that
+        // isn't ciphertext at all is a plaintext name from an older build.
         val attachments = rawAttachments.map { ref ->
-            try {
-                val enc = CryptoService.parseEncryptedJSON(ref.filename)
-                val decryptedFilename = CryptoService.decryptText(enc, key)
-                ref.copy(filename = decryptedFilename)
+            val encrypted = try {
+                CryptoService.parseEncryptedJSON(ref.filename)
             } catch (_: Exception) {
-                ref
+                return@map ref
+            }
+            try {
+                ref.copy(filename = CryptoService.decryptText(encrypted, key))
+            } catch (_: Exception) {
+                ref.copy(filename = "")
             }
         }
 

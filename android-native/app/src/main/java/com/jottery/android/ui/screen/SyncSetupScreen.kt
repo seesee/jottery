@@ -1,18 +1,23 @@
 package com.jottery.android.ui.screen
 
+import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,160 +29,187 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.jottery.android.R
 import com.jottery.android.viewmodel.AppState
 import kotlinx.coroutines.launch
 
+private val passwordKeyboard = KeyboardOptions(
+    keyboardType = KeyboardType.Password,
+    autoCorrectEnabled = false,
+)
+
+/**
+ * Connect the open vault to a server. Goes through the same key checks as first
+ * setup: sync starts only once this vault and the account agree on a key.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SyncSetupScreen(
     appState: AppState,
     onBack: () -> Unit,
 ) {
-    var mode by remember { mutableStateOf<SyncSetupMode>(SyncSetupMode.Register) }
+    var mode by remember { mutableStateOf(SyncSetupMode.Register) }
     var serverUrl by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var deviceName by remember { mutableStateOf("") }
-    var importApiKey by remember { mutableStateOf("") }
-    var importClientId by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var successMessage by remember { mutableStateOf<String?>(null) }
+    var accountPassword by remember { mutableStateOf("") }
+    var notesPassword by remember { mutableStateOf("") }
+    var deviceName by remember { mutableStateOf(Build.MODEL ?: "") }
+    var credentialString by remember { mutableStateOf("") }
+    var isRegistering by remember { mutableStateOf(false) }
+    var registerError by remember { mutableStateOf<String?>(null) }
 
+    val connectState by appState.connectState.collectAsState()
     val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
+
+    val isBusy = isRegistering || connectState is AppState.ConnectState.Working
+    val failure = registerError ?: (connectState as? AppState.ConnectState.Failed)?.message
+    val isDone = connectState is AppState.ConnectState.Done
+
+    // A connect in progress carries on in AppState. Anything else ends with the screen.
+    DisposableEffect(Unit) {
+        onDispose {
+            when (appState.connectState.value) {
+                AppState.ConnectState.Working -> Unit
+                AppState.ConnectState.NeedsMerge -> appState.cancelMerge()
+                else -> appState.clearConnectState()
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Sync Setup") },
+                title = { Text(stringResource(R.string.connect_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.back),
                         )
                     }
                 },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .consumeWindowInsets(padding)
+                .imePadding()
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Mode selector
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 SegmentedButton(
                     selected = mode == SyncSetupMode.Register,
                     onClick = { mode = SyncSetupMode.Register },
                     shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                ) { Text("Register") }
+                ) { Text(stringResource(R.string.connect_register)) }
                 SegmentedButton(
                     selected = mode == SyncSetupMode.Import,
                     onClick = { mode = SyncSetupMode.Import },
                     shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                ) { Text("Import") }
+                ) { Text(stringResource(R.string.connect_import)) }
             }
-
-            // Server URL (common)
-            OutlinedTextField(
-                value = serverUrl,
-                onValueChange = { serverUrl = it },
-                label = { Text("Server URL") },
-                placeholder = { Text("https://sync.example.com") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-            )
 
             when (mode) {
                 SyncSetupMode.Register -> {
                     OutlinedTextField(
+                        value = serverUrl,
+                        onValueChange = { serverUrl = it },
+                        label = { Text(stringResource(R.string.connect_server_url)) },
+                        placeholder = { Text("https://sync.example.com") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                    )
+                    OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
-                        label = { Text("Email") },
+                        label = { Text(stringResource(R.string.connect_email)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                     )
                     OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text("Password") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
+                        value = accountPassword,
+                        onValueChange = { accountPassword = it },
+                        label = { Text(stringResource(R.string.connect_account_password)) },
                         visualTransformation = PasswordVisualTransformation(),
-                    )
-                    OutlinedTextField(
-                        value = deviceName,
-                        onValueChange = { deviceName = it },
-                        label = { Text("Device name") },
-                        placeholder = { Text("My Android phone") },
+                        keyboardOptions = passwordKeyboard,
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                    )
-
-                    Text(
-                        text = "Register this device with your Jottery sync server. " +
-                            "An administrator must approve your account before sync begins.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
                 SyncSetupMode.Import -> {
                     OutlinedTextField(
-                        value = importApiKey,
-                        onValueChange = { importApiKey = it },
-                        label = { Text("API Key") },
+                        value = credentialString,
+                        onValueChange = { credentialString = it },
+                        label = { Text(stringResource(R.string.connect_credentials)) },
+                        supportingText = { Text(stringResource(R.string.connect_credentials_help)) },
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = passwordKeyboard,
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                    )
-                    OutlinedTextField(
-                        value = importClientId,
-                        onValueChange = { importClientId = it },
-                        label = { Text("Client ID") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                    )
-
-                    Text(
-                        text = "Import credentials from another device. " +
-                            "You can find these in Settings > Sync on your other device.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
 
-            errorMessage?.let { error ->
+            OutlinedTextField(
+                value = notesPassword,
+                onValueChange = { notesPassword = it },
+                label = { Text(stringResource(R.string.connect_notes_password)) },
+                supportingText = { Text(stringResource(R.string.connect_notes_password_help)) },
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = passwordKeyboard,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+            OutlinedTextField(
+                value = deviceName,
+                onValueChange = { deviceName = it },
+                label = { Text(stringResource(R.string.connect_device_name)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
+
+            if (mode == SyncSetupMode.Register) {
+                Text(
+                    text = stringResource(R.string.connect_register_help),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            failure?.let { error ->
                 Text(
                     text = error,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
-
-            successMessage?.let { success ->
+            if (isDone) {
                 Text(
-                    text = success,
+                    text = stringResource(R.string.connect_done),
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -185,50 +217,40 @@ fun SyncSetupScreen(
 
             Button(
                 onClick = {
-                    isLoading = true
-                    errorMessage = null
-                    successMessage = null
-                    val trimmedUrl = serverUrl.trim().trimEnd('/')
-
-                    scope.launch {
-                        when (mode) {
-                            SyncSetupMode.Register -> {
+                    registerError = null
+                    appState.clearConnectState()
+                    when (mode) {
+                        SyncSetupMode.Register -> {
+                            isRegistering = true
+                            scope.launch {
                                 val result = appState.registerDevice(
-                                    serverUrl = trimmedUrl,
+                                    serverUrl = serverUrl.trim().trimEnd('/'),
                                     email = email.trim(),
-                                    password = password,
+                                    password = accountPassword,
                                     deviceName = deviceName.trim(),
                                 )
-                                isLoading = false
-                                result.onSuccess { msg ->
-                                    successMessage = msg
+                                isRegistering = false
+                                result.onSuccess { connection ->
+                                    appState.connectExistingVault(connection, notesPassword)
                                 }.onFailure { e ->
-                                    errorMessage = e.message ?: "Registration failed"
-                                }
-                            }
-                            SyncSetupMode.Import -> {
-                                val result = appState.importCredentials(
-                                    serverUrl = trimmedUrl,
-                                    apiKey = importApiKey.trim(),
-                                    clientId = importClientId.trim(),
-                                )
-                                isLoading = false
-                                result.onSuccess { msg ->
-                                    successMessage = msg
-                                }.onFailure { e ->
-                                    errorMessage = e.message ?: "Import failed"
+                                    registerError = e.message
                                 }
                             }
                         }
+                        SyncSetupMode.Import -> appState.importIntoExistingVault(
+                            credentialString = credentialString,
+                            password = notesPassword,
+                            deviceName = deviceName.trim(),
+                        )
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isLoading && serverUrl.isNotBlank() && when (mode) {
-                    SyncSetupMode.Register -> email.isNotBlank() && password.isNotBlank() && deviceName.isNotBlank()
-                    SyncSetupMode.Import -> importApiKey.isNotBlank() && importClientId.isNotBlank()
+                enabled = !isBusy && !isDone && notesPassword.isNotEmpty() && deviceName.isNotBlank() && when (mode) {
+                    SyncSetupMode.Register -> serverUrl.isNotBlank() && email.isNotBlank() && accountPassword.isNotEmpty()
+                    SyncSetupMode.Import -> credentialString.isNotBlank()
                 },
             ) {
-                if (isLoading) {
+                if (isBusy) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp,
@@ -236,15 +258,35 @@ fun SyncSetupScreen(
                     Spacer(Modifier.width(8.dp))
                 }
                 Text(
-                    when (mode) {
-                        SyncSetupMode.Register -> "Register Device"
-                        SyncSetupMode.Import -> "Import Credentials"
-                    }
+                    stringResource(
+                        when (mode) {
+                            SyncSetupMode.Register -> R.string.connect_button_register
+                            SyncSetupMode.Import -> R.string.connect_button_import
+                        }
+                    )
                 )
             }
 
             Spacer(Modifier.height(32.dp))
         }
+    }
+
+    if (connectState is AppState.ConnectState.NeedsMerge) {
+        AlertDialog(
+            onDismissRequest = { appState.cancelMerge() },
+            title = { Text(stringResource(R.string.connect_merge_title)) },
+            text = { Text(stringResource(R.string.connect_merge_message)) },
+            confirmButton = {
+                TextButton(onClick = { appState.confirmMerge() }) {
+                    Text(stringResource(R.string.connect_merge_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { appState.cancelMerge() }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
     }
 }
 

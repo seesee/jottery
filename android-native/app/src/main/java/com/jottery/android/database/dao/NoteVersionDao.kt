@@ -12,6 +12,9 @@ interface NoteVersionDao {
     @Query("SELECT * FROM note_versions WHERE note_id = :noteId ORDER BY version DESC")
     suspend fun getVersions(noteId: String): List<NoteVersionRecord>
 
+    @Query("SELECT * FROM note_versions")
+    suspend fun listAll(): List<NoteVersionRecord>
+
     @Query("SELECT * FROM note_versions WHERE version_key = :versionKey")
     suspend fun getByKey(versionKey: String): NoteVersionRecord?
 

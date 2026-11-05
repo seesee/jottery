@@ -20,4 +20,7 @@ class AttachmentRepository(
     suspend fun listBlobIds(): List<String> = dao.listBlobIds()
 
     suspend fun updateBlobData(id: String, data: ByteArray) = dao.updateBlobData(id, data)
+
+    /** A new server holds none of this device's blobs. */
+    suspend fun markAllNotUploaded() = Unit
 }

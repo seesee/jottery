@@ -20,6 +20,7 @@
     <string name="unlock_unlocking">Unlocking\u2026</string>
     <string name="unlock_biometric">Unlock with Biometrics</string>
     <string name="unlock_incorrect">Incorrect password</string>
+    <string name="unlock_failed">Couldn\'t open the vault: %1$s</string>
 
     <!-- Notes -->
     <string name="notes_new">New Note</string>
@@ -186,6 +187,33 @@
     <string name="settings_screen_security">Hide from screenshots and recents</string>
     <string name="settings_screen_security_detail">Blocks screenshots, screen recording and the app preview in recents</string>
     <string name="password_too_short">Use at least %1$d characters.</string>
+
+    <!-- Joining an account -->
+    <string name="password_same_as_account">Your notes password must be different from your account password. The server sees your account password, so a matching notes password would let it read your notes.</string>
+    <string name="connect_error_cannot_unwrap">That password doesn\'t open this account\'s encryption key. The key may have been saved by an older version of Jottery: unlocking Jottery on a device that\'s already connected will fix it. Then try again.</string>
+    <string name="connect_error_wrong_notes_password">That isn\'t the notes password for this vault.</string>
+    <string name="connect_error_network">Couldn\'t reach the server to check this account\'s encryption key. Nothing has been changed. Check your connection and try again.</string>
+    <string name="connect_error_bad_credentials">That doesn\'t look like a valid credential string.</string>
+    <string name="connect_error_wrong_credentials_password">That password doesn\'t open these credentials.</string>
+    <string name="connect_key_diverged">This vault\'s encryption key differs from your account\'s, so other devices can\'t read what it syncs. Export your notes, then reconnect this device.</string>
+    <string name="connect_merge_title">Move your notes to this account?</string>
+    <string name="connect_merge_message">This account already uses a different encryption key. Your notes can be re-encrypted onto it, all at once, so a failure changes nothing. Afterwards this vault unlocks with the password you just entered.</string>
+    <string name="connect_merge_confirm">Move Notes</string>
+    <string name="connect_done">Connected. Syncing now.</string>
+    <string name="connect_notes_password">Notes password</string>
+    <string name="connect_notes_password_help">The password that encrypts your notes. It must not match your account password.</string>
+    <string name="connect_account_password">Account password</string>
+    <string name="connect_credentials">Credential string</string>
+    <string name="connect_credentials_help">Create this on a device that\'s already connected. Enter the notes password below.</string>
+    <string name="connect_register">Register</string>
+    <string name="connect_import">Import</string>
+    <string name="connect_server_url">Server URL</string>
+    <string name="connect_email">Email</string>
+    <string name="connect_device_name">Device name</string>
+    <string name="connect_register_help">An administrator must approve your account before sync begins.</string>
+    <string name="connect_button_register">Register and Connect</string>
+    <string name="connect_button_import">Import and Connect</string>
+    <string name="connect_title">Sync Setup</string>
 
     <!-- Version history -->
     <string name="version_restore_failed">This version can\'t be read, so it wasn\'t restored.</string>

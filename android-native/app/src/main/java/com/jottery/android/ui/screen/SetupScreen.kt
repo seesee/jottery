@@ -30,6 +30,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,9 +70,15 @@ fun SetupScreen(
     var serverUrl by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var serverPassword by remember { mutableStateOf("") }
-    var isRegistered by remember { mutableStateOf(false) }
     var encryptionPassword by remember { mutableStateOf("") }
-    var registeredApiKey by remember { mutableStateOf<String?>(null) }
+
+    // Owned by AppState, so a rotation can't lose a registered device or an
+    // action in flight, and leaving this screen can't cancel it
+    val pendingConnection by appState.pendingConnection.collectAsState()
+    val connectState by appState.connectState.collectAsState()
+    val isRegistered = pendingConnection != null
+    val isConnecting = connectState is AppState.ConnectState.Working
+    val connectError = (connectState as? AppState.ConnectState.Failed)?.message
 
     // Import fields
     var credentialString by remember { mutableStateOf("") }
@@ -361,9 +368,7 @@ fun SetupScreen(
                                                 password = serverPassword,
                                                 deviceName = Build.MODEL,
                                             )
-                                            result.onSuccess { msg ->
-                                                registeredApiKey = msg
-                                                isRegistered = true
+                                            result.onSuccess {
                                                 isCreating = false
                                                 error = null
                                             }.onFailure { e ->
@@ -404,39 +409,40 @@ fun SetupScreen(
 
                     OutlinedTextField(
                         value = encryptionPassword,
-                        onValueChange = { encryptionPassword = it; error = null },
+                        onValueChange = { encryptionPassword = it; appState.clearConnectState() },
                         label = { Text("Encryption Password") },
                         supportingText = { Text("Enter the same encryption password used on your other devices.") },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        enabled = !isCreating,
+                        enabled = !isConnecting,
                         modifier = Modifier.fillMaxWidth(),
                     )
 
-                    ErrorText(error)
+                    ErrorText(connectError)
 
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Button(
-                        onClick = {
-                            when {
-                                encryptionPassword.isEmpty() -> error = "Encryption password is required"
-                                encryptionPassword.length < 8 -> error = "Password must be at least 8 characters"
-                                else -> {
-                                    isCreating = true
-                                    error = null
-                                    // Use viewModelScope so the coroutine survives
-                                    // the navigation triggered by createVault setting
-                                    // isFirstLaunch=false (which leaves this composition).
-                                    appState.unlockAndSync(encryptionPassword)
-                                }
-                            }
-                        },
-                        enabled = !isCreating && encryptionPassword.isNotEmpty(),
+                        onClick = { appState.connectNewVault(encryptionPassword) },
+                        enabled = !isConnecting && encryptionPassword.isNotEmpty(),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(if (isCreating) "Unlocking\u2026" else "Unlock & Sync")
+                        Text(if (isConnecting) "Unlocking\u2026" else "Unlock & Sync")
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedButton(
+                        onClick = {
+                            appState.abandonPendingConnection()
+                            appState.clearConnectState()
+                            mode = SetupMode.NEW_VAULT
+                        },
+                        enabled = !isConnecting,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.back))
                     }
                 }
             }
@@ -476,7 +482,7 @@ fun SetupScreen(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                ErrorText(error)
+                ErrorText(error ?: connectError)
 
                 Spacer(modifier = Modifier.height(24.dp))
 
@@ -487,28 +493,19 @@ fun SetupScreen(
                             importPassword.isEmpty() -> error = "Password is required"
                             deviceName.isBlank() -> error = "Device name is required"
                             else -> {
-                                isCreating = true
                                 error = null
-                                scope.launch {
-                                    val result = appState.importFromDevice(
-                                        credentialString = credentialString.trim(),
-                                        password = importPassword,
-                                        deviceName = deviceName.trim(),
-                                    )
-                                    result.onSuccess {
-                                        onVaultCreated()
-                                    }.onFailure { e ->
-                                        error = e.message ?: "Import failed"
-                                        isCreating = false
-                                    }
-                                }
+                                appState.importFromDevice(
+                                    credentialString = credentialString,
+                                    password = importPassword,
+                                    deviceName = deviceName.trim(),
+                                )
                             }
                         }
                     },
-                    enabled = !isCreating,
+                    enabled = !isConnecting,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (isCreating) "Importing\u2026" else "Import & Sync")
+                    Text(if (isConnecting) "Importing\u2026" else "Import & Sync")
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))

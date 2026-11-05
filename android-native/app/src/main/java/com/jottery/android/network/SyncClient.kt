@@ -94,7 +94,7 @@ class SyncClient(
         return try {
             get("/api/v1/auth/wrapped-key")
         } catch (e: SyncClientException) {
-            if (e.message?.contains("HTTP 404") == true) null else throw e
+            if (e.message?.startsWith("HTTP 404:") == true) null else throw e
         }
     }
 
@@ -107,6 +107,11 @@ class SyncClient(
             val body = response.body?.string() ?: ""
             throw SyncClientException("HTTP ${response.code}: $body")
         }
+    }
+
+    /** Remove this device from the account. */
+    suspend fun revokeThisDevice() {
+        delete("/api/v1/sync/device")
     }
 
     // MARK: - Private HTTP Methods

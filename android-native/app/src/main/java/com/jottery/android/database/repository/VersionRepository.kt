@@ -12,6 +12,8 @@ class VersionRepository(
     suspend fun getVersions(noteId: String): List<NoteVersionRecord> =
         dao.getVersions(noteId)
 
+    suspend fun listAll(): List<NoteVersionRecord> = dao.listAll()
+
     suspend fun getByKey(versionKey: String): NoteVersionRecord? =
         dao.getByKey(versionKey)
 
