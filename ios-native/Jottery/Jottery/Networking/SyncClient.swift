@@ -87,10 +87,29 @@ actor SyncClient {
         }
     }
 
-    /// Upload a wrapped master key to the server.
-    func putWrappedKey(_ request: PutWrappedKeyRequest) async throws {
+    /// Upload a wrapped master key, saying what the upload is for. Throws
+    /// `wrappedKeyConflict` if the server refuses it for that reason: read the
+    /// key again and decide again, rather than retrying.
+    func putWrappedKey(_ request: PutWrappedKeyRequest, as write: WrappedKeyWrite) async throws {
         let url = try apiURL("auth/wrapped-key")
-        try await put(url: url, body: request)
+        var body = request
+        var ifMatch: String?
+        switch write {
+        case .firstUpload:
+            body.replace = false
+        case .repair(let updatedAt):
+            ifMatch = SyncValidation.opaqueToken(updatedAt)
+            // An older server has no updatedAt and ignores this. One that has
+            // since been upgraded refuses it, which is the safe way to be wrong.
+            if ifMatch == nil { body.replace = false }
+        case .passwordChange:
+            body.replace = true
+        }
+        do {
+            try await put(url: url, body: body, ifMatch: ifMatch)
+        } catch SyncClientError.httpError(let status, _) where status == 409 {
+            throw SyncClientError.wrappedKeyConflict
+        }
     }
 
     // MARK: - Device
@@ -185,10 +204,13 @@ actor SyncClient {
         return try JSONDecoder().decode(Response.self, from: data)
     }
 
-    private func put<Body: Encodable>(url: URL, body: Body) async throws {
+    private func put<Body: Encodable>(url: URL, body: Body, ifMatch: String? = nil) async throws {
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let ifMatch {
+            request.setValue(ifMatch, forHTTPHeaderField: "If-Match")
+        }
         if let apiKey {
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         }
@@ -237,21 +259,25 @@ actor SyncClient {
                     throw SyncClientError.accountPendingApproval
                 }
                 throw SyncClientError.accountDisabled
+            case 408:
+                throw SyncClientError.requestTimedOut
             case 429:
-                let header = http.value(forHTTPHeaderField: "Retry-After").flatMap(TimeInterval.init)
-                throw SyncClientError.rateLimited(
-                    retryAfter: Self.waitTime(header ?? details?.retryAfter.map(TimeInterval.init))
-                )
+                throw SyncClientError.rateLimited(retryAfter: Self.waitTime(http, details))
+            case 503:
+                throw SyncClientError.serverBusy(retryAfter: Self.waitTime(http, details))
+            case 507:
+                throw SyncClientError.storageQuotaExceeded
             default:
                 throw SyncClientError.httpError(status: http.statusCode, body: String(data: data, encoding: .utf8) ?? "")
             }
         }
     }
 
-    /// A wait the server asked for, kept to something sensible: it can't be
+    /// The wait the server asked for, kept to something sensible: it can't be
     /// allowed to stop this device syncing for a year.
-    private static func waitTime(_ requested: TimeInterval?) -> TimeInterval {
-        min(max(requested ?? 60, 1), 3600)
+    private static func waitTime(_ response: HTTPURLResponse, _ details: ErrorBody?) -> TimeInterval {
+        let header = response.value(forHTTPHeaderField: "Retry-After").flatMap(TimeInterval.init)
+        return min(max(header ?? details?.retryAfter.map(TimeInterval.init) ?? 60, 1), 3600)
     }
 
     /// The server's error shape. `error` is its own wording, used only to tell
@@ -277,6 +303,23 @@ enum SyncClientError: LocalizedError {
     case passwordChangeRequired
     /// 429: wait this many seconds before trying again.
     case rateLimited(retryAfter: TimeInterval)
+    /// 503: the server is busy. Wait this many seconds before trying again.
+    case serverBusy(retryAfter: TimeInterval)
+    /// 408: the request took too long. Sending the same one again is safe.
+    case requestTimedOut
+    /// 507: the account is at its storage quota. Nothing was written, though a
+    /// push that only deletes still works.
+    case storageQuotaExceeded
+    /// 409 to a wrapped key upload: the key isn't as this device last read it.
+    case wrappedKeyConflict
+
+    /// How long the server asked for it to be left alone, if it did.
+    var requestedWait: TimeInterval? {
+        switch self {
+        case .rateLimited(let wait), .serverBusy(let wait): return wait
+        default: return nil
+        }
+    }
 
     var errorDescription: String? {
         switch self {
@@ -288,6 +331,10 @@ enum SyncClientError: LocalizedError {
         case .accountPendingApproval: return L.syncErrorAccountPending
         case .passwordChangeRequired: return L.syncErrorPasswordChangeRequired
         case .rateLimited(let wait): return L.syncErrorRateLimited(Int(wait.rounded(.up)))
+        case .serverBusy(let wait): return L.syncErrorServerBusy(Int(wait.rounded(.up)))
+        case .requestTimedOut: return L.syncErrorTimedOut
+        case .storageQuotaExceeded: return L.syncErrorStorageFull
+        case .wrappedKeyConflict: return L.syncErrorKeyChanged
         }
     }
 }

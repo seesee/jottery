@@ -86,7 +86,7 @@ actor SyncService {
 
     private func noteFailure(_ error: Error) {
         lastError = error.localizedDescription
-        if case SyncClientError.rateLimited(let wait) = error {
+        if let wait = (error as? SyncClientError)?.requestedWait {
             retryNotBefore = Date().addingTimeInterval(wait)
         }
     }
@@ -323,8 +323,9 @@ actor SyncService {
             records, size: Self.pushChunkSize, maxBytes: Self.pushByteBudget, bytes: { bytesById[$0.id] ?? 0 }
         )
         var tooLarge = 0
+        var quotaReached = false
 
-        while !queue.isEmpty {
+        while !queue.isEmpty, !quotaReached {
             let batch = queue.removeFirst()
             do {
                 try await pushBatch(batch, pushed: pushed, changes: &changes)
@@ -336,14 +337,22 @@ actor SyncService {
                     Log.debug("[Sync] push: note \(batch[0].id) is over the server's limit — leaving it behind")
                     tooLarge += 1
                 }
+            } catch SyncClientError.storageQuotaExceeded {
+                quotaReached = true
             }
         }
 
-        if !deletions.isEmpty || !savedSearchRecords.isEmpty {
-            try await pushDeletions(deletions, savedSearches: savedSearchRecords)
+        // A push that only deletes works at the quota too, which is how the
+        // user makes room, so deletions go up on their own.
+        if !deletions.isEmpty {
+            try await pushDeletions(deletions)
+        }
+        if !savedSearchRecords.isEmpty, !quotaReached {
+            try await pushSavedSearches(savedSearchRecords)
         }
 
         try syncRepo.updateLastPush(at: Date().iso8601)
+        if quotaReached { throw SyncClientError.storageQuotaExceeded }
         if tooLarge > 0 { throw SyncServiceError.notesTooLarge(count: tooLarge) }
         return changes
     }
@@ -464,16 +473,26 @@ actor SyncService {
         }
     }
 
-    /// Send pending deletions and saved searches.
+    /// Send pending deletions.
     ///
     /// A deletion is done with once the server has answered, whatever it said.
     /// One it refused (`rejectedDeletions`, absent on an older server) lost to a
     /// newer edit, and the note comes back through a normal pull. Sending it
     /// again would only re-announce the note to every device on every push.
-    private func pushDeletions(
-        _ deletions: [(id: String, deletedAt: String)],
-        savedSearches records: [SavedSearchRepository.SavedSearchRecord]
-    ) async throws {
+    private func pushDeletions(_ deletions: [(id: String, deletedAt: String)]) async throws {
+        let response = try await syncClient.push(SyncPushRequest(
+            notes: [],
+            attachments: [],
+            versions: [],
+            deletions: deletions.map { SyncDeletion(id: $0.id, deletedAt: $0.deletedAt) }
+        ))
+        if let refused = response.rejectedDeletions, !refused.isEmpty {
+            Log.debug("[Sync] push: \(refused.count) deletion(s) refused: the notes have newer edits")
+        }
+        try syncRepo.clearDeletions(ids: deletions.map(\.id))
+    }
+
+    private func pushSavedSearches(_ records: [SavedSearchRepository.SavedSearchRecord]) async throws {
         let syncSavedSearches = records.map { record in
             SyncSavedSearch(
                 id: record.id,
@@ -487,17 +506,9 @@ actor SyncService {
                 version: record.version
             )
         }
-        let response = try await syncClient.push(SyncPushRequest(
-            notes: [],
-            attachments: [],
-            versions: [],
-            deletions: deletions.isEmpty ? nil : deletions.map { SyncDeletion(id: $0.id, deletedAt: $0.deletedAt) },
-            savedSearches: syncSavedSearches.isEmpty ? nil : syncSavedSearches
+        _ = try await syncClient.push(SyncPushRequest(
+            notes: [], attachments: [], versions: [], savedSearches: syncSavedSearches
         ))
-        if let refused = response.rejectedDeletions, !refused.isEmpty {
-            Log.debug("[Sync] push: \(refused.count) deletion(s) refused: the notes have newer edits")
-        }
-        try syncRepo.clearDeletions(ids: deletions.map(\.id))
 
         let now = Date().iso8601
         for record in records {
@@ -577,7 +588,7 @@ actor SyncService {
             startedAt = startedAt ?? page.syncedAt.flatMap { Date(iso8601: $0) } ?? requestedAt
 
             let hasMore = page.hasMore ?? false
-            if let nextCursor = SyncValidation.cursor(page.nextCursor) {
+            if let nextCursor = SyncValidation.opaqueToken(page.nextCursor) {
                 if fullPullPending {
                     fullPullPending = false
                     request.cursor = ""
@@ -1274,6 +1285,25 @@ actor SyncService {
             try? await Task.sleep(for: .milliseconds(50))
         }
         return true
+    }
+}
+
+/// When to try a failed sync again without being asked.
+enum SyncRetry {
+    static let maxAttempts = 5
+
+    /// Seconds to wait before attempt number `attempt` (from zero), or nil if
+    /// this failure isn't one that trying again can help. At least as long as
+    /// the server asked for, and longer each time, so a struggling server isn't
+    /// made worse.
+    static func delay(after error: Error, attempt: Int) -> TimeInterval? {
+        guard attempt < maxAttempts, let error = error as? SyncClientError else { return nil }
+        let backoff = 5 * pow(2, Double(attempt))
+        switch error {
+        case .requestTimedOut: return backoff
+        case .rateLimited(let wait), .serverBusy(let wait): return max(wait, backoff)
+        default: return nil
+        }
     }
 }
 

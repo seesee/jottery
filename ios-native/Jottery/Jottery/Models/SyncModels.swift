@@ -240,12 +240,30 @@ struct WrappedKeyResponse: Codable {
     let blob: String           // JSON {"ciphertext":"...","iv":"..."}
     let kdfVersion: Int
     let kdfIterations: Int
+    /// Opaque, and changes on every write. Its presence means the server
+    /// supports conditional writes.
+    var updatedAt: String?
 }
 
 struct PutWrappedKeyRequest: Codable {
     let blob: String
     let kdfVersion: Int
     let kdfIterations: Int
+    /// Set by `SyncClient.putWrappedKey` from what the write is for.
+    var replace: Bool?
+}
+
+/// What a wrapped key upload is for, which decides when the server refuses it.
+/// There's one key per account, and overwriting it with the wrong one locks out
+/// every new device, so every upload has to say.
+enum WrappedKeyWrite: Equatable, Sendable {
+    /// The server had no key when asked. Refused if it has one now.
+    case firstUpload
+    /// Replacing a blob this device read and couldn't open. Refused if it has
+    /// changed since. `updatedAt` is from that read, and nil on an older server.
+    case repair(updatedAt: String?)
+    /// The user changed the notes password. Never refused.
+    case passwordChange
 }
 
 // MARK: - Sync Saved Search

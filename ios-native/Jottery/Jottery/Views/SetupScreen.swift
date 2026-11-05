@@ -379,7 +379,8 @@ private struct ConnectToServerView: View {
                                 syncClient: context.client,
                                 userId: context.userId,
                                 password: encryptionPassword,
-                                masterKeyData: masterKey.withUnsafeBytes { Data($0) }
+                                masterKeyData: masterKey.withUnsafeBytes { Data($0) },
+                                as: .firstUpload
                             )
                             try appState.syncRepo?.markServerKeyOpened()
                         } catch {

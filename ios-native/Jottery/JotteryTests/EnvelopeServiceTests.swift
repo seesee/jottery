@@ -7,8 +7,18 @@ import Testing
 /// In-memory stand-in for the sync server's wrapped-key endpoint.
 final class FakeKeyServerProtocol: URLProtocol, @unchecked Sendable {
 
-    nonisolated(unsafe) static var storedBlob: String?
+    nonisolated(unsafe) static var storedBlob: String? {
+        didSet { revision += 1 }
+    }
+    nonisolated(unsafe) static var revision = 0
     nonisolated(unsafe) static var putCount = 0
+    /// False for an older server: no `updatedAt`, and any PUT overwrites.
+    nonisolated(unsafe) static var supportsConditionalWrites = true
+    /// What the last PUT asked for.
+    nonisolated(unsafe) static var lastReplace: Bool?
+    nonisolated(unsafe) static var lastIfMatch: String?
+    /// Runs as the next PUT arrives: another device getting in first.
+    nonisolated(unsafe) static var beforeNextPut: (() -> Void)?
     nonisolated(unsafe) static var failPuts = false
     nonisolated(unsafe) static var failGets = false
     /// DELETE requests seen: revoking the calling device (`sync/device`).
@@ -17,6 +27,10 @@ final class FakeKeyServerProtocol: URLProtocol, @unchecked Sendable {
     static func reset(blob: String? = nil) {
         storedBlob = blob
         putCount = 0
+        supportsConditionalWrites = true
+        lastReplace = nil
+        lastIfMatch = nil
+        beforeNextPut = nil
         failPuts = false
         failGets = false
         deleteCount = 0
@@ -36,21 +50,34 @@ final class FakeKeyServerProtocol: URLProtocol, @unchecked Sendable {
                 body = Data("unavailable".utf8)
             } else if let blob = Self.storedBlob {
                 status = 200
-                body = (try? JSONEncoder().encode(
-                    WrappedKeyResponse(blob: blob, kdfVersion: 1, kdfIterations: 1_000_000)
-                )) ?? Data()
+                body = (try? JSONEncoder().encode(WrappedKeyResponse(
+                    blob: blob, kdfVersion: 1, kdfIterations: 1_000_000,
+                    updatedAt: Self.supportsConditionalWrites ? "revision-\(Self.revision)" : nil
+                ))) ?? Data()
             } else {
                 status = 404
                 body = Data("No wrapped key found".utf8)
             }
         case "PUT":
             Self.putCount += 1
+            Self.beforeNextPut?()
+            Self.beforeNextPut = nil
+            let ifMatch = request.value(forHTTPHeaderField: "If-Match")
+            Self.lastIfMatch = ifMatch
             if Self.failPuts {
                 status = 500
                 body = Data("boom".utf8)
             } else if let put = try? JSONDecoder().decode(PutWrappedKeyRequest.self, from: Self.readBody(request)) {
-                Self.storedBlob = put.blob
-                status = 200
+                Self.lastReplace = put.replace
+                let refused = Self.supportsConditionalWrites && (ifMatch.map {
+                    $0 != "revision-\(Self.revision)" || Self.storedBlob == nil
+                } ?? (put.replace == false && Self.storedBlob != nil))
+                if refused {
+                    status = 409
+                } else {
+                    Self.storedBlob = put.blob
+                    status = 200
+                }
             } else {
                 status = 400
             }
@@ -317,6 +344,128 @@ struct EnvelopeServiceTests {
         #expect(meta.serverKeyOpened == false)
         #expect(meta.lastSyncAt == nil)
         #expect(meta.pendingWrappedKey == nil)
+    }
+
+    // MARK: - Saying what an upload is for
+
+    /// Two devices could both read "no key", and the second would overwrite the
+    /// first. An upload says it expects to be the first, and the server refuses
+    /// it if it isn't.
+    @Test func aFirstUploadAsksNotToReplaceAnything() async throws {
+        FakeKeyServerProtocol.reset()
+
+        _ = try await reconcile(masterKey: CryptoService.generateMasterKey(), hasSynced: false)
+
+        #expect(FakeKeyServerProtocol.lastReplace == false)
+        #expect(FakeKeyServerProtocol.lastIfMatch == nil)
+    }
+
+    @Test func aRepairNamesTheBlobItRead() async throws {
+        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: serverPassword))
+        let readRevision = "revision-\(FakeKeyServerProtocol.revision)"
+
+        let outcome = try await reconcile(masterKey: CryptoService.generateMasterKey(), hasSynced: true)
+
+        #expect(outcome == .repaired)
+        #expect(FakeKeyServerProtocol.lastIfMatch == readRevision)
+        #expect(FakeKeyServerProtocol.lastReplace == nil)
+    }
+
+    @Test func aPasswordChangeSaysToReplace() async throws {
+        let state = try await makeSyncedState()
+        let masterKey = try #require(TestVaults.keyData(state))
+        FakeKeyServerProtocol.reset(blob: try wrap(masterKey, with: notesPassword))
+
+        await EnvelopeService.changePasswordServer(
+            syncRepo: try #require(state.syncRepo),
+            syncClient: makeClient(),
+            newPassword: "a-brand-new-notes-password",
+            masterKeyData: masterKey
+        )
+
+        #expect(FakeKeyServerProtocol.lastReplace == true)
+    }
+
+    @Test func aFirstUploadThatLosesTheRaceLeavesTheWinnersKey() async throws {
+        FakeKeyServerProtocol.reset()
+        let theirs = try wrap(CryptoService.generateMasterKey(), with: notesPassword)
+        FakeKeyServerProtocol.beforeNextPut = { FakeKeyServerProtocol.storedBlob = theirs }
+
+        let outcome = try await reconcile(masterKey: CryptoService.generateMasterKey(), hasSynced: false)
+
+        #expect(outcome == .leftAlone)
+        #expect(FakeKeyServerProtocol.storedBlob == theirs)
+        #expect(FakeKeyServerProtocol.putCount == 1)
+    }
+
+    /// The race D1 is about: this device reads an old blob, another changes the
+    /// password, and this device's repair must not undo that. The blob that
+    /// arrives still won't open here, which is exactly what makes it tempting.
+    @Test func aRepairThatLosesTheRaceLeavesWhatTheOtherDeviceWrote() async throws {
+        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: serverPassword))
+        let theirs = try wrap(CryptoService.generateMasterKey(), with: "changed-on-another-device")
+        FakeKeyServerProtocol.beforeNextPut = { FakeKeyServerProtocol.storedBlob = theirs }
+
+        let outcome = try await reconcile(masterKey: CryptoService.generateMasterKey(), hasSynced: true)
+
+        #expect(outcome == .passwordChangedElsewhere)
+        #expect(FakeKeyServerProtocol.storedBlob == theirs)
+        #expect(FakeKeyServerProtocol.putCount == 1)  // read again, and didn't try again
+    }
+
+    @Test func aDeviceThatLostARepairNeverTriesAgain() async throws {
+        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: serverPassword))
+        let state = try await makeSyncedState()
+        try #require(state.syncRepo).updateLastSync(at: Date().iso8601)
+        let theirs = try wrap(CryptoService.generateMasterKey(), with: "changed-on-another-device")
+        FakeKeyServerProtocol.beforeNextPut = { FakeKeyServerProtocol.storedBlob = theirs }
+
+        #expect(try await runEnvelopeSetup(on: state, password: notesPassword))
+        #expect(state.accountKeyNotice == .passwordChangedElsewhere)
+        #expect(FakeKeyServerProtocol.putCount == 1)
+
+        #expect(try await runEnvelopeSetup(on: state, password: notesPassword))
+
+        #expect(FakeKeyServerProtocol.putCount == 1)
+        #expect(FakeKeyServerProtocol.storedBlob == theirs)
+    }
+
+    @Test func aLegacyVaultThatLosesARepairNeverTriesAgain() async throws {
+        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: serverPassword))
+        let state = try await makeSyncedLegacyVault()
+        try #require(state.syncRepo).updateLastSync(at: Date().iso8601)
+        let theirs = try wrap(CryptoService.generateMasterKey(), with: "changed-on-another-device")
+        FakeKeyServerProtocol.beforeNextPut = { FakeKeyServerProtocol.storedBlob = theirs }
+
+        #expect(try await !runEnvelopeSetup(on: state, password: notesPassword))
+        #expect(state.accountKeyNotice == .passwordChangedElsewhere)
+        #expect(try state.encryptionRepo?.get()?.envelopeVersion == nil)  // nothing changed here
+
+        state.accountKeyNotice = nil
+        #expect(try await runEnvelopeSetup(on: state, password: notesPassword))
+
+        #expect(FakeKeyServerProtocol.putCount == 1)
+        #expect(FakeKeyServerProtocol.storedBlob == theirs)
+        #expect(state.accountKeyNotice == .passwordChangedElsewhere)
+    }
+
+    @Test func anOlderServerStillGetsRepaired() async throws {
+        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: serverPassword))
+        FakeKeyServerProtocol.supportsConditionalWrites = false
+        let masterKey = CryptoService.generateMasterKey()
+
+        let outcome = try await reconcile(masterKey: masterKey, hasSynced: true)
+
+        #expect(outcome == .repaired)
+        #expect(FakeKeyServerProtocol.lastIfMatch == nil)
+        #expect(unwrap(try #require(FakeKeyServerProtocol.storedBlob), with: notesPassword) == masterKey)
+    }
+
+    @Test func anOlderServerStillTakesAFirstUpload() async throws {
+        FakeKeyServerProtocol.reset()
+        FakeKeyServerProtocol.supportsConditionalWrites = false
+
+        #expect(try await reconcile(masterKey: CryptoService.generateMasterKey(), hasSynced: false) == .published)
     }
 
     // MARK: - A password change the server hasn't heard about (jottery-rkg9)

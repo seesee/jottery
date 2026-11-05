@@ -116,6 +116,8 @@ final class AppState {
     @ObservationIgnored private var networkMonitor: NWPathMonitor?
     @ObservationIgnored private var networkWasSatisfied = true
     @ObservationIgnored private var autoSyncTask: Task<Void, Never>?
+    /// Retries in a row after failures worth retrying (see `SyncRetry`).
+    @ObservationIgnored private var syncRetryAttempts = 0
     @ObservationIgnored private var userErrorClearTask: Task<Void, Never>?
 
     /// Re-entrancy guard for `unlock(password:)` — checked-and-set at entry,
@@ -1551,6 +1553,7 @@ final class AppState {
             _ = try await syncService.sync()
             isSyncing = false
             lastSyncAt = Date()
+            syncRetryAttempts = 0
 
             // Pull any conflicts detected during push
             pendingConflicts = await syncService.pendingConflicts
@@ -1578,6 +1581,10 @@ final class AppState {
             syncError = SyncEndpoint.describeSyncFailure(error)
             syncStatusMessage = nil
             isSyncing = false
+            if let delay = SyncRetry.delay(after: error, attempt: syncRetryAttempts) {
+                syncRetryAttempts += 1
+                scheduleAutoSync(after: .seconds(delay))
+            }
         }
     }
 

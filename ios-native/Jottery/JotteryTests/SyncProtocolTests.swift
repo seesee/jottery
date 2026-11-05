@@ -736,6 +736,82 @@ struct SyncProtocolTests {
         #expect(ScriptedServerProtocol.pushRequests.count == requestsAfterFirstTry)
     }
 
+    @Test func aBusyServerIsLeftAloneForAsLongAsItAsks() async throws {
+        let fixture = try makeFixture()
+        _ = try fixture.repo.create(content: "a note", key: key)
+        ScriptedServerProtocol.pushHandler = { _ in .init(status: 503, headers: ["Retry-After": "3600"]) }
+        ScriptedServerProtocol.pullReplies = [.init(status: 503, headers: ["Retry-After": "3600"])]
+
+        await #expect(throws: (any Error).self) { try await fixture.service.sync() }
+        let requests = ScriptedServerProtocol.pushRequests.count
+
+        try await fixture.service.sync()
+
+        #expect(ScriptedServerProtocol.pushRequests.count == requests)
+    }
+
+    @Test func aTimeoutCanBeTriedAgainAtOnce() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "a note", key: key)
+        ScriptedServerProtocol.pushHandler = { _ in .init(status: 408) }
+
+        await #expect {
+            try await fixture.service.push()
+        } throws: { error in
+            if case SyncClientError.requestTimedOut = error { return true }
+            return false
+        }
+        #expect(try fixture.repo.getRaw(id: note.id)?.needsSync == true)
+
+        // Sending the same push twice is safe, and nothing holds it back.
+        ScriptedServerProtocol.pushHandler = { ScriptedServerProtocol.acceptEverything($0) }
+        try await fixture.service.sync()
+
+        #expect(try fixture.repo.getRaw(id: note.id)?.needsSync == false)
+    }
+
+    /// Deleting is how the user makes room, so it has to get through.
+    @Test func atTheStorageQuotaOnlyDeletionsGoUpAndTheUserIsTold() async throws {
+        let fixture = try makeFixture()
+        let gone = try synced(fixture.repo)
+        try fixture.repo.permanentlyDelete(id: gone.id)
+        let waiting = try fixture.repo.create(content: "waiting for room", key: key)
+        _ = try SavedSearchRepository(db: fixture.db).create(name: "mine", query: "#a", key: key)
+        let incoming = try remoteNote()
+        ScriptedServerProtocol.pullReplies = [page(notes: [incoming])]
+        ScriptedServerProtocol.pushHandler = { request in
+            guard request.notes.isEmpty, request.savedSearches == nil else {
+                return .init(status: 507, body: Data(#"{"error":"x","code":"storage_quota_exceeded"}"#.utf8))
+            }
+            return ScriptedServerProtocol.acceptEverything(request)
+        }
+
+        await #expect {
+            try await fixture.service.sync()
+        } throws: { error in
+            if case SyncClientError.storageQuotaExceeded = error { return true }
+            return false
+        }
+
+        #expect(try fixture.syncRepo.getPendingDeletions().isEmpty)
+        #expect(try fixture.repo.getRaw(id: waiting.id)?.needsSync == true)
+        #expect(ScriptedServerProtocol.pushRequests.filter { $0.savedSearches != nil }.isEmpty)
+        #expect(try fixture.repo.getRaw(id: incoming.id) != nil)  // and it still receives
+    }
+
+    @Test func timeoutsAndBusyServersAreRetriedThenLeft() {
+        #expect(SyncRetry.delay(after: SyncClientError.requestTimedOut, attempt: 0) == 5)
+        #expect(SyncRetry.delay(after: SyncClientError.requestTimedOut, attempt: 2) == 20)
+        #expect(SyncRetry.delay(after: SyncClientError.serverBusy(retryAfter: 90), attempt: 0) == 90)
+        #expect(SyncRetry.delay(after: SyncClientError.rateLimited(retryAfter: 1), attempt: 1) == 10)
+        #expect(SyncRetry.delay(after: SyncClientError.requestTimedOut, attempt: SyncRetry.maxAttempts) == nil)
+    }
+
+    @Test func aFullAccountIsntRetriedByItself() {
+        #expect(SyncRetry.delay(after: SyncClientError.storageQuotaExceeded, attempt: 0) == nil)
+        #expect(SyncRetry.delay(after: SyncClientError.accountDisabled, attempt: 0) == nil)
+    }
+
     @Test func aDisabledAccountIsReportedAsThat() async throws {
         let fixture = try makeFixture()
         ScriptedServerProtocol.pullReplies = [.init(status: 403, body: Data(#"{"error":"Account deactivated"}"#.utf8))]

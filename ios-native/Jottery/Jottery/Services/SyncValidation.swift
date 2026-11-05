@@ -11,8 +11,8 @@ enum SyncValidation {
     static let maxMimeTypeLength = 255
     static let maxSyntaxLanguageLength = 64
     static let maxColorLength = 64
-    /// Cursors are "a short ASCII string". Anything else isn't one.
-    static let maxCursorLength = 256
+    /// Cursors and the like are "a short ASCII string". Anything else isn't one.
+    static let maxTokenLength = 256
 
     static func isId(_ value: String) -> Bool {
         UUID(uuidString: value) != nil
@@ -82,10 +82,11 @@ enum SyncValidation {
             && isOptionalTimestamp(search.deletedAt)
     }
 
-    /// The cursor to keep from a response, or nil when there isn't a usable
-    /// one, which is treated as a server that doesn't support cursors.
-    static func cursor(_ value: String?) -> String? {
-        guard let value, value.utf8.count <= maxCursorLength,
+    /// An opaque value to hand back to the server, or nil when it isn't usable,
+    /// which is treated as a server that doesn't support the feature. This also
+    /// keeps anything that could break out of a header from reaching one.
+    static func opaqueToken(_ value: String?) -> String? {
+        guard let value, value.utf8.count <= maxTokenLength,
               value.unicodeScalars.allSatisfy({ (0x20...0x7E).contains($0.value) }) else {
             return nil
         }

@@ -22,9 +22,9 @@ struct SyncMetadataRecord: Codable, FetchableRecord, PersistableRecord {
     /// server, like `lastSyncAt`. Nil until the server is known to support it.
     var pullCursor: String?
     /// Whether this device has ever opened or uploaded the account's wrapped
-    /// key. Once true, the server's copy can't be one an older build wrote, so
-    /// failing to open it means the password changed elsewhere (see
-    /// `EnvelopeService.reconcileWrappedKey`).
+    /// key, or seen it change under a repair. Once true, the server's copy can't
+    /// be one an older build wrote, so failing to open it means the password
+    /// changed elsewhere (see `EnvelopeService.reconcileWrappedKey`).
     var serverKeyOpened: Bool
     /// A wrapped key still waiting to reach the server after a password change.
     /// Wrapped with the new notes password, as the local copy is.

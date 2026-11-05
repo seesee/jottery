@@ -3241,6 +3241,17 @@
         }
       }
     },
+    "syncError.keyChanged": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The account's encryption key has just changed. Try again."
+          }
+        }
+      }
+    },
     "syncError.notesTooLarge": {
       "extractionState": "manual",
       "localizations": {
@@ -3270,6 +3281,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "Too many attempts. Try again in %lld seconds."
+          }
+        }
+      }
+    },
+    "syncError.serverBusy": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server is busy. Jottery will try again in %lld seconds."
+          }
+        }
+      }
+    },
+    "syncError.storageFull": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your account has used all its storage, so changes aren't reaching the server. They're safe on this device. To make room, delete notes or attachments you don't need, and empty the Recycle Bin."
+          }
+        }
+      }
+    },
+    "syncError.timedOut": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server took too long to answer. Jottery will try again shortly."
           }
         }
       }
