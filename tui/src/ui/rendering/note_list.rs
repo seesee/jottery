@@ -1267,6 +1267,41 @@ mod tests {
     }
 
     #[test]
+    fn the_link_the_keyboard_is_on_stands_out() {
+        let target = Note::new("Target".to_string());
+        let mut app = app_showing(&format!("[other note](link:{})", target.id));
+        app.notes.push(target);
+        app.invalidate_filter_cache();
+        app.selected_note = app.filtered_notes().iter().position(|note| note.content.contains("link:")).unwrap();
+
+        let mut terminal = Terminal::new(TestBackend::new(120, 30)).unwrap();
+        terminal.draw(|frame| render_note_list(&mut app, frame)).unwrap();
+        let (_, y, x, _) = app.note_link_positions[0].clone();
+        let reversed = |terminal: &Terminal<TestBackend>| {
+            terminal.backend().buffer()[(x, y)].modifier.contains(Modifier::REVERSED)
+        };
+        assert!(!reversed(&terminal));
+
+        app.selected_link = Some(0);
+        terminal.draw(|frame| render_note_list(&mut app, frame)).unwrap();
+        assert!(reversed(&terminal));
+    }
+
+    #[test]
+    fn a_wiki_link_shows_as_the_note_it_points_at() {
+        let target = Note::new("Project Plan".to_string());
+        let mut app = app_showing("See [[project plan]] for more");
+        app.notes.push(target.clone());
+        app.invalidate_filter_cache();
+        app.selected_note = app.filtered_notes().iter().position(|note| note.content.contains("[[")).unwrap();
+
+        let shown = screen(&mut app);
+
+        assert!(!shown.contains("[[project plan]]"), "{shown}");
+        assert_eq!(app.note_link_positions[0].0, target.id);
+    }
+
+    #[test]
     fn tab_indented_text_keeps_its_columns_in_a_preview() {
         let mut app = app_showing("First\n\t\tIndented");
         app.notes[0].set_syntax(SyntaxLanguage::Plain);

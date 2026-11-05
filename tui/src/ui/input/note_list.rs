@@ -1844,6 +1844,33 @@ mod tests {
         assert!(matches!(app.input_mode, InputMode::Normal));
     }
 
+    #[test]
+    fn an_export_asks_before_replacing_a_file() {
+        let mut app = app_with_notes(&["Selected"]);
+        let id = app.notes[0].id.clone();
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("export.json");
+        std::fs::write(&path, "already here").unwrap();
+
+        let export = |app: &mut App| {
+            app.is_multi_select_mode = true;
+            app.selected_note_ids.insert(id.clone());
+            app.input_mode = InputMode::BulkExportPath;
+            app.bulk_export_path_input = path.to_str().unwrap().to_string();
+            handle_note_list_key(app, key(KeyCode::Enter)).unwrap();
+        };
+
+        export(&mut app);
+        assert!(app.export_overwrite_path.is_some());
+        handle_note_list_key(&mut app, key(KeyCode::Char('n'))).unwrap();
+        assert!(app.export_overwrite_path.is_none());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "already here");
+
+        export(&mut app);
+        handle_note_list_key(&mut app, key(KeyCode::Char('y'))).unwrap();
+        assert!(std::fs::read_to_string(&path).unwrap().contains("Selected"));
+    }
+
     // ==================== Navigation Tests ====================
 
     #[test]
