@@ -69,6 +69,10 @@ actor SSEClient {
             do {
                 try await connect()
                 reconnectAttempts = 0
+                // The stream ended cleanly. Connecting again straight away would
+                // give a server or proxy that closes every stream a tight request
+                // loop from every device.
+                await pause(.seconds(1))
             } catch SSEError.tokenRefused where reconnectAttempts == 0 {
                 // The token ran out, or the device is no longer welcome. Asking
                 // for a new one finds out which, with the server's real answer,
