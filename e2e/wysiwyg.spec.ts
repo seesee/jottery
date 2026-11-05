@@ -121,6 +121,46 @@ test.describe('Visual editor mode', () => {
     expect(await rawEditorText(page)).toBe(NOTE.replace('# Round trip', '# Round trip edited'));
   });
 
+  test.describe('the link button', () => {
+    /** Select a word in Visual mode, and open the link form on it */
+    async function openLinkForm(page: Page, jp: JotteryPage) {
+      await openMarkdownNote(page, jp, 'Round trip word');
+      await visualButton(page).click();
+      const content = page.locator('.ProseMirror');
+      await expect(content).toContainText('word');
+      await content.locator('p').first().dblclick({ position: { x: 5, y: 5 } });
+      await page.locator('button[title="Insert Link"]').click();
+      return page.locator('input[type="url"]');
+    }
+
+    test('asks in the page, not with a browser prompt', async ({ page }) => {
+      const dialogs: string[] = [];
+      page.on('dialog', dialog => { dialogs.push(dialog.type()); void dialog.dismiss(); });
+      const jp = new JotteryPage(page);
+
+      const input = await openLinkForm(page, jp);
+      await expect(input).toBeFocused();
+      await input.fill('https://example.com/page');
+      await input.press('Enter');
+
+      await expect(input).toHaveCount(0);
+      await expect(page.locator('.ProseMirror a[href="https://example.com/page"]')).toBeVisible();
+      expect(dialogs).toEqual([]);
+    });
+
+    test('Escape closes the form and leaves the note open', async ({ page }) => {
+      const jp = new JotteryPage(page);
+
+      const input = await openLinkForm(page, jp);
+      await input.press('Tab');
+      await page.keyboard.press('Escape');
+
+      await expect(input).toHaveCount(0);
+      await expect(page.locator('.ProseMirror')).toBeVisible();
+      await expect(page.locator('.ProseMirror a')).toHaveCount(0);
+    });
+  });
+
   test('a second switch does not degrade nested lists', async ({ page }) => {
     const jp = new JotteryPage(page);
     await openMarkdownNote(page, jp, NOTE);

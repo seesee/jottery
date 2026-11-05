@@ -20,6 +20,10 @@
   let isHeading2 = false;
   let isHeading3 = false;
 
+  // Link form
+  let linkFormOpen = false;
+  let linkUrl = '';
+
   // Update toolbar state when editor changes
   $: if (editor) {
     const tiptapEditor = editor.getEditor?.();
@@ -80,10 +84,25 @@
   }
 
   function handleLink() {
-    const url = prompt($_('editor.wysiwyg.enterUrl'));
-    if (url !== null) {
-      editor?.setLink(url);
+    linkUrl = '';
+    linkFormOpen = !linkFormOpen;
+  }
+
+  function applyLink() {
+    editor?.setLink(linkUrl.trim());
+    linkFormOpen = false;
+  }
+
+  /** Escape is for this form here, including from its buttons, not for closing the note */
+  function handleLinkKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      linkFormOpen = false;
     }
+  }
+
+  function focusOnOpen(input: HTMLInputElement) {
+    input.focus();
   }
 
   function handleHorizontalRule() {
@@ -289,7 +308,34 @@
   </div>
 
   <!-- Insert -->
-  <div class="flex items-center gap-0.5 pl-2">
+  <div class="relative flex items-center gap-0.5 pl-2">
+    {#if linkFormOpen}
+      <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+      <form
+        class="absolute left-2 top-full z-20 mt-1 flex items-center gap-2 p-2 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+        on:submit|preventDefault={applyLink}
+        on:keydown={handleLinkKeydown}
+      >
+        <input
+          type="url"
+          bind:value={linkUrl}
+          use:focusOnOpen
+          placeholder="https://"
+          aria-label={$_('editor.wysiwyg.enterUrl')}
+          class="w-56 px-2 py-1 text-sm rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+        />
+        <button type="submit" class="px-2 py-1 text-sm rounded bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap">
+          {$_('editor.wysiwyg.link')}
+        </button>
+        <button
+          type="button"
+          on:click={() => (linkFormOpen = false)}
+          class="px-2 py-1 text-sm rounded text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+        >
+          {$_('common.cancel')}
+        </button>
+      </form>
+    {/if}
     <button
       type="button"
       on:click={handleLink}
