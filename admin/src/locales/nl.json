@@ -54,7 +54,17 @@
     "rateLimited": "Te veel pogingen. Probeer het over {seconds} seconden opnieuw.",
     "tooManyAttempts": "Te veel pogingen. Wacht even en probeer het opnieuw.",
     "passwordTooShort": "Nieuw wachtwoord moet minimaal 12 tekens lang zijn",
-    "passwordSameAsCurrent": "Het nieuwe wachtwoord moet verschillen van het huidige"
+    "passwordSameAsCurrent": "Het nieuwe wachtwoord moet verschillen van het huidige",
+    "ownAdminRole": "U kunt uw eigen beheerdersrechten niet verwijderen.",
+    "lastAdminDemote": "De laatste beheerder kan niet worden gedegradeerd.",
+    "ownAccountDelete": "U kunt uw eigen account hier niet verwijderen.",
+    "lastAdminDelete": "De laatste beheerder kan niet worden verwijderd.",
+    "userNotFound": "Gebruiker niet gevonden.",
+    "deviceNotFound": "Apparaat niet gevonden.",
+    "quotaRange": "Het opslagquotum moet tussen 1 en 100000 MB liggen.",
+    "maxUploadRange": "De maximale uploadgrootte moet tussen 1 en 1000 MB liggen.",
+    "inboxItemsRange": "Het maximale aantal inbox-items moet tussen 1 en 10000 liggen.",
+    "inboxSizeRange": "De maximale inbox-grootte moet tussen 1 en 1000 MB liggen."
   },
   "session": {
     "expired": "Uw sessie is verlopen. Meld u opnieuw aan."
@@ -197,11 +207,15 @@
       "promoteToAdmin": "Promoveren tot beheerder",
       "demoteFromAdmin": "Degraderen van beheerder",
       "messages": {
-        "delete": "Weet u zeker dat u gebruiker {email} permanent wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+        "approve": "{email} goedkeuren? Deze gebruiker kan dan inloggen en apparaten registreren.",
+        "deactivate": "{email} deactiveren? Deze gebruiker kan niet inloggen of synchroniseren totdat het account weer is geactiveerd.",
+        "activate": "{email} activeren? Deze gebruiker kan dan weer inloggen en synchroniseren.",
+        "delete": "Hiermee worden {email} en alles wat de server voor deze gebruiker bewaart permanent verwijderd: notities, bijlagen, apparaten en de accountsleutel. Dit kan niet ongedaan worden gemaakt.",
         "promoteToAdmin": "Weet u zeker dat u {email} wilt promoveren tot beheerder? Ze krijgen volledige toegang tot alle beheerfuncties.",
-        "demoteFromAdmin": "Weet u zeker dat u de beheerdersrechten van {email} wilt intrekken?",
-        "genericAction": "Weet u zeker dat u gebruiker {email} wilt {action}?"
-      }
+        "demoteFromAdmin": "Weet u zeker dat u de beheerdersrechten van {email} wilt intrekken?"
+      },
+      "deleteCounts": "Notities: {notes} · Apparaten: {devices}",
+      "typeEmail": "Typ het e-mailadres van de gebruiker om te bevestigen:"
     },
     "toast": {
       "approved": "Gebruiker {email} succesvol goedgekeurd",
@@ -210,8 +224,14 @@
       "deleted": "Gebruiker {email} verwijderd",
       "promotedToAdmin": "Gebruiker {email} gepromoveerd tot beheerder",
       "demotedFromAdmin": "Gebruiker {email} gedegradeerd van beheerder",
-      "failedToAction": "Kon gebruiker niet {action}: {error}",
-      "failedGeneric": "Kon gebruiker niet {action}"
+      "failed": {
+        "approve": "Kon de gebruiker niet goedkeuren: {error}",
+        "deactivate": "Kon de gebruiker niet deactiveren: {error}",
+        "activate": "Kon de gebruiker niet activeren: {error}",
+        "delete": "Kon de gebruiker niet verwijderen: {error}",
+        "promote": "Kon de gebruiker niet tot beheerder promoveren: {error}",
+        "demote": "Kon de beheerdersrechten van de gebruiker niet verwijderen: {error}"
+      }
     }
   },
   "settings": {

@@ -54,7 +54,17 @@
     "rateLimited": "試行回数が多すぎます。{seconds}秒後にもう一度お試しください。",
     "tooManyAttempts": "試行回数が多すぎます。しばらく待ってからもう一度お試しください。",
     "passwordTooShort": "新しいパスワードは12文字以上である必要があります",
-    "passwordSameAsCurrent": "新しいパスワードは現在のパスワードと異なるものにしてください"
+    "passwordSameAsCurrent": "新しいパスワードは現在のパスワードと異なるものにしてください",
+    "ownAdminRole": "自分の管理者権限は削除できません。",
+    "lastAdminDemote": "最後の管理者は降格できません。",
+    "ownAccountDelete": "ここでは自分のアカウントを削除できません。",
+    "lastAdminDelete": "最後の管理者は削除できません。",
+    "userNotFound": "ユーザーが見つかりません。",
+    "deviceNotFound": "デバイスが見つかりません。",
+    "quotaRange": "ストレージクォータは1〜100000 MBの範囲で指定してください。",
+    "maxUploadRange": "最大アップロードサイズは1〜1000 MBの範囲で指定してください。",
+    "inboxItemsRange": "受信トレイ最大件数は1〜10000の範囲で指定してください。",
+    "inboxSizeRange": "受信トレイ最大サイズは1〜1000 MBの範囲で指定してください。"
   },
   "session": {
     "expired": "セッションの有効期限が切れました。もう一度サインインしてください。"
@@ -197,11 +207,15 @@
       "promoteToAdmin": "管理者に昇格",
       "demoteFromAdmin": "管理者から降格",
       "messages": {
-        "delete": "ユーザー{email}を完全に削除してもよろしいですか？この操作は元に戻せません。",
+        "approve": "{email}を承認しますか？ログインとデバイスの登録ができるようになります。",
+        "deactivate": "{email}を無効化しますか？再度有効化されるまで、ログインも同期もできなくなります。",
+        "activate": "{email}を有効化しますか？ログインと同期が再びできるようになります。",
+        "delete": "{email}と、サーバーに保存されているこのユーザーのすべてのデータ（ノート、添付ファイル、デバイス、アカウントキー）を完全に削除します。この操作は元に戻せません。",
         "promoteToAdmin": "{email}を管理者に昇格してもよろしいですか？すべての管理機能へのフルアクセスが付与されます。",
-        "demoteFromAdmin": "{email}から管理者権限を削除してもよろしいですか？",
-        "genericAction": "ユーザー{email}を{action}してもよろしいですか？"
-      }
+        "demoteFromAdmin": "{email}から管理者権限を削除してもよろしいですか？"
+      },
+      "deleteCounts": "ノート: {notes} · デバイス: {devices}",
+      "typeEmail": "確認のため、ユーザーのメールアドレスを入力してください："
     },
     "toast": {
       "approved": "ユーザー{email}が正常に承認されました",
@@ -210,8 +224,14 @@
       "deleted": "ユーザー{email}が削除されました",
       "promotedToAdmin": "ユーザー{email}が管理者に昇格されました",
       "demotedFromAdmin": "ユーザー{email}が管理者から降格されました",
-      "failedToAction": "ユーザーの{action}に失敗しました: {error}",
-      "failedGeneric": "ユーザーの{action}に失敗しました"
+      "failed": {
+        "approve": "ユーザーを承認できませんでした: {error}",
+        "deactivate": "ユーザーを無効化できませんでした: {error}",
+        "activate": "ユーザーを有効化できませんでした: {error}",
+        "delete": "ユーザーを削除できませんでした: {error}",
+        "promote": "ユーザーを管理者に昇格できませんでした: {error}",
+        "demote": "ユーザーの管理者権限を削除できませんでした: {error}"
+      }
     }
   },
   "settings": {

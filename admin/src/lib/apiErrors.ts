@@ -5,9 +5,20 @@ import { ApiError } from './dashboardClient';
 export type Translate = (key: string, options?: { values?: Record<string, string | number> }) => string;
 
 // Server messages that have a translation. The server only sends English.
-const KNOWN_MESSAGES: Record<string, string> = {
+export const KNOWN_MESSAGES: Record<string, string> = {
   'New password must be at least 12 characters': 'errors.passwordTooShort',
   'New password must be different from the current one': 'errors.passwordSameAsCurrent',
+  'Cannot remove your own admin privileges': 'errors.ownAdminRole',
+  'Cannot demote the last admin user': 'errors.lastAdminDemote',
+  'Cannot delete your own account': 'errors.ownAccountDelete',
+  'Cannot delete the last admin user': 'errors.lastAdminDelete',
+  'User not found': 'errors.userNotFound',
+  'Device not found': 'errors.deviceNotFound',
+  'Device name cannot be empty': 'devices.nameRequired',
+  'Storage quota must be between 1 and 100000 MB': 'errors.quotaRange',
+  'Max upload size must be between 1 and 1000 MB': 'errors.maxUploadRange',
+  'Inbox max items must be between 1 and 10000': 'errors.inboxItemsRange',
+  'Inbox max size must be between 1 and 1000 MB': 'errors.inboxSizeRange',
 };
 
 /**

@@ -54,7 +54,17 @@
     "rateLimited": "Zbyt wiele prób. Spróbuj ponownie za {seconds} s.",
     "tooManyAttempts": "Zbyt wiele prób. Poczekaj i spróbuj ponownie.",
     "passwordTooShort": "Nowe hasło musi mieć co najmniej 12 znaków",
-    "passwordSameAsCurrent": "Nowe hasło musi różnić się od obecnego"
+    "passwordSameAsCurrent": "Nowe hasło musi różnić się od obecnego",
+    "ownAdminRole": "Nie możesz odebrać sobie uprawnień administratora.",
+    "lastAdminDemote": "Ostatniego administratora nie można zdegradować.",
+    "ownAccountDelete": "Nie możesz tutaj usunąć własnego konta.",
+    "lastAdminDelete": "Ostatniego administratora nie można usunąć.",
+    "userNotFound": "Nie znaleziono użytkownika.",
+    "deviceNotFound": "Nie znaleziono urządzenia.",
+    "quotaRange": "Limit pamięci musi wynosić od 1 do 100000 MB.",
+    "maxUploadRange": "Maksymalny rozmiar przesyłania musi wynosić od 1 do 1000 MB.",
+    "inboxItemsRange": "Maksymalna liczba elementów w skrzynce musi wynosić od 1 do 10000.",
+    "inboxSizeRange": "Maksymalny rozmiar skrzynki musi wynosić od 1 do 1000 MB."
   },
   "session": {
     "expired": "Twoja sesja wygasła. Zaloguj się ponownie."
@@ -197,11 +207,15 @@
       "promoteToAdmin": "Awansuj na administratora",
       "demoteFromAdmin": "Zdegraduj z administratora",
       "messages": {
-        "delete": "Czy na pewno chcesz trwale usunąć użytkownika {email}? Ta akcja jest nieodwracalna.",
+        "approve": "Zatwierdzić {email}? Ta osoba będzie mogła się logować i rejestrować urządzenia.",
+        "deactivate": "Dezaktywować {email}? Ta osoba nie będzie mogła się logować ani synchronizować, dopóki konto nie zostanie ponownie aktywowane.",
+        "activate": "Aktywować {email}? Ta osoba znów będzie mogła się logować i synchronizować.",
+        "delete": "Ta operacja trwale usuwa {email} i wszystko, co serwer przechowuje dla tego użytkownika: notatki, załączniki, urządzenia i klucz konta. Nie można jej cofnąć.",
         "promoteToAdmin": "Czy na pewno chcesz awansować {email} na administratora? Otrzyma pełny dostęp do wszystkich funkcji administracyjnych.",
-        "demoteFromAdmin": "Czy na pewno chcesz odebrać uprawnienia administratora użytkownikowi {email}?",
-        "genericAction": "Czy na pewno chcesz {action} użytkownika {email}?"
-      }
+        "demoteFromAdmin": "Czy na pewno chcesz odebrać uprawnienia administratora użytkownikowi {email}?"
+      },
+      "deleteCounts": "Notatki: {notes} · Urządzenia: {devices}",
+      "typeEmail": "Wpisz adres e-mail użytkownika, aby potwierdzić:"
     },
     "toast": {
       "approved": "Użytkownik {email} został pomyślnie zatwierdzony",
@@ -210,8 +224,14 @@
       "deleted": "Użytkownik {email} został usunięty",
       "promotedToAdmin": "Użytkownik {email} został awansowany na administratora",
       "demotedFromAdmin": "Użytkownik {email} został zdegradowany z administratora",
-      "failedToAction": "Nie udało się {action} użytkownika: {error}",
-      "failedGeneric": "Nie udało się {action} użytkownika"
+      "failed": {
+        "approve": "Nie udało się zatwierdzić użytkownika: {error}",
+        "deactivate": "Nie udało się dezaktywować użytkownika: {error}",
+        "activate": "Nie udało się aktywować użytkownika: {error}",
+        "delete": "Nie udało się usunąć użytkownika: {error}",
+        "promote": "Nie udało się awansować użytkownika na administratora: {error}",
+        "demote": "Nie udało się odebrać użytkownikowi uprawnień administratora: {error}"
+      }
     }
   },
   "settings": {

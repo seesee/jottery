@@ -54,7 +54,17 @@
     "rateLimited": "Zu viele Versuche. Versuchen Sie es in {seconds} Sekunden erneut.",
     "tooManyAttempts": "Zu viele Versuche. Bitte warten Sie und versuchen Sie es erneut.",
     "passwordTooShort": "Neues Passwort muss mindestens 12 Zeichen lang sein",
-    "passwordSameAsCurrent": "Das neue Passwort muss sich vom aktuellen unterscheiden"
+    "passwordSameAsCurrent": "Das neue Passwort muss sich vom aktuellen unterscheiden",
+    "ownAdminRole": "Sie können sich Ihre eigenen Admin-Rechte nicht entziehen.",
+    "lastAdminDemote": "Der letzte Admin kann nicht herabgestuft werden.",
+    "ownAccountDelete": "Sie können Ihr eigenes Konto hier nicht löschen.",
+    "lastAdminDelete": "Der letzte Admin kann nicht gelöscht werden.",
+    "userNotFound": "Benutzer nicht gefunden.",
+    "deviceNotFound": "Gerät nicht gefunden.",
+    "quotaRange": "Das Speicherkontingent muss zwischen 1 und 100000 MB liegen.",
+    "maxUploadRange": "Die maximale Upload-Größe muss zwischen 1 und 1000 MB liegen.",
+    "inboxItemsRange": "Die maximale Anzahl an Posteingang-Elementen muss zwischen 1 und 10000 liegen.",
+    "inboxSizeRange": "Die maximale Posteingang-Größe muss zwischen 1 und 1000 MB liegen."
   },
   "session": {
     "expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an."
@@ -197,11 +207,15 @@
       "promoteToAdmin": "Zum Admin befördern",
       "demoteFromAdmin": "Vom Admin herabstufen",
       "messages": {
-        "delete": "Sind Sie sicher, dass Sie den Benutzer {email} dauerhaft löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "approve": "{email} genehmigen? Der Benutzer kann sich dann anmelden und Geräte registrieren.",
+        "deactivate": "{email} deaktivieren? Der Benutzer kann sich erst wieder anmelden und synchronisieren, wenn er erneut aktiviert wird.",
+        "activate": "{email} aktivieren? Der Benutzer kann sich dann wieder anmelden und synchronisieren.",
+        "delete": "Damit werden {email} und alle Daten, die der Server für diesen Benutzer speichert, endgültig gelöscht: Notizen, Anhänge, Geräte und der Kontoschlüssel. Das kann nicht rückgängig gemacht werden.",
         "promoteToAdmin": "Sind Sie sicher, dass Sie {email} zum Administrator befördern möchten? Sie erhalten vollen Zugriff auf alle Verwaltungsfunktionen.",
-        "demoteFromAdmin": "Sind Sie sicher, dass Sie die Administratorrechte von {email} entfernen möchten?",
-        "genericAction": "Sind Sie sicher, dass Sie {action} für Benutzer {email} ausführen möchten?"
-      }
+        "demoteFromAdmin": "Sind Sie sicher, dass Sie die Administratorrechte von {email} entfernen möchten?"
+      },
+      "deleteCounts": "Notizen: {notes} · Geräte: {devices}",
+      "typeEmail": "Geben Sie zur Bestätigung die E-Mail-Adresse des Benutzers ein:"
     },
     "toast": {
       "approved": "Benutzer {email} erfolgreich genehmigt",
@@ -210,8 +224,14 @@
       "deleted": "Benutzer {email} gelöscht",
       "promotedToAdmin": "Benutzer {email} zum Admin befördert",
       "demotedFromAdmin": "Benutzer {email} vom Admin herabgestuft",
-      "failedToAction": "Fehler beim {action} des Benutzers: {error}",
-      "failedGeneric": "Fehler beim {action} des Benutzers"
+      "failed": {
+        "approve": "Der Benutzer konnte nicht genehmigt werden: {error}",
+        "deactivate": "Der Benutzer konnte nicht deaktiviert werden: {error}",
+        "activate": "Der Benutzer konnte nicht aktiviert werden: {error}",
+        "delete": "Der Benutzer konnte nicht gelöscht werden: {error}",
+        "promote": "Der Benutzer konnte nicht zum Admin befördert werden: {error}",
+        "demote": "Dem Benutzer konnten die Admin-Rechte nicht entzogen werden: {error}"
+      }
     }
   },
   "settings": {

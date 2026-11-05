@@ -54,7 +54,17 @@
     "rateLimited": "Demasiadas tentativas. Tente novamente dentro de {seconds} segundos.",
     "tooManyAttempts": "Demasiadas tentativas. Aguarde e tente novamente.",
     "passwordTooShort": "A nova senha deve ter pelo menos 12 caracteres",
-    "passwordSameAsCurrent": "A nova senha tem de ser diferente da atual"
+    "passwordSameAsCurrent": "A nova senha tem de ser diferente da atual",
+    "ownAdminRole": "Não pode remover os seus próprios direitos de admin.",
+    "lastAdminDemote": "O último admin não pode ser rebaixado.",
+    "ownAccountDelete": "Não pode eliminar a sua própria conta aqui.",
+    "lastAdminDelete": "O último admin não pode ser eliminado.",
+    "userNotFound": "Utilizador não encontrado.",
+    "deviceNotFound": "Dispositivo não encontrado.",
+    "quotaRange": "A quota de armazenamento deve estar entre 1 e 100000 MB.",
+    "maxUploadRange": "O tamanho máximo de upload deve estar entre 1 e 1000 MB.",
+    "inboxItemsRange": "O máximo de itens na caixa de entrada deve estar entre 1 e 10000.",
+    "inboxSizeRange": "O tamanho máximo da caixa de entrada deve estar entre 1 e 1000 MB."
   },
   "session": {
     "expired": "A sua sessão expirou. Inicie sessão novamente."
@@ -197,11 +207,15 @@
       "promoteToAdmin": "Promover a admin",
       "demoteFromAdmin": "Rebaixar de admin",
       "messages": {
-        "delete": "Tem a certeza de que deseja eliminar permanentemente o utilizador {email}? Esta ação não pode ser revertida.",
+        "approve": "Aprovar {email}? Poderá entrar e registar dispositivos.",
+        "deactivate": "Desativar {email}? Não poderá entrar nem sincronizar até ser novamente ativado.",
+        "activate": "Ativar {email}? Poderá voltar a entrar e sincronizar.",
+        "delete": "Isto elimina permanentemente {email} e tudo o que o servidor guarda deste utilizador: notas, anexos, dispositivos e a chave da conta. Não pode ser revertido.",
         "promoteToAdmin": "Tem a certeza de que deseja promover {email} a administrador? Terão acesso completo a todas as funções de administração.",
-        "demoteFromAdmin": "Tem a certeza de que deseja remover os privilégios de administrador de {email}?",
-        "genericAction": "Tem a certeza de que deseja {action} o utilizador {email}?"
-      }
+        "demoteFromAdmin": "Tem a certeza de que deseja remover os privilégios de administrador de {email}?"
+      },
+      "deleteCounts": "Notas: {notes} · Dispositivos: {devices}",
+      "typeEmail": "Escreva o endereço de e-mail do utilizador para confirmar:"
     },
     "toast": {
       "approved": "Utilizador {email} aprovado com sucesso",
@@ -210,8 +224,14 @@
       "deleted": "Utilizador {email} eliminado",
       "promotedToAdmin": "Utilizador {email} promovido a admin",
       "demotedFromAdmin": "Utilizador {email} rebaixado de admin",
-      "failedToAction": "Falha ao {action} utilizador: {error}",
-      "failedGeneric": "Falha ao {action} utilizador"
+      "failed": {
+        "approve": "Não foi possível aprovar o utilizador: {error}",
+        "deactivate": "Não foi possível desativar o utilizador: {error}",
+        "activate": "Não foi possível ativar o utilizador: {error}",
+        "delete": "Não foi possível eliminar o utilizador: {error}",
+        "promote": "Não foi possível promover o utilizador a admin: {error}",
+        "demote": "Não foi possível remover os direitos de admin do utilizador: {error}"
+      }
     }
   },
   "settings": {

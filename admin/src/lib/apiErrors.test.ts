@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ApiError } from './dashboardClient';
-import { describeError } from './apiErrors';
+import { describeError, KNOWN_MESSAGES } from './apiErrors';
+import en from '../locales/en-GB.json';
 
 // Shows which key was chosen, and with what, instead of a translation
 const t = (key: string, options?: { values?: Record<string, string | number> }) =>
@@ -26,9 +27,16 @@ describe('describeError', () => {
   });
 
   it('keeps a server message it has no translation for', () => {
-    expect(describeError(new ApiError(400, 'Storage quota must be between 1 and 100000 MB'), t)).toBe(
-      'Storage quota must be between 1 and 100000 MB',
+    expect(describeError(new ApiError(400, 'A message added to a newer server'), t)).toBe(
+      'A message added to a newer server',
     );
+  });
+
+  it('only maps server messages to keys that exist', () => {
+    for (const key of Object.values(KNOWN_MESSAGES)) {
+      const value = key.split('.').reduce<unknown>((node, part) => (node as Record<string, unknown>)?.[part], en);
+      expect(typeof value, key).toBe('string');
+    }
   });
 
   it('explains a 403 with no body, which the middleware sends', () => {

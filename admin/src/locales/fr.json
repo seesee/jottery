@@ -54,7 +54,17 @@
     "rateLimited": "Trop de tentatives. Réessayez dans {seconds} secondes.",
     "tooManyAttempts": "Trop de tentatives. Veuillez patienter et réessayer.",
     "passwordTooShort": "Le nouveau mot de passe doit comporter au moins 12 caractères",
-    "passwordSameAsCurrent": "Le nouveau mot de passe doit être différent de l'actuel"
+    "passwordSameAsCurrent": "Le nouveau mot de passe doit être différent de l'actuel",
+    "ownAdminRole": "Vous ne pouvez pas retirer vos propres droits admin.",
+    "lastAdminDemote": "Le dernier admin ne peut pas être rétrogradé.",
+    "ownAccountDelete": "Vous ne pouvez pas supprimer votre propre compte ici.",
+    "lastAdminDelete": "Le dernier admin ne peut pas être supprimé.",
+    "userNotFound": "Utilisateur introuvable.",
+    "deviceNotFound": "Appareil introuvable.",
+    "quotaRange": "Le quota de stockage doit être compris entre 1 et 100000 Mo.",
+    "maxUploadRange": "La taille maximale de téléchargement doit être comprise entre 1 et 1000 Mo.",
+    "inboxItemsRange": "Le nombre maximal d'éléments de la boîte de réception doit être compris entre 1 et 10000.",
+    "inboxSizeRange": "La taille maximale de la boîte de réception doit être comprise entre 1 et 1000 Mo."
   },
   "session": {
     "expired": "Votre session a expiré. Veuillez vous reconnecter."
@@ -197,11 +207,15 @@
       "promoteToAdmin": "Promouvoir admin",
       "demoteFromAdmin": "Rétrograder admin",
       "messages": {
-        "delete": "Êtes-vous sûr de vouloir supprimer définitivement l'utilisateur {email} ? Cette action est irréversible.",
+        "approve": "Approuver {email} ? Cette personne pourra se connecter et enregistrer des appareils.",
+        "deactivate": "Désactiver {email} ? Cette personne ne pourra plus se connecter ni synchroniser tant que son compte ne sera pas réactivé.",
+        "activate": "Activer {email} ? Cette personne pourra de nouveau se connecter et synchroniser.",
+        "delete": "Cette action supprime définitivement {email} et tout ce que le serveur conserve pour cet utilisateur : notes, pièces jointes, appareils et clé de compte. Elle est irréversible.",
         "promoteToAdmin": "Êtes-vous sûr de vouloir promouvoir {email} en tant qu'admin ? Ils auront un accès complet à toutes les fonctions d'administration.",
-        "demoteFromAdmin": "Êtes-vous sûr de vouloir retirer les privilèges d'administrateur à {email} ?",
-        "genericAction": "Êtes-vous sûr de vouloir {action} l'utilisateur {email} ?"
-      }
+        "demoteFromAdmin": "Êtes-vous sûr de vouloir retirer les privilèges d'administrateur à {email} ?"
+      },
+      "deleteCounts": "Notes : {notes} · Appareils : {devices}",
+      "typeEmail": "Saisissez l'adresse e-mail de l'utilisateur pour confirmer :"
     },
     "toast": {
       "approved": "Utilisateur {email} approuvé avec succès",
@@ -210,8 +224,14 @@
       "deleted": "Utilisateur {email} supprimé",
       "promotedToAdmin": "Utilisateur {email} promu admin",
       "demotedFromAdmin": "Utilisateur {email} rétrogradé d'admin",
-      "failedToAction": "Échec de {action} l'utilisateur : {error}",
-      "failedGeneric": "Échec de {action} l'utilisateur"
+      "failed": {
+        "approve": "Impossible d'approuver l'utilisateur : {error}",
+        "deactivate": "Impossible de désactiver l'utilisateur : {error}",
+        "activate": "Impossible d'activer l'utilisateur : {error}",
+        "delete": "Impossible de supprimer l'utilisateur : {error}",
+        "promote": "Impossible de promouvoir l'utilisateur admin : {error}",
+        "demote": "Impossible de retirer les droits admin de l'utilisateur : {error}"
+      }
     }
   },
   "settings": {

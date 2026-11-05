@@ -1,12 +1,14 @@
 <script lang="ts">
-  import { api, ApiError } from '../lib/api';
+  import { api } from '../lib/api';
   import { describeError } from '../lib/apiErrors';
+  import { isProtectedAccount } from '../lib/userActions';
+  import { auth } from '../lib/auth.svelte';
   import type { UserListItem } from '../lib/api';
   import { onMount } from 'svelte';
   import { toast } from '../lib/toast.svelte';
   import ConfirmModal from '../components/ConfirmModal.svelte';
   import UserDetailModal from '../components/UserDetailModal.svelte';
-  import { _ } from 'svelte-i18n';
+  import { _, locale } from 'svelte-i18n';
 
   let users = $state<UserListItem[]>([]);
   let loading = $state(true);
@@ -17,7 +19,14 @@
   let selectedUserId = $state<string | null>(null);
 
   // Confirmation modal state
-  type ConfirmAction = { type: 'approve' | 'deactivate' | 'activate' | 'delete' | 'toggleAdmin'; userId: string; email: string; isAdmin?: boolean } | null;
+  type ConfirmAction = {
+    type: 'approve' | 'deactivate' | 'activate' | 'delete' | 'toggleAdmin';
+    userId: string;
+    email: string;
+    isAdmin?: boolean;
+    noteCount?: number;
+    deviceCount?: number;
+  } | null;
   let confirmAction = $state<ConfirmAction>(null);
 
   async function loadUsers() {
@@ -45,8 +54,14 @@
     confirmAction = { type: 'activate', userId, email };
   }
 
-  function requestDelete(userId: string, email: string) {
-    confirmAction = { type: 'delete', userId, email };
+  function requestDelete(user: UserListItem) {
+    confirmAction = {
+      type: 'delete',
+      userId: user.id,
+      email: user.email,
+      noteCount: user.noteCount,
+      deviceCount: user.deviceCount,
+    };
   }
 
   function requestToggleAdmin(userId: string, email: string, isAdmin: boolean) {
@@ -82,11 +97,8 @@
       }
       await loadUsers();
     } catch (err) {
-      if (err instanceof ApiError) {
-        toast.error($_('users.toast.failedToAction', { values: { action: type, error: describeError(err, $_) } }));
-      } else {
-        toast.error($_('users.toast.failedGeneric', { values: { action: type } }));
-      }
+      const action = type === 'toggleAdmin' ? (isAdmin ? 'promote' : 'demote') : type;
+      toast.error($_(`users.toast.failed.${action}`, { values: { error: describeError(err, $_) } }));
     }
   }
 
@@ -211,6 +223,7 @@
         <tbody class="bg-white divide-y divide-gray-200">
           {#each filteredUsers as user (user.id)}
             {@const badge = getStatusBadge(user)}
+            {@const isProtected = isProtectedAccount(user, users, auth.user?.email)}
             <tr class="hover:bg-gray-50">
               <td class="px-6 py-4 whitespace-nowrap">
                 <button
@@ -239,7 +252,7 @@
                 {user.noteCount}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {new Date(user.createdAt).toLocaleDateString('en-GB')}
+                {new Date(user.createdAt).toLocaleDateString($locale ?? undefined)}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <div class="flex flex-wrap gap-2">
@@ -254,13 +267,15 @@
 
                   {#if user.approved}
                     {#if user.isAdmin}
-                      <button
-                        onclick={() => requestToggleAdmin(user.id, user.email, false)}
-                        class="text-purple-600 hover:text-purple-900"
-                        title={$_('users.actions.demoteFromAdmin')}
-                      >
-                        {$_('users.actions.removeAdmin')}
-                      </button>
+                      {#if !isProtected}
+                        <button
+                          onclick={() => requestToggleAdmin(user.id, user.email, false)}
+                          class="text-purple-600 hover:text-purple-900"
+                          title={$_('users.actions.demoteFromAdmin')}
+                        >
+                          {$_('users.actions.removeAdmin')}
+                        </button>
+                      {/if}
                     {:else}
                       <button
                         onclick={() => requestToggleAdmin(user.id, user.email, true)}
@@ -272,29 +287,31 @@
                     {/if}
                   {/if}
 
-                  {#if user.isActive}
-                    <button
-                      onclick={() => requestDeactivate(user.id, user.email)}
-                      class="text-yellow-600 hover:text-yellow-900"
-                    >
-                      {$_('users.actions.deactivate')}
-                    </button>
-                  {:else}
+                  {#if !user.isActive}
                     <button
                       onclick={() => requestActivate(user.id, user.email)}
                       class="text-green-600 hover:text-green-900"
                     >
                       {$_('users.actions.activate')}
                     </button>
+                  {:else if !isProtected}
+                    <button
+                      onclick={() => requestDeactivate(user.id, user.email)}
+                      class="text-yellow-600 hover:text-yellow-900"
+                    >
+                      {$_('users.actions.deactivate')}
+                    </button>
                   {/if}
 
-                  <button
-                    onclick={() => requestDelete(user.id, user.email)}
-                    class="text-red-600 hover:text-red-900"
-                    title={$_('users.actions.deleteUser')}
-                  >
-                    {$_('users.actions.delete')}
-                  </button>
+                  {#if !isProtected}
+                    <button
+                      onclick={() => requestDelete(user)}
+                      class="text-red-600 hover:text-red-900"
+                      title={$_('users.actions.deleteUser')}
+                    >
+                      {$_('users.actions.delete')}
+                    </button>
+                  {/if}
                 </div>
               </td>
             </tr>
@@ -311,18 +328,19 @@
                         confirmAction.type === 'activate' ? $_('users.confirm.activate') :
                         confirmAction.type === 'delete' ? $_('users.confirm.delete') :
                         confirmAction.isAdmin ? $_('users.confirm.promoteToAdmin') : $_('users.confirm.demoteFromAdmin')}
-  {@const message = confirmAction.type === 'delete'
-    ? $_('users.confirm.messages.delete', { values: { email: confirmAction.email } })
-    : confirmAction.type === 'toggleAdmin' && confirmAction.isAdmin
-    ? $_('users.confirm.messages.promoteToAdmin', { values: { email: confirmAction.email } })
-    : confirmAction.type === 'toggleAdmin' && !confirmAction.isAdmin
-    ? $_('users.confirm.messages.demoteFromAdmin', { values: { email: confirmAction.email } })
-    : $_('users.confirm.messages.genericAction', { values: { action: confirmAction.type, email: confirmAction.email } })}
+  {@const messageKey = confirmAction.type !== 'toggleAdmin' ? confirmAction.type :
+                        confirmAction.isAdmin ? 'promoteToAdmin' : 'demoteFromAdmin'}
+  {@const isDelete = confirmAction.type === 'delete'}
   <ConfirmModal
     title={actionText}
-    message={message}
+    message={$_(`users.confirm.messages.${messageKey}`, { values: { email: confirmAction.email } })}
+    details={isDelete
+      ? $_('users.confirm.deleteCounts', { values: { notes: confirmAction.noteCount ?? 0, devices: confirmAction.deviceCount ?? 0 } })
+      : undefined}
     confirmText={actionText}
     cancelText={$_('common.cancel')}
+    typeToConfirm={isDelete ? { value: confirmAction.email, label: $_('users.confirm.typeEmail') } : undefined}
+    danger={isDelete || confirmAction.type === 'deactivate' || (confirmAction.type === 'toggleAdmin' && !confirmAction.isAdmin)}
     onConfirm={executeAction}
     onCancel={() => confirmAction = null}
   />

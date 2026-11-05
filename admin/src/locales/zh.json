@@ -54,7 +54,17 @@
     "rateLimited": "尝试次数过多。请在 {seconds} 秒后重试。",
     "tooManyAttempts": "尝试次数过多。请稍候再试。",
     "passwordTooShort": "新密码必须至少包含12个字符",
-    "passwordSameAsCurrent": "新密码必须与当前密码不同"
+    "passwordSameAsCurrent": "新密码必须与当前密码不同",
+    "ownAdminRole": "您不能移除自己的管理员权限。",
+    "lastAdminDemote": "不能降级最后一位管理员。",
+    "ownAccountDelete": "您不能在此删除自己的账户。",
+    "lastAdminDelete": "不能删除最后一位管理员。",
+    "userNotFound": "未找到用户。",
+    "deviceNotFound": "未找到设备。",
+    "quotaRange": "存储配额必须在 1 到 100000 MB 之间。",
+    "maxUploadRange": "最大上传大小必须在 1 到 1000 MB 之间。",
+    "inboxItemsRange": "收件箱最大条目数必须在 1 到 10000 之间。",
+    "inboxSizeRange": "收件箱最大容量必须在 1 到 1000 MB 之间。"
   },
   "session": {
     "expired": "您的会话已过期。请重新登录。"
@@ -197,11 +207,15 @@
       "promoteToAdmin": "提升为管理员",
       "demoteFromAdmin": "从管理员降级",
       "messages": {
-        "delete": "您确定要永久删除用户{email}吗？此操作无法撤销。",
+        "approve": "批准{email}？该用户将可以登录并注册设备。",
+        "deactivate": "停用{email}？在重新激活之前，该用户将无法登录或同步。",
+        "activate": "激活{email}？该用户将可以重新登录和同步。",
+        "delete": "这将永久删除{email}以及服务器为该用户保存的所有内容：笔记、附件、设备和账户密钥。此操作无法撤销。",
         "promoteToAdmin": "您确定要将{email}提升为管理员吗？他们将拥有所有管理功能的完全访问权限。",
-        "demoteFromAdmin": "您确定要移除{email}的管理员权限吗？",
-        "genericAction": "您确定要对用户{email}执行{action}操作吗？"
-      }
+        "demoteFromAdmin": "您确定要移除{email}的管理员权限吗？"
+      },
+      "deleteCounts": "笔记：{notes} · 设备：{devices}",
+      "typeEmail": "输入该用户的电子邮箱地址以确认："
     },
     "toast": {
       "approved": "用户{email}已成功批准",
@@ -210,8 +224,14 @@
       "deleted": "用户{email}已删除",
       "promotedToAdmin": "用户{email}已提升为管理员",
       "demotedFromAdmin": "用户{email}已从管理员降级",
-      "failedToAction": "无法{action}用户：{error}",
-      "failedGeneric": "无法{action}用户"
+      "failed": {
+        "approve": "无法批准用户：{error}",
+        "deactivate": "无法停用用户：{error}",
+        "activate": "无法激活用户：{error}",
+        "delete": "无法删除用户：{error}",
+        "promote": "无法将用户提升为管理员：{error}",
+        "demote": "无法移除用户的管理员权限：{error}"
+      }
     }
   },
   "settings": {

@@ -54,7 +54,17 @@
     "rateLimited": "Too many attempts. Try again in {seconds} seconds.",
     "tooManyAttempts": "Too many attempts. Please wait and try again.",
     "passwordTooShort": "New password must be at least 12 characters",
-    "passwordSameAsCurrent": "New password must be different from the current one"
+    "passwordSameAsCurrent": "New password must be different from the current one",
+    "ownAdminRole": "You can't remove your own admin rights.",
+    "lastAdminDemote": "The last admin can't be demoted.",
+    "ownAccountDelete": "You can't delete your own account here.",
+    "lastAdminDelete": "The last admin can't be deleted.",
+    "userNotFound": "User not found.",
+    "deviceNotFound": "Device not found.",
+    "quotaRange": "Storage quota must be between 1 and 100000 MB.",
+    "maxUploadRange": "Maximum upload size must be between 1 and 1000 MB.",
+    "inboxItemsRange": "Maximum inbox items must be between 1 and 10000.",
+    "inboxSizeRange": "Maximum inbox size must be between 1 and 1000 MB."
   },
   "session": {
     "expired": "Your session has expired. Please sign in again."
@@ -197,11 +207,15 @@
       "promoteToAdmin": "Promote to Admin",
       "demoteFromAdmin": "Demote from Admin",
       "messages": {
-        "delete": "Are you sure you want to permanently delete user {email}? This action cannot be undone.",
+        "approve": "Approve {email}? They'll be able to sign in and register devices.",
+        "deactivate": "Deactivate {email}? They won't be able to sign in or sync until they're activated again.",
+        "activate": "Activate {email}? They'll be able to sign in and sync again.",
+        "delete": "This permanently deletes {email} and everything the server holds for them: notes, attachments, devices and their account key. It can't be undone.",
         "promoteToAdmin": "Are you sure you want to promote {email} to admin? They will have full access to all admin functions.",
-        "demoteFromAdmin": "Are you sure you want to remove admin privileges from {email}?",
-        "genericAction": "Are you sure you want to {action} user {email}?"
-      }
+        "demoteFromAdmin": "Are you sure you want to remove admin privileges from {email}?"
+      },
+      "deleteCounts": "Notes: {notes} · Devices: {devices}",
+      "typeEmail": "Type the user's email address to confirm:"
     },
     "toast": {
       "approved": "User {email} approved successfully",
@@ -210,8 +224,14 @@
       "deleted": "User {email} deleted",
       "promotedToAdmin": "User {email} promoted to admin",
       "demotedFromAdmin": "User {email} demoted from admin",
-      "failedToAction": "Failed to {action} user: {error}",
-      "failedGeneric": "Failed to {action} user"
+      "failed": {
+        "approve": "Couldn't approve the user: {error}",
+        "deactivate": "Couldn't deactivate the user: {error}",
+        "activate": "Couldn't activate the user: {error}",
+        "delete": "Couldn't delete the user: {error}",
+        "promote": "Couldn't promote the user to admin: {error}",
+        "demote": "Couldn't remove the user's admin rights: {error}"
+      }
     }
   },
   "settings": {

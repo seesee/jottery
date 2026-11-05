@@ -54,7 +54,17 @@
     "rateLimited": "Çok fazla deneme yapıldı. {seconds} saniye sonra tekrar deneyin.",
     "tooManyAttempts": "Çok fazla deneme yapıldı. Lütfen bekleyip tekrar deneyin.",
     "passwordTooShort": "Yeni parola en az 12 karakter uzunluğunda olmalıdır",
-    "passwordSameAsCurrent": "Yeni parola mevcut paroladan farklı olmalıdır"
+    "passwordSameAsCurrent": "Yeni parola mevcut paroladan farklı olmalıdır",
+    "ownAdminRole": "Kendi yönetici yetkilerinizi kaldıramazsınız.",
+    "lastAdminDemote": "Son yöneticinin yetkisi düşürülemez.",
+    "ownAccountDelete": "Kendi hesabınızı buradan silemezsiniz.",
+    "lastAdminDelete": "Son yönetici silinemez.",
+    "userNotFound": "Kullanıcı bulunamadı.",
+    "deviceNotFound": "Cihaz bulunamadı.",
+    "quotaRange": "Depolama kotası 1 ile 100000 MB arasında olmalıdır.",
+    "maxUploadRange": "Maksimum yükleme boyutu 1 ile 1000 MB arasında olmalıdır.",
+    "inboxItemsRange": "Maksimum gelen kutusu öğesi 1 ile 10000 arasında olmalıdır.",
+    "inboxSizeRange": "Maksimum gelen kutusu boyutu 1 ile 1000 MB arasında olmalıdır."
   },
   "session": {
     "expired": "Oturumunuzun süresi doldu. Lütfen tekrar oturum açın."
@@ -197,11 +207,15 @@
       "promoteToAdmin": "Yöneticiye terfi ettir",
       "demoteFromAdmin": "Yöneticiden indir",
       "messages": {
-        "delete": "{email} kullanıcısını kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+        "approve": "{email} onaylansın mı? Giriş yapabilecek ve cihaz kaydedebilecek.",
+        "deactivate": "{email} devre dışı bırakılsın mı? Yeniden etkinleştirilene kadar giriş yapamayacak ve senkronizasyon yapamayacak.",
+        "activate": "{email} etkinleştirilsin mi? Yeniden giriş yapabilecek ve senkronizasyon yapabilecek.",
+        "delete": "Bu işlem {email} kullanıcısını ve sunucunun bu kullanıcı için tuttuğu her şeyi kalıcı olarak siler: notlar, ekler, cihazlar ve hesap anahtarı. Geri alınamaz.",
         "promoteToAdmin": "{email} kullanıcısını yöneticiye terfi ettirmek istediğinizden emin misiniz? Tüm yönetim işlevlerine tam erişim elde edecekler.",
-        "demoteFromAdmin": "{email} kullanıcısının yönetici ayrıcalıklarını kaldırmak istediğinizden emin misiniz?",
-        "genericAction": "{email} kullanıcısı için {action} işlemini yapmak istediğinizden emin misiniz?"
-      }
+        "demoteFromAdmin": "{email} kullanıcısının yönetici ayrıcalıklarını kaldırmak istediğinizden emin misiniz?"
+      },
+      "deleteCounts": "Notlar: {notes} · Cihazlar: {devices}",
+      "typeEmail": "Onaylamak için kullanıcının e-posta adresini yazın:"
     },
     "toast": {
       "approved": "Kullanıcı {email} başarıyla onaylandı",
@@ -210,8 +224,14 @@
       "deleted": "Kullanıcı {email} silindi",
       "promotedToAdmin": "Kullanıcı {email} yöneticiye terfi ettirildi",
       "demotedFromAdmin": "Kullanıcı {email} yöneticiden indirildi",
-      "failedToAction": "Kullanıcı {action} işlemi başarısız oldu: {error}",
-      "failedGeneric": "Kullanıcı {action} işlemi başarısız oldu"
+      "failed": {
+        "approve": "Kullanıcı onaylanamadı: {error}",
+        "deactivate": "Kullanıcı devre dışı bırakılamadı: {error}",
+        "activate": "Kullanıcı etkinleştirilemedi: {error}",
+        "delete": "Kullanıcı silinemedi: {error}",
+        "promote": "Kullanıcı yöneticiye terfi ettirilemedi: {error}",
+        "demote": "Kullanıcının yönetici yetkileri kaldırılamadı: {error}"
+      }
     }
   },
   "settings": {
