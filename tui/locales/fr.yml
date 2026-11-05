@@ -201,6 +201,8 @@ sync:
     approved: Votre compte est approuvé et actif. Vous pouvez synchroniser vos notes.
     pending: Votre compte est en attente d'approbation. Veuillez attendre qu'un administrateur approuve votre inscription.
     inactive: Votre compte a été désactivé. Veuillez contacter un administrateur.
+  skipped_notes: "%{count} éléments du serveur n'ont pas pu être lus et ont été ignorés"
+  rejected_notes: "%{count} notes sont en conflit avec le serveur. Ouvrez Jottery pour les résoudre."
 
 # Boîte de réception
 inbox:

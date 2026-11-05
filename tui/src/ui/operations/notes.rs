@@ -170,6 +170,12 @@ pub fn restore_version(app: &mut App, version_number: i32) -> Result<()> {
     note_in_list.content = version.content;
     note_in_list.tags = version.tags;
     note_in_list.attachments = version.attachments;
+    // A version pulled by an older build can still hold encrypted filenames
+    for attachment in &mut note_in_list.attachments {
+        if let Ok(filename) = super::sync::filename_from_sync(&app.crypto, &attachment.filename, key) {
+            attachment.filename = filename;
+        }
+    }
     note_in_list.syntax_language = version.syntax_language.unwrap_or_default();
     note_in_list.word_wrap = version.word_wrap.unwrap_or(true);
     note_in_list.modified_at = chrono::Utc::now();

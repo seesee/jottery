@@ -201,6 +201,8 @@ sync:
   reload_failed: "同期は成功しましたがノートの再読み込みに失敗: %{error}"
   note: 件のノート
   notes: 件のノート
+  skipped_notes: "サーバーの %{count} 件の項目を読み取れなかったためスキップしました"
+  rejected_notes: "%{count} 件のノートがサーバーと競合しています。Jottery を開いて解決してください。"
 
 # 受信トレイ
 inbox:

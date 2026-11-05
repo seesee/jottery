@@ -160,6 +160,17 @@ fn note_matches_search(
     true
 }
 
+/// Write a line to the debug log, if there is one.
+pub(crate) fn write_debug_log(debug_log: &Option<Arc<Mutex<File>>>, message: &str) {
+    if let Some(log) = debug_log {
+        if let Ok(mut file) = log.lock() {
+            let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
+            let _ = writeln!(file, "[{}] {}", timestamp, message);
+            let _ = file.flush();
+        }
+    }
+}
+
 /// Application state and coordinator
 pub struct App {
     /// Current view mode
@@ -347,14 +358,36 @@ pub struct App {
 impl App {
     /// Create a new app
     pub fn new(db_path: PathBuf, debug_log: Option<Arc<Mutex<File>>>) -> Result<Self> {
-        let is_new_database = !db_path.exists();
-
         // Initialise password storage with migration from file to keychain if available
         let config_dir = db_path.parent()
             .ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
         let password_storage = password_storage::create_storage(config_dir, true);
 
-        Ok(Self {
+        Ok(Self::with_storage(db_path, debug_log, password_storage))
+    }
+
+    /// An unlocked app with no terminal, for CLI commands that share the TUI's
+    /// logic. The keychain stays out of it: it may not be reachable from a script.
+    pub fn headless(db_path: PathBuf, db: Database, key: [u8; 32]) -> Result<Self> {
+        let config_dir = db_path.parent()
+            .ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
+        let password_storage = password_storage::create_file_storage(config_dir);
+
+        let mut app = Self::with_storage(db_path, None, password_storage);
+        app.db = Some(db);
+        app.key = Some(key);
+        app.key_manager.set_master_key(key);
+        Ok(app)
+    }
+
+    fn with_storage(
+        db_path: PathBuf,
+        debug_log: Option<Arc<Mutex<File>>>,
+        password_storage: Box<dyn PasswordStorage>,
+    ) -> Self {
+        let is_new_database = !db_path.exists();
+
+        Self {
             view_mode: ViewMode::NoteList,
             state: AppState::Locked,
             input_mode: InputMode::Normal,
@@ -444,18 +477,12 @@ impl App {
             selected_inbox_item: 0,
             show_inbox_delete_confirm: false,
             show_inbox_delete_all_confirm: false,
-        })
+        }
     }
 
     /// Write to debug log if enabled
     pub(crate) fn debug_log(&self, message: &str) {
-        if let Some(log) = &self.debug_log {
-            if let Ok(mut file) = log.lock() {
-                let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
-                let _ = writeln!(file, "[{}] {}", timestamp, message);
-                let _ = file.flush();
-            }
-        }
+        write_debug_log(&self.debug_log, message);
     }
 
     /// Tell the user something went well, in the status bar. It clears itself.

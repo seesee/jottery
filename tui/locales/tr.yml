@@ -201,6 +201,8 @@ sync:
   reload_failed: "Senkronizasyon başarılı ancak notlar yeniden yüklenemedi: %{error}"
   note: not
   notes: not
+  skipped_notes: "Sunucudan gelen %{count} öğe okunamadı ve atlandı"
+  rejected_notes: "%{count} not sunucuyla çakışıyor. Çözmek için Jottery uygulamasını açın."
 
 # Gelen Kutusu
 inbox:

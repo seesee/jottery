@@ -201,6 +201,8 @@ sync:
   reload_failed: "Synchronizacja powiodła się, ale ponowne załadowanie notatek nie powiodło się: %{error}"
   note: notatka
   notes: notatek
+  skipped_notes: "Nie udało się odczytać elementów z serwera (%{count}) i zostały pominięte"
+  rejected_notes: "Notatki w konflikcie z serwerem: %{count}. Otwórz Jottery, aby je rozwiązać."
 
 # Skrzynka odbiorcza
 inbox:

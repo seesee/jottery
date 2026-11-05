@@ -201,6 +201,8 @@ sync:
   reload_failed: "Sincronização bem-sucedida mas falha ao recarregar notas: %{error}"
   note: nota
   notes: notas
+  skipped_notes: "Não foi possível ler %{count} itens do servidor, pelo que foram ignorados"
+  rejected_notes: "%{count} notas entram em conflito com o servidor. Abra o Jottery para os resolver."
 
 # Caixa de entrada
 inbox:

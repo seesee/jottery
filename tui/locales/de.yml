@@ -201,6 +201,8 @@ sync:
   reload_failed: "Synchronisation erfolgreich, aber Notizen konnten nicht neu geladen werden: %{error}"
   note: Notiz
   notes: Notizen
+  skipped_notes: "%{count} Elemente vom Server konnten nicht gelesen werden und wurden übersprungen"
+  rejected_notes: "%{count} Notizen stehen im Konflikt mit dem Server. Öffne Jottery, um sie aufzulösen."
 
 # Posteingang
 inbox:

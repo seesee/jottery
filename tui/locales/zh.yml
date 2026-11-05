@@ -201,6 +201,8 @@ sync:
   reload_failed: "同步成功但重新加载笔记失败: %{error}"
   note: 条笔记
   notes: 条笔记
+  skipped_notes: "服务器上的 %{count} 项无法读取，已跳过"
+  rejected_notes: "%{count} 条笔记与服务器冲突。请打开 Jottery 解决。"
 
 # 收件箱
 inbox:

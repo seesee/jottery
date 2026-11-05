@@ -201,6 +201,8 @@ sync:
   reload_failed: "Synchronisatie geslaagd maar notities opnieuw laden mislukt: %{error}"
   note: notitie
   notes: notities
+  skipped_notes: "%{count} items van de server konden niet worden gelezen en zijn overgeslagen"
+  rejected_notes: "%{count} notities conflicteren met de server. Open Jottery om ze op te lossen."
 
 # Postvak IN
 inbox:

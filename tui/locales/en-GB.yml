@@ -223,6 +223,8 @@ sync:
     approved: "Your account is approved and active. You can sync your notes."
     pending: "Your account is pending approval. Please wait for an administrator to approve your registration."
     inactive: "Your account has been deactivated. Please contact an administrator."
+  skipped_notes: "%{count} items from the server couldn't be read and were skipped"
+  rejected_notes: "%{count} notes conflict with the server. Open Jottery to resolve them."
 
 # Inbox
 inbox:
