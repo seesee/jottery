@@ -88,7 +88,7 @@ class SyncRepository(
 
     // MARK: - Note Deletions
 
-    suspend fun listDeletions(): List<NoteDeletion> = noteDeletionDao.listAll()
+    suspend fun listDeletions(): List<NoteDeletion> = noteDeletionDao.listPending()
 
     suspend fun addDeletion(deletion: NoteDeletion) = noteDeletionDao.insertOrReplace(deletion)
 

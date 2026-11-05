@@ -36,7 +36,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,7 +51,6 @@ import androidx.compose.ui.unit.dp
 import com.jottery.android.R
 import com.jottery.android.service.backup.BackupSource
 import com.jottery.android.viewmodel.AppState
-import kotlinx.coroutines.launch
 
 private enum class SetupMode { NEW_VAULT, REGISTER, IMPORT, RESTORE }
 
@@ -59,17 +58,16 @@ private enum class SetupMode { NEW_VAULT, REGISTER, IMPORT, RESTORE }
 fun SetupScreen(
     appState: AppState,
 ) {
-    var mode by remember { mutableStateOf(SetupMode.NEW_VAULT) }
+    var mode by rememberSaveable { mutableStateOf(SetupMode.NEW_VAULT) }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var isCreating by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
 
     // Register fields
-    var serverUrl by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
+    var serverUrl by rememberSaveable { mutableStateOf("") }
+    var email by rememberSaveable { mutableStateOf("") }
     var serverPassword by remember { mutableStateOf("") }
     var encryptionPassword by remember { mutableStateOf("") }
 
@@ -79,7 +77,7 @@ fun SetupScreen(
     val connectState by appState.connectState.collectAsState()
     val isRegistered = pendingConnection != null
     val isConnecting = connectState is AppState.ConnectState.Working
-    var showCreateAccount by remember { mutableStateOf(false) }
+    var showCreateAccount by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val connectError = (connectState as? AppState.ConnectState.Failed)?.message
     var confirmationPassword by remember { mutableStateOf("") }
@@ -91,7 +89,7 @@ fun SetupScreen(
     // Import fields
     var credentialString by remember { mutableStateOf("") }
     var importPassword by remember { mutableStateOf("") }
-    var deviceName by remember { mutableStateOf(Build.MODEL) }
+    var deviceName by rememberSaveable { mutableStateOf(Build.MODEL) }
 
     fun submitNewVault() {
         when {
@@ -103,7 +101,7 @@ fun SetupScreen(
     }
 
     // Restore fields
-    var backupUri by remember { mutableStateOf<Uri?>(null) }
+    var backupUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     var backupPassword by remember { mutableStateOf("") }
     val backupPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -343,7 +341,7 @@ fun SetupScreen(
                         Text(stringResource(R.string.create_account_title))
                     }
 
-                    ErrorText(error)
+                    ErrorText(error ?: connectError)
 
                     Spacer(modifier = Modifier.height(24.dp))
 
@@ -355,35 +353,20 @@ fun SetupScreen(
                                 serverPassword.isEmpty() -> error = context.getString(R.string.setup_password_is_required)
                                 serverPassword.length < 8 -> error = context.getString(R.string.setup_password_must_be_at_least)
                                 else -> {
-                                    isCreating = true
                                     error = null
-                                    scope.launch {
-                                        try {
-                                            val result = appState.registerDevice(
-                                                serverUrl = serverUrl.trim().trimEnd('/'),
-                                                email = email.trim(),
-                                                password = serverPassword,
-                                                deviceName = Build.MODEL,
-                                            )
-                                            result.onSuccess {
-                                                isCreating = false
-                                                error = null
-                                            }.onFailure { e ->
-                                                error = appState.describeAccountFailure(e)
-                                                isCreating = false
-                                            }
-                                        } catch (e: Exception) {
-                                            error = appState.describeAccountFailure(e)
-                                            isCreating = false
-                                        }
-                                    }
+                                    appState.beginRegistration(
+                                        serverUrl = serverUrl.trim().trimEnd('/'),
+                                        email = email.trim(),
+                                        password = serverPassword,
+                                        deviceName = Build.MODEL,
+                                    )
                                 }
                             }
                         },
-                        enabled = !isCreating,
+                        enabled = !isConnecting,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(if (isCreating) stringResource(R.string.setup_registering) else stringResource(R.string.setup_register_device))
+                        Text(if (isConnecting) stringResource(R.string.setup_registering) else stringResource(R.string.setup_register_device))
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))

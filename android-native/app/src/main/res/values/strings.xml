@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="en-GB">
     <string name="app_name" translatable="false">Jottery</string>
 
     <!-- Setup -->
@@ -83,6 +83,30 @@
     <!-- Backup -->
     <string name="backup_title">Backup &amp; Restore</string>
     <string name="backup_intro">Create an encrypted backup of everything in this vault, or restore one. A backup opens with the notes password it was made with, on this device, a new one, or another Jottery client.</string>
+    <string name="backup_last">Last backup: %1$s</string>
+    <string name="backup_never">Never</string>
+    <string name="backup_reminders">Enable backup reminders</string>
+    <string name="backup_reminders_detail">A weekly notification if you haven\'t made a backup. It says nothing about your notes.</string>
+    <string name="backup_reminders_denied">Notifications are off for Jottery, so reminders can\'t appear.</string>
+    <string name="backup_reminder_title">Time to back up your notes</string>
+    <string name="backup_reminder_channel">Backup reminders</string>
+    <string name="health_title">Vault Health</string>
+    <string name="health_description">Detects notes that cannot be decrypted and attachments that are missing from this device.</string>
+    <string name="health_healthy">No problems found.</string>
+    <string name="health_rescan">Rescan</string>
+    <string name="health_scanning">Scanning…</string>
+    <string name="health_undecryptable_title">Undecryptable notes</string>
+    <string name="health_undecryptable_hint">These notes cannot be read with your current password. This usually means they were created with a different password. Deleting is permanent and removes them from the sync server and all devices.</string>
+    <string name="health_delete">Delete permanently</string>
+    <string name="health_delete_title">Delete undecryptable note?</string>
+    <string name="health_delete_message">This note cannot be decrypted and its content cannot be recovered. Deleting removes it from this device, the sync server, and all your other devices. This cannot be undone.</string>
+    <string name="health_missing_title">Missing attachments</string>
+    <string name="health_missing_hint">These attachments are referenced by notes but not stored on this device.</string>
+    <string name="health_repair">Repair from server</string>
+    <string name="health_repair_success">Attachment restored</string>
+    <string name="health_repair_failed">Repair failed — check sync connection and server version</string>
+    <string name="health_repair_not_on_server">Not on the server either — open the note and remove the attachment</string>
+    <string name="health_unknown_note">(note cannot be decrypted)</string>
     <string name="backup_create">Create Backup</string>
     <string name="backup_restore">Restore from Backup</string>
     <string name="backup_created">Backup created: %1$d notes, %2$d attachments.</string>
@@ -212,6 +236,7 @@
     <string name="sync_error_rate_limited">The server is busy. Jottery will try again shortly.</string>
     <string name="sync_error_storage_full">Your account is full, so changes here can\'t sync. Move notes to the bin or remove attachments to make room.</string>
     <string name="sync_error_offline">Couldn\'t reach the server. Jottery will try again.</string>
+    <string name="sync_clock_ahead">Some changes weren\'t synced because they\'re dated more than a day ahead of the server. Check the date and time on this device.</string>
     <string name="sync_error_failed">Sync failed. Jottery will try again.</string>
     <string name="sync_done">Synced</string>
     <plurals name="sync_done_new_notes">
@@ -342,6 +367,15 @@
     <string name="note_link_missing">That note isn\'t on this device.</string>
     <string name="note_copied">Note copied</string>
     <string name="note_link_copied">Link copied. Paste it into another note.</string>
+    <string name="format_bold">Bold</string>
+    <string name="format_italic">Italic</string>
+    <string name="format_bullet_list">Bullet List</string>
+    <string name="format_link">Insert Link</string>
+    <string name="format_insert">Insert</string>
+    <string name="format_insert_now">Date and time</string>
+    <string name="format_insert_date">Date</string>
+    <string name="format_insert_time">Time</string>
+    <string name="format_insert_uuid">Unique ID</string>
     <string name="editor_placeholder">Start typing…</string>
     <string name="editor_redo">Redo</string>
     <string name="editor_find_menu">Find and replace</string>
@@ -426,7 +460,42 @@
     <string name="note_list_archived_notes_will_appear_here">Archived notes will appear here.</string>
     <string name="note_list_try_a_different_search_term">Try a different search term.</string>
     <string name="note_list_tap_to_create_your_first">Tap + to create your first note.</string>
+    <string name="note_row_open">Open this note</string>
+    <string name="note_row_select">Select note</string>
+    <string name="tags_empty">No tags yet.</string>
+    <string name="settings_about_notes">Notes</string>
+    <string name="settings_default_note_type">Default note type</string>
+    <string name="settings_colours">Category Colours</string>
+    <string name="settings_colours_detail">Give a colour a name, then find it with category:name. These stay on this device.</string>
+    <string name="settings_tag_categories">Tag Categories</string>
+    <string name="settings_tag_categories_detail">Assign categories to tags globally</string>
+    <string name="change_password_old_backups">Backups made before this change still open with the old password.</string>
     <string name="note_row_has_attachments">Has attachments</string>
+    <string name="search_help_title">Search Syntax</string>
+    <string name="search_help_tags">Tags</string>
+    <string name="search_help_text">Text</string>
+    <string name="search_help_wildcards">Wildcards</string>
+    <string name="search_help_modifiers">Modifiers</string>
+    <string name="search_help_tags_and">Both tags (AND)</string>
+    <string name="search_help_tags_or">Either tag (OR)</string>
+    <string name="search_help_exact_phrase">Exact phrase</string>
+    <string name="search_help_both_words">Both words (AND)</string>
+    <string name="search_help_either_word">Either word (OR)</string>
+    <string name="search_help_not_containing">Does NOT contain</string>
+    <string name="search_help_starts_with">Starts with</string>
+    <string name="search_help_ends_with">Ends with</string>
+    <string name="search_help_contains_anywhere">Contains anywhere</string>
+    <string name="search_help_has_attachment">Notes with attachments</string>
+    <string name="search_help_created_after">Created after date</string>
+    <string name="search_help_created_before">Created before date</string>
+    <string name="search_help_created_range">Created in date range</string>
+    <string name="search_help_modified_after">Modified after date</string>
+    <string name="search_help_words_more">More than N words</string>
+    <string name="search_help_words_less">Less than N words</string>
+    <string name="search_help_words_range">Between N and M words</string>
+    <string name="search_help_try">Tap an example to try it</string>
+    <string name="search_in_archive">In the archive: %1$d</string>
+    <string name="search_in_notes">In your notes: %1$d</string>
     <string name="search_bar_search">Search</string>
     <string name="search_bar_search_notes">Search notes…</string>
     <string name="search_bar_clear_search">Clear search</string>
@@ -470,8 +539,6 @@
     <string name="settings_delete_everything_and_start_fresh">Delete everything and start fresh</string>
     <string name="settings_about2">About</string>
     <string name="settings_wipe_all_data2">Wipe all data?</string>
-    <string name="settings_this_will_permanently_delete_all">This will permanently delete all notes, settings, and encryption keys. </string>
-    <string name="settings_this_action_cannot_be_undone">This action cannot be undone.</string>
     <string name="settings_wipe_everything">Wipe Everything</string>
     <string name="setup_password_is_required">Password is required</string>
     <string name="setup_password_must_be_at_least">Password must be at least 8 characters</string>

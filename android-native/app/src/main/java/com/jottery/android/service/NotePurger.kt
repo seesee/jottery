@@ -35,6 +35,7 @@ class NotePurger(
      * Returns how many were removed.
      */
     suspend fun purgeExpired(olderThan: Duration = BIN_RETENTION): Int {
+        noteRepo.startBinClocks()
         val cutoff = DateUtils.formatISO8601(Instant.now().minus(olderThan))
         val expired = noteRepo.listExpiredDeleted(cutoff)
         remove(expired.map { NoteDeletion(it.id, it.deletedAt ?: DateUtils.nowISO8601()) })

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -73,7 +75,10 @@ import com.jottery.android.R
 import com.jottery.android.model.SortOrder
 import com.jottery.android.ui.component.NoteEditorView
 import com.jottery.android.ui.component.NoteListView
+import com.jottery.android.model.tagCounts
 import com.jottery.android.ui.component.SearchBar
+import com.jottery.android.ui.component.SearchHelpSheet
+import com.jottery.android.ui.component.SearchSuggestionChips
 import com.jottery.android.ui.component.enableBiometricUnlock
 import com.jottery.android.ui.component.sortOrderLabel
 import com.jottery.android.viewmodel.AppState
@@ -89,6 +94,7 @@ fun MainScreen(
     onNavigateToConflicts: () -> Unit,
     onNavigateToInbox: () -> Unit,
     onNavigateToSavedSearches: () -> Unit,
+    onNavigateToTags: () -> Unit,
 ) {
     val conflicts by appState.pendingConflicts.collectAsState()
     val inboxItems by appState.inboxItems.collectAsState()
@@ -137,6 +143,22 @@ fun MainScreen(
     }
 
     var searchVisible by remember { mutableStateOf(false) }
+    var showSearchHelp by remember { mutableStateOf(false) }
+    var searchFocused by remember { mutableStateOf(false) }
+    val recentSearches by appState.recentSearches.collectAsState()
+    val searchRequested by appState.searchRequested.collectAsState()
+    LaunchedEffect(searchRequested) {
+        if (searchRequested) searchVisible = true
+    }
+    if (showSearchHelp) {
+        SearchHelpSheet(
+            onChoose = {
+                showSearchHelp = false
+                appState.setSearchQuery(it)
+            },
+            onDismiss = { showSearchHelp = false },
+        )
+    }
     var showSaveSearch by remember { mutableStateOf(false) }
 
     // A saved search applied from its own screen has to be visible, and clearable
@@ -225,7 +247,7 @@ fun MainScreen(
                         // Overflow menu (settings, recycle bin, archive toggle, lock)
                         Box {
                             IconButton(onClick = { overflowMenuExpanded = true }) {
-                                Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.action_more))
+                                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.action_more))
                             }
                             DropdownMenu(
                                 expanded = overflowMenuExpanded,
@@ -255,6 +277,16 @@ fun MainScreen(
                                         },
                                     )
                                 }
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.note_info_tags)) },
+                                    onClick = {
+                                        overflowMenuExpanded = false
+                                        onNavigateToTags()
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.AutoMirrored.Filled.Label, contentDescription = null)
+                                    },
+                                )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.recycle_bin_title)) },
                                     onClick = {
@@ -329,9 +361,25 @@ fun MainScreen(
                     matchCount = filteredCount,
                     totalCount = noteCount,
                     showCounts = searchQuery.isNotEmpty(),
+                    focusRequested = searchRequested,
+                    onFocusHandled = appState::searchRequestHandled,
+                    onSubmit = { appState.rememberSearch(searchQuery) },
+                    onHelp = { showSearchHelp = true },
+                    onFocusChanged = { searchFocused = it },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+
+            if (searchVisible && showListOnNarrow && searchFocused) {
+                SearchSuggestionChips(
+                    query = searchQuery,
+                    tags = remember(allNotes, archivedNotes) {
+                        (allNotes + archivedNotes).tagCounts().map { it.first }
+                    },
+                    recent = recentSearches,
+                    onChoose = { appState.setSearchQuery(it) },
                 )
             }
 

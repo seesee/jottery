@@ -116,6 +116,11 @@ data class SyncPushResponse(
      * the next pull. Absent on older servers, which never refuse one.
      */
     val rejectedDeletions: List<String>? = null,
+    /**
+     * Notes this push sent that were permanently deleted after the edit. Absent on
+     * older servers, which take them or reject them instead.
+     */
+    val skippedDeleted: List<String>? = null,
 )
 
 /** One accepted note whose attachment references have no data on the server. */
@@ -153,6 +158,9 @@ data class SyncRejected(
     val serverContentHash: String? = null,
     val serverParentHash: String? = null,
     val serverHashChain: List<String>? = null,
+    /** Whether the server's copy is in the bin. An older server doesn't say. */
+    val serverDeleted: Boolean = false,
+    val serverDeletedAt: String? = null,
     val ancestorHash: String? = null,
     val ancestorContent: String? = null,
     val ancestorTags: List<String>? = null,

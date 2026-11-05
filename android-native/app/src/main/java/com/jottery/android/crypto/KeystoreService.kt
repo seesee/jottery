@@ -5,9 +5,12 @@ import android.content.SharedPreferences
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyPermanentlyInvalidatedException
 import android.security.keystore.KeyProperties
+import android.util.Base64
 import android.util.Log
+import androidx.annotation.VisibleForTesting
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import java.io.File
 import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
@@ -15,15 +18,24 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * Manages secure storage using EncryptedSharedPreferences (for API key, client ID)
- * and Android Keystore (for biometric-protected master key).
+ * Secure storage, using the Android Keystore directly: for the API key and client ID,
+ * and for the biometric-protected master key.
  */
 object KeystoreService {
 
     private const val TAG = "KeystoreService"
-    private const val PREFS_NAME = "jottery_secure_prefs"
     private const val KEY_API_KEY = "api_key"
     private const val KEY_CLIENT_ID = "client_id"
+
+    // Each value is sealed under a Keystore key that never leaves the Keystore
+    private const val SEALED_PREFS = "jottery_sealed_prefs"
+    private const val SEALED_KEY_ALIAS = "jottery_sealed_prefs_key"
+    private const val GCM_TAG_BITS = 128
+    private const val GCM_IV_BYTES = 12
+
+    // What older builds used. Google has deprecated EncryptedSharedPreferences, so
+    // it's only opened to move those values here, and goes once no install needs it.
+    private const val LEGACY_PREFS = "jottery_secure_prefs"
 
     // Biometric key storage
     private const val KEYSTORE_ALIAS = "jottery_biometric_key"
@@ -31,32 +43,50 @@ object KeystoreService {
     private const val KEY_ENCRYPTED_MASTER_KEY = "encrypted_master_key"
     private const val KEY_MASTER_KEY_IV = "master_key_iv"
 
-    // MARK: - Encrypted SharedPreferences (API Key / Client ID)
+    // MARK: - Sealed Preferences (API Key / Client ID)
 
-    @Volatile private var encryptedPrefs: SharedPreferences? = null
+    @Volatile private var legacyChecked = false
 
-    /**
-     * Built once. If the file can't be opened it's useless, as when it arrived
-     * without its Keystore key, so it's deleted and the device registers again.
-     */
     @Synchronized
-    private fun getEncryptedPrefs(context: Context): SharedPreferences {
-        encryptedPrefs?.let { return it }
+    private fun sealedPrefs(context: Context): SharedPreferences {
         val app = context.applicationContext
-        val prefs = try {
-            openEncryptedPrefs(app)
-        } catch (e: Exception) {
-            Log.w(TAG, "Secure preferences unreadable, starting again: ${e.javaClass.simpleName}")
-            app.deleteSharedPreferences(PREFS_NAME)
-            openEncryptedPrefs(app)
+        val prefs = app.getSharedPreferences(SEALED_PREFS, Context.MODE_PRIVATE)
+        if (!legacyChecked) {
+            moveLegacyValues(app, prefs)
+            legacyChecked = true
         }
-        encryptedPrefs = prefs
         return prefs
     }
 
-    private fun openEncryptedPrefs(context: Context) = EncryptedSharedPreferences.create(
+    /**
+     * Bring over what an older build stored. If its file can't be opened it's useless,
+     * as it always was, so it's deleted and the device registers again. A failure on
+     * this side is different: the values are still good, so the file stays for next time.
+     */
+    private fun moveLegacyValues(app: Context, prefs: SharedPreferences) {
+        val file = File(File(app.applicationInfo.dataDir, "shared_prefs"), "$LEGACY_PREFS.xml")
+        if (!file.exists()) return
+
+        val legacy = try {
+            openLegacyPrefs(app)
+        } catch (e: Exception) {
+            Log.w(TAG, "Old secure preferences unreadable, starting again: ${e.javaClass.simpleName}")
+            app.deleteSharedPreferences(LEGACY_PREFS)
+            return
+        }
+
+        val editor = prefs.edit()
+        for (name in listOf(KEY_API_KEY, KEY_CLIENT_ID)) {
+            // Anything already here is newer
+            if (prefs.contains(name)) continue
+            legacy.getString(name, null)?.let { editor.putString(name, seal(it)) }
+        }
+        if (editor.commit()) app.deleteSharedPreferences(LEGACY_PREFS)
+    }
+
+    private fun openLegacyPrefs(context: Context) = EncryptedSharedPreferences.create(
         context,
-        PREFS_NAME,
+        LEGACY_PREFS,
         MasterKey.Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
             .build(),
@@ -64,23 +94,74 @@ object KeystoreService {
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
     )
 
-    fun getAPIKey(context: Context): String? =
-        getEncryptedPrefs(context).getString(KEY_API_KEY, null)
+    private fun sealingKey(): SecretKey {
+        val keystore = KeyStore.getInstance("AndroidKeyStore")
+        keystore.load(null)
+        keystore.getKey(SEALED_KEY_ALIAS, null)?.let { return it as SecretKey }
 
-    fun setAPIKey(context: Context, apiKey: String) =
-        getEncryptedPrefs(context).edit().putString(KEY_API_KEY, apiKey).apply()
+        val keyGen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
+        keyGen.init(
+            KeyGenParameterSpec.Builder(
+                SEALED_KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
+            )
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(256)
+                .build()
+        )
+        return keyGen.generateKey()
+    }
 
-    fun deleteAPIKey(context: Context) =
-        getEncryptedPrefs(context).edit().remove(KEY_API_KEY).apply()
+    /** The IV, then the ciphertext, as Base64. The Keystore chooses a fresh IV each time. */
+    private fun seal(value: String): String {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, sealingKey())
+        val sealed = cipher.iv + cipher.doFinal(value.toByteArray(Charsets.UTF_8))
+        return Base64.encodeToString(sealed, Base64.NO_WRAP)
+    }
 
-    fun getClientId(context: Context): String? =
-        getEncryptedPrefs(context).getString(KEY_CLIENT_ID, null)
+    private fun unseal(sealed: String): String {
+        val bytes = Base64.decode(sealed, Base64.NO_WRAP)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, sealingKey(), GCMParameterSpec(GCM_TAG_BITS, bytes, 0, GCM_IV_BYTES))
+        return String(cipher.doFinal(bytes, GCM_IV_BYTES, bytes.size - GCM_IV_BYTES), Charsets.UTF_8)
+    }
 
-    fun setClientId(context: Context, clientId: String) =
-        getEncryptedPrefs(context).edit().putString(KEY_CLIENT_ID, clientId).apply()
+    /** Null if it can't be read. The value stays, as that may not last, and saving a new one replaces it. */
+    private fun read(context: Context, name: String): String? {
+        val sealed = sealedPrefs(context).getString(name, null) ?: return null
+        return try {
+            unseal(sealed)
+        } catch (e: Exception) {
+            Log.w(TAG, "Couldn't open a stored value: ${e.javaClass.simpleName}")
+            null
+        }
+    }
 
-    fun deleteClientId(context: Context) =
-        getEncryptedPrefs(context).edit().remove(KEY_CLIENT_ID).apply()
+    private fun write(context: Context, name: String, value: String) =
+        sealedPrefs(context).edit().putString(name, seal(value)).apply()
+
+    private fun remove(context: Context, name: String) =
+        sealedPrefs(context).edit().remove(name).apply()
+
+    fun getAPIKey(context: Context): String? = read(context, KEY_API_KEY)
+
+    fun setAPIKey(context: Context, apiKey: String) = write(context, KEY_API_KEY, apiKey)
+
+    fun deleteAPIKey(context: Context) = remove(context, KEY_API_KEY)
+
+    fun getClientId(context: Context): String? = read(context, KEY_CLIENT_ID)
+
+    fun setClientId(context: Context, clientId: String) = write(context, KEY_CLIENT_ID, clientId)
+
+    fun deleteClientId(context: Context) = remove(context, KEY_CLIENT_ID)
+
+    /** For tests: look for an older build's file again, as a new process would. */
+    @VisibleForTesting
+    internal fun forgetLegacyCheck() {
+        legacyChecked = false
+    }
 
     // MARK: - Biometric Key (Android Keystore)
 
@@ -105,8 +186,8 @@ object KeystoreService {
         val encrypted = cipher.doFinal(masterKeyData)
         context.getSharedPreferences(BIOMETRIC_PREFS, Context.MODE_PRIVATE)
             .edit()
-            .putString(KEY_ENCRYPTED_MASTER_KEY, android.util.Base64.encodeToString(encrypted, android.util.Base64.NO_WRAP))
-            .putString(KEY_MASTER_KEY_IV, android.util.Base64.encodeToString(cipher.iv, android.util.Base64.NO_WRAP))
+            .putString(KEY_ENCRYPTED_MASTER_KEY, Base64.encodeToString(encrypted, Base64.NO_WRAP))
+            .putString(KEY_MASTER_KEY_IV, Base64.encodeToString(cipher.iv, Base64.NO_WRAP))
             .apply()
     }
 
@@ -127,7 +208,7 @@ object KeystoreService {
             return null
         }
 
-        val iv = android.util.Base64.decode(ivB64, android.util.Base64.NO_WRAP)
+        val iv = Base64.decode(ivB64, Base64.NO_WRAP)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         return try {
             cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
@@ -144,7 +225,7 @@ object KeystoreService {
     fun decryptBiometricKey(context: Context, cipher: Cipher): ByteArray? {
         val prefs = context.getSharedPreferences(BIOMETRIC_PREFS, Context.MODE_PRIVATE)
         val encB64 = prefs.getString(KEY_ENCRYPTED_MASTER_KEY, null) ?: return null
-        val encrypted = android.util.Base64.decode(encB64, android.util.Base64.NO_WRAP)
+        val encrypted = Base64.decode(encB64, Base64.NO_WRAP)
         return cipher.doFinal(encrypted)
     }
 

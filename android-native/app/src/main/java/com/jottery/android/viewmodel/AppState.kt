@@ -27,6 +27,8 @@ import com.jottery.android.model.DecryptedNote
 import com.jottery.android.model.DecryptedSavedSearch
 import com.jottery.android.model.EncryptionMetadata
 import com.jottery.android.model.InboxItem
+import com.jottery.android.model.NoteCategories
+import com.jottery.android.model.NoteRecord
 import com.jottery.android.model.NoteVersionRecord
 import com.jottery.android.model.CloneDeviceRequest
 import com.jottery.android.model.CredentialPayload
@@ -51,7 +53,10 @@ import com.jottery.android.service.VaultReKeyService
 import com.jottery.android.service.ExportService
 import com.jottery.android.service.ImportService
 import com.jottery.android.service.ImportStrategy
+import com.jottery.android.service.BackupReminder
+import com.jottery.android.service.BlobRepair
 import com.jottery.android.service.NotePurger
+import com.jottery.android.service.VaultHealthService
 import com.jottery.android.service.SearchService
 import com.jottery.android.service.SyncPhase
 import com.jottery.android.service.SyncRetryPolicy
@@ -68,8 +73,14 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
+import com.jottery.android.util.KeyboardCommand
+import com.jottery.android.util.QuickAction
+import com.jottery.android.util.SearchSuggestions
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -161,6 +172,24 @@ class AppState(application: Application) : AndroidViewModel(application) {
             .getFloat(KEY_EDITOR_FONT_SCALE, 1.0f)
     )
     val editorFontScale: StateFlow<Float> = _editorFontScale.asStateFlow()
+
+    // MARK: - New Notes
+
+    private val _defaultNoteType = MutableStateFlow(
+        application.getSharedPreferences(PREFS_NAME, 0)
+            .getString(KEY_DEFAULT_NOTE_TYPE, DEFAULT_NOTE_TYPE) ?: DEFAULT_NOTE_TYPE
+    )
+    /** Per device, like the web's, and read for every note made here. */
+    val defaultNoteType: StateFlow<String> = _defaultNoteType.asStateFlow()
+
+    fun setDefaultNoteType(type: String) {
+        _defaultNoteType.value = type
+        getApplication<Application>()
+            .getSharedPreferences(PREFS_NAME, 0)
+            .edit()
+            .putString(KEY_DEFAULT_NOTE_TYPE, type)
+            .apply()
+    }
 
     // MARK: - Screen Security
 
@@ -275,7 +304,12 @@ class AppState(application: Application) : AndroidViewModel(application) {
     init {
         initialise()
         viewModelScope.launch {
-            _isLocked.collect { locked -> if (!locked) applyPendingShare() }
+            _isLocked.collect { locked ->
+                if (!locked) {
+                    applyPendingShare()
+                    applyPendingQuickAction()
+                }
+            }
         }
     }
 
@@ -327,14 +361,14 @@ class AppState(application: Application) : AndroidViewModel(application) {
                         keyManager.autoLockTimeout = loaded.autoLockTimeout.toLong() * 60L
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Initialisation error: ${e.message}")
+                    Log.e(TAG, "Initialisation error: ${e.javaClass.simpleName}")
                     _isFirstLaunch.value = true
                 } finally {
                     _isInitialised.value = true
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Database init failed: ${e.message}")
+            Log.e(TAG, "Database init failed: ${e.javaClass.simpleName}")
             _isFirstLaunch.value = true
             _isInitialised.value = true
         }
@@ -492,10 +526,13 @@ class AppState(application: Application) : AndroidViewModel(application) {
             _syncError.value = text(R.string.sync_error_setup)
         }
 
-        // Upgrade old vaults: store a verification token if missing
+        // Upgrade old vaults: store a verification token if missing. Only a key that
+        // has proved itself may be written down as the right one, or a mistyped
+        // password on an empty vault would lock out the real one for good.
         if (metadata.verification == null) {
             try {
-                upgradeVaultVerification(key)
+                val proved = metadata.envelopeVersion != null || opensANote(noteRepo?.listAllRaw().orEmpty(), key)
+                if (proved) upgradeVaultVerification(key)
             } catch (_: Exception) { /* ignore */ }
         }
 
@@ -612,30 +649,24 @@ class AppState(application: Application) : AndroidViewModel(application) {
      * Returns true if decryption succeeds, or if there are no notes to test against.
      */
     private suspend fun verifyByDecryptingNote(key: SecretKey): Boolean {
-        val repo = noteRepo ?: return false
-        return try {
-            val record = repo.getRaw(
-                // Try to get any non-deleted note to verify against
-                id = "" // We need a different approach -- check if any active notes exist
-            )
-            // If getRaw returns null for empty id, try listing active notes
-            val activeNotes = repo.listActive(key)
-            // If listing succeeded without exception, the key is valid
-            true
-        } catch (_: Exception) {
-            // Try counting active notes -- if there are none, empty vault is safe
-            try {
-                val count = repo.countActive()
-                count == 0 // If no notes, can't verify but safe to enter
-            } catch (_: Exception) {
-                false
-            }
-        }
+        val records = noteRepo?.listAllRaw() ?: return false
+        return records.isEmpty() || opensANote(records, key)
     }
 
     /**
-     * Store a verification token on an old vault that doesn't have one.
+     * AES-GCM can't decrypt under the wrong key, so one note opening proves the key.
+     * It takes only one: a damaged note mustn't lock out the right password. This reads
+     * rows directly, because listActive skips what it can't read, and so proves nothing.
      */
+    private fun opensANote(records: List<NoteRecord>, key: SecretKey): Boolean = records.any { record ->
+        try {
+            CryptoService.decryptText(CryptoService.parseEncryptedJSON(record.content), key)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     private suspend fun upgradeVaultVerification(key: SecretKey) {
         val repo = encryptionRepo ?: return
         val metadata = repo.get() ?: return
@@ -673,6 +704,8 @@ class AppState(application: Application) : AndroidViewModel(application) {
         _notes.value = emptyList()
         _archivedNotes.value = emptyList()
         _filteredNotes.value = emptyList()
+        _recentSearches.value = emptyList()
+        _otherViewMatches.value = 0
         _savedSearches.value = emptyList()
         _pendingConflicts.value = emptyList()
         _inboxItems.value = emptyList()
@@ -786,10 +819,14 @@ class AppState(application: Application) : AndroidViewModel(application) {
      * Create a new note with the given content and tags.
      * Returns the created DecryptedNote, or null on failure.
      */
-    suspend fun createNote(content: String = "", tags: List<String> = emptyList()): DecryptedNote? {
+    suspend fun createNote(
+        content: String = "",
+        tags: List<String> = emptyList(),
+        syntaxLanguage: String = _defaultNoteType.value,
+    ): DecryptedNote? {
         val repo = noteRepo ?: return null
         val key = keyManager.masterKey ?: return null
-        val note = repo.create(content = content, tags = tags, key = key)
+        val note = repo.create(content = content, tags = tags, key = key, syntaxLanguage = syntaxLanguage)
         notesRevision.incrementAndGet()
         _notes.value = listOf(note) + _notes.value
         _selectedNoteId.value = note.id
@@ -834,8 +871,22 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun duplicateNote(id: String) {
         val repo = noteRepo ?: return
         val key = keyManager.masterKey ?: return
+        // What's on screen is what the user means to copy
+        flushPendingEditor()
         val original = repo.get(id = id, key = key) ?: return
-        val duplicate = repo.create(content = original.content, tags = original.tags, key = key)
+        val created = repo.create(
+            content = original.content,
+            tags = original.tags,
+            key = key,
+            syntaxLanguage = original.syntaxLanguage,
+            wordWrap = original.wordWrap,
+            showPreview = original.showPreview,
+            color = original.color,
+        )
+        // Both notes point at the same blobs, which stay until nothing refers to them
+        val refs = repo.rawAttachmentRefs(id)
+        if (refs.isNotEmpty()) repo.setAttachments(created.id, refs, key)
+        val duplicate = repo.get(id = created.id, key = key) ?: created
         notesRevision.incrementAndGet()
         _notes.value = listOf(duplicate) + _notes.value
         _selectedNoteId.value = duplicate.id
@@ -960,14 +1011,22 @@ class AppState(application: Application) : AndroidViewModel(application) {
             displayedNotes
         }
         val order = _sortOrder.value
+        val categories = NoteCategories.from(_settings.value)
+        val otherView = if (_showArchive.value) _notes.value else _archivedNotes.value
 
         searchJob = viewModelScope.launch {
             // Debounce while typing. With no query there's nothing to wait for.
             if (query.isNotBlank()) delay(150)
 
             _filteredNotes.value = withContext(Dispatchers.Default) {
-                val matches = if (query.isBlank()) source else SearchService.filter(source, query).notes
+                val matches = if (query.isBlank()) source else SearchService.filter(source, query, categories).notes
                 SearchService.sort(matches, order)
+            }
+            // An archive search already covers both views
+            _otherViewMatches.value = if (query.isBlank() || source.size > displayedNotes.size) {
+                0
+            } else {
+                withContext(Dispatchers.Default) { SearchService.filter(otherView, query, categories).matchCount }
             }
         }
     }
@@ -1265,7 +1324,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             val base64 = android.util.Base64.encodeToString(decryptedData, android.util.Base64.NO_WRAP)
             "data:${ref.mimeType};base64,$base64"
         } catch (e: Exception) {
-            Log.w("AppState", "Failed to resolve attachment $attachmentId: ${e.message}")
+            Log.w("AppState", "Failed to resolve attachment $attachmentId: ${e.javaClass.simpleName}")
             null
         }
     }
@@ -1288,7 +1347,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             val enc = CryptoService.parseEncryptedJSON(version.content)
             CryptoService.decryptText(enc, key)
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to decrypt version content: ${e.message}")
+            Log.w(TAG, "Failed to decrypt version content: ${e.javaClass.simpleName}")
             null
         }
     }
@@ -1359,6 +1418,18 @@ class AppState(application: Application) : AndroidViewModel(application) {
         keyManager.autoLockTimeout = newSettings.autoLockTimeout.toLong() * 60L
     }
 
+    /** Name a colour, or clear its name with a blank one. */
+    suspend fun setCategoryName(colour: String, name: String) = changeCategories { it.named(colour, name) }
+
+    /** Give a tag a colour, or take it away with null. */
+    suspend fun setTagColour(tag: String, colour: String?) = changeCategories { it.withTag(tag, colour) }
+
+    private suspend fun changeCategories(change: (NoteCategories) -> NoteCategories) {
+        val settings = _settings.value
+        updateSettings(change(NoteCategories.from(settings)).appliedTo(settings))
+        scheduleSearch()
+    }
+
     // MARK: - Wipe & Re-onboard
 
     /**
@@ -1367,6 +1438,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
      */
     fun wipeAllData() {
         val context = getApplication<Application>()
+        BackupReminder.forget(context)
 
         // Clear secure storage. Failing here can't be allowed to stop a wipe.
         try {
@@ -1398,6 +1470,8 @@ class AppState(application: Application) : AndroidViewModel(application) {
         _notes.value = emptyList()
         _archivedNotes.value = emptyList()
         _filteredNotes.value = emptyList()
+        _recentSearches.value = emptyList()
+        _otherViewMatches.value = 0
         _savedSearches.value = emptyList()
         _pendingConflicts.value = emptyList()
         _inboxItems.value = emptyList()
@@ -1899,7 +1973,6 @@ class AppState(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        Log.d(TAG, "[Sync] setupSync: OK -- endpoint=$endpoint")
 
         val noteRepository = noteRepo ?: return
         val versionRepository = versionRepo ?: return
@@ -1936,6 +2009,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
         service.onConflictDetected = { conflict ->
             _pendingConflicts.value = _pendingConflicts.value.filter { it.id != conflict.id } + conflict
         }
+        service.onClockLooksWrong = {
+            showMessage(getApplication<Application>().getString(R.string.sync_clock_ahead))
+        }
         service.onManyNotesBinned = { count ->
             showMessage(
                 getApplication<Application>().resources
@@ -1967,7 +2043,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             }
             service.startSSE()
             try { triggerSync() } catch (e: Exception) {
-                Log.w(TAG, "[Sync] Initial sync failed: ${e.message}")
+                Log.w(TAG, "[Sync] Initial sync failed: ${e.javaClass.simpleName}")
             }
         }
     }
@@ -2169,6 +2245,29 @@ class AppState(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Register this device, in the view model's scope. A rotation mustn't cancel a
+     * request the server may already have acted on, or the user would register again
+     * and leave a second device on their account.
+     */
+    fun beginRegistration(
+        serverUrl: String,
+        email: String,
+        password: String,
+        deviceName: String,
+        onRegistered: (PendingConnection) -> Unit = {},
+    ) {
+        _connectState.value = ConnectState.Working
+        viewModelScope.launch {
+            registerDevice(serverUrl, email, password, deviceName)
+                .onSuccess {
+                    _connectState.value = ConnectState.Idle
+                    onRegistered(it)
+                }
+                .onFailure { _connectState.value = ConnectState.Failed(describeAccountFailure(it)) }
+        }
+    }
+
     /** Give up on a registered device that never finished joining. */
     fun abandonPendingConnection() {
         val connection = _pendingConnection.value ?: return
@@ -2193,12 +2292,89 @@ class AppState(application: Application) : AndroidViewModel(application) {
     private suspend fun applyPendingShare() {
         val shared = pendingShare ?: return
         pendingShare = null
-        val note = createNote(shared.text.orEmpty()) ?: return
+        // Text from another app is text, whatever new notes here usually are
+        val note = createNote(shared.text.orEmpty(), syntaxLanguage = DEFAULT_NOTE_TYPE) ?: return
         var failed = 0
         for (file in shared.files) {
             if (addAttachment(note.id, file.data, file.name, file.mimeType) == null) failed++
         }
         showMessage(text(if (failed == 0) R.string.share_saved else R.string.share_file_failed))
+    }
+
+    // MARK: - Search Help
+
+    private val _otherViewMatches = MutableStateFlow(0)
+    /** How many notes match in the view not showing, so a search can't quietly miss them. */
+    val otherViewMatches: StateFlow<Int> = _otherViewMatches.asStateFlow()
+
+    private val _recentSearches = MutableStateFlow<List<String>>(emptyList())
+    /** In memory only, and gone on lock: what someone searched for says a lot about them. */
+    val recentSearches: StateFlow<List<String>> = _recentSearches.asStateFlow()
+
+    fun rememberSearch(query: String) {
+        _recentSearches.value = SearchSuggestions.remember(_recentSearches.value, query)
+    }
+
+    // MARK: - Quick Actions
+
+    /** Held until the vault is open, like a share. */
+    private var pendingQuickAction: QuickAction? = null
+
+    private val _searchRequested = MutableStateFlow(false)
+    /** Stays set until the screen has taken it up, which may not exist yet. */
+    val searchRequested: StateFlow<Boolean> = _searchRequested.asStateFlow()
+
+    private val _showNotesRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    /** A quick action can arrive with any screen showing. */
+    val showNotesRequests: SharedFlow<Unit> = _showNotesRequests.asSharedFlow()
+
+    fun receiveQuickAction(action: QuickAction) {
+        pendingQuickAction = action
+        if (!_isLocked.value) viewModelScope.launch { applyPendingQuickAction() }
+    }
+
+    private suspend fun applyPendingQuickAction() {
+        val action = pendingQuickAction ?: return
+        pendingQuickAction = null
+        _showNotesRequests.tryEmit(Unit)
+        when (action) {
+            QuickAction.NEW_NOTE -> createNote()
+            QuickAction.SEARCH -> requestSearch()
+        }
+    }
+
+    private val _findRequested = MutableStateFlow(false)
+    /** Stays set until the editor has opened its find bar. */
+    val findRequested: StateFlow<Boolean> = _findRequested.asStateFlow()
+
+    fun findRequestHandled() {
+        _findRequested.value = false
+    }
+
+    /** Returns false for anything that doesn't apply yet, so the key goes on as usual. */
+    fun perform(command: KeyboardCommand): Boolean {
+        if (_isLocked.value) return false
+        when (command) {
+            KeyboardCommand.NEW_NOTE -> receiveQuickAction(QuickAction.NEW_NOTE)
+            KeyboardCommand.SEARCH -> receiveQuickAction(QuickAction.SEARCH)
+            KeyboardCommand.SAVE -> viewModelScope.launch { flushPendingEditor() }
+            KeyboardCommand.FIND -> {
+                if (_selectedNoteId.value == null) return false
+                _findRequested.value = true
+            }
+            KeyboardCommand.LOCK -> lock()
+        }
+        return true
+    }
+
+    /** Leave the open note and put the cursor in the search bar. */
+    fun requestSearch() {
+        _selectedNoteId.value = null
+        _searchRequested.value = true
+    }
+
+    fun searchRequestHandled() {
+        _searchRequested.value = false
     }
 
     // MARK: - Leaving and Managing an Account
@@ -2479,8 +2655,22 @@ class AppState(application: Application) : AndroidViewModel(application) {
     /** Write an encrypted backup of the whole vault to [out]. */
     suspend fun createBackup(out: java.io.OutputStream): BackupService.Summary {
         val key = keyManager.masterKey ?: throw AppStateError.NotInitialised
-        return withContext(Dispatchers.IO) { backupService().write(out, key) }
+        val summary = withContext(Dispatchers.IO) { backupService().write(out, key) }
+        BackupReminder.recordBackup(getApplication())
+        return summary
     }
+
+    /** Look for what can't be read, or isn't here. */
+    suspend fun scanVaultHealth(): VaultHealthService.Report {
+        val notes = noteRepo ?: return VaultHealthService.Report()
+        val attachments = attachmentRepo ?: return VaultHealthService.Report()
+        val key = keyManager.masterKey ?: return VaultHealthService.Report()
+        return withContext(Dispatchers.Default) { VaultHealthService(notes, attachments).scan(key) }
+    }
+
+    /** Ask the server for a blob this device doesn't have. */
+    suspend fun repairAttachment(blobId: String): BlobRepair =
+        syncServiceInstance?.repairBlob(blobId) ?: BlobRepair.FAILED
 
     /**
      * Establish a backup's key from [password] and check the whole file, changing
@@ -2782,6 +2972,8 @@ class AppState(application: Application) : AndroidViewModel(application) {
         private const val TAG = "AppState"
         private const val PREFS_NAME = "jottery_prefs"
         private const val KEY_EDITOR_FONT_SCALE = "editorFontScale"
+        private const val KEY_DEFAULT_NOTE_TYPE = "defaultNoteType"
+        private const val DEFAULT_NOTE_TYPE = "markdown"
         private const val KEY_SCREEN_SECURITY = "screenSecurity"
         private const val KEY_BIOMETRIC_OFFERED = "biometricOffered"
         private const val MAX_LOAD_ATTEMPTS = 3

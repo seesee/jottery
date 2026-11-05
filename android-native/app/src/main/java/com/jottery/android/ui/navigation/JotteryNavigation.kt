@@ -10,6 +10,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.jottery.android.ui.screen.BackupScreen
 import com.jottery.android.ui.screen.ChangePasswordScreen
+import com.jottery.android.ui.screen.ColoursScreen
 import com.jottery.android.ui.screen.ConflictResolutionScreen
 import com.jottery.android.ui.screen.ImportScreen
 import com.jottery.android.ui.screen.InboxScreen
@@ -20,6 +21,8 @@ import com.jottery.android.ui.screen.SettingsScreen
 import com.jottery.android.ui.screen.SetupScreen
 import com.jottery.android.ui.screen.SyncAccountScreen
 import com.jottery.android.ui.screen.SyncSetupScreen
+import com.jottery.android.ui.screen.TagsScreen
+import com.jottery.android.ui.screen.VaultHealthScreen
 import com.jottery.android.ui.screen.UnlockScreen
 import com.jottery.android.viewmodel.AppState
 
@@ -35,6 +38,9 @@ object Routes {
     const val BACKUP = "backup"
     const val IMPORT = "import"
     const val SAVED_SEARCHES = "saved_searches"
+    const val TAGS = "tags"
+    const val COLOURS = "colours"
+    const val VAULT_HEALTH = "vault_health"
     const val CONFLICT_RESOLUTION = "conflict_resolution"
     const val INBOX = "inbox"
 }
@@ -61,6 +67,10 @@ fun JotteryNavigation(
     // React to state changes (e.g. wipeAllData sets isFirstLaunch=true while on
     // the unlock screen). NavHost's startDestination only affects initial composition,
     // so we must navigate explicitly when the auth state changes.
+    LaunchedEffect(Unit) {
+        appState.showNotesRequests.collect { navController.popBackStack(Routes.MAIN, inclusive = false) }
+    }
+
     LaunchedEffect(isFirstLaunch, isLocked) {
         val currentRoute = navController.currentBackStackEntry?.destination?.route
         when {
@@ -110,6 +120,7 @@ fun JotteryNavigation(
                 onNavigateToConflicts = { navController.navigate(Routes.CONFLICT_RESOLUTION) },
                 onNavigateToInbox = { navController.navigate(Routes.INBOX) },
                 onNavigateToSavedSearches = { navController.navigate(Routes.SAVED_SEARCHES) },
+                onNavigateToTags = { navController.navigate(Routes.TAGS) },
             )
         }
 
@@ -128,6 +139,7 @@ fun JotteryNavigation(
                 onNavigateToBackup = { navController.navigate(Routes.BACKUP) },
                 onNavigateToImport = { navController.navigate(Routes.IMPORT) },
                 onNavigateToSavedSearches = { navController.navigate(Routes.SAVED_SEARCHES) },
+                onNavigateToColours = { navController.navigate(Routes.COLOURS) },
                 onNavigateToChangePassword = { navController.navigate(Routes.CHANGE_PASSWORD) },
             )
         }
@@ -158,11 +170,37 @@ fun JotteryNavigation(
             BackupScreen(
                 appState = appState,
                 onBack = { navController.popBackStack() },
+                onOpenVaultHealth = { navController.navigate(Routes.VAULT_HEALTH) },
+            )
+        }
+
+        composable(Routes.VAULT_HEALTH) {
+            VaultHealthScreen(
+                appState = appState,
+                onBack = { navController.popBackStack() },
+                onOpenNote = { id ->
+                    appState.setSelectedNoteId(id)
+                    navController.popBackStack(Routes.MAIN, inclusive = false)
+                },
             )
         }
 
         composable(Routes.IMPORT) {
             ImportScreen(
+                appState = appState,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(Routes.COLOURS) {
+            ColoursScreen(
+                appState = appState,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(Routes.TAGS) {
+            TagsScreen(
                 appState = appState,
                 onBack = { navController.popBackStack() },
             )

@@ -16,17 +16,21 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.jottery.android.BuildConfig
 import com.jottery.android.R
 import com.jottery.android.model.SortOrder
 import com.jottery.android.model.ThemeMode
+import com.jottery.android.model.tagCounts
 import com.jottery.android.ui.component.autoLockLabel
 import com.jottery.android.ui.component.enableBiometricUnlock
 import com.jottery.android.ui.component.relativeTime
 import com.jottery.android.ui.component.sortOrderLabel
+import com.jottery.android.ui.component.syntaxLanguages
 import com.jottery.android.ui.component.themeModeLabel
 import com.jottery.android.util.BiometricHelper
 import com.jottery.android.viewmodel.AppState
 import com.jottery.android.viewmodel.defaultExportName
+import java.text.NumberFormat
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,6 +42,7 @@ fun SettingsScreen(
     onNavigateToBackup: () -> Unit,
     onNavigateToImport: () -> Unit,
     onNavigateToSavedSearches: () -> Unit,
+    onNavigateToColours: () -> Unit,
     onNavigateToChangePassword: () -> Unit,
 ) {
     val screenSecurity by appState.screenSecurity.collectAsState()
@@ -50,10 +55,16 @@ fun SettingsScreen(
     val syncError by appState.syncError.collectAsState()
     var showThemeDialog by remember { mutableStateOf(false) }
     var showSortDialog by remember { mutableStateOf(false) }
+    var showNoteTypeDialog by remember { mutableStateOf(false) }
+    val defaultNoteType by appState.defaultNoteType.collectAsState()
     var showAutoLockDialog by remember { mutableStateOf(false) }
     var showWipeConfirm by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
+    val notes by appState.notes.collectAsState()
+    val archivedNotes by appState.archivedNotes.collectAsState()
+    var binCount by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) { binCount = appState.loadDeletedNotes().size }
     var exportStatus by remember { mutableStateOf<String?>(null) }
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -97,6 +108,15 @@ fun SettingsScreen(
                 title = stringResource(R.string.settings_auto_lock_timeout),
                 subtitle = autoLockLabel(settings.autoLockTimeout),
                 onClick = { showAutoLockDialog = true },
+            )
+            SettingsRow(
+                title = stringResource(R.string.settings_default_note_type),
+                subtitle = defaultNoteType.replaceFirstChar { it.uppercase() },
+                onClick = { showNoteTypeDialog = true },
+            )
+            SettingsRow(
+                title = stringResource(R.string.settings_colours),
+                onClick = onNavigateToColours,
             )
             SettingsRow(
                 title = stringResource(R.string.saved_searches_title),
@@ -193,8 +213,19 @@ fun SettingsScreen(
             SettingsSectionHeader(stringResource(R.string.settings_about2))
             SettingsRow(
                 title = stringResource(R.string.settings_about_app),
-                subtitle = stringResource(R.string.settings_about_version, appVersion(context)),
+                subtitle = stringResource(R.string.settings_about_version, BuildConfig.VERSION_NAME),
             )
+            val numbers = remember { NumberFormat.getInstance() }
+            val counts = listOf(
+                R.string.settings_about_notes to notes.size,
+                R.string.note_info_archived to archivedNotes.size,
+                R.string.recycle_bin_title to binCount,
+                R.string.note_info_tags to (notes + archivedNotes).tagCounts().size,
+                R.string.note_info_attachments to (notes + archivedNotes).sumOf { it.attachments.size },
+            )
+            for ((label, count) in counts) {
+                SettingsRow(title = stringResource(label), subtitle = numbers.format(count))
+            }
 
             Spacer(Modifier.height(32.dp))
         }
@@ -213,6 +244,19 @@ fun SettingsScreen(
                 }
             },
             onDismiss = { showThemeDialog = false },
+        )
+    }
+
+    if (showNoteTypeDialog) {
+        SingleChoiceDialog(
+            title = stringResource(R.string.settings_default_note_type),
+            options = syntaxLanguages.map { it.replaceFirstChar { first -> first.uppercase() } to it },
+            selected = defaultNoteType,
+            onSelect = { type ->
+                showNoteTypeDialog = false
+                appState.setDefaultNoteType(type)
+            },
+            onDismiss = { showNoteTypeDialog = false },
         )
     }
 
@@ -253,12 +297,7 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { showWipeConfirm = false },
             title = { Text(stringResource(R.string.settings_wipe_all_data2)) },
-            text = {
-                Text(
-                    stringResource(R.string.settings_this_will_permanently_delete_all) +
-                    stringResource(R.string.settings_this_action_cannot_be_undone)
-                )
-            },
+            text = { Text(stringResource(R.string.unlock_this_will_permanently_delete_all)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -277,8 +316,6 @@ fun SettingsScreen(
     }
 }
 
-private fun appVersion(context: android.content.Context): String =
-    context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
 
 @Composable
 private fun SettingsSectionHeader(title: String) {

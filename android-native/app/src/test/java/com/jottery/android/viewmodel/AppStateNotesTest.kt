@@ -5,6 +5,9 @@ import androidx.test.core.app.ApplicationProvider
 import com.jottery.android.crypto.CryptoService
 import com.jottery.android.database.JotteryDatabase
 import com.jottery.android.model.NoteVersionRecord
+import com.jottery.android.model.NoteCategories
+import com.jottery.android.util.KeyboardCommand
+import com.jottery.android.util.QuickAction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -12,9 +15,13 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -48,6 +55,202 @@ class AppStateNotesTest {
             while (appState.filteredNotes.value.none { it.id == id }) delay(5)
             appState.filteredNotes.value.first { it.id == id }
         }
+
+    @Test fun `the new note shortcut waits for the vault to open`() = runBlocking {
+        appState.lock()
+
+        appState.receiveQuickAction(QuickAction.NEW_NOTE)
+        assertNull(appState.selectedNoteId.value)
+
+        appState.unlock(password)
+        withTimeout(5_000) { while (appState.selectedNoteId.value == null) delay(5) }
+        assertEquals(1, appState.notes.value.size)
+    }
+
+    @Test fun `the new note shortcut needs no waiting when the vault is open`() = runBlocking {
+        appState.receiveQuickAction(QuickAction.NEW_NOTE)
+
+        withTimeout(5_000) { while (appState.selectedNoteId.value == null) delay(5) }
+    }
+
+    @Test fun `the search shortcut leaves the note, and waits for the screen to take it up`() = runBlocking {
+        val note = appState.createNote("Open")!!
+        assertEquals(note.id, appState.selectedNoteId.value)
+        appState.lock()
+
+        appState.receiveQuickAction(QuickAction.SEARCH)
+        appState.unlock(password)
+
+        withTimeout(5_000) { while (!appState.searchRequested.value) delay(5) }
+        assertNull(appState.selectedNoteId.value)
+        appState.searchRequestHandled()
+        assertFalse(appState.searchRequested.value)
+    }
+
+    @Test fun `a duplicate keeps what makes the note what it is`() = runBlocking {
+        val note = appState.createNote("1 + 1", listOf("sums"))!!
+        appState.saveNote(
+            note.copy(syntaxLanguage = "calc", color = "red", wordWrap = false, showPreview = true, pinned = true)
+        )
+        val attachmentId = appState.addAttachment(note.id, "bytes".toByteArray(), "sums.txt", "text/plain")!!
+
+        appState.duplicateNote(note.id)
+
+        val copy = appState.notes.value.first { it.id == appState.selectedNoteId.value }
+        assertNotEquals(note.id, copy.id)
+        assertEquals("1 + 1", copy.content)
+        assertEquals(listOf("sums"), copy.tags)
+        assertEquals("calc", copy.syntaxLanguage)
+        assertEquals("red", copy.color)
+        assertEquals(false, copy.wordWrap)
+        assertEquals(true, copy.showPreview)
+        assertEquals(attachmentId, copy.attachments.single().id)
+        assertEquals("sums.txt", copy.attachments.single().filename)
+        assertFalse("a copy doesn't jump the queue", copy.pinned)
+    }
+
+    @Test fun `a duplicate takes the text on screen, not what was last saved`() = runBlocking {
+        val note = appState.createNote("Saved")!!
+        appState.setPendingEditorNote(note.copy(content = "Still being typed"))
+
+        appState.duplicateNote(note.id)
+
+        val copy = appState.notes.value.first { it.id == appState.selectedNoteId.value }
+        assertEquals("Still being typed", copy.content)
+    }
+
+    private fun server(vararg responses: MockResponse) = MockWebServer().apply {
+        responses.forEach(::enqueue)
+        start()
+    }
+
+    private suspend fun connectStateSettles() =
+        withTimeout(5_000) { while (appState.connectState.value is AppState.ConnectState.Working) delay(5) }
+
+    @Test fun `registering carries on in the view model, and hands over the connection`() = runBlocking {
+        val server = server(MockResponse().setBody("""{"clientId":"c","apiKey":"k","userId":"u","deviceName":"Phone"}"""))
+        var handedOver: AppState.PendingConnection? = null
+
+        appState.beginRegistration(server.url("/").toString().trimEnd('/'), "a@example.test", "p", "Phone") { handedOver = it }
+        connectStateSettles()
+        withTimeout(5_000) { while (handedOver == null) delay(5) }
+
+        assertEquals("k", handedOver!!.apiKey)
+        assertEquals(handedOver, appState.pendingConnection.value)
+        assertEquals(AppState.ConnectState.Idle, appState.connectState.value)
+        server.shutdown()
+    }
+
+    @Test fun `a refused registration says why, with no connection left behind`() = runBlocking {
+        val server = server(MockResponse().setResponseCode(401).setBody("""{"error":"no"}"""))
+
+        appState.beginRegistration(server.url("/").toString().trimEnd('/'), "a@example.test", "p", "Phone")
+        connectStateSettles()
+
+        assertTrue(appState.connectState.value is AppState.ConnectState.Failed)
+        assertNull(appState.pendingConnection.value)
+        server.shutdown()
+    }
+
+    @Test fun `a new note takes the default type, and that's remembered`() = runBlocking {
+        assertEquals("markdown", appState.createNote("Before")!!.syntaxLanguage)
+
+        appState.setDefaultNoteType("calc")
+
+        assertEquals("calc", appState.createNote("After")!!.syntaxLanguage)
+        val reopened = AppState(ApplicationProvider.getApplicationContext<Application>())
+        assertEquals("calc", reopened.defaultNoteType.value)
+        appState.setDefaultNoteType("markdown")
+    }
+
+    @Test fun `what's shared in stays text, whatever the default`() = runBlocking {
+        appState.setDefaultNoteType("calc")
+
+        appState.receiveShare("A link from another app", emptyList())
+
+        withTimeout(5_000) { while (appState.notes.value.isEmpty()) delay(5) }
+        assertEquals("markdown", appState.notes.value.single().syntaxLanguage)
+        appState.setDefaultNoteType("markdown")
+    }
+
+    @Test fun `naming a colour reaches search, and survives a restart of the app's state`() = runBlocking {
+        val note = appState.createNote("Coloured")!!
+        appState.saveNote(note.copy(color = "red"))
+        appState.createNote("Plain")
+        appState.setCategoryName("red", "Urgent")
+
+        appState.setSearchQuery("category:urgent")
+
+        withTimeout(5_000) { while (appState.filteredNotes.value.size != 1) delay(5) }
+        assertEquals("Coloured", appState.filteredNotes.value.single().content)
+        assertEquals("Urgent", NoteCategories.from(appState.settings.value).names["red"])
+    }
+
+    @Test fun `a tag's colour reaches search`() = runBlocking {
+        appState.createNote("Tagged", listOf("work"))
+        appState.createNote("Plain")
+        appState.setTagColour("work", "blue")
+
+        appState.setSearchQuery("color:blue tag")
+
+        withTimeout(5_000) { while (appState.filteredNotes.value.size != 1) delay(5) }
+        assertEquals("Tagged", appState.filteredNotes.value.single().content)
+    }
+
+    @Test fun `a search says how many match in the view not showing`() = runBlocking {
+        val archived = appState.createNote("Hidden treasure")!!
+        appState.createNote("Something else")
+        appState.archiveNote(archived.id)
+
+        appState.setSearchQuery("treasure")
+
+        withTimeout(5_000) { while (appState.otherViewMatches.value != 1) delay(5) }
+        assertTrue(appState.filteredNotes.value.isEmpty())
+
+        appState.setSearchQuery("nothing matches this")
+        withTimeout(5_000) { while (appState.otherViewMatches.value != 0) delay(5) }
+    }
+
+    @Test fun `recent searches are gone once the vault is locked`() = runBlocking {
+        appState.rememberSearch("something private")
+        assertEquals(listOf("something private"), appState.recentSearches.value)
+
+        appState.lock()
+
+        assertTrue(appState.recentSearches.value.isEmpty())
+    }
+
+    @Test fun `a keyboard makes a note, and saves what's being typed`() = runBlocking {
+        assertTrue(appState.perform(KeyboardCommand.NEW_NOTE))
+        withTimeout(5_000) { while (appState.selectedNoteId.value == null) delay(5) }
+        val note = appState.notes.value.single()
+
+        appState.setPendingEditorNote(note.copy(content = "Typed"))
+        assertTrue(appState.perform(KeyboardCommand.SAVE))
+
+        withTimeout(5_000) { while (appState.notes.value.single().content != "Typed") delay(5) }
+    }
+
+    @Test fun `search and find ask the screen for what they need`() = runBlocking {
+        assertFalse("nothing to find in yet", appState.perform(KeyboardCommand.FIND))
+
+        appState.createNote("Open")
+        assertTrue(appState.perform(KeyboardCommand.FIND))
+        assertTrue(appState.findRequested.value)
+        appState.findRequestHandled()
+
+        assertTrue(appState.perform(KeyboardCommand.SEARCH))
+        withTimeout(5_000) { while (!appState.searchRequested.value) delay(5) }
+    }
+
+    @Test fun `a keyboard locks the vault, and does nothing else to a locked one`() = runBlocking {
+        assertTrue(appState.perform(KeyboardCommand.LOCK))
+        assertTrue(appState.isLocked.value)
+
+        assertFalse(appState.perform(KeyboardCommand.NEW_NOTE))
+        appState.unlock(password)
+        assertTrue("nothing was held back for later", appState.notes.value.isEmpty())
+    }
 
     @Test fun `restoring a version updates the list the editor reads`() = runBlocking {
         val note = appState.createNote("original")!!

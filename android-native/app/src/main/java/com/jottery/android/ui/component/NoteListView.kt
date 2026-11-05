@@ -22,7 +22,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.LabelOff
 import androidx.compose.material.icons.filled.Share
@@ -51,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.jottery.android.R
@@ -76,6 +78,7 @@ fun NoteListView(
     val searchQuery by appState.searchQuery.collectAsState()
     val conflicts by appState.pendingConflicts.collectAsState()
     val conflictIds = remember(conflicts) { conflicts.map { it.id }.toSet() }
+    val otherViewMatches by appState.otherViewMatches.collectAsState()
 
     // Derive counts from collected state
     val noteCount = if (showArchive) archivedNotes.size else allNotes.size
@@ -121,6 +124,36 @@ fun NoteListView(
     LaunchedEffect(showArchive) {
         isSelectMode = false
         selectedIds = emptySet()
+    }
+
+    val pinLabel = stringResource(R.string.editor_pin)
+    val unpinLabel = stringResource(R.string.editor_unpin)
+    val unarchiveLabel = stringResource(R.string.editor_unarchive)
+    val deleteLabel = stringResource(R.string.editor_delete)
+
+    // A swipe, and the same rules as a swipe, for anyone who can't make one
+    fun rowActions(note: DecryptedNote): List<CustomAccessibilityAction> = buildList {
+        val rightSwipe = when {
+            showArchive -> unarchiveLabel
+            note.pinned -> unpinLabel
+            else -> pinLabel
+        }
+        add(
+            CustomAccessibilityAction(rightSwipe) {
+                scope.launch {
+                    if (showArchive) appState.unarchiveNote(note.id) else appState.togglePin(note.id)
+                }
+                true
+            }
+        )
+        if (!note.pinned && !note.locked) {
+            add(
+                CustomAccessibilityAction(deleteLabel) {
+                    scope.launch { appState.deleteNoteWithUndo(note) }
+                    true
+                }
+            )
+        }
     }
 
     Column(modifier = modifier) {
@@ -177,6 +210,17 @@ fun NoteListView(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             textAlign = TextAlign.Center,
                         )
+                        if (searchQuery.isNotEmpty() && otherViewMatches > 0) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            TextButton(onClick = { appState.toggleArchiveView() }) {
+                                Text(
+                                    stringResource(
+                                        if (showArchive) R.string.search_in_notes else R.string.search_in_archive,
+                                        otherViewMatches,
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
             } else {
@@ -230,8 +274,10 @@ fun NoteListView(
                                             }
                                         }
                                         SwipeToDismissBoxValue.StartToEnd -> {
-                                            // Swipe right to pin/unpin
-                                            scope.launch { appState.togglePin(note.id) }
+                                            // Pin here, or back to the notes from the archive
+                                            scope.launch {
+                                                if (showArchive) appState.unarchiveNote(note.id) else appState.togglePin(note.id)
+                                            }
                                             false // Reset after action
                                         }
                                         SwipeToDismissBoxValue.Settled -> false
@@ -242,7 +288,7 @@ fun NoteListView(
                             SwipeToDismissBox(
                                 state = dismissState,
                                 backgroundContent = {
-                                    SwipeToDismissBackground(dismissState.targetValue)
+                                    SwipeToDismissBackground(dismissState.targetValue, showArchive)
                                 },
                                 modifier = Modifier.animateItem(),
                             ) {
@@ -257,6 +303,8 @@ fun NoteListView(
                                         selectedIds = setOf(note.id)
                                     },
                                     hasConflict = note.id in conflictIds,
+                                    onTagClick = { appState.setSearchQuery("#$it") },
+                                    accessibilityActions = rowActions(note),
                                 )
                             }
                         }
@@ -386,10 +434,12 @@ fun NoteListView(
 @Composable
 private fun SwipeToDismissBackground(
     dismissDirection: SwipeToDismissBoxValue,
+    showArchive: Boolean,
 ) {
     val color = when (dismissDirection) {
         SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.error
-        SwipeToDismissBoxValue.StartToEnd -> Color(0xFFFF9800) // Orange for pin
+        SwipeToDismissBoxValue.StartToEnd ->
+            if (showArchive) MaterialTheme.colorScheme.primary else Color(0xFFFF9800) // Orange for pin
         SwipeToDismissBoxValue.Settled -> Color.Transparent
     }
     val alignment = when (dismissDirection) {
@@ -398,7 +448,7 @@ private fun SwipeToDismissBackground(
     }
     val icon = when (dismissDirection) {
         SwipeToDismissBoxValue.EndToStart -> Icons.Default.Delete
-        else -> Icons.Default.Done // Pin icon placeholder
+        else -> if (showArchive) Icons.Default.Unarchive else Icons.Default.PushPin
     }
 
     Box(

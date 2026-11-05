@@ -2,6 +2,7 @@ package com.jottery.android.service
 
 import com.jottery.android.model.AttachmentRef
 import com.jottery.android.model.DecryptedNote
+import com.jottery.android.model.NoteCategories
 import com.jottery.android.model.SortOrder
 import org.junit.Assert.*
 import org.junit.Test
@@ -205,6 +206,53 @@ class SearchServiceTest {
         assertEquals("Apple", sorted[0].content)
         assertEquals("Banana", sorted[1].content)
         assertEquals("Cherry", sorted[2].content)
+    }
+
+    // Categories
+
+    private val categories = NoteCategories(
+        names = mapOf("red" to "Urgent", "blue" to "Very Important"),
+        tagColours = mapOf("work" to "red"),
+    )
+
+    private fun search(query: String, vararg notes: DecryptedNote) =
+        SearchService.filter(notes.toList(), query, categories).notes.map { it.content }
+
+    @Test fun `a colour's name finds its notes`() {
+        val notes = arrayOf(makeNote("One", color = "red"), makeNote("Two", color = "green"))
+
+        assertEquals(listOf("One"), search("category:urgent", *notes))
+    }
+
+    @Test fun `a name of two words is one name, and the search goes on after it`() {
+        val notes = arrayOf(makeNote("dog", color = "blue"), makeNote("cat", color = "blue"), makeNote("dog"))
+
+        assertEquals(listOf("dog"), search("category:very important dog", *notes))
+    }
+
+    @Test fun `a colour still answers to its own name`() {
+        assertEquals(listOf("One"), search("category:red", makeNote("One", color = "red"), makeNote("Two")))
+    }
+
+    @Test fun `a colour finds tags of that colour too`() {
+        val notes = arrayOf(makeNote("Tagged", tags = listOf("Work")), makeNote("Coloured", color = "red"), makeNote("Neither"))
+
+        assertEquals(listOf("Tagged", "Coloured"), search("color:red", *notes))
+    }
+
+    @Test fun `tag and note narrow a colour to that kind`() {
+        val notes = arrayOf(makeNote("Tagged", tags = listOf("work")), makeNote("Coloured", color = "red"))
+
+        assertEquals(listOf("Tagged"), search("color:red tag", *notes))
+        assertEquals(listOf("Coloured"), search("color:red note", *notes))
+        assertEquals(listOf("Tagged"), search("category:urgent tag", *notes))
+    }
+
+    @Test fun `with no categories, colours behave as they always did`() {
+        val notes = listOf(makeNote("Tagged", tags = listOf("work")), makeNote("Coloured", color = "red"))
+
+        assertEquals(listOf("Coloured"), SearchService.filter(notes, "color:red").notes.map { it.content })
+        assertEquals(emptyList<String>(), SearchService.filter(notes, "color:red tag").notes.map { it.content })
     }
 
     // -- Helpers --

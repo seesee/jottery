@@ -77,7 +77,7 @@ abstract class JotteryDatabase : RoomDatabase() {
         }
 
         /** Migration 1→2: Add envelope encryption columns and userId. */
-        private val MIGRATION_1_2 = object : Migration(1, 2) {
+        internal val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE encryption_metadata ADD COLUMN envelope_version INTEGER")
                 db.execSQL("ALTER TABLE encryption_metadata ADD COLUMN device_salt TEXT")
@@ -88,7 +88,7 @@ abstract class JotteryDatabase : RoomDatabase() {
         }
 
         /** Migration 2→3: Make salt and iterations nullable for envelope encryption. */
-        private val MIGRATION_2_3 = object : Migration(2, 3) {
+        internal val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // SQLite doesn't support ALTER COLUMN, so recreate the table
                 db.execSQL("""

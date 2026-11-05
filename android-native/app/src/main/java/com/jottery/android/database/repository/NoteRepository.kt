@@ -71,7 +71,7 @@ class NoteRepository(
             } catch (e: Exception) {
                 failCount++
                 if (failCount <= 3) {
-                    Log.w(TAG, "Decrypt failed for note ${record.id}: ${e.javaClass.simpleName}: ${e.message}")
+                    Log.w(TAG, "Decrypt failed for note ${record.id}: ${e.javaClass.simpleName}")
                 }
             }
         }
@@ -211,6 +211,10 @@ class NoteRepository(
         content: String,
         tags: List<String> = emptyList(),
         key: SecretKey,
+        syntaxLanguage: String = "markdown",
+        wordWrap: Boolean = true,
+        showPreview: Boolean = false,
+        color: String? = null,
     ): DecryptedNote {
         val encContent = CryptoService.encryptText(content, key)
         val encTags = CryptoService.encryptStringArray(tags, key)
@@ -221,7 +225,7 @@ class NoteRepository(
         var record = NoteRecord.new(
             encryptedContent = contentJSON,
             encryptedTags = tagsJSON,
-        )
+        ).copy(syntaxLanguage = syntaxLanguage, wordWrap = wordWrap, showPreview = showPreview, color = color)
 
         // Compute content hash using sync-format tags
         val syncTags = encryptTagsToSyncFormat(tags, key)
@@ -417,6 +421,10 @@ class NoteRepository(
         noteDao.moveToBinForServer(id, deletedAt, DateUtils.nowISO8601())
     }
 
+    /** Returns false if the note has moved on since [pushedModifiedAt], and was left alone. */
+    suspend fun moveToBinIfUnchanged(id: String, pushedModifiedAt: String): Boolean =
+        noteDao.moveToBinIfUnchanged(id, pushedModifiedAt, DateUtils.nowISO8601()) > 0
+
     /** Archive a note. */
     suspend fun archive(id: String) {
         val now = DateUtils.nowISO8601()
@@ -593,6 +601,8 @@ class NoteRepository(
     /** Notes whose time in the bin ran out before [cutoff]. See NotePurger. */
     suspend fun listExpiredDeleted(cutoff: String): List<ExpiredNote> =
         noteDao.listExpiredDeleted(cutoff)
+
+    suspend fun startBinClocks() = noteDao.startBinClocks(DateUtils.nowISO8601())
 
     // MARK: - Private
 

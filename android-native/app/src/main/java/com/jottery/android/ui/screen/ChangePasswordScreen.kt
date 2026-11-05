@@ -69,6 +69,11 @@ fun ChangePasswordScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Text(
+                stringResource(R.string.change_password_old_backups),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             OutlinedTextField(
                 value = currentPassword,

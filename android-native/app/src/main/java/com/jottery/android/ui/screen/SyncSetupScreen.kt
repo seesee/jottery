@@ -38,7 +38,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -47,7 +47,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.jottery.android.R
 import com.jottery.android.viewmodel.AppState
-import kotlinx.coroutines.launch
 
 private val passwordKeyboard = KeyboardOptions(
     keyboardType = KeyboardType.Password,
@@ -64,22 +63,19 @@ fun SyncSetupScreen(
     appState: AppState,
     onBack: () -> Unit,
 ) {
-    var mode by remember { mutableStateOf(SyncSetupMode.Register) }
-    var serverUrl by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
+    var mode by rememberSaveable { mutableStateOf(SyncSetupMode.Register) }
+    var serverUrl by rememberSaveable { mutableStateOf("") }
+    var email by rememberSaveable { mutableStateOf("") }
     var accountPassword by remember { mutableStateOf("") }
     var notesPassword by remember { mutableStateOf("") }
-    var deviceName by remember { mutableStateOf(Build.MODEL ?: "") }
+    var deviceName by rememberSaveable { mutableStateOf(Build.MODEL ?: "") }
     var credentialString by remember { mutableStateOf("") }
-    var isRegistering by remember { mutableStateOf(false) }
-    var registerError by remember { mutableStateOf<String?>(null) }
-    var showCreateAccount by remember { mutableStateOf(false) }
+    var showCreateAccount by rememberSaveable { mutableStateOf(false) }
 
     val connectState by appState.connectState.collectAsState()
-    val scope = rememberCoroutineScope()
 
-    val isBusy = isRegistering || connectState is AppState.ConnectState.Working
-    val failure = registerError ?: (connectState as? AppState.ConnectState.Failed)?.message
+    val isBusy = connectState is AppState.ConnectState.Working
+    val failure = (connectState as? AppState.ConnectState.Failed)?.message
     val isDone = connectState is AppState.ConnectState.Done
 
     // A connect in progress carries on in AppState. Anything else ends with the
@@ -223,25 +219,17 @@ fun SyncSetupScreen(
 
             Button(
                 onClick = {
-                    registerError = null
                     appState.clearConnectState()
                     when (mode) {
                         SyncSetupMode.Register -> {
-                            isRegistering = true
-                            scope.launch {
-                                val result = appState.registerDevice(
-                                    serverUrl = serverUrl.trim().trimEnd('/'),
-                                    email = email.trim(),
-                                    password = accountPassword,
-                                    deviceName = deviceName.trim(),
-                                )
-                                isRegistering = false
-                                result.onSuccess { connection ->
-                                    appState.connectExistingVault(connection, notesPassword)
-                                }.onFailure { e ->
-                                    registerError = appState.describeAccountFailure(e)
-                                }
-                            }
+                            val password = notesPassword
+                            appState.beginRegistration(
+                                serverUrl = serverUrl.trim().trimEnd('/'),
+                                email = email.trim(),
+                                password = accountPassword,
+                                deviceName = deviceName.trim(),
+                                onRegistered = { appState.connectExistingVault(it, password) },
+                            )
                         }
                         SyncSetupMode.Import -> appState.importIntoExistingVault(
                             credentialString = credentialString,

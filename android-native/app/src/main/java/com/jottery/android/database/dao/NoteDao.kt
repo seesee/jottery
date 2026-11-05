@@ -71,6 +71,20 @@ interface NoteDao {
     """)
     suspend fun moveToBinForServer(id: String, deletedAt: String, localDeletedAt: String)
 
+    /**
+     * As above, unless the note has changed since it was pushed. A note already in the
+     * bin keeps its dates. A live one starts afresh, as a date left on it from an
+     * earlier stay would let a server send it through the bin at once.
+     */
+    @Query("""
+        UPDATE notes SET
+        deleted_at = CASE WHEN deleted = 1 THEN COALESCE(deleted_at, :now) ELSE :now END,
+        local_deleted_at = CASE WHEN deleted = 1 THEN COALESCE(local_deleted_at, :now) ELSE :now END,
+        deleted = 1, needs_sync = 0
+        WHERE id = :id AND modified_at = :pushedModifiedAt
+    """)
+    suspend fun moveToBinIfUnchanged(id: String, pushedModifiedAt: String, now: String): Int
+
     @Query("""
         UPDATE notes SET deleted = 0, deleted_at = NULL, local_deleted_at = NULL,
         modified_at = :modifiedAt, needs_sync = 1 WHERE id = :id
@@ -125,9 +139,13 @@ interface NoteDao {
 
     @Query("""
         SELECT id, deleted_at AS deletedAt FROM notes
-        WHERE deleted = 1 AND COALESCE(local_deleted_at, deleted_at) < :cutoff
+        WHERE deleted = 1 AND local_deleted_at < :cutoff
     """)
     suspend fun listExpiredDeleted(cutoff: String): List<ExpiredNote>
+
+    /** A note in the bin with no date of this device's own gets one. deleted_at can be the server's. */
+    @Query("UPDATE notes SET local_deleted_at = :now WHERE deleted = 1 AND local_deleted_at IS NULL")
+    suspend fun startBinClocks(now: String)
 }
 
 data class ExpiredNote(

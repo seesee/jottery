@@ -27,6 +27,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /**
@@ -47,10 +49,22 @@ class RealServerTest {
     private lateinit var laptop: SyncHarness
     private lateinit var phone: SyncHarness
 
-    private fun device(name: String): SyncHarness = runBlocking {
-        val response = SyncClient(endpoint, "", "").registerDevice(RegisterDeviceRequest(email, password, name))
-        SyncHarness(SyncHarness.RealServer(endpoint, response.apiKey, response.clientId))
+    private companion object {
+        /**
+         * Registration is limited to a burst of 20 calls from one address, then one
+         * every three seconds. A device per test goes over that, and the 429 in setUp
+         * stops the test before it has tried anything, so each is registered only once.
+         */
+        val registered = mutableMapOf<String, SyncHarness.RealServer>()
     }
+
+    private fun register(name: String): SyncHarness.RealServer = runBlocking {
+        val response = SyncClient(endpoint, "", "").registerDevice(RegisterDeviceRequest(email, password, name))
+        SyncHarness.RealServer(endpoint, response.apiKey, response.clientId)
+    }
+
+    /** A device with an empty database. Its registration lasts the whole run: see [registered]. */
+    private fun device(name: String) = SyncHarness(registered.getOrPut(name) { register(name) })
 
     @Before fun setUp() {
         assumeTrue("needs a real server", endpoint.isNotEmpty())
@@ -206,6 +220,66 @@ class RealServerTest {
         assertEquals("Edited since", laptop.noteRepo.get(note.id, laptop.key)?.content)
     }
 
+    @Test fun `an edit older than a deletion is skipped, and the device stops sending it`() = runBlocking {
+        val note = laptop.noteRepo.create("Delete me later", emptyList(), laptop.key)
+        laptop.service().fullSync()
+        phone.service().fullSync()
+
+        // Edited on the laptop, and only then permanently deleted on the phone
+        val current = laptop.noteRepo.get(note.id, laptop.key)!!
+        laptop.noteRepo.update(current.copy(content = "Too late"), laptop.key)
+        Thread.sleep(20)
+        purger(phone).deletePermanently(listOf(note.id))
+        phone.service().fullSync()
+
+        laptop.service().fullSync()
+
+        val row = laptop.noteRepo.getRaw(note.id)!!
+        assertTrue("in the bin, not gone", row.deleted)
+        assertFalse("not queued to be sent again", row.needsSync)
+    }
+
+    @Test fun `a note dated days ahead is skipped, kept, and the clock is mentioned`() = runBlocking {
+        val note = laptop.noteRepo.create("From the future", emptyList(), laptop.key)
+        val row = laptop.noteRepo.getRaw(note.id)!!
+        laptop.noteRepo.insertOrReplace(row.copy(modifiedAt = Instant.now().plus(3, ChronoUnit.DAYS).toString()))
+        var told = false
+        val service = laptop.service()
+        service.onClockLooksWrong = { told = true }
+
+        service.fullSync()
+
+        assertTrue("the user should hear about it", told)
+        assertTrue("it goes when the clock is right", laptop.noteRepo.getRaw(note.id)!!.needsSync)
+        phone.service().fullSync()
+        assertNull(phone.noteRepo.getRaw(note.id))
+    }
+
+    @Test fun `a conflict with a note in the server's bin says so`() = runBlocking {
+        val note = laptop.noteRepo.create("Base", emptyList(), laptop.key)
+        laptop.service().fullSync()
+        phone.service().fullSync()
+
+        // Binning alone doesn't move the note's hash, so it takes an edit as well to diverge
+        val onLaptop = laptop.noteRepo.get(note.id, laptop.key)!!
+        laptop.noteRepo.update(onLaptop.copy(content = "Laptop edit"), laptop.key)
+        laptop.noteRepo.softDelete(note.id)
+        laptop.service().fullSync()
+
+        val onPhone = phone.noteRepo.get(note.id, phone.key)!!
+        phone.noteRepo.update(onPhone.copy(content = "Phone was offline"), phone.key)
+        val service = phone.service()
+        val conflicts = mutableListOf<com.jottery.android.model.ConflictInfo>()
+        service.onConflictDetected = { conflicts += it }
+        service.fullSync()
+
+        val conflict = conflicts.last { it.id == note.id }
+        assertTrue(phone.syncRepo.listStoredConflicts().single { it.id == note.id }.serverDeleted)
+        service.resolveConflict(conflict, com.jottery.android.model.ConflictResolutionStrategy.KEEP_SERVER)
+
+        assertTrue(phone.noteRepo.getRaw(note.id)!!.deleted)
+    }
+
     @Test fun `saved searches travel both ways`() = runBlocking {
         val search = laptop.savedSearchRepo.create("Work", "#work", laptop.key)
         laptop.service().fullSync()
@@ -268,7 +342,7 @@ class RealServerTest {
     }
 
     @Test fun `a revoked device is told so`() = runBlocking {
-        val spare = device("spare")
+        val spare = SyncHarness(register("spare"))
         spare.client.revokeThisDevice()
 
         val failure = runCatching { spare.service().pull() }.exceptionOrNull()

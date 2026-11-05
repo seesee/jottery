@@ -78,3 +78,16 @@
 
 # Suppress warnings for missing javax.annotation classes
 -dontwarn javax.annotation.**
+
+# Logs in a release build reach bug reports, and those mustn't carry user ids,
+# server addresses or anything about notes. Warnings and errors stay, and name an
+# exception's class only: its message can quote a server's reply or a note.
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+    public static int i(...);
+}
+
+# Tink, under security-crypto, refers to these compile-time annotations, which
+# have no runtime classes. Without this a minified build can't be made at all.
+-dontwarn com.google.errorprone.annotations.**

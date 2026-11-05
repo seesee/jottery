@@ -365,6 +365,61 @@ class SyncProtocolTest {
         assertTrue("sent once", h.syncRepo.listDeletions().isEmpty())
     }
 
+    private suspend fun importTheNote() {
+        val file = Json.encodeToString(
+            ExportService.ExportPayload(
+                notes = listOf(
+                    ExportService.ExportNote(
+                        id = noteId,
+                        createdAt = "2026-01-01T00:00:00.000Z",
+                        modifiedAt = "2026-01-01T00:00:00.000Z",
+                        content = "BACK",
+                    )
+                ),
+            )
+        )
+        ImportService(h.noteRepo, h.attachmentRepo) { block -> h.db.withTransaction { block() } }
+            .import(file, h.key, ImportStrategy.SKIP)
+    }
+
+    @Test fun `a queued deletion isn't sent for a note that came back`() = runBlocking {
+        h.seedSynced(noteId, "BASE", "hash")
+        purger().deletePermanently(listOf(noteId))
+        importTheNote()
+        h.onPush = { accepted(pushRequest(it)) }
+
+        h.service().push()
+
+        val requests = h.pushBodies.map(::pushRequest)
+        assertEquals("the older copy would lose to it, on every device", emptyList<SyncDeletion>(), requests.flatMap { it.deletions })
+        assertEquals(listOf(noteId), requests.flatMap { it.notes }.map { it.id })
+    }
+
+    @Test fun `a note restored over a queued deletion still takes edits from the server`() = runBlocking {
+        // Restoring a backup writes the row back as it was
+        val saved = h.seedSynced(noteId, "BASE", "hash")
+        purger().deletePermanently(listOf(noteId))
+        h.noteRepo.insertOrReplace(saved)
+        val edit = h.remoteNote(noteId, "EDITED", "hash-edit", "hash", listOf("hash-edit", "hash"))
+        h.onPull = { SyncHarness.emptyPull(edit) }
+
+        h.service().pull()
+
+        assertEquals("EDITED", h.noteRepo.get(noteId, h.key)?.content)
+    }
+
+    @Test fun `a note that came back and is deleted again is deleted everywhere`() = runBlocking {
+        h.seedSynced(noteId, "BASE", "hash")
+        purger().deletePermanently(listOf(noteId))
+        importTheNote()
+        purger().deletePermanently(listOf(noteId))
+        h.onPush = { SyncPushResponse(emptyList(), emptyList()) }
+
+        h.service().push()
+
+        assertEquals(listOf(noteId), pushRequest(h.pushBodies.single()).deletions.map { it.id })
+    }
+
     @Test fun `a permanent delete before the soft delete synced still reaches the server`() = runBlocking {
         h.seedSynced(noteId, "BASE", "hash")
         h.noteRepo.softDelete(noteId)

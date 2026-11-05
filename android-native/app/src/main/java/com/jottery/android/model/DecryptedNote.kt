@@ -93,3 +93,11 @@ data class DecryptedNote(
         }
     }
 }
+
+/** Each tag and how many of these notes carry it, most used first. */
+fun List<DecryptedNote>.tagCounts(): List<Pair<String, Int>> =
+    flatMap { it.regularTags.distinct() }
+        .groupingBy { it }
+        .eachCount()
+        .toList()
+        .sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first.lowercase() })
