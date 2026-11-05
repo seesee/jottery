@@ -4,10 +4,10 @@ Terminal User Interface for Jottery - A privacy-focused, encrypted note-taking a
 
 ## Features
 
-- 🔐 **End-to-End Encryption**: AES-256-GCM encryption with PBKDF2 key derivation (256k iterations)
+- 🔐 **End-to-End Encryption**: AES-256-GCM encryption with a random master key, wrapped using PBKDF2 (600k iterations)
 - 📝 **Full Note Management**: Create, edit, delete, search, and tag notes
 - 🔄 **Bidirectional Sync**: Full sync with Jottery server including auto-sync
-- 💾 **Local Storage**: SQLite database with SQLCipher encryption
+- 💾 **Local Storage**: SQLite database. Note content and tags are always encrypted, and the whole file is too when built with SQLCipher
 - ⌨️ **Keyboard-Driven**: Efficient Vim-style keyboard shortcuts for all operations
 - 🎨 **Syntax Highlighting**: Support for JavaScript, Python, Markdown, JSON, HTML, CSS, SQL, Bash, Perl
 - 📋 **Markdown Rendering**: Beautiful markdown preview with tables, lists, code blocks, and inline formatting
@@ -25,7 +25,7 @@ Terminal User Interface for Jottery - A privacy-focused, encrypted note-taking a
 
 ### Prerequisites
 
-**SQLCipher** is required for database encryption:
+Notes and tags are encrypted in every build. To encrypt the rest of the database file as well, such as your email, the server address, attachment names and dates, build with **SQLCipher**. The default build doesn't include it, and says so on the unlock screen. Either way the file is readable only by your user.
 
 **macOS:**
 ```bash
@@ -46,7 +46,7 @@ sudo dnf install sqlcipher-devel
 
 ```bash
 cd tui
-cargo build --release
+cargo build --release                      # or: cargo build --release --features sqlcipher
 sudo cp target/release/jottery /usr/local/bin/
 ```
 
@@ -230,14 +230,15 @@ jottery register-device --server https://your-server.com --email your@email.com
 
 You'll be prompted for:
 - **Server password**: Your account password from Step 1
-- **Local database password**: Separate password for encrypting your local database
-  - This can be different from your server password
-  - Used to encrypt your local notes database
+- **Notes password**: The password that protects your notes
+  - It must be different from your server password. The server sees your server password, so that one can't also open your notes
+  - If this account already has notes, use the notes password from your other devices. A new notes password needs at least 8 characters
   - Required each time you open the TUI (unless "Remember Password" is enabled)
 
 The device registration will:
 - Authenticate with your approved user account
 - Receive an API key from the server
+- Unlock the account's master key with your notes password, and move any local notes onto it. If the notes password can't open it, the key may have been saved by an older version: unlock Jottery on a device that's already connected, which fixes it, then try again
 - Store encrypted credentials in your local database
 - Enable sync automatically
 
@@ -394,7 +395,7 @@ The preview pane renders markdown with full formatting support:
 - [x] Project setup and build configuration
 - [x] Database layer (SQLite + SQLCipher)
 - [x] Data models (Rust structs)
-- [x] Encryption layer (AES-256-GCM + PBKDF2 with 256k iterations)
+- [x] Encryption layer (AES-256-GCM + PBKDF2 with 600k iterations)
 - [x] Repository pattern for data access
 - [x] TUI framework (ratatui)
 - [x] Note management (create, edit, delete, list)

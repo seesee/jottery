@@ -553,6 +553,14 @@ fn run() -> Result<()> {
             .unwrap_or_else(|| PathBuf::from("."))
             .join("jottery");
         std::fs::create_dir_all(&config_dir)?;
+
+        // This directory is Jottery's own, unlike one named by a path above
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&config_dir, std::fs::Permissions::from_mode(0o700))?;
+        }
+
         config_dir.join(&cli.database)
     };
 
@@ -576,6 +584,11 @@ fn run() -> Result<()> {
             outln!("{}: {}", t!("error.file_not_found"), db_path.display());
         }
         return Ok(());
+    }
+
+    // The TUI says this on its unlock screen. A script only needs telling once.
+    if cli.command.is_some() && !db_path.exists() && !Database::encrypts_files() {
+        errln!("⚠ {}", t!("password.no_file_encryption"));
     }
 
     // Handle subcommands

@@ -49,6 +49,7 @@ password:
   too_short: "La contraseña debe tener al menos %{min} caracteres"
   same_as_account: "Usa contraseñas distintas. El servidor ve la contraseña de tu cuenta, así que no debe abrir también tus notas."
   same_as_account_warning: "La contraseña de tu cuenta es la misma que la de tus notas, así que el servidor podría leerlas. Cambia la contraseña de las notas en Ajustes."
+  no_file_encryption: "Esta compilación no cifra el archivo de la base de datos. Las notas y etiquetas siguen cifradas, pero tu correo, la dirección del servidor, los nombres de los adjuntos y las fechas no."
 menu:
   notes: Notas
   new_note: Nueva nota

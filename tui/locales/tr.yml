@@ -49,6 +49,7 @@ password:
   too_short: "Parola en az %{min} karakter olmalıdır"
   same_as_account: "Farklı parolalar kullanın. Sunucu hesap parolanızı görür, bu yüzden aynı parola notlarınızı da açmamalıdır."
   same_as_account_warning: "Hesap parolanız not parolanızla aynı, bu yüzden sunucu notlarınızı okuyabilir. Ayarlar bölümünden not parolanızı değiştirin."
+  no_file_encryption: "Bu derleme veritabanı dosyasını şifrelemez. Notlar ve etiketler şifreli kalır, ancak e-posta adresiniz, sunucu adresi, ek adları ve tarihler şifrelenmez."
 menu:
   notes: Notlar
   new_note: Yeni not

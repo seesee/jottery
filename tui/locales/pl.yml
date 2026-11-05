@@ -49,6 +49,7 @@ password:
   too_short: "Hasło musi mieć co najmniej %{min} znaków"
   same_as_account: "Użyj różnych haseł. Serwer widzi hasło konta, więc nie może ono również otwierać notatek."
   same_as_account_warning: "Hasło konta jest takie samo jak hasło notatek, więc serwer mógłby je odczytać. Zmień hasło notatek w Ustawieniach."
+  no_file_encryption: "Ta kompilacja nie szyfruje pliku bazy danych. Notatki i tagi pozostają zaszyfrowane, ale adres e-mail, adres serwera, nazwy załączników i daty już nie."
 menu:
   notes: Notatki
   new_note: Nowa notatka

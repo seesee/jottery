@@ -49,6 +49,7 @@ password:
   too_short: "密码至少需要 %{min} 个字符"
   same_as_account: "请使用不同的密码。服务器能看到您的账户密码，因此它不能同时用于打开笔记。"
   same_as_account_warning: "您的账户密码与笔记密码相同，服务器可能读取您的笔记。请在设置中更改笔记密码。"
+  no_file_encryption: "此版本不加密数据库文件。笔记和标签仍保持加密，但您的邮箱、服务器地址、附件名称和日期不会加密。"
 menu:
   notes: 笔记
   new_note: 新建笔记

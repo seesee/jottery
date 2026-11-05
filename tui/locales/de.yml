@@ -49,6 +49,7 @@ password:
   too_short: "Das Passwort muss mindestens %{min} Zeichen lang sein"
   same_as_account: "Verwende unterschiedliche Passwörter. Der Server sieht dein Kontopasswort, daher darf es nicht auch deine Notizen öffnen."
   same_as_account_warning: "Dein Kontopasswort ist dasselbe wie dein Notizenpasswort, daher könnte der Server deine Notizen lesen. Ändere dein Notizenpasswort in den Einstellungen."
+  no_file_encryption: "Dieser Build verschlüsselt die Datenbankdatei nicht. Notizen und Tags bleiben verschlüsselt, deine E-Mail-Adresse, Serveradresse, Anhangnamen und Datumsangaben jedoch nicht."
 menu:
   notes: Notizen
   new_note: Neue Notiz

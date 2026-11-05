@@ -54,6 +54,7 @@ password:
   too_short: "Password must be at least %{min} characters"
   same_as_account: "Use different passwords. The server sees your account password, so it must not also open your notes."
   same_as_account_warning: "Your account password is the same as your notes password, so the server could read your notes. Change your notes password in Settings."
+  no_file_encryption: "This build does not encrypt the database file. Notes and tags stay encrypted, but your email, server address, attachment names and dates do not."
 
 # Main menu / Navigation
 menu:

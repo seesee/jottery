@@ -49,6 +49,7 @@ password:
   too_short: "La password deve contenere almeno %{min} caratteri"
   same_as_account: "Usa password diverse. Il server vede la password dell'account, quindi non deve aprire anche le note."
   same_as_account_warning: "La password dell'account è uguale a quella delle note, quindi il server potrebbe leggerle. Cambia la password delle note nelle Impostazioni."
+  no_file_encryption: "Questa build non cifra il file del database. Note e tag restano cifrati, ma non l'email, l'indirizzo del server, i nomi degli allegati e le date."
 menu:
   notes: Note
   new_note: Nuova nota

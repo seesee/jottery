@@ -338,6 +338,8 @@ pub struct App {
     pub search_tag_completions: Vec<String>,
     /// Selected search tag completion index
     pub search_tag_completion_index: usize,
+    /// Whether this build encrypts the database file
+    pub(crate) database_encrypted: bool,
     /// Password storage backend (keychain or file-based fallback)
     pub(crate) password_storage: Box<dyn PasswordStorage>,
     /// SSE handle for real-time sync notifications (when connected)
@@ -469,6 +471,7 @@ impl App {
             tag_completion_index: 0,
             search_tag_completions: Vec::new(),
             search_tag_completion_index: 0,
+            database_encrypted: Database::encrypts_files(),
             password_storage,
             sse_handle: None,
             inbox_items: Vec::new(),

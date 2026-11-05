@@ -49,6 +49,7 @@ password:
   too_short: "Het wachtwoord moet minstens %{min} tekens bevatten"
   same_as_account: "Gebruik verschillende wachtwoorden. De server ziet je accountwachtwoord, dus dat mag niet ook je notities openen."
   same_as_account_warning: "Je accountwachtwoord is hetzelfde als je notitiewachtwoord, dus de server zou je notities kunnen lezen. Wijzig je notitiewachtwoord in Instellingen."
+  no_file_encryption: "Deze build versleutelt het databasebestand niet. Notities en tags blijven versleuteld, maar je e-mailadres, serveradres, bijlagenamen en datums niet."
 menu:
   notes: Notities
   new_note: Nieuwe notitie

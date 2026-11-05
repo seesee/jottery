@@ -49,6 +49,7 @@ password:
   too_short: "Le mot de passe doit contenir au moins %{min} caractères"
   same_as_account: "Utilisez des mots de passe différents. Le serveur voit le mot de passe de votre compte : il ne doit pas aussi ouvrir vos notes."
   same_as_account_warning: "Le mot de passe de votre compte est identique à celui de vos notes : le serveur pourrait les lire. Changez le mot de passe des notes dans les paramètres."
+  no_file_encryption: "Cette version ne chiffre pas le fichier de base de données. Les notes et les tags restent chiffrés, mais pas votre e-mail, l'adresse du serveur, les noms des pièces jointes ni les dates."
 menu:
   notes: Notes
   new_note: Nouvelle note

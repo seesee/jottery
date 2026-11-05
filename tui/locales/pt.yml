@@ -49,6 +49,7 @@ password:
   too_short: "A palavra-passe deve ter pelo menos %{min} caracteres"
   same_as_account: "Utilize palavras-passe diferentes. O servidor vê a palavra-passe da conta, por isso esta não pode também abrir as suas notas."
   same_as_account_warning: "A palavra-passe da conta é igual à das notas, por isso o servidor poderia lê-las. Altere a palavra-passe das notas nas Definições."
+  no_file_encryption: "Esta compilação não encripta o ficheiro da base de dados. As notas e etiquetas continuam encriptadas, mas o seu e-mail, o endereço do servidor, os nomes dos anexos e as datas não."
 menu:
   notes: Notas
   new_note: Nova nota
