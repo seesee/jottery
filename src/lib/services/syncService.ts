@@ -859,48 +859,42 @@ class SyncService {
       return true;
     }
 
-    // Hash-based conflict detection (like git)
+    // What a re-delivered note means comes from the hashes, as set out under "Applying
+    // a pulled note" in docs/sync-protocol.md. A refused push clears needsSync, so a
+    // conflict waiting to be resolved counts as an edit: the note here is the only
+    // copy of that side of it.
+    const syncState = await syncRepository.getNoteSyncMetadata(remoteNote.id);
+    const hasUnsentEdit = !!localNote.needsSync || syncState?.lastSyncStatus === 'conflict';
+
     let isConflict = false;
     let isFastForward = false;
 
-    // If both have hash chains, use hash-based detection
     if (remoteNote.contentHash && localNote.contentHash) {
-      // Case 1: Local hash == remote parent hash -> can fast-forward (remote is newer)
-      if (localNote.contentHash === remoteNote.parentHash) {
-        isFastForward = true;
-      }
-      // Case 2: Same content hash. The text is the same, but state can still differ:
-      // deleted isn't part of the hash, and not every client recomputes it for a pin
-      // or an attachment. A note with unsent changes pushes its own state instead.
-      else if (localNote.contentHash === remoteNote.contentHash) {
-        if (localNote.needsSync || !this.hasRemoteStateChange(localNote, remoteNote)) {
+      if (localNote.contentHash === remoteNote.contentHash) {
+        // The text is the same, but state can still differ: deleted isn't part of the
+        // hash, and not every client recomputes it for a pin or an attachment. A note
+        // with unsent changes pushes its own state instead.
+        if (hasUnsentEdit || !this.hasRemoteStateChange(localNote, remoteNote)) {
           return false;
         }
         noteForStorage.attachments = this.mergedAttachments(localNote, remoteNote);
         isFastForward = true;
-      }
-      // Case 3: Local has unsaved changes and hashes diverged
-      else if (localNote.needsSync) {
-        // Check if local parent exists in remote chain (remote includes local's history)
-        if (localNote.parentHash && remoteNote.hashChain?.includes(localNote.parentHash)) {
-          isFastForward = true; // Remote has our ancestor, safe to update
-        } else {
-          isConflict = true;
-        }
-      }
-      // Case 4: Check if remote parent exists in local chain (local is ahead)
-      else if (remoteNote.parentHash && localNote.hashChain?.includes(remoteNote.parentHash)) {
-        return false; // Local is ahead, no update needed
-      }
-      // Case 5: The histories can't be related, typically because the local hash has
-      // aged out of a long remote chain. Nothing here is unsent (that's case 3), so
-      // the server's copy is the newer one.
-      else {
+      } else if (!hasUnsentEdit) {
+        // Nothing here is unsent, so the server's copy is the current one. That holds
+        // even if it matches an older hash: a restore or an undo can return to one.
         isFastForward = true;
+      } else if (remoteNote.contentHash === localNote.parentHash || localNote.hashChain?.includes(remoteNote.contentHash)) {
+        return false; // Already seen, and older than the edit, which will be pushed
+      } else if (remoteNote.parentHash === localNote.contentHash || remoteNote.hashChain?.includes(localNote.contentHash)) {
+        isFastForward = true; // Newer, and it already includes the edit
+      } else {
+        // Sharing a parent proves nothing here: every chain starts with its own hash,
+        // so two sides of a divergence both hold their common ancestor.
+        isConflict = true;
       }
     } else {
       // Fallback to timestamp-based detection for legacy notes
-      if (remoteNote.modifiedAt > localNote.modifiedAt && localNote.needsSync) {
+      if (remoteNote.modifiedAt > localNote.modifiedAt && hasUnsentEdit) {
         isConflict = true;
       } else if (remoteNote.modifiedAt > localNote.modifiedAt) {
         isFastForward = true;
@@ -908,6 +902,12 @@ class SyncService {
     }
 
     if (isConflict) {
+      // A refused push already stored this server copy, with the ancestor for a
+      // three-way merge, which a pull can't supply
+      if (remoteNote.contentHash && syncState?.conflictData?.serverContentHash === remoteNote.contentHash) {
+        return false;
+      }
+
       console.warn(`[SyncService] Conflict detected during pull for note ${remoteNote.id}`);
 
       // Find common ancestor for 3-way merge
