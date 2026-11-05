@@ -114,6 +114,8 @@ unicode-width = "0.2"
 serde_yaml = "0.9"
 # Splitting $EDITOR and $PAGER into a program and its arguments
 shell-words = "1"
+# Compression for backups, which the web app writes with zlib
+flate2 = "1"
 
 [dev-dependencies]
 

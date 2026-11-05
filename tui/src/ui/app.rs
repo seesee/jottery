@@ -1513,6 +1513,7 @@ impl App {
 #[cfg(test)]
 mod lock_tests {
     use super::*;
+    use crate::repository::NoteRepository;
     use crate::ui::operations::auth;
     use crossterm::event::KeyEvent;
 

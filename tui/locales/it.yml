@@ -602,6 +602,8 @@ backup:
   restoring: "Ripristino dati..."
   restored: "Ripristinato"
   key_not_in_backup: "Questo backup è stato creato da una versione precedente di Jottery e non contiene la sua chiave. Può essere ripristinato solo nella cassaforte da cui proviene."
+  incomplete: "Questo backup è incompleto: %{count} elementi non erano leggibili e sono stati esclusi."
+  records_failed: "%{count} record di questo backup non sono stati ripristinati. Tutto il resto sì."
 
 # Progress indicators
 progress:

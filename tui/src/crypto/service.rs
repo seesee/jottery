@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 
 use aes_gcm::{
-    aead::{Aead, AeadCore, KeyInit, OsRng, rand_core::RngCore},
+    aead::{Aead, AeadCore, KeyInit, OsRng, Payload, rand_core::RngCore},
     Aes256Gcm, Nonce,
 };
 use anyhow::{Context, Result};
@@ -168,6 +168,39 @@ impl CryptoService {
             .map_err(|_| anyhow::anyhow!("Decryption failed. Invalid key or corrupted data."))?;
 
         Ok(plaintext)
+    }
+
+    /// Encrypt binary data, authenticating `aad` along with it
+    pub fn encrypt_binary_with_aad(&self, data: &[u8], aad: &[u8], key: &[u8; KEY_LENGTH]) -> Result<EncryptedData> {
+        let cipher = Aes256Gcm::new(key.into());
+        let nonce = self.generate_nonce();
+
+        let ciphertext = cipher
+            .encrypt(Nonce::from_slice(&nonce), Payload { msg: data, aad })
+            .map_err(|_| anyhow::anyhow!("Encryption failed"))?;
+
+        Ok(EncryptedData {
+            ciphertext: general_purpose::STANDARD.encode(&ciphertext),
+            nonce: general_purpose::STANDARD.encode(nonce),
+            tag: String::new(),
+        })
+    }
+
+    /// Decrypt binary data that was encrypted with `aad`
+    pub fn decrypt_binary_with_aad(&self, encrypted: &EncryptedData, aad: &[u8], key: &[u8; KEY_LENGTH]) -> Result<Vec<u8>> {
+        let cipher = Aes256Gcm::new(key.into());
+
+        let ciphertext = general_purpose::STANDARD
+            .decode(&encrypted.ciphertext)
+            .context("Invalid base64 ciphertext")?;
+
+        let nonce_bytes = general_purpose::STANDARD
+            .decode(&encrypted.nonce)
+            .context("Invalid base64 nonce")?;
+
+        cipher
+            .decrypt(nonce_from(&nonce_bytes)?, Payload { msg: &ciphertext, aad })
+            .map_err(|_| anyhow::anyhow!("Decryption failed. Invalid key or corrupted data."))
     }
 
     /// Generate random salt for key derivation (32 bytes)

@@ -602,6 +602,8 @@ backup:
   restoring: "データを復元中..."
   restored: "復元完了"
   key_not_in_backup: "このバックアップは古いバージョンの Jottery で作成されたため、鍵が含まれていません。作成元の保管庫にのみ復元できます。"
+  incomplete: "このバックアップは不完全です：保管庫の %{count} 件の項目を読み取れず、含まれていません。"
+  records_failed: "このバックアップの %{count} 件のレコードを復元できませんでした。それ以外は復元されました。"
 
 # Progress indicators
 progress:

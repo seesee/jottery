@@ -602,6 +602,8 @@ backup:
   restoring: "Przywracanie danych..."
   restored: "Przywrócono"
   key_not_in_backup: "Ta kopia zapasowa została utworzona przez starszą wersję Jottery i nie zawiera swojego klucza. Można ją przywrócić tylko do sejfu, z którego pochodzi."
+  incomplete: "Ta kopia jest niepełna: nie udało się odczytać elementów (%{count}) i zostały pominięte."
+  records_failed: "Nie udało się przywrócić rekordów z tej kopii: %{count}. Pozostałe przywrócono."
 
 # Progress indicators
 progress:

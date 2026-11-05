@@ -602,6 +602,8 @@ backup:
   restoring: "Veriler geri yükleniyor..."
   restored: "Geri yüklendi"
   key_not_in_backup: "Bu yedek, Jottery'nin eski bir sürümüyle oluşturuldu ve anahtarını içermiyor. Yalnızca oluşturulduğu kasaya geri yüklenebilir."
+  incomplete: "Bu yedek eksik: kasadaki %{count} öğe okunamadı ve dışarıda bırakıldı."
+  records_failed: "Bu yedekteki %{count} kayıt geri yüklenemedi. Geri kalanı yüklendi."
 
 # Progress indicators
 progress:

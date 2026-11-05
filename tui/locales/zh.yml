@@ -602,6 +602,8 @@ backup:
   restoring: "正在恢复数据..."
   restored: "已恢复"
   key_not_in_backup: "此备份由旧版 Jottery 创建，不包含其密钥。只能恢复到其来源的保险库。"
+  incomplete: "此备份不完整：保险库中有 %{count} 项无法读取，已被略过。"
+  records_failed: "此备份中有 %{count} 条记录无法恢复，其余均已恢复。"
 
 # Progress indicators
 progress:

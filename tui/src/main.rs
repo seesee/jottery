@@ -28,7 +28,7 @@ use tracing::info;
 use crypto::CryptoService;
 use db::Database;
 use models::{Note, get_note_title, get_regular_tags};
-use repository::{NoteRepository, sync::SyncRepository, EncryptionRepository};
+use repository::{NoteRepository, sync::SyncRepository};
 use terminal_text::{errln, outln};
 use ui::{App, EventHandler, Tui};
 
@@ -1055,9 +1055,15 @@ fn run() -> Result<()> {
             outln!("✓ {}: {} ({} {})",
                 t!("backup.created"),
                 output.display(),
-                backup.data.len(),
+                backup.record_count(),
                 t!("backup.records")
             );
+
+            // A backup that's missing something mustn't look like one that isn't
+            if backup.skipped > 0 {
+                errln!("⚠ {}", t!("backup.incomplete", count = backup.skipped));
+                std::process::exit(1);
+            }
             return Ok(());
         }
         Some(Commands::RestoreBackup { input, password, key_password }) => {
@@ -1070,7 +1076,7 @@ fn run() -> Result<()> {
             outln!("✓ {} v{} ({} {})",
                 t!("backup.valid"),
                 backup.version,
-                backup.data.len(),
+                backup.record_count(),
                 t!("backup.records")
             );
 
@@ -1081,31 +1087,31 @@ fn run() -> Result<()> {
             let db = Database::open(&db_path, local_password)
                 .context(t!("password.unlock_failed", error = ""))?;
 
-            // Verify password. An older backup names no key, so only the vault
-            // it came from can open it.
+            // Check both passwords before touching anything
             outln!("{}", t!("backup.verifying_password"));
-            let key = if backup.encryption.names_its_key() {
-                backup::verify_backup_password(&backup, &password)?
-            } else {
-                let has_vault = EncryptionRepository::new(db.connection()).get()?.is_some();
-                let key = if has_vault { derive_key_from_db(&db, local_password).ok() } else { None };
-                match key.filter(|key| backup::verify_backup_key(&backup, key).is_ok()) {
-                    Some(key) => key,
-                    None => anyhow::bail!("{}", t!("backup.key_not_in_backup")),
-                }
-            };
+            let keys = backup::restore_keys(&db, &backup, &password, local_password)?;
             outln!("✓ {}", t!("password.correct"));
 
             outln!("{}", t!("backup.restoring"));
 
             // Restore with progress indicator
-            let restored = backup::restore_backup(&db, &backup, &key, Some(Box::new(|current, total, item| {
+            let restored = backup::restore_backup(&db, &backup, &keys, Some(Box::new(|current, total, item| {
                 print!("\r{}: {}/{} ({})", t!("progress.processing"), current, total, item);
                 let _ = io::stdout().flush();
             })))?;
 
             outln!();
-            outln!("✓ {}: {} {}", t!("backup.restored"), restored, t!("menu.notes"));
+            outln!("✓ {}: {} {}, {} {}, {} {}",
+                t!("backup.restored"),
+                restored.notes, t!("menu.notes"),
+                restored.attachments, t!("ui.attachments"),
+                restored.versions, t!("ui.version_history"),
+            );
+
+            if restored.failed > 0 {
+                errln!("⚠ {}", t!("backup.records_failed", count = restored.failed));
+                std::process::exit(1);
+            }
             return Ok(());
         }
         Some(Commands::StorePassword { password }) => {

@@ -602,6 +602,8 @@ backup:
   restoring: "Daten werden wiederhergestellt..."
   restored: "Wiederhergestellt"
   key_not_in_backup: "Diese Sicherung wurde mit einer älteren Version von Jottery erstellt und enthält ihren Schlüssel nicht. Sie kann nur in den Tresor wiederhergestellt werden, aus dem sie stammt."
+  incomplete: "Diese Sicherung ist unvollständig: %{count} Elemente im Tresor konnten nicht gelesen werden und fehlen."
+  records_failed: "%{count} Datensätze dieser Sicherung konnten nicht wiederhergestellt werden. Alles andere wurde wiederhergestellt."
 
 # Progress indicators
 progress:

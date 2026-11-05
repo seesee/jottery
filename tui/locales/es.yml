@@ -602,6 +602,8 @@ backup:
   restoring: "Restaurando datos..."
   restored: "Restaurado"
   key_not_in_backup: "Esta copia de seguridad se creó con una versión anterior de Jottery y no contiene su clave. Solo se puede restaurar en la bóveda de la que procede."
+  incomplete: "Esta copia está incompleta: %{count} elementos del almacén no se pudieron leer y se dejaron fuera."
+  records_failed: "%{count} registros de esta copia no se pudieron restaurar. Todo lo demás, sí."
 
 # Progress indicators
 progress:

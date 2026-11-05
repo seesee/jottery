@@ -643,6 +643,8 @@ backup:
   restoring: "Restoring data..."
   restored: "Restored"
   key_not_in_backup: "This backup was made by an older version of Jottery and doesn't contain its key. It can only be restored into the vault it came from."
+  incomplete: "This backup is incomplete: %{count} items in the vault couldn't be read and were left out."
+  records_failed: "%{count} records in this backup couldn't be restored. Everything else was."
 
 # Progress indicators
 progress:
