@@ -177,6 +177,8 @@ settings:
   press_enter_cycle: değiştirmek için Enter tuşuna basın
   press_enter_toggle: açıp kapatmak için Enter tuşuna basın
   disabled: devre dışı
+  sort_order: "Sıralama"
+  language_auto: "Sistemle aynı"
 sync:
   push: Sunucuya gönder
   pull: Sunucudan çek
@@ -226,6 +228,11 @@ sync:
   force_title: "Tam yeniden eşitlemeyi zorla"
   force_confirm: "TÜM notlar ve ekler sunucudan çekilsin mi?"
   force_note: "Gönderilmemiş yerel değişiklikler korunur."
+  disconnect_title: "Eşitleme bağlantısını kes"
+  disconnect_confirm: "Bu cihazın sunucuyla bağlantısı kesilsin mi?"
+  disconnect_warning: "Notlarınız burada kalır. Cihaz sunucuda iptal edilir."
+  disconnect_conflicts: "%{count} notta çözülmemiş çakışma var. Sunucu kopyaları burada unutulacak."
+  device_still_registered: "Burada bağlantı kesildi, ancak sunucuya bildirilemedi, bu yüzden bu cihazın anahtarı hâlâ çalışıyor. Kullanıcı portalından iptal edin."
 
 # Gelen Kutusu
 inbox:
@@ -516,6 +523,10 @@ help:
   search_modified_desc: "Bir tarihten sonra değiştirildi (< ve a..b de olur)"
   search_words_key: "words:>100"
   search_words_desc: "Sözcük sayısı (< ve a..b de olur)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "Seçili notlardan etiket kaldır"
+  multi_colour_key: "C"
+  multi_colour_desc: "Seçili notların rengini ayarla"
 cli:
   # Eski (bazı yerlerde kullanılıyor)
   list: Notları listele
@@ -614,6 +625,12 @@ bulk:
   add_tags_to: Etiket ekle
   export_notes_to: Dışa aktar
   archived: "%{count} not arşivlendi"
+  tags_removed: "%{count} nottan etiketler kaldırıldı: %{tags}"
+  remove_tags_from: "%{count} nottan etiket kaldır"
+  enter_colour: "Renk adı girin (temizlemek için boş bırakın):"
+  colour_of: "%{count} notun rengini ayarla"
+  colour_set: "%{count} notun rengi değişti"
+  unknown_colour: "%{colour} adında bir renk yok"
 time:
   just_now: az önce
   minutes_ago: "%{count} dakika önce"

@@ -177,6 +177,8 @@ settings:
   press_enter_cycle: 按 Enter 循环
   press_enter_toggle: 按 Enter 切换
   disabled: 禁用
+  sort_order: "排序"
+  language_auto: "跟随系统"
 sync:
   push: 推送到服务器
   pull: 从服务器拉取
@@ -226,6 +228,11 @@ sync:
   force_title: "强制完全重新同步"
   force_confirm: "要从服务器拉取所有笔记和附件吗？"
   force_note: "尚未推送的本地更改将被保留。"
+  disconnect_title: "断开同步"
+  disconnect_confirm: "要断开此设备与服务器的连接吗？"
+  disconnect_warning: "您的笔记保留在此处。此设备将在服务器上被撤销。"
+  disconnect_conflicts: "%{count} 条笔记存在未解决的冲突。其服务器副本将在此处被遗忘。"
+  device_still_registered: "已在此处断开，但无法通知服务器，因此此设备的密钥仍然有效。请在用户门户中撤销。"
 
 # 收件箱
 inbox:
@@ -516,6 +523,10 @@ help:
   search_modified_desc: "在某日期之后修改（也可用 < 和 a..b）"
   search_words_key: "words:>100"
   search_words_desc: "字数（也可用 < 和 a..b）"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "从所选笔记中移除标签"
+  multi_colour_key: "C"
+  multi_colour_desc: "设置所选笔记的颜色"
 cli:
   # 简短命令描述（用于旧版/备用）
   list: 列出笔记
@@ -614,6 +625,12 @@ bulk:
   add_tags_to: 添加标签到
   export_notes_to: 导出
   archived: "已归档 %{count} 条笔记"
+  tags_removed: "已从 %{count} 条笔记中移除标签：%{tags}"
+  remove_tags_from: "从 %{count} 条笔记中移除标签"
+  enter_colour: "输入颜色名称（留空以清除）："
+  colour_of: "设置 %{count} 条笔记的颜色"
+  colour_set: "已更改 %{count} 条笔记的颜色"
+  unknown_colour: "没有名为 %{colour} 的颜色"
 time:
   just_now: 刚刚
   minutes_ago: "%{count} 分钟前"

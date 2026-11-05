@@ -18,9 +18,8 @@ pub fn start_editing_setting(app: &mut App) {
     // Populate input buffer with current value for string/number fields
     match app.selected_setting {
         0 => {
-            // Language
-            app.setting_input = app.settings.language.clone();
-            app.input_mode = InputMode::SettingsEdit;
+            // Language: cycle forward immediately, no input needed
+            cycle_language(app, true);
         }
         1 => {
             // Theme: cycle forward immediately, no input needed
@@ -79,9 +78,8 @@ pub fn start_editing_setting_backward(app: &mut App) {
     // For cyclic fields, cycle backward; for others, behave like forward
     match app.selected_setting {
         0 => {
-            // Language
-            app.setting_input = app.settings.language.clone();
-            app.input_mode = InputMode::SettingsEdit;
+            // Language: cycle backward immediately, no input needed
+            cycle_language(app, false);
         }
         1 => {
             // Theme: cycle backward immediately, no input needed
@@ -155,10 +153,6 @@ pub fn endpoint_confirmed(app: &mut App, endpoint: &str) -> bool {
 /// Save edited setting value
 pub fn save_setting_value(app: &mut App) -> Result<()> {
     match app.selected_setting {
-        0 => {
-            // Language
-            app.settings.language = app.setting_input.clone();
-        }
         3 => {
             // Auto-lock timeout
             if let Ok(timeout) = app.setting_input.parse::<i32>() {
@@ -219,6 +213,23 @@ fn point_sync_at(app: &mut App, endpoint: &str) -> Result<()> {
     Ok(())
 }
 
+/// Show the app in the language the settings ask for. Not in tests, which run side by
+/// side and compare translated text, because the locale is global.
+pub fn apply_language(app: &App) {
+    if !cfg!(test) {
+        rust_i18n::set_locale(&crate::models::effective_locale(&app.settings.language));
+    }
+}
+
+/// Move to the next or previous language, which takes effect at once.
+fn cycle_language(app: &mut App, forward: bool) {
+    app.settings.language = crate::models::cycle_language(&app.settings.language, forward).to_string();
+    apply_language(app);
+    if let Err(e) = save_settings(app) {
+        app.error = Some(format!("Failed to save settings: {}", e));
+    }
+}
+
 /// Cycle forward through color scheme options
 pub fn cycle_theme(app: &mut App) {
     app.settings.theme.cycle_next();
@@ -239,20 +250,25 @@ pub fn cycle_theme_backward(app: &mut App) {
     }
 }
 
-/// Cycle forward through sort order options
-pub fn cycle_sort_order(app: &mut App) {
-    app.settings.sort_order = app.settings.sort_order.next();
+/// Apply a new sort order, keeping the highlight on the note it was on.
+fn apply_sort_order(app: &mut App) {
+    app.invalidate_filter_cache();
+    app.keep_selection_on_note();
     if let Err(e) = save_settings(app) {
         app.error = Some(format!("Failed to save settings: {}", e));
     }
 }
 
+/// Cycle forward through sort order options
+pub fn cycle_sort_order(app: &mut App) {
+    app.settings.sort_order = app.settings.sort_order.next();
+    apply_sort_order(app);
+}
+
 /// Cycle backward through sort order options
 pub fn cycle_sort_order_backward(app: &mut App) {
     app.settings.sort_order = app.settings.sort_order.prev();
-    if let Err(e) = save_settings(app) {
-        app.error = Some(format!("Failed to save settings: {}", e));
-    }
+    apply_sort_order(app);
 }
 
 /// Save settings to database
@@ -264,13 +280,38 @@ pub fn save_settings(app: &mut App) -> Result<()> {
     Ok(())
 }
 
+/// Ask the server to stop honouring this device's API key.
+fn revoke_this_device(app: &App) -> Result<()> {
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
+    let key = app.key.as_ref().ok_or_else(|| anyhow::anyhow!("Vault is locked"))?;
+
+    let Some(metadata) = SyncRepository::new(db.connection()).get_metadata()? else {
+        return Ok(());
+    };
+    let Some(api_key) = metadata.api_key.filter(|_| !metadata.sync_endpoint.is_empty()) else {
+        return Ok(());
+    };
+
+    let api_key: crate::crypto::EncryptedData = serde_json::from_str(&api_key)?;
+    let api_key = app.crypto.decrypt_text(&api_key, key)?;
+
+    crate::api::AuthClient::new(metadata.sync_endpoint).revoke_device(&api_key)
+}
+
 /// Disconnect from sync server
-/// Clears all sync credentials and metadata, but preserves local notes
+/// Revokes this device, then clears all sync credentials and metadata, but preserves
+/// local notes. A device the server can't be told about still gets disconnected here,
+/// and the user hears that its key is still valid.
 pub fn disconnect_from_sync(app: &mut App) -> Result<()> {
     app.debug_log("Disconnect - Starting disconnect from sync server");
 
     // Stop SSE connection since we're disabling sync
     app.stop_sse();
+
+    let revoked = revoke_this_device(app);
+    if let Err(e) = &revoked {
+        app.debug_log(&format!("Disconnect - Could not revoke this device: {}", e));
+    }
 
     // Get database
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
@@ -291,6 +332,9 @@ pub fn disconnect_from_sync(app: &mut App) -> Result<()> {
     // Show success message
     app.sync_status = Some(t!("sync.disconnected").to_string());
     app.sync_status_set_at = Some(Instant::now());
+    if revoked.is_err() {
+        app.error = Some(t!("sync.device_still_registered").to_string());
+    }
 
     Ok(())
 }
@@ -592,5 +636,148 @@ mod tests {
         assert_eq!(metadata.sync_endpoint, "https://new.example.com");
         assert_eq!(metadata.pull_cursor, None);
         assert_eq!(metadata.last_pull_at, None);
+    }
+
+    /// The server's answer to a device being revoked, and how many times it was asked.
+    fn revoke_server(status: &'static str) -> (String, std::sync::Arc<std::sync::atomic::AtomicUsize>) {
+        use std::io::{Read, Write};
+        use std::sync::atomic::{AtomicUsize, Ordering};
+
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let endpoint = format!("http://{}", listener.local_addr().unwrap());
+        let calls = std::sync::Arc::new(AtomicUsize::new(0));
+        let counted = calls.clone();
+
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let mut stream = stream.unwrap();
+                let mut request = [0u8; 4096];
+                let read = stream.read(&mut request).unwrap();
+                if String::from_utf8_lossy(&request[..read]).starts_with("DELETE /api/v1/sync/device ") {
+                    counted.fetch_add(1, Ordering::SeqCst);
+                }
+                let response = format!("HTTP/1.1 {status}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+                stream.write_all(response.as_bytes()).unwrap();
+            }
+        });
+
+        (endpoint, calls)
+    }
+
+    fn connected_app(endpoint: &str) -> App {
+        let mut app = app();
+        let key = app.crypto.generate_master_key();
+        let db = Database::in_memory(&uuid::Uuid::new_v4().to_string()).unwrap();
+        let api_key = app.crypto.encrypt_text("device-api-key", &key).unwrap();
+        SyncRepository::new(db.connection()).update_metadata(&crate::models::sync::SyncMetadata {
+            api_key: Some(serde_json::to_string(&api_key).unwrap()),
+            sync_enabled: true,
+            sync_endpoint: endpoint.to_string(),
+            ..Default::default()
+        }).unwrap();
+        app.settings.sync_enabled = true;
+        app.settings.sync_endpoint = Some(endpoint.to_string());
+        app.db = Some(db);
+        app.key = Some(key);
+        app
+    }
+
+    #[test]
+    fn disconnecting_revokes_the_device_first() {
+        let (endpoint, calls) = revoke_server("204 No Content");
+        let mut app = connected_app(&endpoint);
+
+        disconnect_from_sync(&mut app).unwrap();
+
+        assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 1);
+        assert!(app.error.is_none());
+        assert!(app.sync_metadata().is_none());
+    }
+
+    #[test]
+    fn a_key_the_server_has_already_dropped_counts_as_revoked() {
+        let (endpoint, _calls) = revoke_server("401 Unauthorized");
+        let mut app = connected_app(&endpoint);
+
+        disconnect_from_sync(&mut app).unwrap();
+
+        assert!(app.error.is_none());
+    }
+
+    /// Disconnecting should still work offline, but the user must know the key lives on.
+    #[test]
+    fn a_failed_revoke_disconnects_anyway_and_says_so() {
+        let (endpoint, _calls) = revoke_server("500 Internal Server Error");
+        let mut app = connected_app(&endpoint);
+
+        disconnect_from_sync(&mut app).unwrap();
+
+        assert_eq!(app.error, Some(t!("sync.device_still_registered").to_string()));
+        assert!(app.sync_metadata().is_none());
+    }
+
+    #[test]
+    fn the_language_setting_cycles_and_saves_rather_than_taking_text() {
+        let mut app = app();
+        let db = Database::in_memory(&uuid::Uuid::new_v4().to_string()).unwrap();
+        app.db = Some(db);
+        app.selected_setting = 0;
+
+        start_editing_setting(&mut app);
+
+        assert_eq!(app.settings.language, "de");
+        assert!(!matches!(app.input_mode, InputMode::SettingsEdit));
+        let stored = SettingsRepository::new(app.db.as_ref().unwrap().connection()).get().unwrap();
+        assert_eq!(stored.language, "de");
+
+        start_editing_setting_backward(&mut app);
+        assert_eq!(app.settings.language, "auto");
+    }
+
+    #[test]
+    fn the_sort_order_decides_the_list() {
+        use crate::models::{Note, SortOrder};
+
+        let mut app = app();
+        let mut older = Note::new("Banana".to_string());
+        older.created_at = "2021-01-01T00:00:00Z".parse().unwrap();
+        older.modified_at = "2026-01-01T00:00:00Z".parse().unwrap();
+        let mut newer = Note::new("apple".to_string());
+        newer.created_at = "2024-01-01T00:00:00Z".parse().unwrap();
+        newer.modified_at = "2023-01-01T00:00:00Z".parse().unwrap();
+        let mut pinned = Note::new("Zebra".to_string());
+        pinned.pinned = true;
+        pinned.created_at = "2020-01-01T00:00:00Z".parse().unwrap();
+        pinned.modified_at = "2020-01-01T00:00:00Z".parse().unwrap();
+        app.notes = vec![older, newer, pinned];
+
+        let order = |app: &mut App, sort: SortOrder| -> Vec<String> {
+            app.settings.sort_order = sort;
+            app.invalidate_filter_cache();
+            app.filtered_notes().iter().map(|note| note.content.clone()).collect()
+        };
+
+        assert_eq!(order(&mut app, SortOrder::Recent), vec!["Zebra", "Banana", "apple"]);
+        assert_eq!(order(&mut app, SortOrder::Oldest), vec!["Zebra", "apple", "Banana"]);
+        assert_eq!(order(&mut app, SortOrder::Alpha), vec!["Zebra", "apple", "Banana"]);
+        assert_eq!(order(&mut app, SortOrder::Created), vec!["Zebra", "apple", "Banana"]);
+    }
+
+    #[test]
+    fn cycling_the_sort_order_changes_the_list_at_once_and_keeps_the_highlight() {
+        use crate::models::Note;
+
+        let mut app = app();
+        let mut first = Note::new("first".to_string());
+        first.modified_at = "2026-01-01T00:00:00Z".parse().unwrap();
+        let mut second = Note::new("second".to_string());
+        second.modified_at = "2025-01-01T00:00:00Z".parse().unwrap();
+        app.notes = vec![first, second];
+        app.select_note_at(1);
+
+        cycle_sort_order(&mut app);
+
+        assert_eq!(app.filtered_notes()[0].content, "second");
+        assert_eq!(app.filtered_notes()[app.selected_note].content, "second");
     }
 }

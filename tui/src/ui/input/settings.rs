@@ -12,6 +12,24 @@ use crate::ui::state::{AppState, InputMode};
 
 /// Handle key events in settings screen
 pub fn handle_settings_key(app: &mut App, key: KeyEvent) -> Result<()> {
+    // Disconnecting drops the credentials and any conflicts still waiting, so nothing
+    // else gets through until it's answered
+    if app.show_disconnect_confirm {
+        match key.code {
+            KeyCode::Char('y') => {
+                app.show_disconnect_confirm = false;
+                if let Err(e) = operations::settings::disconnect_from_sync(app) {
+                    app.error = Some(format!("{}: {}", t!("sync.disconnect_failed"), e));
+                }
+            }
+            KeyCode::Char('n') | KeyCode::Char('q') | KeyCode::Esc => {
+                app.show_disconnect_confirm = false;
+            }
+            _ => {}
+        }
+        return Ok(());
+    }
+
     match app.input_mode {
         InputMode::Normal => {
             // Navigation mode
@@ -55,10 +73,9 @@ pub fn handle_settings_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 KeyCode::Char('d') => {
                     // Disconnect from sync server or clear pending registration
                     if app.settings.sync_enabled || app.settings.sync_endpoint.is_some() {
-                        // Fully configured - disconnect
-                        if let Err(e) = operations::settings::disconnect_from_sync(app) {
-                            app.error = Some(format!("{}: {}", t!("sync.disconnect_failed"), e));
-                        }
+                        // Fully configured - disconnect, once that's confirmed
+                        app.refresh_conflict_cache();
+                        app.show_disconnect_confirm = true;
                     } else if operations::settings::has_pending_registration(app) {
                         // Pending registration - clear it
                         if let Err(e) = operations::settings::clear_pending_registration(app) {
@@ -273,4 +290,46 @@ pub fn handle_settings_key(app: &mut App, key: KeyEvent) -> Result<()> {
         _ => {}
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn app_in_settings() -> App {
+        let dir = tempfile::tempdir().unwrap();
+        let mut app = App::new(dir.path().join("test.db"), None).unwrap();
+        std::mem::forget(dir);
+        app.settings.sync_enabled = true;
+        app.settings.sync_endpoint = Some("https://notes.example.com".to_string());
+        app
+    }
+
+    fn press(app: &mut App, c: char) {
+        handle_settings_key(app, KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE)).unwrap();
+    }
+
+    #[test]
+    fn one_key_does_not_disconnect() {
+        let mut app = app_in_settings();
+
+        press(&mut app, 'd');
+
+        assert!(app.show_disconnect_confirm);
+        assert!(app.settings.sync_enabled);
+    }
+
+    #[test]
+    fn declining_keeps_the_connection_and_other_keys_wait() {
+        let mut app = app_in_settings();
+        press(&mut app, 'd');
+
+        press(&mut app, 'j');
+        assert!(app.show_disconnect_confirm);
+        assert_eq!(app.selected_setting, 0);
+
+        press(&mut app, 'n');
+        assert!(!app.show_disconnect_confirm);
+        assert!(app.settings.sync_enabled);
+    }
 }

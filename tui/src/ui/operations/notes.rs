@@ -46,6 +46,12 @@ pub fn save_note(app: &mut App) -> Result<()> {
             if let Some(note_id) = &app.editing_note_id {
                 // Update existing note
                 if let Some(note) = app.notes.iter_mut().find(|n| &n.id == note_id) {
+                    // Opening a note and closing it again isn't an edit. Saving it anyway
+                    // would date it now, and let it beat a newer edit from elsewhere.
+                    if note.content == app.note_input && note.tags == app.current_tags {
+                        return Ok(());
+                    }
+
                     // Before editing, create a version snapshot if one doesn't exist
                     // This ensures we can revert to the pre-edit state
                     let version_repo = NoteVersionRepository::new(db.connection());
@@ -225,23 +231,17 @@ pub fn toggle_archive_selected(app: &mut App) {
     }
 }
 
-/// Delete a note (soft delete)
-pub fn delete_note(app: &mut App) -> Result<()> {
+/// Delete a note (soft delete). The highlight moves to the note that takes its place.
+pub fn delete_note(app: &mut App, note_id: &str) -> Result<()> {
     if let Some(db) = &app.db {
-        if !app.notes.is_empty() && app.selected_note < app.notes.len() {
-            let note = &app.notes[app.selected_note];
-            let repo = NoteRepository::new(db.connection());
-            repo.delete(&note.id)?;
-            app.notes.remove(app.selected_note);
-            if app.selected_note >= app.notes.len() && app.selected_note > 0 {
-                app.selected_note -= 1;
-            }
-            app.invalidate_filter_cache();
+        NoteRepository::new(db.connection()).delete(note_id)?;
+        app.notes.retain(|note| note.id != note_id);
+        app.invalidate_filter_cache();
+        app.keep_selection_on_note();
 
-            // Trigger sync to push deletion to server
-            if app.settings.sync_enabled {
-                app.trigger_sync();
-            }
+        // Trigger sync to push deletion to server
+        if app.settings.sync_enabled {
+            app.trigger_sync();
         }
     }
     Ok(())
@@ -257,33 +257,30 @@ pub fn load_deleted_notes(app: &mut App) -> Result<()> {
     Ok(())
 }
 
-/// Restore a deleted note
+/// Restore the note highlighted in the bin
 pub fn restore_note(app: &mut App) -> Result<()> {
+    // The bin is drawn from the filtered list, which isn't in the order of `notes`
+    let Some(note_id) = app.filtered_notes().get(app.selected_note).map(|note| note.id.clone()) else {
+        return Ok(());
+    };
+
     if let (Some(db), Some(key)) = (&app.db, &app.key) {
-        if !app.notes.is_empty() && app.selected_note < app.notes.len() {
-            let note_id = app.notes[app.selected_note].id.clone();
+        // Restore the note by setting deleted = false
+        if let Some(note) = app.notes.iter_mut().find(|n| n.id == note_id) {
+            note.restore();
 
-            // Restore the note by setting deleted = false
-            if let Some(note) = app.notes.iter_mut().find(|n| n.id == note_id) {
-                note.restore();
+            // Save to database
+            let repo = NoteRepository::new(db.connection());
+            repo.update(note, key)?;
+        }
 
-                // Save to database
-                let repo = NoteRepository::new(db.connection());
-                repo.update(note, key)?;
-            }
+        // Reload deleted notes to refresh the list
+        load_deleted_notes(app)?;
+        app.keep_selection_on_note();
 
-            // Reload deleted notes to refresh the list
-            load_deleted_notes(app)?;
-
-            // Adjust selection after restore
-            if app.selected_note >= app.notes.len() && app.selected_note > 0 {
-                app.selected_note -= 1;
-            }
-
-            // Trigger sync to push restore to server
-            if app.settings.sync_enabled {
-                app.trigger_sync();
-            }
+        // Trigger sync to push restore to server
+        if app.settings.sync_enabled {
+            app.trigger_sync();
         }
     }
     Ok(())
@@ -297,7 +294,7 @@ pub fn empty_trash(app: &mut App) -> Result<()> {
 
         // Clear the notes list
         app.notes.clear();
-        app.selected_note = 0;
+        app.select_note_at(0);
         app.invalidate_filter_cache();
 
         app.notify(t!("note.bin_emptied", count = count).to_string());

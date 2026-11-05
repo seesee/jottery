@@ -177,6 +177,8 @@ settings:
   press_enter_cycle: "Enter를 눌러 순환"
   press_enter_toggle: "Enter를 눌러 전환"
   disabled: "비활성화됨"
+  sort_order: "정렬 순서"
+  language_auto: "시스템과 동일"
 sync:
   push: "서버로 푸시"
   pull: "서버에서 가져오기"
@@ -226,6 +228,11 @@ sync:
   force_title: "전체 재동기화 강제"
   force_confirm: "서버에서 모든 노트와 첨부 파일을 가져올까요?"
   force_note: "아직 전송하지 않은 로컬 변경 사항은 유지됩니다."
+  disconnect_title: "동기화 연결 해제"
+  disconnect_confirm: "이 기기를 서버에서 연결 해제할까요?"
+  disconnect_warning: "노트는 여기에 남습니다. 기기는 서버에서 해지됩니다."
+  disconnect_conflicts: "노트 %{count}개에 해결되지 않은 충돌이 있습니다. 서버 사본은 여기서 잊힙니다."
+  device_still_registered: "여기서는 연결 해제했지만 서버에 알리지 못해 이 기기의 키는 여전히 유효합니다. 사용자 포털에서 해지하세요."
 
 # 받은편지함
 inbox:
@@ -516,6 +523,10 @@ help:
   search_modified_desc: "날짜 이후 수정 (< 및 a..b 가능)"
   search_words_key: "words:>100"
   search_words_desc: "단어 수 (< 및 a..b 가능)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "선택한 노트에서 태그 제거"
+  multi_colour_key: "C"
+  multi_colour_desc: "선택한 노트의 색상 설정"
 cli:
   # 기존 (일부 위치에서 사용됨)
   list: "노트 목록"
@@ -614,6 +625,12 @@ bulk:
   add_tags_to: "태그 추가"
   export_notes_to: "내보내기"
   archived: "노트 %{count}개를 보관했습니다"
+  tags_removed: "노트 %{count}개에서 태그 제거: %{tags}"
+  remove_tags_from: "노트 %{count}개에서 태그 제거"
+  enter_colour: "색상 이름 입력 (비우면 해제):"
+  colour_of: "노트 %{count}개의 색상 설정"
+  colour_set: "노트 %{count}개의 색상을 변경했습니다"
+  unknown_colour: "%{colour}(이)라는 색상이 없습니다"
 time:
   just_now: "방금"
   minutes_ago: "%{count}분 전"

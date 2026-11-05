@@ -185,6 +185,53 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
         return Ok(());
     }
 
+    // Handle bulk remove tags input mode
+    if matches!(app.input_mode, InputMode::BulkRemoveTags) {
+        match handle_text_input(&key, &mut app.bulk_tags_input) {
+            TextInputResult::Submit => {
+                let tags: Vec<String> = app.bulk_tags_input
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+
+                if !tags.is_empty() {
+                    match operations::bulk::remove_tags_from_selected(app, &tags) {
+                        Ok(count) => app.notify(t!("bulk.tags_removed", count = count, tags = tags.join(", ")).to_string()),
+                        Err(e) => app.error = Some(t!("bulk.operation_failed", error = e.to_string()).to_string()),
+                    }
+                }
+                app.bulk_tags_input.clear();
+                app.input_mode = InputMode::Normal;
+            }
+            TextInputResult::Cancel => {
+                app.input_mode = InputMode::Normal;
+            }
+            TextInputResult::Continue | TextInputResult::Unhandled => {}
+        }
+        return Ok(());
+    }
+
+    // Handle bulk colour input mode
+    if matches!(app.input_mode, InputMode::BulkSetColour) {
+        match handle_text_input(&key, &mut app.bulk_tags_input) {
+            TextInputResult::Submit => {
+                let colour = app.bulk_tags_input.trim().to_lowercase();
+                match operations::bulk::set_colour_of_selected(app, &colour) {
+                    Ok(count) => app.notify(t!("bulk.colour_set", count = count).to_string()),
+                    Err(e) => app.error = Some(t!("bulk.operation_failed", error = e.to_string()).to_string()),
+                }
+                app.bulk_tags_input.clear();
+                app.input_mode = InputMode::Normal;
+            }
+            TextInputResult::Cancel => {
+                app.input_mode = InputMode::Normal;
+            }
+            TextInputResult::Continue | TextInputResult::Unhandled => {}
+        }
+        return Ok(());
+    }
+
     // Handle bulk export path input mode
     if matches!(app.input_mode, InputMode::BulkExportPath) {
         match handle_text_input(&key, &mut app.bulk_export_path_input) {
@@ -258,7 +305,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         }
                         ViewMode::RecycleBin => {
                             app.view_mode = ViewMode::NoteList;
-                            app.selected_note = 0;
+                            app.select_note_at(0);
                             app.preview_scroll_offset = 0;
                             // Reload normal notes
                             if let Err(e) = operations::notes::load_notes(app) {
@@ -350,17 +397,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         .map(|n| n.id.clone());
 
                     if let Some(blank_id) = existing_blank {
-                        // Reuse existing blank note
-                        if let Some(note) = app.notes.iter_mut().find(|n| n.id == blank_id) {
-                            note.touch(); // Update timestamps
-                            // Update in database
-                            if let (Some(db), Some(key)) = (&app.db, &app.key) {
-                                let repo = NoteRepository::new(db.connection());
-                                if let Err(e) = repo.update(note, key) {
-                                    app.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
-                                }
-                            }
-                        }
+                        // Reuse existing blank note, which only changes if text goes in it
                         // Set up for editing this note
                         app.editing_note_id = Some(blank_id.clone());
                         if let Some(note) = app.notes.iter().find(|n| n.id == blank_id) {
@@ -671,6 +708,16 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
                 }
             }
+            KeyCode::Char('T') if app.is_multi_select_mode && matches!(app.view_mode, ViewMode::NoteList) => {
+                // In multi-select mode: remove tags from selected notes
+                app.input_mode = InputMode::BulkRemoveTags;
+                app.bulk_tags_input.clear();
+            }
+            KeyCode::Char('C') if app.is_multi_select_mode && matches!(app.view_mode, ViewMode::NoteList) => {
+                // In multi-select mode: set the colour of selected notes
+                app.input_mode = InputMode::BulkSetColour;
+                app.bulk_tags_input.clear();
+            }
             KeyCode::Char('C') => {
                 // Cycle color/category forward for selected note (only in note list view)
                 if matches!(app.view_mode, ViewMode::NoteList) {
@@ -717,7 +764,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     ViewMode::NoteList => {
                         // Switch to recycle bin view
                         app.view_mode = ViewMode::RecycleBin;
-                        app.selected_note = 0;
+                        app.select_note_at(0);
                         app.preview_scroll_offset = 0;
                         if let Err(e) = operations::notes::load_deleted_notes(app) {
                             app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
@@ -777,7 +824,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 if matches!(app.view_mode, ViewMode::NoteList) {
                     app.archive_mode = !app.archive_mode;
                     app.invalidate_filter_cache();
-                    app.selected_note = 0;
+                    app.select_note_at(0);
                     app.preview_scroll_offset = 0;
                 }
             }
@@ -863,7 +910,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     // Exit archive mode
                     app.archive_mode = false;
                     app.invalidate_filter_cache();
-                    app.selected_note = 0;
+                    app.select_note_at(0);
                     app.preview_scroll_offset = 0;
                 } else if matches!(app.view_mode, ViewMode::AttachmentViewer) {
                     // Exit attachment viewer
@@ -877,7 +924,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 } else if matches!(app.view_mode, ViewMode::RecycleBin) {
                     // Exit recycle bin view
                     app.view_mode = ViewMode::NoteList;
-                    app.selected_note = 0;
+                    app.select_note_at(0);
                     app.preview_scroll_offset = 0;
                     // Reload normal notes
                     if let Err(e) = operations::notes::load_notes(app) {
@@ -950,23 +997,14 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                             return Ok(());
                         }
 
-                        // Find the actual note in the full list
-                        let note_to_delete = filtered[app.selected_note];
-                        if let Some(pos) = app.notes.iter().position(|n| n.id == note_to_delete.id) {
-                            app.selected_note = pos;
-                            operations::notes::delete_note(app)?;
-                            // Adjust selection after delete
-                            let new_count = app.filtered_notes().len();
-                            if app.selected_note >= new_count && app.selected_note > 0 {
-                                app.selected_note -= 1;
-                            }
-                        }
+                        let note_id = filtered[app.selected_note].id.clone();
+                        operations::notes::delete_note(app, &note_id)?;
                     }
                 }
             }
             KeyCode::Char('c') if app.is_multi_select_mode && matches!(app.view_mode, ViewMode::NoteList) => {
                 // In multi-select mode: show bulk combine confirmation (requires 2+ notes)
-                if app.selected_note_ids.len() >= 2 {
+                if app.editable_selection().len() >= 2 {
                     app.show_bulk_combine_confirm = true;
                 } else {
                     app.error = Some(t!("bulk.combine_requires_two").to_string());
@@ -1126,6 +1164,173 @@ mod tests {
     /// Create a key event with no modifiers
     fn key(code: KeyCode) -> KeyEvent {
         KeyEvent::new(code, KeyModifiers::NONE)
+    }
+
+    /// A vault of `count` notes, in the app and the database, in the order given.
+    fn app_with_notes(contents: &[&str]) -> App {
+        let mut app = create_test_app();
+        let key = crate::crypto::CryptoService::new().generate_master_key();
+        let db = crate::db::Database::in_memory(&uuid::Uuid::new_v4().to_string()).unwrap();
+        for (index, content) in contents.iter().enumerate() {
+            let mut note = Note::new(content.to_string());
+            note.modified_at = chrono::Utc::now() - chrono::Duration::minutes(index as i64);
+            NoteRepository::new(db.connection()).create(&note, &key).unwrap();
+            app.notes.push(note);
+        }
+        app.db = Some(db);
+        app.key = Some(key);
+        app.invalidate_filter_cache();
+        app.select_note_at(0);
+        app
+    }
+
+    fn highlighted(app: &App) -> String {
+        app.filtered_notes()[app.selected_note].content.clone()
+    }
+
+    #[test]
+    fn deleting_moves_the_highlight_to_the_next_note() {
+        let mut app = app_with_notes(&["first", "second", "third"]);
+        app.select_note_at(1);
+
+        handle_note_list_key(&mut app, key(KeyCode::Char('d'))).unwrap();
+
+        assert_eq!(highlighted(&app), "third");
+        handle_note_list_key(&mut app, key(KeyCode::Char('d'))).unwrap();
+        assert_eq!(highlighted(&app), "first");
+    }
+
+    /// `notes` and the visible list are in different orders. The index used to be swapped
+    /// between them, so a repeated delete could hit a note the user never highlighted.
+    #[test]
+    fn a_repeated_delete_only_takes_what_was_highlighted() {
+        let mut app = app_with_notes(&["first", "second", "third", "fourth"]);
+        app.notes.reverse();
+        app.invalidate_filter_cache();
+        app.select_note_at(1);
+        assert_eq!(highlighted(&app), "second");
+
+        handle_note_list_key(&mut app, key(KeyCode::Char('d'))).unwrap();
+        assert_eq!(highlighted(&app), "third");
+
+        handle_note_list_key(&mut app, key(KeyCode::Char('d'))).unwrap();
+        assert_eq!(highlighted(&app), "fourth");
+
+        let left: Vec<&str> = app.filtered_notes().iter().map(|n| n.content.as_str()).collect();
+        assert_eq!(left, vec!["first", "fourth"]);
+    }
+
+    #[test]
+    fn pinning_keeps_the_highlight_on_the_note() {
+        let mut app = app_with_notes(&["first", "second", "third"]);
+        app.select_note_at(2);
+
+        handle_note_list_key(&mut app, key(KeyCode::Char('p'))).unwrap();
+
+        assert_eq!(app.selected_note, 0);
+        assert_eq!(highlighted(&app), "third");
+    }
+
+    #[test]
+    fn a_reload_keeps_the_highlight_on_the_note_however_it_got_there() {
+        let mut app = app_with_notes(&["first", "second", "third"]);
+        handle_note_list_key(&mut app, key(KeyCode::Char('j'))).unwrap();
+        assert_eq!(highlighted(&app), "second");
+
+        // A sync brings in a newer note above it
+        let db = app.db.as_ref().unwrap();
+        let key_bytes = app.key.unwrap();
+        let mut newest = Note::new("newest".to_string());
+        newest.modified_at = chrono::Utc::now() + chrono::Duration::hours(1);
+        NoteRepository::new(db.connection()).create(&newest, &key_bytes).unwrap();
+        operations::notes::load_notes(&mut app).unwrap();
+
+        assert_eq!(highlighted(&app), "second");
+    }
+
+    fn bin_with(app: &mut App, contents: &[&str]) {
+        let db = app.db.as_ref().unwrap();
+        let key_bytes = app.key.unwrap();
+        for (index, content) in contents.iter().enumerate() {
+            let mut note = Note::new(content.to_string());
+            note.deleted = true;
+            note.deleted_at = Some(chrono::Utc::now());
+            note.modified_at = chrono::Utc::now() - chrono::Duration::minutes(index as i64);
+            NoteRepository::new(db.connection()).create(&note, &key_bytes).unwrap();
+        }
+        operations::notes::load_deleted_notes(app).unwrap();
+        app.view_mode = ViewMode::RecycleBin;
+        app.select_note_at(0);
+    }
+
+    /// The bin is drawn in display order, and restoring used to index the stored order.
+    #[test]
+    fn restoring_from_the_bin_takes_the_note_highlighted() {
+        let mut app = app_with_notes(&[]);
+        bin_with(&mut app, &["binned first", "binned second", "binned third"]);
+        app.notes.reverse();
+        app.invalidate_filter_cache();
+        app.select_note_at(0);
+        let chosen = highlighted(&app);
+
+        operations::notes::restore_note(&mut app).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let live = NoteRepository::new(db.connection()).list(false, &app.key.unwrap()).unwrap();
+        assert_eq!(live.len(), 1);
+        assert_eq!(live[0].content, chosen);
+    }
+
+    /// Enter opens the editor, and quitting it unchanged is the usual way to read a note.
+    #[test]
+    fn opening_a_note_and_closing_it_changes_nothing() {
+        let mut app = app_with_notes(&["unchanged"]);
+        let before = app.notes[0].clone();
+        let db = app.db.as_ref().unwrap();
+        let key_bytes = app.key.unwrap();
+        let mut synced = NoteRepository::new(db.connection()).get(&before.id, &key_bytes).unwrap().unwrap();
+        synced.needs_sync = false;
+        NoteRepository::new(db.connection()).store(&synced, &key_bytes).unwrap();
+
+        app.note_input = before.content.clone();
+        app.current_tags = before.tags.clone();
+        app.editing_note_id = Some(before.id.clone());
+        operations::notes::save_note(&mut app).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let after = NoteRepository::new(db.connection()).get(&before.id, &key_bytes).unwrap().unwrap();
+        assert_eq!(after.modified_at, before.modified_at);
+        assert_eq!(after.version, before.version);
+        assert!(!after.needs_sync);
+        assert_eq!(app.notes[0].version, before.version);
+    }
+
+    #[test]
+    fn a_real_edit_still_saves() {
+        let mut app = app_with_notes(&["before"]);
+        let id = app.notes[0].id.clone();
+
+        app.note_input = "after".to_string();
+        app.editing_note_id = Some(id.clone());
+        operations::notes::save_note(&mut app).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let stored = NoteRepository::new(db.connection()).get(&id, &app.key.unwrap()).unwrap().unwrap();
+        assert_eq!(stored.content, "after");
+        assert!(stored.needs_sync);
+    }
+
+    #[test]
+    fn a_large_deletion_waits_for_an_answer_before_any_other_key() {
+        let mut app = app_with_notes(&["first"]);
+        app.held_deletions = 12;
+
+        handle_note_list_key(&mut app, key(KeyCode::Char('d'))).unwrap();
+        assert_eq!(app.notes.len(), 1);
+        assert_eq!(app.held_deletions, 12);
+
+        handle_note_list_key(&mut app, key(KeyCode::Esc)).unwrap();
+        assert_eq!(app.held_deletions, 0);
     }
 
     /// Ctrl+C used to recolour the note, Ctrl+P pin it, Ctrl+S open Settings and Ctrl+R

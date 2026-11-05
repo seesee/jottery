@@ -156,6 +156,8 @@ pub fn render_help(app: &App, frame: &mut Frame) {
                 HelpEntry::new("help.shift_v_range_key", "help.shift_v_range_desc"),
                 HelpEntry::new("help.ctrl_a_all_key", "help.ctrl_a_all_desc"),
                 HelpEntry::new("help.multi_t_tags_key", "help.multi_t_tags_desc"),
+                HelpEntry::new("help.multi_remove_tags_key", "help.multi_remove_tags_desc"),
+                HelpEntry::new("help.multi_colour_key", "help.multi_colour_desc"),
                 HelpEntry::new("help.multi_d_delete_key", "help.multi_d_delete_desc"),
                 HelpEntry::new("help.multi_z_archive_key", "help.multi_z_archive_desc"),
                 HelpEntry::new("help.multi_c_combine_key", "help.multi_c_combine_desc"),

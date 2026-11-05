@@ -177,6 +177,8 @@ settings:
   press_enter_cycle: Enterを押して切り替え
   press_enter_toggle: Enterを押してトグル
   disabled: 無効
+  sort_order: "並び順"
+  language_auto: "システムと同じ"
 sync:
   push: サーバーにプッシュ
   pull: サーバーからプル
@@ -226,6 +228,11 @@ sync:
   force_title: "完全再同期を強制"
   force_confirm: "すべてのノートと添付ファイルをサーバーから取得しますか?"
   force_note: "送信していないローカルの変更は保持されます。"
+  disconnect_title: "同期を切断"
+  disconnect_confirm: "このデバイスをサーバーから切断しますか?"
+  disconnect_warning: "ノートはここに残ります。デバイスはサーバーで失効します。"
+  disconnect_conflicts: "%{count} 件のノートに未解決の競合があります。サーバー側のコピーはここから失われます。"
+  device_still_registered: "ここでは切断しましたが、サーバーに通知できなかったため、このデバイスのキーはまだ有効です。ユーザーポータルで失効させてください。"
 
 # 受信トレイ
 inbox:
@@ -516,6 +523,10 @@ help:
   search_modified_desc: "指定日より後に更新 (< と a..b も可)"
   search_words_key: "words:>100"
   search_words_desc: "語数 (< と a..b も可)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "選択したノートからタグを削除"
+  multi_colour_key: "C"
+  multi_colour_desc: "選択したノートの色を設定"
 cli:
   # 代替 (一部で使用)
   list: ノートを一覧表示
@@ -614,6 +625,12 @@ bulk:
   add_tags_to: タグを追加
   export_notes_to: エクスポート
   archived: "%{count} 件のノートをアーカイブしました"
+  tags_removed: "%{count} 件のノートからタグを削除しました: %{tags}"
+  remove_tags_from: "%{count} 件のノートからタグを削除"
+  enter_colour: "色の名前を入力 (空欄で解除):"
+  colour_of: "%{count} 件のノートの色を設定"
+  colour_set: "%{count} 件のノートの色を変更しました"
+  unknown_colour: "%{colour} という色はありません"
 time:
   just_now: たった今
   minutes_ago: "%{count} 分前"

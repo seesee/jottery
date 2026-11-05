@@ -415,7 +415,8 @@ fn version_for_backup(crypto: &CryptoService, version: &NoteVersion, key: &[u8; 
 fn settings_for_backup(settings: &UserSettings) -> Value {
     let scheme = settings.theme.scheme_name();
     let mut item = json!({
-        "language": settings.language,
+        // "auto" is this client's alone, and a backup goes to all of them
+        "language": if settings.language == crate::models::AUTO_LANGUAGE { "en-GB" } else { settings.language.as_str() },
         "theme": if scheme.contains("light") { "light" } else { "dark" },
         "tuiTheme": scheme,
         "sortOrder": settings.sort_order,

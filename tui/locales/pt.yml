@@ -177,6 +177,8 @@ settings:
   press_enter_cycle: pressione Enter para alternar
   press_enter_toggle: pressione Enter para alternar
   disabled: desativado
+  sort_order: "Ordenação"
+  language_auto: "Igual ao sistema"
 sync:
   push: Enviar para o servidor
   pull: Receber do servidor
@@ -226,6 +228,11 @@ sync:
   force_title: "Forçar ressincronização completa"
   force_confirm: "Obter TODAS as notas e anexos do servidor?"
   force_note: "As alterações locais ainda não enviadas são mantidas."
+  disconnect_title: "Desligar da sincronização"
+  disconnect_confirm: "Desligar este dispositivo do servidor?"
+  disconnect_warning: "As suas notas ficam aqui. O dispositivo é revogado no servidor."
+  disconnect_conflicts: "%{count} notas têm conflitos por resolver. As cópias do servidor serão esquecidas aqui."
+  device_still_registered: "Desligado aqui, mas não foi possível avisar o servidor, por isso a chave deste dispositivo ainda funciona. Revogue-a no portal do utilizador."
 
 # Caixa de entrada
 inbox:
@@ -516,6 +523,10 @@ help:
   search_modified_desc: "Modificada depois de uma data (também < e a..b)"
   search_words_key: "words:>100"
   search_words_desc: "Número de palavras (também < e a..b)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "Remover etiquetas das notas selecionadas"
+  multi_colour_key: "C"
+  multi_colour_desc: "Definir a cor das notas selecionadas"
 cli:
   # Alternativo (usado em alguns lugares)
   list: Listar notas
@@ -614,6 +625,12 @@ bulk:
   add_tags_to: Adicionar etiquetas a
   export_notes_to: Exportar
   archived: "%{count} notas arquivadas"
+  tags_removed: "Etiquetas removidas de %{count} notas: %{tags}"
+  remove_tags_from: "Remover etiquetas de %{count} notas"
+  enter_colour: "Introduza um nome de cor (vazio para limpar):"
+  colour_of: "Definir a cor de %{count} notas"
+  colour_set: "Cor alterada em %{count} notas"
+  unknown_colour: "Não existe nenhuma cor chamada %{colour}"
 time:
   just_now: agora mesmo
   minutes_ago: "%{count} minutos atrás"

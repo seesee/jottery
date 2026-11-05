@@ -122,6 +122,10 @@ pub enum InputMode {
     AttachmentPath,
     /// Bulk add tags input mode
     BulkAddTags,
+    /// Bulk remove tags input mode
+    BulkRemoveTags,
+    /// Bulk set colour input mode
+    BulkSetColour,
     /// Bulk export path input mode
     BulkExportPath,
 }

@@ -177,6 +177,8 @@ settings:
   press_enter_cycle: Enter zum Durchschalten
   press_enter_toggle: Enter zum Umschalten
   disabled: disabled
+  sort_order: "Sortierung"
+  language_auto: "Wie im System"
 sync:
   push: An Server senden
   pull: Vom Server abrufen
@@ -226,6 +228,11 @@ sync:
   force_title: "Vollständige Neusynchronisierung erzwingen"
   force_confirm: "ALLE Notizen und Anhänge vom Server abrufen?"
   force_note: "Noch nicht übertragene lokale Änderungen bleiben erhalten."
+  disconnect_title: "Synchronisierung trennen"
+  disconnect_confirm: "Dieses Gerät vom Server trennen?"
+  disconnect_warning: "Ihre Notizen bleiben hier. Das Gerät wird auf dem Server widerrufen."
+  disconnect_conflicts: "%{count} Notizen haben ungelöste Konflikte. Die Serverkopien davon werden hier vergessen."
+  device_still_registered: "Hier getrennt, aber der Server konnte nicht benachrichtigt werden, daher funktioniert der Schlüssel dieses Geräts weiterhin. Widerrufen Sie ihn im Benutzerportal."
 
 # Posteingang
 inbox:
@@ -516,6 +523,10 @@ help:
   search_modified_desc: "Nach einem Datum geändert (auch < und a..b)"
   search_words_key: "words:>100"
   search_words_desc: "Wortanzahl (auch < und a..b)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "Tags von ausgewählten Notizen entfernen"
+  multi_colour_key: "C"
+  multi_colour_desc: "Farbe der ausgewählten Notizen festlegen"
 cli:
   # Alt (an einigen Stellen verwendet)
   list: Notizen auflisten
@@ -614,6 +625,12 @@ bulk:
   add_tags_to: Tags hinzufügen zu
   export_notes_to: Exportieren
   archived: "%{count} Notizen archiviert"
+  tags_removed: "Tags von %{count} Notizen entfernt: %{tags}"
+  remove_tags_from: "Tags von %{count} Notizen entfernen"
+  enter_colour: "Farbnamen eingeben (leer zum Entfernen):"
+  colour_of: "Farbe von %{count} Notizen festlegen"
+  colour_set: "Farbe bei %{count} Notizen geändert"
+  unknown_colour: "Es gibt keine Farbe namens %{colour}"
 time:
   just_now: gerade eben
   minutes_ago: vor %{count} Minuten

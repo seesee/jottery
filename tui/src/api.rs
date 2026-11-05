@@ -353,6 +353,26 @@ impl AuthClient {
         response.json().context("Failed to parse status response")
     }
 
+    /// Take this device off the account, so its API key stops working. A key the server
+    /// no longer knows has got there already.
+    pub fn revoke_device(&self, api_key: &str) -> Result<()> {
+        let url = format!("{}/api/v1/sync/device", self.base_url);
+
+        let response = self.client
+            .delete(&url)
+            .header("Authorization", format!("Bearer {}", api_key))
+            .timeout(std::time::Duration::from_secs(10))
+            .send()
+            .context("Failed to reach the server")?;
+
+        let status = response.status();
+        if !status.is_success() && status != reqwest::StatusCode::UNAUTHORIZED {
+            anyhow::bail!("Failed to revoke this device: {}", status);
+        }
+
+        Ok(())
+    }
+
     /// Check user approval status (no auth required)
     pub fn check_status(&self, email: &str) -> Result<UserStatusResponse> {
         let url = format!(

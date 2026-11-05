@@ -177,6 +177,8 @@ settings:
   press_enter_cycle: нажмите Enter для переключения
   press_enter_toggle: нажмите Enter для переключения
   disabled: отключено
+  sort_order: "Сортировка"
+  language_auto: "Как в системе"
 sync:
   push: Отправить на сервер
   pull: Получить с сервера
@@ -226,6 +228,11 @@ sync:
   force_title: "Принудительная полная синхронизация"
   force_confirm: "Загрузить ВСЕ заметки и вложения с сервера?"
   force_note: "Неотправленные локальные изменения сохранятся."
+  disconnect_title: "Отключить синхронизацию"
+  disconnect_confirm: "Отключить это устройство от сервера?"
+  disconnect_warning: "Заметки останутся здесь. Устройство будет отозвано на сервере."
+  disconnect_conflicts: "Заметок с неразрешёнными конфликтами: %{count}. Их серверные копии здесь будут забыты."
+  device_still_registered: "Отключено здесь, но сервер уведомить не удалось, поэтому ключ этого устройства всё ещё действует. Отзовите его на портале пользователя."
 
 # Входящие
 inbox:
@@ -516,6 +523,10 @@ help:
   search_modified_desc: "Изменено после даты (также < и a..b)"
   search_words_key: "words:>100"
   search_words_desc: "Число слов (также < и a..b)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "Удалить теги из выбранных заметок"
+  multi_colour_key: "C"
+  multi_colour_desc: "Задать цвет выбранных заметок"
 cli:
   # Альтернативные (используются в некоторых местах)
   list: Список заметок
@@ -614,6 +625,12 @@ bulk:
   add_tags_to: Добавить теги к
   export_notes_to: Экспорт
   archived: "Заметок в архиве: %{count}"
+  tags_removed: "Теги удалены из заметок (%{count}): %{tags}"
+  remove_tags_from: "Удалить теги из заметок (%{count})"
+  enter_colour: "Введите название цвета (пусто, чтобы убрать):"
+  colour_of: "Задать цвет заметок (%{count})"
+  colour_set: "Цвет изменён у заметок: %{count}"
+  unknown_colour: "Цвета с названием %{colour} нет"
 time:
   just_now: только что
   minutes_ago: "%{count} минут назад"

@@ -177,6 +177,8 @@ settings:
   press_enter_cycle: druk op Enter om door te bladeren
   press_enter_toggle: druk op Enter om te schakelen
   disabled: uitgeschakeld
+  sort_order: "Sortering"
+  language_auto: "Zelfde als systeem"
 sync:
   push: Naar server pushen
   pull: Van server pullen
@@ -226,6 +228,11 @@ sync:
   force_title: "Volledige hersynchronisatie forceren"
   force_confirm: "ALLE notities en bijlagen van de server ophalen?"
   force_note: "Lokale wijzigingen die nog niet zijn verzonden, blijven behouden."
+  disconnect_title: "Sync loskoppelen"
+  disconnect_confirm: "Dit apparaat loskoppelen van de server?"
+  disconnect_warning: "Je notities blijven hier. Het apparaat wordt op de server ingetrokken."
+  disconnect_conflicts: "%{count} notities hebben onopgeloste conflicten. De serverkopieën daarvan worden hier vergeten."
+  device_still_registered: "Hier losgekoppeld, maar de server kon niet worden bereikt, dus de sleutel van dit apparaat werkt nog. Trek hem in via het gebruikersportaal."
 
 # Postvak IN
 inbox:
@@ -516,6 +523,10 @@ help:
   search_modified_desc: "Gewijzigd na een datum (ook < en a..b)"
   search_words_key: "words:>100"
   search_words_desc: "Aantal woorden (ook < en a..b)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "Tags verwijderen van geselecteerde notities"
+  multi_colour_key: "C"
+  multi_colour_desc: "Kleur van geselecteerde notities instellen"
 cli:
   # Basis (op sommige plaatsen gebruikt)
   list: Notities weergeven
@@ -614,6 +625,12 @@ bulk:
   add_tags_to: Labels toevoegen aan
   export_notes_to: Exporteren
   archived: "%{count} notities gearchiveerd"
+  tags_removed: "Tags verwijderd van %{count} notities: %{tags}"
+  remove_tags_from: "Tags verwijderen van %{count} notities"
+  enter_colour: "Voer een kleurnaam in (leeg om te wissen):"
+  colour_of: "Kleur van %{count} notities instellen"
+  colour_set: "Kleur gewijzigd op %{count} notities"
+  unknown_colour: "Er is geen kleur met de naam %{colour}"
 time:
   just_now: zojuist
   minutes_ago: "%{count} minuten geleden"

@@ -177,6 +177,8 @@ settings:
   press_enter_cycle: appuyez sur Entrée pour cycler
   press_enter_toggle: appuyez sur Entrée pour basculer
   disabled: désactivé
+  sort_order: "Tri"
+  language_auto: "Comme le système"
 sync:
   push: Pousser vers le serveur
   pull: Tirer du serveur
@@ -226,6 +228,11 @@ sync:
   force_title: "Forcer une resynchronisation complète"
   force_confirm: "Récupérer TOUTES les notes et pièces jointes du serveur ?"
   force_note: "Les modifications locales non envoyées sont conservées."
+  disconnect_title: "Se déconnecter de la synchronisation"
+  disconnect_confirm: "Déconnecter cet appareil du serveur ?"
+  disconnect_warning: "Vos notes restent ici. L'appareil est révoqué sur le serveur."
+  disconnect_conflicts: "%{count} notes ont des conflits non résolus. Leurs copies du serveur seront oubliées ici."
+  device_still_registered: "Déconnecté ici, mais le serveur n'a pas pu être prévenu : la clé de cet appareil fonctionne encore. Révoquez-la dans le portail utilisateur."
 
 # Boîte de réception
 inbox:
@@ -516,6 +523,10 @@ help:
   search_modified_desc: "Modifiée après une date (aussi < et a..b)"
   search_words_key: "words:>100"
   search_words_desc: "Nombre de mots (aussi < et a..b)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "Retirer des tags des notes sélectionnées"
+  multi_colour_key: "C"
+  multi_colour_desc: "Définir la couleur des notes sélectionnées"
 cli:
   # Alt (utilisé à certains endroits)
   list: Lister les notes
@@ -614,6 +625,12 @@ bulk:
   add_tags_to: Ajouter des étiquettes à
   export_notes_to: Exporter
   archived: "%{count} notes archivées"
+  tags_removed: "Tags retirés de %{count} notes : %{tags}"
+  remove_tags_from: "Retirer des tags de %{count} notes"
+  enter_colour: "Saisissez un nom de couleur (vide pour effacer) :"
+  colour_of: "Définir la couleur de %{count} notes"
+  colour_set: "Couleur modifiée sur %{count} notes"
+  unknown_colour: "Aucune couleur ne s'appelle %{colour}"
 time:
   just_now: à l'instant
   minutes_ago: il y a %{count} minutes

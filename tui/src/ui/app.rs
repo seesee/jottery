@@ -38,7 +38,7 @@ use std::{
 use crate::{
     crypto::{CryptoService, KeyManager},
     db::Database,
-    models::{Note, UserSettings, sync::ConflictData},
+    models::{get_note_title, Note, SortOrder, UserSettings, sync::ConflictData},
     password_storage::{self, PasswordStorage, RetrieveResult, StorageBackendType},
     repository::{SettingsRepository, sync::SyncRepository},
     search::SearchQuery,
@@ -224,6 +224,8 @@ pub struct App {
     pub show_empty_bin_confirm: bool,
     /// Notes the server says to delete, waiting for an answer. Above zero, it asks.
     pub held_deletions: usize,
+    /// Show the confirmation for disconnecting from the sync server
+    pub show_disconnect_confirm: bool,
     /// The plain HTTP address the user has been warned about. Entering it again accepts that.
     pub insecure_endpoint_warned: Option<String>,
     /// Show note info modal
@@ -391,6 +393,7 @@ impl App {
             show_bulk_combine_confirm: false,
             show_empty_bin_confirm: false,
             held_deletions: 0,
+            show_disconnect_confirm: false,
             insecure_endpoint_warned: None,
             show_note_info: false,
             note_list_area: None,
@@ -556,6 +559,7 @@ impl App {
         self.show_force_sync_confirm = false;
         self.show_empty_bin_confirm = false;
         self.held_deletions = 0;
+        self.show_disconnect_confirm = false;
         self.show_bulk_delete_confirm = false;
         self.show_bulk_combine_confirm = false;
         self.show_note_info = false;
@@ -747,6 +751,29 @@ impl App {
         Ok(())
     }
 
+    /// Move the highlight to a position in the visible list.
+    pub(crate) fn select_note_at(&mut self, index: usize) {
+        self.selected_note = index;
+        self.selected_note_id = self.filtered_notes().get(index).map(|note| note.id.clone());
+    }
+
+    /// The selected notes that are still in the list. The selection outlives a change of
+    /// search or mode, and nothing should act on notes that can't be seen.
+    pub(crate) fn visible_selection(&self) -> Vec<&Note> {
+        self.filtered_notes().into_iter()
+            .filter(|note| self.selected_note_ids.contains(&note.id))
+            .collect()
+    }
+
+    /// The ids of the selected notes a bulk action may change, which leaves out what a
+    /// single-note action would refuse.
+    pub(crate) fn editable_selection(&self) -> Vec<String> {
+        self.visible_selection().into_iter()
+            .filter(|note| !note.locked)
+            .map(|note| note.id.clone())
+            .collect()
+    }
+
     /// Point `selected_note`, an index into the visible list, at the note that was
     /// selected, or the nearest one if that note has left the list.
     pub(crate) fn keep_selection_on_note(&mut self) {
@@ -910,19 +937,34 @@ impl App {
             || inbox_items != self.inbox_items.len()
     }
 
-    /// Display order: pinned notes first, then most recently modified
-    fn display_order(a: &Note, b: &Note) -> std::cmp::Ordering {
-        match (a.pinned, b.pinned) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => b.modified_at.cmp(&a.modified_at),
+    /// Display order for two notes: pinned notes first, then as the settings say. Alpha
+    /// sorts by title, and is handled by `sort_for_display`, which works each out once.
+    fn display_order(order: SortOrder, a: &Note, b: &Note) -> std::cmp::Ordering {
+        b.pinned.cmp(&a.pinned).then_with(|| match order {
+            SortOrder::Recent | SortOrder::Alpha => b.modified_at.cmp(&a.modified_at),
+            SortOrder::Oldest => a.modified_at.cmp(&b.modified_at),
+            SortOrder::Created => b.created_at.cmp(&a.created_at),
+        })
+    }
+
+    /// Put indices into `notes` in display order.
+    fn sort_for_display(&self, indices: &mut [usize]) {
+        let order = self.settings.sort_order;
+
+        if order == SortOrder::Alpha {
+            indices.sort_by_cached_key(|&index| {
+                let note = &self.notes[index];
+                (!note.pinned, get_note_title(&note.content, &note.tags).to_lowercase())
+            });
+        } else {
+            indices.sort_by(|&a, &b| Self::display_order(order, &self.notes[a], &self.notes[b]));
         }
     }
 
     /// Sort notes by pinned status first (pinned at top), then by modified_at descending
     #[cfg(test)]
     pub fn sort_notes_by_pinned_and_date(notes: &mut [&Note]) {
-        notes.sort_by(|a, b| Self::display_order(a, b));
+        notes.sort_by(|a, b| Self::display_order(SortOrder::Recent, a, b));
     }
 
     /// Filter notes based on search query and sort (pinned first, then by modified date)
@@ -954,8 +996,7 @@ impl App {
                 .collect()
         };
 
-        // Sort: pinned first, then by modified_at descending
-        indices.sort_by(|&a, &b| Self::display_order(&self.notes[a], &self.notes[b]));
+        self.sort_for_display(&mut indices);
 
         let notes = indices.iter().map(|&index| &self.notes[index]).collect();
         *self.filtered_notes_cache.borrow_mut() = Some((self.notes.len(), indices));

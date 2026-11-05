@@ -200,6 +200,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
         app.debug_log("Unlock - Color scheme updated");
     }
     app.apply_auto_lock_setting();
+    super::settings::apply_language(app);
 
     // Store password if remember checkbox was enabled
     if app.remember_password_checkbox {

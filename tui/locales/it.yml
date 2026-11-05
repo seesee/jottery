@@ -177,6 +177,8 @@ settings:
   press_enter_cycle: premi Invio per ciclare
   press_enter_toggle: premi Invio per attivare/disattivare
   disabled: disabilitato
+  sort_order: "Ordinamento"
+  language_auto: "Come il sistema"
 sync:
   push: Invia al server
   pull: Ricevi dal server
@@ -226,6 +228,11 @@ sync:
   force_title: "Forza risincronizzazione completa"
   force_confirm: "Scaricare TUTTE le note e gli allegati dal server?"
   force_note: "Le modifiche locali non inviate vengono mantenute."
+  disconnect_title: "Disconnetti dalla sincronizzazione"
+  disconnect_confirm: "Disconnettere questo dispositivo dal server?"
+  disconnect_warning: "Le note restano qui. Il dispositivo viene revocato sul server."
+  disconnect_conflicts: "%{count} note hanno conflitti irrisolti. Le loro copie del server verranno dimenticate qui."
+  device_still_registered: "Disconnesso qui, ma non è stato possibile avvisare il server, quindi la chiave di questo dispositivo funziona ancora. Revocala nel portale utente."
 
 # Posta in arrivo
 inbox:
@@ -516,6 +523,10 @@ help:
   search_modified_desc: "Modificata dopo una data (anche < e a..b)"
   search_words_key: "words:>100"
   search_words_desc: "Numero di parole (anche < e a..b)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "Rimuovi tag dalle note selezionate"
+  multi_colour_key: "C"
+  multi_colour_desc: "Imposta il colore delle note selezionate"
 cli:
   # Alt (usato in alcuni contesti)
   list: Elenca note
@@ -614,6 +625,12 @@ bulk:
   add_tags_to: Aggiungi tag a
   export_notes_to: Esporta
   archived: "%{count} note archiviate"
+  tags_removed: "Tag rimossi da %{count} note: %{tags}"
+  remove_tags_from: "Rimuovi tag da %{count} note"
+  enter_colour: "Inserisci un nome di colore (vuoto per togliere):"
+  colour_of: "Imposta il colore di %{count} note"
+  colour_set: "Colore cambiato su %{count} note"
+  unknown_colour: "Non esiste un colore chiamato %{colour}"
 time:
   just_now: proprio ora
   minutes_ago: "%{count} minuti fa"

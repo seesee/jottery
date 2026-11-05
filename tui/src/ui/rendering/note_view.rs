@@ -19,7 +19,7 @@ pub fn render_note_view(app: &App, frame: &mut Frame) {
         InputMode::Tag => "TAG",
         InputMode::AttachmentPath => "ATTACHMENT",
         InputMode::Insert | InputMode::SettingsEdit | InputMode::PasswordVerify
-            | InputMode::BulkAddTags | InputMode::BulkExportPath => "PREVIEW", // Should not happen in note view
+            | InputMode::BulkAddTags | InputMode::BulkRemoveTags | InputMode::BulkSetColour | InputMode::BulkExportPath => "PREVIEW", // Should not happen in note view
     };
 
     let block = Block::default()
@@ -76,7 +76,7 @@ pub fn render_note_view(app: &App, frame: &mut Frame) {
     // Help text
     let help = match app.input_mode {
         InputMode::Normal | InputMode::Insert | InputMode::SettingsEdit | InputMode::PasswordVerify
-            | InputMode::BulkAddTags | InputMode::BulkExportPath => {
+            | InputMode::BulkAddTags | InputMode::BulkRemoveTags | InputMode::BulkSetColour | InputMode::BulkExportPath => {
             Paragraph::new("Enter/e: edit with $EDITOR | t: tags | q/Esc: save & quit")
                 .style(Style::default().fg(app.color_scheme.muted))
                 .alignment(Alignment::Center)

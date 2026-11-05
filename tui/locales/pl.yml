@@ -177,6 +177,8 @@ settings:
   press_enter_cycle: naciśnij Enter, aby przełączyć
   press_enter_toggle: naciśnij Enter, aby przełączyć
   disabled: wyłączone
+  sort_order: "Sortowanie"
+  language_auto: "Jak w systemie"
 sync:
   push: Wyślij na serwer
   pull: Pobierz z serwera
@@ -226,6 +228,11 @@ sync:
   force_title: "Wymuś pełną resynchronizację"
   force_confirm: "Pobrać WSZYSTKIE notatki i załączniki z serwera?"
   force_note: "Niewysłane zmiany lokalne zostaną zachowane."
+  disconnect_title: "Odłącz synchronizację"
+  disconnect_confirm: "Odłączyć to urządzenie od serwera?"
+  disconnect_warning: "Notatki zostają tutaj. Urządzenie zostanie unieważnione na serwerze."
+  disconnect_conflicts: "Notatki z nierozwiązanymi konfliktami: %{count}. Ich kopie z serwera zostaną tutaj zapomniane."
+  device_still_registered: "Odłączono tutaj, ale nie udało się powiadomić serwera, więc klucz tego urządzenia nadal działa. Unieważnij go w portalu użytkownika."
 
 # Skrzynka odbiorcza
 inbox:
@@ -516,6 +523,10 @@ help:
   search_modified_desc: "Zmienione po dacie (także < i a..b)"
   search_words_key: "words:>100"
   search_words_desc: "Liczba słów (także < i a..b)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "Usuń tagi z wybranych notatek"
+  multi_colour_key: "C"
+  multi_colour_desc: "Ustaw kolor wybranych notatek"
 cli:
   # Alternatywne (używane w niektórych miejscach)
   list: Wyświetl notatki
@@ -614,6 +625,12 @@ bulk:
   add_tags_to: Dodaj tagi do
   export_notes_to: Eksportuj
   archived: "Zarchiwizowane notatki: %{count}"
+  tags_removed: "Usunięto tagi z notatek (%{count}): %{tags}"
+  remove_tags_from: "Usuń tagi z notatek (%{count})"
+  enter_colour: "Wpisz nazwę koloru (puste, aby wyczyścić):"
+  colour_of: "Ustaw kolor notatek (%{count})"
+  colour_set: "Zmieniono kolor notatek: %{count}"
+  unknown_colour: "Nie ma koloru o nazwie %{colour}"
 time:
   just_now: przed chwilą
   minutes_ago: "%{count} minut temu"

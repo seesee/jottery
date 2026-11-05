@@ -1052,6 +1052,34 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     }
 
     // Render bulk add tags input modal if showing
+    if matches!(app.input_mode, InputMode::BulkRemoveTags) {
+        render_input_modal(
+            frame,
+            size,
+            &t!("bulk.enter_tags"),
+            &t!("bulk.remove_tags_from", count = app.selected_note_ids.len()),
+            &app.bulk_tags_input,
+            "Enter: confirm | Esc: cancel",
+            &app.color_scheme,
+            60,
+            6,
+        );
+    }
+
+    if matches!(app.input_mode, InputMode::BulkSetColour) {
+        render_input_modal(
+            frame,
+            size,
+            &t!("bulk.enter_colour"),
+            &t!("bulk.colour_of", count = app.selected_note_ids.len()),
+            &app.bulk_tags_input,
+            "Enter: confirm | Esc: cancel",
+            &app.color_scheme,
+            60,
+            6,
+        );
+    }
+
     if matches!(app.input_mode, InputMode::BulkAddTags) {
         let count = app.selected_note_ids.len();
         let description = format!(
