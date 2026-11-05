@@ -200,14 +200,17 @@ final class AppState {
     func scheduleSearch() {
         searchTask?.cancel()
         let query = searchQuery
-        let source = displayedNotes
         let order = sortOrder
 
         // No debounce needed when query is empty — just sort (cheap).
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
-            filteredNotes = SearchService.sort(notes: source, order: order)
+            filteredNotes = SearchService.sort(notes: displayedNotes, order: order)
             return
         }
+
+        // Both lists, because `archived` reaches whichever one isn't showing.
+        let source = notes + archivedNotes
+        let archiveMode = showArchive
 
         searchTask = Task {
             // Debounce while typing
@@ -216,7 +219,7 @@ final class AppState {
 
             // Run expensive filter + sort off the main thread
             let results = await Task.detached(priority: .userInitiated) {
-                let filtered = SearchService.filter(notes: source, query: query)
+                let filtered = SearchService.filter(notes: source, query: query, archiveMode: archiveMode)
                 return SearchService.sort(notes: filtered, order: order)
             }.value
 
