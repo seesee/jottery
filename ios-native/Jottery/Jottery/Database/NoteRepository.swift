@@ -277,13 +277,17 @@ struct NoteRepository: Sendable {
     func softDelete(ids: [String]) throws {
         let now = Date().iso8601
         try db.dbPool.write { db in
-            for id in ids {
-                try db.execute(sql: """
-                    UPDATE notes SET
-                        deleted = 1, deleted_at = ?, local_deleted_at = ?, modified_at = ?, needs_sync = 1
-                    WHERE id = ?
-                """, arguments: [now, now, now, id])
-            }
+            try Self.softDelete(ids: ids, at: now, in: db)
+        }
+    }
+
+    static func softDelete(ids: [String], at now: String, in db: Database) throws {
+        for id in ids {
+            try db.execute(sql: """
+                UPDATE notes SET
+                    deleted = 1, deleted_at = ?, local_deleted_at = ?, modified_at = ?, needs_sync = 1
+                WHERE id = ?
+            """, arguments: [now, now, now, id])
         }
     }
 

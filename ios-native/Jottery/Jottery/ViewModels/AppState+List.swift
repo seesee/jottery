@@ -20,4 +20,28 @@ extension AppState {
         }
         return saveEditorEdit(NoteEditorFields(note: pending))
     }
+
+    // MARK: - Combining Notes
+
+    /// Make one note from these, oldest first, send them to the bin and open the
+    /// new one. Notes that can't be changed are left out, as `NoteCombining` says.
+    /// Returns the new note's id.
+    @discardableResult
+    func combineNotes(ids: Set<String>, mergeTags: Bool) async throws -> String? {
+        guard !isReKeying else { throw AppStateError.vaultBusy }
+        guard let noteRepo, let key = keyManager.masterKey else { return nil }
+        guard saveEditorEdits(toNotes: ids) else { return nil }
+
+        let selected = NoteCombining.combinable((notes + archivedNotes).filter { ids.contains($0.id) })
+        guard selected.count >= 2 else { throw NoteCombining.Failure.tooFewNotes }
+
+        let combinedId = try await Task.detached(priority: .userInitiated) {
+            try noteRepo.combine(selected, mergeTags: mergeTags, key: key)
+        }.value
+
+        try await loadNotes()
+        selectedNoteId = combinedId
+        scheduleAutoSync()
+        return combinedId
+    }
 }

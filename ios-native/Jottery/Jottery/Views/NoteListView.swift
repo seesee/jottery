@@ -10,6 +10,7 @@ struct NoteListView: View {
     @State private var showBulkTagSheet = false
     @State private var showBulkRemoveTagSheet = false
     @State private var showBulkColorSheet = false
+    @State private var showBulkCombineSheet = false
     @State private var showBulkDeleteConfirm = false
     @State private var bulkExportFile: ExportFile?
     @State private var noteShareFile: ExportFile?
@@ -162,6 +163,12 @@ struct NoteListView: View {
         }
         .sheet(isPresented: $showBulkColorSheet) {
             BulkSetColorSheet(noteIds: selectedIds) {
+                isSelectMode = false
+                selectedIds.removeAll()
+            }
+        }
+        .sheet(isPresented: $showBulkCombineSheet) {
+            BulkCombineSheet(noteIds: selectedIds) {
                 isSelectMode = false
                 selectedIds.removeAll()
             }
@@ -370,6 +377,14 @@ struct NoteListView: View {
                         showBulkColorSheet = true
                     } label: {
                         Label(L.bulkSetColour, systemImage: "paintbrush")
+                    }
+
+                    if !appState.showArchive && selectedIds.count >= 2 {
+                        Button {
+                            showBulkCombineSheet = true
+                        } label: {
+                            Label(L.bulkCombine, systemImage: "rectangle.stack")
+                        }
                     }
 
                     if !appState.showArchive {
