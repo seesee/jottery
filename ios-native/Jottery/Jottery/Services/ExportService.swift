@@ -146,12 +146,13 @@ enum ExportService {
         notes: [DecryptedNote],
         attachmentRepo: AttachmentRepository?,
         key: SymmetricKey,
-        files: TemporaryFiles = .shared
+        files: TemporaryFiles = .shared,
+        progress: (@Sendable (_ completed: Int, _ total: Int) -> Void)? = nil
     ) async throws -> URL {
         let url = try files.createFile(named: defaultFilename())
         do {
             try await offMainActor {
-                try writeExport(notes: notes, to: url, attachmentRepo: attachmentRepo, key: key)
+                try writeExport(notes: notes, to: url, attachmentRepo: attachmentRepo, key: key, progress: progress)
             }
             return url
         } catch {

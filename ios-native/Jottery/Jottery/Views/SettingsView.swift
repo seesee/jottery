@@ -11,8 +11,9 @@ struct SettingsView: View {
     @State private var showBackup = false
     @State private var showForceSyncConfirmation = false
     @State private var exportFile: ExportFile?
-    @State private var isExporting = false
+    @State private var exportProgress: (completed: Int, total: Int)?
     @State private var exportError: String?
+    @State private var exportTask: Task<Void, Never>?
     @State private var isDisconnecting = false
     @State private var disconnectWarning: String?
     @State private var showDeleteAccount = false
@@ -95,16 +96,16 @@ struct SettingsView: View {
                     Button {
                         exportAllNotes()
                     } label: {
-                        HStack {
-                            Label(L.settingsExportAll, systemImage: "square.and.arrow.up")
-                            Spacer()
-                            if isExporting {
-                                ProgressView()
-                                    .controlSize(.small)
-                            }
+                        Label(L.settingsExportAll, systemImage: "square.and.arrow.up")
+                    }
+                    .disabled(exportProgress != nil)
+
+                    if let exportProgress {
+                        ProgressView(value: Double(exportProgress.completed), total: Double(max(exportProgress.total, 1))) {
+                            Text(L.exportProgress(exportProgress.completed, exportProgress.total))
+                                .font(.footnote)
                         }
                     }
-                    .disabled(isExporting)
 
                     Button {
                         showImport = true
@@ -195,6 +196,10 @@ struct SettingsView: View {
                 ImportView()
             }
             .shareTemporaryFile($exportFile)
+            .onDisappear {
+                // The app can lock during an export, which takes this view away.
+                exportTask?.cancel()
+            }
             .sheet(isPresented: $showChangePassword) {
                 ChangePasswordView()
             }
@@ -308,16 +313,23 @@ struct SettingsView: View {
         guard let key = appState.keyManager.masterKey else { return }
         let allNotes = appState.notes + appState.archivedNotes
         exportError = nil
-        isExporting = true
-        Task {
-            defer { isExporting = false }
+        exportProgress = (0, allNotes.count)
+        exportTask = Task {
+            defer { exportProgress = nil }
             do {
                 let url = try await ExportService.exportToTemporaryFile(
                     notes: allNotes,
                     attachmentRepo: appState.attachmentRepo,
-                    key: key
+                    key: key,
+                    progress: { completed, total in
+                        Task { @MainActor in
+                            if exportProgress != nil { exportProgress = (completed, total) }
+                        }
+                    }
                 )
                 exportFile = ExportFile(url: url)
+            } catch is CancellationError {
+                // Settings went away, so there's nobody to tell.
             } catch {
                 exportError = L.errorCouldntExport
             }

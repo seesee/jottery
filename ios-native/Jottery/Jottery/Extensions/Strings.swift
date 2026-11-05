@@ -390,6 +390,9 @@ enum L {
     static func backupProgress(_ completed: Int, _ total: Int) -> String {
         String(format: String(localized: "backup.progress"), completed, total)
     }
+    static func exportProgress(_ completed: Int, _ total: Int) -> String {
+        String(format: String(localized: "export.progress"), completed, total)
+    }
     static func restoreProgress(_ completed: Int, _ total: Int) -> String {
         String(format: String(localized: "backup.restoreProgress"), completed, total)
     }

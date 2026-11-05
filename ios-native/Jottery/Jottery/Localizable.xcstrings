@@ -1316,6 +1316,17 @@
         }
       }
     },
+    "export.progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporting %lld of %lld…"
+          }
+        }
+      }
+    },
     "forceSync.action": {
       "extractionState": "manual",
       "localizations": {

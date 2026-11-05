@@ -39,6 +39,27 @@ struct TemporaryFilesTests {
             == files.root.standardizedFileURL)
     }
 
+    @Test func aCopyHoldsTheSameBytes() throws {
+        let files = makeFiles()
+        let source = try files.write(Data("picked photo".utf8), named: "source.jpg")
+
+        let copy = try files.copy(source, named: "../IMG_0001.jpg")
+
+        #expect(copy.lastPathComponent == "IMG_0001.jpg")
+        #expect(try Data(contentsOf: copy) == Data("picked photo".utf8))
+    }
+
+    @Test func aCreatedFileCanBeWrittenToAsItGrows() throws {
+        let files = makeFiles()
+        let url = try files.createFile(named: "export.json")
+
+        let handle = try FileHandle(forWritingTo: url)
+        try handle.write(contentsOf: Data("streamed".utf8))
+        try handle.close()
+
+        #expect(try Data(contentsOf: url) == Data("streamed".utf8))
+    }
+
     @Test func removingAFileRemovesItsFolder() throws {
         let files = makeFiles()
         let url = try files.write(Data("a".utf8), named: "note.json")

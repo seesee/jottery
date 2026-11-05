@@ -12,6 +12,7 @@ struct NoteListView: View {
     @State private var showBulkColorSheet = false
     @State private var showBulkDeleteConfirm = false
     @State private var bulkExportFile: ExportFile?
+    @State private var bulkExportTask: Task<Void, Never>?
     @State private var showSavedSearches = false
     @State private var showConflicts = false
     @State private var showInbox = false
@@ -159,6 +160,10 @@ struct NoteListView: View {
             }
         }
         .shareTemporaryFile($bulkExportFile)
+        .onDisappear {
+            // The app can lock during an export, which takes this view away.
+            bulkExportTask?.cancel()
+        }
         .alert(L.bulkDeleteConfirmTitle, isPresented: $showBulkDeleteConfirm) {
             Button(L.bulkDeleteConfirmAction, role: .destructive) {
                 var failureCount = 0
@@ -399,8 +404,13 @@ struct NoteListView: View {
                     Button {
                         exportSelectedNotes()
                     } label: {
-                        Label(L.bulkExport, systemImage: "square.and.arrow.up")
+                        if bulkExportTask != nil {
+                            ProgressView()
+                        } else {
+                            Label(L.bulkExport, systemImage: "square.and.arrow.up")
+                        }
                     }
+                    .disabled(bulkExportTask != nil)
 
                     Button(role: .destructive) {
                         showBulkDeleteConfirm = true
@@ -422,7 +432,8 @@ struct NoteListView: View {
     private func exportSelectedNotes() {
         guard let key = appState.keyManager.masterKey else { return }
         let selected = (appState.notes + appState.archivedNotes).filter { selectedIds.contains($0.id) }
-        Task {
+        bulkExportTask = Task {
+            defer { bulkExportTask = nil }
             do {
                 let url = try await ExportService.exportToTemporaryFile(
                     notes: selected,
@@ -430,6 +441,8 @@ struct NoteListView: View {
                     key: key
                 )
                 bulkExportFile = ExportFile(url: url)
+            } catch is CancellationError {
+                // The list went away, so there's nobody to tell.
             } catch {
                 appState.reportError(L.errorCouldntExport)
             }

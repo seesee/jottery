@@ -34,6 +34,33 @@ struct PrivacyCoverWindowTests {
         #expect(window.rootViewController?.view.bounds.isEmpty == false)
     }
 
+    /// It's no use if what's beneath shows through, or it hasn't drawn yet by
+    /// the time the system takes its snapshot.
+    @Test func isOpaqueAsSoonAsItsUp() async throws {
+        let state = try await makeUnlockedState()
+        let scene = try connectedScene()
+        let controller = PrivacyCoverController(appState: state)
+
+        controller.coverIfNeeded(scene)
+        defer { controller.lift(from: scene) }
+
+        let window = try #require(controller.coverWindow(for: scene))
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.preferredRange = .standard
+        let image = UIGraphicsImageRenderer(bounds: window.bounds, format: format).image { _ in
+            window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+        }
+        let cgImage = try #require(image.cgImage)
+        let data = try #require(cgImage.dataProvider?.data as Data?)
+        #expect(cgImage.bitsPerComponent == 8)
+        let bytesPerPixel = cgImage.bitsPerPixel / 8
+        let alphaOffset = cgImage.alphaInfo == .premultipliedFirst || cgImage.alphaInfo == .first ? 0 : bytesPerPixel - 1
+        for (x, y) in [(2, 2), (cgImage.width - 3, 2), (2, cgImage.height - 3), (cgImage.width / 2, cgImage.height - 3)] {
+            #expect(data[y * cgImage.bytesPerRow + x * bytesPerPixel + alphaOffset] == 255)
+        }
+    }
+
     /// The point of the window: a modal presented in the app's own window is
     /// still underneath it.
     @Test func sitsAboveAPresentedSheet() async throws {
