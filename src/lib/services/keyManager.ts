@@ -1,15 +1,12 @@
 /**
- * Key manager service for handling master key lifecycle
- * Manages locking, unlocking, and auto-lock timeout
+ * Key manager service for handling master key lifecycle.
+ * autoLockService decides when to lock.
  */
 
 import type { KeyManager, MasterKey } from '../types';
 
 class KeyManagerService implements KeyManager {
   private masterKey: MasterKey | null = null;
-  private autoLockTimer: number | null = null;
-  private autoLockTimeoutMinutes: number = 0;
-  private activityCallbacks: Set<() => void> = new Set();
   private lockCallbacks: Set<() => void> = new Set();
 
   /**
@@ -31,7 +28,6 @@ class KeyManagerService implements KeyManager {
    */
   setMasterKey(key: MasterKey): void {
     this.masterKey = key;
-    this.notifyActivity();
   }
 
   /**
@@ -48,12 +44,6 @@ class KeyManagerService implements KeyManager {
     }
     this.masterKey = null;
 
-    // Stop auto-lock timer
-    if (this.autoLockTimer !== null) {
-      clearTimeout(this.autoLockTimer);
-      this.autoLockTimer = null;
-    }
-
     // Notify lock callbacks
     this.lockCallbacks.forEach(callback => callback());
   }
@@ -66,74 +56,12 @@ class KeyManagerService implements KeyManager {
   }
 
   /**
-   * Register activity (for auto-lock timeout)
-   */
-  registerActivity(): void {
-    if (this.isLocked()) return;
-
-    this.notifyActivity();
-    this.resetAutoLockTimer();
-  }
-
-  /**
-   * Start auto-lock timer
-   */
-  startAutoLock(timeoutMinutes: number): void {
-    this.stopAutoLock();
-    this.autoLockTimeoutMinutes = timeoutMinutes;
-
-    if (timeoutMinutes <= 0) return;
-
-    const timeoutMs = timeoutMinutes * 60 * 1000;
-    this.autoLockTimer = window.setTimeout(() => {
-      this.clearMasterKey();
-    }, timeoutMs);
-  }
-
-  /**
-   * Stop auto-lock timer
-   */
-  stopAutoLock(): void {
-    if (this.autoLockTimer !== null) {
-      clearTimeout(this.autoLockTimer);
-      this.autoLockTimer = null;
-    }
-  }
-
-  /**
-   * Reset auto-lock timer on activity
-   * Restarts the timer with the previously configured timeout
-   */
-  private resetAutoLockTimer(): void {
-    if (this.autoLockTimeoutMinutes > 0) {
-      this.startAutoLock(this.autoLockTimeoutMinutes);
-    }
-  }
-
-  /**
    * Check if key is expired (for future implementation)
    */
   private isExpired(_key: MasterKey): boolean {
     // For now, keys don't expire on their own
     // This could be extended to add a max session time
     return false;
-  }
-
-  /**
-   * Notify activity callbacks
-   */
-  private notifyActivity(): void {
-    this.activityCallbacks.forEach(callback => callback());
-  }
-
-  /**
-   * Subscribe to activity events
-   */
-  onActivity(callback: () => void): () => void {
-    this.activityCallbacks.add(callback);
-    return () => {
-      this.activityCallbacks.delete(callback);
-    };
   }
 
   /**
@@ -166,53 +94,6 @@ class KeyManagerService implements KeyManager {
  * Singleton instance of key manager
  */
 export const keyManager = new KeyManagerService();
-
-/**
- * Activity listener events to track
- */
-const ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart'] as const;
-
-/**
- * Stored handler reference for proper cleanup
- * Must be the same reference for addEventListener and removeEventListener
- */
-let activityHandler: (() => void) | null = null;
-
-/**
- * Setup global activity listeners for auto-lock
- */
-export function setupActivityListeners(timeoutMinutes: number): void {
-  // Remove any existing listeners first to prevent duplicates
-  if (activityHandler) {
-    removeActivityListeners();
-  }
-
-  // Create and store the handler reference
-  activityHandler = () => {
-    keyManager.registerActivity();
-  };
-
-  ACTIVITY_EVENTS.forEach(event => {
-    window.addEventListener(event, activityHandler!, { passive: true });
-  });
-
-  // Start initial auto-lock timer
-  keyManager.startAutoLock(timeoutMinutes);
-}
-
-/**
- * Remove activity listeners
- */
-export function removeActivityListeners(): void {
-  if (activityHandler) {
-    ACTIVITY_EVENTS.forEach(event => {
-      window.removeEventListener(event, activityHandler!);
-    });
-    activityHandler = null;
-  }
-
-  keyManager.stopAutoLock();
-}
 
 // Re-export from centralized errors for backwards compatibility
 export { ApplicationLockedError } from '../errors';

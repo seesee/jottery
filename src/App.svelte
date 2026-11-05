@@ -5,7 +5,7 @@
   import { initDB, noteService, settingsRepository, isLocked as checkLocked, searchService, initI18n, getInitialLocale, AVAILABLE_LOCALES, syncService, syncRepository, appUpdateService, versionRepository } from './lib/services';
   import { startAutoLock, stopAutoLock } from './lib/services/autoLockService';
   import { listenForLockElsewhere } from './lib/services/lockService';
-  import { keyManager, setupActivityListeners } from './lib/services/keyManager';
+  import { keyManager } from './lib/services/keyManager';
   import { resetVaultHealth, undecryptableNotes } from './lib/services/vaultHealthService';
   import { toast } from './lib/utils/toast.svelte';
   import { get } from 'svelte/store';
@@ -414,24 +414,16 @@
     }
   }
 
-  // Manage auto-lock based on lock state and remember password setting
-  $: if (!$isLocked && initialized && $settings) {
-    if ($settings.rememberPassword) {
-      // Remember password enabled - disable auto-lock
-      stopAutoLock();
-    } else {
-      // Remember password disabled - enable auto-lock
-      startAutoLock($settings.autoLockTimeout);
-    }
-  }
-
-  // keyManager runs its own idle timer alongside autoLockService, started at
-  // unlock. Keep it on the current timeout, or a change only takes effect from
-  // the next unlock. This depends on the value alone, so unrelated settings
-  // changes don't restart the timer. Zero turns it off.
-  $: keyManagerLockMinutes = $settings.rememberPassword ? 0 : $settings.autoLockTimeout;
+  // Auto-lock follows the lock state and the current timeout, and Remember Password
+  // switches it off. This depends on the value alone, so unrelated settings changes
+  // don't restart the timer. Zero turns it off.
+  $: autoLockMinutes = $settings.rememberPassword ? 0 : $settings.autoLockTimeout;
   $: if (!$isLocked && initialized) {
-    setupActivityListeners(keyManagerLockMinutes);
+    if (autoLockMinutes > 0) {
+      startAutoLock(autoLockMinutes);
+    } else {
+      stopAutoLock();
+    }
   }
 
   /**

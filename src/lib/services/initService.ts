@@ -12,7 +12,7 @@ import { noteService } from './noteService';
 import { syncRepository } from './syncRepository';
 import { savedSearchRepository } from './savedSearchRepository';
 import { cryptoService } from './crypto';
-import { keyManager, setupActivityListeners } from './keyManager';
+import { keyManager } from './keyManager';
 import { sessionStorageService } from './sessionStorageService';
 import { passwordStorageService } from './passwordStorageService';
 import { AuthApiError, authService } from './authService';
@@ -186,9 +186,6 @@ export async function unlock(password: string): Promise<void> {
 
   keyManager.setMasterKey(masterKey);
 
-  // Get settings to check rememberPassword
-  const settings = await settingsRepository.get();
-
   // Handle restored credentials (RESTORE: marker from backup restore)
   await handleImportedCredentials(key);
 
@@ -216,14 +213,6 @@ export async function unlock(password: string): Promise<void> {
   noteService.purgeOldDeletedNotes().catch(error => {
     console.warn('[Unlock] Could not empty old notes from the recycle bin:', error);
   });
-
-  // Setup auto-lock (disabled if rememberPassword is enabled)
-  if (settings.rememberPassword) {
-    console.log('[Unlock] ⚠️ Remember Password enabled - auto-lock DISABLED');
-  } else {
-    setupActivityListeners(settings.autoLockTimeout);
-    console.log('[Unlock] ✓ Auto-lock enabled with timeout:', settings.autoLockTimeout, 'minutes');
-  }
 
   // Start backup scheduler
   backupSchedulerService.start();
@@ -1048,16 +1037,6 @@ export async function restoreFromBackup(
   } finally {
     // Re-enable sync after restore completes (or fails)
     syncService.setRestoreInProgress(false);
-  }
-
-  // Step 6: Setup auto-lock based on restored settings
-  const settings = await settingsRepository.get();
-
-  if (settings.rememberPassword) {
-    console.log('[RestoreFromBackup] Remember Password enabled - auto-lock DISABLED');
-  } else {
-    setupActivityListeners(settings.autoLockTimeout);
-    console.log('[RestoreFromBackup] Auto-lock enabled with timeout:', settings.autoLockTimeout, 'minutes');
   }
 
   // Start backup scheduler
