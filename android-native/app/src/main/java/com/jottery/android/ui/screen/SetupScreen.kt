@@ -57,7 +57,6 @@ private enum class SetupMode { NEW_VAULT, REGISTER, IMPORT, RESTORE }
 @Composable
 fun SetupScreen(
     appState: AppState,
-    onVaultCreated: () -> Unit,
 ) {
     var mode by remember { mutableStateOf(SetupMode.NEW_VAULT) }
     var password by remember { mutableStateOf("") }
@@ -90,6 +89,15 @@ fun SetupScreen(
     var credentialString by remember { mutableStateOf("") }
     var importPassword by remember { mutableStateOf("") }
     var deviceName by remember { mutableStateOf(Build.MODEL) }
+
+    fun submitNewVault() {
+        when {
+            password.isEmpty() -> error = "Password is required"
+            password.length < AppState.MIN_NOTES_PASSWORD_LENGTH -> error = "Password must be at least 8 characters"
+            password != confirmPassword -> error = "Passwords do not match"
+            else -> appState.createNewVault(password)
+        }
+    }
 
     // Restore fields
     val context = LocalContext.current
@@ -183,43 +191,20 @@ fun SetupScreen(
                         keyboardType = KeyboardType.Password,
                         imeAction = ImeAction.Done,
                     ),
-                    keyboardActions = KeyboardActions(
-                        onDone = {
-                            if (password == confirmPassword && password.isNotEmpty()) {
-                                isCreating = true
-                                scope.launch {
-                                    appState.createVault(password)
-                                    onVaultCreated()
-                                }
-                            }
-                        }
-                    ),
+                    keyboardActions = KeyboardActions(onDone = { submitNewVault() }),
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                ErrorText(error)
+                ErrorText(error ?: connectError)
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Button(
-                    onClick = {
-                        when {
-                            password.isEmpty() -> error = "Password is required"
-                            password.length < 8 -> error = "Password must be at least 8 characters"
-                            password != confirmPassword -> error = "Passwords do not match"
-                            else -> {
-                                isCreating = true
-                                scope.launch {
-                                    appState.createVault(password)
-                                    onVaultCreated()
-                                }
-                            }
-                        }
-                    },
-                    enabled = !isCreating,
+                    onClick = { submitNewVault() },
+                    enabled = !isConnecting,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (isCreating) "Creating vault\u2026" else "Create Vault")
+                    Text(if (isConnecting) "Creating vault\u2026" else "Create Vault")
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))

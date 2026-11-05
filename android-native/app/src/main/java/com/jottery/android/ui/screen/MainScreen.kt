@@ -6,12 +6,15 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -57,6 +60,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.window.core.layout.WindowHeightSizeClass
 import androidx.window.core.layout.WindowWidthSizeClass
 import com.jottery.android.R
 import com.jottery.android.model.SortOrder
@@ -66,7 +70,7 @@ import com.jottery.android.ui.component.SearchBar
 import com.jottery.android.viewmodel.AppState
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MainScreen(
     appState: AppState,
@@ -115,6 +119,11 @@ fun MainScreen(
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
     val isExpandedLayout = windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
 
+    // A phone in landscape has no height to spare: with the keyboard up, the app
+    // bars would leave the editor no room at all.
+    val keyboardNeedsTheSpace = WindowInsets.isImeVisible &&
+        windowSizeClass.windowHeightSizeClass == WindowHeightSizeClass.COMPACT
+
     // Selected note for editor
     val selectedNote = remember(selectedNoteId, notes) {
         notes.firstOrNull { it.id == selectedNoteId }
@@ -133,7 +142,7 @@ fun MainScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            if (showListOnNarrow) {
+            if (showListOnNarrow && !(keyboardNeedsTheSpace && selectedNote != null)) {
                 TopAppBar(
                     title = {
                         Text(if (showArchive) "Archive" else "Jottery")
@@ -317,6 +326,7 @@ fun MainScreen(
                             NoteEditorView(
                                 appState = appState,
                                 note = selectedNote,
+                                showAppBar = !keyboardNeedsTheSpace,
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxHeight(),
@@ -355,6 +365,7 @@ fun MainScreen(
                             appState = appState,
                             note = selectedNote,
                             onNavigateBack = { appState.setSelectedNoteId(null) },
+                            showAppBar = !keyboardNeedsTheSpace,
                             modifier = Modifier.weight(1f),
                         )
                     }

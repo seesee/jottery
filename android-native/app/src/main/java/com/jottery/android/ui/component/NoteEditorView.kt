@@ -99,6 +99,7 @@ fun NoteEditorView(
     appState: AppState,
     note: DecryptedNote?,
     onNavigateBack: (() -> Unit)? = null,
+    showAppBar: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     if (note == null) return
@@ -314,7 +315,7 @@ fun NoteEditorView(
         ),
     ) {
         // Top bar with back button (phone) and overflow menu
-        TopAppBar(
+        if (showAppBar) TopAppBar(
             title = {
                 Text(
                     text = note.title,

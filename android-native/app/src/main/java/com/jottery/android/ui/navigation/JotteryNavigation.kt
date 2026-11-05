@@ -86,14 +86,8 @@ fun JotteryNavigation(
         startDestination = startDestination,
     ) {
         composable(Routes.SETUP) {
-            SetupScreen(
-                appState = appState,
-                onVaultCreated = {
-                    navController.navigate(Routes.MAIN) {
-                        popUpTo(Routes.SETUP) { inclusive = true }
-                    }
-                },
-            )
+            // Leaves through the LaunchedEffect above, when the vault exists
+            SetupScreen(appState = appState)
         }
 
         composable(Routes.UNLOCK) {

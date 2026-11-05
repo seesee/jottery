@@ -428,7 +428,6 @@ class AppState(application: Application) : AndroidViewModel(application) {
         }
 
         loadNotes()
-        _isLocked.value = false
 
         // Auto-purge deleted notes older than 30 days
         try {
@@ -465,6 +464,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
         if (_settings.value.syncEnabled) {
             viewModelScope.launch { reconcileAccountKey(password) }
         }
+
+        // Last: this leaves the unlock screen, which cancels the caller's scope
+        _isLocked.value = false
 
         return true
     }
@@ -1373,6 +1375,18 @@ class AppState(application: Application) : AndroidViewModel(application) {
         _pendingConnection.value = null
         setupSync(connection.apiKey)
         _connectState.value = ConnectState.Done
+    }
+
+    /**
+     * Setup: create a vault with no account. In viewModelScope, because the vault
+     * appearing is what navigates away from the screen that asked for it.
+     */
+    fun createNewVault(password: String) {
+        connecting {
+            refuseShortNewPassword(password)
+            createVault(password)
+            _connectState.value = ConnectState.Idle
+        }
     }
 
     /**

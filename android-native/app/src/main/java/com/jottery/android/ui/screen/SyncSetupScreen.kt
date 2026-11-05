@@ -81,8 +81,10 @@ fun SyncSetupScreen(
     val failure = registerError ?: (connectState as? AppState.ConnectState.Failed)?.message
     val isDone = connectState is AppState.ConnectState.Done
 
-    // A connect in progress carries on in AppState. Anything else ends with the screen.
+    // A connect in progress carries on in AppState. Anything else ends with the
+    // screen, and an earlier result mustn't greet the next visit.
     DisposableEffect(Unit) {
+        if (appState.connectState.value !is AppState.ConnectState.Working) appState.clearConnectState()
         onDispose {
             when (appState.connectState.value) {
                 AppState.ConnectState.Working -> Unit
