@@ -10,6 +10,7 @@
   import { _ } from 'svelte-i18n';
   import { isNotesPasswordLongEnough, isSamePassword } from '../utils/passwordRules';
   import { onboardingErrorKey } from '../utils/onboardingErrors';
+  import { isConnectionRestricted } from '../services/cspService';
   import ConfirmModal from './ConfirmModal.svelte';
   import LandingPage from './LandingPage.svelte';
   import LanguagePicker from './LanguagePicker.svelte';
@@ -532,6 +533,13 @@
       await restoreFromBackup(backupData, backupPassword, (progress) => {
         restoreProgress = progress;
       });
+
+      // The backup may name another sync server, and connections are limited to the
+      // old one for this page load
+      if (isConnectionRestricted()) {
+        window.location.reload();
+        return;
+      }
 
       // Restore successful - update UI state
       needsInit = false;

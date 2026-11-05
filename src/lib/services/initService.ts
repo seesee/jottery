@@ -21,6 +21,7 @@ import { restoreFromBackup as restoreBackupData, verifyBackupPassword } from './
 import { backupSchedulerService } from './backupSchedulerService';
 import { clearAllStores, deleteDB, initDB } from './db';
 import { syncService } from './syncService';
+import { restrictConnections } from './cspService';
 import { AccountKeyExistsError, AccountKeyUnreadableError, LocalNotesOrphanedError, ValidationError } from '../errors';
 import { isNotesPasswordLongEnough, MIN_NOTES_PASSWORD_LENGTH } from '../utils/passwordRules';
 
@@ -202,6 +203,12 @@ export async function unlock(password: string): Promise<void> {
   await handleImportedCredentials(key);
 
   await encryptLegacySavedSearches();
+
+  // Decrypted notes exist from here on, so limit where they could be sent
+  const connectionMetadata = await syncRepository.getMetadata();
+  if (connectionMetadata?.syncEnabled && connectionMetadata.syncEndpoint) {
+    restrictConnections(connectionMetadata.syncEndpoint);
+  }
 
   // Attempt migration from legacy to envelope encryption
   if (!metadata.envelopeVersion) {

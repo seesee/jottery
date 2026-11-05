@@ -19,6 +19,7 @@
   import { toast } from '../utils/toast.svelte';
   import { isSamePassword } from '../utils/passwordRules';
   import { onboardingErrorKey } from '../utils/onboardingErrors';
+  import { isConnectionRestricted } from '../services/cspService';
 
   export let show = false;
   export let onClose: () => void = () => {};
@@ -581,6 +582,14 @@
   async function handleDisconnect() {
     try {
       await syncService.disconnect();
+
+      // Connections are limited to the old server for this page load, and only a
+      // reload can lift that, so a new server couldn't be reached otherwise
+      if (isConnectionRestricted()) {
+        window.location.reload();
+        return;
+      }
+
       // Reset UI state
       syncStatus = null;
       syncEndpoint = '';
