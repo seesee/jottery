@@ -138,6 +138,11 @@
   });
 
   const filteredUsers = $derived(getFilteredUsers());
+
+  // Below lg each row stacks into a card, so nothing needs sideways scrolling on a
+  // phone. The table needs about 900px, which a laptop window with the sidebar lacks.
+  const headerCell = 'px-3 xl:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider';
+  const cell = 'block lg:table-cell py-1 lg:px-3 xl:px-6 lg:py-4 lg:whitespace-nowrap';
 </script>
 
 <div class="space-y-6">
@@ -159,7 +164,7 @@
   {/if}
 
   <!-- Filters -->
-  <div class="flex space-x-2">
+  <div class="flex flex-wrap gap-2">
     <button
       onclick={() => filter = 'all'}
       class="px-4 py-2 rounded-md {filter === 'all' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}"
@@ -196,50 +201,51 @@
     </div>
   {:else}
     <!-- Users Table -->
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+    <div class="bg-white rounded-lg shadow overflow-x-auto">
+      <table class="block lg:table min-w-full divide-y divide-gray-200">
+        <thead class="hidden lg:table-header-group bg-gray-50">
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th class={headerCell}>
               {$_('users.table.email')}
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th class={headerCell}>
               {$_('users.table.status')}
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th class={headerCell}>
               {$_('users.table.devices')}
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th class={headerCell}>
               {$_('users.table.notes')}
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th class="{headerCell} hidden xl:table-cell">
               {$_('users.table.created')}
             </th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th class={headerCell}>
               {$_('users.table.actions')}
             </th>
           </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
+        <tbody class="block lg:table-row-group bg-white divide-y divide-gray-200">
           {#each filteredUsers as user (user.id)}
             {@const badge = getStatusBadge(user)}
             {@const isProtected = isProtectedAccount(user, users, auth.user?.email)}
-            <tr class="hover:bg-gray-50">
-              <td class="px-6 py-4 whitespace-nowrap">
+            <tr class="block lg:table-row p-4 lg:p-0 hover:bg-gray-50">
+              <td class={cell}>
                 <button
                   onclick={() => selectedUserId = user.id}
-                  class="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                  class="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline break-all text-left"
                   title={$_('users.detail.viewDetails')}
                 >
                   {user.email}
                 </button>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap">
+              <td class={cell}>
                 <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {badge.class}">
                   {badge.text}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
+              <td class="{cell} text-sm">
+                <span class="lg:hidden text-gray-500">{$_('users.table.devices')}:</span>
                 <button
                   onclick={() => selectedUserId = user.id}
                   class="text-blue-600 hover:text-blue-800 hover:underline"
@@ -248,14 +254,16 @@
                   {user.deviceCount}
                 </button>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td class="{cell} text-sm text-gray-500">
+                <span class="lg:hidden">{$_('users.table.notes')}:</span>
                 {user.noteCount}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              <td class="{cell} lg:hidden xl:table-cell text-sm text-gray-500">
+                <span class="lg:hidden">{$_('users.table.created')}:</span>
                 {new Date(user.createdAt).toLocaleDateString($locale ?? undefined)}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <div class="flex flex-wrap gap-2">
+              <td class="{cell} text-sm font-medium">
+                <div class="flex flex-wrap gap-x-3 gap-y-2 pt-2 lg:pt-0">
                   {#if !user.approved}
                     <button
                       onclick={() => requestApprove(user.id, user.email)}
