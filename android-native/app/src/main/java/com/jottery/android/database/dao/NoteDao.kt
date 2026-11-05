@@ -71,6 +71,14 @@ interface NoteDao {
     """)
     suspend fun moveToBinForServer(id: String, deletedAt: String, localDeletedAt: String)
 
+    /** As above, unless the note has changed since it was pushed. A note already in the bin keeps its dates. */
+    @Query("""
+        UPDATE notes SET deleted = 1, deleted_at = COALESCE(deleted_at, :now),
+        local_deleted_at = COALESCE(local_deleted_at, :now), needs_sync = 0
+        WHERE id = :id AND modified_at = :pushedModifiedAt
+    """)
+    suspend fun moveToBinIfUnchanged(id: String, pushedModifiedAt: String, now: String): Int
+
     @Query("""
         UPDATE notes SET deleted = 0, deleted_at = NULL, local_deleted_at = NULL,
         modified_at = :modifiedAt, needs_sync = 1 WHERE id = :id

@@ -19,6 +19,8 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
+import java.time.Duration
+import java.time.Instant
 import javax.crypto.SecretKey
 
 /** What a sync is doing, for the UI to word. */
@@ -69,6 +71,10 @@ class SyncService(
         /** This many notes binned in one pull is worth telling the user about. */
         internal const val NOTABLE_BIN_COUNT = 10
 
+        /** The server skips anything dated further than this ahead of its clock. */
+        private val CLOCK_TOLERANCE = Duration.ofHours(24)
+        private val CLOCK_NOTICE_INTERVAL = Duration.ofHours(1)
+
         /**
          * The attachments-only repair payload for server attachment warnings:
          * every warned blob the lookup can supply, deduplicated by id.
@@ -105,7 +111,15 @@ class SyncService(
 
     /** Notes the server moved to the bin in one pull, when it was a lot of them. */
     var onManyNotesBinned: ((Int) -> Unit)? = null
+
+    /** Something was skipped for being dated too far ahead of the server. */
+    var onClockLooksWrong: (() -> Unit)? = null
     private var binned = 0
+
+    // Found by a push, and acted on when the pull after it has the server's time
+    private var binnedByPush = 0
+    private val unansweredTimes = mutableListOf<String>()
+    private var clockNoticeAt: Instant = Instant.EPOCH
 
     /** Blobs the server has said it doesn't hold, so they aren't asked for again. */
     private val unavailableBlobs = mutableSetOf<String>()
@@ -138,6 +152,8 @@ class SyncService(
         onSyncPhaseChanged?.invoke(SyncPhase.PUSHING)
         try {
             val key = requireKey()
+            binnedByPush = 0
+            unansweredTimes.clear()
             // Notes waiting on a conflict decision would only be rejected again
             val inConflict = syncRepo.listStoredConflicts().map { it.id }.toSet()
             val notesToSync = noteRepo.listNeedingSync().filter { it.id !in inConflict }
@@ -256,6 +272,8 @@ class SyncService(
             }
         }
 
+        recordSkipped(response, syncNotes)
+
         // Send what the server lacks: blobs never uploaded from here, plus any it
         // reports missing. Older servers don't report, so the flag covers those.
         val acceptedIds = response.accepted.map { it.id }.toSet()
@@ -274,6 +292,45 @@ class SyncService(
             syncNotes.filter { note -> note.id in acceptedIds && note.attachments.any { it.data in waiting } }
                 .forEach { noteRepo.requeue(it.id) }
             throw e
+        }
+    }
+
+    /**
+     * Deal with the notes the server took but didn't store. Only ones this push sent
+     * count, so a server can't name any others here.
+     *
+     * One deleted after this edit goes to the bin, as a pulled deletion would. This
+     * can't wait for the pull, which won't repeat a deletion it's already past. An edit
+     * made since it was sent stays, because that edit is later than the deletion.
+     *
+     * One it doesn't answer for at all has a time it wouldn't accept. It says so only
+     * in `errors`, which aren't for parsing, so the times are kept to check against
+     * the server's clock. The note stays queued for when the device's clock is right.
+     */
+    private suspend fun recordSkipped(response: SyncPushResponse, pushed: List<SyncNote>) {
+        val deletedElsewhere = response.skippedDeleted.orEmpty().toSet()
+        val answered = (response.accepted.map { it.id } + response.rejected.map { it.id }).toSet()
+        for (note in pushed) {
+            if (note.id in deletedElsewhere) {
+                val wasLive = noteRepo.getRaw(note.id)?.deleted == false
+                if (noteRepo.moveToBinIfUnchanged(note.id, note.modifiedAt) && wasLive) binnedByPush++
+            } else if (note.id !in answered) {
+                unansweredTimes += listOfNotNull(note.createdAt, note.modifiedAt, note.deletedAt, note.archivedAt, note.lockedAt)
+            }
+        }
+    }
+
+    /** Judged by the server's clock, because this device's is the one in doubt. */
+    private fun warnIfClockLooksWrong(serverTime: String?) {
+        val reference = serverTime?.let { DateUtils.parseISO8601(it) } ?: Instant.now()
+        val limit = reference.plus(CLOCK_TOLERANCE)
+        val tooFarAhead = unansweredTimes.any { DateUtils.parseISO8601(it)?.isAfter(limit) == true }
+        unansweredTimes.clear()
+
+        val now = Instant.now()
+        if (tooFarAhead && Duration.between(clockNoticeAt, now) >= CLOCK_NOTICE_INTERVAL) {
+            clockNoticeAt = now
+            onClockLooksWrong?.invoke()
         }
     }
 
@@ -429,6 +486,13 @@ class SyncService(
             Log.i(TAG, "${it.size} deletion(s) refused: those notes have newer edits")
         }
         deletions.forEach { syncRepo.removeDeletion(it.id) }
+
+        // A search has no accepted list, so an error may mean one was skipped. Nothing
+        // says which, and sending them all again is harmless.
+        if (!response.errors.isNullOrEmpty()) {
+            unansweredTimes += searches.map { it.modifiedAt }
+            return
+        }
         val now = DateUtils.nowISO8601()
         searches.forEach { savedSearchRepo.markSynced(it.id, now, it.modifiedAt) }
     }
@@ -461,7 +525,8 @@ class SyncService(
         try {
             val key = requireKey()
             quarantined = 0
-            binned = 0
+            binned = binnedByPush
+            binnedByPush = 0
             val syncMeta = syncRepo.getSyncMetadata()
             var cursor = if (fullPull) "" else syncMeta?.pullCursor.orEmpty()
             var lastSyncAt = if (fullPull) null else syncMeta?.lastSyncAt
@@ -640,6 +705,7 @@ class SyncService(
             Log.d(TAG, "Pull complete: $totalNewCount new notes")
             if (quarantined > 0) onNotesQuarantined?.invoke(quarantined)
             if (binned >= NOTABLE_BIN_COUNT) onManyNotesBinned?.invoke(binned)
+            warnIfClockLooksWrong(watermark)
             return totalNewCount
         } catch (e: Exception) {
             Log.e(TAG, "Pull failed: ${e.message}")
@@ -942,6 +1008,8 @@ class SyncService(
                 serverSyntaxLanguage = rejected.serverSyntaxLanguage,
                 serverWordWrap = rejected.serverWordWrap,
                 serverShowPreview = rejected.serverShowPreview,
+                serverDeleted = rejected.serverDeleted,
+                serverDeletedAt = rejected.serverDeletedAt?.takeIf { DateUtils.parseISO8601(it) != null },
                 serverContentHash = rejected.serverContentHash,
                 serverParentHash = rejected.serverParentHash,
                 serverHashChain = rejected.serverHashChain,
@@ -1125,7 +1193,9 @@ class SyncService(
         locked = stored.serverLocked,
         lockedAt = stored.serverLockedAt,
         deleted = stored.serverDeleted,
-        deletedAt = stored.serverDeletedAt,
+        deletedAt = stored.serverDeletedAt ?: DateUtils.nowISO8601().takeIf { stored.serverDeleted },
+        // Its time in the bin runs from when this device saw it go there
+        localDeletedAt = if (stored.serverDeleted) local.localDeletedAt ?: DateUtils.nowISO8601() else null,
         color = stored.serverColor,
         syntaxLanguage = stored.serverSyntaxLanguage ?: local.syntaxLanguage,
         wordWrap = stored.serverWordWrap ?: local.wordWrap,

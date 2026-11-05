@@ -120,6 +120,9 @@ class SyncHarness(
 
     fun encryptTag(tag: String): String = encrypt(json.encodeToString(tag))
 
+    fun decryptTag(ciphertext: String): String =
+        json.decodeFromString(CryptoService.decryptText(CryptoService.parseEncryptedJSON(ciphertext), key))
+
     /** Put a note in the database in the state it has after a clean sync. */
     suspend fun seedSynced(id: String, text: String, hash: String, chain: List<String> = listOf(hash)): NoteRecord {
         val record = NoteRecord(

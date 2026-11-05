@@ -1936,6 +1936,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
         service.onConflictDetected = { conflict ->
             _pendingConflicts.value = _pendingConflicts.value.filter { it.id != conflict.id } + conflict
         }
+        service.onClockLooksWrong = {
+            showMessage(getApplication<Application>().getString(R.string.sync_clock_ahead))
+        }
         service.onManyNotesBinned = { count ->
             showMessage(
                 getApplication<Application>().resources

@@ -157,6 +157,7 @@
     <string name="sync_error_rate_limited">De server is bezet. Jottery probeert het zo meteen opnieuw.</string>
     <string name="sync_error_storage_full">Uw account is vol, dus wijzigingen van hier kunnen niet worden gesynchroniseerd. Verplaats notities naar de prullenbak of verwijder bijlagen om ruimte vrij te maken.</string>
     <string name="sync_error_offline">De server kon niet worden bereikt. Jottery probeert het opnieuw.</string>
+    <string name="sync_clock_ahead">Sommige wijzigingen zijn niet gesynchroniseerd, omdat hun datum meer dan een dag op de server voorloopt. Controleer de datum en tijd op dit apparaat.</string>
     <string name="sync_error_failed">Synchronisatie mislukt. Jottery probeert het opnieuw.</string>
     <string name="sync_done">Gesynchroniseerd</string>
     <plurals name="sync_done_new_notes">

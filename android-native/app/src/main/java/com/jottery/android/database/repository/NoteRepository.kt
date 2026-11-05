@@ -417,6 +417,10 @@ class NoteRepository(
         noteDao.moveToBinForServer(id, deletedAt, DateUtils.nowISO8601())
     }
 
+    /** Returns false if the note has moved on since [pushedModifiedAt], and was left alone. */
+    suspend fun moveToBinIfUnchanged(id: String, pushedModifiedAt: String): Boolean =
+        noteDao.moveToBinIfUnchanged(id, pushedModifiedAt, DateUtils.nowISO8601()) > 0
+
     /** Archive a note. */
     suspend fun archive(id: String) {
         val now = DateUtils.nowISO8601()

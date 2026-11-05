@@ -155,6 +155,7 @@
     <string name="sync_error_rate_limited">서버가 바쁩니다. Jottery가 잠시 후 다시 시도합니다.</string>
     <string name="sync_error_storage_full">계정 저장 공간이 가득 차서 이 기기의 변경 사항을 동기화할 수 없습니다. 노트를 휴지통으로 옮기거나 첨부파일을 제거하여 공간을 확보하세요.</string>
     <string name="sync_error_offline">서버에 연결할 수 없었습니다. Jottery가 다시 시도합니다.</string>
+    <string name="sync_clock_ahead">날짜가 서버보다 하루 이상 앞서 있어 일부 변경 사항이 동기화되지 않았습니다. 이 기기의 날짜와 시간을 확인하세요.</string>
     <string name="sync_error_failed">동기화에 실패했습니다. Jottery가 다시 시도합니다.</string>
     <string name="sync_done">동기화됨</string>
     <plurals name="sync_done_new_notes">

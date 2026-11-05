@@ -159,6 +159,7 @@
     <string name="sync_error_rate_limited">Il server è occupato. Jottery riproverà a breve.</string>
     <string name="sync_error_storage_full">Il tuo account è pieno, quindi le modifiche fatte qui non possono essere sincronizzate. Sposta delle note nel cestino o rimuovi degli allegati per fare spazio.</string>
     <string name="sync_error_offline">Impossibile raggiungere il server. Jottery riproverà.</string>
+    <string name="sync_clock_ahead">Alcune modifiche non sono state sincronizzate perché la loro data è avanti di più di un giorno rispetto al server. Controlla la data e l\'ora di questo dispositivo.</string>
     <string name="sync_error_failed">Sincronizzazione non riuscita. Jottery riproverà.</string>
     <string name="sync_done">Sincronizzato</string>
     <plurals name="sync_done_new_notes">

@@ -155,6 +155,7 @@
     <string name="sync_error_rate_limited">服务器繁忙，Jottery 稍后会重试。</string>
     <string name="sync_error_storage_full">您的账户空间已满，此处的更改无法同步。请将笔记移至回收站或移除附件以腾出空间。</string>
     <string name="sync_error_offline">无法连接服务器，Jottery 会重试。</string>
+    <string name="sync_clock_ahead">部分更改未能同步，因为其日期比服务器提前了一天以上。请检查此设备的日期和时间。</string>
     <string name="sync_error_failed">同步失败，Jottery 会重试。</string>
     <string name="sync_done">已同步</string>
     <plurals name="sync_done_new_notes">

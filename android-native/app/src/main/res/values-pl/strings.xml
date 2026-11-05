@@ -161,6 +161,7 @@
     <string name="sync_error_rate_limited">Serwer jest zajęty. Jottery wkrótce spróbuje ponownie.</string>
     <string name="sync_error_storage_full">Twoje konto jest pełne, więc zmiany stąd nie mogą się synchronizować. Przenieś notatki do kosza lub usuń załączniki, aby zwolnić miejsce.</string>
     <string name="sync_error_offline">Nie udało się połączyć z serwerem. Jottery spróbuje ponownie.</string>
+    <string name="sync_clock_ahead">Niektóre zmiany nie zostały zsynchronizowane, ponieważ ich data wyprzedza serwer o ponad jeden dzień. Sprawdź datę i godzinę na tym urządzeniu.</string>
     <string name="sync_error_failed">Synchronizacja nie powiodła się. Jottery spróbuje ponownie.</string>
     <string name="sync_done">Zsynchronizowano</string>
     <plurals name="sync_done_new_notes">

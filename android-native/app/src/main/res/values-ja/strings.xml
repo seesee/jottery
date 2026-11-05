@@ -155,6 +155,7 @@
     <string name="sync_error_rate_limited">サーバーが混み合っています。Jotteryはまもなく再試行します。</string>
     <string name="sync_error_storage_full">アカウントの容量がいっぱいのため、ここでの変更を同期できません。ノートをごみ箱に移動するか、添付ファイルを削除して空き容量を確保してください。</string>
     <string name="sync_error_offline">サーバーに接続できませんでした。Jotteryは再試行します。</string>
+    <string name="sync_clock_ahead">日付がサーバーより1日以上先になっているため、一部の変更を同期できませんでした。このデバイスの日付と時刻を確認してください。</string>
     <string name="sync_error_failed">同期に失敗しました。Jotteryは再試行します。</string>
     <string name="sync_done">同期済み</string>
     <plurals name="sync_done_new_notes">

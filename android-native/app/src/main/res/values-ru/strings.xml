@@ -161,6 +161,7 @@
     <string name="sync_error_rate_limited">Сервер занят. Jottery скоро повторит попытку.</string>
     <string name="sync_error_storage_full">Ваш аккаунт заполнен, поэтому изменения отсюда не синхронизируются. Переместите заметки в корзину или удалите вложения, чтобы освободить место.</string>
     <string name="sync_error_offline">Не удалось связаться с сервером. Jottery повторит попытку.</string>
+    <string name="sync_clock_ahead">Некоторые изменения не синхронизированы: их дата опережает сервер более чем на сутки. Проверьте дату и время на этом устройстве.</string>
     <string name="sync_error_failed">Сбой синхронизации. Jottery повторит попытку.</string>
     <string name="sync_done">Синхронизировано</string>
     <plurals name="sync_done_new_notes">

@@ -157,6 +157,7 @@
     <string name="sync_error_rate_limited">Sunucu meşgul. Jottery kısa süre sonra yeniden deneyecek.</string>
     <string name="sync_error_storage_full">Hesabınız dolu, bu yüzden buradaki değişiklikler senkronize edilemiyor. Yer açmak için notları geri dönüşüm kutusuna taşıyın veya ekleri kaldırın.</string>
     <string name="sync_error_offline">Sunucuya ulaşılamadı. Jottery yeniden deneyecek.</string>
+    <string name="sync_clock_ahead">Tarihleri sunucunun bir günden fazla ilerisinde olduğu için bazı değişiklikler eşitlenmedi. Bu cihazın tarih ve saatini kontrol edin.</string>
     <string name="sync_error_failed">Senkronizasyon başarısız. Jottery yeniden deneyecek.</string>
     <string name="sync_done">Senkronize edildi</string>
     <plurals name="sync_done_new_notes">
