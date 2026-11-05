@@ -254,7 +254,8 @@
         "title": "Informations de sauvegarde",
         "created": "Créé le",
         "records": "Enregistrements"
-      }
+      },
+      "storageFull": "Le navigateur n'a plus d'espace de stockage : la restauration n'a pas abouti et rien n'a été conservé. Votre fichier de sauvegarde est intact : libérez de l'espace et restaurez-le à nouveau."
     }
   },
   "settings": {

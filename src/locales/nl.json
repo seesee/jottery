@@ -254,7 +254,8 @@
         "title": "Back-up Informatie",
         "created": "Gemaakt",
         "records": "Gegevens"
-      }
+      },
+      "storageFull": "De browser had geen opslagruimte meer, dus het herstellen is niet voltooid en er is niets bewaard. Je back-upbestand is in orde: maak ruimte vrij en herstel het opnieuw."
     }
   },
   "settings": {

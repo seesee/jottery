@@ -17,7 +17,7 @@ import { authService } from './authService';
 import { arrayBufferToBase64, base64ToUint8Array } from '../utils/base64';
 import { CRYPTO_PBKDF2_ITERATIONS, CRYPTO_WRAPPING_ITERATIONS, CRYPTO_WRAPPING_KDF_VERSION } from '../constants';
 import type { EncryptionResult } from '../types/crypto';
-import { restoreFromBackup as restoreBackupData, verifyBackupPassword } from './backupService';
+import { restoreFromBackup as restoreBackupData, verifyBackupContents, verifyBackupPassword } from './backupService';
 import { backupSchedulerService } from './backupSchedulerService';
 import { clearAllStores, deleteDB, initDB } from './db';
 import { syncService } from './syncService';
@@ -834,6 +834,10 @@ export async function restoreFromBackup(
 
   console.log('[RestoreFromBackup] Password verified successfully');
 
+  // Everything below replaces the vault, so the whole backup is checked first
+  await verifyBackupContents(backup, verification.keyBytes, onProgress);
+  console.log('[RestoreFromBackup] Backup contents verified');
+
   // Disable sync during restore to prevent interference
   syncService.setRestoreInProgress(true);
 
@@ -851,11 +855,7 @@ export async function restoreFromBackup(
       console.warn('[RestoreFromBackup] Failed to delete/recreate database:', error);
       // Fallback to clearing stores
       console.log('[RestoreFromBackup] Falling back to clearing stores...');
-      try {
-        await clearAllStores();
-      } catch (clearError) {
-        console.warn('[RestoreFromBackup] Failed to clear stores:', clearError);
-      }
+      await clearAllStores();
     }
 
     // Step 3: Store the master key BEFORE restoring (repositories need it for encryption)
@@ -870,7 +870,16 @@ export async function restoreFromBackup(
 
     // Step 4: Restore all data from backup (passing the keyBytes for JWE decryption)
     console.log('[RestoreFromBackup] Restoring data...');
-    await restoreBackupData(backup, verification.keyBytes, onProgress);
+    try {
+      await restoreBackupData(backup, verification.keyBytes, onProgress);
+    } catch (error) {
+      // The backup is known to be good, so this is storage giving out. Go back to an
+      // empty vault: part of one could be mistaken for the real thing, whereas the
+      // backup file can simply be restored again.
+      keyManager.clearMasterKey();
+      await clearAllStores();
+      throw error;
+    }
     await encryptLegacySavedSearches();
 
     // Step 5: Log restored sync configuration for debugging

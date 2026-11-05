@@ -254,7 +254,8 @@
         "title": "Yedekleme Bilgileri",
         "created": "Oluşturulma",
         "records": "Kayıtlar"
-      }
+      },
+      "storageFull": "Tarayıcının depolama alanı bitti, bu yüzden geri yükleme tamamlanmadı ve hiçbir şey saklanmadı. Yedek dosyanız sağlam: yer açıp yeniden geri yükleyin."
     }
   },
   "settings": {

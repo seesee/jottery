@@ -224,3 +224,14 @@ export class LocalNotesOrphanedError extends AppError {
     this.name = 'LocalNotesOrphanedError';
   }
 }
+
+/**
+ * The browser ran out of storage while restoring a backup. The backup file itself
+ * is fine, so it can be restored again once there is room.
+ */
+export class BackupStorageFullError extends AppError {
+  constructor(cause?: Error) {
+    super('The browser ran out of storage while restoring', cause);
+    this.name = 'BackupStorageFullError';
+  }
+}

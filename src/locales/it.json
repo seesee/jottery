@@ -254,7 +254,8 @@
         "title": "Informazioni Backup",
         "created": "Creato",
         "records": "Record"
-      }
+      },
+      "storageFull": "Il browser ha esaurito lo spazio, quindi il ripristino non è stato completato e non è stato conservato nulla. Il file di backup è integro: libera spazio e ripristinalo di nuovo."
     }
   },
   "settings": {

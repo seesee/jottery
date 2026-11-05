@@ -254,7 +254,8 @@
         "title": "Información de la copia de seguridad",
         "created": "Creado",
         "records": "Registros"
-      }
+      },
+      "storageFull": "El navegador se quedó sin almacenamiento, así que la restauración no terminó y no se conservó nada. Tu archivo de copia de seguridad está bien: libera espacio y vuelve a restaurarlo."
     }
   },
   "settings": {

@@ -254,7 +254,8 @@
         "title": "Informações do Backup",
         "created": "Criado",
         "records": "Registos"
-      }
+      },
+      "storageFull": "O navegador ficou sem espaço de armazenamento, por isso o restauro não terminou e nada foi mantido. O seu ficheiro de cópia de segurança está bem: liberte espaço e restaure-o novamente."
     }
   },
   "settings": {

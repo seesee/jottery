@@ -254,7 +254,8 @@
         "title": "Backup-Informationen",
         "created": "Erstellt",
         "records": "Datensätze"
-      }
+      },
+      "storageFull": "Dem Browser ist der Speicher ausgegangen, daher wurde die Wiederherstellung nicht abgeschlossen und nichts behalten. Ihre Sicherungsdatei ist in Ordnung: Geben Sie Speicherplatz frei und stellen Sie sie erneut wieder her."
     }
   },
   "settings": {

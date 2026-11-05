@@ -254,7 +254,8 @@
         "title": "Informacje o Kopii Zapasowej",
         "created": "Utworzono",
         "records": "Rekordy"
-      }
+      },
+      "storageFull": "W przeglądarce zabrakło miejsca, więc przywracanie nie zostało ukończone i nic nie zachowano. Plik kopii zapasowej jest w porządku: zwolnij miejsce i przywróć go ponownie."
     }
   },
   "settings": {

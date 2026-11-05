@@ -11,6 +11,7 @@
   import { isNotesPasswordLongEnough, isSamePassword } from '../utils/passwordRules';
   import { onboardingErrorKey } from '../utils/onboardingErrors';
   import { isConnectionRestricted } from '../services/cspService';
+  import { BackupStorageFullError } from '../errors';
   import ConfirmModal from './ConfirmModal.svelte';
   import LandingPage from './LandingPage.svelte';
   import LanguagePicker from './LanguagePicker.svelte';
@@ -552,7 +553,9 @@
       console.error('[UnlockScreen] Backup restore failed:', err);
       const errorMessage = err instanceof Error ? err.message : String(err);
 
-      if (errorMessage.includes('Incorrect password')) {
+      if (err instanceof BackupStorageFullError) {
+        error = $_('backup.restore.storageFull');
+      } else if (errorMessage.includes('Incorrect password')) {
         error = $_('backup.restore.wrongPassword');
       } else {
         error = errorMessage;

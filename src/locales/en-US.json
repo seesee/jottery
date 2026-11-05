@@ -254,7 +254,8 @@
         "title": "Backup Information",
         "created": "Created",
         "records": "Records"
-      }
+      },
+      "storageFull": "The browser ran out of storage, so the restore didn't finish and nothing was kept. Your backup file is fine: free up some space and restore it again."
     }
   },
   "settings": {
