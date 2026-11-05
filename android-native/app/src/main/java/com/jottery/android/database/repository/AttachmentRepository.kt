@@ -38,4 +38,6 @@ class AttachmentRepository(
 
     /** A new server holds none of this device's blobs. */
     suspend fun markAllNotUploaded() = dao.markAllNotUploaded()
+
+    suspend fun clearOldFilenames(limit: Int): Int = dao.clearOldFilenames(limit)
 }

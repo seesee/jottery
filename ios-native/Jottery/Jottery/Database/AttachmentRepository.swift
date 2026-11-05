@@ -21,6 +21,21 @@ struct AttachmentRepository: Sendable {
         }
     }
 
+    /// Blank up to `limit` of the plaintext filenames older builds left in this
+    /// table, and say how many that was. Changing a row's size rewrites the
+    /// attachment data in it, so this is a few rows at a time, never one statement
+    /// over the table. Nothing reads the column.
+    @discardableResult
+    func clearOldFilenames(limit: Int) throws -> Int {
+        try db.dbPool.write { db in
+            try db.execute(sql: """
+                UPDATE attachments SET filename = ''
+                WHERE id IN (SELECT id FROM attachments WHERE filename != '' LIMIT ?)
+            """, arguments: [limit])
+            return db.changesCount
+        }
+    }
+
     /// The blob, unless the server is known to hold it already.
     func getBlobToUpload(id: String) throws -> Data? {
         try db.dbPool.read { db in

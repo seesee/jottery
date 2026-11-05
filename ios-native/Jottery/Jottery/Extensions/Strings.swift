@@ -210,6 +210,7 @@ enum L {
     }
     static var unlockDeleteConfirmAction: String { String(localized: "unlock.deleteConfirmAction") }
     static var unlockDeleteConfirmCancel: String { String(localized: "unlock.deleteConfirmCancel") }
+    static var launchOpening: String { String(localized: "launch.opening") }
     static var unlockFaceId: String { String(localized: "unlock.faceId") }
     static var unlockEnableFaceIdTitle: String { String(localized: "unlock.enableFaceIdTitle") }
     static var unlockEnableFaceIdAction: String { String(localized: "unlock.enableFaceIdAction") }

@@ -205,6 +205,15 @@ final class AppState {
     private(set) var encryptionRepo: EncryptionRepository?
     private(set) var settingsRepo: SettingsRepository?
     private(set) var syncRepo: SyncRepository?
+    @ObservationIgnored private var filenameCleanup: Task<Void, Never>?
+    /// False from launch until the database has been tried, so that nothing decides
+    /// which screen to show from the defaults.
+    private(set) var isDatabaseReady = false
+    @ObservationIgnored private var isOpeningDatabase = false
+    /// Replaced by tests, to hold the database open partway.
+    @ObservationIgnored var openDatabase: @Sendable () throws -> DatabaseManager = { try DatabaseManager() }
+    /// Replaced by tests, which share the simulator's keychain.
+    @ObservationIgnored var forgetEarlierInstall: () -> Void = KeychainService.deleteAll
     private(set) var versionRepo: VersionRepository?
     private(set) var attachmentRepo: AttachmentRepository?
     private(set) var savedSearchRepo: SavedSearchRepository?
@@ -317,16 +326,42 @@ final class AppState {
 
     // MARK: - Initialisation
 
-    func initialise() {
-        guard db == nil else { return }  // Already initialised
+    /// Open the database, off the main thread. iOS kills an app that takes over 10
+    /// seconds to start, and opening can take that long: a migration, or a checkpoint
+    /// of a large write-ahead log, scales with the vault. Killed partway, the same
+    /// work starts again at the next launch, so it can stop the app opening for good.
+    func initialise() async {
+        guard db == nil, !isOpeningDatabase else { return }
+        isOpeningDatabase = true
+        defer { isOpeningDatabase = false }
 
         removeTemporaryFiles()
 
+        let open = openDatabase
         do {
-            try initialise(database: DatabaseManager(), forgetEarlierInstall: KeychainService.deleteAll)
+            let database = try await withCheckedThrowingContinuation { continuation in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    continuation.resume(with: Result { try open() })
+                }
+            }
+            try initialise(database: database, forgetEarlierInstall: forgetEarlierInstall)
+            clearOldFilenamesInBackground()
         } catch {
             // Database init failed — stay on first launch screen
             isFirstLaunch = true
+            isDatabaseReady = true
+        }
+    }
+
+    /// Blank the plaintext filenames older builds stored, a few rows at a time. Each
+    /// row's attachment data gets rewritten with it, so this keeps out of the way of
+    /// everything else, and picks up at the next launch if it doesn't finish.
+    private func clearOldFilenamesInBackground() {
+        guard let attachmentRepo else { return }
+        filenameCleanup = Task.detached(priority: .background) {
+            while !Task.isCancelled, (try? attachmentRepo.clearOldFilenames(limit: 5)) ?? 0 > 0 {
+                try? await Task.sleep(for: .milliseconds(100))
+            }
         }
     }
 
@@ -366,6 +401,7 @@ final class AppState {
         // Check if vault exists
         let hasVault = try encryptionRepo?.isVaultSetUp() ?? false
         isFirstLaunch = !hasVault
+        isDatabaseReady = true
         if !hasVault { forgetEarlierInstall() }
 
         // Load settings
@@ -1893,7 +1929,7 @@ final class AppState {
         case .active:
             // The database can't open while the device is locked (see
             // `DatabaseManager`), which a launch in the background can run into.
-            if db == nil { initialise() }
+            if db == nil { Task { await initialise() } }
             // A reminder fires once, so coming back is when the next is set.
             Task { await refreshBackupReminder() }
             guard !isLocked, !lockIfAwayTooLong() else { return }
@@ -1968,6 +2004,8 @@ final class AppState {
         settingsRepo = nil
         syncRepo = nil
         versionRepo = nil
+        filenameCleanup?.cancel()
+        filenameCleanup = nil
         attachmentRepo = nil
         savedSearchRepo = nil
         pendingEditorNote = nil
@@ -1998,7 +2036,8 @@ final class AppState {
         isFirstLaunch = true
 
         // Re-initialise so the DB is recreated fresh
-        initialise()
+        isDatabaseReady = false
+        Task { await initialise() }
     }
 
     // MARK: - Password Change
