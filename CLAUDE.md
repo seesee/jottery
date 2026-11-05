@@ -169,9 +169,11 @@ User Account (email/password)
 - Admin can view metadata, not decrypted content
 
 **Default Admin Account:**
-- Email: `admin@localhost`
-- Password: `changeme` (must be changed on first deployment)
-- Created automatically by migration 003
+- Email: `admin@localhost`, unless `DEFAULT_ADMIN_EMAIL` is set
+- Password: `DEFAULT_ADMIN_PASSWORD` if set, otherwise a random one printed once in the server log on first start
+- A generated password must be changed at first sign-in, and the dashboards show a change-password screen until it is
+- An older install still on the password published in migration 003 can sign in, but can do nothing else until it changes it
+- Created by migration 003, then secured on every start by `server/src/bootstrap.rs`
 - Pre-approved and active
 
 ## Design Patterns to Avoid
