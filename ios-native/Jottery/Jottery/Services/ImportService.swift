@@ -89,18 +89,18 @@ enum ImportService {
                 for exportAtt in exportNote.attachments {
                     let attId = UUID().uuidString
                     if let rawData = Data(base64Encoded: exportAtt.data) {
+                        let filename = AttachmentFilename.safe(exportAtt.filename)
                         let encData = try CryptoService.encrypt(rawData, key: key)
                         let encJSON = try CryptoService.serializeEncryptedJSON(encData)
                         let blobData = Data(encJSON.utf8)
                         try attachmentRepo.storeBlob(
                             id: attId,
-                            filename: exportAtt.filename,
+                            filename: filename,
                             mimeType: exportAtt.mimeType,
                             size: rawData.count,
                             data: blobData
                         )
-                        let encFilename = try CryptoService.encryptText(exportAtt.filename, key: key)
-                        let encFilenameJSON = try CryptoService.serializeEncryptedJSON(encFilename)
+                        let encFilenameJSON = try AttachmentFilename.encrypted(filename, key: key)
                         attachmentRefs.append(AttachmentRef(
                             id: attId,
                             filename: encFilenameJSON,

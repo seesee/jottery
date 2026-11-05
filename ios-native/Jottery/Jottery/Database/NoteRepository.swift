@@ -133,6 +133,11 @@ struct NoteRepository: Sendable {
     // MARK: - Update
 
     /// Update a decrypted note's content and tags back to the database.
+    ///
+    /// Attachments stay as they're stored. `note.attachments` holds decrypted
+    /// filenames, so writing it back would put them in the clear, and sync would
+    /// send them to the server. It can also be older than the stored list.
+    /// `addAttachment` and `removeAttachment` are the only way to change them.
     func update(_ note: DecryptedNote, key: SymmetricKey) throws {
         let encContent = try CryptoService.encryptText(note.content, key: key)
         let encTags = try CryptoService.encryptStringArray(note.tags, key: key)
@@ -141,11 +146,13 @@ struct NoteRepository: Sendable {
         let tagsJSON = try CryptoService.serializeEncryptedJSON(encTags)
 
         let now = Date().iso8601
-        let attachmentsJSON = try JSONEncoder().encode(note.attachments)
-        let attachmentsString = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
 
         // Fetch the current DB record so we can read the previous hash and version
         let currentRecord = try getRaw(id: note.id)
+        let attachmentsString = currentRecord?.attachments ?? "[]"
+        let storedAttachments = (try? JSONDecoder().decode(
+            [AttachmentRef].self, from: Data(attachmentsString.utf8)
+        )) ?? []
         let previousHash = currentRecord?.contentHash
         let previousChain: [String]
         if let chainStr = currentRecord?.hashChain, let data = chainStr.data(using: .utf8) {
@@ -159,7 +166,7 @@ struct NoteRepository: Sendable {
         let contentHash = HashChainService.computeContentHash(
             encryptedContent: contentJSON,
             encryptedTags: syncTags,
-            attachmentIds: note.attachments.map(\.id).sorted(),
+            attachmentIds: storedAttachments.map(\.id).sorted(),
             pinned: note.pinned,
             archived: note.archived,
             locked: note.locked,
@@ -398,6 +405,52 @@ struct NoteRepository: Sendable {
         try updateRaw(record)
     }
 
+    /// Encrypt any filename older builds stored in plaintext, in notes and in
+    /// their version snapshots, and queue those notes for a push so the server's
+    /// copy is replaced too (versions go up with their note). Returns how many
+    /// notes that was. Does nothing once everything is encrypted, so it can run
+    /// on every unlock. `modified_at` is left alone: the note hasn't been edited.
+    @discardableResult
+    func encryptPlaintextAttachmentFilenames(key: SymmetricKey) throws -> Int {
+        try db.dbPool.write { db in
+            var noteIds = Set<String>()
+
+            let notes = try Row.fetchAll(db, sql: "SELECT id, attachments FROM notes WHERE attachments != '[]'")
+            for row in notes {
+                let id: String = row["id"]
+                guard let json = try Self.repairedAttachments(row["attachments"], key: key) else { continue }
+                try db.execute(sql: "UPDATE notes SET attachments = ? WHERE id = ?", arguments: [json, id])
+                noteIds.insert(id)
+            }
+
+            let versions = try Row.fetchAll(db, sql: """
+                SELECT version_key, note_id, attachments FROM note_versions WHERE attachments != '[]'
+            """)
+            for row in versions {
+                let versionKey: String = row["version_key"]
+                guard let json = try Self.repairedAttachments(row["attachments"], key: key) else { continue }
+                try db.execute(
+                    sql: "UPDATE note_versions SET attachments = ? WHERE version_key = ?",
+                    arguments: [json, versionKey]
+                )
+                noteIds.insert(row["note_id"])
+            }
+
+            for id in noteIds {
+                try db.execute(sql: "UPDATE notes SET needs_sync = 1 WHERE id = ?", arguments: [id])
+            }
+            return noteIds.count
+        }
+    }
+
+    /// The JSON to store instead of `json`, or nil if it needs no change.
+    private static func repairedAttachments(_ json: String, key: SymmetricKey) throws -> String? {
+        guard let refs = try? JSONDecoder().decode([AttachmentRef].self, from: Data(json.utf8)) else { return nil }
+        let repaired = try AttachmentFilename.encryptingPlaintext(in: refs, key: key)
+        guard repaired.changed else { return nil }
+        return String(data: try JSONEncoder().encode(repaired.refs), encoding: .utf8)
+    }
+
     // MARK: - Insert Raw (for sync pull)
 
     /// Insert or replace a raw record (from server).
@@ -466,9 +519,7 @@ struct NoteRepository: Sendable {
         // Decrypt attachment filenames (stored as encrypted JSON strings)
         let attachments = rawAttachments.map { ref -> AttachmentRef in
             var decrypted = ref
-            if let enc = try? CryptoService.parseEncryptedJSON(ref.filename) {
-                decrypted.filename = (try? CryptoService.decryptText(enc, key: key)) ?? ref.filename
-            }
+            decrypted.filename = AttachmentFilename.display(stored: ref.filename, key: key)
             return decrypted
         }
 

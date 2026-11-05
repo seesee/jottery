@@ -257,6 +257,7 @@ enum L {
     static var attachmentsDataNotAvailable: String { String(localized: "attachments.dataNotAvailable") }
     static var attachmentsInvalidData: String { String(localized: "attachments.invalidData") }
     static var attachmentsDecryptFailed: String { String(localized: "attachments.decryptFailed") }
+    static var attachmentsUnreadableName: String { String(localized: "attachments.unreadableName") }
 
     // MARK: - Saved Searches
 

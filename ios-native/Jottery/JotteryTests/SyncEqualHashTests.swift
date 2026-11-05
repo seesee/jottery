@@ -234,3 +234,70 @@ struct SyncEqualHashTests {
         #expect(try #require(try fixture.repo.getRaw(id: record.id)).needsSync)
     }
 }
+
+/// Older builds pushed attachment filenames in plaintext, so a pull can bring
+/// them in. A server can also send any name it likes in that field.
+@Suite(.serialized)
+struct PulledAttachmentFilenameTests {
+
+    private let key = SymmetricKey(data: Data(repeating: 7, count: 32))
+
+    private func pullNote(withFilename filename: String) async throws -> (repo: NoteRepository, id: String) {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("jottery-pulled-filename-tests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let db = try DatabaseManager(path: dir.appendingPathComponent("test.db").path)
+        let versionRepo = VersionRepository(db: db)
+        let repo = NoteRepository(db: db, versionRepo: versionRepo)
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [PullStubURLProtocol.self]
+        let service = SyncService(
+            syncClient: SyncClient(endpoint: "https://sync.example.test", apiKey: "device-key", configuration: configuration),
+            noteRepo: repo,
+            syncRepo: SyncRepository(db: db),
+            versionRepo: versionRepo,
+            attachmentRepo: AttachmentRepository(db: db),
+            savedSearchRepo: SavedSearchRepository(db: db),
+            key: key
+        )
+
+        let id = CryptoService.generateUUID()
+        let now = Date().iso8601
+        let content = try CryptoService.serializeEncryptedJSON(CryptoService.encryptText("pulled", key: key))
+        let attachmentId = CryptoService.generateUUID()
+        let note = SyncNote(
+            id: id, createdAt: now, modifiedAt: now, content: content, tags: [],
+            attachments: [AttachmentRef(id: attachmentId, filename: filename, mimeType: "text/plain", size: 1, data: attachmentId)],
+            pinned: false, archived: false, deleted: false, version: 1
+        )
+        PullStubURLProtocol.body = try JSONEncoder().encode(
+            SyncPullResponse(notes: [note], attachments: [], versions: [], hasMore: false)
+        )
+        try await service.pull()
+        return (repo, id)
+    }
+
+    @Test func aPlaintextNameIsEncryptedAndPushedBack() async throws {
+        let (repo, id) = try await pullNote(withFilename: "passport-scan.jpg")
+
+        let record = try #require(try repo.getRaw(id: id))
+        #expect(!record.attachments.contains("passport-scan"))
+        #expect(record.needsSync)
+        #expect(try repo.get(id: id, key: key)?.attachments.first?.filename == "passport-scan.jpg")
+    }
+
+    @Test func aHostileNameCantEscapeOnceStored() async throws {
+        let (repo, id) = try await pullNote(withFilename: "../../Library/Application Support/Jottery/jottery.db")
+
+        #expect(try repo.get(id: id, key: key)?.attachments.first?.filename == "jottery.db")
+    }
+
+    @Test func anEncryptedNameIsStoredAsItCame() async throws {
+        let filename = try AttachmentFilename.encrypted("fine.txt", key: key)
+        let (repo, id) = try await pullNote(withFilename: filename)
+
+        let record = try #require(try repo.getRaw(id: id))
+        #expect(record.attachments.contains("ciphertext"))
+        #expect(!record.needsSync)
+    }
+}

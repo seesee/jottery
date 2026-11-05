@@ -542,6 +542,7 @@ final class AppState {
         // Retry any edit that failed to flush at lock time now that the key
         // is available again.
         flushPendingEditorNote()
+        await repairStoredData()
 
         #if DEBUG
         let loadStart = CFAbsoluteTimeGetCurrent()
@@ -583,6 +584,22 @@ final class AppState {
         }
 
         return true
+    }
+
+    /// Clean up what older builds left in the vault. Runs on every unlock, and
+    /// before sync starts, so the first push carries the repairs.
+    func repairStoredData() async {
+        guard let noteRepo, let key = keyManager.masterKey else { return }
+        await Task.detached(priority: .userInitiated) {
+            do {
+                let repaired = try noteRepo.encryptPlaintextAttachmentFilenames(key: key)
+                if repaired > 0 {
+                    Log.debug("[Repair] Encrypted attachment filenames in \(repaired) note(s)")
+                }
+            } catch {
+                Log.debug("[Repair] Couldn't encrypt attachment filenames: \(error)")
+            }
+        }.value
     }
 
     /// Whether the key now loaded is this vault's key, checked against the
@@ -1126,9 +1143,10 @@ final class AppState {
         try addAttachment(to: noteId, data: try Data(contentsOf: url), filename: filename, mimeType: mimeType)
     }
 
-    func addAttachment(to noteId: String, data fileData: Data, filename: String, mimeType: String) throws {
+    func addAttachment(to noteId: String, data fileData: Data, filename rawFilename: String, mimeType: String) throws {
         guard let noteRepo, let attachmentRepo, let key = keyManager.masterKey else { return }
         guard try noteRepo.get(id: noteId, key: key) != nil else { return }
+        let filename = AttachmentFilename.safe(rawFilename)
 
         // Encrypt the file data
         let encrypted = try CryptoService.encrypt(fileData, key: key)
@@ -1143,8 +1161,7 @@ final class AppState {
         try attachmentRepo.storeBlob(id: attachmentId, filename: filename, mimeType: mimeType, size: fileData.count, data: blobData)
 
         // Encrypt the filename for storage
-        let encFilename = try CryptoService.encryptText(filename, key: key)
-        let encFilenameJSON = try CryptoService.serializeEncryptedJSON(encFilename)
+        let encFilenameJSON = try AttachmentFilename.encrypted(filename, key: key)
 
         // Create attachment ref (data = attachmentId so blob lookup matches)
         let ref = AttachmentRef(
@@ -1231,7 +1248,7 @@ final class AppState {
                 }
 
                 let alreadyAttached = Set(note.attachments.map { $0.filename })
-                for file in item.manifest.files where !alreadyAttached.contains(file.filename) {
+                for file in item.manifest.files where !alreadyAttached.contains(AttachmentFilename.safe(file.filename)) {
                     let fileURL = item.directory.appendingPathComponent(file.storedName)
                     let data = try Data(contentsOf: fileURL)
                     try addAttachment(to: note.id, data: data, filename: file.filename, mimeType: file.mimeType)

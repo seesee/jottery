@@ -139,6 +139,17 @@
         }
       }
     },
+    "attachments.unreadableName": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unreadable attachment"
+          }
+        }
+      }
+    },
     "backup.create": {
       "extractionState": "manual",
       "localizations": {

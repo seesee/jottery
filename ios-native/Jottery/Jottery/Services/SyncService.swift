@@ -577,9 +577,15 @@ actor SyncService {
     }
 
     /// Build a NoteRecord from a SyncNote for local storage.
+    ///
+    /// Older builds could send filenames in plaintext. Those are encrypted on
+    /// the way in, and the note queued for a push so the server's copy is
+    /// replaced too. (A name is also made safe to use whenever it's read: see
+    /// `AttachmentFilename`.)
     private func buildNoteRecord(from syncNote: SyncNote, syncedAt: String) throws -> NoteRecord {
         let tagsString = Self.syncTagsToStorageTags(syncNote.tags, key: key)
-        let attachmentsJSON = try JSONEncoder().encode(syncNote.attachments)
+        let attachments = try AttachmentFilename.encryptingPlaintext(in: syncNote.attachments, key: key)
+        let attachmentsJSON = try JSONEncoder().encode(attachments.refs)
         let attachmentsString = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
 
         let hashChainStr: String?
@@ -612,7 +618,7 @@ actor SyncService {
             contentHash: syncNote.contentHash,
             parentHash: syncNote.parentHash,
             hashChain: hashChainStr,
-            needsSync: false
+            needsSync: attachments.changed
         )
     }
 
