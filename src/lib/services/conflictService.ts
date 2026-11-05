@@ -11,9 +11,11 @@ import type { Note, ConflictData, Attachment } from '../types';
 import { noteRepository } from './noteRepository';
 import { syncRepository } from './syncRepository';
 import { noteService } from './noteService';
-import { cryptoService, encryptStringArray, updateHashChain } from './crypto';
+import { advanceContentHash, cryptoService, encryptStringArray, updateHashChain } from './crypto';
 import { keyManager } from './keyManager';
-import { storageToSync } from './tagConversionService';
+import { storageToSync, syncToStorage } from './tagConversionService';
+import { attachmentRepository } from './attachmentRepository';
+import { repairAttachment } from './vaultHealthService';
 import { ApplicationLockedError, CryptoError, NotFoundError } from '../errors';
 
 export type ConflictResolution = 'keep-mine' | 'keep-server' | 'keep-both' | 'merge';
@@ -155,6 +157,42 @@ export async function getConflictInfo(noteId: string): Promise<ConflictInfo | nu
 }
 
 /**
+ * The note's attachments plus any the server's copy added. A push now states a note's
+ * complete list, so what another device added would be removed by resolving this
+ * conflict. Choosing a version of the text isn't a decision to delete a photo.
+ */
+function withServerAttachments(note: Note, conflict: ConflictData | undefined): Attachment[] {
+  const held = new Set(note.attachments.map(attachment => attachment.id));
+  const added = (conflict?.serverAttachments ?? []).filter(attachment => !held.has(attachment.id));
+  return [...note.attachments, ...(added as Attachment[])];
+}
+
+/**
+ * Copy the server's attachments under new ids, so that the two notes don't share a
+ * blob and deleting one can't damage the other. Fetches what this device never had.
+ * Runs before anything changes, because a missing blob must stop the resolution.
+ */
+async function copyServerAttachments(conflict: ConflictData): Promise<Attachment[]> {
+  const copies: Attachment[] = [];
+
+  for (const reference of conflict.serverAttachments as Attachment[]) {
+    let blob = await attachmentRepository.getBlob(reference.data);
+    if (!blob && (await repairAttachment(reference.id)) === 'repaired') {
+      blob = await attachmentRepository.getBlob(reference.id);
+    }
+    if (!blob) {
+      throw new Error('An attachment on the server copy could not be fetched');
+    }
+
+    const id = crypto.randomUUID();
+    await attachmentRepository.storeBlob(id, blob);
+    copies.push({ ...reference, id, data: id });
+  }
+
+  return copies;
+}
+
+/**
  * Resolve conflict by keeping the local version
  * Clears conflict status and marks note for sync with updated timestamp
  */
@@ -167,6 +205,7 @@ export async function resolveKeepMine(noteId: string): Promise<void> {
   // Get conflict data for server's hash info
   const syncMeta = await syncRepository.getNoteSyncMetadata(noteId);
   const conflict = syncMeta?.conflictData;
+  note.attachments = withServerAttachments(note, conflict);
 
   // Recompute content hash for current local content
   const contentHash = await cryptoService.computeContentHash(note);
@@ -226,11 +265,13 @@ export async function resolveKeepServer(noteId: string): Promise<void> {
     throw new CryptoError('decrypt', 'the server copy of this note is unreadable');
   }
 
-  // Update note with server data, including hash chain fields
+  // Update note with server data, including hash chain fields. It now matches the
+  // server, so it keeps the server's time and isn't marked for sync. Conflict data
+  // holds tags in the sync format, which a stored note can't.
   await noteRepository.update({
     ...existingNote,
     content: conflict.serverContent,
-    tags: conflict.serverTags,
+    tags: await syncToStorage(conflict.serverTags, masterKey.key),
     modifiedAt: conflict.serverModifiedAt,
     pinned: conflict.serverPinned,
     syntaxLanguage: conflict.serverSyntaxLanguage,
@@ -240,7 +281,7 @@ export async function resolveKeepServer(noteId: string): Promise<void> {
     contentHash: conflict.serverContentHash,
     parentHash: conflict.serverParentHash,
     hashChain: conflict.serverHashChain || [],
-  });
+  }, false, true);
 
   // Clear conflict and mark as synced with matching syncHash
   await syncRepository.updateNoteSyncMetadata(noteId, {
@@ -283,13 +324,21 @@ export async function resolveKeepBoth(noteId: string): Promise<string> {
   // Add a tag to indicate this is a conflict copy
   serverTags.push('conflict-copy');
 
+  const attachments = await copyServerAttachments(conflict);
+
   // Create new note from server version
   const newNote = await noteService.createNote(serverContent, serverTags, {
     pinned: conflict.serverPinned,
     syntaxLanguage: conflict.serverSyntaxLanguage as 'markdown' | 'javascript' | 'python' | 'json' | 'css' | 'bash' | 'sql' | 'plain' | 'html' | undefined,
     wordWrap: conflict.serverWordWrap,
-    // Note: Attachments would need to be copied separately if needed
   });
+
+  const copy = await noteRepository.getById(newNote.id);
+  if (copy && attachments.length > 0) {
+    copy.attachments = attachments;
+    await advanceContentHash(copy);
+    await noteRepository.update(copy);
+  }
 
   // Update original note's hash chain to acknowledge server version
   const now = new Date().toISOString();
@@ -354,6 +403,7 @@ export async function resolveMerge(
     ...note,
     content: JSON.stringify(encryptedContent),
     tags: [JSON.stringify(encryptedTags)],
+    attachments: withServerAttachments(note, conflict),
   };
 
   // Compute content hash for the merged version

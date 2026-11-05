@@ -7,6 +7,12 @@ import LocalAuthentication
 /// The `SymmetricKey` is kept in memory only — never persisted to disk.
 /// Biometric unlock stores the raw key bytes in Keychain with
 /// `SecAccessControl` flag `.biometryCurrentSet`.
+///
+/// CryptoKit zeroes a `SymmetricKey` when the last reference goes, so locking
+/// clears the key provided nothing else holds it, which is why `lock()` also
+/// ends sync. Key bytes that have to pass through `Data` are wiped once used
+/// (`Data.wipe()`). That's as far as it can go: Swift gives no control over
+/// copies the runtime makes, so this narrows the window rather than closing it.
 @MainActor @Observable
 final class KeyManager {
 
@@ -16,8 +22,13 @@ final class KeyManager {
     var masterKey: SymmetricKey?
     private(set) var isUnlocked: Bool = false
 
-    /// Seconds since last user interaction before auto-locking.
-    var autoLockTimeout: TimeInterval = 15 * 60  // 15 minutes default
+    /// Seconds since last user interaction before auto-locking. Zero or less
+    /// means never. Takes effect at once, whether or not a timer is running.
+    var autoLockTimeout: TimeInterval = 15 * 60 {  // 15 minutes default
+        didSet {
+            if isUnlocked { startAutoLockTimer() }
+        }
+    }
 
     /// Called when the auto-lock timer fires. AppState should wire this
     /// to its own `lock()` so the UI transitions to the unlock screen.
@@ -55,7 +66,8 @@ final class KeyManager {
         guard let key = masterKey else {
             throw KeyManagerError.noKeyLoaded
         }
-        let keyData = key.withUnsafeBytes { Data($0) }
+        var keyData = key.withUnsafeBytes { Data($0) }
+        defer { keyData.wipe() }
         try KeychainService.storeBiometricKey(keyData)
     }
 
@@ -74,7 +86,8 @@ final class KeyManager {
         isBiometricUnlockInFlight = true
         defer { isBiometricUnlockInFlight = false }
         do {
-            let keyData = try await retrieve()
+            var keyData = try await retrieve()
+            defer { keyData.wipe() }
             unlockWithKeyData(keyData)
             return true
         } catch {
@@ -117,8 +130,11 @@ final class KeyManager {
         autoLockTimer = nil
     }
 
-    private func checkAutoLock() {
-        guard isUnlocked else { return }
+    /// Whether the clock is running: there's something to lock, and a timeout.
+    var isAutoLockTimerRunning: Bool { autoLockTimer != nil }
+
+    func checkAutoLock() {
+        guard isUnlocked, autoLockTimeout > 0 else { return }
         let elapsed = Date().timeIntervalSince(lastActivityDate)
         if elapsed >= autoLockTimeout {
             // Use the callback so AppState can lock the full app (show unlock screen,
@@ -134,6 +150,13 @@ final class KeyManager {
 
     // No deinit needed — KeyManager lives for the app's lifetime.
     // Timer invalidation happens in lock() / stopAutoLockTimer().
+}
+
+extension Data {
+    /// Overwrite these bytes, once they've done their job.
+    mutating func wipe() {
+        resetBytes(in: startIndex..<endIndex)
+    }
 }
 
 enum KeyManagerError: LocalizedError {

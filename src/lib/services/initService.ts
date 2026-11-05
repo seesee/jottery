@@ -13,9 +13,11 @@ import { savedSearchRepository } from './savedSearchRepository';
 import { cryptoService } from './crypto';
 import { keyManager, setupActivityListeners } from './keyManager';
 import { sessionStorageService } from './sessionStorageService';
-import { authService } from './authService';
+import { passwordStorageService } from './passwordStorageService';
+import { AuthApiError, authService } from './authService';
+import type { WrappedKeyResponse, WrappedKeyWrite } from './authService';
 import { arrayBufferToBase64, base64ToUint8Array } from '../utils/base64';
-import { CRYPTO_PBKDF2_ITERATIONS, CRYPTO_WRAPPING_ITERATIONS, CRYPTO_WRAPPING_KDF_VERSION } from '../constants';
+import { CRYPTO_PBKDF2_ITERATIONS, CRYPTO_WRAPPING_ITERATIONS, CRYPTO_WRAPPING_KDF_VERSION, CRYPTO_WRAPPING_MAX_ITERATIONS } from '../constants';
 import type { EncryptionResult } from '../types/crypto';
 import { restoreFromBackup as restoreBackupData, verifyBackupContents, verifyBackupPassword } from './backupService';
 import { backupSchedulerService } from './backupSchedulerService';
@@ -25,6 +27,9 @@ import { restrictConnections } from './cspService';
 import { searchService } from './searchService';
 import { AccountKeyExistsError, AccountKeyUnreadableError, LocalNotesOrphanedError, ValidationError } from '../errors';
 import { isNotesPasswordLongEnough, MIN_NOTES_PASSWORD_LENGTH } from '../utils/passwordRules';
+import { toast } from '../utils/toast.svelte';
+import { get } from 'svelte/store';
+import { _ } from 'svelte-i18n';
 
 /**
  * Check if the application has been initialized
@@ -167,26 +172,9 @@ export async function unlock(password: string): Promise<void> {
     throw new Error('Invalid encryption metadata: neither envelope nor legacy fields found');
   }
 
-  // Verify the key is correct by attempting to decrypt an existing note
-  // This prevents the UI from loading with a wrong password
-  const notes = await noteRepository.getAllActive();
-  console.log('[Unlock] Active notes count:', notes.length);
-
-  if (notes.length > 0) {
-    try {
-      console.log('[Unlock] Verifying password by decrypting first note...');
-      // Try to decrypt the first note's content as a verification
-      const testNote = notes[0];
-      const encryptedContent = JSON.parse(testNote.content);
-      await cryptoService.decryptText(encryptedContent, key);
-      console.log('[Unlock] ✓ Password verified (note decrypted successfully)');
-    } catch (error) {
-      console.error('[Unlock] Password verification failed:', error);
-      throw new Error('Incorrect password');
-    }
-  } else {
-    console.log('[Unlock] ⚠️ No notes to verify password against - skipping verification');
-  }
+  // An envelope vault's key was authenticated by unwrapping it. A legacy vault has
+  // nothing to check a derived key against but its own notes.
+  const legacyKeyVerified = metadata.envelopeVersion ? true : await legacyKeyOpensNotes(key);
 
   // Store the master key with bytes for JWE operations
   const masterKey: MasterKey = {
@@ -205,14 +193,18 @@ export async function unlock(password: string): Promise<void> {
 
   await encryptLegacySavedSearches();
 
+  // Moves anything an older version left in plaintext into the encrypted settings
+  await settingsRepository.update({});
+
   // Decrypted notes exist from here on, so limit where they could be sent
   const connectionMetadata = await syncRepository.getMetadata();
   if (connectionMetadata?.syncEnabled && connectionMetadata.syncEndpoint) {
     restrictConnections(connectionMetadata.syncEndpoint);
   }
 
-  // Attempt migration from legacy to envelope encryption
-  if (!metadata.envelopeVersion) {
+  // Attempt migration from legacy to envelope encryption. An unverified key could be
+  // any password at all, and migrating would make it the vault's key for good.
+  if (!metadata.envelopeVersion && legacyKeyVerified) {
     await tryMigrateToEnvelope(password, keyBytes);
   }
 
@@ -233,6 +225,39 @@ export async function unlock(password: string): Promise<void> {
   console.log('[Unlock] ✓ Backup scheduler started');
 
   console.log('[Unlock] ✓ Unlock complete!');
+}
+
+/**
+ * Check a legacy vault's derived key against its notes, one at a time, so that one
+ * corrupt note can't lock anyone out of a healthy vault.
+ *
+ * @returns false if there was nothing to check it against
+ * @throws if no note opens with it
+ */
+async function legacyKeyOpensNotes(key: CryptoKey): Promise<boolean> {
+  const notes = await noteRepository.getAll();
+  if (notes.length === 0) {
+    return false;
+  }
+
+  for (const note of notes) {
+    if (await noteOpensWith(note, key)) {
+      return true;
+    }
+  }
+  throw new Error('Incorrect password');
+}
+
+/**
+ * Only a 401 says the restored key is no good. A 403 means the account is disabled,
+ * and reactivating it restores the key. A TypeError is fetch failing to connect.
+ * Anything else means the marker itself is unusable.
+ */
+function canRetryRestoredDevice(error: unknown): boolean {
+  if (error instanceof AuthApiError) {
+    return error.status !== 401;
+  }
+  return error instanceof TypeError;
 }
 
 /**
@@ -291,6 +316,13 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
 
         console.log('[ImportHandler] ✓✓✓ Restored credentials processed successfully! Registered as new device.');
       } catch (restoreError) {
+        // Being offline, or the server being down, says nothing about the credentials.
+        // Keep the marker and try again at the next unlock.
+        if (canRetryRestoredDevice(restoreError)) {
+          console.warn('[ImportHandler] Could not re-register restored device (will retry next unlock):', restoreError);
+          return;
+        }
+
         console.error('[ImportHandler] Failed to re-register restored device:', restoreError);
         // Clear the invalid data so sync is disabled but app still works
         await syncRepository.updateMetadata({
@@ -341,6 +373,25 @@ export function lock(): void {
   searchService.indexNotes([]);
 }
 
+/** Display preferences kept outside the vault, for before it is unlocked */
+const LOCAL_PREFERENCE_KEYS = ['jottery-theme', 'jottery-locale'];
+
+/**
+ * Delete everything this notebook keeps on this device. deleteDB alone leaves a
+ * remembered password readable in localStorage, and someone clearing a machine
+ * before handing it on has no way of knowing.
+ */
+export async function deleteAllLocalData(): Promise<void> {
+  await passwordStorageService.clear();
+  sessionStorageService.clear();
+  try {
+    LOCAL_PREFERENCE_KEYS.forEach(key => localStorage.removeItem(key));
+  } catch (error) {
+    console.warn('[Delete] Could not clear local preferences:', error);
+  }
+  await deleteDB();
+}
+
 /**
  * Check if the application is locked
  */
@@ -350,11 +401,14 @@ export function isLocked(): boolean {
 
 /**
  * Change the password (enabled by envelope encryption — no re-encryption needed)
+ *
+ * The local change always stands. `serverKeyUpdated` is false if the server's copy
+ * couldn't be updated, in which case the upload is retried at the next unlock.
  */
 export async function changePassword(
   currentPassword: string,
   newPassword: string
-): Promise<void> {
+): Promise<{ serverKeyUpdated: boolean }> {
   if (!isNotesPasswordLongEnough(newPassword)) {
     throw new ValidationError(`Password must be at least ${MIN_NOTES_PASSWORD_LENGTH} characters`, 'newPassword');
   }
@@ -372,6 +426,11 @@ export async function changePassword(
   const metadata = await encryptionRepository.getMetadata();
   if (!metadata) {
     throw new Error('No encryption metadata found');
+  }
+
+  // Being unlocked proves nothing about whoever is at the keyboard
+  if (!(await passwordUnlocksVault(currentPassword, metadata, currentMasterKey.keyBytes))) {
+    throw new Error('Incorrect password');
   }
 
   // If still on legacy, migrate first
@@ -402,29 +461,24 @@ export async function changePassword(
   });
 
   // Re-wrap master key for server (if sync configured)
+  let serverKeyUpdated = true;
   const syncMetadata = await syncRepository.getMetadata();
   if (syncMetadata?.syncEnabled && syncMetadata.userId && syncMetadata.apiKey && syncMetadata.syncEndpoint) {
     try {
-      const wrappingKey = await cryptoService.deriveWrappingKey(newPassword, syncMetadata.userId);
-      const serverWrapped = await cryptoService.wrapMasterKey(wrappingKey, currentMasterKey.keyBytes);
-
-      // Get plaintext API key for auth
-      const encryptedApiKey = JSON.parse(syncMetadata.apiKey);
-      const plaintextApiKey = await cryptoService.decryptText(encryptedApiKey, currentMasterKey.key);
-
-      await authService.putWrappedKey(syncMetadata.syncEndpoint, plaintextApiKey, {
-        blob: JSON.stringify(serverWrapped),
-        kdfVersion: CRYPTO_WRAPPING_KDF_VERSION,
-        kdfIterations: CRYPTO_WRAPPING_ITERATIONS,
-      });
+      await uploadWrappedKey(newPassword, currentMasterKey.keyBytes, { replace: true });
       console.log('[ChangePassword] ✓ Server wrapped key updated');
     } catch (error) {
       console.warn('[ChangePassword] Failed to update server wrapped key:', error);
-      // Non-fatal — local password change still succeeded
+      // The server still holds a copy under the old password, so a new device would
+      // need that one. Without this, unlock would read the mismatch as a change
+      // made somewhere else, and never repair it.
+      serverKeyUpdated = false;
+      await syncRepository.updateMetadata({ serverKeyStale: true });
     }
   }
 
   console.log('[ChangePassword] ✓ Password changed successfully (no re-encryption needed)');
+  return { serverKeyUpdated };
 }
 
 /**
@@ -478,7 +532,7 @@ async function passwordUnlocksVault(
  * password in plaintext at registration and login, so a blob wrapped with it
  * could be opened by the server operator.
  */
-async function uploadWrappedKey(password: string, masterKeyBytes: Uint8Array): Promise<void> {
+async function uploadWrappedKey(password: string, masterKeyBytes: Uint8Array, write: WrappedKeyWrite): Promise<void> {
   const syncMetadata = await syncRepository.getMetadata();
   if (!syncMetadata?.syncEnabled || !syncMetadata.userId || !syncMetadata.apiKey || !syncMetadata.syncEndpoint) {
     throw new Error('Sync is not configured');
@@ -500,7 +554,22 @@ async function uploadWrappedKey(password: string, masterKeyBytes: Uint8Array): P
     blob: JSON.stringify(serverWrapped),
     kdfVersion: CRYPTO_WRAPPING_KDF_VERSION,
     kdfIterations: CRYPTO_WRAPPING_ITERATIONS,
-  });
+  }, write);
+
+  await syncRepository.updateMetadata({ serverKeyVerified: true, serverKeyStale: false });
+}
+
+/** The key changed between reading it and writing, so the write was refused. */
+function isWriteConflict(error: unknown): boolean {
+  return error instanceof AuthApiError && error.status === 409;
+}
+
+/**
+ * The condition for overwriting a key this device has read. An older server gives
+ * no updatedAt, and sending If-Match there could fail its preflight.
+ */
+function overwriteOf(existing: WrappedKeyResponse): WrappedKeyWrite {
+  return existing.updatedAt ? { ifMatch: existing.updatedAt } : { replace: true };
 }
 
 /**
@@ -576,7 +645,11 @@ export async function uploadWrappedKeyToServer(notesPassword: string): Promise<v
     throw new AccountKeyExistsError();
   }
 
-  await uploadWrappedKey(notesPassword, masterKey.keyBytes);
+  try {
+    await uploadWrappedKey(notesPassword, masterKey.keyBytes, { replace: false });
+  } catch (error) {
+    throw isWriteConflict(error) ? new AccountKeyExistsError() : error;
+  }
 
   if (!metadata.envelopeVersion) {
     await convertLocalToEnvelope(notesPassword, masterKey.keyBytes);
@@ -607,8 +680,18 @@ export async function verifyUnlockPassword(password: string): Promise<boolean> {
  *
  * A blob that opens with the notes password is never touched, even if it holds a
  * different key: that means this device has diverged, and overwriting would damage
- * the account. A blob that won't open is replaced only by a device that has synced
- * successfully, because such a device holds the account's real key.
+ * the account.
+ *
+ * A blob that won't open has three possible causes, and only one is safe to repair:
+ * - A password change here never reached the server. Finish it.
+ * - This device has opened or uploaded the blob before, so it isn't old-format. The
+ *   password must have changed on another device, and overwriting would undo that
+ *   and start the two devices taking turns. Leave it, and tell the user.
+ * - This device has never opened it. If it has synced it holds the account's real
+ *   key, so it may repair the blob. Doing so sets the flag, so that happens only once.
+ *
+ * Every write here is conditional on what was read, so a change made by another
+ * device in between can't be overwritten: that is the one race the flag can't close.
  *
  * All failures (including being offline) are logged and ignored.
  */
@@ -626,20 +709,49 @@ export async function ensureServerWrappedKey(notesPassword: string): Promise<voi
 
     const plaintextApiKey = await cryptoService.decryptText(JSON.parse(syncMetadata.apiKey), masterKey.key);
     const existing = await authService.getWrappedKey(syncMetadata.syncEndpoint, plaintextApiKey);
-    if (existing) {
-      if (await unwrapServerBlob(existing.blob, notesPassword, syncMetadata.userId)) {
+
+    if (!existing) {
+      console.log('[Unlock] Server has no wrapped key for this account, uploading one...');
+      await uploadWrappedKey(notesPassword, masterKey.keyBytes, { replace: false });
+      console.log('[Unlock] ✓ Wrapped key uploaded to server');
+      return;
+    }
+
+    if (await unwrapServerBlob(existing, notesPassword, syncMetadata.userId)) {
+      if (!syncMetadata.serverKeyVerified || syncMetadata.serverKeyStale) {
+        await syncRepository.updateMetadata({ serverKeyVerified: true, serverKeyStale: false });
+      }
+      return;
+    }
+
+    const finishingPasswordChange = !!syncMetadata.serverKeyStale;
+    if (!finishingPasswordChange) {
+      if (syncMetadata.serverKeyVerified) {
+        toast.info(get(_)('unlock.passwordChangedElsewhere'));
         return;
       }
       if (!syncMetadata.lastSyncAt) {
         return;
       }
-      console.log('[Unlock] Server key does not open with the notes password, re-wrapping it...');
-    } else {
-      console.log('[Unlock] Server has no wrapped key for this account, uploading one...');
     }
 
-    await uploadWrappedKey(notesPassword, masterKey.keyBytes);
-    console.log('[Unlock] ✓ Wrapped key uploaded to server');
+    console.log('[Unlock] Server key does not open with the notes password, re-wrapping it...');
+    try {
+      await uploadWrappedKey(notesPassword, masterKey.keyBytes, overwriteOf(existing));
+      console.log('[Unlock] ✓ Wrapped key uploaded to server');
+    } catch (error) {
+      if (!isWriteConflict(error)) {
+        throw error;
+      }
+
+      // Something changed the key while this ran. That was another device, so the key
+      // isn't old-format, and this device mustn't repair it at a later unlock either.
+      // Its own password change stays marked instead, and is retried.
+      if (!finishingPasswordChange) {
+        await syncRepository.updateMetadata({ serverKeyVerified: true });
+        toast.info(get(_)('unlock.passwordChangedElsewhere'));
+      }
+    }
   } catch (error) {
     console.warn('[Unlock] Could not check or upload the server wrapped key (will retry next unlock):', error);
   }
@@ -671,8 +783,15 @@ export async function tryMigrateToEnvelope(password: string, masterKeyBytes: Uin
     if (await accountHasKey()) {
       console.log('[Migration] Account already has a wrapped key, leaving it in place');
     } else {
-      await uploadWrappedKey(password, masterKeyBytes);
-      console.log('[Migration] ✓ Wrapped key uploaded to server');
+      try {
+        await uploadWrappedKey(password, masterKeyBytes, { replace: false });
+        console.log('[Migration] ✓ Wrapped key uploaded to server');
+      } catch (error) {
+        if (!isWriteConflict(error)) {
+          throw error;
+        }
+        console.log('[Migration] Another device uploaded a key first, leaving it in place');
+      }
     }
 
     await convertLocalToEnvelope(password, masterKeyBytes);
@@ -690,14 +809,34 @@ export async function tryMigrateToEnvelope(password: string, masterKeyBytes: Uin
  * This must only ever be given the notes password. The server receives the account
  * password in plaintext, so it could wrap a key of its own choosing under that one.
  */
-async function unwrapServerBlob(blob: string, password: string, userId: string): Promise<Uint8Array | null> {
+async function unwrapServerBlob(wrapped: WrappedKeyResponse, password: string, userId: string): Promise<Uint8Array | null> {
+  const iterations = serverWrappingIterations(wrapped);
+  if (iterations === null) {
+    return null;
+  }
+
   try {
-    const serverWrapped: EncryptionResult = JSON.parse(blob);
-    const wrappingKey = await cryptoService.deriveWrappingKey(password, userId);
+    const serverWrapped: EncryptionResult = JSON.parse(wrapped.blob);
+    const wrappingKey = await cryptoService.deriveWrappingKey(password, userId, iterations);
     return await cryptoService.unwrapMasterKey(wrappingKey, serverWrapped);
   } catch {
     return null;
   }
+}
+
+/**
+ * The iterations a blob says it was wrapped with, or null if they can't be accepted.
+ * A later client may raise them, and this one must still open that blob. They are the
+ * server's word, though, so an unknown scheme is refused, and so is anything below
+ * what clients use or high enough to hang the app. Wrapping never uses this value.
+ */
+function serverWrappingIterations({ kdfVersion, kdfIterations }: WrappedKeyResponse): number | null {
+  if (kdfVersion !== CRYPTO_WRAPPING_KDF_VERSION || !Number.isInteger(kdfIterations)) {
+    return null;
+  }
+  return kdfIterations >= CRYPTO_WRAPPING_ITERATIONS && kdfIterations <= CRYPTO_WRAPPING_MAX_ITERATIONS
+    ? kdfIterations
+    : null;
 }
 
 async function noteOpensWith(note: Note, key: CryptoKey): Promise<boolean> {
@@ -750,7 +889,7 @@ export async function onboardFromServer(
     throw new Error('No wrapped key found on server. The source device may not have migrated to envelope encryption yet.');
   }
 
-  const masterKeyBytes = await unwrapServerBlob(wrappedKeyResponse.blob, password, userId);
+  const masterKeyBytes = await unwrapServerBlob(wrappedKeyResponse, password, userId);
   if (!masterKeyBytes) {
     throw new AccountKeyUnreadableError();
   }
@@ -793,6 +932,10 @@ export async function onboardFromServer(
     derivedAt: Date.now(),
   };
   keyManager.setMasterKey(masterKey);
+
+  // Written with the account it belongs to, because the proof is only about that one
+  await syncRepository.updateMetadata({ syncEndpoint: endpoint, userId, serverKeyVerified: true, serverKeyStale: false });
+
   console.log('[Onboard] ✓ Device onboarded via envelope encryption');
 }
 

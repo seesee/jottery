@@ -84,7 +84,7 @@ RUN cargo chef cook --release --locked --recipe-path recipe.json
 
 # Now copy the actual source code and build
 COPY server/ .
-RUN cargo build --release --locked --bin jottery-server
+RUN cargo build --release --locked --bin jottery-server --bin jottery-admin
 
 # -----------------------------
 # Stage 4: Caddy, the only component that faces the internet
@@ -117,6 +117,8 @@ RUN groupadd --gid 10001 jottery \
 # -----------------------------
 COPY --from=caddy          /tmp/caddy /usr/bin/caddy
 COPY --from=server-builder /app/server/target/release/jottery-server /usr/local/bin/jottery-server
+# The supported way back in if the dashboard can't be used: see "Recovering access" in the README
+COPY --from=server-builder /app/server/target/release/jottery-admin /usr/local/bin/jottery-admin
 COPY --from=web-builder    /app/dist ./dist
 COPY --from=admin-builder  /app/admin/dist ./admin/dist
 

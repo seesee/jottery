@@ -28,6 +28,7 @@ class PreviewSecurityTest {
 
     private val links = CopyOnWriteArrayList<String>()
     private val attachments = CopyOnWriteArrayList<String>()
+    private val openedNotes = CopyOnWriteArrayList<String>()
 
     private fun <T> onMain(block: () -> T): T {
         var result: Result<T>? = null
@@ -47,6 +48,7 @@ class PreviewSecurityTest {
                         onReady = {},
                         onOpenLink = { links += it },
                         onRequestAttachment = { attachments += it },
+                        onOpenNote = { openedNotes += it },
                     ),
                     "Android",
                 )
@@ -187,5 +189,100 @@ class PreviewSecurityTest {
 
         assertFalse(settings.allowFileAccess)
         assertFalse(settings.allowContentAccess)
+    }
+
+    // MARK: - Note links
+
+    private val linkedId = "22222222-2222-4222-8222-222222222222"
+
+    private fun renderLinked(webView: WebView, content: String) {
+        val titles = org.json.JSONObject(mapOf(linkedId to "Shopping list")).toString()
+        evaluate(webView, "window.bridge.setNoteTitles($titles)")
+        evaluate(webView, "window.bridge.setContent(${org.json.JSONObject.quote(content)}, false)")
+    }
+
+    private fun waitForOpenedNote(): String {
+        repeat(200) {
+            openedNotes.firstOrNull()?.let { return it }
+            Thread.sleep(25)
+        }
+        throw AssertionError("the note link never reached the native side")
+    }
+
+    @Test fun aWikiLinkByTitleOpensItsNote() {
+        val webView = loadPage()
+        renderLinked(webView, "See [[Shopping list]]")
+
+        assertTrue(evaluate(webView, "document.body.innerText").contains("Shopping list"))
+        evaluate(webView, "document.querySelector('.note-link').click()")
+
+        assertEquals(linkedId, waitForOpenedNote())
+    }
+
+    @Test fun aCopiedLinkShowsItsNotesTitleAndOpensIt() {
+        val webView = loadPage()
+        renderLinked(webView, "[](link:$linkedId)")
+
+        assertTrue(evaluate(webView, "document.querySelector('.note-link').textContent").contains("Shopping list"))
+        evaluate(webView, "document.querySelector('.note-link').click()")
+
+        assertEquals(linkedId, waitForOpenedNote())
+    }
+
+    @Test fun aLinkToNoNoteIsShownButGoesNowhere() {
+        val webView = loadPage()
+        renderLinked(webView, "[[Nothing by this name]]")
+
+        assertEquals("\"true\"", evaluate(webView, "String(!!document.querySelector('.note-link.missing'))"))
+        evaluate(webView, "document.querySelector('.note-link').click()")
+        Thread.sleep(200)
+
+        assertTrue(openedNotes.isEmpty())
+    }
+
+    @Test fun aTitleCantCarryScriptIntoThePage() {
+        val webView = loadPage()
+        val hostile = "<img src=x onerror=\"Android.postMessage('{\\\"type\\\":\\\"openLink\\\",\\\"url\\\":\\\"https://evil\\\"}')\">"
+        val titles = org.json.JSONObject(mapOf(linkedId to hostile)).toString()
+        evaluate(webView, "window.bridge.setNoteTitles($titles)")
+        evaluate(webView, "window.bridge.setContent(${org.json.JSONObject.quote("[](link:$linkedId)")}, false)")
+        Thread.sleep(300)
+
+        assertTrue(links.isEmpty())
+        assertEquals("\"0\"", evaluate(webView, "String(document.querySelectorAll('img[onerror]').length)"))
+    }
+
+    // MARK: - Read-only editors
+
+    @Test fun aLockedCalcNoteTakesNoTyping() {
+        val webView = loadPage("calc.html")
+        evaluate(webView, "window.bridge.setContent('1 + 1', false)")
+
+        assertEquals("\"true\"", evaluate(webView, "document.querySelector('.cm-content').getAttribute('contenteditable')"))
+        evaluate(webView, "window.bridge.setReadOnly(true)")
+        assertEquals("\"false\"", evaluate(webView, "document.querySelector('.cm-content').getAttribute('contenteditable')"))
+
+        evaluate(webView, "window.bridge.setReadOnly(false)")
+        assertEquals("\"true\"", evaluate(webView, "document.querySelector('.cm-content').getAttribute('contenteditable')"))
+    }
+
+    @Test fun aLockedCalcNoteStaysLockedAfterTheFontChanges() {
+        val webView = loadPage("calc.html")
+        evaluate(webView, "window.bridge.setContent('1 + 1', false)")
+        evaluate(webView, "window.bridge.setReadOnly(true)")
+
+        // Changing the size rebuilds the whole editor
+        evaluate(webView, "window.bridge.setFontSize(20)")
+
+        assertEquals("\"false\"", evaluate(webView, "document.querySelector('.cm-content').getAttribute('contenteditable')"))
+    }
+
+    @Test fun aLockedOutlinerNoteTakesNoTyping() {
+        val webView = loadPage("outliner.html")
+        evaluate(webView, "window.bridge.setContent('- one', false)")
+
+        assertEquals("\"true\"", evaluate(webView, "document.querySelector('.outliner-content').contentEditable"))
+        evaluate(webView, "window.bridge.setReadOnly(true)")
+        assertEquals("\"false\"", evaluate(webView, "document.querySelector('.outliner-content').contentEditable"))
     }
 }

@@ -31,7 +31,7 @@ write_service_stub() {
   local name=$1 var=$2
   cat > "$BIN/$name" <<STUB
 #!/usr/bin/env bash
-echo "$name started uid=\$(id -u) args=\$*" >> "\$STUB_LOG"
+echo "$name started uid=\$(id -u) args=\$* body_limit=\${JOTTERY_MAX_BODY_SIZE:-unset}" >> "\$STUB_LOG"
 trap 'echo "$name got TERM" >> "\$STUB_LOG"; exit 0' TERM
 if [[ -n "\${$var:-}" ]]; then
   sleep "\${$var%%:*}"
@@ -247,6 +247,29 @@ test_database_file_is_created() {
   unset STUB_UID
 }
 
+# Caddy refuses to start on a size it can't parse, where the server uses its default
+check_body_limit() {
+  local name=$1 value=$2 expected=$3
+  setup
+  export STUB_UID=$TEST_UID MAX_PAYLOAD_SIZE=$value
+  start_entrypoint
+  if wait_for_log 'caddy started' && grep -q "caddy started.*body_limit=$expected\$" "$LOG"; then
+    pass "$name"
+  else
+    fail "$name" "$(cat "$LOG")"
+  fi
+  kill -TERM "$ENTRY_PID"
+  wait_for_exit
+  unset STUB_UID MAX_PAYLOAD_SIZE
+}
+
+test_body_limit_follows_a_size_both_services_accept() {
+  check_body_limit "Caddy's body limit follows MAX_PAYLOAD_SIZE" 5242880 5242880
+  check_body_limit "a mistyped MAX_PAYLOAD_SIZE can't stop Caddy starting" 5MB unset
+  check_body_limit "an empty MAX_PAYLOAD_SIZE leaves the default" "" unset
+  check_body_limit "a size too large to parse leaves the default" 99999999999999999999 unset
+}
+
 test_a_command_runs_unprivileged_instead_of_the_services() {
   setup
   cat > "$BIN/jottery-admin" <<'STUB'
@@ -329,6 +352,7 @@ test_root_start_hands_over_data_and_drops
 test_non_root_start_leaves_ownership_alone
 test_unwritable_data_dir_fails_with_a_reason
 test_database_file_is_created
+test_body_limit_follows_a_size_both_services_accept
 test_a_command_runs_unprivileged_instead_of_the_services
 
 check_healthcheck "the healthcheck passes on 200" 'HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK' 0

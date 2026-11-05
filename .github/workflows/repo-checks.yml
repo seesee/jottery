@@ -23,6 +23,9 @@ jobs:
       - name: Check for databases, secrets and large files
         run: scripts/check-tracked-files.sh
 
+      - name: Check the settings documentation matches the code
+        run: python3 -I scripts/check-env-docs.py
+
   docker-entrypoint:
     name: Docker Entrypoint
     runs-on: ubuntu-latest

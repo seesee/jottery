@@ -3,7 +3,7 @@
   import { describeError } from '../../lib/apiErrors';
   import type { Device } from '../../lib/userApi';
   import { toast } from '../../lib/toast.svelte';
-  import { _ } from 'svelte-i18n';
+  import { _, locale } from 'svelte-i18n';
   import ConfirmModal from '../ConfirmModal.svelte';
 
   let devices = $state<Device[]>([]);
@@ -65,7 +65,7 @@
   }
 
   function formatDate(dateStr: string): string {
-    return new Date(dateStr).toLocaleDateString(undefined, {
+    return new Date(dateStr).toLocaleDateString($locale ?? undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -74,7 +74,7 @@
 
   function formatDateTime(dateStr: string | null): string {
     if (!dateStr) return $_('userPortal.devices.never');
-    return new Date(dateStr).toLocaleString(undefined, {
+    return new Date(dateStr).toLocaleString($locale ?? undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -114,7 +114,7 @@
       <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
     </div>
   {:else if error}
-    <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+    <div role="alert" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
       {error}
     </div>
   {:else if devices.length === 0}

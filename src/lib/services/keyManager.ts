@@ -38,7 +38,14 @@ class KeyManagerService implements KeyManager {
    * Clear master key (on lock)
    */
   clearMasterKey(): void {
-    // Securely clear the key from memory
+    // JavaScript can't wipe memory or a CryptoKey, and the garbage collector decides
+    // when they go. The raw bytes are ours to overwrite, though, which is what lets
+    // them outlive the session in a heap dump.
+    if (this.masterKey) {
+      this.masterKey.keyBytes.fill(0);
+      this.masterKey.password = undefined;
+      this.masterKey.derivedAt = 0;
+    }
     this.masterKey = null;
 
     // Stop auto-lock timer

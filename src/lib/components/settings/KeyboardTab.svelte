@@ -1,9 +1,11 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import type { KeyboardShortcuts, KeyboardShortcut } from '../../types';
+  import type { ShortcutProblem } from '../../utils/shortcutRecording';
 
   export let tempShortcuts: KeyboardShortcuts;
   export let recordingShortcut: keyof KeyboardShortcuts | null;
+  export let recordingProblem: ShortcutProblem | null = null;
   export let onStartRecording: (shortcutName: keyof KeyboardShortcuts) => void;
   export let onResetShortcuts: () => void;
   export let onOpenShortcutsHelp: () => void;
@@ -53,6 +55,9 @@
 </script>
 
 <div class="space-y-4">
+  {#if recordingProblem}
+    <p class="text-sm text-red-600 dark:text-red-400" role="alert">{$_(`settings.keyboardTab.${recordingProblem}`)}</p>
+  {/if}
   <p class="text-sm text-gray-600 dark:text-gray-400">
     {$_('settings.keyboardTab.description')}
   </p>

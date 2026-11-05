@@ -61,6 +61,7 @@ describe('sync merge', () => {
 
   async function localNote(overrides: Partial<Note> = {}): Promise<Note> {
     const note = createTestNote({
+      tags: [],
       id: NOTE_ID,
       content: await encrypted('local text'),
       contentHash: HASH_1,
@@ -165,7 +166,7 @@ describe('sync merge', () => {
       const unpushed = 'a0000000-0000-4000-8000-000000000021';
 
       serve({}, async () => {
-        await noteRepository.create(createTestNote({ id: unpushed, needsSync: true }));
+        await noteRepository.create(createTestNote({ tags: [], id: unpushed, needsSync: true }));
         return {
           accepted: [
             { id: NOTE_ID, serverVersion: 2, syncedAt: NOW },
@@ -202,13 +203,14 @@ describe('sync merge', () => {
       expect((await syncRepository.getNoteSyncMetadata(NOTE_ID))?.lastSyncStatus).toBe('conflict');
     });
 
-    it('is still ignored when the local copy is ahead of it', async () => {
+    it('is accepted when it shares a parent but nothing here is unsent', async () => {
+      // The chains overlap, but only the server has anything this device hasn't
       await localNote({ contentHash: HASH_1, hashChain: [HASH_1, HASH_3] });
       serve({ notes: [await remoteNote({ parentHash: HASH_3 })] });
 
       await syncService.syncNow();
 
-      expect(await textOf(await stored())).toBe('local text');
+      expect(await textOf(await stored())).toBe('remote text');
     });
 
     it('is still a fast-forward when it descends from the local copy', async () => {
@@ -218,6 +220,116 @@ describe('sync merge', () => {
       await syncService.syncNow();
 
       expect(await textOf(await stored())).toBe('remote text');
+    });
+  });
+
+  // The table under "Applying a pulled note" in docs/sync-protocol.md
+  describe('a pulled note when an edit here is waiting to be pushed', () => {
+    /** An edit saved here on top of HASH_3: local chain HASH_1, HASH_3 */
+    const pendingEdit = () => localNote({ needsSync: true, contentHash: HASH_1, parentHash: HASH_3, hashChain: [HASH_1, HASH_3] });
+
+    it('leaves it alone when the pulled note is the same one', async () => {
+      await pendingEdit();
+      serve({ notes: [await remoteNote({ contentHash: HASH_1, parentHash: HASH_3, hashChain: [HASH_1, HASH_3] })] });
+
+      await syncService.syncNow();
+
+      const note = await stored();
+      expect(await textOf(note)).toBe('local text');
+      expect(note.needsSync).toBe(true);
+      expect((await syncRepository.getNoteSyncMetadata(NOTE_ID))?.lastSyncStatus).not.toBe('conflict');
+    });
+
+    it('keeps the edit when the pulled note is what the edit was made on', async () => {
+      // Every pull can re-deliver a note. This one is simply older than the edit
+      await pendingEdit();
+      serve({ notes: [await remoteNote({ contentHash: HASH_3, parentHash: null, hashChain: [HASH_3] })] });
+
+      await syncService.syncNow();
+
+      const note = await stored();
+      expect(await textOf(note)).toBe('local text');
+      expect(note.needsSync).toBe(true);
+      expect((await syncRepository.getNoteSyncMetadata(NOTE_ID))?.lastSyncStatus).not.toBe('conflict');
+    });
+
+    it('keeps the edit when the pulled note is further back in its history', async () => {
+      await localNote({ needsSync: true, contentHash: HASH_1, parentHash: HASH_2, hashChain: [HASH_1, HASH_2, HASH_3] });
+      serve({ notes: [await remoteNote({ contentHash: HASH_3, parentHash: null, hashChain: [HASH_3] })] });
+
+      await syncService.syncNow();
+
+      expect(await textOf(await stored())).toBe('local text');
+      expect((await syncRepository.getNoteSyncMetadata(NOTE_ID))?.lastSyncStatus).not.toBe('conflict');
+    });
+
+    it('takes the pulled note when it already includes the edit', async () => {
+      await pendingEdit();
+      serve({ notes: [await remoteNote({ contentHash: HASH_2, parentHash: HASH_1, hashChain: [HASH_2, HASH_1, HASH_3] })] });
+
+      await syncService.syncNow();
+
+      const note = await stored();
+      expect(await textOf(note)).toBe('remote text');
+      expect(note.needsSync).toBe(false);
+    });
+
+    it('raises a conflict when both descend from the same parent', async () => {
+      // R2-061: the pulled chain holds the local parent, which proves only a shared
+      // ancestor. Taking it silently discarded the edit.
+      await pendingEdit();
+      serve({ notes: [await remoteNote({ contentHash: HASH_2, parentHash: HASH_3, hashChain: [HASH_2, HASH_3] })] });
+
+      await syncService.syncNow();
+
+      expect(await textOf(await stored())).toBe('local text');
+      expect((await syncRepository.getNoteSyncMetadata(NOTE_ID))?.lastSyncStatus).toBe('conflict');
+    });
+  });
+
+  describe('a pulled note while a conflict is waiting to be resolved', () => {
+    const HASH_4 = 'ddddddddddddddddddddddddddddddddddddddddddd=';
+
+    /** A push was refused: the edit stays here, with needsSync off so it isn't re-sent */
+    async function refusedEdit(): Promise<void> {
+      await localNote({ needsSync: true, contentHash: HASH_1, parentHash: HASH_3, hashChain: [HASH_1, HASH_3] });
+      const server = await remoteNote({ contentHash: HASH_2, parentHash: HASH_3, hashChain: [HASH_2, HASH_3] });
+      serve({ notes: [server] }, async () => ({
+        rejected: [{
+          id: NOTE_ID, reason: 'conflict', serverModifiedAt: LATER, serverContent: server.content, serverTags: [],
+          serverVersion: 2, serverAttachments: [], serverPinned: false, serverContentHash: HASH_2,
+          serverParentHash: HASH_3, serverHashChain: [HASH_2, HASH_3],
+          ancestorHash: HASH_3, ancestorContent: server.content, ancestorTags: [],
+        }],
+      }) as never);
+      await syncService.syncNow();
+    }
+
+    it('keeps the local side, which nothing else holds', async () => {
+      await refusedEdit();
+
+      const note = await stored();
+      expect(note.needsSync).toBe(false);
+      expect(await textOf(note)).toBe('local text');
+      expect((await syncRepository.getNoteSyncMetadata(NOTE_ID))?.lastSyncStatus).toBe('conflict');
+    });
+
+    it('keeps the ancestor the refused push came with, which a pull cannot supply', async () => {
+      await refusedEdit();
+
+      expect((await syncRepository.getNoteSyncMetadata(NOTE_ID))?.conflictData?.ancestorContent).toBeTruthy();
+    });
+
+    it('moves the conflict on to a newer server copy', async () => {
+      await refusedEdit();
+
+      serve({ notes: [await remoteNote({ contentHash: HASH_4, parentHash: HASH_2, hashChain: [HASH_4, HASH_2, HASH_3] })] });
+      await syncService.syncNow();
+
+      expect(await textOf(await stored())).toBe('local text');
+      const metadata = await syncRepository.getNoteSyncMetadata(NOTE_ID);
+      expect(metadata?.lastSyncStatus).toBe('conflict');
+      expect(metadata?.conflictData?.serverContentHash).toBe(HASH_4);
     });
   });
 
@@ -412,7 +524,7 @@ describe('sync merge', () => {
     }
 
     beforeEach(async () => {
-      const note = createTestNote({ id: NOTE_ID, content: await encrypted('text'), needsSync: false });
+      const note = createTestNote({ tags: [], id: NOTE_ID, content: await encrypted('text'), needsSync: false });
       note.contentHash = await cryptoService.computeContentHash(note);
       note.parentHash = null;
       note.hashChain = [note.contentHash];

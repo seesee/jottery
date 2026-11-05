@@ -335,3 +335,101 @@ async fn asking_for_the_role_a_user_already_has_changes_nothing() {
 
     assert!(session_works(&app, &token).await);
 }
+
+async fn user_with_id(pool: &SqlitePool, id: &str) {
+    sqlx::query(
+        "INSERT INTO users (id, email, password_hash, approved, is_active, created_at)
+         VALUES (?, ?, 'unused', 0, 1, '2026-01-01T00:00:00+00:00')",
+    )
+    .bind(id)
+    .bind(format!("{id}@example.com"))
+    .execute(pool)
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
+async fn a_prefix_that_fits_two_users_is_refused() {
+    let db = migrated_db().await;
+    user_with_id(&db.pool, "abcdef12-0000").await;
+    user_with_id(&db.pool, "abcdef12-1111").await;
+
+    let result = AdminService::approve_user(&db.pool, "abcdef12").await;
+
+    assert!(matches!(result, Err(AdminError::AmbiguousId(_))));
+}
+
+#[tokio::test]
+async fn a_prefix_that_fits_one_user_finds_them() {
+    let db = migrated_db().await;
+    user_with_id(&db.pool, "abcdef12-0000").await;
+    user_with_id(&db.pool, "abcdef99-1111").await;
+
+    let user = AdminService::approve_user(&db.pool, "abcdef12").await.unwrap();
+
+    assert_eq!(user.id, "abcdef12-0000");
+}
+
+#[tokio::test]
+async fn an_exact_id_wins_over_a_longer_one_it_is_a_prefix_of() {
+    let db = migrated_db().await;
+    user_with_id(&db.pool, "abcdef12").await;
+    user_with_id(&db.pool, "abcdef12-1111").await;
+
+    let user = AdminService::approve_user(&db.pool, "abcdef12").await.unwrap();
+
+    assert_eq!(user.id, "abcdef12");
+}
+
+#[tokio::test]
+async fn a_short_prefix_is_refused() {
+    let db = migrated_db().await;
+    user_with_id(&db.pool, "abcdef12-0000").await;
+
+    for identifier in ["", "a", "abcdef1"] {
+        let result = AdminService::approve_user(&db.pool, identifier).await;
+        assert!(matches!(result, Err(AdminError::UserNotFound(_))), "{identifier:?}");
+    }
+}
+
+#[tokio::test]
+async fn wildcards_in_an_identifier_match_nothing() {
+    let db = migrated_db().await;
+    user_with_id(&db.pool, "abcdef12-0000").await;
+
+    for identifier in ["%%%%%%%%", "________", "abcdef1%", "abcdef1_"] {
+        let result = AdminService::approve_user(&db.pool, identifier).await;
+        assert!(matches!(result, Err(AdminError::UserNotFound(_))), "{identifier:?}");
+    }
+}
+
+#[tokio::test]
+async fn a_device_prefix_follows_the_same_rules() {
+    let db = migrated_db().await;
+    let (user, _, _) = add_user(&db.pool).await;
+    let (device, _) = create_device(&db.pool, &user).await;
+    for id in ["fedcba98-0000", "fedcba98-1111"] {
+        sqlx::query(
+            "INSERT INTO clients (id, user_id, api_key, device_name, device_type, created_at, last_seen_at, is_active)
+             VALUES (?, ?, ?, 'test', 'web', '2026-01-01T00:00:00+00:00', '2026-01-01T00:00:00+00:00', 1)",
+        )
+        .bind(id)
+        .bind(&user)
+        .bind(new_id())
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    }
+
+    let ambiguous = AdminService::revoke_device(&db.pool, "fedcba98").await;
+    assert!(matches!(ambiguous, Err(AdminError::AmbiguousId(_))));
+
+    let wildcard = AdminService::revoke_device(&db.pool, "%%%%%%%%").await;
+    assert!(matches!(wildcard, Err(AdminError::DeviceNotFound(_))));
+
+    let short = AdminService::revoke_device(&db.pool, "").await;
+    assert!(matches!(short, Err(AdminError::DeviceNotFound(_))));
+
+    let found = AdminService::revoke_device(&db.pool, &device[..13]).await.unwrap();
+    assert_eq!(found.id, device);
+}

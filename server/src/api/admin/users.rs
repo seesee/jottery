@@ -551,7 +551,7 @@ pub async fn rename_device(
     };
     audit::record(&state.pool, &actor, event).await;
 
-    tracing::info!("Admin renamed device {}: {}", device_id, req.name);
+    tracing::info!("Admin renamed device {}: {:?}", device_id, req.name);
     Ok(StatusCode::NO_CONTENT)
 }
 

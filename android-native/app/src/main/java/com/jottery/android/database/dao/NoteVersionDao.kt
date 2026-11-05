@@ -33,6 +33,12 @@ interface NoteVersionDao {
     @Query("DELETE FROM note_versions WHERE note_id = :noteId")
     suspend fun deleteByNoteId(noteId: String)
 
+    @Query("SELECT attachments FROM note_versions WHERE note_id = :noteId AND attachments != '[]'")
+    suspend fun listAttachments(noteId: String): List<String>
+
+    @Query("SELECT attachments FROM note_versions WHERE attachments != '[]'")
+    suspend fun listAllAttachments(): List<String>
+
     @Query("SELECT length(content) FROM note_versions WHERE version_key = :versionKey")
     suspend fun contentLength(versionKey: String): Int?
 

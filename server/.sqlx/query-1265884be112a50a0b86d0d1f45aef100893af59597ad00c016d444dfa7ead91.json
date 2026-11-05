@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO users (\n                id, email, password_hash, created_at, approved, is_admin, is_active,\n                storage_quota_mb, max_upload_size_mb, inbox_max_items, inbox_max_size_mb\n            )\n            SELECT ?1, ?2, ?3, ?4, 0, 0, 1, ?5, ?6, ?7, ?8\n            WHERE NOT EXISTS (SELECT 1 FROM users WHERE email = ?2 COLLATE NOCASE)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": []
+  },
+  "hash": "1265884be112a50a0b86d0d1f45aef100893af59597ad00c016d444dfa7ead91"
+}

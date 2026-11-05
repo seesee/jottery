@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { ApiError } from './dashboardClient';
-import { describeError } from './apiErrors';
+import { describeError, CHARACTER_CLASSES, KNOWN_MESSAGES } from './apiErrors';
+import en from '../locales/en-GB.json';
 
 // Shows which key was chosen, and with what, instead of a translation
 const t = (key: string, options?: { values?: Record<string, string | number> }) =>
@@ -26,9 +27,35 @@ describe('describeError', () => {
   });
 
   it('keeps a server message it has no translation for', () => {
-    expect(describeError(new ApiError(400, 'Storage quota must be between 1 and 100000 MB'), t)).toBe(
-      'Storage quota must be between 1 and 100000 MB',
+    expect(describeError(new ApiError(400, 'A message added to a newer server'), t)).toBe(
+      'A message added to a newer server',
     );
+  });
+
+  it('translates the password rules, whose message varies with what is missing', () => {
+    const err = new ApiError(400, 'Password requires at least 3 of 4 character types. Missing: uppercase letter, number');
+    expect(describeError(err, t)).toBe(
+      'errors.passwordComplexity:{"required":3,"missing":"errors.passwordClass.uppercase, errors.passwordClass.number"}',
+    );
+  });
+
+  it('keeps a character type it has no name for, rather than dropping it', () => {
+    const err = new ApiError(400, 'Password requires at least 4 of 4 character types. Missing: emoji');
+    expect(describeError(err, t)).toBe('errors.passwordComplexity:{"required":4,"missing":"emoji"}');
+  });
+
+  it('has a real translation for every character type', () => {
+    for (const key of Object.values(CHARACTER_CLASSES)) {
+      const value = key.split('.').reduce<unknown>((node, part) => (node as Record<string, unknown>)?.[part], en);
+      expect(typeof value, key).toBe('string');
+    }
+  });
+
+  it('only maps server messages to keys that exist', () => {
+    for (const key of Object.values(KNOWN_MESSAGES)) {
+      const value = key.split('.').reduce<unknown>((node, part) => (node as Record<string, unknown>)?.[part], en);
+      expect(typeof value, key).toBe('string');
+    }
   });
 
   it('explains a 403 with no body, which the middleware sends', () => {

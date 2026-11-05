@@ -61,6 +61,7 @@ async fn create_test_app() -> (Router, SqlitePool) {
         max_tag_length: 100,
         max_tags_per_note: 50,
         enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);

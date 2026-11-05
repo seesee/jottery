@@ -36,7 +36,7 @@ class SavedSearchRepository(
     }
 
     /** Create a new saved search. */
-    suspend fun create(name: String, query: String, key: SecretKey): DecryptedSavedSearch {
+    suspend fun create(name: String, query: String, key: SecretKey, order: Int = 0): DecryptedSavedSearch {
         val id = CryptoService.generateUUID()
         val now = DateUtils.nowISO8601()
         val encName = CryptoService.encryptText(name, key)
@@ -46,7 +46,7 @@ class SavedSearchRepository(
             id = id,
             name = CryptoService.serializeEncryptedJSON(encName),
             query = CryptoService.serializeEncryptedJSON(encQuery),
-            displayOrder = 0,
+            displayOrder = order,
             createdAt = now,
             modifiedAt = now,
             needsSync = true,
@@ -57,10 +57,31 @@ class SavedSearchRepository(
             id = id,
             name = name,
             query = query,
-            displayOrder = 0,
+            displayOrder = order,
             createdAt = now,
             modifiedAt = now,
         )
+    }
+
+    /** Give a saved search a new name. */
+    suspend fun rename(id: String, name: String, key: SecretKey) {
+        val record = dao.getById(id) ?: return
+        dao.insertOrReplace(record.copy(
+            name = CryptoService.serializeEncryptedJSON(CryptoService.encryptText(name, key)),
+            modifiedAt = DateUtils.nowISO8601(),
+            needsSync = true,
+        ))
+    }
+
+    /** Store a new order, touching only the searches that moved. */
+    suspend fun setOrder(idsInOrder: List<String>) {
+        val now = DateUtils.nowISO8601()
+        idsInOrder.forEachIndexed { index, id ->
+            val record = dao.getById(id) ?: return@forEachIndexed
+            if (record.displayOrder != index) {
+                dao.insertOrReplace(record.copy(displayOrder = index, modifiedAt = now, needsSync = true))
+            }
+        }
     }
 
     /** Soft-delete a saved search. */

@@ -268,6 +268,71 @@ test.describe('Attachments', () => {
     }
   });
 
+  test('should play an audio attachment under the shipped policy', async ({ page }) => {
+    // default-src alone doesn't match blob:, which left an inert player and no error
+    const samples = Buffer.alloc(1600);
+    const header = Buffer.alloc(44);
+    header.write('RIFF', 0);
+    header.writeUInt32LE(36 + samples.length, 4);
+    header.write('WAVEfmt ', 8);
+    header.writeUInt32LE(16, 16);
+    header.writeUInt16LE(1, 20); // PCM
+    header.writeUInt16LE(1, 22); // mono
+    header.writeUInt32LE(8000, 24);
+    header.writeUInt32LE(8000, 28);
+    header.writeUInt16LE(1, 32);
+    header.writeUInt16LE(8, 34);
+    header.write('data', 36);
+    header.writeUInt32LE(samples.length, 40);
+    const filePath = path.join(__dirname, 'test-audio.wav');
+    fs.writeFileSync(filePath, Buffer.concat([header, samples]));
+
+    await page.evaluate(() => {
+      const violations: string[] = [];
+      (window as unknown as { __violations: string[] }).__violations = violations;
+      document.addEventListener('securitypolicyviolation', event => violations.push(event.effectiveDirective));
+    });
+
+    try {
+      await openAttachmentsModal(page, jp);
+      await uploadFileAndWait(page, jp, filePath, 'test-audio.wav');
+      await jp.dialog.locator('.attachment-item').first().locator('button').nth(1).click();
+
+      const audio = page.locator('audio');
+      await expect(audio).toBeAttached({ timeout: 10000 });
+      await expect.poll(() => audio.evaluate((el: HTMLAudioElement) => el.readyState), { timeout: 10000 }).toBeGreaterThan(0);
+
+      const violations = await page.evaluate(() => (window as unknown as { __violations: string[] }).__violations);
+      expect(violations.filter(directive => directive === 'media-src')).toEqual([]);
+    } finally {
+      cleanupTestFile(filePath);
+    }
+  });
+
+  test('should not let a locked note lose or gain an attachment', async ({ page }) => {
+    const filePath = createTestFile('locked-note.txt');
+    try {
+      await openAttachmentsModal(page, jp);
+      await uploadFileAndWait(page, jp, filePath, 'locked-note.txt');
+      await closeAttachmentsModal(page, jp);
+
+      await page.evaluate(() => {
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true, shiftKey: true, bubbles: true }));
+      });
+      const palette = page.getByRole('dialog').locator('input').first();
+      await palette.fill('Lock/Unlock');
+      await palette.press('Enter');
+      await expect(page.getByText(/this note is locked/i)).toBeVisible({ timeout: 5000 });
+
+      await openAttachmentsModal(page, jp);
+      await expect(jp.dialog.locator('.attachment-item')).toHaveCount(1);
+      await expect(jp.dialog.locator('input[type="file"]')).toHaveCount(0);
+      await expect(jp.dialog.getByRole('button', { name: /delete/i })).toHaveCount(0);
+    } finally {
+      cleanupTestFile(filePath);
+    }
+  });
+
   test('should handle multiple attachments', async ({ page }) => {
     await openAttachmentsModal(page, jp);
 

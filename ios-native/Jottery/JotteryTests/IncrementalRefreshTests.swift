@@ -61,9 +61,7 @@ struct IncrementalRefreshTests {
         #expect(untouchedNote1.version == originalNote1.version)
 
         // filteredNotes stays consistent with notes.
-        for _ in 0..<1500 where state.filteredNotes.count != 2 {
-            try await Task.sleep(for: .milliseconds(20))
-        }
+        await waitUntil { state.filteredNotes.count == 2 }
         #expect(state.filteredNotes.count == 2)
         #expect(state.filteredNotes.contains { $0.id == note2.id && $0.content == "note two — updated by server" })
         #expect(!state.filteredNotes.contains { $0.id == note3.id })

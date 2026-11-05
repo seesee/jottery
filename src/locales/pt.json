@@ -444,7 +444,7 @@
         "required": "Introduza a palavra-passe das suas notas.",
         "incorrect": "Esta não é a palavra-passe que desbloqueia as suas notas neste dispositivo. Introduza a palavra-passe das notas, não a do servidor.",
         "uploadFailed": "A sincronização está configurada, mas não foi possível guardar a chave de encriptação no servidor, por isso os outros dispositivos ainda não se podem ligar. Será feita nova tentativa no próximo desbloqueio",
-        "mustDiffer": "A palavra-passe das notas e a da conta têm de ser diferentes. O servidor de sincronização vê a palavra-passe da conta, por isso, se coincidirem, poderá ler as suas notas. Se forem iguais nos outros dispositivos, altere primeiro aí a palavra-passe das notas.",
+        "mustDiffer": "A palavra-passe das notas e a da conta têm de ser diferentes. O servidor de sincronização vê a palavra-passe da conta, por isso, se coincidirem, poderá ler as suas notas.",
         "matchesAccountWarning": "A palavra-passe das notas é igual à da conta, pelo que o servidor de sincronização poderá ler as suas notas. Altere a palavra-passe das notas para resolver isto."
       },
       "existingAccountDetected": "Este e-mail já tem uma conta, por isso este dispositivo irá ligar-se a ela. Introduza a palavra-passe das notas que utiliza nos outros dispositivos."
@@ -517,7 +517,9 @@
       "duplicateNote": "Duplicar nota",
       "exportNote": "Exportar nota",
       "pressKey": "Pressione uma tecla...",
-      "notSet": "Não definido"
+      "notSet": "Não definido",
+      "needsModifier": "Este atalho funciona enquanto escreve, por isso precisa de Ctrl, Cmd ou Alt. Prima outra tecla, ou Esc para cancelar.",
+      "reserved": "Essa tecla está reservada. Prima outra tecla, ou Esc para cancelar."
     },
     "syncTab": {
       "enableSync": "Ativar sincronização",
@@ -570,7 +572,8 @@
         "changing": "A alterar palavra-passe...",
         "button": "Alterar palavra-passe",
         "success": "Palavra-passe alterada com sucesso",
-        "error": "Falha ao alterar a palavra-passe: {error}"
+        "error": "Falha ao alterar a palavra-passe: {error}",
+        "serverKeyFailed": "A sua palavra-passe foi alterada neste dispositivo, mas não foi possível atualizar o servidor. Será tentado novamente no próximo desbloqueio. Até lá, um novo dispositivo precisaria da palavra-passe antiga."
       },
       "connectionDetails": {
         "title": "Detalhes da conexão",
@@ -606,11 +609,12 @@
         "dangerZone": "Zona de perigo",
         "deleteNotesDescription": "Exclua todas as suas notas do servidor de sincronização. Esta ação não pode ser desfeita. Suas notas locais NÃO serão excluídas.",
         "deleteNotesButton": "Excluir todas as notas do servidor"
-      }
+      },
+      "disconnectNotRevoked": "Este dispositivo foi desligado, mas não foi possível avisar o servidor, pelo que continua listado e a sua chave ainda funciona. Revogue-o no portal do utilizador."
     },
     "advancedTab": {
       "importExport": "Importar/Exportar",
-      "exportDescription": "Exportar notas como JSON descriptografado. A importação mesclará notas com dados existentes.",
+      "exportDescription": "A exportação cria uma cópia JSON não encriptada para levar as notas para outro lado: qualquer pessoa com o ficheiro a pode ler. Para uma cópia encriptada, use a cópia de segurança. A importação junta as notas às que já existem.",
       "downloadClient": "Baixar cliente de terminal/HTML",
       "downloadTerminalClient": "Baixar cliente de terminal",
       "clientDescription": "Baixe o cliente de terminal para acesso via linha de comando, ou o cliente HTML para executar localmente a partir do sistema de arquivos",
@@ -638,7 +642,8 @@
       "aboutDescription": "Jottery é um aplicativo de bloco de notas auto-hospedado focado em privacidade para capturar, organizar e pesquisar notas com conteúdo rico, realce de sintaxe e criptografia.",
       "viewOnGithub": "Ver no GitHub",
       "license": "Licenciado sob a Licença MIT."
-    }
+    },
+    "exportIncomplete": "A exportação está incompleta: {notes} notas e {attachments} anexos não puderam ser lidos e foram omitidos."
   },
   "landing": {
     "languagePicker": {
@@ -934,7 +939,8 @@
         "encrypting": "A proteger credenciais…",
         "syncing": "A iniciar primeira sincronização…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "A palavra-passe das notas foi alterada noutro dispositivo. Este dispositivo continua a desbloquear com a palavra-passe antiga e as suas notas estão seguras, mas os novos dispositivos vão precisar da nova."
   },
   "lock": {
     "title": "Bloquear aplicativo",
@@ -1194,7 +1200,11 @@
   },
   "sync": {
     "syncing": "Sincronizando...",
-    "syncProgress": "Sincronizando: {percentage}% concluído"
+    "syncProgress": "Sincronizando: {percentage}% concluído",
+    "notesRefused": "Algumas notas excedem o limite de envio da sua conta e não foram sincronizadas. Tudo o resto foi.",
+    "accountDisabled": "A sua conta está desativada ou a aguardar aprovação, pelo que a sincronização parou. As suas notas neste dispositivo estão seguras. Contacte o seu administrador.",
+    "storageQuotaExceeded": "A sua conta atingiu o limite de armazenamento, pelo que as alterações neste dispositivo não podem ser enviadas. Elimine permanentemente algumas notas ou anexos para libertar espaço.",
+    "massDeletionHeld": "O servidor pediu para eliminar {count} notas de uma vez. Estão na reciclagem, caso não tenha sido você. Restaure-as a partir daí, ou esvazie a reciclagem se tiver sido."
   },
   "inbox": {
     "title": "Caixa de entrada",

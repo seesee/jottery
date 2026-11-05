@@ -10,10 +10,13 @@ final class DatabaseManager: Sendable {
     /// Initialise with the default application support path.
     init() throws {
         let path = try DatabaseManager.databasePath()
+        try Self.protectFiles(ofDatabaseAt: path)
         var config = Configuration()
         config.foreignKeysEnabled = true
         dbPool = try DatabasePool(path: path, configuration: config)
         try migrate()
+        // The first run has only just created these.
+        try Self.protectFiles(ofDatabaseAt: path)
     }
 
     /// Initialise with a specific path (for testing).
@@ -50,6 +53,31 @@ final class DatabaseManager: Sendable {
         let dir = appSupport.appendingPathComponent("Jottery", isDirectory: true)
         try fm.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir.appendingPathComponent("jottery.db").path
+    }
+
+    /// How the database is protected at rest. It holds the password-wrapped
+    /// master key, account details and every note's metadata, so the system
+    /// default, which leaves files readable on a locked phone at any time after
+    /// the first unlock, isn't enough. This class keeps a file readable only
+    /// while it's open, as SQLite's need to be when the phone locks with the app
+    /// running. New files in the directory, like the WAL, take the same class.
+    static let fileProtection = FileProtectionType.completeUnlessOpen
+
+    /// Apply `fileProtection` to the database's directory and files. The files
+    /// stay in device backups on purpose: a vault that doesn't sync has no
+    /// other copy, and notes in a backup are encrypted with the vault's key.
+    ///
+    /// `protect` is replaced in tests: the simulator ignores file protection.
+    static func protectFiles(
+        ofDatabaseAt path: String,
+        protect: (String) throws -> Void = {
+            try FileManager.default.setAttributes([.protectionKey: fileProtection], ofItemAtPath: $0)
+        }
+    ) throws {
+        try protect((path as NSString).deletingLastPathComponent)
+        for file in [path, path + "-wal", path + "-shm"] where FileManager.default.fileExists(atPath: file) {
+            try protect(file)
+        }
     }
 
     // MARK: - Migrations
@@ -286,6 +314,25 @@ final class DatabaseManager: Sendable {
             try db.execute(sql: "ALTER TABLE encryption_metadata ADD COLUMN local_wrapped_master TEXT")
             try db.execute(sql: "ALTER TABLE encryption_metadata ADD COLUMN wrapping_kdf_version INTEGER")
             try db.execute(sql: "ALTER TABLE sync_metadata ADD COLUMN user_id TEXT")
+        }
+
+        // Per-account sync state: the pull cursor, and what this device knows
+        // about the wrapped key on the server.
+        migrator.registerMigration("ios_008_account_sync_state") { db in
+            try db.execute(sql: "ALTER TABLE sync_metadata ADD COLUMN pull_cursor TEXT")
+            try db.execute(sql: "ALTER TABLE sync_metadata ADD COLUMN server_key_opened INTEGER NOT NULL DEFAULT 0")
+            try db.execute(sql: "ALTER TABLE sync_metadata ADD COLUMN pending_wrapped_key TEXT")
+        }
+
+        // What the server has been sent and told. Filenames in `attachments`
+        // were never read, and everything uses the refs in the note, so the
+        // plaintext names older builds left there are simply removed.
+        migrator.registerMigration("ios_009_local_sync_tracking") { db in
+            try db.execute(sql: "ALTER TABLE notes ADD COLUMN local_deleted_at TEXT")
+            try db.execute(sql: "ALTER TABLE notes ADD COLUMN from_inbox INTEGER NOT NULL DEFAULT 0")
+            try db.execute(sql: "UPDATE notes SET local_deleted_at = deleted_at WHERE deleted = 1")
+            try db.execute(sql: "ALTER TABLE attachments ADD COLUMN uploaded INTEGER NOT NULL DEFAULT 0")
+            try db.execute(sql: "UPDATE attachments SET filename = ''")
         }
 
         try migrator.migrate(dbPool)

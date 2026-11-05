@@ -22,6 +22,7 @@ struct NoteEditorView: View {
     @State private var showAttachmentPicker = false
     @State private var showPhotoPicker = false
     @State private var pinchBaseScale: Double = 1.0
+    @State private var shareFile: ExportFile?
 
     let note: DecryptedNote
 
@@ -61,12 +62,14 @@ struct NoteEditorView: View {
                         fontSize: appState.editorFontSize,
                         attachments: note.attachments,
                         attachmentRepo: appState.attachmentRepo,
-                        encryptionKey: appState.keyManager.masterKey
+                        encryptionKey: appState.keyManager.masterKey,
+                        noteTitles: appState.noteTitles(linkedFrom: content),
+                        onOpenNote: { appState.openLinkedNote(id: $0) }
                     )
                 } else if syntaxLanguage == "calc" {
-                    WebCalcEditorView(content: $content, fontSize: appState.editorFontSize)
+                    WebCalcEditorView(content: $content, fontSize: appState.editorFontSize, isReadOnly: isReadOnly)
                 } else if syntaxLanguage == "outliner" {
-                    WebOutlinerEditorView(content: $content, fontSize: appState.editorFontSize)
+                    WebOutlinerEditorView(content: $content, fontSize: appState.editorFontSize, isReadOnly: isReadOnly)
                 } else {
                     RunestoneEditorView(
                         text: $content,
@@ -252,6 +255,11 @@ struct NoteEditorView: View {
 
                     Divider()
 
+                    // What's on screen, which may be newer than what's saved.
+                    NoteShareActions(note: currentNote, shareFile: $shareFile)
+
+                    Divider()
+
                     // Lock toggle
                     Button {
                         let wasLocked = note.locked
@@ -347,6 +355,7 @@ struct NoteEditorView: View {
                 noteChanged(to: incoming)
             }
         }
+        .shareTemporaryFile($shareFile)
         .sheet(isPresented: $showVersionHistory) {
             VersionHistoryView(note: note)
         }
@@ -372,7 +381,8 @@ struct NoteEditorView: View {
         }
         .onDisappear {
             saveImmediately()
-            appState.pendingEditorNote = nil
+            // A failed save stays staged, to be retried.
+            if !hasChanges { clearStalePendingNote(id: baseline.noteId) }
             // Trigger a background sync if any save happened during this editing session
             if didSaveDuringSession && appState.syncEnabled {
                 Task { await appState.triggerSync() }
@@ -404,6 +414,11 @@ struct NoteEditorView: View {
             guard !Task.isCancelled else { return }
             saveImmediately()
         }
+    }
+
+    /// The note with what's in the editor now.
+    private var currentNote: DecryptedNote {
+        fields.applied(to: note)
     }
 
     /// What's in the editor now.
@@ -462,9 +477,9 @@ struct NoteEditorView: View {
     /// `AppState.flushPendingEditorNote()` on the next `lock()` —
     /// `noteRepo.update` there doesn't check `locked`/`archived`, so a stale
     /// pending note would silently overwrite a note that has since become
-    /// read-only (or is gone, or was already unchanged). Only the successful
-    /// save path at the bottom needs no extra clearing — it already nils
-    /// `pendingEditorNote` unconditionally.
+    /// read-only (or is gone, or was already unchanged). The save path at the
+    /// bottom needs no extra clearing: `saveEditorEdit` keeps the pending note
+    /// exactly when the save failed.
     private func flushOutgoingNote(id: String) {
         saveTask?.cancel()
         saveTask = nil
@@ -482,8 +497,7 @@ struct NoteEditorView: View {
             return
         }
 
-        try? appState.saveEditorFields(fields)
-        appState.pendingEditorNote = nil
+        appState.saveEditorEdit(fields)
         // Note: `didSaveDuringSession` is deliberately not set here — the
         // caller resets it to false for the
         // incoming note immediately after this call returns, so any
@@ -511,9 +525,8 @@ struct NoteEditorView: View {
         }
         guard hasChanges else { return }
         let saving = fields
-        try? appState.saveEditorFields(saving)
+        guard appState.saveEditorEdit(saving) else { return }
         baseline = saving
-        appState.pendingEditorNote = nil
         didSaveDuringSession = true
     }
 
@@ -534,6 +547,51 @@ struct NoteEditorView: View {
             try appState.addAttachment(to: note.id, url: url, filename: filename, mimeType: mimeType)
         } catch {
             appState.reportError(L.errorCouldntAddAttachment)
+        }
+    }
+}
+
+// MARK: - Sharing a Note
+
+/// Copy, Copy Link, Share and Print, for the editor's menu and a row's context
+/// menu. Share covers saving to a file, as the system's sheet offers that.
+struct NoteShareActions: View {
+    @Environment(AppState.self) private var appState
+    let note: DecryptedNote
+    @Binding var shareFile: ExportFile?
+
+    var body: some View {
+        Button {
+            UIPasteboard.general.string = note.content
+        } label: {
+            Label(L.editorCopy, systemImage: "doc.on.clipboard")
+        }
+
+        Button {
+            UIPasteboard.general.string = NoteSharing.link(to: note.id)
+        } label: {
+            Label(L.editorCopyLink, systemImage: "link")
+        }
+
+        Button {
+            do {
+                shareFile = try NoteSharing.shareFile(for: note)
+            } catch {
+                appState.reportError(L.errorCouldntExport)
+            }
+        } label: {
+            Label(L.editorShare, systemImage: "square.and.arrow.up")
+        }
+
+        Button {
+            NotePrinter.print(
+                note,
+                noteTitles: appState.noteTitles(linkedFrom: note.content),
+                attachmentRepo: appState.attachmentRepo,
+                key: appState.keyManager.masterKey
+            )
+        } label: {
+            Label(L.editorPrint, systemImage: "printer")
         }
     }
 }

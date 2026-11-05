@@ -34,8 +34,9 @@
   }
 
   function handleKeydown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
+    if (event.key === 'Escape' && isOpen) {
       isOpen = false;
+      event.preventDefault();
     }
   }
 

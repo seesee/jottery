@@ -162,7 +162,7 @@ async fn apply_configured_email(
     }
 
     let taken = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM users WHERE email = ? AND id != ?",
+        "SELECT COUNT(*) FROM users WHERE email = ? COLLATE NOCASE AND id != ?",
         wanted,
         SEED_ADMIN_ID
     )

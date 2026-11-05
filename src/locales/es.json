@@ -444,7 +444,7 @@
         "required": "Introduce la contraseña de tus notas.",
         "incorrect": "Esa no es la contraseña que desbloquea tus notas en este dispositivo. Introduce la contraseña de las notas, no la del servidor.",
         "uploadFailed": "La sincronización está configurada, pero no se pudo guardar la clave de cifrado en el servidor, por lo que otros dispositivos aún no pueden conectarse. Se volverá a intentar la próxima vez que desbloquees",
-        "mustDiffer": "Tu contraseña de notas y la de tu cuenta deben ser distintas. El servidor de sincronización ve la contraseña de tu cuenta, así que si coinciden podría leer tus notas. Si son iguales en tus otros dispositivos, cambia primero allí la contraseña de notas.",
+        "mustDiffer": "Tu contraseña de notas y la de tu cuenta deben ser distintas. El servidor de sincronización ve la contraseña de tu cuenta, así que si coinciden podría leer tus notas.",
         "matchesAccountWarning": "Tu contraseña de notas es la misma que la de tu cuenta, por lo que el servidor de sincronización podría leer tus notas. Cambia tu contraseña de notas para solucionarlo."
       },
       "existingAccountDetected": "Este correo ya tiene una cuenta, así que este dispositivo se conectará a ella. Introduce la contraseña de notas que usas en tus otros dispositivos."
@@ -517,7 +517,9 @@
       "duplicateNote": "Duplicar nota",
       "exportNote": "Exportar nota",
       "pressKey": "Presione una tecla...",
-      "notSet": "No establecido"
+      "notSet": "No establecido",
+      "needsModifier": "Este atajo funciona mientras escribes, así que necesita Ctrl, Cmd o Alt. Pulsa otra tecla, o Esc para cancelar.",
+      "reserved": "Esa tecla está reservada. Pulsa otra tecla, o Esc para cancelar."
     },
     "syncTab": {
       "enableSync": "Habilitar sincronización",
@@ -570,7 +572,8 @@
         "changing": "Cambiando contraseña...",
         "button": "Cambiar contraseña",
         "success": "Contraseña cambiada correctamente",
-        "error": "Error al cambiar la contraseña: {error}"
+        "error": "Error al cambiar la contraseña: {error}",
+        "serverKeyFailed": "Tu contraseña se cambió en este dispositivo, pero no se pudo actualizar el servidor. Se volverá a intentar la próxima vez que desbloquees. Hasta entonces, un dispositivo nuevo necesitaría tu contraseña antigua."
       },
       "connectionDetails": {
         "title": "Detalles de conexión",
@@ -606,11 +609,12 @@
         "dangerZone": "Zona de peligro",
         "deleteNotesDescription": "Elimine todas sus notas del servidor de sincronización. Esta acción no se puede deshacer. Sus notas locales NO se eliminarán.",
         "deleteNotesButton": "Eliminar todas las notas del servidor"
-      }
+      },
+      "disconnectNotRevoked": "Este dispositivo se ha desconectado, pero no se pudo avisar al servidor, así que sigue en la lista y su clave sigue funcionando. Revócalo en el portal de usuario."
     },
     "advancedTab": {
       "importExport": "Importar/Exportar",
-      "exportDescription": "Exporte notas como JSON descifrado. La importación fusionará las notas con los datos existentes.",
+      "exportDescription": "La exportación crea una copia JSON sin cifrar para llevar las notas a otro sitio: cualquiera con el archivo puede leerla. Para una copia cifrada, usa la copia de seguridad. La importación combina las notas con las que ya hay.",
       "downloadClient": "Descargar cliente de terminal/HTML",
       "downloadTerminalClient": "Descargar cliente de terminal",
       "clientDescription": "Descargue el cliente de terminal para acceso desde la línea de comandos, o el cliente HTML para ejecutar localmente desde el sistema de archivos",
@@ -638,7 +642,8 @@
       "aboutDescription": "Jottery es una aplicación de bloc de notas auto-alojada enfocada en la privacidad para capturar, organizar y buscar notas con contenido enriquecido, resaltado de sintaxis y cifrado.",
       "viewOnGithub": "Ver en GitHub",
       "license": "Licenciado bajo la Licencia MIT."
-    }
+    },
+    "exportIncomplete": "La exportación está incompleta: {notes} notas y {attachments} adjuntos no se pudieron leer y se han omitido."
   },
   "landing": {
     "languagePicker": {
@@ -934,7 +939,8 @@
         "encrypting": "Asegurando credenciales…",
         "syncing": "Iniciando sincronización inicial…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "Tu contraseña de notas se cambió en otro dispositivo. Este dispositivo sigue desbloqueándose con la contraseña antigua y tus notas están a salvo, pero los dispositivos nuevos necesitarán la nueva."
   },
   "lock": {
     "title": "Bloquear aplicación",
@@ -1194,7 +1200,11 @@
   },
   "sync": {
     "syncing": "Sincronizando...",
-    "syncProgress": "Sincronizando: {percentage}% completado"
+    "syncProgress": "Sincronizando: {percentage}% completado",
+    "notesRefused": "Algunas notas superan el límite de subida de tu cuenta y no se han sincronizado. Todo lo demás sí.",
+    "accountDisabled": "Tu cuenta está desactivada o pendiente de aprobación, así que la sincronización se ha detenido. Tus notas en este dispositivo están a salvo. Ponte en contacto con tu administrador.",
+    "storageQuotaExceeded": "Tu cuenta ha alcanzado su límite de almacenamiento, así que los cambios de este dispositivo no se pueden subir. Elimina definitivamente algunas notas o adjuntos para liberar espacio.",
+    "massDeletionHeld": "El servidor ha pedido eliminar {count} notas a la vez. Están en la papelera por si no has sido tú. Restáuralas desde allí, o vacía la papelera si has sido tú."
   },
   "inbox": {
     "title": "Bandeja de entrada",

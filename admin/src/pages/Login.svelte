@@ -50,7 +50,7 @@
       {/if}
 
       {#if error}
-        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div role="alert" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
       {/if}
@@ -62,6 +62,7 @@
         <input
           id="email"
           type="email"
+          autocomplete="username"
           required
           bind:value={email}
           disabled={loading}
@@ -77,6 +78,7 @@
         <input
           id="password"
           type="password"
+          autocomplete="current-password"
           required
           bind:value={password}
           disabled={loading}

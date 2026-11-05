@@ -13,6 +13,7 @@ struct AttachmentListView: View {
     @State private var previewURL: URL?
     @State private var shareFile: ExportFile?
     @State private var errorMessage: String?
+    @State private var attachmentToDelete: AttachmentRef?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -47,7 +48,7 @@ struct AttachmentListView: View {
                         attachment: attachment,
                         onTap: { decryptAndPreview(attachment) },
                         onShare: { decryptAndShare(attachment) },
-                        onDelete: onDelete != nil ? { onDelete?(attachment.id) } : nil
+                        onDelete: onDelete != nil ? { attachmentToDelete = attachment } : nil
                     )
 
                     if attachment.id != attachments.last?.id {
@@ -71,6 +72,22 @@ struct AttachmentListView: View {
             if let closed { TemporaryFiles.shared.remove(closed) }
         }
         .shareTemporaryFile($shareFile)
+        // Removing an attachment takes its data with it, and the button sits
+        // right next to Share.
+        .confirmationDialog(
+            L.attachmentsDeleteTitle(attachmentToDelete?.filename ?? ""),
+            isPresented: Binding(
+                get: { attachmentToDelete != nil },
+                set: { if !$0 { attachmentToDelete = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: attachmentToDelete
+        ) { attachment in
+            Button(L.attachmentsDeleteAction, role: .destructive) { onDelete?(attachment.id) }
+            Button(L.commonCancel, role: .cancel) {}
+        } message: { _ in
+            Text(L.attachmentsDeleteMessage)
+        }
     }
 
     // MARK: - Decrypt & Preview
@@ -177,16 +194,22 @@ private struct AttachmentRowView: View {
                     Image(systemName: "square.and.arrow.up")
                         .font(.subheadline)
                         .foregroundStyle(.accent)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(L.attachmentsShare)
 
                 if let onDelete {
                     Button(role: .destructive, action: onDelete) {
                         Image(systemName: "trash")
                             .font(.subheadline)
                             .foregroundStyle(.red)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(L.attachmentsDeleteAction)
                 }
             }
             .padding(.horizontal)
