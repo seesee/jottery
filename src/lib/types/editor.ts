@@ -129,23 +129,6 @@ export interface PdfViewport {
 }
 
 /**
- * FlexSearch enriched result item
- * When using enrich: true, results contain objects with id property
- */
-export interface FlexSearchResultItem {
-  id: string;
-}
-
-/**
- * FlexSearch enriched result set
- * Results are grouped by field when using enrich: true
- */
-export interface FlexSearchEnrichedResult {
-  field: string;
-  result: (string | FlexSearchResultItem)[];
-}
-
-/**
  * Calculator evaluation result
  */
 export interface CalcEvaluationResult {

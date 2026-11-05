@@ -1,0 +1,37 @@
+name: Server Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - '.github/workflows/server-tests.yml'
+  workflow_call:  # Run before publishing, from build-multiarch.yml
+  workflow_dispatch:  # Manual trigger
+
+permissions:
+  contents: read
+
+jobs:
+  server-tests:
+    name: Server Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Compiles the way the Docker image does, so a query cache that's out of date
+      # fails here and not on a release tag. The tests run the migrations themselves.
+      SQLX_OFFLINE: "true"
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: server
+
+      # --no-fail-fast so one failing target doesn't hide the others
+      - name: Run tests
+        working-directory: server
+        run: cargo test --locked --no-fail-fast

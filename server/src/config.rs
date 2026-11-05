@@ -1,5 +1,38 @@
 use std::env;
 
+/// Limits on the anonymous credential routes. See `rate_limit`.
+#[derive(Clone)]
+pub struct RateLimitConfig {
+    pub enabled: bool,
+    /// Proxies in front of this server that append to X-Forwarded-For. Zero
+    /// means the header is ignored, because a client can send any value.
+    pub trusted_proxy_hops: usize,
+    pub auth_per_minute: u32,
+    pub register_per_hour: u32,
+    pub status_per_minute: u32,
+}
+
+impl Default for RateLimitConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            trusted_proxy_hops: 0,
+            // Generous enough that clients sharing one address, behind a proxy
+            // this server can't see past, still don't get in each other's way.
+            auth_per_minute: 20,
+            register_per_hour: 20,
+            status_per_minute: 60,
+        }
+    }
+}
+
+fn env_or<T: std::str::FromStr>(name: &str, default: T) -> T {
+    env::var(name)
+        .ok()
+        .and_then(|value| value.parse().ok())
+        .unwrap_or(default)
+}
+
 #[derive(Clone)]
 pub struct Config {
     pub database_url: String,
@@ -10,7 +43,9 @@ pub struct Config {
     // Security settings
     pub session_expiry_days: i64,
     pub default_admin_email: String,
-    pub default_admin_password: String,
+    /// `None` when unset. There is deliberately no default: a fresh install gets
+    /// a generated password instead of a published one (see `bootstrap`).
+    pub default_admin_password: Option<String>,
 
     // Password hashing (Argon2id parameters)
     pub argon2_m_cost: u32,  // Memory cost in KiB
@@ -29,6 +64,8 @@ pub struct Config {
 
     // Security headers
     pub enable_hsts: bool, // Strict-Transport-Security (only enable for HTTPS deployments)
+
+    pub rate_limit: RateLimitConfig,
 
     // Input validation limits
     pub max_device_name_length: usize,
@@ -74,7 +111,8 @@ impl Config {
             default_admin_email: env::var("DEFAULT_ADMIN_EMAIL")
                 .unwrap_or_else(|_| "admin@localhost".to_string()),
             default_admin_password: env::var("DEFAULT_ADMIN_PASSWORD")
-                .unwrap_or_else(|_| "changeme".to_string()),
+                .ok()
+                .filter(|password| !password.is_empty()),
 
             // Password hashing (Argon2id parameters)
             argon2_m_cost: env::var("ARGON2_M_COST")
@@ -118,6 +156,23 @@ impl Config {
                 .unwrap_or_else(|_| "false".to_string())
                 .to_lowercase()
                 == "true",
+
+            rate_limit: {
+                let defaults = RateLimitConfig::default();
+                RateLimitConfig {
+                    enabled: env_or("RATE_LIMIT_ENABLED", defaults.enabled),
+                    trusted_proxy_hops: env_or("TRUSTED_PROXY_HOPS", defaults.trusted_proxy_hops),
+                    auth_per_minute: env_or("RATE_LIMIT_AUTH_PER_MINUTE", defaults.auth_per_minute),
+                    register_per_hour: env_or(
+                        "RATE_LIMIT_REGISTER_PER_HOUR",
+                        defaults.register_per_hour,
+                    ),
+                    status_per_minute: env_or(
+                        "RATE_LIMIT_STATUS_PER_MINUTE",
+                        defaults.status_per_minute,
+                    ),
+                }
+            },
 
             // Input validation limits
             max_device_name_length: env::var("MAX_DEVICE_NAME_LENGTH")

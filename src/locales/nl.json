@@ -254,7 +254,8 @@
         "title": "Back-up Informatie",
         "created": "Gemaakt",
         "records": "Gegevens"
-      }
+      },
+      "storageFull": "De browser had geen opslagruimte meer, dus het herstellen is niet voltooid en er is niets bewaard. Je back-upbestand is in orde: maak ruimte vrij en herstel het opnieuw."
     }
   },
   "settings": {
@@ -442,8 +443,11 @@
         "hintExisting": "Het wachtwoord waarmee je je notities op je andere apparaten ontgrendelt. Het wordt nooit naar de server verzonden.",
         "required": "Voer je notitiewachtwoord in.",
         "incorrect": "Dat is niet het wachtwoord dat je notities op dit apparaat ontgrendelt. Voer je notitiewachtwoord in, niet je serverwachtwoord.",
-        "uploadFailed": "Synchronisatie is ingesteld, maar de versleutelingssleutel kon niet op de server worden opgeslagen, dus andere apparaten kunnen nog geen verbinding maken. Bij de volgende ontgrendeling wordt het opnieuw geprobeerd"
-      }
+        "uploadFailed": "Synchronisatie is ingesteld, maar de versleutelingssleutel kon niet op de server worden opgeslagen, dus andere apparaten kunnen nog geen verbinding maken. Bij de volgende ontgrendeling wordt het opnieuw geprobeerd",
+        "mustDiffer": "Je notitiewachtwoord en accountwachtwoord moeten verschillen. De synchronisatieserver ziet je accountwachtwoord, dus als ze gelijk zijn, kan de server je notities lezen. Zijn ze gelijk op je andere apparaten, wijzig dan eerst daar je notitiewachtwoord.",
+        "matchesAccountWarning": "Je notitiewachtwoord is gelijk aan je accountwachtwoord, dus de synchronisatieserver kan je notities lezen. Wijzig je notitiewachtwoord om dit op te lossen."
+      },
+      "existingAccountDetected": "Dit e-mailadres heeft al een account, dus dit apparaat maakt daarmee verbinding. Voer het notitiewachtwoord in dat je op je andere apparaten gebruikt."
     },
     "editorTab": {
       "vimMode": "Editormodus",
@@ -919,7 +923,9 @@
         "emailRequired": "E-mailadres is vereist.",
         "serverPasswordRequired": "Serverwachtwoord is vereist.",
         "notesPasswordMinLength": "Notitiewachtwoord moet minimaal 8 tekens bevatten.",
-        "onboardingFailed": "Downloaden van versleutelingssleutels van de server is mislukt. Controleer of je notitiewachtwoord overeenkomt met dat van je andere apparaten en of het bronapparaat is gesynchroniseerd"
+        "onboardingFailed": "Downloaden van versleutelingssleutels van de server is mislukt. Controleer of je notitiewachtwoord overeenkomt met dat van je andere apparaten en of het bronapparaat is gesynchroniseerd",
+        "accountKeyUnreadable": "Dit notitiewachtwoord kan de sleutel van je account niet openen. Controleer het wachtwoord. Klopt het, dan is de sleutel mogelijk opgeslagen door een oudere versie van Jottery: ontgrendel Jottery op een apparaat dat al verbonden is om dit op te lossen. Probeer het daarna opnieuw.",
+        "localNotesOrphaned": "Notities op dit apparaat gebruiken een andere sleutel dan je account, dus verbinden zou ze onleesbaar maken. Er is niets gewijzigd. Om ze te behouden: exporteer je notities, verwijder de gegevens van dit apparaat, maak verbinding en importeer ze daarna."
       },
       "steps": {
         "initialising": "Lokale versleuteling initialiseren…",
@@ -1005,6 +1011,11 @@
       "notAvailable": "Voorvertoning niet beschikbaar voor dit bestandstype.",
       "audioNotSupported": "Uw browser ondersteunt geen audio-afspelen.",
       "videoNotSupported": "Uw browser ondersteunt geen video-afspelen."
+    },
+    "confirmDelete": {
+      "title": "Bijlage verwijderen?",
+      "message": "Het bestand wordt uit deze notitie verwijderd. Tenzij een eerdere versie van de notitie het nog bevat, kan het niet worden hersteld.",
+      "confirmButton": "Verwijderen"
     }
   },
   "keyboard": {
@@ -1171,7 +1182,9 @@
     "indicator": "Synchronisatieconflict",
     "bannerText": "Deze notitie heeft een synchronisatieconflict dat moet worden opgelost",
     "resolveButton": "Conflict oplossen",
-    "syncNotification": "{count, plural, one {1 notitie heeft een synchronisatieconflict} other {{count} notities hebben synchronisatieconflicten}}"
+    "syncNotification": "{count, plural, one {1 notitie heeft een synchronisatieconflict} other {{count} notities hebben synchronisatieconflicten}}",
+    "serverUnreadable": "De kopie van deze notitie op de server is niet leesbaar en is mogelijk gewijzigd. Alleen jouw versie kan worden behouden.",
+    "localUnreadable": "De kopie van deze notitie op dit apparaat is niet leesbaar."
   },
   "pullToRefresh": {
     "pull": "Trek omlaag om te synchroniseren",
@@ -1420,6 +1433,17 @@
     "openNote": "Deze notitie openen",
     "repairNotOnServer": "Ook niet op de server — open de notitie en verwijder de bijlage",
     "serverMissingTitle": "Ontbreekt op de server",
-    "serverMissingHint": "De synchronisatieserver heeft geen kopie van deze bijlagen en dit apparaat ook niet. Open de notitie en verwijder de bijlage, of synchroniseer vanaf een apparaat dat het bestand nog heeft."
+    "serverMissingHint": "De synchronisatieserver heeft geen kopie van deze bijlagen en dit apparaat ook niet. Open de notitie en verwijder de bijlage, of synchroniseer vanaf een apparaat dat het bestand nog heeft.",
+    "rejectedTitle": "Geweigerd van de synchronisatieserver",
+    "rejectedHint": "De synchronisatieserver stuurde deze in een vorm die niet te vertrouwen is, dus ze zijn niet opgeslagen. Je bestaande notities zijn niet aangetast. Als dit blijft gebeuren, controleer dan wie de server beheert.",
+    "rejectedKind": {
+      "note": "Notitie",
+      "version": "Notitieversie",
+      "conflict": "Synchronisatieconflict",
+      "savedSearch": "Opgeslagen zoekopdracht",
+      "attachment": "Bijlage",
+      "inboxItem": "Inboxitem",
+      "deletion": "Verwijdering"
+    }
   }
 }

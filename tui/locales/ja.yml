@@ -23,11 +23,11 @@ password:
   change_success: パスワードを正常に変更しました
   change_title: "パスワード変更"
   change_enter_current: "現在のパスワードを入力してください:"
-  change_enter_new: "新しいパスワードを入力 (12文字以上):"
+  change_enter_new: "新しいパスワードを入力 (8文字以上):"
   change_confirm_new: "新しいパスワードを確認:"
   change_current_required: "現在のパスワードを入力してください"
   change_wrong_current: "現在のパスワードが正しくありません"
-  change_too_short: "新しいパスワードは12文字以上必要です"
+  change_too_short: "新しいパスワードは8文字以上必要です"
   change_mismatch: "パスワードが一致しません"
   change_failed: "パスワードの変更に失敗しました"
   remember: パスワードを記憶
@@ -46,6 +46,10 @@ password:
   enter_to_enable: "自動ロック解除を有効にするにはパスワードを入力してください:"
   create_title: パスワードを作成
   unlock_title: ロック解除
+  too_short: "パスワードは %{min} 文字以上にしてください"
+  same_as_account: "別のパスワードを使用してください。サーバーはアカウントのパスワードを見ることができるため、ノートを開くパスワードと同じにしてはいけません。"
+  same_as_account_warning: "アカウントのパスワードがノートのパスワードと同じため、サーバーがノートを読める状態です。設定でノートのパスワードを変更してください。"
+  no_file_encryption: "このビルドはデータベースファイルを暗号化しません。ノートとタグは暗号化されたままですが、メールアドレス、サーバーアドレス、添付ファイル名、日付は暗号化されません。"
 menu:
   notes: ノート
   new_note: 新しいノート
@@ -78,6 +82,13 @@ note:
   info: ノート情報
   info_title: ノート情報
   untitled: "無題"
+  save_retry_hint: "q: 再度保存 | e: 編集 | Esc: 変更を破棄"
+  empty_bin_title: "ごみ箱を空にする"
+  empty_bin_confirm: "ごみ箱の %{count} 件のノートを完全に削除しますか？"
+  empty_bin_warning: "サーバーと他のデバイスからも削除されます。元に戻すことはできません。"
+  bin_emptied: "%{count} 件のノートを完全に削除しました"
+  locked_cannot_archive: "ロックされたノートはアーカイブできません"
+  unreadable: "この保管庫の %{count} 件のノートを読み取れません"
 archive:
   view: "アーカイブを表示"
   title: "アーカイブ"
@@ -115,6 +126,18 @@ attachment:
   delete: 添付ファイルを削除
   no_attachments: 添付ファイルなし
   total: "%{count} 件の添付ファイル"
+  press_enter: "続行するには Enter を押してください..."
+  opened: "既定のアプリケーションでファイルを開きました。"
+  no_opener: "このシステムにはファイルを開くプログラムがありません。代わりに S で添付ファイルを保存してください。"
+  delete_failed: "添付ファイルの削除に失敗しました: %{error}"
+  deleted: "削除しました: %{name}"
+  exists: "%{path} はすでに存在します。別の名前を選んでください。"
+  saved: "%{path} に保存しました"
+  save_failed: "添付ファイルの保存に失敗しました: %{error}"
+  added: "%{name} を添付しました"
+  too_large: "ファイルが大きすぎます。上限は %{max_mb} MB です。"
+  unsafe_title: "このファイルは開きません"
+  unsafe_body: "この種類のファイルを開くと、送信者のコードが実行される可能性があります。代わりに保存しますか？"
 version:
   history: バージョン履歴
   restore: バージョンを復元
@@ -188,6 +211,8 @@ sync:
   reload_failed: "同期は成功しましたがノートの再読み込みに失敗: %{error}"
   note: 件のノート
   notes: 件のノート
+  skipped_notes: "サーバーの %{count} 件の項目を読み取れなかったためスキップしました"
+  rejected_notes: "%{count} 件のノートがサーバーと競合しています。Jottery を開いて解決してください。"
 
 # 受信トレイ
 inbox:
@@ -233,6 +258,7 @@ register:
   device_failed: デバイス登録に失敗しました
   cleared: 登録がクリアされました。最初からやり直せます。
   pending_status: 承認待ち
+  password_differs: "ノートのパスワードとは別のものにしてください。"
 color_scheme:
   default_dark: デフォルトダーク
   default_light: デフォルトライト
@@ -386,8 +412,8 @@ help:
   s_q_close_desc: 設定パネルを閉じる
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: 添付ファイルパネルにフォーカス (j/kで移動、Enterで表示、dで削除)
-  A_add_attachment_key: A
-  A_add_attachment_desc: 添付ファイルを追加 (ファイルパスを入力)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: 添付ファイルを追加 (ファイルパスを入力)
   a_view_attachment_key: a + 番号
   a_view_attachment_desc: 添付ファイルを表示 (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -450,6 +476,14 @@ help:
   click_tags_desc: タグ編集モードに入る
   scroll_key: スクロールホイール
   scroll_desc: プレビューを上下にスクロール
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Jottery をロック"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "選択した添付ファイルをファイルに保存"
+  z_archive_key: "z"
+  z_archive_desc: "選択したノートをアーカイブ（アーカイブモードでは元に戻す）"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "選択したノートをアーカイブ"
 cli:
   # 代替 (一部で使用)
   list: ノートを一覧表示
@@ -513,6 +547,14 @@ cli:
   # 出力メッセージ
   notes_count: "%{count} 件のノート"
   results_count: "%{count} 件の結果: '%{query}'"
+  attach_about: "ノートにファイルを添付"
+  save_attachment_about: "ノートの添付ファイルをファイルに保存"
+  archive_about: "ノートをアーカイブ"
+  unarchive_about: "ノートをアーカイブから戻す"
+  note_id_help: "ノート ID（部分一致可）"
+  attach_file_help: "添付するファイル"
+  attachment_number_help: "どの添付ファイルか（show の番号）"
+  archived_help: "代わりにアーカイブ済みのノートを一覧表示"
 status:
   locked: ロック中
   unlocked: ロック解除
@@ -534,6 +576,7 @@ bulk:
   enter_export_path: "エクスポートパス:"
   add_tags_to: タグを追加
   export_notes_to: エクスポート
+  archived: "%{count} 件のノートをアーカイブしました"
 time:
   just_now: たった今
   minutes_ago: "%{count} 分前"
@@ -568,6 +611,8 @@ backup:
   restoring: "データを復元中..."
   restored: "復元完了"
   key_not_in_backup: "このバックアップは古いバージョンの Jottery で作成されたため、鍵が含まれていません。作成元の保管庫にのみ復元できます。"
+  incomplete: "このバックアップは不完全です：保管庫の %{count} 件の項目を読み取れず、含まれていません。"
+  records_failed: "このバックアップの %{count} 件のレコードを復元できませんでした。それ以外は復元されました。"
 
 # Progress indicators
 progress:
@@ -591,6 +636,12 @@ ui:
   type: "タイプ:"
   modified: "更新日時:"
   version: "バージョン:"
+  save_attachment: "添付ファイルを保存 (Tab: 補完、↑↓: 選択、Enter: 確定)"
+  path: "パス"
+  attachments_hint: "添付ファイル: (Tab でフォーカス)"
+  attachments_focused_hint: "添付ファイル: (Tab で切替、j/k で移動、Enter で表示、S で保存、d で削除)"
+  attachments_keys_hint: "'a' で表示、'+' で追加、'X' で選択項目を削除"
+  attachment_viewer_hint: "↑/↓: 移動 │ 1-9: クイック選択 │ Enter: 表示 │ S: 保存 │ +: 追加 │ d: 削除 │ Esc: 閉じる"
 
 # ステータスバーヘルプテキスト
 status_bar:
@@ -640,8 +691,21 @@ status_bar:
   quick_select: "クイック選択"
   view: "表示"
   restore_version: "バージョンを復元"
+  save: "保存"
+  add: "追加"
 
 # Virtual tags
 tags:
   virtual:
     title: "タイトル"
+
+calc:
+  line_too_long: "⚠ 行が長すぎて計算できません（上限 %{max} バイト）"
+  numbers_only: "⚠ Calc は数値のみ扱います：テキスト、タプル、; は計算されません"
+  too_deep: "⚠ 括弧のネストが深すぎます（上限 %{max}）"
+  gave_up: "このノートの計算に時間がかかりすぎたため、結果なしで表示しています。"
+
+envelope:
+  unwrap_failed: "ノートのパスワードではこのアカウントのキーを開けません。古いバージョンで保存された可能性があります。すでに接続済みのデバイスで Jottery のロックを解除すると修復されるので、その後もう一度お試しください。"
+  rekey_failed: "ローカルのノートをこのアカウントのキーに移行できなかったため、何も変更されていません: %{error}"
+  diverged: "このデバイスのキーはアカウントのキーと異なります。他のデバイスのノートをここで開けない場合があります。"

@@ -26,7 +26,7 @@ fn fuzz_config() -> Config {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: String::new(),
-        default_admin_password: String::new(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -36,6 +36,7 @@ fn fuzz_config() -> Config {
         default_inbox_max_size_mb: 10,
         password_complexity: "standard".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         // Use smaller limits for faster fuzzing
         max_device_name_length: 1000,
         max_inbox_content_size: 10_000,

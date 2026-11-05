@@ -3,6 +3,8 @@
 //! This module defines the core state machine for the TUI application,
 //! including app states, input modes, and view modes.
 
+use zeroize::Zeroizing;
+
 /// Application state
 #[derive(Debug)]
 pub enum AppState {
@@ -58,7 +60,7 @@ pub enum AppState {
     RegisterInputDeviceName {
         endpoint: String,
         email: String,
-        password: String,
+        password: Zeroizing<String>,
         previous: Box<AppState>,
     },
     /// Password change flow - input current password
@@ -67,13 +69,13 @@ pub enum AppState {
     },
     /// Password change flow - input new password
     ChangePasswordNew {
-        current_password: String,
+        current_password: Zeroizing<String>,
         previous: Box<AppState>,
     },
     /// Password change flow - confirm new password
     ChangePasswordConfirm {
-        current_password: String,
-        new_password: String,
+        current_password: Zeroizing<String>,
+        new_password: Zeroizing<String>,
         previous: Box<AppState>,
     },
     /// Quit
@@ -92,9 +94,7 @@ pub enum InputMode {
     SettingsEdit,
     /// Password verification mode (for enabling remember password)
     PasswordVerify,
-    /// Attachment path input mode (entering file path to attach)
-    /// Note: This mode is defined but not currently used in the application
-    #[allow(dead_code)]
+    /// Attachment path input mode (entering a path to attach from or save to)
     AttachmentPath,
     /// Bulk add tags input mode
     BulkAddTags,

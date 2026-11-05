@@ -23,11 +23,11 @@ password:
   change_success: Hasło zmienione pomyślnie
   change_title: "Zmiana hasła"
   change_enter_current: "Wprowadź aktualne hasło:"
-  change_enter_new: "Wprowadź nowe hasło (min. 12 znaków):"
+  change_enter_new: "Wprowadź nowe hasło (min. 8 znaków):"
   change_confirm_new: "Potwierdź nowe hasło:"
   change_current_required: "Wprowadź aktualne hasło"
   change_wrong_current: "Aktualne hasło jest nieprawidłowe"
-  change_too_short: "Nowe hasło musi mieć co najmniej 12 znaków"
+  change_too_short: "Nowe hasło musi mieć co najmniej 8 znaków"
   change_mismatch: "Hasła nie pasują"
   change_failed: "Zmiana hasła nie powiodła się"
   remember: Zapamiętaj hasło
@@ -46,6 +46,10 @@ password:
   enter_to_enable: "Wprowadź hasło, aby włączyć automatyczne odblokowywanie:"
   create_title: Utwórz hasło
   unlock_title: Odblokuj
+  too_short: "Hasło musi mieć co najmniej %{min} znaków"
+  same_as_account: "Użyj różnych haseł. Serwer widzi hasło konta, więc nie może ono również otwierać notatek."
+  same_as_account_warning: "Hasło konta jest takie samo jak hasło notatek, więc serwer mógłby je odczytać. Zmień hasło notatek w Ustawieniach."
+  no_file_encryption: "Ta kompilacja nie szyfruje pliku bazy danych. Notatki i tagi pozostają zaszyfrowane, ale adres e-mail, adres serwera, nazwy załączników i daty już nie."
 menu:
   notes: Notatki
   new_note: Nowa notatka
@@ -78,6 +82,13 @@ note:
   info: Info o notatce
   info_title: Informacje o notatce
   untitled: "Bez tytułu"
+  save_retry_hint: "q: spróbuj zapisać ponownie | e: edytuj | Esc: odrzuć zmiany"
+  empty_bin_title: "Opróżnij kosz"
+  empty_bin_confirm: "Trwale usunąć notatki z kosza (%{count})?"
+  empty_bin_warning: "Zostaną też usunięte z serwera i innych urządzeń. Tego nie można cofnąć."
+  bin_emptied: "Trwale usunięte notatki: %{count}"
+  locked_cannot_archive: "Nie można zarchiwizować zablokowanej notatki"
+  unreadable: "Nie można odczytać notatek w tym sejfie: %{count}"
 archive:
   view: "Wyświetl archiwum"
   title: "Archiwum"
@@ -115,6 +126,18 @@ attachment:
   delete: Usuń załącznik
   no_attachments: Brak załączników
   total: "%{count} załączników"
+  press_enter: "Naciśnij Enter, aby kontynuować..."
+  opened: "Plik otwarto w domyślnej aplikacji."
+  no_opener: "W tym systemie nie ma programu do otwierania plików. Zapisz załącznik klawiszem S."
+  delete_failed: "Nie udało się usunąć załącznika: %{error}"
+  deleted: "Usunięto: %{name}"
+  exists: "%{path} już istnieje. Wybierz inną nazwę."
+  saved: "Zapisano w %{path}"
+  save_failed: "Nie udało się zapisać załącznika: %{error}"
+  added: "Dołączono %{name}"
+  too_large: "Plik jest za duży. Limit to %{max_mb} MB."
+  unsafe_title: "Ten plik nie zostanie otwarty"
+  unsafe_body: "Otwarcie pliku tego typu może uruchomić kod nadawcy. Zapisać go zamiast tego?"
 version:
   history: Historia wersji
   restore: Przywróć wersję
@@ -188,6 +211,8 @@ sync:
   reload_failed: "Synchronizacja powiodła się, ale ponowne załadowanie notatek nie powiodło się: %{error}"
   note: notatka
   notes: notatek
+  skipped_notes: "Nie udało się odczytać elementów z serwera (%{count}) i zostały pominięte"
+  rejected_notes: "Notatki w konflikcie z serwerem: %{count}. Otwórz Jottery, aby je rozwiązać."
 
 # Skrzynka odbiorcza
 inbox:
@@ -233,6 +258,7 @@ register:
   device_failed: Rejestracja urządzenia nie powiodła się
   cleared: Rejestracja wyczyszczona. Możesz zacząć od nowa.
   pending_status: Oczekuje na zatwierdzenie
+  password_differs: "Musi się różnić od hasła notatek."
 color_scheme:
   default_dark: Domyślny ciemny
   default_light: Domyślny jasny
@@ -386,8 +412,8 @@ help:
   s_q_close_desc: Zamknij panel ustawień
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: Fokus na panelu załączników (j/k do nawigacji, Enter do podglądu, d do usunięcia)
-  A_add_attachment_key: A
-  A_add_attachment_desc: Dodaj załącznik (wprowadź ścieżkę pliku)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: Dodaj załącznik (wprowadź ścieżkę pliku)
   a_view_attachment_key: a + numer
   a_view_attachment_desc: Wyświetl załącznik (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -450,6 +476,14 @@ help:
   click_tags_desc: Wejdź w tryb edycji tagów
   scroll_key: Kółko przewijania
   scroll_desc: Przewiń podgląd w górę/w dół
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Zablokuj Jottery"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Zapisz wybrany załącznik do pliku"
+  z_archive_key: "z"
+  z_archive_desc: "Zarchiwizuj wybraną notatkę (lub przywróć w trybie archiwum)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Zarchiwizuj wybrane notatki"
 cli:
   # Alternatywne (używane w niektórych miejscach)
   list: Wyświetl notatki
@@ -513,6 +547,14 @@ cli:
   # Komunikaty wyjściowe
   notes_count: "%{count} notatek"
   results_count: "%{count} wyników: '%{query}'"
+  attach_about: "Dołącz plik do notatki"
+  save_attachment_about: "Zapisz załącznik notatki do pliku"
+  archive_about: "Zarchiwizuj notatkę"
+  unarchive_about: "Przywróć notatkę z archiwum"
+  note_id_help: "ID notatki (obsługiwane częściowe dopasowanie)"
+  attach_file_help: "Plik do dołączenia"
+  attachment_number_help: "Który załącznik, według numeracji z show"
+  archived_help: "Pokaż zamiast tego zarchiwizowane notatki"
 status:
   locked: Zablokowane
   unlocked: Odblokowane
@@ -534,6 +576,7 @@ bulk:
   enter_export_path: "Ścieżka eksportu:"
   add_tags_to: Dodaj tagi do
   export_notes_to: Eksportuj
+  archived: "Zarchiwizowane notatki: %{count}"
 time:
   just_now: przed chwilą
   minutes_ago: "%{count} minut temu"
@@ -568,6 +611,8 @@ backup:
   restoring: "Przywracanie danych..."
   restored: "Przywrócono"
   key_not_in_backup: "Ta kopia zapasowa została utworzona przez starszą wersję Jottery i nie zawiera swojego klucza. Można ją przywrócić tylko do sejfu, z którego pochodzi."
+  incomplete: "Ta kopia jest niepełna: nie udało się odczytać elementów (%{count}) i zostały pominięte."
+  records_failed: "Nie udało się przywrócić rekordów z tej kopii: %{count}. Pozostałe przywrócono."
 
 # Progress indicators
 progress:
@@ -591,6 +636,12 @@ ui:
   type: "Typ:"
   modified: "Zmodyfikowano:"
   version: "Wersja:"
+  save_attachment: "Zapisz załącznik (Tab: uzupełnij, ↑↓: wybierz, Enter: potwierdź)"
+  path: "Ścieżka"
+  attachments_hint: "Załączniki: (Tab, aby przejść)"
+  attachments_focused_hint: "Załączniki: (Tab — przełącz, j/k — nawigacja, Enter — podgląd, S — zapisz, d — usuń)"
+  attachments_keys_hint: "'a' — podgląd, '+' — dodaj, 'X' — usuń zaznaczony"
+  attachment_viewer_hint: "↑/↓: nawigacja │ 1-9: szybki wybór │ Enter: podgląd │ S: zapisz │ +: dodaj │ d: usuń │ Esc: zamknij"
 
 # Tekst pomocy paska stanu
 status_bar:
@@ -640,8 +691,21 @@ status_bar:
   quick_select: "Szybki wybór"
   view: "podgląd"
   restore_version: "Przywróć wersję"
+  save: "zapisz"
+  add: "dodaj"
 
 # Virtual tags
 tags:
   virtual:
     title: "tytuł"
+
+calc:
+  line_too_long: "⚠ Wiersz jest za długi do obliczenia (limit %{max} bajtów)"
+  numbers_only: "⚠ Calc działa na liczbach: tekst, krotki i ; nie są obliczane"
+  too_deep: "⚠ Zbyt wiele zagnieżdżonych nawiasów (limit %{max})"
+  gave_up: "Obliczanie tej notatki trwało zbyt długo, więc jest wyświetlana bez wyników."
+
+envelope:
+  unwrap_failed: "Hasło notatek nie otwiera klucza tego konta. Mógł zostać zapisany przez starszą wersję. Odblokuj Jottery na już połączonym urządzeniu, co to naprawi, i spróbuj ponownie."
+  rekey_failed: "Nie udało się przenieść lokalnych notatek na klucz tego konta, więc nic się nie zmieniło: %{error}"
+  diverged: "Klucz tego urządzenia różni się od klucza konta. Notatki z innych urządzeń mogą się tu nie otwierać."

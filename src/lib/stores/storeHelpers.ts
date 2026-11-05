@@ -3,10 +3,11 @@
  * Reduces code duplication across components
  */
 
-import type { DecryptedNote } from '../types';
+import type { DecryptedNote, SortOrder } from '../types';
 import { get } from 'svelte/store';
-import { notes } from './appStore';
+import { notes, remoteNoteUpdate } from './appStore';
 import { searchService } from '../services/searchService';
+import { noteService } from '../services/noteService';
 
 /**
  * Update a single note in the notes store
@@ -21,6 +22,17 @@ export function updateNoteInStore(updatedNote: DecryptedNote): void {
     const newNotes = allNotes.map((n, i) => i === index ? updatedNote : n);
     notes.set(newNotes);
   }
+}
+
+/**
+ * Bring the store, search and open editor up to date after a conflict is resolved.
+ * Resolving writes straight to storage, and Keep Both adds a note.
+ */
+export async function reloadNotesAfterConflict(noteId: string, sortOrder: SortOrder): Promise<void> {
+  const allNotes = await noteService.getNotesForList(sortOrder);
+  notes.set(allNotes);
+  searchService.indexNotes(allNotes);
+  remoteNoteUpdate.set({ ids: [noteId], resolved: true });
 }
 
 /**

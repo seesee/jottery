@@ -50,6 +50,10 @@ private struct NewVaultView: View {
         !password.isEmpty && password == confirmPassword
     }
 
+    var passwordIsTooShort: Bool {
+        PasswordPolicy.violation(newNotesPassword: password) == .tooShort
+    }
+
     var body: some View {
         VStack(spacing: 16) {
             PasswordField(L.setupPassword, text: $password)
@@ -59,6 +63,12 @@ private struct NewVaultView: View {
             PasswordField(L.setupConfirmPassword, text: $confirmPassword)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 320)
+
+            if !password.isEmpty && passwordIsTooShort {
+                Text(L.notesPasswordTooShort(PasswordPolicy.minimumNotesPasswordLength))
+                    .foregroundStyle(.red)
+                    .font(.callout)
+            }
 
             if !confirmPassword.isEmpty && !passwordsMatch {
                 Text(L.setupPasswordsDoNotMatch)
@@ -87,12 +97,12 @@ private struct NewVaultView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
-            .disabled(!passwordsMatch || isCreating)
+            .disabled(!passwordsMatch || passwordIsTooShort || isCreating)
         }
     }
 
     private func createVault() {
-        guard passwordsMatch else { return }
+        guard passwordsMatch, !passwordIsTooShort else { return }
         error = nil
         isCreating = true
 
@@ -298,6 +308,9 @@ private struct ConnectToServerView: View {
                 // be shown, and carrying on with a key of our own would leave this
                 // device unable to read the account's notes (and vice versa).
                 // Server failures are not swallowed either: they stop setup here.
+                //
+                // Only the encryption password is ever tried: the server knows
+                // the server password, so it could wrap a key of its own with it.
                 var serverKeyData: Data?
                 var onboardingContext: (client: SyncClient, userId: String)?
                 if let syncRepo = appState.syncRepo,
@@ -307,19 +320,18 @@ private struct ConnectToServerView: View {
                    let apiKey = registeredApiKey {
                     let client = SyncClient(endpoint: endpoint, apiKey: apiKey)
                     onboardingContext = (client, userId)
-                    do {
-                        // The server key is wrapped with the encryption password;
-                        // builds before the fix wrapped it with the server
-                        // password, so that is tried as a fallback.
-                        serverKeyData = try await EnvelopeService.fetchServerKey(
-                            syncClient: client,
-                            userId: userId,
-                            password: encryptionPassword,
-                            alternatePassword: password
-                        )
-                    } catch EnvelopeError.cannotUnwrapServerKey {
-                        throw SyncSetupError.encryptionPasswordMismatch
-                    }
+                    serverKeyData = try await EnvelopeService.accountKeyForNewVault(
+                        syncClient: client,
+                        userId: userId,
+                        notesPassword: encryptionPassword,
+                        accountPassword: password
+                    )
+                } else if let violation = PasswordPolicy.violation(
+                    newNotesPassword: encryptionPassword, accountPassword: password
+                ) {
+                    throw violation == .tooShort
+                        ? SyncSetupError.notesPasswordTooShort
+                        : SyncSetupError.notesPasswordMatchesAccountPassword
                 }
 
                 syncProgress = L.setupProgressCreatingVault
@@ -412,6 +424,9 @@ private struct ConnectToServerView: View {
                 appState.isSyncing = false
                 syncProgress = nil
                 isWorking = false
+                // A password the rules refuse isn't a wrong guess at the real one.
+                if case SyncSetupError.notesPasswordMatchesAccountPassword = error { return }
+                if case SyncSetupError.notesPasswordTooShort = error { return }
                 failedAttempts += 1
                 if failedAttempts >= 5 {
                     self.error = L.unlockFailedAttempts

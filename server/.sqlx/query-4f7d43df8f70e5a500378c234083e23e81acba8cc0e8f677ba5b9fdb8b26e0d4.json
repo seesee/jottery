@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT created_at, expires_at FROM sessions WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "created_at",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "expires_at",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "4f7d43df8f70e5a500378c234083e23e81acba8cc0e8f677ba5b9fdb8b26e0d4"
+}

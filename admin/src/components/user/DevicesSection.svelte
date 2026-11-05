@@ -1,5 +1,6 @@
 <script lang="ts">
   import { userApi, ApiError } from '../../lib/userApi';
+  import { describeError } from '../../lib/apiErrors';
   import type { Device } from '../../lib/userApi';
   import { toast } from '../../lib/toast.svelte';
   import { _ } from 'svelte-i18n';
@@ -19,7 +20,7 @@
       error = null;
       devices = await userApi.getDevices();
     } catch (err) {
-      error = err instanceof Error ? err.message : $_('userPortal.devices.loadError');
+      error = describeError(err, $_, 'userPortal.devices.loadError');
     } finally {
       loading = false;
     }
@@ -37,7 +38,7 @@
       await loadDevices();
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error($_('userPortal.devices.revokeFailed', { values: { error: err.message } }));
+        toast.error($_('userPortal.devices.revokeFailed', { values: { error: describeError(err, $_) } }));
       } else {
         toast.error($_('userPortal.devices.revokeFailedGeneric'));
       }
@@ -56,7 +57,7 @@
       await loadDevices();
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error($_('userPortal.devices.deleteFailed', { values: { error: err.message } }));
+        toast.error($_('userPortal.devices.deleteFailed', { values: { error: describeError(err, $_) } }));
       } else {
         toast.error($_('userPortal.devices.deleteFailedGeneric'));
       }

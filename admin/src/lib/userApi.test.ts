@@ -18,18 +18,39 @@ const localStorageMock = {
   key: () => null,
 };
 
+// The session lives in sessionStorage. localStorage is shared with the notes app
+// on the same origin, so it's a separate mock, to prove nothing goes there.
+let sessionStore: Record<string, string> = {};
+const sessionStorageMock = {
+  getItem: (key: string) => sessionStore[key] || null,
+  setItem: (key: string, value: string) => {
+    sessionStore[key] = value;
+  },
+  removeItem: (key: string) => {
+    delete sessionStore[key];
+  },
+  clear: () => {
+    sessionStore = {};
+  },
+  length: 0,
+  key: () => null,
+};
+
 const mockFetch = vi.fn();
 
 // Apply mocks immediately at module level
 vi.stubGlobal('localStorage', localStorageMock);
+vi.stubGlobal('sessionStorage', sessionStorageMock);
 vi.stubGlobal('fetch', mockFetch);
 
 describe('UserApiClient', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorageStore = {};
+    sessionStore = {};
     // Re-stub after clearing
     vi.stubGlobal('localStorage', localStorageMock);
+    vi.stubGlobal('sessionStorage', sessionStorageMock);
     vi.stubGlobal('fetch', mockFetch);
   });
 
@@ -41,6 +62,7 @@ describe('UserApiClient', () => {
   async function createFreshApiClient() {
     vi.resetModules();
     vi.stubGlobal('localStorage', localStorageMock);
+    vi.stubGlobal('sessionStorage', sessionStorageMock);
     vi.stubGlobal('fetch', mockFetch);
     const module = await import('./userApi');
     return module.userApi;
@@ -70,7 +92,7 @@ describe('UserApiClient', () => {
           headers: expect.objectContaining({
             'Content-Type': 'application/json',
           }),
-          body: JSON.stringify({ email: 'test@example.com', password: 'password123' }),
+          body: JSON.stringify({ email: 'test@example.com', password: 'password123', cookieSession: true }),
         }),
       );
 
@@ -78,7 +100,7 @@ describe('UserApiClient', () => {
       expect(result.user.email).toBe('test@example.com');
     });
 
-    it('stores session token in localStorage after login', async () => {
+    it('stores session token in sessionStorage after login', async () => {
       const userApi = await createFreshApiClient();
 
       mockFetch.mockResolvedValueOnce({
@@ -94,7 +116,47 @@ describe('UserApiClient', () => {
 
       await userApi.login('test@example.com', 'password123');
 
-      expect(localStorageStore['user_session_token']).toBe('new-session-token');
+      expect(sessionStore['user_session_token']).toBe('new-session-token');
+      expect(localStorageStore['user_session_token']).toBeUndefined();
+    });
+
+    it('removes a token left in localStorage by an earlier version and ignores it', async () => {
+      localStorageStore['user_session_token'] = 'stale-token';
+
+      const userApi = await createFreshApiClient();
+
+      expect(localStorageStore['user_session_token']).toBeUndefined();
+      expect(userApi.isAuthenticated()).toBe(false);
+    });
+
+    it('keeps no token when the server sets a cookie session', async () => {
+      const userApi = await createFreshApiClient();
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            cookieSession: true,
+            expiresAt: '2025-01-20T00:00:00Z',
+            user: { id: '1', email: 'test@example.com', isAdmin: false },
+          }),
+      });
+      await userApi.login('test@example.com', 'password123');
+
+      expect(userApi.isAuthenticated()).toBe(true);
+      expect(JSON.parse(mockFetch.mock.calls[0][1].body).cookieSession).toBe(true);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve([]),
+      });
+      await userApi.getDevices();
+
+      const headers = mockFetch.mock.calls[1][1].headers;
+      expect(headers['Authorization']).toBeUndefined();
+      expect(headers['X-Requested-With']).toBe('JotteryDashboard');
     });
 
     it('throws ApiError on failed login', async () => {
@@ -112,8 +174,8 @@ describe('UserApiClient', () => {
   });
 
   describe('logout', () => {
-    it('clears session token from localStorage', async () => {
-      localStorageStore['user_session_token'] = 'existing-token';
+    it('clears session token from sessionStorage', async () => {
+      sessionStore['user_session_token'] = 'existing-token';
       const userApi = await createFreshApiClient();
 
       mockFetch.mockResolvedValueOnce({
@@ -123,24 +185,24 @@ describe('UserApiClient', () => {
 
       await userApi.logout();
 
-      expect(localStorageStore['user_session_token']).toBeUndefined();
+      expect(sessionStore['user_session_token']).toBeUndefined();
     });
 
     it('clears token even if API request fails', async () => {
-      localStorageStore['user_session_token'] = 'existing-token';
+      sessionStore['user_session_token'] = 'existing-token';
       const userApi = await createFreshApiClient();
 
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
       await userApi.logout();
 
-      expect(localStorageStore['user_session_token']).toBeUndefined();
+      expect(sessionStore['user_session_token']).toBeUndefined();
     });
   });
 
   describe('isAuthenticated', () => {
     it('returns true when session token exists', async () => {
-      localStorageStore['user_session_token'] = 'some-token';
+      sessionStore['user_session_token'] = 'some-token';
       const userApi = await createFreshApiClient();
 
       expect(userApi.isAuthenticated()).toBe(true);
@@ -155,7 +217,7 @@ describe('UserApiClient', () => {
 
   describe('getAccountInfo', () => {
     it('fetches account information with auth header', async () => {
-      localStorageStore['user_session_token'] = 'auth-token';
+      sessionStore['user_session_token'] = 'auth-token';
       const userApi = await createFreshApiClient();
 
       mockFetch.mockResolvedValueOnce({
@@ -192,7 +254,7 @@ describe('UserApiClient', () => {
 
   describe('changePassword', () => {
     it('sends password change request', async () => {
-      localStorageStore['user_session_token'] = 'auth-token';
+      sessionStore['user_session_token'] = 'auth-token';
       const userApi = await createFreshApiClient();
 
       mockFetch.mockResolvedValueOnce({
@@ -212,7 +274,7 @@ describe('UserApiClient', () => {
     });
 
     it('throws ApiError on wrong current password', async () => {
-      localStorageStore['user_session_token'] = 'auth-token';
+      sessionStore['user_session_token'] = 'auth-token';
       const userApi = await createFreshApiClient();
       const { ApiError } = await import('./userApi');
 
@@ -228,7 +290,7 @@ describe('UserApiClient', () => {
 
   describe('deactivateAccount', () => {
     it('sends deactivate request and clears session', async () => {
-      localStorageStore['user_session_token'] = 'auth-token';
+      sessionStore['user_session_token'] = 'auth-token';
       const userApi = await createFreshApiClient();
 
       mockFetch.mockResolvedValueOnce({
@@ -245,13 +307,13 @@ describe('UserApiClient', () => {
         }),
       );
 
-      expect(localStorageStore['user_session_token']).toBeUndefined();
+      expect(sessionStore['user_session_token']).toBeUndefined();
     });
   });
 
   describe('deleteAccount', () => {
     it('sends delete request and clears session', async () => {
-      localStorageStore['user_session_token'] = 'auth-token';
+      sessionStore['user_session_token'] = 'auth-token';
       const userApi = await createFreshApiClient();
 
       mockFetch.mockResolvedValueOnce({
@@ -268,7 +330,7 @@ describe('UserApiClient', () => {
         }),
       );
 
-      expect(localStorageStore['user_session_token']).toBeUndefined();
+      expect(sessionStore['user_session_token']).toBeUndefined();
     });
   });
 });

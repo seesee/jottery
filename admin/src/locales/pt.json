@@ -46,6 +46,23 @@
     "confirmTitle": "Confirmar saída",
     "confirmMessage": "Tem a certeza de que deseja sair?"
   },
+  "errors": {
+    "unknown": "Algo correu mal. Tente novamente.",
+    "network": "Não foi possível contactar o servidor. Verifique a sua ligação e tente novamente.",
+    "forbidden": "Não tem permissão para fazer isso.",
+    "wrongPassword": "A senha atual está incorreta",
+    "rateLimited": "Demasiadas tentativas. Tente novamente dentro de {seconds} segundos.",
+    "tooManyAttempts": "Demasiadas tentativas. Aguarde e tente novamente.",
+    "passwordTooShort": "A nova senha deve ter pelo menos 12 caracteres",
+    "passwordSameAsCurrent": "A nova senha tem de ser diferente da atual"
+  },
+  "session": {
+    "expired": "A sua sessão expirou. Inicie sessão novamente."
+  },
+  "forcedPasswordChange": {
+    "title": "Altere a sua senha",
+    "description": "Tem de escolher uma nova senha para continuar. Deve ter pelo menos 12 caracteres."
+  },
   "dashboard": {
     "title": "Painel",
     "loadingStats": "Carregando estatísticas...",
@@ -248,6 +265,7 @@
       "errors": {
         "invalidCredentials": "E-mail ou senha inválidos",
         "accountInactive": "A sua conta está inativa. Entre em contacto com o administrador.",
+        "accountPending": "A sua conta aguarda a aprovação de um administrador.",
         "unexpected": "Ocorreu um erro inesperado",
         "statusCheckFailed": "Failed to check status. Please try again."
       },

@@ -13,7 +13,7 @@
 
 import { writable, get } from 'svelte/store';
 import { settingsRepository } from './settingsRepository';
-import { createBackup, downloadBackup } from './backupService';
+import { createBatchedBackup, downloadBackup } from './backupService';
 import { toast } from '../utils/toast.svelte';
 import {
   BACKUP_REMINDER_CHECK_INTERVAL_MS,
@@ -152,7 +152,7 @@ async function checkAutoBackup(): Promise<void> {
 /**
  * Trigger an automatic backup download
  */
-async function triggerAutoBackup(): Promise<void> {
+export async function triggerAutoBackup(): Promise<void> {
   // Prevent concurrent backups
   if (get(isAutoBackingUp)) {
     return;
@@ -163,7 +163,7 @@ async function triggerAutoBackup(): Promise<void> {
   try {
     console.log('[BackupScheduler] Triggering automatic backup...');
 
-    const backup = await createBackup();
+    const backup = await createBatchedBackup();
     downloadBackup(backup);
 
     // Record the backup

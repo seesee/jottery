@@ -14,6 +14,7 @@
   import { isMobileTouchDevice } from '../utils/device';
   import { setTitleTag } from '../utils/noteTitle';
   import ColorPickerModal from './ColorPickerModal.svelte';
+  import { reloadNotesAfterConflict } from '../stores/storeHelpers';
   import type { DecryptedNote, KeyboardShortcut } from '../types';
   import {
     VIRTUAL_SCROLL_ESTIMATED_ITEM_HEIGHT,
@@ -96,6 +97,9 @@
   function handleConflictResolved() {
     // Refresh conflict list and notes
     loadConflictNotes();
+    if (conflictNoteId) {
+      void reloadNotesAfterConflict(conflictNoteId, $settings.sortOrder);
+    }
   }
 
   // Auto-trigger conflict resolution when selecting a conflicted note
@@ -445,7 +449,7 @@
   async function reloadNotes() {
     // Reload notes after deletion
     try {
-      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      const allNotes = await noteService.getNotesForList($settings.sortOrder);
       notes.set(allNotes);
     } catch (error) {
       console.error('Failed to reload notes:', error);

@@ -46,6 +46,23 @@
     "confirmTitle": "로그아웃 확인",
     "confirmMessage": "로그아웃하시겠습니까?"
   },
+  "errors": {
+    "unknown": "문제가 발생했습니다. 다시 시도해 주세요.",
+    "network": "서버에 연결할 수 없습니다. 연결을 확인하고 다시 시도해 주세요.",
+    "forbidden": "이 작업을 수행할 권한이 없습니다.",
+    "wrongPassword": "현재 비밀번호가 올바르지 않습니다",
+    "rateLimited": "시도 횟수가 너무 많습니다. {seconds}초 후에 다시 시도해 주세요.",
+    "tooManyAttempts": "시도 횟수가 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+    "passwordTooShort": "새 비밀번호는 최소 12자 이상이어야 합니다",
+    "passwordSameAsCurrent": "새 비밀번호는 현재 비밀번호와 달라야 합니다"
+  },
+  "session": {
+    "expired": "세션이 만료되었습니다. 다시 로그인해 주세요."
+  },
+  "forcedPasswordChange": {
+    "title": "비밀번호를 변경하세요",
+    "description": "계속하려면 새 비밀번호를 설정해야 합니다. 비밀번호는 12자 이상이어야 합니다."
+  },
   "dashboard": {
     "title": "대시보드",
     "loadingStats": "통계 로딩 중...",
@@ -248,6 +265,7 @@
       "errors": {
         "invalidCredentials": "이메일 또는 비밀번호가 올바르지 않습니다",
         "accountInactive": "계정이 비활성화되었습니다. 관리자에게 문의하세요.",
+        "accountPending": "계정이 관리자의 승인을 기다리고 있습니다.",
         "unexpected": "예기치 않은 오류가 발생했습니다",
         "statusCheckFailed": "Failed to check status. Please try again."
       },

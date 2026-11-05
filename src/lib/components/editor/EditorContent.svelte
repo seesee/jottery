@@ -5,6 +5,7 @@
   import OutlinerEditor from '../OutlinerEditor.svelte';
   import WysiwygToolbar from './WysiwygToolbar.svelte';
   import TagInput from '../TagInput.svelte';
+  import { buildSandboxedPreview } from '../../utils/markdownPreview';
   import type { CodeEditorRef, WysiwygEditorRef } from '../../types';
 
   // State props
@@ -44,7 +45,7 @@
   // Preview HTML
   export let previewHtml: string;
 
-  // Use iframe for HTML/XML preview (allows scripts to run)
+  // Use iframe for HTML/XML preview (a sandboxed, static render)
   export let useIframePreview: boolean = false;
 
   // Raw content for iframe preview
@@ -206,13 +207,15 @@
   <!-- Preview Panel - Only shown when IN preview mode -->
   {#if showPreview && canPreview}
     {#if useIframePreview}
-      <!-- Iframe-based preview for HTML/XML (allows scripts to run safely) -->
+      <!-- Iframe-based preview for HTML/XML. The empty sandbox denies everything:
+           the language and preview flags are plaintext a sync server can set, so
+           selecting a note must never run what's in it. -->
       <div class="h-full w-full bg-white">
         <iframe
-          srcdoc={rawContent}
+          srcdoc={buildSandboxedPreview(rawContent)}
           title="HTML Preview"
           class="w-full h-full border-0"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-modals allow-popups"
+          sandbox=""
         ></iframe>
       </div>
     {:else}
