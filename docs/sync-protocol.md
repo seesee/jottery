@@ -301,6 +301,8 @@ GET /api/v1/sync/events?token=<token>
 
 A Server-Sent Events stream. An event named `sync` with data `pull` means another of the user's devices changed something, so pull. The device that made the change isn't told. Heartbeats arrive every 30 seconds.
 
+A token can be used to reconnect for as long as it's valid, but only while the device and its account are. Otherwise connecting gets 401, and a stream that's already open ends within a minute. Ask for a new token after a 401: that request says why, with the usual 401 or 403.
+
 ### Wrapped master key
 
 ```

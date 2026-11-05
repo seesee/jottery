@@ -174,6 +174,7 @@ mod tests {
             max_tag_length: 100,
             max_tags_per_note: 50,
             enforce_storage_quota: false,
+            sse_recheck_secs: 60,
         }
     }
 
@@ -186,6 +187,7 @@ mod tests {
             max_tag_length: 5,
             max_tags_per_note: 3,
             enforce_storage_quota: false,
+            sse_recheck_secs: 60,
             ..test_config()
         }
     }

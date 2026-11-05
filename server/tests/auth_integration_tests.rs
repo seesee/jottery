@@ -63,6 +63,7 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
         max_tag_length: 100,
         max_tags_per_note: 50,
         enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -162,6 +163,7 @@ async fn test_user_registration_duplicate_email() {
         max_tag_length: 100,
         max_tags_per_note: 50,
         enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
