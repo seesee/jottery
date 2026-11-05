@@ -1,8 +1,10 @@
-import { describe, test, expect, beforeEach } from 'vitest';
+import { describe, test, it, expect, beforeEach } from 'vitest';
 import * as savedSearchRepository from './savedSearchRepository';
 import { initDB, getDB, STORES } from './db';
 import { initTestDB } from '../../test/db-utils';
 import { keyManager } from './keyManager';
+import { cryptoService } from './crypto';
+import type { SavedSearch } from '../types';
 
 describe('savedSearchRepository', () => {
   let masterKey: CryptoKey;
@@ -407,7 +409,7 @@ describe('savedSearchRepository', () => {
       expect(retrieved?.query).toBe('test query');
     });
 
-    test('should handle legacy unencrypted data', async () => {
+    test('should read legacy unencrypted data once it has been migrated', async () => {
       // Manually insert unencrypted data (simulating old data)
       const db = await getDB();
       const legacySearch = {
@@ -423,7 +425,8 @@ describe('savedSearchRepository', () => {
       };
       await db.put(STORES.SAVED_SEARCHES, legacySearch);
 
-      // Should read legacy data without errors
+      await savedSearchRepository.encryptLegacyRows();
+
       const retrieved = await savedSearchRepository.getById('legacy-1');
       expect(retrieved?.name).toBe('Legacy Search');
       expect(retrieved?.query).toBe('legacy query');
@@ -491,6 +494,181 @@ describe('savedSearchRepository', () => {
         keyBytes: new Uint8Array(32),
         derivedAt: Date.now(),
       });
+    });
+  });
+});
+
+describe('saved search encryption at rest', () => {
+  let key: CryptoKey;
+
+  beforeEach(async () => {
+    key = (await initTestDB()).masterKey;
+    keyManager.setMasterKey({ key, keyBytes: new Uint8Array(32), derivedAt: Date.now() });
+    await getDB().clear(STORES.SAVED_SEARCHES);
+  });
+
+  async function storedRow(id: string): Promise<SavedSearch> {
+    return await getDB().get(STORES.SAVED_SEARCHES, id) as SavedSearch;
+  }
+
+  async function putRow(overrides: Partial<SavedSearch>): Promise<SavedSearch> {
+    const row: SavedSearch = {
+      id: 'c0000000-0000-4000-8000-000000000001',
+      name: 'plain name',
+      query: 'plain query',
+      order: 1,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      modifiedAt: '2026-01-01T00:00:00.000Z',
+      deleted: false,
+      version: 1,
+      needsSync: false,
+      ...overrides,
+    };
+    await getDB().put(STORES.SAVED_SEARCHES, row);
+    return row;
+  }
+
+  function isCiphertext(value: string): boolean {
+    const parsed = JSON.parse(value);
+    return typeof parsed.ciphertext === 'string' && typeof parsed.iv === 'string';
+  }
+
+  describe('markSynced', () => {
+    it('leaves the stored name and query encrypted', async () => {
+      const created = await savedSearchRepository.create('Secret name', 'secret query');
+      const before = await storedRow(created.id);
+
+      await savedSearchRepository.markSynced(created.id);
+
+      const after = await storedRow(created.id);
+      expect(after.name).toBe(before.name);
+      expect(after.query).toBe(before.query);
+      expect(after.needsSync).toBe(false);
+      expect(after.syncedAt).toBeDefined();
+    });
+
+    it('never sends plaintext after a sync followed by a reorder', async () => {
+      const created = await savedSearchRepository.create('Secret name', 'secret query');
+      await savedSearchRepository.markSynced(created.id);
+
+      await savedSearchRepository.reorder([created.id]);
+
+      const [row] = await savedSearchRepository.getAllNeedingSync();
+      expect(isCiphertext(row.name)).toBe(true);
+      expect(isCiphertext(row.query)).toBe(true);
+    });
+
+    it('never sends plaintext after a sync followed by a soft delete', async () => {
+      const created = await savedSearchRepository.create('Secret name', 'secret query');
+      await savedSearchRepository.markSynced(created.id);
+
+      await savedSearchRepository.softDelete(created.id);
+
+      const [row] = await savedSearchRepository.getAllNeedingSync();
+      expect(isCiphertext(row.name)).toBe(true);
+    });
+
+    it('keeps an edit made while the push was in flight', async () => {
+      const created = await savedSearchRepository.create('Name', 'query');
+      const pushed = await storedRow(created.id);
+      await savedSearchRepository.update(created.id, { name: 'Edited' });
+
+      await savedSearchRepository.markSynced(created.id, pushed.version);
+
+      expect((await storedRow(created.id)).needsSync).toBe(true);
+    });
+
+    it('clears needsSync when the pushed version is still current', async () => {
+      const created = await savedSearchRepository.create('Name', 'query');
+      const pushed = await storedRow(created.id);
+
+      await savedSearchRepository.markSynced(created.id, pushed.version);
+
+      expect((await storedRow(created.id)).needsSync).toBe(false);
+    });
+  });
+
+  describe('encryptLegacyRows', () => {
+    it('encrypts plaintext rows and queues them, so the server copy is replaced', async () => {
+      const row = await putRow({ name: 'Old name', query: 'old query' });
+
+      expect(await savedSearchRepository.encryptLegacyRows()).toBe(1);
+
+      const stored = await storedRow(row.id);
+      expect(isCiphertext(stored.name)).toBe(true);
+      expect(isCiphertext(stored.query)).toBe(true);
+      expect(stored.needsSync).toBe(true);
+      expect(stored.modifiedAt > row.modifiedAt).toBe(true);
+
+      const [read] = await savedSearchRepository.getAll();
+      expect(read.name).toBe('Old name');
+      expect(read.query).toBe('old query');
+    });
+
+    it('handles a row where only one field is plaintext', async () => {
+      const encryptedName = JSON.stringify(await cryptoService.encryptText('Name', key));
+      const row = await putRow({ name: encryptedName, query: 'old query' });
+
+      await savedSearchRepository.encryptLegacyRows();
+
+      const stored = await storedRow(row.id);
+      expect(stored.name).toBe(encryptedName);
+      expect(isCiphertext(stored.query)).toBe(true);
+    });
+
+    it('treats a plaintext query that happens to be valid JSON as plaintext', async () => {
+      const row = await putRow({ query: '123' });
+
+      await savedSearchRepository.encryptLegacyRows();
+
+      expect(isCiphertext((await storedRow(row.id)).query)).toBe(true);
+    });
+
+    it('leaves encrypted rows alone', async () => {
+      const created = await savedSearchRepository.create('Name', 'query');
+      await savedSearchRepository.markSynced(created.id);
+      const before = await storedRow(created.id);
+
+      expect(await savedSearchRepository.encryptLegacyRows()).toBe(0);
+
+      expect(await storedRow(created.id)).toEqual(before);
+    });
+  });
+
+  describe('reading a row that will not decrypt', () => {
+    it('never shows a plaintext value', async () => {
+      await putRow({ name: 'planted by a server', query: 'planted query' });
+
+      const [read] = await savedSearchRepository.getAll();
+
+      expect(read.name).not.toContain('planted');
+      expect(read.query).not.toContain('planted');
+    });
+
+    it('never shows ciphertext from another key', async () => {
+      const otherKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+      const name = JSON.stringify(await cryptoService.encryptText('other', otherKey));
+      await putRow({ name, query: name });
+
+      const [read] = await savedSearchRepository.getAll();
+
+      expect(read.name).not.toBe(name);
+    });
+  });
+
+  describe('isReadable', () => {
+    it('accepts a row this vault encrypted', async () => {
+      const created = await savedSearchRepository.create('Name', 'query');
+      expect(await savedSearchRepository.isReadable(await storedRow(created.id))).toBe(true);
+    });
+
+    it('refuses plaintext', async () => {
+      expect(await savedSearchRepository.isReadable(await putRow({}))).toBe(false);
+    });
+
+    it('refuses a row with only one good field', async () => {
+      const name = JSON.stringify(await cryptoService.encryptText('Name', key));
+      expect(await savedSearchRepository.isReadable(await putRow({ name }))).toBe(false);
     });
   });
 });

@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(*) FROM attachments_meta m\n         WHERE m.user_id = ?1 AND EXISTS (\n             SELECT 1 FROM note_attachments na\n             JOIN notes n ON n.id = na.note_id AND n.user_id = na.user_id\n             WHERE na.user_id = ?1 AND na.attachment_id = m.attachment_id AND n.deleted = 0\n         )",
+  "describe": {
+    "columns": [
+      {
+        "name": "COUNT(*)",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "fd68a79e256f5723411fa8a478fc38ec27ffc0b7e12e892ae60680dc5ab6e105"
+}

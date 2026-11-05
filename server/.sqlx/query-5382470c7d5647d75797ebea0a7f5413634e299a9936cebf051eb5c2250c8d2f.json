@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT m.id AS \"blob_key!: String\", d.id AS \"existing_blob: String\"\n               FROM attachments_meta m\n               LEFT JOIN attachments_data d ON d.id = m.id\n               WHERE m.user_id = ? AND m.attachment_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "blob_key!: String",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "existing_blob: String",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "5382470c7d5647d75797ebea0a7f5413634e299a9936cebf051eb5c2250c8d2f"
+}

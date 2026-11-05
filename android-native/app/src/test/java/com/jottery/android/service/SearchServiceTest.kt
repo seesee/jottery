@@ -235,4 +235,31 @@ class SearchServiceTest {
         color = color,
         needsSync = false,
     )
+
+    @Test fun `a before date includes that day`() {
+        val zone = java.time.ZoneId.systemDefault()
+        val lastThing = java.time.LocalDate.parse("2024-06-30").plusDays(1).atStartOfDay(zone).toInstant().minusSeconds(1)
+        val nextDay = lastThing.plusSeconds(2)
+        val onTheDay = makeNote(content = "a", createdAt = lastThing)
+        val after = makeNote(content = "b", createdAt = nextDay)
+
+        assertEquals(listOf(onTheDay), SearchService.filter(listOf(onTheDay, after), "created:<2024-06-30").notes)
+    }
+
+    @Test fun `archived finds only archived notes, in either list`() {
+        val note = makeNote(content = "plain")
+        val archived = makeNote(content = "kept").copy(archived = true)
+
+        assertEquals(listOf(archived), SearchService.filter(listOf(note, archived), "archived").notes)
+        assertEquals(listOf(archived), SearchService.filter(listOf(note, archived), "archived:true").notes)
+        assertTrue(SearchService.searchesArchive("kept archived"))
+        assertFalse(SearchService.searchesArchive("the archived-box"))
+    }
+
+    @Test fun `colour qualifiers aren't searched for as text`() {
+        val red = makeNote(content = "no such word", color = "red")
+
+        assertEquals(listOf(red), SearchService.filter(listOf(red), "color:red note").notes)
+        assertTrue("this client has no tag colours", SearchService.filter(listOf(red), "color:red tag").notes.isEmpty())
+    }
 }

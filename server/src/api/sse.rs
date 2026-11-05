@@ -78,45 +78,8 @@ pub async fn get_sse_token(
 
     let api_key = &auth_header[7..]; // Remove "Bearer " prefix
 
-    // Hash the API key
-    let hashed_key = hash_sha256(api_key);
-
-    tracing::debug!(
-        "SSE token request: api_key_len={}, hashed_key={}",
-        api_key.len(),
-        &hashed_key[..16]
-    );
-
-    // Look up client in database
-    let client = sqlx::query!(
-        "SELECT id, user_id, is_active FROM clients WHERE api_key = ?",
-        hashed_key
-    )
-    .fetch_optional(&state.pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Database error during SSE token request: {}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
-
-    let client = match client {
-        Some(c) if c.is_active == Some(1) => c,
-        Some(c) => {
-            tracing::warn!(
-                "SSE token request with inactive API key: client_id={}, is_active={:?}",
-                c.id,
-                c.is_active
-            );
-            return Err(StatusCode::UNAUTHORIZED);
-        }
-        None => {
-            tracing::warn!(
-                "SSE token request with unknown API key: hashed_prefix={}",
-                &hashed_key[..16]
-            );
-            return Err(StatusCode::UNAUTHORIZED);
-        }
-    };
+    // The same rules as every other device request
+    let client = crate::api::middleware::authenticate_device(&state.pool, api_key).await?;
 
     // Generate a random token
     let token = uuid::Uuid::new_v4().to_string();
@@ -143,14 +106,14 @@ pub async fn get_sse_token(
             token_hash,
             SseTokenInfo {
                 user_id: client.user_id.clone(),
-                client_id: client.id.clone(),
+                client_id: client.client_id.clone(),
                 expires_at,
             },
         );
 
         tracing::debug!(
             "SSE token issued for client {} (user {}), expires in {}s, store size: {}",
-            client.id,
+            client.client_id,
             client.user_id,
             SSE_TOKEN_VALIDITY_SECS,
             store.len()

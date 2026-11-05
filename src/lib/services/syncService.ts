@@ -13,7 +13,7 @@ import type {
   SyncRejected,
   SyncAccepted,
 } from '../types';
-import type { AttachmentWarning } from '../types';
+import type { AttachmentWarning, InboxItem } from '../types';
 import { syncRepository } from './syncRepository';
 import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
@@ -27,10 +27,19 @@ import { noteService } from './noteService';
 import { storeConflict } from './conflictService';
 import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/base64';
 import { searchService } from './searchService';
-import { notes, settings, isSyncRefreshing, isSyncing as isSyncingStore, syncProgress, inboxItems } from '../stores/appStore';
+import { notes, remoteNoteUpdate, settings, isSyncRefreshing, isSyncing as isSyncingStore, syncProgress, inboxItems } from '../stores/appStore';
 import { toast } from '../utils/toast.svelte';
 import { createSyncRecoveryNote, deleteSyncRecoveryNote } from './syncRecoveryService';
-import { reportServerMissingAttachments } from './vaultHealthService';
+import { recordRejectedRemoteRecord, reportServerMissingAttachments } from './vaultHealthService';
+import {
+  isTimestamp,
+  isUuid,
+  validateConflict,
+  validateInboxItem,
+  validateRemoteNote,
+  validateRemoteVersion,
+  validateSavedSearch,
+} from './syncValidation';
 import { isDBAvailable, wasDBTerminated } from './db';
 import { SYNC_PUSH_BATCH_SIZE, SYNC_PULL_BATCH_SIZE, SYNC_AUTO_INTERVAL_MINUTES } from '../constants';
 import {
@@ -53,6 +62,8 @@ class SyncService {
   private autoSyncTimer?: number;
   private backgroundSyncTimer?: number;
   private eventSource: EventSource | null = null;
+  /** Notes the last pull changed, for telling the open editor */
+  private pulledNoteIds: string[] = [];
   private sseReconnectAttempts = 0;
   private maxSseReconnectAttempts = 5;
   private sseReconnectDelay = 1000; // Start with 1 second
@@ -334,13 +345,16 @@ class SyncService {
         isSyncRefreshing.set(true);
 
         // Get all notes from database (already decrypted and sorted)
-        const allNotes = await noteService.getAllNotes(sortOrder);
+        const allNotes = await noteService.getNotesForList(sortOrder);
 
         // Replace store with properly sorted notes from database
         notes.set(allNotes);
 
         // Rebuild search index with all notes
         searchService.indexNotes(allNotes);
+
+        // After the store, so the editor reloads from the new copy
+        remoteNoteUpdate.set({ ids: this.pulledNoteIds });
 
         console.log('[SyncService] Notes refreshed after pull:', allNotes.length);
 
@@ -351,7 +365,7 @@ class SyncService {
         let settingsSnapshot: { sortOrder?: string } = {};
         settings.subscribe(s => settingsSnapshot = s)();
         const sortOrder = (settingsSnapshot.sortOrder ?? 'recent') as 'recent' | 'oldest' | 'alpha' | 'created';
-        const allNotes = await noteService.getAllNotes(sortOrder);
+        const allNotes = await noteService.getNotesForList(sortOrder);
         notes.set(allNotes);
         console.log('[SyncService] Pushed', pushedCount, 'notes, refreshed store');
       } else {
@@ -503,11 +517,22 @@ class SyncService {
     }));
   }
 
+  /**
+   * Whether a note is exactly as it was pushed. An edit saved while the request was
+   * in flight isn't on the server, so it must stay marked for the next sync.
+   */
+  private isUnchangedSincePush(note: Note, pushed: Note | undefined): boolean {
+    return pushed !== undefined
+      && note.modifiedAt === pushed.modifiedAt
+      && note.contentHash === pushed.contentHash;
+  }
+
   /** Process notes accepted by server during push */
-  private async processAcceptedNotes(accepted: SyncAccepted[]): Promise<void> {
+  private async processAcceptedNotes(accepted: SyncAccepted[], pushedNotes: Map<string, Note>): Promise<void> {
     for (const item of accepted) {
-      const syncedAt = item.syncedAt ?? new Date().toISOString();
-      const serverVersion = item.serverVersion ?? 1;
+      if (!isUuid(item?.id)) continue;
+      const syncedAt = isTimestamp(item.syncedAt) ? item.syncedAt : new Date().toISOString();
+      const serverVersion = typeof item.serverVersion === 'number' ? item.serverVersion : 1;
 
       await syncRepository.updateNoteSyncMetadata(item.id, {
         noteId: item.id,
@@ -519,16 +544,26 @@ class SyncService {
       const note = await noteRepository.getById(item.id);
       if (note) {
         note.syncedAt = syncedAt;
-        note.needsSync = false;
+        if (this.isUnchangedSincePush(note, pushedNotes.get(item.id))) {
+          note.needsSync = false;
+        }
         await noteRepository.update(note, false, true);
       }
     }
   }
 
   /** Process notes rejected by server during push (conflicts) */
-  private async processRejectedNotes(rejected: SyncRejected[]): Promise<void> {
-    for (const item of rejected) {
-      console.warn(`[SyncService] Note ${item.id} rejected: ${item.reason}`);
+  private async processRejectedNotes(rejected: SyncRejected[], pushedNotes: Map<string, Note>): Promise<void> {
+    for (const candidate of rejected) {
+      const validated = validateConflict(candidate);
+      if (!validated.ok) {
+        // needsSync stays set, so the note is offered again on the next sync
+        recordRejectedRemoteRecord('conflict', candidate?.id, validated.reason);
+        continue;
+      }
+
+      const item = validated.value;
+      console.warn(`[SyncService] Note ${item.id} rejected by the server`);
       await storeConflict(item.id, {
         serverContent: item.serverContent,
         serverTags: item.serverTags,
@@ -550,7 +585,7 @@ class SyncService {
 
       // Clear needsSync flag to prevent infinite retry loop
       const note = await noteRepository.getById(item.id);
-      if (note) {
+      if (note && this.isUnchangedSincePush(note, pushedNotes.get(item.id))) {
         note.needsSync = false;
         await noteRepository.update(note, false, true);
       }
@@ -618,8 +653,9 @@ class SyncService {
 
     // Send to server and process results
     const result = await pushToServer(endpoint, apiKey, pushRequest);
-    await this.processAcceptedNotes(result.accepted);
-    await this.processRejectedNotes(result.rejected);
+    const pushedNotes = new Map(batchNotes.map(note => [note.id, note]));
+    await this.processAcceptedNotes(result.accepted, pushedNotes);
+    await this.processRejectedNotes(result.rejected, pushedNotes);
     const warnings = result.attachmentWarnings ?? [];
 
     // Update progress
@@ -629,7 +665,7 @@ class SyncService {
     if (batchIndex === 0) {
       if (savedSearchesForPush.length > 0) {
         for (const search of savedSearchesForPush) {
-          await savedSearchRepository.markSynced(search.id);
+          await savedSearchRepository.markSynced(search.id, search.version);
         }
         console.log(`[SyncService] Marked ${savedSearchesForPush.length} saved searches as synced`);
       }
@@ -709,7 +745,7 @@ class SyncService {
 
     for (const warning of warnings) {
       const missingHere: string[] = [];
-      for (const attachmentId of warning.attachmentIds) {
+      for (const attachmentId of warning.attachmentIds.filter(isUuid)) {
         const blob = await attachmentRepository.getBlob(attachmentId);
         if (blob) {
           repairAttachments.push({ id: attachmentId, data: arrayBufferToBase64(blob) });
@@ -719,7 +755,7 @@ class SyncService {
           console.warn(`[SyncService] Server is missing attachment ${attachmentId} (note ${warning.noteId}) and it is not on this device`);
         }
       }
-      if (missingHere.length > 0) {
+      if (missingHere.length > 0 && isUuid(warning.noteId)) {
         unhealable.push({ noteId: warning.noteId, attachmentIds: missingHere });
       }
     }
@@ -754,10 +790,18 @@ class SyncService {
 
   /** Process a single remote note during pull (handles conflicts) */
   private async processRemoteNote(
-    remoteNote: SyncNote,
+    candidate: SyncNote,
     masterKey: CryptoKey,
     syncedAt: string
   ): Promise<boolean> {
+    const validated = validateRemoteNote(candidate);
+    if (!validated.ok) {
+      recordRejectedRemoteRecord('note', candidate?.id, validated.reason);
+      return false;
+    }
+
+    const remoteNote = validated.value;
+    const localNote = await noteRepository.getById(remoteNote.id);
     const tagsForStorage = await syncToStorage(remoteNote.tags, masterKey);
     const noteForStorage: Note = {
       id: remoteNote.id,
@@ -776,7 +820,10 @@ class SyncService {
       version: remoteNote.version,
       wordWrap: remoteNote.wordWrap,
       syntaxLanguage: remoteNote.syntaxLanguage,
-      showPreview: remoteNote.showPreview,
+      // Whether a note opens in preview stays with this device. The field is
+      // plaintext, so taking it from the server would let the server choose to
+      // render a note the moment it is selected.
+      showPreview: localNote?.showPreview ?? false,
       color: remoteNote.color,
       syncedAt,
       needsSync: false,
@@ -785,8 +832,6 @@ class SyncService {
       parentHash: remoteNote.parentHash,
       hashChain: remoteNote.hashChain,
     };
-
-    const localNote = await noteRepository.getById(remoteNote.id);
 
     if (!localNote) {
       // New note from server
@@ -810,9 +855,15 @@ class SyncService {
       if (localNote.contentHash === remoteNote.parentHash) {
         isFastForward = true;
       }
-      // Case 2: Same content hash -> identical, no-op
+      // Case 2: Same content hash. The text is the same, but state can still differ:
+      // deleted isn't part of the hash, and not every client recomputes it for a pin
+      // or an attachment. A note with unsent changes pushes its own state instead.
       else if (localNote.contentHash === remoteNote.contentHash) {
-        return false; // No change needed
+        if (localNote.needsSync || !this.hasRemoteStateChange(localNote, remoteNote)) {
+          return false;
+        }
+        noteForStorage.attachments = this.mergedAttachments(localNote, remoteNote);
+        isFastForward = true;
       }
       // Case 3: Local has unsaved changes and hashes diverged
       else if (localNote.needsSync) {
@@ -827,8 +878,10 @@ class SyncService {
       else if (remoteNote.parentHash && localNote.hashChain?.includes(remoteNote.parentHash)) {
         return false; // Local is ahead, no update needed
       }
-      // Case 5: Check if local parent exists in remote chain (can fast-forward)
-      else if (localNote.contentHash && remoteNote.hashChain?.includes(localNote.contentHash)) {
+      // Case 5: The histories can't be related, typically because the local hash has
+      // aged out of a long remote chain. Nothing here is unsent (that's case 3), so
+      // the server's copy is the newer one.
+      else {
         isFastForward = true;
       }
     } else {
@@ -883,9 +936,42 @@ class SyncService {
     return false; // Local is newer or equal
   }
 
+  /**
+   * Whether the remote copy differs in anything apart from the text. showPreview is
+   * left out, because it stays with each device.
+   */
+  private hasRemoteStateChange(local: Note, remote: SyncNote): boolean {
+    const localAttachments = new Set(local.attachments.map(attachment => attachment.id));
+
+    return local.pinned !== remote.pinned
+      || !!local.archived !== !!remote.archived
+      || !!local.locked !== !!remote.locked
+      || !!local.deleted !== !!remote.deleted
+      || (local.color ?? null) !== (remote.color ?? null)
+      || (local.wordWrap ?? true) !== (remote.wordWrap ?? true)
+      || (local.syntaxLanguage ?? null) !== (remote.syntaxLanguage ?? null)
+      || remote.attachments.some(attachment => !localAttachments.has(attachment.id));
+  }
+
+  /**
+   * Local attachments plus any new remote ones. A shorter remote list isn't a removal:
+   * some clients send empty lists by mistake, and the server can return a note
+   * without an attachment it holds. When the text changes, the remote list is taken
+   * as it is.
+   */
+  private mergedAttachments(local: Note, remote: SyncNote): Note['attachments'] {
+    const localAttachments = new Set(local.attachments.map(attachment => attachment.id));
+    return [...local.attachments, ...remote.attachments.filter(attachment => !localAttachments.has(attachment.id))];
+  }
+
   /** Download attachments from server */
   private async downloadAttachments(attachments: Array<{ id: string; data: string }>): Promise<void> {
     for (const attachment of attachments) {
+      if (!isUuid(attachment?.id) || typeof attachment.data !== 'string') {
+        recordRejectedRemoteRecord('attachment', attachment?.id, 'invalid attachment');
+        continue;
+      }
+
       try {
         const blob = base64ToArrayBuffer(attachment.data);
         await attachmentRepository.storeBlob(attachment.id, blob);
@@ -897,7 +983,14 @@ class SyncService {
 
   /** Merge note versions from server */
   private async mergeVersionsFromServer(versions: SyncNoteVersion[]): Promise<void> {
-    for (const serverVersion of versions) {
+    for (const candidate of versions) {
+      const validated = validateRemoteVersion(candidate);
+      if (!validated.ok) {
+        recordRejectedRemoteRecord('version', candidate?.noteId, validated.reason);
+        continue;
+      }
+
+      const serverVersion = validated.value;
       const existingVersion = await versionRepository.getVersion(
         serverVersion.noteId,
         serverVersion.version
@@ -913,7 +1006,6 @@ class SyncService {
             version: serverVersion.version,
             syntaxLanguage: serverVersion.syntaxLanguage,
             wordWrap: serverVersion.wordWrap,
-            showPreview: serverVersion.showPreview,
             createdAt: serverVersion.createdAt,
             modifiedAt: serverVersion.createdAt,
             pinned: false,
@@ -939,8 +1031,22 @@ class SyncService {
     const { getDB, STORES } = await import('./db');
     const db = getDB();
 
-    for (const remoteSearch of savedSearches) {
-      const localSearch = await savedSearchRepository.getById(remoteSearch.id);
+    for (const candidate of savedSearches) {
+      const validated = validateSavedSearch(candidate);
+      if (!validated.ok) {
+        recordRejectedRemoteRecord('savedSearch', candidate?.id, validated.reason);
+        continue;
+      }
+
+      const remoteSearch = validated.value;
+      const localSearch = await savedSearchRepository.getStoredById(remoteSearch.id);
+
+      // A live row has to decrypt. A deleted one is never shown, and older clients
+      // pushed some as plaintext, so a deletion is applied whatever the row holds.
+      if (!remoteSearch.deleted && !(await savedSearchRepository.isReadable(remoteSearch))) {
+        recordRejectedRemoteRecord('savedSearch', remoteSearch.id, 'unreadable');
+        continue;
+      }
 
       if (!localSearch || remoteSearch.modifiedAt > localSearch.modifiedAt) {
         await db.put(STORES.SAVED_SEARCHES, {
@@ -961,9 +1067,28 @@ class SyncService {
     console.log(`[SyncService] Processed ${savedSearches.length} saved searches from server`);
   }
 
+  /** Inbox items that are safe to show, reporting any that are not */
+  private validInboxItems(items: InboxItem[]): InboxItem[] {
+    const valid: InboxItem[] = [];
+    for (const item of items) {
+      const checked = validateInboxItem(item);
+      if (checked) {
+        valid.push(checked);
+      } else {
+        recordRejectedRemoteRecord('inboxItem', item?.id, 'invalid inbox item');
+      }
+    }
+    return valid;
+  }
+
   /** Process hard deletions from server */
   private async processRemoteDeletions(deletions: Array<{ id: string }>): Promise<void> {
     for (const deletion of deletions) {
+      if (!isUuid(deletion?.id)) {
+        recordRejectedRemoteRecord('deletion', deletion?.id, 'invalid id');
+        continue;
+      }
+
       const wasDeleted = await noteRepository.applyRemoteDeletion(deletion.id);
       if (wasDeleted) {
         console.log(`[SyncService] Hard deleted note ${deletion.id} (from server)`);
@@ -984,6 +1109,8 @@ class SyncService {
     if (!masterKey) {
       throw new Error('Application is locked');
     }
+
+    this.pulledNoteIds = [];
 
     let offset = 0;
     let hasMore = true;
@@ -1006,7 +1133,7 @@ class SyncService {
       };
 
       const result = await pullFromServer(endpoint, apiKey, pullRequest);
-      const syncedAt = result.syncedAt ?? new Date().toISOString();
+      const syncedAt = isTimestamp(result.syncedAt) ? result.syncedAt : new Date().toISOString();
 
       // Update pagination state
       hasMore = result.hasMore ?? false;
@@ -1030,7 +1157,10 @@ class SyncService {
       let processedInBatch = 0;
       for (const remoteNote of result.notes) {
         const wasChanged = await this.processRemoteNote(remoteNote, masterKey.key, syncedAt);
-        if (wasChanged) totalNotes++;
+        if (wasChanged) {
+          totalNotes++;
+          this.pulledNoteIds.push(remoteNote.id);
+        }
         processedInBatch++;
 
         // Update progress every 10 notes to avoid too many store updates
@@ -1057,7 +1187,7 @@ class SyncService {
 
       // Update inbox items from pull response
       if (result.inboxItems && result.inboxItems.length > 0) {
-        inboxItems.set(result.inboxItems);
+        inboxItems.set(this.validInboxItems(result.inboxItems));
       } else if (offset === 0) {
         // Only clear on first page (full sync) — subsequent pages don't repeat inbox
         inboxItems.set([]);

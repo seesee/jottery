@@ -1,0 +1,418 @@
+{
+  "description": "Expected results for the search query syntax documented in CLAUDE.md. The web client runs this from src/lib/services/searchService.query.test.ts. Each client should run the same cases, so that a saved search means the same thing everywhere.",
+  "rules": [
+    "Matching ignores case. A plain word or *word* matches anywhere in the note's content or tags, including inside a longer word.",
+    "word* and *word match the start and end of a word. Words are split on whitespace and punctuation.",
+    "A quoted phrase matches those characters in that order. An unclosed quote runs to the end of the query.",
+    "#tag matches any tag containing that text. Terms next to each other are ANDed.",
+    "| joins the terms on either side into a group where any one may match, with or without spaces around it. A group can mix tags and text. Groups are ANDed with everything else.",
+    "-word and -\"a phrase\" exclude notes whose content contains that text. -#tag excludes notes with a matching tag. An exclusion is always ANDed, and ends a | group.",
+    "A lone -, # or * is an ordinary search for that character. A | with nothing on one side is ignored."
+  ],
+  "notes": [
+    {
+      "id": "fox-ordered",
+      "content": "The quick brown fox jumps",
+      "tags": [
+        "animals"
+      ]
+    },
+    {
+      "id": "fox-shuffled",
+      "content": "brown quick fox",
+      "tags": [
+        "animals",
+        "foxes"
+      ]
+    },
+    {
+      "id": "doghouse",
+      "content": "doghouse plans",
+      "tags": [
+        "work"
+      ]
+    },
+    {
+      "id": "hotdog",
+      "content": "a hotdog stand",
+      "tags": [
+        "food"
+      ]
+    },
+    {
+      "id": "dog-and-cat",
+      "content": "my dog and cat",
+      "tags": [
+        "animals",
+        "work"
+      ]
+    },
+    {
+      "id": "cat-only",
+      "content": "only a cat here",
+      "tags": [
+        "home"
+      ]
+    },
+    {
+      "id": "tag-alpha",
+      "content": "first plain note",
+      "tags": [
+        "alpha"
+      ]
+    },
+    {
+      "id": "tag-beta",
+      "content": "second plain note",
+      "tags": [
+        "beta"
+      ]
+    },
+    {
+      "id": "tag-both",
+      "content": "third plain note",
+      "tags": [
+        "alpha",
+        "beta"
+      ]
+    },
+    {
+      "id": "accents",
+      "content": "Un Café à ÉCLAIR",
+      "tags": [
+        "Pâtisserie"
+      ]
+    },
+    {
+      "id": "punctuation",
+      "content": "well-known (dogma), end. 100% * # -",
+      "tags": []
+    }
+  ],
+  "cases": [
+    {
+      "query": "dog",
+      "expected": [
+        "dog-and-cat",
+        "doghouse",
+        "hotdog",
+        "punctuation"
+      ]
+    },
+    {
+      "query": "DOG",
+      "expected": [
+        "dog-and-cat",
+        "doghouse",
+        "hotdog",
+        "punctuation"
+      ]
+    },
+    {
+      "query": "dog cat",
+      "expected": [
+        "dog-and-cat"
+      ]
+    },
+    {
+      "query": "dog | cat",
+      "expected": [
+        "cat-only",
+        "dog-and-cat",
+        "doghouse",
+        "hotdog",
+        "punctuation"
+      ]
+    },
+    {
+      "query": "dog|cat",
+      "expected": [
+        "cat-only",
+        "dog-and-cat",
+        "doghouse",
+        "hotdog",
+        "punctuation"
+      ]
+    },
+    {
+      "query": "hotdog | doghouse | cat",
+      "expected": [
+        "cat-only",
+        "dog-and-cat",
+        "doghouse",
+        "hotdog"
+      ]
+    },
+    {
+      "query": "my dog | hotdog",
+      "expected": [
+        "dog-and-cat"
+      ]
+    },
+    {
+      "query": "\"quick brown\"",
+      "expected": [
+        "fox-ordered"
+      ]
+    },
+    {
+      "query": "\"brown quick\"",
+      "expected": [
+        "fox-shuffled"
+      ]
+    },
+    {
+      "query": "\"quick brown",
+      "expected": [
+        "fox-ordered"
+      ]
+    },
+    {
+      "query": "\"quick brown\" | doghouse",
+      "expected": [
+        "doghouse",
+        "fox-ordered"
+      ]
+    },
+    {
+      "query": "dog*",
+      "expected": [
+        "dog-and-cat",
+        "doghouse",
+        "punctuation"
+      ]
+    },
+    {
+      "query": "*dog",
+      "expected": [
+        "dog-and-cat",
+        "hotdog"
+      ]
+    },
+    {
+      "query": "*dog*",
+      "expected": [
+        "dog-and-cat",
+        "doghouse",
+        "hotdog",
+        "punctuation"
+      ]
+    },
+    {
+      "query": "*og",
+      "expected": [
+        "dog-and-cat",
+        "hotdog"
+      ]
+    },
+    {
+      "query": "hot*",
+      "expected": [
+        "hotdog"
+      ]
+    },
+    {
+      "query": "*dog | *cat",
+      "expected": [
+        "cat-only",
+        "dog-and-cat",
+        "hotdog"
+      ]
+    },
+    {
+      "query": "known*",
+      "expected": [
+        "punctuation"
+      ]
+    },
+    {
+      "query": "#alpha",
+      "expected": [
+        "tag-alpha",
+        "tag-both"
+      ]
+    },
+    {
+      "query": "#alpha #beta",
+      "expected": [
+        "tag-both"
+      ]
+    },
+    {
+      "query": "#alpha | #beta",
+      "expected": [
+        "tag-alpha",
+        "tag-beta",
+        "tag-both"
+      ]
+    },
+    {
+      "query": "#alph",
+      "expected": [
+        "tag-alpha",
+        "tag-both"
+      ]
+    },
+    {
+      "query": "#work dog",
+      "expected": [
+        "dog-and-cat",
+        "doghouse"
+      ]
+    },
+    {
+      "query": "#work dog | cat",
+      "expected": [
+        "dog-and-cat",
+        "doghouse"
+      ]
+    },
+    {
+      "query": "#animals fox | #food",
+      "expected": [
+        "fox-ordered",
+        "fox-shuffled"
+      ]
+    },
+    {
+      "query": "#home | fox",
+      "expected": [
+        "cat-only",
+        "fox-ordered",
+        "fox-shuffled"
+      ]
+    },
+    {
+      "query": "#animals cat | #work",
+      "expected": [
+        "dog-and-cat"
+      ]
+    },
+    {
+      "query": "#alpha | doghouse",
+      "expected": [
+        "doghouse",
+        "tag-alpha",
+        "tag-both"
+      ]
+    },
+    {
+      "query": "animals",
+      "expected": [
+        "dog-and-cat",
+        "fox-ordered",
+        "fox-shuffled"
+      ]
+    },
+    {
+      "query": "dog -cat",
+      "expected": [
+        "doghouse",
+        "hotdog",
+        "punctuation"
+      ]
+    },
+    {
+      "query": "#animals dog -cat",
+      "expected": []
+    },
+    {
+      "query": "#animals -cat",
+      "expected": [
+        "fox-ordered",
+        "fox-shuffled"
+      ]
+    },
+    {
+      "query": "fox -\"quick brown\"",
+      "expected": [
+        "fox-shuffled"
+      ]
+    },
+    {
+      "query": "#animals -#foxes",
+      "expected": [
+        "dog-and-cat",
+        "fox-ordered"
+      ]
+    },
+    {
+      "query": "plain -#beta",
+      "expected": [
+        "tag-alpha"
+      ]
+    },
+    {
+      "query": "dog | -cat",
+      "expected": [
+        "doghouse",
+        "hotdog",
+        "punctuation"
+      ]
+    },
+    {
+      "query": "café",
+      "expected": [
+        "accents"
+      ]
+    },
+    {
+      "query": "CAFÉ",
+      "expected": [
+        "accents"
+      ]
+    },
+    {
+      "query": "éclair",
+      "expected": [
+        "accents"
+      ]
+    },
+    {
+      "query": "#pâtisserie",
+      "expected": [
+        "accents"
+      ]
+    },
+    {
+      "query": "dog |",
+      "expected": [
+        "dog-and-cat",
+        "doghouse",
+        "hotdog",
+        "punctuation"
+      ]
+    },
+    {
+      "query": "| dog",
+      "expected": [
+        "dog-and-cat",
+        "doghouse",
+        "hotdog",
+        "punctuation"
+      ]
+    },
+    {
+      "query": "*",
+      "expected": [
+        "punctuation"
+      ]
+    },
+    {
+      "query": "#",
+      "expected": [
+        "punctuation"
+      ]
+    },
+    {
+      "query": "-",
+      "expected": [
+        "punctuation"
+      ]
+    },
+    {
+      "query": "nothing-matches-this",
+      "expected": []
+    }
+  ]
+}

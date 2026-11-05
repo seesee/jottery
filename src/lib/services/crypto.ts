@@ -345,6 +345,22 @@ export function updateHashChain(
 }
 
 /**
+ * Record a change to a note in its hash chain, so other devices see a new version
+ * descending from the old one. Call this after any local change to a field the hash
+ * covers. It does nothing if the hash hasn't changed.
+ */
+export async function advanceContentHash(note: Note): Promise<void> {
+  const contentHash = await cryptoService.computeContentHash(note);
+  if (contentHash === note.contentHash) {
+    return;
+  }
+
+  note.hashChain = updateHashChain(contentHash, note.hashChain ?? []);
+  note.parentHash = note.contentHash ?? null;
+  note.contentHash = contentHash;
+}
+
+/**
  * Find the common ancestor hash between two hash chains.
  * Returns the first hash that appears in both chains.
  *

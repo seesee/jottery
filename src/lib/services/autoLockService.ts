@@ -15,7 +15,7 @@ import { get } from 'svelte/store';
 import { isLocked, settings as settingsStore } from '../stores/appStore';
 import { lock } from './initService';
 import { settingsRepository } from './settingsRepository';
-import { hasValidSession } from './sessionStorageService';
+import { hasStoredSession, hasValidSession } from './sessionStorageService';
 import { hasStoredPassword } from './passwordStorageService';
 
 let lastActivityTime: number = Date.now();
@@ -29,9 +29,12 @@ const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchs
  * Returns false when the feature is off — in that mode the sessionStorage
  * password isn't relevant, so there's nothing to expire.
  */
-function isPersistSessionExpired(): boolean {
+export function isPersistSessionExpired(): boolean {
   const { persistSession, persistSessionTimeout } = get(settingsStore);
   if (!persistSession) return false;
+  // Nothing stored isn't the same as expired. If the store failed, treating it as
+  // expired would lock on the first mouse move, before Settings could be reached.
+  if (!hasStoredSession()) return false;
   return !hasValidSession(persistSessionTimeout ?? 30);
 }
 

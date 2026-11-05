@@ -1,6 +1,10 @@
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{
+    extract::{ConnectInfo, State},
+    http::StatusCode,
+    Json,
+};
 use rand::Rng;
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 use uuid::Uuid;
 
 use crate::{
@@ -95,11 +99,14 @@ pub async fn register_device(
     // Validate device name
     validation::validate_device_name(&req.device_name, &state.config)?;
 
+    state.login_throttle.check(&req.email)?;
+
     // Get user by email
     let user = UserRepository::get_by_email(&state.pool, &req.email)
         .await
         .map_err(|_| {
             tracing::warn!("Device registration failed: user not found: {}", req.email);
+            state.login_throttle.record_failure(&req.email);
             crate::error::AppError::Unauthorized
         })?;
 
@@ -111,8 +118,10 @@ pub async fn register_device(
 
     if !password_valid {
         tracing::warn!("Device registration failed: invalid password for {}", req.email);
+        state.login_throttle.record_failure(&req.email);
         return Err(crate::error::AppError::Unauthorized);
     }
+    state.login_throttle.record_success(&req.email);
 
     // Check if user is approved
     if user.approved == 0 {
@@ -131,6 +140,12 @@ pub async fn register_device(
         return Err(crate::error::AppError::Forbidden(
             "Account deactivated".to_string(),
         ));
+    }
+
+    // A password that must be changed can't be used to enrol anything
+    if user.must_change_password != 0 {
+        tracing::warn!("Device registration refused: {} must change password", req.email);
+        return Err(crate::error::AppError::PasswordChangeRequired);
     }
 
     // Generate client ID
@@ -301,6 +316,7 @@ pub async fn clone_device(
 /// Creates a session for admin dashboard access
 pub async fn login(
     State(state): State<Arc<AppState>>,
+    peer: Option<ConnectInfo<SocketAddr>>,
     headers: axum::http::HeaderMap,
     Json(req): Json<LoginRequest>,
 ) -> AppResult<(StatusCode, Json<LoginResponse>)> {
@@ -312,24 +328,22 @@ pub async fn login(
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string());
 
-    // Extract IP from X-Forwarded-For (first IP in chain) or X-Real-IP
-    let ip_address = headers
-        .get("X-Forwarded-For")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.split(',').next())
-        .map(|s| s.trim().to_string())
-        .or_else(|| {
-            headers
-                .get("X-Real-IP")
-                .and_then(|v| v.to_str().ok())
-                .map(|s| s.to_string())
-        });
+    // Only as far as the trusted proxies allow: anything else is client input
+    let ip_address = crate::rate_limit::client_ip(
+        &headers,
+        peer.map(|ConnectInfo(address)| address.ip()),
+        state.config.rate_limit.trusted_proxy_hops,
+    )
+    .map(|address| address.to_string());
+
+    state.login_throttle.check(&req.email)?;
 
     // Get user by email
     let user = UserRepository::get_by_email(&state.pool, &req.email)
         .await
         .map_err(|_| {
             tracing::warn!("Login failed: user not found: {}", req.email);
+            state.login_throttle.record_failure(&req.email);
             crate::error::AppError::Unauthorized
         })?;
 
@@ -341,14 +355,24 @@ pub async fn login(
 
     if !password_valid {
         tracing::warn!("Login failed: invalid password for {}", req.email);
+        state.login_throttle.record_failure(&req.email);
         return Err(crate::error::AppError::Unauthorized);
     }
+    state.login_throttle.record_success(&req.email);
 
     // Check if user is admin
     if user.is_admin == 0 {
         tracing::warn!("Login failed: user is not admin: {}", req.email);
         return Err(crate::error::AppError::Forbidden(
             "Admin access required".to_string(),
+        ));
+    }
+
+    // Check if user is approved
+    if user.approved == 0 {
+        tracing::warn!("Login failed: user not approved: {}", req.email);
+        return Err(crate::error::AppError::Forbidden(
+            "Account pending admin approval".to_string(),
         ));
     }
 
@@ -398,6 +422,7 @@ pub async fn login(
             email: user.email,
             is_admin: user.is_admin == 1,
         },
+        must_change_password: user.must_change_password != 0,
     };
 
     Ok((StatusCode::OK, Json(response)))
@@ -481,17 +506,35 @@ pub async fn put_wrapped_key_session(
     put_wrapped_key_for_user(&state, &session.user_id, req).await
 }
 
+/// A real blob is a wrapped 32-byte key, a few hundred bytes of JSON. Anything
+/// near this size isn't one, and accounts mustn't be free storage.
+const MAX_WRAPPED_BLOB_BYTES: usize = 8 * 1024;
+
+/// Reject a wrapped key blob of an impossible size.
+pub fn validate_wrapped_blob(blob: &str) -> AppResult<()> {
+    if blob.is_empty() {
+        return Err(crate::error::AppError::BadRequest(
+            "Wrapped key blob cannot be empty".to_string(),
+        ));
+    }
+
+    if blob.len() > MAX_WRAPPED_BLOB_BYTES {
+        return Err(crate::error::AppError::PayloadTooLarge(format!(
+            "Wrapped key blob exceeds maximum size of {} bytes",
+            MAX_WRAPPED_BLOB_BYTES
+        )));
+    }
+
+    Ok(())
+}
+
 /// Shared implementation for storing wrapped key
 async fn put_wrapped_key_for_user(
     state: &AppState,
     user_id: &str,
     req: crate::models::PutWrappedKeyRequest,
 ) -> AppResult<StatusCode> {
-    if req.blob.is_empty() {
-        return Err(crate::error::AppError::BadRequest(
-            "Wrapped key blob cannot be empty".to_string(),
-        ));
-    }
+    validate_wrapped_blob(&req.blob)?;
 
     if req.kdf_version < 1 {
         return Err(crate::error::AppError::BadRequest(

@@ -4,6 +4,7 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 import { visualizer } from 'rollup-plugin-visualizer';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { readFileSync, writeFileSync } from 'fs';
+import { addInlineScriptHashes } from './src/lib/utils/cspHash';
 
 // Read version from package.json
 const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
@@ -31,6 +32,17 @@ function generateVersionFile() {
   };
 }
 
+// Plugin to allow the inlined bundle by hash, once vite-plugin-singlefile has inlined it
+function hashInlineScripts() {
+  return {
+    name: 'csp-hash-inline-scripts',
+    writeBundle() {
+      const page = 'dist/index.html';
+      writeFileSync(page, addInlineScriptHashes(readFileSync(page, 'utf-8')));
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
   // Use relative paths so the build also works when served from a subpath or file:// URL
@@ -41,6 +53,7 @@ export default defineConfig({
   plugins: [
     svelte(),
     viteSingleFile(),
+    hashInlineScripts(),
     generateVersionFile(),
     // Only enable HTTPS when VITE_HTTPS=true (needed for crypto.subtle on mobile)
     ...(enableHttps ? [basicSsl()] : []),

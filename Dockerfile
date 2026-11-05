@@ -1,7 +1,10 @@
+# Base images are pinned by digest, so a retagged image can't change a release and a
+# tag can be rebuilt identically. Dependabot's docker updates keep them current.
+
 # -----------------------------
 # Stage 1: Build the Svelte web client
 # -----------------------------
-FROM node:20-slim AS web-builder
+FROM node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0 AS web-builder
 WORKDIR /app
 
 # Registry fetches are slow under QEMU emulation (arm builds) and intermittently
@@ -13,7 +16,8 @@ ENV npm_config_fetch_retries=5 \
 
 # Only copy web client deps first for caching
 COPY package.json package-lock.json ./
-# Use --ignore-scripts to skip Electron postinstall scripts (not needed for Docker builds)
+# Lifecycle scripts stay off: the build doesn't need them, and they would run
+# third-party code with access to everything in this stage.
 RUN npm ci --ignore-scripts || npm ci --ignore-scripts
 
 # Copy rest of web client source
@@ -32,7 +36,7 @@ RUN npm run build
 # -----------------------------
 # Stage 2: Build the Admin Dashboard
 # -----------------------------
-FROM node:20-slim AS admin-builder
+FROM node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0 AS admin-builder
 WORKDIR /app/admin
 
 # Same npm network hardening as the web-builder stage (see above)
@@ -43,7 +47,7 @@ ENV npm_config_fetch_retries=5 \
 
 # Copy admin dashboard deps first for caching
 COPY admin/package.json admin/package-lock.json ./
-RUN npm ci || npm ci
+RUN npm ci --ignore-scripts || npm ci --ignore-scripts
 
 # Copy rest of admin dashboard source
 COPY admin/src ./src
@@ -58,9 +62,10 @@ RUN npm run build
 # -----------------------------
 # Stage 3: Build the Rust server (using cargo-chef for dependency caching)
 # -----------------------------
-FROM rust:1.85 AS chef
+FROM rust:1.85@sha256:e51d0265072d2d9d5d320f6a44dde6b9ef13653b035098febd68cce8fa7c0bc4 AS chef
 WORKDIR /app
-RUN cargo install cargo-chef
+# 0.1.75 is the newest cargo-chef whose lock file builds on Rust 1.85
+RUN cargo install cargo-chef --locked --version 0.1.75
 
 FROM chef AS planner
 WORKDIR /app/server
@@ -75,40 +80,52 @@ ENV SQLX_OFFLINE=true
 
 # Copy the recipe and build dependencies (this layer will be cached)
 COPY --from=planner /app/server/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
+RUN cargo chef cook --release --locked --recipe-path recipe.json
 
 # Now copy the actual source code and build
 COPY server/ .
-RUN cargo build --release --bin jottery-server
+RUN cargo build --release --locked --bin jottery-server
 
 # -----------------------------
-# Stage 4: Final unified runtime image (Caddy + Server)
+# Stage 4: Caddy, the only component that faces the internet
 # -----------------------------
-FROM debian:bookworm-slim
+# Taken from the official image because Debian's package is frozen at 2.6.2 from
+# 2022. The binary is static, so it runs on bookworm-slim on all three platforms.
+FROM caddy:2.11.8-alpine@sha256:3db3a09e418f86a8fce8de4bc0026fccd2b4cd925aef00cc7d843d9fdc75e442 AS caddy
+# Copying the contents leaves behind the official binary's file capability, which
+# it only needs to bind low ports. This image listens on 8088.
+RUN cat /usr/bin/caddy > /tmp/caddy && chmod 0755 /tmp/caddy
+
+# -----------------------------
+# Stage 5: Final unified runtime image (Caddy + Server)
+# -----------------------------
+FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
-      caddy \
     && rm -rf /var/lib/apt/lists/*
+
+# Both services run as this user. The id is fixed so that a volume's ownership
+# survives an image rebuild, and scripts/docker-entrypoint.sh has to match it.
+RUN groupadd --gid 10001 jottery \
+    && useradd --uid 10001 --gid 10001 --no-create-home --home-dir /app/data \
+         --shell /usr/sbin/nologin jottery
 
 # -----------------------------
 # Copy server + web client + admin dashboard
 # -----------------------------
+COPY --from=caddy          /tmp/caddy /usr/bin/caddy
 COPY --from=server-builder /app/server/target/release/jottery-server /usr/local/bin/jottery-server
 COPY --from=web-builder    /app/dist ./dist
 COPY --from=admin-builder  /app/admin/dist ./admin/dist
 
 # -----------------------------
-# Copy TUI binaries (added by GitHub Actions in /releases)
-# -----------------------------
-COPY releases ./releases
-RUN chmod -R +x /app/releases 2>/dev/null || true
-
-# -----------------------------
 # Persistent data directory
 # -----------------------------
-RUN mkdir -p /app/data
+# Everything else stays owned by root, so the services can't rewrite the web bundle
+# that every client loads. This comes before VOLUME so a new volume inherits it.
+RUN mkdir -p /app/data && chown jottery:jottery /app/data
 VOLUME ["/app/data"]
 
 # -----------------------------
@@ -120,9 +137,14 @@ COPY Caddyfile /etc/caddy/Caddyfile
 # -----------------------------
 # Runtime environment
 # -----------------------------
-ENV ROCKET_ADDRESS=0.0.0.0
-ENV ROCKET_PORT=3030
 ENV DATABASE_URL=/app/data/jottery.db
+# The bundled Caddy is the one proxy in front of the server. It replaces any
+# X-Forwarded-For a client sends, and port 3030 is never published.
+ENV TRUSTED_PROXY_HOPS=1
+# Caddy needs somewhere writable. It keeps nothing there worth persisting: this image
+# doesn't terminate TLS, and the Caddyfile is the whole configuration.
+ENV XDG_CONFIG_HOME=/tmp/caddy/config
+ENV XDG_DATA_HOME=/tmp/caddy/data
 
 # Expose only the Caddy HTTP port
 EXPOSE 8088
@@ -130,4 +152,13 @@ EXPOSE 8088
 # -----------------------------
 # Start both jottery-server & Caddy
 # -----------------------------
-CMD ["/bin/sh", "-c", "mkdir -p /app/data && touch /app/data/jottery.db && jottery-server & exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"]
+COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
+COPY scripts/docker-healthcheck.sh /usr/local/bin/docker-healthcheck
+
+# The start period allows for database migrations after an upgrade
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD ["/usr/local/bin/docker-healthcheck"]
+
+# No USER here: the entrypoint starts as root only to take ownership of volumes
+# written by earlier images, then drops to the jottery user before anything runs.
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint"]

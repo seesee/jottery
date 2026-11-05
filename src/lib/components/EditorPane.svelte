@@ -1,14 +1,16 @@
 <script lang="ts">
   import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { _ } from 'svelte-i18n';
-  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery, selectNote, isContentOnlyUpdate, refreshEditorTagsSignal, isLocked } from '../stores/appStore';
-  import { updateNoteInStore, updateNoteInStoreAndSearch, removeNoteFromStoreAndSearch, addNoteToStoreAndSearch } from '../stores/storeHelpers';
+  import { selectedNote, clearSelection, notes, remoteNoteUpdate, settings, isDraftMode, exitDraftMode, searchQuery, selectNote, isContentOnlyUpdate, refreshEditorTagsSignal, isLocked } from '../stores/appStore';
+  import { updateNoteInStore, updateNoteInStoreAndSearch, reloadNotesAfterConflict, removeNoteFromStoreAndSearch, addNoteToStoreAndSearch } from '../stores/storeHelpers';
   import { noteService, tagService, attachmentService, syncService, versionRepository, noteRepository, syncRepository } from '../services';
   import { lock } from '../services/initService';
   import { isApplicationLockedError } from '../errors';
   import { EDITOR_AUTOSAVE_DELAY_MS } from '../constants';
   import { formatDateTime } from '../utils/dateFormat';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
+  import type { RemoteNoteUpdate } from '../stores/appStore';
+  import { conflictService } from '../services/conflictService';
   import type { Attachment, KeyboardShortcut, CodeEditorRef, HighlightJsInstance, DecryptedNote } from '../types';
   import VersionHistoryModal from './VersionHistoryModal.svelte';
   import AttachmentPreviewModal from './AttachmentPreviewModal.svelte';
@@ -94,6 +96,7 @@
   }
 
   let saveTimeout: number | null = null;
+  let saveInFlight = false;
   let language: string = 'plain';
   let wordWrap: boolean = true;
   let showPreview: boolean = false;
@@ -108,6 +111,7 @@
   let showAttachmentsModal: boolean = false; // Mobile: show attachments in modal
   let showColorPicker: boolean = false;
   let showDeleteConfirm: boolean = false;
+  let attachmentToDelete: Attachment | null = null;
   let hasContentChanged: boolean = false; // Track if content modified since note loaded
   let isDarkMode: boolean = false; // Track if dark mode is active (updated via MutationObserver)
   let editorMode: 'raw' | 'wysiwyg' = 'raw'; // Editor mode for markdown notes
@@ -161,7 +165,7 @@
       ? $_('editor.readOnly.lockedBanner')
       : undefined;
 
-  // Check if preview should use iframe (for HTML/XML with potential scripts)
+  // HTML/XML previews render in a sandboxed iframe, never in the app's document
   $: useIframePreview = language === 'html' || language === 'xml';
 
   // Compute note statistics
@@ -254,16 +258,78 @@
   }
 
   // Handler to open conflict resolution modal
-  function handleResolveConflict() {
+  async function handleResolveConflict() {
     if ($selectedNote?.id) {
+      // The modal shows what's stored, so that has to include what was just typed
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+        await handleSave();
+      }
       showConflictModal = true;
     }
   }
 
   // Handler when conflict is resolved
-  function handleConflictResolved() {
+  async function handleConflictResolved() {
     hasConflict = false;
     showConflictModal = false;
+    if ($selectedNote) {
+      await reloadNotesAfterConflict($selectedNote.id, $settings.sortOrder);
+    }
+  }
+
+  // Text waiting to be saved. hasContentChanged can't answer this: it stays set after
+  // an autosave, so that switching notes still creates a version.
+  function hasUnsavedEdit(): boolean {
+    return saveTimeout !== null || saveInFlight;
+  }
+
+  function loadNoteIntoEditor(note: DecryptedNote) {
+    content = note.content;
+    tags = [...note.tags];
+    attachments = [...note.attachments];
+    language = note.syntaxLanguage || 'plain';
+    wordWrap = note.wordWrap ?? true;
+  }
+
+  /**
+   * A pull landed on the open note while text was unsaved. Neither copy can be dropped,
+   * so the typed text stays and saves as normal, and the pulled copy is kept as the
+   * conflict's other side. New attachments are taken regardless: the save would
+   * otherwise see them as removed.
+   */
+  async function keepEditsAndRaiseConflict(note: DecryptedNote) {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+      saveTimeout = null;
+    }
+
+    const known = new Set(attachments.map(attachment => attachment.id));
+    attachments = [...attachments, ...note.attachments.filter(attachment => !known.has(attachment.id))];
+
+    await conflictService.raiseConflictWithStoredNote(note.id);
+    await checkForConflict(note.id);
+    handleInput();
+  }
+
+  function applyRemoteNoteUpdate(update: RemoteNoteUpdate) {
+    const note = $selectedNote;
+    if (!note || $isDraftMode || !update.ids.includes(note.id)) return;
+
+    if (update.resolved && saveTimeout) {
+      clearTimeout(saveTimeout);
+      saveTimeout = null;
+    }
+
+    if (hasUnsavedEdit()) {
+      void keepEditsAndRaiseConflict(note);
+    } else {
+      loadNoteIntoEditor(note);
+    }
+  }
+
+  $: if ($remoteNoteUpdate) {
+    applyRemoteNoteUpdate($remoteNoteUpdate);
   }
 
   // Watch for note selection changes
@@ -516,8 +582,10 @@
   }
 
   async function handleSave() {
+    saveTimeout = null;
     if (!$selectedNote) return;
 
+    saveInFlight = true;
     try {
       // Save note and get the updated encrypted note with correct version
       const savedNote = await noteService.updateNote($selectedNote.id, {
@@ -563,6 +631,8 @@
         lock();
         isLocked.set(true);
       }
+    } finally {
+      saveInFlight = false;
     }
   }
 
@@ -762,6 +832,19 @@
       }
     } finally {
       isUploading = false;
+    }
+  }
+
+  // The bin icon is small and easy to hit, and a removed file may be gone for good
+  function requestDeleteAttachment(attachment: Attachment) {
+    attachmentToDelete = attachment;
+  }
+
+  function confirmDeleteAttachment() {
+    const attachment = attachmentToDelete;
+    attachmentToDelete = null;
+    if (attachment) {
+      handleDeleteAttachment(attachment);
     }
   }
 
@@ -978,6 +1061,31 @@
     return event.key.toLowerCase() === shortcut.key.toLowerCase();
   }
 
+  // Palette commands that act on the open note. The palette only offers them while a
+  // note is open.
+  const commandPaletteActions: Record<string, () => void> = {
+    togglePreview: handlePreviewToggle,
+    toggleWordWrap: handleWordWrapToggle,
+    copyContent: handleCopy,
+    copyLink: handleCopyLink,
+    duplicateNote: handleDuplicate,
+    exportNote: handleExport,
+    printNote: handlePrintPdf,
+    noteInfo: handleShowInfo,
+    versionHistory: handleShowVersionHistory,
+    deleteNote: requestDelete,
+    lockNote: handleLock,
+    setColor: handleSetColor,
+    archiveNote: handleArchive,
+  };
+
+  function handleCommandPaletteAction(event: Event) {
+    const action = commandPaletteActions[(event as CustomEvent<string>).detail];
+    if (action && $selectedNote) {
+      action();
+    }
+  }
+
   function handleEditorKeydown(event: KeyboardEvent) {
     // Only handle shortcuts when a note is selected
     if (!$selectedNote) return;
@@ -1048,6 +1156,7 @@
 
   onMount(() => {
     window.addEventListener('keydown', handleEditorKeydown);
+    window.addEventListener('command-palette-action', handleCommandPaletteAction);
 
     // Set up theme observer to watch for dark mode changes
     const updateTheme = () => {
@@ -1080,6 +1189,7 @@
     }
 
     window.removeEventListener('keydown', handleEditorKeydown);
+    window.removeEventListener('command-palette-action', handleCommandPaletteAction);
 
     // Disconnect theme observer
     if (themeObserver) {
@@ -1202,7 +1312,7 @@
         {isUploading}
         backgroundColor={noteBackgroundColor ? hexWithOpacity(noteBackgroundColor, 0.15) : undefined}
         onToggleExpanded={toggleAttachments}
-        onDelete={handleDeleteAttachment}
+        onDelete={requestDeleteAttachment}
         onFileUpload={handleFileUpload}
       />
     {/if}
@@ -1274,13 +1384,7 @@
     });
 
     // Restore version data to the note in database
-    currentNote.content = version.content;
-    currentNote.tags = version.tags;
-    currentNote.attachments = version.attachments;
-    currentNote.syntaxLanguage = version.syntaxLanguage;
-    currentNote.wordWrap = version.wordWrap;
-
-    await noteRepository.update(currentNote);
+    await noteService.restoreVersion(currentNote.id, version);
 
     // Reload the note to get decrypted content for display
     const updatedNote = await noteService.getNote($selectedNote.id);
@@ -1313,8 +1417,19 @@
   {attachments}
   {isUploading}
   onClose={() => showAttachmentsModal = false}
-  onDelete={handleDeleteAttachment}
+  onDelete={requestDeleteAttachment}
   onFileUpload={handleFileUpload}
+/>
+
+<!-- Attachment delete confirmation. After the attachments modal, so it sits on top. -->
+<ConfirmModal
+  show={attachmentToDelete !== null}
+  title={$_('attachments.confirmDelete.title')}
+  message={$_('attachments.confirmDelete.message')}
+  confirmText={$_('attachments.confirmDelete.confirmButton')}
+  cancelText={$_('common.cancel')}
+  onConfirm={confirmDeleteAttachment}
+  onCancel={() => attachmentToDelete = null}
 />
 
 <!-- Color Picker Modal -->

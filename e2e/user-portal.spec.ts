@@ -199,10 +199,11 @@ test.use({ baseURL: process.env.ADMIN_BASE_URL || 'http://localhost:5174' });
 
 test.describe('User Portal', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear localStorage before each test
+    // Clear storage before each test
     await page.goto('/user');
     await page.evaluate(() => {
       localStorage.clear();
+      sessionStorage.clear();
     });
   });
 
@@ -255,7 +256,7 @@ test.describe('User Portal', () => {
       // Simulate logged in state
       await page.goto('/user');
       await page.evaluate(() => {
-        localStorage.setItem('user_session_token', 'mock-session-token');
+        sessionStorage.setItem('user_session_token', 'mock-session-token');
       });
     });
 
@@ -274,7 +275,7 @@ test.describe('User Portal', () => {
       await setupApiMocks(page);
       await page.goto('/user');
       await page.evaluate(() => {
-        localStorage.setItem('user_session_token', 'mock-session-token');
+        sessionStorage.setItem('user_session_token', 'mock-session-token');
       });
     });
 
@@ -359,7 +360,7 @@ test.describe('User Portal', () => {
       await setupApiMocks(page);
       await page.goto('/user');
       await page.evaluate(() => {
-        localStorage.setItem('user_session_token', 'mock-session-token');
+        sessionStorage.setItem('user_session_token', 'mock-session-token');
       });
     });
 
@@ -389,7 +390,7 @@ test.describe('User Portal', () => {
       await setupApiMocks(page);
       await page.goto('/user');
       await page.evaluate(() => {
-        localStorage.setItem('user_session_token', 'mock-session-token');
+        sessionStorage.setItem('user_session_token', 'mock-session-token');
       });
     });
 
@@ -444,7 +445,7 @@ test.describe('User Portal', () => {
       await setupApiMocks(page);
       await page.goto('/user');
       await page.evaluate(() => {
-        localStorage.setItem('user_session_token', 'mock-session-token');
+        sessionStorage.setItem('user_session_token', 'mock-session-token');
       });
     });
 

@@ -1,9 +1,14 @@
 package com.jottery.android
 
+import android.os.Build
 import android.os.Bundle
+import android.view.KeyEvent
+import android.view.MotionEvent
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
@@ -12,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.jottery.android.ui.navigation.JotteryNavigation
 import com.jottery.android.ui.theme.JotteryTheme
 import com.jottery.android.viewmodel.AppState
@@ -20,12 +24,15 @@ import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
+    private val appState: AppState by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Set before the first frame, so a decrypted note is never captured
+        applyScreenSecurity(appState.screenSecurity.value)
         enableEdgeToEdge()
 
         setContent {
-            val appState: AppState = viewModel()
             val settings by appState.settings.collectAsState()
 
             JotteryTheme(themeMode = settings.themeMode) {
@@ -35,14 +42,44 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // Handle lifecycle events for auto-lock and SSE management
         lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                // Foreground
-                val appState = (application as JotteryApp).let {
-                    // AppState handles its own lifecycle via handleLifecycleEvent
-                }
+            repeatOnLifecycle(Lifecycle.State.CREATED) {
+                appState.screenSecurity.collect(::applyScreenSecurity)
             }
         }
+    }
+
+    private fun applyScreenSecurity(enabled: Boolean) {
+        if (enabled) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            setRecentsScreenshotEnabled(!enabled)
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        appState.handleLifecycleEvent(started = true)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Rotation stops and restarts the activity, but the app never left
+        if (!isChangingConfigurations) {
+            appState.handleLifecycleEvent(started = false)
+        }
+    }
+
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        appState.recordActivity()
+        return super.dispatchTouchEvent(event)
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        appState.recordActivity()
+        return super.dispatchKeyEvent(event)
     }
 }

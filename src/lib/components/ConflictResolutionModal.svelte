@@ -40,7 +40,8 @@
           const encryptedContent = JSON.parse(conflictInfo.localNote.content);
           localContent = await cryptoService.decryptText(encryptedContent, masterKey.key);
         } catch {
-          localContent = conflictInfo.localNote.content;
+          // Never show the stored value in place of the note
+          localContent = $_('conflict.localUnreadable');
         }
 
         // Decrypt local tags
@@ -49,7 +50,7 @@
             const encryptedTags = JSON.parse(conflictInfo.localNote.tags[0]);
             localTags = await decryptJSON(encryptedTags, masterKey.key);
           } catch {
-            localTags = conflictInfo.localNote.tags;
+            localTags = [];
           }
         }
       }
@@ -108,6 +109,9 @@
       resolving = false;
     }
   }
+
+  // A server copy that won't decrypt can't be trusted, so only Keep Mine is offered
+  $: serverReadable = conflictInfo?.serverContent !== null;
 
   $: if (show && noteId) {
     loadConflict();
@@ -246,9 +250,15 @@
                   </div>
                 {/if}
               </div>
-              <div class="flex-1 overflow-auto p-4 font-mono text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300">
-                {conflictInfo.serverContent}
-              </div>
+              {#if serverReadable}
+                <div class="flex-1 overflow-auto p-4 font-mono text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+                  {conflictInfo.serverContent}
+                </div>
+              {:else}
+                <div class="flex-1 overflow-auto p-4 text-sm text-red-700 dark:text-red-300" data-testid="conflict-server-unreadable">
+                  {$_('conflict.serverUnreadable')}
+                </div>
+              {/if}
             </div>
           </div>
         {:else}
@@ -274,14 +284,14 @@
             </button>
             <button
               on:click={handleKeepServer}
-              disabled={resolving || !conflictInfo}
+              disabled={resolving || !conflictInfo || !serverReadable}
               class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
             >
               {$_('conflict.keepServer')}
             </button>
             <button
               on:click={handleKeepBoth}
-              disabled={resolving || !conflictInfo}
+              disabled={resolving || !conflictInfo || !serverReadable}
               class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
             >
               {$_('conflict.keepBoth')}

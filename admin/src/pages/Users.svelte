@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api, ApiError } from '../lib/api';
+  import { describeError } from '../lib/apiErrors';
   import type { UserListItem } from '../lib/api';
   import { onMount } from 'svelte';
   import { toast } from '../lib/toast.svelte';
@@ -26,7 +27,7 @@
       const response = await api.listUsers();
       users = response.users;
     } catch (err) {
-      error = err instanceof Error ? err.message : $_('users.failedToLoad');
+      error = describeError(err, $_, 'users.failedToLoad');
     } finally {
       loading = false;
     }
@@ -82,7 +83,7 @@
       await loadUsers();
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error($_('users.toast.failedToAction', { values: { action: type, error: err.message } }));
+        toast.error($_('users.toast.failedToAction', { values: { action: type, error: describeError(err, $_) } }));
       } else {
         toast.error($_('users.toast.failedGeneric', { values: { action: type } }));
       }

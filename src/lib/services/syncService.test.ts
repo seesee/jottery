@@ -377,7 +377,7 @@ describe('syncService', () => {
       const remoteTag = await cryptoService.encryptText('remote', masterKey);
 
       const remoteNote = {
-        id: 'remote-note-id',
+        id: 'a0000000-0000-4000-8000-000000000001',
         createdAt: new Date().toISOString(),
         modifiedAt: new Date().toISOString(),
         content: JSON.stringify(remoteContent),
@@ -416,13 +416,13 @@ describe('syncService', () => {
       await syncService.syncNow();
 
       // Verify note was stored (encrypted content is stored as-is)
-      const storedNote = await noteRepository.getById('remote-note-id');
+      const storedNote = await noteRepository.getById('a0000000-0000-4000-8000-000000000001');
       expect(storedNote).toBeDefined();
       // Content is stored encrypted - verify it's the encrypted JSON format
       expect(storedNote!.content).toMatch(/^\{.*ciphertext.*\}$/);
 
       // Verify decryption works when reading through noteService
-      const decryptedNote = await noteService.getNote('remote-note-id');
+      const decryptedNote = await noteService.getNote('a0000000-0000-4000-8000-000000000001');
       expect(decryptedNote).toBeDefined();
       expect(decryptedNote!.content).toBe('Remote content');
       // Note: Tags are decrypted separately by noteService - the sync stores them encrypted
@@ -434,11 +434,11 @@ describe('syncService', () => {
       // server re-sends the missing one when this note is next pulled
       await noteService.createNote('note with attachments', [], {
         attachments: [
-          { id: 'att-stored', filename: 'a.png', mimeType: 'image/png', size: 4, data: 'att-stored' },
-          { id: 'att-gone', filename: 'b.png', mimeType: 'image/png', size: 4, data: 'att-gone' },
+          { id: 'b0000000-0000-4000-8000-000000000001', filename: 'a.png', mimeType: 'image/png', size: 4, data: 'b0000000-0000-4000-8000-000000000001' },
+          { id: 'b0000000-0000-4000-8000-000000000002', filename: 'b.png', mimeType: 'image/png', size: 4, data: 'b0000000-0000-4000-8000-000000000002' },
         ],
       });
-      await attachmentRepository.storeBlob('att-stored', new ArrayBuffer(4));
+      await attachmentRepository.storeBlob('b0000000-0000-4000-8000-000000000001', new ArrayBuffer(4));
 
       let capturedBody: { knownAttachmentIds?: string[] } | undefined;
       server.use(
@@ -465,18 +465,18 @@ describe('syncService', () => {
 
       await syncService.syncNow();
 
-      expect(capturedBody?.knownAttachmentIds).toEqual(['att-stored']);
+      expect(capturedBody?.knownAttachmentIds).toEqual(['b0000000-0000-4000-8000-000000000001']);
     });
 
     it('re-pushes held blobs when the server warns about missing attachment data', async () => {
       // Note with two attachment refs: one blob held locally, one not
       const note = await noteService.createNote('note with attachments', [], {
         attachments: [
-          { id: 'att-held', filename: 'a.png', mimeType: 'image/png', size: 5, data: 'att-held' },
-          { id: 'att-ghost', filename: 'b.png', mimeType: 'image/png', size: 5, data: 'att-ghost' },
+          { id: 'b0000000-0000-4000-8000-000000000003', filename: 'a.png', mimeType: 'image/png', size: 5, data: 'b0000000-0000-4000-8000-000000000003' },
+          { id: 'b0000000-0000-4000-8000-000000000004', filename: 'b.png', mimeType: 'image/png', size: 5, data: 'b0000000-0000-4000-8000-000000000004' },
         ],
       });
-      await attachmentRepository.storeBlob('att-held', new TextEncoder().encode('hello').buffer);
+      await attachmentRepository.storeBlob('b0000000-0000-4000-8000-000000000003', new TextEncoder().encode('hello').buffer);
 
       const pushBodies: Array<{ notes: unknown[]; attachments: Array<{ id: string; data: string }> }> = [];
       server.use(
@@ -495,14 +495,14 @@ describe('syncService', () => {
             return HttpResponse.json({
               accepted: [{ id: note.id, serverVersion: 1, syncedAt: new Date().toISOString() }],
               rejected: [],
-              attachmentWarnings: [{ noteId: note.id, attachmentIds: ['att-held', 'att-ghost'] }],
+              attachmentWarnings: [{ noteId: note.id, attachmentIds: ['b0000000-0000-4000-8000-000000000003', 'b0000000-0000-4000-8000-000000000004'] }],
             } as SyncPushResponse);
           }
           // Repair pushes and any later pushes: keep warning to prove no loop
           return HttpResponse.json({
             accepted: [],
             rejected: [],
-            attachmentWarnings: [{ noteId: note.id, attachmentIds: ['att-ghost'] }],
+            attachmentWarnings: [{ noteId: note.id, attachmentIds: ['b0000000-0000-4000-8000-000000000004'] }],
           } as SyncPushResponse);
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
@@ -515,20 +515,20 @@ describe('syncService', () => {
       // First push carried the note; exactly one follow-up attachments-only push
       expect(pushBodies.length).toBe(2);
       expect(pushBodies[1].notes).toEqual([]);
-      expect(pushBodies[1].attachments.map(a => a.id)).toEqual(['att-held']);
+      expect(pushBodies[1].attachments.map(a => a.id)).toEqual(['b0000000-0000-4000-8000-000000000003']);
       // Base64 of 'hello'
       expect(pushBodies[1].attachments[0].data).toBe('aGVsbG8=');
 
       // Unhealable attachment recorded for vault health
       expect(get(serverMissingAttachments)).toEqual([
-        { noteId: note.id, attachmentIds: ['att-ghost'] },
+        { noteId: note.id, attachmentIds: ['b0000000-0000-4000-8000-000000000004'] },
       ]);
     });
 
     it('does not fire a repair push when no warned blob is held locally', async () => {
       const note = await noteService.createNote('ghost only', [], {
         attachments: [
-          { id: 'att-ghost2', filename: 'b.png', mimeType: 'image/png', size: 5, data: 'att-ghost2' },
+          { id: 'b0000000-0000-4000-8000-000000000005', filename: 'b.png', mimeType: 'image/png', size: 5, data: 'b0000000-0000-4000-8000-000000000005' },
         ],
       });
 
@@ -547,7 +547,7 @@ describe('syncService', () => {
           return HttpResponse.json({
             accepted: [{ id: note.id, serverVersion: 1, syncedAt: new Date().toISOString() }],
             rejected: [],
-            attachmentWarnings: [{ noteId: note.id, attachmentIds: ['att-ghost2'] }],
+            attachmentWarnings: [{ noteId: note.id, attachmentIds: ['b0000000-0000-4000-8000-000000000005'] }],
           } as SyncPushResponse);
         }),
         http.post(`${TEST_ENDPOINT}/api/v1/sync/pull`, () => {
@@ -559,7 +559,7 @@ describe('syncService', () => {
 
       expect(pushCount).toBe(1);
       expect(get(serverMissingAttachments)).toEqual([
-        { noteId: note.id, attachmentIds: ['att-ghost2'] },
+        { noteId: note.id, attachmentIds: ['b0000000-0000-4000-8000-000000000005'] },
       ]);
     });
 
@@ -807,7 +807,7 @@ describe('syncService', () => {
       const remoteContent = await cryptoService.encryptText('Remote note', masterKey);
       const remoteTag = await cryptoService.encryptText('remote', masterKey);
       const remoteNote = {
-        id: 'remote-note-id',
+        id: 'a0000000-0000-4000-8000-000000000001',
         createdAt: new Date().toISOString(),
         modifiedAt: new Date().toISOString(),
         content: JSON.stringify(remoteContent),
@@ -849,7 +849,7 @@ describe('syncService', () => {
 
       // Verify both notes exist locally (use noteService to read decrypted)
       const local = await noteService.getNote(localDecryptedNote.id);
-      const remote = await noteService.getNote('remote-note-id');
+      const remote = await noteService.getNote('a0000000-0000-4000-8000-000000000001');
 
       expect(local).toBeDefined();
       expect(local!.content).toBe('Local note');
@@ -1118,7 +1118,7 @@ describe('syncService', () => {
 
       // Pre-populate store with note1 plus a "stale" note not in DB
       const staleNote: DecryptedNote = {
-        id: 'stale-note-id',
+        id: 'a0000000-0000-4000-8000-000000000002',
         content: 'This note was deleted from DB',
         tags: ['stale'],
         attachments: [],
@@ -1177,7 +1177,7 @@ describe('syncService', () => {
       // Only note1 should remain (stale note removed)
       expect(currentNotes.length).toBe(1);
       expect(currentNotes[0].id).toBe(note1.id);
-      expect(currentNotes.some(n => n.id === 'stale-note-id')).toBe(false);
+      expect(currentNotes.some(n => n.id === 'a0000000-0000-4000-8000-000000000002')).toBe(false);
     });
 
     it('should sort notes correctly after sync based on user preferences', async () => {
@@ -1367,8 +1367,8 @@ describe('syncService', () => {
       expect(capturedRequest.notes[0].showPreview).toBe(true);
     });
 
-    it('should apply showPreview from pull response', async () => {
-      const noteId = 'pulled-note-id';
+    it('should not take showPreview from a pull response', async () => {
+      const noteId = 'a0000000-0000-4000-8000-000000000003';
       const now = new Date().toISOString();
 
       server.use(
@@ -1399,7 +1399,7 @@ describe('syncService', () => {
         archived: false,
               deleted: false,
               version: 1,
-              showPreview: true, // Server says preview is enabled
+              showPreview: true, // Plaintext, so the server could set it on any note
               syntaxLanguage: 'markdown',
             }],
             attachments: [],
@@ -1411,10 +1411,9 @@ describe('syncService', () => {
 
       await syncService.syncNow();
 
-      // Verify note was stored with showPreview
       const storedNote = await noteRepository.getById(noteId);
       expect(storedNote).not.toBeNull();
-      expect(storedNote?.showPreview).toBe(true);
+      expect(storedNote?.showPreview).toBe(false);
     });
   });
 });

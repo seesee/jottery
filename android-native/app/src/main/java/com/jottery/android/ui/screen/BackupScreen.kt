@@ -1,21 +1,47 @@
 package com.jottery.android.ui.screen
 
-import android.content.Intent
+import android.content.Context
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.jottery.android.R
+import com.jottery.android.service.backup.BackupException
+import com.jottery.android.service.backup.BackupSource
+import com.jottery.android.service.backup.RestorePlan
 import com.jottery.android.viewmodel.AppState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.FileNotFoundException
+import java.time.LocalDate
+
+/** The message for a failed restore. */
+fun Context.backupErrorText(error: Throwable): String = when (error) {
+    is BackupException.WrongPassword -> getString(R.string.backup_error_wrong_password)
+    is BackupException.NotABackup -> getString(R.string.backup_error_not_backup)
+    is BackupException.UnsupportedVersion -> getString(R.string.backup_error_unsupported, error.version)
+    is BackupException.Corrupt -> getString(R.string.backup_error_corrupt)
+    is BackupException.KeyNotInBackup -> getString(R.string.backup_error_no_key)
+    else -> getString(R.string.backup_error_generic, error.message ?: error.javaClass.simpleName)
+}
+
+private fun Context.sourceFor(uri: Uri) = BackupSource {
+    contentResolver.openInputStream(uri) ?: throw FileNotFoundException()
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,30 +51,32 @@ fun BackupScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var isCreating by remember { mutableStateOf(false) }
-    var isRestoring by remember { mutableStateOf(false) }
+    var isBusy by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    var uriToRestore by remember { mutableStateOf<Uri?>(null) }
+    var plan by remember { mutableStateOf<RestorePlan?>(null) }
+
     val createLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
+        ActivityResultContracts.CreateDocument("application/octet-stream")
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
-            isCreating = true
+            isBusy = true
             errorMessage = null
+            statusMessage = null
             try {
-                val json = appState.createBackup()
-                withContext(Dispatchers.IO) {
-                    context.contentResolver.openOutputStream(uri)?.use { os ->
-                        os.write(json.toByteArray(Charsets.UTF_8))
-                    }
+                val summary = withContext(Dispatchers.IO) {
+                    val stream = context.contentResolver.openOutputStream(uri)
+                        ?: throw FileNotFoundException()
+                    stream.use { appState.createBackup(it) }
                 }
-                statusMessage = "Backup created successfully."
+                statusMessage = context.getString(R.string.backup_created, summary.notes, summary.attachments)
             } catch (e: Exception) {
-                errorMessage = "Backup failed: ${e.message}"
+                errorMessage = context.getString(R.string.backup_failed, e.message ?: e.javaClass.simpleName)
             } finally {
-                isCreating = false
+                isBusy = false
             }
         }
     }
@@ -56,33 +84,23 @@ fun BackupScreen(
     val restoreLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            isRestoring = true
+        if (uri != null) {
             errorMessage = null
-            try {
-                val json = withContext(Dispatchers.IO) {
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        input.bufferedReader().readText()
-                    } ?: throw Exception("Could not read file")
-                }
-                val count = appState.restoreBackup(json)
-                statusMessage = "Restored $count notes from backup."
-            } catch (e: Exception) {
-                errorMessage = "Restore failed: ${e.message}"
-            } finally {
-                isRestoring = false
-            }
+            statusMessage = null
+            uriToRestore = uri
         }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Backup & Restore") },
+                title = { Text(stringResource(R.string.backup_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back),
+                        )
                     }
                 },
             )
@@ -92,38 +110,31 @@ fun BackupScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(
-                "Create an encrypted backup of all your notes, or restore from a previous backup.",
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Text(stringResource(R.string.backup_intro), style = MaterialTheme.typography.bodyMedium)
 
             Button(
-                onClick = { createLauncher.launch("jottery-backup.json") },
+                onClick = { createLauncher.launch("jottery-backup-${LocalDate.now()}.jottery-backup") },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isCreating && !isRestoring,
+                enabled = !isBusy,
             ) {
-                if (isCreating) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    Spacer(Modifier.width(8.dp))
-                }
-                Text("Create Backup")
+                Text(stringResource(R.string.backup_create))
             }
 
             OutlinedButton(
-                onClick = { restoreLauncher.launch(arrayOf("application/json", "*/*")) },
+                onClick = { restoreLauncher.launch(arrayOf("*/*")) },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !isCreating && !isRestoring,
+                enabled = !isBusy,
             ) {
-                if (isRestoring) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    Spacer(Modifier.width(8.dp))
-                }
-                Text("Restore from Backup")
+                Text(stringResource(R.string.backup_restore))
             }
 
+            if (isBusy) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+            }
             statusMessage?.let {
                 Text(it, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
             }
@@ -132,4 +143,145 @@ fun BackupScreen(
             }
         }
     }
+
+    val pendingUri = uriToRestore
+    if (pendingUri != null && plan == null) {
+        BackupPasswordDialog(
+            isChecking = isBusy,
+            onConfirm = { password ->
+                scope.launch {
+                    isBusy = true
+                    try {
+                        plan = appState.inspectBackup(context.sourceFor(pendingUri), password)
+                    } catch (e: Exception) {
+                        errorMessage = context.backupErrorText(e)
+                        uriToRestore = null
+                    } finally {
+                        isBusy = false
+                    }
+                }
+            },
+            onDismiss = { uriToRestore = null },
+        )
+    }
+
+    val pendingPlan = plan
+    if (pendingUri != null && pendingPlan != null) {
+        RestoreConfirmDialog(
+            plan = pendingPlan,
+            onConfirm = {
+                plan = null
+                uriToRestore = null
+                scope.launch {
+                    isBusy = true
+                    try {
+                        val result = appState.restoreBackup(context.sourceFor(pendingUri), pendingPlan)
+                        statusMessage = buildString {
+                            append(context.getString(R.string.backup_restored, result.notesRestored, result.attachmentsRestored))
+                            if (result.keptNewer > 0) {
+                                append(' ')
+                                append(context.getString(R.string.backup_restored_kept, result.keptNewer))
+                            }
+                            if (result.unreadable > 0) {
+                                append(' ')
+                                append(context.getString(R.string.backup_restored_unreadable, result.unreadable))
+                            }
+                        }
+                    } catch (e: Exception) {
+                        errorMessage = context.backupErrorText(e)
+                    } finally {
+                        isBusy = false
+                    }
+                }
+            },
+            onDismiss = {
+                plan = null
+                uriToRestore = null
+            },
+        )
+    }
+}
+
+@Composable
+private fun BackupPasswordDialog(
+    isChecking: Boolean,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var password by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.backup_password_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.backup_password_message))
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text(stringResource(R.string.backup_password_label)) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Password,
+                        autoCorrectEnabled = false,
+                    ),
+                    enabled = !isChecking,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (isChecking) {
+                    Text(stringResource(R.string.backup_checking), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(password) }, enabled = !isChecking && password.isNotEmpty()) {
+                Text(stringResource(R.string.backup_confirm_button))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isChecking) {
+                Text(stringResource(R.string.cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun RestoreConfirmDialog(
+    plan: RestorePlan,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.backup_confirm_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    stringResource(
+                        R.string.backup_confirm_summary,
+                        plan.notes, plan.attachments, plan.versions, plan.savedSearches,
+                    )
+                )
+                if (plan.replaced > 0) {
+                    Text(stringResource(R.string.backup_confirm_replaced, plan.replaced))
+                }
+                if (plan.keptNewer > 0) {
+                    Text(stringResource(R.string.backup_confirm_kept, plan.keptNewer))
+                }
+                if (plan.unreadable > 0) {
+                    Text(
+                        stringResource(R.string.backup_confirm_unreadable, plan.unreadable),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(stringResource(R.string.backup_confirm_button)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+        },
+    )
 }

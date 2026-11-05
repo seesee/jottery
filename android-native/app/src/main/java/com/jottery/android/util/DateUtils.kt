@@ -31,7 +31,12 @@ object DateUtils {
                 }
                 Instant.parse(normalized)
             } catch (_: Exception) {
-                null
+                try {
+                    // The server's RFC 3339 timestamps end in +00:00, not Z
+                    java.time.OffsetDateTime.parse(dateString).toInstant()
+                } catch (_: Exception) {
+                    null
+                }
             }
         }
     }

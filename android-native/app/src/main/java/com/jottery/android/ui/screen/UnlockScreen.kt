@@ -6,12 +6,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -32,6 +35,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -39,7 +43,9 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.jottery.android.ui.component.ConfirmDialog
+import com.jottery.android.R
 import com.jottery.android.viewmodel.AppState
+import com.jottery.android.viewmodel.AppStateError
 import kotlinx.coroutines.launch
 
 @Composable
@@ -54,6 +60,7 @@ fun UnlockScreen(
     var failedAttempts by remember { mutableIntStateOf(0) }
     var showWipeConfirm by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     fun attemptUnlock() {
         if (password.isEmpty()) {
@@ -74,11 +81,15 @@ fun UnlockScreen(
                     error = "Incorrect password"
                     password = ""
                 }
-            } catch (_: Exception) {
+            } catch (_: AppStateError.WrongPassword) {
                 isUnlocking = false
                 failedAttempts++
                 error = "Incorrect password"
                 password = ""
+            } catch (e: Exception) {
+                // Not a password problem, so it must not count towards the wipe offer
+                isUnlocking = false
+                error = context.getString(R.string.unlock_failed, e.message ?: e.javaClass.simpleName)
             }
         }
     }
@@ -86,6 +97,9 @@ fun UnlockScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .systemBarsPadding()
+            .imePadding()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -158,24 +172,6 @@ fun UnlockScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(if (isUnlocking) "Unlocking\u2026" else "Unlock")
-        }
-
-        // Biometric button placeholder
-        Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedButton(
-            onClick = {
-                // TODO: Biometric unlock
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Icon(
-                Icons.Default.Fingerprint,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(modifier = Modifier.padding(4.dp))
-            Text("Unlock with Biometrics")
         }
 
         // Wipe button after 3 failed attempts

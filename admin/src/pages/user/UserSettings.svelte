@@ -1,5 +1,6 @@
 <script lang="ts">
   import { userApi, ApiError } from '../../lib/userApi';
+  import { describeError } from '../../lib/apiErrors';
   import { userAuth } from '../../lib/userAuth.svelte';
   import { toast } from '../../lib/toast.svelte';
   import ConfirmModal from '../../components/ConfirmModal.svelte';
@@ -59,7 +60,7 @@
         if (err.status === 401) {
           passwordError = $_('userPortal.settings.errors.wrongPassword');
         } else {
-          passwordError = err.message;
+          passwordError = describeError(err, $_, 'userPortal.settings.errors.unexpected');
         }
       } else {
         passwordError = $_('userPortal.settings.errors.unexpected');
