@@ -60,6 +60,13 @@ struct VersionRepository: Sendable {
         }
     }
 
+    /// Insert a version unless one with this key is already here.
+    func insertIfAbsent(_ record: NoteVersionRecord) throws {
+        try db.dbPool.write { db in
+            try record.insert(db, onConflict: .ignore)
+        }
+    }
+
     // MARK: - Delete
 
     /// Delete all version snapshots for a note.

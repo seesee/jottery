@@ -1327,6 +1327,54 @@ struct SyncProtocolTests {
         #expect(await fixture.service.pendingConflicts.count == 1)
     }
 
+    // MARK: - Version keys collide across devices (R2-076)
+
+    /// A key is only unique per client, so a pulled version with the same key can
+    /// be someone else's revision. This device's own must survive that.
+    @Test func aPulledVersionNeverReplacesOneThisDeviceHolds() async throws {
+        let fixture = try makeFixture()
+        let record = try synced(fixture.repo)
+        try fixture.versionRepo.createVersion(from: record, reason: "manual")
+        let mine = try #require(try fixture.versionRepo.getVersions(noteId: record.id).first)
+        let response = SyncPullResponse(
+            notes: [], deletions: nil, attachments: [],
+            versions: [SyncNoteVersion(
+                versionKey: mine.versionKey, noteId: record.id, version: mine.version,
+                createdAt: mine.createdAt, syncedAt: "2026-11-05T09:00:00Z",
+                content: "a different device's revision", tags: [], attachments: [],
+                syntaxLanguage: "markdown", wordWrap: true, showPreview: false, reason: "sync"
+            )],
+            syncedAt: "2026-11-05T09:23:45Z", hasMore: false, nextCursor: nil
+        )
+        ScriptedServerProtocol.pullReplies = [.init(body: try JSONEncoder().encode(response))]
+
+        try await fixture.service.pull()
+
+        let kept = try #require(try fixture.versionRepo.getVersions(noteId: record.id).first)
+        #expect(kept.content == mine.content)
+    }
+
+    // MARK: - A sync that didn't run (jottery-bp2j)
+
+    @Test func aSyncThatDidntRunSaysSo() async throws {
+        let fixture = try makeFixture()
+        ScriptedServerProtocol.pushHandler = { _ in .init(status: 429, body: Data(#"{"retryAfter":600}"#.utf8)) }
+        _ = try fixture.repo.create(content: "waiting", key: key)
+        await #expect(throws: (any Error).self) { try await fixture.service.sync() }
+
+        let changes = try await fixture.service.sync()
+
+        #expect(changes.wasSkipped)
+    }
+
+    @Test func aSyncThatRanSaysSoEvenWithNothingToDo() async throws {
+        let fixture = try makeFixture()
+
+        let changes = try await fixture.service.sync()
+
+        #expect(!changes.wasSkipped)
+    }
+
     // MARK: - A note edited many times between syncs (R2-060)
 
     @Test func theServersHashStaysInTheChainHoweverManyEditsThereAre() throws {

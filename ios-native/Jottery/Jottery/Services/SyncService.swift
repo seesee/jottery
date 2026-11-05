@@ -53,8 +53,8 @@ actor SyncService {
     /// thrown once the pull is done.
     @discardableResult
     func sync() async throws -> SyncChanges {
-        guard !isSyncing, !isShutDown else { return .none }
-        if let retryNotBefore, Date() < retryNotBefore { return .none }
+        guard !isSyncing, !isShutDown else { return .skipped }
+        if let retryNotBefore, Date() < retryNotBefore { return .skipped }
         isSyncing = true
         lastError = nil
 
@@ -743,7 +743,10 @@ actor SyncService {
         for syncVersion in page.versions {
             do {
                 let attachmentsStr = String(data: (try? JSONEncoder().encode(syncVersion.attachments)) ?? Data("[]".utf8), encoding: .utf8) ?? "[]"
-                try versionRepo.insertOrReplace(NoteVersionRecord(
+                // Never over one this device holds. A version key is only unique
+                // per client, so a match can be someone else's revision, and the
+                // server keeps whichever it heard first (R2-076).
+                try versionRepo.insertIfAbsent(NoteVersionRecord(
                     versionKey: syncVersion.versionKey,
                     noteId: syncVersion.noteId,
                     version: syncVersion.version,

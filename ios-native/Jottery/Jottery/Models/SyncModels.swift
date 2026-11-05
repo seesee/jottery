@@ -348,9 +348,14 @@ struct SyncChanges: Sendable {
     /// Something this cycle sent went unanswered, and was dated over a day
     /// ahead of the server's clock. Never set by `merge`: `sync()` decides it.
     var clockLooksWrong = false
+    /// Nothing ran: a sync was in progress, or the server has said to wait.
+    var wasSkipped = false
 
     /// No changes, no reload needed — the default/no-op value.
     static let none = SyncChanges()
+
+    /// No cycle ran at all, which isn't the same as finding nothing to do.
+    static let skipped = SyncChanges(wasSkipped: true)
 
     /// Ambiguous or oversized change set — always safe, just not incremental.
     static let fullReload = SyncChanges(fullReloadRequired: true)

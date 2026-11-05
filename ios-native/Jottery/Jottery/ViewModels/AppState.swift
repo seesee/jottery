@@ -1430,11 +1430,15 @@ final class AppState {
         for item in SharedInboxStore.pendingItems(in: root) {
             do {
                 let note: DecryptedNote
-                if let resumeId = item.manifest.importedNoteId,
-                   let resumed = try? noteRepo.get(id: resumeId, key: key) {
+                if let resumeId = item.manifest.importedNoteId {
                     // A previous pass already created the note but failed
                     // before finishing (e.g. an attachment threw) — resume
-                    // onto it instead of creating a duplicate.
+                    // onto it instead of creating a duplicate. If the user has
+                    // deleted it since, they've answered: the rest goes too.
+                    guard let resumed = try noteRepo.get(id: resumeId, key: key), !resumed.deleted else {
+                        SharedInboxStore.remove(item.directory)
+                        continue
+                    }
                     note = resumed
                 } else {
                     var lines: [String] = []
@@ -1452,8 +1456,14 @@ final class AppState {
                     note = created
                 }
 
-                let alreadyAttached = Set(note.attachments.map { $0.filename })
-                for file in item.manifest.files where !alreadyAttached.contains(AttachmentFilename.safe(file.filename)) {
+                // By count: two files can share a name, and both have to arrive.
+                var alreadyAttached = Dictionary(grouping: note.attachments, by: \.filename).mapValues(\.count)
+                for file in item.manifest.files {
+                    let name = AttachmentFilename.safe(file.filename)
+                    if let count = alreadyAttached[name], count > 0 {
+                        alreadyAttached[name] = count - 1
+                        continue
+                    }
                     let fileURL = item.directory.appendingPathComponent(file.storedName)
                     let data = try Data(contentsOf: fileURL)
                     try addAttachment(to: note.id, data: data, filename: file.filename, mimeType: file.mimeType)
@@ -1667,8 +1677,15 @@ final class AppState {
             // this cycle's changes — this method must NOT call
             // applySyncChanges again itself, or every sync would decrypt
             // the same changed rows twice.
-            _ = try await syncService.sync()
+            let changes = try await syncService.sync()
             isSyncing = false
+            guard !changes.wasSkipped else {
+                // Nothing ran, so nothing can be said about it. One already
+                // running may have missed what prompted this, so go again after.
+                syncStatusMessage = nil
+                if await syncService.isSyncing { scheduleAutoSync() }
+                return
+            }
             lastSyncAt = Date()
             syncRetryAttempts = 0
 
