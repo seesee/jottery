@@ -31,6 +31,10 @@ fun MarkdownPreviewView(
 ) {
     val currentOnRequestAttachment by rememberUpdatedState(onRequestAttachment)
     val currentOnOpenLink by rememberUpdatedState(onOpenLink)
+    val currentContent by rememberUpdatedState(content)
+    val currentIsDark by rememberUpdatedState(isDark)
+    val currentFontSize by rememberUpdatedState(fontSize)
+    val pageState = remember { WebPageState() }
 
     // Keep a reference to the WebView so we can call resolveAttachment from the callback
     val webViewRef = remember { arrayOfNulls<WebView>(1) }
@@ -82,15 +86,19 @@ fun MarkdownPreviewView(
                     context = context,
                     onOpenLink = { currentOnOpenLink(it) },
                     onPageLoaded = { view ->
-                        val jsonContent = org.json.JSONObject.quote(content)
+                        val text = currentContent
+                        val dark = currentIsDark
+                        val size = currentFontSize
+                        val jsonContent = org.json.JSONObject.quote(text)
                         view?.evaluateJavascript(
-                            "window.bridge.setContent($jsonContent, $isDark)",
+                            "window.bridge.setContent($jsonContent, $dark)",
                             null,
                         )
                         view?.evaluateJavascript(
-                            "window.bridge.setFontSize($fontSize)",
+                            "window.bridge.setFontSize($size)",
                             null,
                         )
+                        pageState.loaded(text, dark, size)
                     },
                 )
 
@@ -103,13 +111,17 @@ fun MarkdownPreviewView(
             it.release()
         },
         update = { webView ->
-            webView.evaluateJavascript("window.bridge.setTheme($isDark)", null)
-            webView.evaluateJavascript("window.bridge.setFontSize($fontSize)", null)
-            val jsonContent = org.json.JSONObject.quote(content)
-            webView.evaluateJavascript(
-                "window.bridge.setContent($jsonContent, $isDark)",
-                null,
-            )
+            if (pageState.themeChanged(isDark)) {
+                webView.evaluateJavascript("window.bridge.setTheme($isDark)", null)
+            }
+            if (pageState.fontSizeChanged(fontSize)) {
+                webView.evaluateJavascript("window.bridge.setFontSize($fontSize)", null)
+            }
+            // The preview never edits, so any change comes from outside
+            if (pageState.isExternalChange(content)) {
+                val jsonContent = org.json.JSONObject.quote(content)
+                webView.evaluateJavascript("window.bridge.setContent($jsonContent, $isDark)", null)
+            }
         },
         modifier = modifier,
     )

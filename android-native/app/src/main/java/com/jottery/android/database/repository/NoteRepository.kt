@@ -52,11 +52,19 @@ class NoteRepository(
     }
 
     /** Fetch all active notes with decryption stats (total records, failures). */
-    suspend fun listActiveWithStats(key: SecretKey): ListResult {
+    suspend fun listActiveWithStats(
+        key: SecretKey,
+        known: Map<String, DecryptedNote> = emptyMap(),
+    ): ListResult {
         val records = noteDao.listActive()
         var failCount = 0
         val decrypted = mutableListOf<DecryptedNote>()
         for (record in records) {
+            val unchanged = known[record.id]?.takeIf { isSameAs(record, it) }
+            if (unchanged != null) {
+                decrypted.add(unchanged)
+                continue
+            }
             try {
                 decrypted.add(decrypt(hydrate(record), key))
             } catch (e: kotlinx.coroutines.CancellationException) {
@@ -80,13 +88,41 @@ class NoteRepository(
     }
 
     /** Fetch all archived notes, decrypted. */
-    suspend fun listArchived(key: SecretKey): List<DecryptedNote> {
-        return decryptEach(noteDao.listArchived(), key)
+    suspend fun listArchived(
+        key: SecretKey,
+        known: Map<String, DecryptedNote> = emptyMap(),
+    ): List<DecryptedNote> {
+        return decryptEach(noteDao.listArchived(), key, known)
     }
 
+    /**
+     * Whether a row is the note already in memory, so it needn't be decrypted
+     * again. Rows from before hash chains can't show that, so they always are.
+     */
+    private fun isSameAs(record: NoteRecord, note: DecryptedNote): Boolean =
+        record.contentHash != null &&
+            record.contentHash == note.contentHash &&
+            record.version == note.version &&
+            record.needsSync == note.needsSync &&
+            record.pinned == note.pinned &&
+            record.archived == note.archived &&
+            record.locked == note.locked &&
+            record.deleted == note.deleted &&
+            record.wordWrap == note.wordWrap &&
+            record.syntaxLanguage == note.syntaxLanguage &&
+            record.showPreview == note.showPreview &&
+            record.color == note.color &&
+            DateUtils.parseISO8601(record.modifiedAt) == note.modifiedAt &&
+            record.syncedAt?.let(DateUtils::parseISO8601) == note.syncedAt
+
     /** One note that can't be read must not stop the others loading. */
-    private suspend fun decryptEach(records: List<NoteRecord>, key: SecretKey): List<DecryptedNote> =
+    private suspend fun decryptEach(
+        records: List<NoteRecord>,
+        key: SecretKey,
+        known: Map<String, DecryptedNote> = emptyMap(),
+    ): List<DecryptedNote> =
         records.mapNotNull { record ->
+            known[record.id]?.takeIf { isSameAs(record, it) }?.let { return@mapNotNull it }
             try {
                 decrypt(hydrate(record), key)
             } catch (e: kotlinx.coroutines.CancellationException) {

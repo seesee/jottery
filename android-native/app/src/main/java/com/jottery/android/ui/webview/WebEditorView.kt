@@ -41,8 +41,10 @@ fun WebEditorView(
     val currentOnOpenLink by rememberUpdatedState(onOpenLink)
     val currentOnRequestAttachment by rememberUpdatedState(onRequestAttachment)
 
-    // The latest text, read when the page finishes loading.
+    // The latest values, read when the page finishes loading.
     val currentContent by rememberUpdatedState(content)
+    val currentIsDark by rememberUpdatedState(isDark)
+    val currentFontSize by rememberUpdatedState(fontSize)
 
     // Tells the page's own edits coming back from anything else that changed the
     // note, such as a sync, a restored version or a resolved conflict. The page
@@ -80,16 +82,18 @@ fun WebEditorView(
                         // Set initial content after page loads using JSON string
                         // escaping (handles all special characters)
                         val text = currentContent
+                        val dark = currentIsDark
+                        val size = currentFontSize
                         val jsonContent = org.json.JSONObject.quote(text)
                         view?.evaluateJavascript(
-                            "window.bridge.setContent($jsonContent, $isDark)",
+                            "window.bridge.setContent($jsonContent, $dark)",
                             null,
                         )
                         view?.evaluateJavascript(
-                            "window.bridge.setFontSize($fontSize)",
+                            "window.bridge.setFontSize($size)",
                             null,
                         )
-                        pageState.loaded(text)
+                        pageState.loaded(text, dark, size)
                     },
                 )
 
@@ -98,8 +102,15 @@ fun WebEditorView(
         },
         onRelease = { it.release() },
         update = { webView ->
-            webView.evaluateJavascript("window.bridge.setTheme($isDark)", null)
-            webView.evaluateJavascript("window.bridge.setFontSize($fontSize)", null)
+            // Only when they change: the calc page rebuilds its whole editor for
+            // these, and this block runs on every keystroke. A rebuild drops focus,
+            // so typing would stop partway through.
+            if (pageState.themeChanged(isDark)) {
+                webView.evaluateJavascript("window.bridge.setTheme($isDark)", null)
+            }
+            if (pageState.fontSizeChanged(fontSize)) {
+                webView.evaluateJavascript("window.bridge.setFontSize($fontSize)", null)
+            }
             if (pageState.isExternalChange(content)) {
                 val jsonContent = org.json.JSONObject.quote(content)
                 webView.evaluateJavascript("window.bridge.setContent($jsonContent, $isDark)", null)
@@ -119,12 +130,28 @@ fun WebEditorView(
 internal class WebPageState {
     private var loaded = false
     private var composed: String? = null
+    private var dark: Boolean? = null
+    private var fontSize: Float? = null
     private val unconfirmed = ArrayDeque<String>()
 
-    fun loaded(content: String) {
+    fun loaded(content: String, isDark: Boolean = false, size: Float = 0f) {
         loaded = true
         composed = content
+        dark = isDark
+        fontSize = size
         unconfirmed.clear()
+    }
+
+    fun themeChanged(isDark: Boolean): Boolean {
+        if (!loaded || dark == isDark) return false
+        dark = isDark
+        return true
+    }
+
+    fun fontSizeChanged(size: Float): Boolean {
+        if (!loaded || fontSize == size) return false
+        fontSize = size
+        return true
     }
 
     fun reported(content: String) {

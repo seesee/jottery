@@ -257,6 +257,35 @@ class SyncConflictTest {
         assertEquals(1, h.service().loadConflicts().size)
     }
 
+    @Test fun `resolving uses the server's latest version, not the one first shown`() = runBlocking {
+        h.seedSynced(noteId, "BASE", "hash-base")
+        editLocally("LOCAL")
+        val shown = raiseConflict(h.remoteNote(noteId, "R1", "hash-r1", "hash-base", listOf("hash-r1", "hash-base")))
+        h.onPull = {
+            SyncHarness.emptyPull(
+                h.remoteNote(noteId, "R2", "hash-r2", "hash-r1", listOf("hash-r2", "hash-r1", "hash-base"))
+            )
+        }
+        h.service().pull()
+
+        h.service().resolveConflict(shown, ConflictResolutionStrategy.KEEP_SERVER)
+
+        assertEquals("R2", localText())
+        assertEquals("hash-r2", h.noteRepo.getRaw(noteId)!!.contentHash)
+    }
+
+    @Test fun `keep both copies the local text as it is now`() = runBlocking {
+        h.seedSynced(noteId, "BASE", "hash-base")
+        editLocally("LOCAL")
+        val shown = raiseConflict(h.remoteNote(noteId, "R", "hash-r", "hash-base", listOf("hash-r", "hash-base")))
+        editLocally("LOCAL, EDITED SINCE")
+
+        h.service().resolveConflict(shown, ConflictResolutionStrategy.KEEP_BOTH)
+
+        val copy = h.noteRepo.listAllRaw().single { it.id != noteId }
+        assertEquals("LOCAL, EDITED SINCE", localText(copy.id))
+    }
+
     @Test fun `a new remote note is inserted`() = runBlocking {
         val remote = h.remoteNote(noteId, "NEW", "hash-new", null, listOf("hash-new"))
         h.onPull = { SyncHarness.emptyPull(remote) }

@@ -145,10 +145,12 @@ class BackupService(
         val writer = out.bufferedWriter(Charsets.UTF_8)
         val encryption = headerFor(metadata)
 
-        writer.write("{\"version\":\"$FORMAT_VERSION\",\"type\":\"$FORMAT_TYPE\",")
-        writer.write("\"createdAt\":${JsonPrimitive(DateUtils.nowISO8601())},")
-        writer.write("\"encryption\":${json.encodeToString(encryption)},")
-        writer.write("\"batches\":[")
+        // These keys in this order, and a batch to a line: web reads large files
+        // in pieces and finds the header at the start and the summary at the end.
+        writer.write("{\n\"version\":\"$FORMAT_VERSION\",\n\"type\":\"$FORMAT_TYPE\",\n")
+        writer.write("\"createdAt\":${JsonPrimitive(DateUtils.nowISO8601())},\n")
+        writer.write("\"encryption\":${json.encodeToString(encryption)},\n")
+        writer.write("\"batches\":[\n")
 
         var first = true
         val indexes = mutableMapOf<String, Int>()
@@ -157,7 +159,7 @@ class BackupService(
             val index = indexes.getOrDefault(type, 0)
             indexes[type] = index + 1
             val jwe = BackupCodec.encryptBatch(JsonArray(items).toString(), key)
-            if (!first) writer.write(",")
+            if (!first) writer.write(",\n")
             first = false
             writer.write("{\"type\":\"$type\",\"index\":$index,\"count\":${items.size},\"data\":\"$jwe\"}")
         }
@@ -205,7 +207,7 @@ class BackupService(
         emit("saved_searches", searches.map(::searchToJson))
 
         val summary = Summary(notes.size, attachments, versions, searches.size)
-        writer.write("],\"summary\":${json.encodeToString(summary)}}")
+        writer.write("\n],\n\"summary\":${json.encodeToString(summary)}\n}")
         writer.flush()
         return summary
     }

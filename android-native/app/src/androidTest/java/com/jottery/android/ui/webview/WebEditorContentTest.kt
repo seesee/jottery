@@ -1,5 +1,6 @@
 package com.jottery.android.ui.webview
 
+import android.view.KeyCharacterMap
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebView
@@ -114,11 +115,18 @@ class WebEditorContentTest {
         waitFor("the editor") { evaluate("document.querySelector('.cm-content') != null") == "true" }
 
         instrumentation.runOnMainSync { findWebView(activity.window.decorView)!!.requestFocus() }
+
         evaluate("document.querySelector('.cm-content').focus()")
-        Thread.sleep(500)
-        // Every keystroke at once, faster than Compose can recompose
-        val typed = "qzxwvkqzxwvkqzxwvk"
-        instrumentation.sendStringSync(typed)
+        Thread.sleep(300)
+
+        // Faster than Compose can recompose. Sent straight to the WebView, because
+        // the input system drops injected keys when the soft keyboard appears.
+        val typed = "qzxwvkqzxwvkqzxwvkqzxwvkqzxwvk"
+        val keys = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD).getEvents(typed.toCharArray())
+        for (key in keys) {
+            activity.runOnUiThread { findWebView(activity.window.decorView)!!.dispatchKeyEvent(key) }
+            Thread.sleep(2)
+        }
 
         repeat(100) {
             if (reported.lastOrNull() == typed) return@repeat

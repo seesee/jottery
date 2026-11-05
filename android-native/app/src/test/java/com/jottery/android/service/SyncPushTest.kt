@@ -251,6 +251,30 @@ class SyncPushTest {
         assertTrue(h.noteRepo.listAllRaw().isEmpty())
     }
 
+    @Test fun `quarantined notes are reported`() = runBlocking {
+        val foreign = javax.crypto.spec.SecretKeySpec(ByteArray(32) { 9 }, "AES")
+        val content = com.jottery.android.crypto.CryptoService.serializeEncryptedJSON(
+            com.jottery.android.crypto.CryptoService.encryptText("foreign", foreign)
+        )
+        val unreadable = h.remoteNote(id(), "x", "h1", null, listOf("h1")).copy(content = content)
+        val malformed = h.remoteNote("not-a-uuid", "x", "h2", null, listOf("h2"))
+        h.onPull = { SyncHarness.emptyPull(unreadable, malformed) }
+        var reported = 0
+        val service = h.service()
+        service.onNotesQuarantined = { reported = it }
+
+        service.pull()
+
+        assertEquals(2, reported)
+    }
+
+    @Test fun `a mime type with parameters is accepted`() {
+        val ref = AttachmentRef(id(), "x", "text/plain; charset=utf-8", 1, id())
+        val note = h.remoteNote(id(), "x", "h", null, listOf("h")).copy(attachments = listOf(ref.copy(data = ref.id)))
+
+        assertTrue(SyncValidator.isValidNote(note))
+    }
+
     @Test fun `tags in every historic shape survive a pull`() = runBlocking {
         val asString = h.encryptTag("one")
         val asArray = h.encrypt("[\"two\",\"three\"]")

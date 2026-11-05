@@ -76,6 +76,10 @@ class SyncService(
     var onConflictDetected: ((ConflictInfo) -> Unit)? = null
     var onSyncComplete: ((Int) -> Unit)? = null
 
+    /** Notes from the server that were dropped because they couldn't be read. */
+    var onNotesQuarantined: ((Int) -> Unit)? = null
+    private var quarantined = 0
+
     private fun requireKey(): SecretKey =
         keyProvider() ?: throw IllegalStateException("Vault is locked")
 
@@ -374,6 +378,7 @@ class SyncService(
         onSyncStatusChanged?.invoke("Pulling…")
         try {
             val key = requireKey()
+            quarantined = 0
             val syncMeta = syncRepo.getSyncMetadata()
             val lastSyncAt = if (fullPull) null else syncMeta?.lastSyncAt
             val knownNoteIds = noteRepo.listIdsAndAttachmentBlobIds().map { it.first }.toMutableList()
@@ -414,6 +419,7 @@ class SyncService(
                     for (syncNote in response.notes) {
                         if (!SyncValidator.isValidNote(syncNote)) {
                             Log.w(TAG, "Dropped a malformed note from the server")
+                            quarantined++
                             continue
                         }
                         val sanitised = SyncValidator.sanitised(syncNote)
@@ -501,6 +507,7 @@ class SyncService(
             watermark?.let { syncRepo.updateLastSyncAt(it) }
 
             Log.d(TAG, "Pull complete: $totalNewCount new notes across ${offset} total")
+            if (quarantined > 0) onNotesQuarantined?.invoke(quarantined)
             return totalNewCount
         } catch (e: Exception) {
             Log.e(TAG, "Pull failed: ${e.message}")
@@ -608,6 +615,7 @@ class SyncService(
             syncTagsToStorageTags(syncNote.tags, key)
         } catch (e: Exception) {
             Log.w(TAG, "Skipping pulled note ${syncNote.id}: it can't be decrypted with this key")
+            quarantined++
             return null
         }
 
@@ -801,10 +809,13 @@ class SyncService(
      */
     suspend fun resolveConflict(conflict: ConflictInfo, strategy: ConflictResolutionStrategy) {
         val key = requireKey()
-        val stored = conflict.stored
+        // What's on screen may be behind: a pull can move the server's side on,
+        // and the user can edit the note while it waits for a decision.
+        val stored = syncRepo.listStoredConflicts().firstOrNull { it.id == conflict.id } ?: conflict.stored
+        val current = describe(stored, key)
         val localRecord = noteRepo.getRaw(conflict.id)
             ?: throw IllegalStateException("The note no longer exists")
-        if (strategy != ConflictResolutionStrategy.KEEP_LOCAL && conflict.serverUnreadable) {
+        if (strategy != ConflictResolutionStrategy.KEEP_LOCAL && current.serverUnreadable) {
             throw IllegalStateException("The server's version can't be decrypted on this device")
         }
 
@@ -849,8 +860,8 @@ class SyncService(
                     // went with it. Blobs are copied under new ids, because
                     // removing an attachment deletes its blob by id.
                     val copy = noteRepo.create(
-                        content = conflict.localContent,
-                        tags = conflict.localTags,
+                        content = current.localContent,
+                        tags = current.localTags,
                         key = key,
                     )
                     val refs = decodeRefs(localRecord.attachments).map { copyAttachment(it) }

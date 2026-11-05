@@ -142,6 +142,19 @@ class ConnectFlowTest {
         assertNothingCreated()
     }
 
+    @Test fun `a new password has to be typed twice before anything is created`() = runBlocking {
+        register()
+
+        appState.connectNewVault(notesPassword)
+        assertEquals(AppState.ConnectState.ConfirmNewPassword, settled())
+        assertNothingCreated()
+
+        appState.clearConnectState()
+        appState.connectNewVault(notesPassword, "${notesPassword}typo")
+        assertTrue(settled() is AppState.ConnectState.Failed)
+        assertNothingCreated()
+    }
+
     @Test fun `a registered device isn't connected until it holds a key`() = runBlocking {
         register()
 

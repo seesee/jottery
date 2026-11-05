@@ -575,10 +575,12 @@ class AppState(application: Application) : AndroidViewModel(application) {
         // that a local write overtook starts again.
         repeat(MAX_LOAD_ATTEMPTS) {
             val revision = notesRevision.get()
+            // A sync usually changes a few notes: the rest needn't be decrypted again
+            val known = (_notes.value + _archivedNotes.value).associateBy { it.id }
             val loaded = withContext(Dispatchers.Default) {
                 LoadedNotes(
-                    active = repo.listActiveWithStats(key),
-                    archived = repo.listArchived(key),
+                    active = repo.listActiveWithStats(key, known),
+                    archived = repo.listArchived(key, known),
                     searches = savedSearchRepo?.listActive(key) ?: emptyList(),
                 )
             }
@@ -770,7 +772,11 @@ class AppState(application: Application) : AndroidViewModel(application) {
     fun scheduleSearch() {
         searchJob?.cancel()
         val query = _searchQuery.value
-        val source = displayedNotes
+        val source = if (SearchService.searchesArchive(query)) {
+            _notes.value + _archivedNotes.value
+        } else {
+            displayedNotes
+        }
         val order = _sortOrder.value
 
         // No debounce needed when query is empty -- just sort (cheap)
@@ -1273,6 +1279,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
         data object Working : ConnectState
         data class Failed(val message: String) : ConnectState
 
+        /** No account key yet, so this password is new: it has to be typed twice. */
+        data object ConfirmNewPassword : ConnectState
+
         /** The account uses another key: the user chooses whether to move to it. */
         data object NeedsMerge : ConnectState
         data object Done : ConnectState
@@ -1371,7 +1380,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
      * key is checked BEFORE any vault exists, so a wrong password or a network
      * failure leaves the user on the screen with nothing created.
      */
-    fun connectNewVault(notesPassword: String) {
+    fun connectNewVault(notesPassword: String, confirmation: String? = null) {
         val connection = _pendingConnection.value ?: return
         connecting {
             refuseMatchingPasswords(notesPassword, connection.accountPassword)
@@ -1383,6 +1392,15 @@ class AppState(application: Application) : AndroidViewModel(application) {
                 // is published before anything else, so no second device can
                 // start on a key of its own in the meantime.
                 refuseShortNewPassword(notesPassword)
+                // Nothing can recover a mistyped password, so a new one is typed
+                // twice. A password that opened the account's key has proved itself.
+                if (confirmation == null) {
+                    _connectState.value = ConnectState.ConfirmNewPassword
+                    return@connecting
+                }
+                if (confirmation != notesPassword) {
+                    throw ConnectRefused(text(R.string.password_mismatch))
+                }
                 master = CryptoService.generateSalt()
                 EnvelopeService.publishKey(client, connection.userId, notesPassword, master)
             }
@@ -1621,6 +1639,10 @@ class AppState(application: Application) : AndroidViewModel(application) {
         service.onSyncStatusChanged = { status ->
             _syncStatusMessage.value = status
         }
+        service.onNotesQuarantined = { count ->
+            _syncError.value = getApplication<Application>().resources
+                .getQuantityString(R.plurals.sync_notes_quarantined, count, count)
+        }
         service.onConflictDetected = { conflict ->
             _pendingConflicts.value = _pendingConflicts.value.filter { it.id != conflict.id } + conflict
         }
@@ -1694,6 +1716,8 @@ class AppState(application: Application) : AndroidViewModel(application) {
                 "Synced \u2014 up to date"
             }
             loadNotes()
+            // A pull can move the server's side of a conflict on
+            _pendingConflicts.value = withContext(Dispatchers.Default) { service.loadConflicts() }
             loadInboxItems()
         } catch (e: Exception) {
             Log.e(TAG, "[Sync] triggerSync failed: ${e.message}", e)

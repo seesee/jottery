@@ -1,11 +1,16 @@
 package com.jottery.android.ui.component
 
+import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
@@ -21,6 +26,7 @@ import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Image
@@ -53,6 +59,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.mimeTypes
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -83,7 +93,7 @@ import kotlinx.coroutines.launch
  * Note editor composable with auto-save, context menu, tag input area, and
  * pinch-to-zoom font size.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun NoteEditorView(
     appState: AppState,
@@ -188,6 +198,15 @@ fun NoteEditorView(
     val noAppMessage = stringResource(R.string.attachment_no_app)
     val tooLargeMessage = stringResource(R.string.attachment_too_large, AttachmentFiles.MAX_ATTACHMENT_BYTES / (1024 * 1024))
     val addFailedMessage = stringResource(R.string.attachment_add_failed)
+    val noteTooLargeMessage = stringResource(R.string.note_too_large)
+    val nothingToPasteMessage = stringResource(R.string.attachment_nothing_to_paste)
+
+    // A note the server would refuse could never leave this device
+    fun acceptsText(text: String): Boolean {
+        if (text.length <= MAX_NOTE_CHARS) return true
+        appState.showMessage(noteTooLargeMessage)
+        return false
+    }
 
     fun attach(uris: List<Uri>) {
         scope.launch {
@@ -222,6 +241,20 @@ fun NoteEditorView(
     val filePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
     ) { uris -> attach(uris) }
+
+    // Files dragged in from another app, on large screens and in split screen
+    val dropTarget = remember {
+        object : DragAndDropTarget {
+            override fun onDrop(event: DragAndDropEvent): Boolean {
+                val dragEvent = event.toAndroidDragEvent()
+                (context as? Activity)?.requestDragAndDropPermissions(dragEvent)
+                val uris = dragEvent.clipData?.urisOrEmpty().orEmpty()
+                if (uris.isEmpty()) return false
+                attach(uris)
+                return true
+            }
+        }
+    }
 
     fun handOff(attachment: AttachmentRef, buildIntent: suspend (ByteArray) -> Intent) {
         scope.launch {
@@ -274,7 +307,12 @@ fun NoteEditorView(
         showPreview = note.showPreview
     }
 
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier.dragAndDropTarget(
+            shouldStartDragAndDrop = { event -> !isReadOnly && event.mimeTypes().isNotEmpty() },
+            target = dropTarget,
+        ),
+    ) {
         // Top bar with back button (phone) and overflow menu
         TopAppBar(
             title = {
@@ -351,6 +389,12 @@ fun NoteEditorView(
                         onAddFile = {
                             menuExpanded = false
                             filePicker.launch(arrayOf("*/*"))
+                        },
+                        onPasteAttachment = {
+                            menuExpanded = false
+                            val clipboard = context.getSystemService(ClipboardManager::class.java)
+                            val uris = clipboard?.primaryClip?.urisOrEmpty().orEmpty()
+                            if (uris.isEmpty()) appState.showMessage(nothingToPasteMessage) else attach(uris)
                         },
                         onDelete = {
                             menuExpanded = false
@@ -538,7 +582,7 @@ fun NoteEditorView(
                         content = textFieldValue.text,
                         fontSize = 14f * editorFontScale,
                         onContentChanged = { newContent ->
-                            if (!isReadOnly) {
+                            if (!isReadOnly && acceptsText(newContent)) {
                                 textFieldValue = TextFieldValue(newContent)
                                 scheduleSave()
                             }
@@ -551,7 +595,7 @@ fun NoteEditorView(
                         content = textFieldValue.text,
                         fontSize = 14f * editorFontScale,
                         onContentChanged = { newContent ->
-                            if (!isReadOnly) {
+                            if (!isReadOnly && acceptsText(newContent)) {
                                 textFieldValue = TextFieldValue(newContent)
                                 scheduleSave()
                             }
@@ -563,7 +607,7 @@ fun NoteEditorView(
                     BasicTextField(
                         value = textFieldValue,
                         onValueChange = { newValue ->
-                            if (!isReadOnly) {
+                            if (!isReadOnly && acceptsText(newValue.text)) {
                                 textFieldValue = newValue
                                 scheduleSave()
                             }
@@ -707,6 +751,7 @@ private fun EditorContextMenu(
     canAddAttachments: Boolean,
     onAddPhoto: () -> Unit,
     onAddFile: () -> Unit,
+    onPasteAttachment: () -> Unit,
     onDelete: () -> Unit,
     onShowColourMenu: () -> Unit,
     onShowLanguageMenu: () -> Unit,
@@ -823,6 +868,11 @@ private fun EditorContextMenu(
                 onClick = onAddFile,
                 leadingIcon = { Icon(Icons.Default.AttachFile, contentDescription = null) },
             )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.attachment_paste)) },
+                onClick = onPasteAttachment,
+                leadingIcon = { Icon(Icons.Default.ContentPaste, contentDescription = null) },
+            )
         }
 
         // Duplicate
@@ -855,6 +905,16 @@ private fun EditorContextMenu(
         )
     }
 }
+
+/**
+ * Encryption and base64 add a third, and the server refuses content over 10 MB
+ * by default, so this is the most that can still sync.
+ */
+private const val MAX_NOTE_CHARS = 7_000_000
+
+/** The files a clip or a drop is carrying. */
+private fun ClipData.urisOrEmpty(): List<Uri> =
+    (0 until itemCount).mapNotNull { getItemAt(it).uri }
 
 /** Supported syntax languages matching the iOS editor. */
 private val syntaxLanguages = listOf(

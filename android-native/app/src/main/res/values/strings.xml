@@ -265,6 +265,18 @@
     <string name="attachment_too_large">Attachments can be up to %1$d MB.</string>
     <string name="attachment_add_failed">Couldn\'t add that file.</string>
 
+    <!-- Limits and sync problems -->
+    <string name="note_too_large">This note has reached the size limit, so that wasn\'t added. Split it into two notes.</string>
+    <string name="attachment_paste">Paste as Attachment</string>
+    <string name="attachment_nothing_to_paste">There\'s no file or image on the clipboard.</string>
+    <string name="password_mismatch">Those passwords don\'t match.</string>
+    <string name="connect_confirm_password">Confirm encryption password</string>
+    <string name="connect_confirm_password_help">This account has no encryption key yet, so this password is new. It can\'t be recovered if lost.</string>
+    <plurals name="sync_notes_quarantined">
+        <item quantity="one">%1$d note from the server couldn\'t be read and was skipped. It may have been encrypted with a different key.</item>
+        <item quantity="other">%1$d notes from the server couldn\'t be read and were skipped. They may have been encrypted with a different key.</item>
+    </plurals>
+
     <!-- Version history -->
     <string name="version_restore_failed">This version can\'t be read, so it wasn\'t restored.</string>
 

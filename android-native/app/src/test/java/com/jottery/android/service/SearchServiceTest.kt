@@ -236,24 +236,30 @@ class SearchServiceTest {
         needsSync = false,
     )
 
-    @Test fun `mixed OR keeps every term in each alternative`() {
-        val tagged = makeNote(content = "dog here", tags = listOf("work"))
-        val untagged = makeNote(content = "dog here", tags = emptyList())
-        val cat = makeNote(content = "a cat", tags = emptyList())
+    @Test fun `a before date includes that day`() {
+        val zone = java.time.ZoneId.systemDefault()
+        val lastThing = java.time.LocalDate.parse("2024-06-30").plusDays(1).atStartOfDay(zone).toInstant().minusSeconds(1)
+        val nextDay = lastThing.plusSeconds(2)
+        val onTheDay = makeNote(content = "a", createdAt = lastThing)
+        val after = makeNote(content = "b", createdAt = nextDay)
 
-        val result = SearchService.filter(listOf(tagged, untagged, cat), "#work dog | cat").notes
-
-        assertTrue(tagged in result)
-        assertTrue(cat in result)
-        assertFalse("the tag must not be dropped", untagged in result)
+        assertEquals(listOf(onTheDay), SearchService.filter(listOf(onTheDay, after), "created:<2024-06-30").notes)
     }
 
-    @Test fun `three way text OR needs only one`() {
-        val c = makeNote(content = "gamma only", tags = emptyList())
-        val none = makeNote(content = "nothing", tags = emptyList())
+    @Test fun `archived finds only archived notes, in either list`() {
+        val note = makeNote(content = "plain")
+        val archived = makeNote(content = "kept").copy(archived = true)
 
-        val result = SearchService.filter(listOf(c, none), "alpha | beta | gamma").notes
+        assertEquals(listOf(archived), SearchService.filter(listOf(note, archived), "archived").notes)
+        assertEquals(listOf(archived), SearchService.filter(listOf(note, archived), "archived:true").notes)
+        assertTrue(SearchService.searchesArchive("kept archived"))
+        assertFalse(SearchService.searchesArchive("the archived-box"))
+    }
 
-        assertEquals(listOf(c), result)
+    @Test fun `colour qualifiers aren't searched for as text`() {
+        val red = makeNote(content = "no such word", color = "red")
+
+        assertEquals(listOf(red), SearchService.filter(listOf(red), "color:red note").notes)
+        assertTrue("this client has no tag colours", SearchService.filter(listOf(red), "color:red tag").notes.isEmpty())
     }
 }

@@ -30,6 +30,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -79,6 +80,11 @@ fun SetupScreen(
     val isRegistered = pendingConnection != null
     val isConnecting = connectState is AppState.ConnectState.Working
     val connectError = (connectState as? AppState.ConnectState.Failed)?.message
+    var confirmationPassword by remember { mutableStateOf("") }
+    var askForConfirmation by remember { mutableStateOf(false) }
+    LaunchedEffect(connectState) {
+        if (connectState is AppState.ConnectState.ConfirmNewPassword) askForConfirmation = true
+    }
 
     // Import fields
     var credentialString by remember { mutableStateOf("") }
@@ -419,12 +425,32 @@ fun SetupScreen(
                         modifier = Modifier.fillMaxWidth(),
                     )
 
+                    if (askForConfirmation) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = confirmationPassword,
+                            onValueChange = { confirmationPassword = it },
+                            label = { Text(stringResource(R.string.connect_confirm_password)) },
+                            supportingText = { Text(stringResource(R.string.connect_confirm_password_help)) },
+                            singleLine = true,
+                            visualTransformation = PasswordVisualTransformation(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                            enabled = !isConnecting,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+
                     ErrorText(connectError)
 
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Button(
-                        onClick = { appState.connectNewVault(encryptionPassword) },
+                        onClick = {
+                            appState.connectNewVault(
+                                encryptionPassword,
+                                confirmationPassword.takeIf { askForConfirmation },
+                            )
+                        },
                         enabled = !isConnecting && encryptionPassword.isNotEmpty(),
                         modifier = Modifier.fillMaxWidth(),
                     ) {

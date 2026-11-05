@@ -53,6 +53,9 @@ object SearchService {
         return FilterResult(notes = filtered, matchCount = filtered.size, totalCount = notes.size)
     }
 
+    /** Whether a query asks for archived notes, wherever the list is showing. */
+    fun searchesArchive(query: String): Boolean = parseQuery(query.trim()).archivedOnly
+
     /**
      * Sort notes by the given order, with pinned notes always first.
      */
@@ -78,17 +81,13 @@ object SearchService {
     data class ParsedQuery(
         // Tags (AND -- all must match)
         val requiredTags: MutableList<String> = mutableListOf(),
-        // Tags (OR groups -- at least one in each group must match)
-        val orTagGroups: MutableList<List<String>> = mutableListOf(),
         // Tags to exclude
         val excludeTags: MutableList<String> = mutableListOf(),
 
         // Text terms (AND -- all must match)
         val requiredText: MutableList<TextMatch> = mutableListOf(),
-        // Text terms (OR groups)
-        val orTextGroups: MutableList<List<TextMatch>> = mutableListOf(),
-        // Alternatives with more than one term each: `#work dog | cat`
-        val orClauses: MutableList<ParsedQuery> = mutableListOf(),
+        // Terms joined by |: at least one in each group must match, tags and text alike
+        val orGroups: MutableList<List<OrTerm>> = mutableListOf(),
         // Text to exclude
         val excludeText: MutableList<String> = mutableListOf(),
 
@@ -102,7 +101,16 @@ object SearchService {
         var wordCountMax: Int? = null,
         val colors: MutableList<String> = mutableListOf(),
         val excludeColors: MutableList<String> = mutableListOf(),
+        // `archived` searches archived notes only
+        var archivedOnly: Boolean = false,
+        // `color:red tag` asks for a tag colour, which this client doesn't have
+        var tagColorOnly: Boolean = false,
     )
+
+    sealed class OrTerm {
+        data class Tag(val name: String) : OrTerm()
+        data class Text(val match: TextMatch) : OrTerm()
+    }
 
     sealed class TextMatch {
         /** Plain word -- case-insensitive contains. */
@@ -165,6 +173,13 @@ object SearchService {
     private fun extractModifiers(input: String, query: ParsedQuery): String {
         var text = input
 
+        // archived, archived:true
+        val archivedRegex = Regex("""(?i)(?<![^\s])archived(?::true)?(?![^\s])""")
+        if (archivedRegex.containsMatchIn(text)) {
+            query.archivedOnly = true
+            text = archivedRegex.replaceFirst(text, "")
+        }
+
         // has:attachment
         val hasAttachmentRegex = Regex("""\bhas:attachment\b""")
         if (hasAttachmentRegex.containsMatchIn(text)) {
@@ -175,14 +190,14 @@ object SearchService {
         // created:>DATE
         text = extractDateModifier(text, Regex("""created:>$DATE_PATTERN""")) { query.createdAfter = it }
         // created:<DATE
-        text = extractDateModifier(text, Regex("""created:<$DATE_PATTERN""")) { query.createdBefore = it }
+        text = extractDateModifier(text, Regex("""created:<$DATE_PATTERN"""), endOfDay = true) { query.createdBefore = it }
         // created:DATE..DATE
         text = extractDateRange(text, "created", { query.createdAfter = it }, { query.createdBefore = it })
 
         // modified:>DATE
         text = extractDateModifier(text, Regex("""modified:>$DATE_PATTERN""")) { query.modifiedAfter = it }
         // modified:<DATE
-        text = extractDateModifier(text, Regex("""modified:<$DATE_PATTERN""")) { query.modifiedBefore = it }
+        text = extractDateModifier(text, Regex("""modified:<$DATE_PATTERN"""), endOfDay = true) { query.modifiedBefore = it }
         // modified:DATE..DATE
         text = extractDateRange(text, "modified", { query.modifiedAfter = it }, { query.modifiedBefore = it })
 
@@ -198,6 +213,7 @@ object SearchService {
     private fun extractDateModifier(
         text: String,
         pattern: Regex,
+        endOfDay: Boolean = false,
         setter: (Instant) -> Unit,
     ): String {
         val match = pattern.find(text) ?: return text
@@ -206,7 +222,15 @@ object SearchService {
         val dateStr = matched.takeLast(10)
         val date = parseDate(dateStr)
         if (date != null) {
-            setter(date)
+            // A "before" date includes that day, as on web and the TUI
+            setter(
+                if (endOfDay) {
+                    LocalDate.parse(dateStr, DATE_FORMATTER).plusDays(1)
+                        .atStartOfDay(ZoneId.systemDefault()).toInstant()
+                } else {
+                    date
+                }
+            )
         }
         return text.removeRange(match.range)
     }
@@ -271,11 +295,13 @@ object SearchService {
         var result = text
 
         // Match color:name, colour:name, or category:name (case-insensitive)
-        val colorPattern = Regex("""(?i)\b(?:colou?r|category):([a-z0-9#]+)\b""")
+        // `note` or `tag` after it says which colour is meant
+        val colorPattern = Regex("""(?i)\b(?:colou?r|category):([a-z0-9#]+)\b(?:\s+(note|tag)\b)?""")
         var match = colorPattern.find(result)
         while (match != null) {
             val colorName = match.groupValues[1].lowercase()
             query.colors.add(colorName)
+            if (match.groupValues[2].equals("tag", ignoreCase = true)) query.tagColorOnly = true
             result = result.removeRange(match.range)
             match = colorPattern.find(result)
         }
@@ -296,75 +322,55 @@ object SearchService {
         data object OrSeparator : RawToken()
     }
 
-    private fun addAndTerms(tokens: List<RawToken>, query: ParsedQuery) {
-        for (token in tokens) {
-            when (token) {
-                is RawToken.Tag -> query.requiredTags.add(token.name)
-                is RawToken.ExcludeTag -> query.excludeTags.add(token.name)
-                is RawToken.Exclude -> query.excludeText.add(token.term)
-                is RawToken.Text -> query.requiredText.add(classifyTextMatch(token.term))
-                is RawToken.Phrase -> query.requiredText.add(TextMatch.Exact(token.phrase.lowercase()))
-                is RawToken.OrSeparator -> { /* already handled */ }
-            }
-        }
-    }
-
+    /**
+     * The grammar shared by every client (docs/search-query-fixture.json). Terms
+     * side by side are ANDed. | joins the terms on either side into a group where
+     * any one may match, so `#work dog | cat` is #work AND (dog OR cat). An
+     * exclusion is always ANDed and ends a group, and a | with nothing on one side
+     * is ignored.
+     */
     private fun tokenize(input: String, query: ParsedQuery) {
-        val tokens = splitTokens(input)
+        var group = mutableListOf<RawToken>()
+        var joinNext = false
 
-        // Group tokens by | (OR) separators
-        var currentGroup = mutableListOf<RawToken>()
-        val groups = mutableListOf<List<RawToken>>()
-        var hasOr = false
+        fun endGroup() {
+            when (group.size) {
+                0 -> Unit
+                1 -> when (val token = group[0]) {
+                    is RawToken.Tag -> query.requiredTags.add(token.name)
+                    else -> textMatchFromToken(token)?.let { query.requiredText.add(it) }
+                }
+                else -> query.orGroups.add(
+                    group.mapNotNull { token ->
+                        if (token is RawToken.Tag) OrTerm.Tag(token.name)
+                        else textMatchFromToken(token)?.let { OrTerm.Text(it) }
+                    }
+                )
+            }
+            group = mutableListOf()
+        }
 
-        for (token in tokens) {
-            if (token is RawToken.OrSeparator) {
-                hasOr = true
-                groups.add(currentGroup)
-                currentGroup = mutableListOf()
-            } else {
-                currentGroup.add(token)
+        for (token in splitTokens(input)) {
+            when (token) {
+                is RawToken.OrSeparator -> joinNext = group.isNotEmpty()
+                is RawToken.ExcludeTag -> {
+                    endGroup()
+                    joinNext = false
+                    query.excludeTags.add(token.name)
+                }
+                is RawToken.Exclude -> {
+                    endGroup()
+                    joinNext = false
+                    query.excludeText.add(token.term)
+                }
+                else -> {
+                    if (!joinNext) endGroup()
+                    joinNext = false
+                    group.add(token)
+                }
             }
         }
-        groups.add(currentGroup)
-
-        if (hasOr && groups.size > 1) {
-            // Check if this is an OR group of tags or text
-            val allTags = groups.all { group ->
-                group.size == 1 && group[0] is RawToken.Tag
-            }
-            val allSimpleText = groups.all { group ->
-                group.size == 1 && textMatchFromToken(group[0]) != null
-            }
-
-            if (!allTags && !allSimpleText) {
-                // Mixed: every term in every alternative counts
-                for (group in groups) {
-                    val clause = ParsedQuery()
-                    addAndTerms(group, clause)
-                    query.orClauses.add(clause)
-                }
-            } else if (allTags) {
-                // OR tag group
-                val tagNames = groups.mapNotNull { group ->
-                    val token = group.firstOrNull()
-                    if (token is RawToken.Tag) token.name else null
-                }
-                query.orTagGroups.add(tagNames)
-            } else {
-                // OR text group
-                val textMatches = groups.mapNotNull { group ->
-                    val token = group.firstOrNull() ?: return@mapNotNull null
-                    textMatchFromToken(token)
-                }
-                if (textMatches.isNotEmpty()) {
-                    query.orTextGroups.add(textMatches)
-                }
-            }
-        } else {
-            // No OR -- treat as AND
-            addAndTerms(currentGroup, query)
-        }
+        endGroup()
     }
 
     private fun splitTokens(input: String): List<RawToken> {
@@ -384,6 +390,15 @@ object SearchService {
             if (ch == '|') {
                 tokens.add(RawToken.OrSeparator)
                 i++
+                continue
+            }
+
+            // Excluded phrase
+            if (ch == '-' && i + 1 < input.length && input[i + 1] == '"') {
+                val start = i + 2
+                val end = input.indexOf('"', start).takeIf { it != -1 } ?: input.length
+                tokens.add(RawToken.Exclude(input.substring(start, end).lowercase()))
+                i = minOf(end + 1, input.length)
                 continue
             }
 
@@ -457,19 +472,14 @@ object SearchService {
         val lowerTags = note.tags.map { it.lowercase() }
         val searchableText = lowerContent + " " + lowerTags.joinToString(" ")
 
-        // Required tags (AND)
+        // Required tags (AND). #tag matches any tag containing that text.
         for (tag in query.requiredTags) {
-            if (tag !in lowerTags) return false
-        }
-
-        // OR tag groups
-        for (group in query.orTagGroups) {
-            if (group.none { it in lowerTags }) return false
+            if (lowerTags.none { it.contains(tag) }) return false
         }
 
         // Excluded tags
         for (tag in query.excludeTags) {
-            if (tag in lowerTags) return false
+            if (lowerTags.any { it.contains(tag) }) return false
         }
 
         // Required text (AND)
@@ -477,9 +487,15 @@ object SearchService {
             if (!match.matches(searchableText)) return false
         }
 
-        // OR text groups
-        for (group in query.orTextGroups) {
-            if (group.none { it.matches(searchableText) }) return false
+        // Groups joined by |
+        for (group in query.orGroups) {
+            val anyMatch = group.any { term ->
+                when (term) {
+                    is OrTerm.Tag -> lowerTags.any { it.contains(term.name) }
+                    is OrTerm.Text -> term.match.matches(searchableText)
+                }
+            }
+            if (!anyMatch) return false
         }
 
         // Excluded text
@@ -487,10 +503,8 @@ object SearchService {
             if (lowerContent.contains(term)) return false
         }
 
-        // Alternatives of several terms: at least one must hold in full
-        if (query.orClauses.isNotEmpty() && query.orClauses.none { matchesQuery(note, it) }) {
-            return false
-        }
+        if (query.archivedOnly && !note.archived) return false
+        if (query.tagColorOnly) return false
 
         // has:attachment
         if (query.hasAttachment == true) {
@@ -499,9 +513,9 @@ object SearchService {
 
         // Date filters
         if (query.createdAfter != null && note.createdAt.isBefore(query.createdAfter)) return false
-        if (query.createdBefore != null && note.createdAt.isAfter(query.createdBefore)) return false
+        if (query.createdBefore != null && !note.createdAt.isBefore(query.createdBefore)) return false
         if (query.modifiedAfter != null && note.modifiedAt.isBefore(query.modifiedAfter)) return false
-        if (query.modifiedBefore != null && note.modifiedAt.isAfter(query.modifiedBefore)) return false
+        if (query.modifiedBefore != null && !note.modifiedAt.isBefore(query.modifiedBefore)) return false
 
         // Word count
         if (query.wordCountMin != null && note.wordCount < query.wordCountMin!!) return false

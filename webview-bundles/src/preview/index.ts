@@ -129,6 +129,12 @@ function renderMarkdown(content: string): string {
     return `<pre><code>${escaped}</code></pre>`;
   };
 
+  // The sanitiser removes form controls, so a task's box is a character. The
+  // reader still needs to see what's done.
+  renderer.checkbox = function ({ checked }) {
+    return `<span class="task-box">${checked ? '\u2611' : '\u2610'}</span> `;
+  };
+
   // Custom image renderer to handle attachment: URLs
   renderer.image = function (token) {
     const href = token.href ?? '';
@@ -397,7 +403,7 @@ style.textContent = `
   tr:nth-child(even) { background: var(--table-stripe); }
   img { max-width: 100%; height: auto; border-radius: 4px; }
   del { opacity: 0.6; }
-  input[type="checkbox"] { margin-right: 0.4em; }
+  li:has(> .task-box), li:has(> p > .task-box) { list-style: none; margin-left: -1.2em; }
   .attachment-link {
     display: inline-flex;
     align-items: center;

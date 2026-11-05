@@ -93,6 +93,37 @@ class NoteRepositoryTest {
         assertTrue(row.needsSync)
     }
 
+    @Test fun `plaintext filenames left by older builds are encrypted and queued`() = runBlocking {
+        val ref = AttachmentRef("a1", "passport-scan.jpg", "image/jpeg", 10, "a1")
+        h.noteRepo.insertOrReplace(
+            h.seedSynced(id, "BASE", "h0").copy(attachments = Json.encodeToString(listOf(ref)))
+        )
+
+        assertEquals(1, h.noteRepo.repairPlaintextFilenames(h.key))
+
+        val row = h.noteRepo.getRaw(id)!!
+        assertFalse(row.attachments.contains("passport"))
+        assertTrue("the server's copy must be replaced too", row.needsSync)
+        assertEquals("passport-scan.jpg", h.noteRepo.get(id, h.key)!!.attachments.single().filename)
+        assertEquals("a second pass finds nothing", 0, h.noteRepo.repairPlaintextFilenames(h.key))
+    }
+
+    @Test fun `an unchanged note isn't decrypted again, and a changed one is`() = runBlocking {
+        h.seedSynced(id, "BASE", "h0")
+        val first = h.noteRepo.listActiveWithStats(h.key).notes.single()
+
+        val again = h.noteRepo.listActiveWithStats(h.key, mapOf(id to first)).notes.single()
+        assertTrue("the same object means no second decryption", again === first)
+
+        h.noteRepo.update(first.copy(content = "changed"), h.key)
+        val changed = h.noteRepo.listActiveWithStats(h.key, mapOf(id to first)).notes.single()
+        assertEquals("changed", changed.content)
+
+        h.noteRepo.togglePin(id)
+        val pinned = h.noteRepo.listActiveWithStats(h.key, mapOf(id to changed)).notes.single()
+        assertTrue(pinned.pinned)
+    }
+
     private fun note(pinned: Boolean = false, locked: Boolean = false, attachments: List<AttachmentRef> = emptyList()) =
         DecryptedNote(
             id = "a", createdAt = java.time.Instant.EPOCH, modifiedAt = java.time.Instant.EPOCH,

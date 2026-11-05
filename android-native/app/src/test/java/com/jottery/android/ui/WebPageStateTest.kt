@@ -12,6 +12,18 @@ class WebPageStateTest {
         assertFalse(WebPageState().isExternalChange("anything"))
     }
 
+    @Test fun `theme and font go to the page only when they change`() {
+        val state = WebPageState().apply { loaded("x", isDark = false, size = 14f) }
+
+        assertFalse("recomposing must not rebuild the calc editor", state.themeChanged(false))
+        assertFalse(state.fontSizeChanged(14f))
+
+        assertTrue(state.themeChanged(true))
+        assertFalse(state.themeChanged(true))
+        assertTrue(state.fontSizeChanged(16f))
+        assertFalse(state.fontSizeChanged(16f))
+    }
+
     @Test fun `the same text again is no change`() {
         assertFalse(page.isExternalChange("start"))
     }
