@@ -50,11 +50,9 @@ enum SyncEndpoint {
             throw SyncEndpointError.malformed(raw)
         }
 
-        // ATS only guards connections to public host names. Plain HTTP to an IP
-        // literal, an unqualified name or a .local host is exempt and keeps working;
-        // plain HTTP to a public host is blocked, so reject it here with something
-        // actionable rather than letting the request fail opaquely later.
-        if scheme == "http" && !isATSExempt(host: host) {
+        // The account password and API key travel in the clear over plain HTTP,
+        // so it's only for addresses on the user's own network.
+        if scheme == "http" && !allowsPlainHTTP(host: host) {
             throw SyncEndpointError.insecurePublicHost(host)
         }
 
@@ -80,37 +78,61 @@ enum SyncEndpoint {
         return url
     }
 
-    /// Whether App Transport Security leaves connections to this host alone.
+    /// Whether plain HTTP to this host can stay on the user's own network:
+    /// loopback, private and link-local addresses, `.local` names and
+    /// unqualified (single-label) host names.
     ///
-    /// ATS applies only to public host names. Apple exempts IP literals,
-    /// unqualified (single-label) host names, and the `.local` TLD — which
-    /// between them cover the self-hosted-on-the-LAN cases.
-    static func isATSExempt(host: String) -> Bool {
+    /// ATS doesn't stop plain HTTP to any IP address, so a public one has to be
+    /// refused here. An endpoint saved before this check keeps working.
+    static func allowsPlainHTTP(host: String) -> Bool {
         let name = host.lowercased()
 
         if name.hasSuffix(".local") { return true }
-        if isIPLiteral(name) { return true }
+        if let octets = ipv4Octets(name) { return isPrivate(octets) }
+        if let bytes = ipv6Bytes(name) { return isPrivate(ipv6: bytes) }
         // Unqualified: a single label with no dots, e.g. "nas".
-        if !name.contains(".") { return true }
-
-        return false
+        return !name.contains(".")
     }
 
-    private static func isIPLiteral(_ host: String) -> Bool {
+    /// `inet_aton` also takes the forms the system's resolver accepts, like
+    /// `134744072` and `0x7f.1`, which would otherwise pass for host names.
+    private static func ipv4Octets(_ host: String) -> [UInt8]? {
+        var address = in_addr()
+        guard host.withCString({ inet_aton($0, &address) }) == 1 else { return nil }
+        return withUnsafeBytes(of: address.s_addr) { Array($0) }
+    }
+
+    private static func ipv6Bytes(_ host: String) -> [UInt8]? {
         // URLComponents.host keeps the brackets on an IPv6 literal ("[fe80::1]"),
         // so strip them before handing the address to inet_pton.
         let bare = host.hasPrefix("[") && host.hasSuffix("]")
             ? String(host.dropFirst().dropLast())
             : host
-
-        var v4 = in_addr()
-        if bare.withCString({ inet_pton(AF_INET, $0, &v4) }) == 1 { return true }
-
-        var v6 = in6_addr()
         // Strip any zone identifier ("fe80::1%en0") before parsing.
         let withoutZone = bare.split(separator: "%", maxSplits: 1).first.map(String.init) ?? bare
-        if withoutZone.withCString({ inet_pton(AF_INET6, $0, &v6) }) == 1 { return true }
+        var address = in6_addr()
+        guard withoutZone.withCString({ inet_pton(AF_INET6, $0, &address) }) == 1 else { return nil }
+        return withUnsafeBytes(of: address) { Array($0) }
+    }
 
+    /// Loopback, RFC 1918, link-local, and the carrier-grade range that
+    /// Tailscale and other overlay networks use.
+    private static func isPrivate(_ octets: [UInt8]) -> Bool {
+        switch (octets[0], octets[1]) {
+        case (127, _), (10, _), (192, 168), (169, 254): return true
+        case (172, 16...31), (100, 64...127): return true
+        default: return false
+        }
+    }
+
+    /// Loopback, link-local, unique local, and an IPv4 address written as IPv6.
+    private static func isPrivate(ipv6 bytes: [UInt8]) -> Bool {
+        if bytes[..<15].allSatisfy({ $0 == 0 }) && bytes[15] == 1 { return true }
+        if bytes[0] == 0xFE && bytes[1] & 0xC0 == 0x80 { return true }
+        if bytes[0] & 0xFE == 0xFC { return true }
+        if bytes[..<10].allSatisfy({ $0 == 0 }) && bytes[10] == 0xFF && bytes[11] == 0xFF {
+            return isPrivate(Array(bytes[12...]))
+        }
         return false
     }
 
@@ -125,6 +147,11 @@ enum SyncEndpoint {
             return L.syncEndpointInsecureStored
         }
         return error.localizedDescription
+    }
+
+    /// The server's name, for telling the user where something will go.
+    static func displayHost(_ endpoint: String) -> String {
+        URLComponents(string: endpoint)?.host ?? endpoint
     }
 
     /// Percent-encode a value being interpolated into a URL path segment.

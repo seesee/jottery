@@ -6,15 +6,19 @@
 import type { Note, DecryptedNote, SortOrder, Attachment } from '../types';
 import { DEFAULT_NOTE } from '../types';
 import { noteRepository } from './noteRepository';
-import { attachmentRepository } from './attachmentRepository';
+import { attachmentService } from './attachmentService';
+import { deleteUnreferencedAttachments } from './storageCleanupService';
 import { versionRepository } from './versionRepository';
-import { cryptoService, encryptStringArray, decryptStringArray, updateHashChain } from './crypto';
-import { recordDecryptFailure } from './vaultHealthService';
+import { advanceContentHash, cryptoService, encryptStringArray, decryptStringArray, updateHashChain } from './crypto';
+import { recordDecryptFailure, repairAttachment } from './vaultHealthService';
 import { keyManager } from './keyManager';
-import { ApplicationLockedError, NotFoundError, CryptoError } from '../errors';
+import { ApplicationLockedError, NotFoundError, NoteReadOnlyError, CryptoError } from '../errors';
+import { syncToStorage } from './tagConversionService';
+import { syncRepository } from './syncRepository';
 import { backupSchedulerService } from './backupSchedulerService';
 import { getNoteTitle } from '../utils/noteTitle';
 import { localeIncludes, localeSort } from '../utils/stringUtils';
+import { asTimestampString, compareTimestamps } from '../utils/timestamps';
 
 /**
  * Note service class
@@ -32,6 +36,7 @@ class NoteService {
       modifiedAt?: string;
       pinned?: boolean;
       locked?: boolean;
+      archived?: boolean;
       wordWrap?: boolean;
       syntaxLanguage?: string;
       showPreview?: boolean;
@@ -58,6 +63,8 @@ class NoteService {
       modifiedAt: options?.modifiedAt || now,
       pinned: options?.pinned || false,
       locked: options?.locked || false,
+      archived: options?.archived || false,
+      archivedAt: options?.archived ? (options.modifiedAt ?? now) : undefined,
       wordWrap: options?.wordWrap ?? true,
       syntaxLanguage: options?.syntaxLanguage || 'markdown',
       showPreview: options?.showPreview ?? false,
@@ -104,12 +111,24 @@ class NoteService {
    * Get all active notes (decrypted)
    */
   async getAllNotes(sortOrder: SortOrder = 'recent'): Promise<DecryptedNote[]> {
+    return this.decryptAndSort(await noteRepository.getAllActive(), sortOrder);
+  }
+
+  /**
+   * Get everything the note list and search hold, which includes archived notes.
+   * This is what the first load puts in the store, so a refresh has to use it too,
+   * or the Archive view empties and archived notes drop out of search.
+   */
+  async getNotesForList(sortOrder: SortOrder = 'recent'): Promise<DecryptedNote[]> {
+    return this.decryptAndSort(await noteRepository.getAllNonDeleted(), sortOrder);
+  }
+
+  private async decryptAndSort(notes: Note[], sortOrder: SortOrder): Promise<DecryptedNote[]> {
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
       throw new ApplicationLockedError();
     }
 
-    const notes = await noteRepository.getAllActive();
     const results = await Promise.allSettled(
       notes.map(note => this.decryptNote(note, masterKey.key))
     );
@@ -251,17 +270,17 @@ class NoteService {
   private getEncryptedSortFunction(sortOrder: SortOrder) {
     switch (sortOrder) {
       case 'recent':
-        return (a: Note, b: Note) => b.modifiedAt.localeCompare(a.modifiedAt);
+        return (a: Note, b: Note) => compareTimestamps(b.modifiedAt, a.modifiedAt);
       case 'oldest':
-        return (a: Note, b: Note) => a.modifiedAt.localeCompare(b.modifiedAt);
+        return (a: Note, b: Note) => compareTimestamps(a.modifiedAt, b.modifiedAt);
       case 'created':
-        return (a: Note, b: Note) => b.createdAt.localeCompare(a.createdAt);
+        return (a: Note, b: Note) => compareTimestamps(b.createdAt, a.createdAt);
       case 'alpha':
         // For alpha sort, we need decrypted content, so just use modified for now
         // The final sort will happen after all notes are decrypted
-        return (a: Note, b: Note) => b.modifiedAt.localeCompare(a.modifiedAt);
+        return (a: Note, b: Note) => compareTimestamps(b.modifiedAt, a.modifiedAt);
       default:
-        return (a: Note, b: Note) => b.modifiedAt.localeCompare(a.modifiedAt);
+        return (a: Note, b: Note) => compareTimestamps(b.modifiedAt, a.modifiedAt);
     }
   }
 
@@ -334,6 +353,8 @@ class NoteService {
 
     // Track if actual content changed (not just UI state)
     let hasContentChange = false;
+    let changesWhatItHolds = false;
+    let removedAttachmentIds: string[] = [];
 
     // Decrypt current content to compare
     let currentContent = '';
@@ -358,6 +379,7 @@ class NoteService {
       );
       note.content = JSON.stringify(encryptedContent);
       hasContentChange = true;
+      changesWhatItHolds = true;
     }
 
     // Update tags if provided and changed
@@ -370,6 +392,7 @@ class NoteService {
         const encryptedTags = await encryptStringArray(updates.tags, masterKey.key);
         note.tags = [JSON.stringify(encryptedTags)];
         hasContentChange = true;
+        changesWhatItHolds = true;
       }
     }
 
@@ -383,22 +406,17 @@ class NoteService {
         [...oldAttachmentIds].some(id => !newAttachmentIds.has(id));
 
       if (attachmentsChanged) {
-        // Delete attachments that were removed
-        for (const oldId of oldAttachmentIds) {
-          if (!newAttachmentIds.has(oldId)) {
-            try {
-              await attachmentRepository.deleteBlob(oldId);
-              // Also try to delete thumbnail if it exists
-              await attachmentRepository.deleteThumbnail(oldId);
-            } catch (error) {
-              console.error(`Failed to delete attachment blob ${oldId}:`, error);
-            }
-          }
-        }
-
+        removedAttachmentIds = [...oldAttachmentIds].filter(id => !newAttachmentIds.has(id));
         note.attachments = updates.attachments;
         hasContentChange = true;
+        changesWhatItHolds = true;
       }
+    }
+
+    // The one place this is enforced: read-only is otherwise only a matter of which
+    // controls the UI shows. A save that changes nothing, such as an autosave, is fine.
+    if (changesWhatItHolds && (note.locked || note.archived)) {
+      throw new NoteReadOnlyError(id);
     }
 
     // Update pinned status if provided and changed
@@ -433,19 +451,14 @@ class NoteService {
 
     // Update hash chain if content changed
     if (hasContentChange) {
-      // Store old hash as parent
-      const oldContentHash = note.contentHash;
-      const oldHashChain = note.hashChain || [];
-
-      // Compute new content hash
-      const newContentHash = await cryptoService.computeContentHash(note);
-      note.contentHash = newContentHash;
-      note.parentHash = oldContentHash || null;
-      note.hashChain = updateHashChain(newContentHash, oldHashChain);
+      await advanceContentHash(note);
     }
 
     // Update modifiedAt for any change (content or UI state) so it syncs properly
     const updatedNote = await noteRepository.update(note, hasContentChange);
+
+    // After the save, so this note's old reference no longer counts
+    await deleteUnreferencedAttachments(removedAttachmentIds);
 
     // Notify backup scheduler of note update (fire and forget)
     if (hasContentChange) {
@@ -453,6 +466,40 @@ class NoteService {
     }
 
     return updatedNote;
+  }
+
+  /**
+   * Put a note back to an earlier version. This counts as a new change: without a new
+   * hash, other devices would treat the note as identical and keep what they have,
+   * and a later edit there would undo the restore.
+   */
+  async restoreVersion(
+    id: string,
+    version: Pick<Note, 'content' | 'tags' | 'attachments' | 'syntaxLanguage' | 'wordWrap'>
+  ): Promise<Note> {
+    const note = await noteRepository.getById(id);
+    if (!note) {
+      throw new NotFoundError('Note', id);
+    }
+
+    if (note.locked || note.archived) {
+      throw new NoteReadOnlyError(id);
+    }
+
+    const masterKey = keyManager.getMasterKey();
+    if (!masterKey) {
+      throw new ApplicationLockedError();
+    }
+
+    note.content = version.content;
+    // Versions pulled by older clients can hold the sync format
+    note.tags = await syncToStorage(version.tags, masterKey.key);
+    note.attachments = version.attachments;
+    note.syntaxLanguage = version.syntaxLanguage;
+    note.wordWrap = version.wordWrap;
+
+    await advanceContentHash(note);
+    return await noteRepository.update(note);
   }
 
   /**
@@ -465,6 +512,7 @@ class NoteService {
     }
 
     note.pinned = !note.pinned;
+    await advanceContentHash(note);
     return await noteRepository.update(note);
   }
 
@@ -538,7 +586,9 @@ class NoteService {
 
   /**
    * Duplicate an existing note
-   * Creates a copy with new ID and timestamps, preserving all content and settings
+   * Creates a copy with new ID and timestamps, preserving all content and settings.
+   * Attachments are copied too, and the copy's text points at them, so the two notes
+   * can be deleted independently.
    */
   async duplicateNote(id: string): Promise<Note> {
     const masterKey = keyManager.getMasterKey();
@@ -552,14 +602,20 @@ class NoteService {
       throw new NotFoundError('Note', id);
     }
 
+    const attachments = await attachmentService.copyAttachments(original.attachments, repairAttachment);
+    const content = original.attachments.reduce(
+      (text, attachment, index) => text.replaceAll(`attachment:${attachment.id}`, `attachment:${attachments[index].id}`),
+      original.content
+    );
+
     // Create a new note with the same content and settings
-    return await this.createNote(original.content, original.tags, {
+    return await this.createNote(content, original.tags, {
       pinned: false, // Don't duplicate pinned status
       wordWrap: original.wordWrap,
       syntaxLanguage: original.syntaxLanguage,
       showPreview: original.showPreview,
-      // Note: attachments are not duplicated - they reference the same blobs
-      // If we wanted to duplicate attachments, we'd need to copy the blobs too
+      color: original.color,
+      attachments,
     });
   }
 
@@ -568,16 +624,29 @@ class NoteService {
    */
   async permanentlyDeleteNote(id: string): Promise<void> {
     const note = await noteRepository.getById(id);
-    if (note && note.attachments.length > 0) {
-      // Delete all attachments
-      await Promise.all(
-        note.attachments.map(attachment =>
-          attachmentRepository.deleteAll(attachment.id)
-        )
-      );
-    }
 
+    // Its versions can't be reached once the note has gone, and they would keep its
+    // attachments in use for good
+    await versionRepository.deleteVersionsForNote(id);
+    await syncRepository.deleteNoteSyncMetadata(id);
     await noteRepository.permanentDelete(id);
+
+    await deleteUnreferencedAttachments(note?.attachments.map(attachment => attachment.id) ?? []);
+  }
+
+  /**
+   * Remove a note another device permanently deleted, and everything kept for it here
+   * @returns Whether this device had the note
+   */
+  async applyRemoteDeletion(id: string): Promise<boolean> {
+    const note = await noteRepository.getById(id);
+
+    await versionRepository.deleteVersionsForNote(id);
+    await syncRepository.deleteNoteSyncMetadata(id);
+    const deleted = await noteRepository.applyRemoteDeletion(id);
+
+    await deleteUnreferencedAttachments(note?.attachments.map(attachment => attachment.id) ?? []);
+    return deleted;
   }
 
   /**
@@ -605,17 +674,22 @@ class NoteService {
   }
 
   /**
-   * Purge old deleted notes (older than specified days)
+   * Purge notes that have been in the bin on this device for the given number of days.
+   *
+   * The time is this device's own. deletedAt can come from a server, which could then
+   * have a note purged at the next unlock without it ever sitting in the bin. So a
+   * note's time starts when this first finds it there, and a note already in the bin
+   * gets its full time.
    */
   async purgeOldDeletedNotes(daysOld: number = 30): Promise<number> {
-    const notes = await noteRepository.getDeleted();
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-    const cutoffISO = cutoffDate.toISOString();
+    const now = new Date();
+    const cutoff = now.getTime() - daysOld * 24 * 60 * 60 * 1000;
 
     let purgedCount = 0;
-    for (const note of notes) {
-      if (note.deletedAt && note.deletedAt < cutoffISO) {
+    for (const note of await noteRepository.getDeleted()) {
+      if (!note.binnedAt) {
+        await noteRepository.update({ ...note, binnedAt: now.toISOString() }, false, true);
+      } else if (Date.parse(note.binnedAt) < cutoff) {
         await this.permanentlyDeleteNote(note.id);
         purgedCount++;
       }
@@ -727,10 +801,14 @@ class NoteService {
         }
       }
 
+      // A bad value in a stored note must not break the list, which is the only way
+      // to reach the note. Tags and dates from older imports can be anything.
       return {
         ...note,
         content,
-        tags,
+        tags: tags.filter(tag => typeof tag === 'string' && tag.trim().length > 0),
+        createdAt: asTimestampString(note.createdAt),
+        modifiedAt: asTimestampString(note.modifiedAt),
         decryptedAt: Date.now(),
       };
     } catch (error) {
@@ -764,15 +842,15 @@ class NoteService {
     switch (sortOrder) {
       case 'recent':
         return (a: DecryptedNote, b: DecryptedNote) =>
-          b.modifiedAt.localeCompare(a.modifiedAt);
+          compareTimestamps(b.modifiedAt, a.modifiedAt);
 
       case 'oldest':
         return (a: DecryptedNote, b: DecryptedNote) =>
-          a.modifiedAt.localeCompare(b.modifiedAt);
+          compareTimestamps(a.modifiedAt, b.modifiedAt);
 
       case 'created':
         return (a: DecryptedNote, b: DecryptedNote) =>
-          b.createdAt.localeCompare(a.createdAt);
+          compareTimestamps(b.createdAt, a.createdAt);
 
       case 'alpha':
         // Sort alphabetically by title (custom t: tag or first line)
@@ -781,7 +859,7 @@ class NoteService {
 
       default:
         return (a: DecryptedNote, b: DecryptedNote) =>
-          b.modifiedAt.localeCompare(a.modifiedAt);
+          compareTimestamps(b.modifiedAt, a.modifiedAt);
     }
   }
 }

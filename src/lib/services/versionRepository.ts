@@ -33,11 +33,23 @@ class VersionRepository {
       attachments: note.attachments,
       syntaxLanguage: note.syntaxLanguage,
       wordWrap: note.wordWrap,
+      showPreview: note.showPreview,
+      color: note.color,
       reason: metadata.reason,
+      contentHash: note.contentHash,
+      parentHash: note.parentHash,
     };
 
     await getDB().put(STORES.NOTE_VERSIONS, version);
     return version;
+  }
+
+  /**
+   * Store a version pulled from a server, as it came. Anything left out here would be
+   * missing when this device pushes the version again.
+   */
+  async storeRemoteVersion(version: NoteVersion): Promise<void> {
+    await getDB().put(STORES.NOTE_VERSIONS, { ...version, versionKey: `${version.noteId}:${version.version}` });
   }
 
   /**

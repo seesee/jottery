@@ -1,262 +1,146 @@
-// Configuration tests
-//
-// Tests for configuration parsing logic and validation
+// Reading the configuration, through the code `main` uses.
 
-#[test]
-fn test_config_default_constants() {
-    // Test that the expected default values are reasonable
-    const DEFAULT_PORT: u16 = 3030;
-    const DEFAULT_MAX_PAYLOAD: usize = 5_242_880; // 5 MB
-    const DEFAULT_SESSION_EXPIRY: i64 = 7; // days
-    const DEFAULT_ARGON2_M_COST: u32 = 19456; // KiB
-    const DEFAULT_ARGON2_T_COST: u32 = 2;
-    const DEFAULT_ARGON2_P_COST: u32 = 1;
-    const DEFAULT_STORAGE_QUOTA: i32 = 1000; // MB
+mod common;
 
-    assert!(DEFAULT_PORT > 1024, "Port should be above privileged range");
-    assert!(DEFAULT_PORT < 65535, "Port should be valid");
-    assert!(DEFAULT_MAX_PAYLOAD > 0, "Max payload should be positive");
-    assert!(DEFAULT_MAX_PAYLOAD <= 10_000_000, "Max payload should be reasonable");
-    assert!(DEFAULT_SESSION_EXPIRY > 0, "Session expiry should be positive");
-    assert!(DEFAULT_SESSION_EXPIRY <= 30, "Default session expiry should be reasonable");
-    assert!(DEFAULT_ARGON2_M_COST >= 8192, "Argon2 memory cost should be secure");
-    assert!(DEFAULT_ARGON2_T_COST >= 1, "Argon2 time cost should be at least 1");
-    assert!(DEFAULT_ARGON2_P_COST >= 1, "Argon2 parallelism should be at least 1");
-    assert!(DEFAULT_STORAGE_QUOTA > 0, "Storage quota should be positive");
+use axum::http::StatusCode;
+use common::*;
+use jottery_server::config::Config;
+use serde_json::json;
+
+fn config(settings: &[(&str, &str)]) -> Config {
+    Config::from_lookup(|name| {
+        settings
+            .iter()
+            .find(|(key, _)| *key == name)
+            .map(|(_, value)| value.to_string())
+    })
 }
 
 #[test]
-fn test_config_value_parsing() {
-    // Test integer parsing with fallback
-    assert_eq!("3030".parse::<u16>().unwrap_or(3030), 3030);
-    assert_eq!("8080".parse::<u16>().unwrap_or(3030), 8080);
-    assert_eq!("invalid".parse::<u16>().unwrap_or(3030), 3030);
+fn the_defaults_are_the_documented_ones() {
+    let config = config(&[]);
 
-    // Test i64 parsing
-    assert_eq!("7".parse::<i64>().unwrap_or(7), 7);
-    assert_eq!("14".parse::<i64>().unwrap_or(7), 14);
-    assert_eq!("abc".parse::<i64>().unwrap_or(7), 7);
-
-    // Test u32 parsing
-    assert_eq!("19456".parse::<u32>().unwrap_or(19456), 19456);
-    assert_eq!("65536".parse::<u32>().unwrap_or(19456), 65536);
-    assert_eq!("xyz".parse::<u32>().unwrap_or(19456), 19456);
+    assert_eq!(config.database_url, "sqlite:jottery.db");
+    assert_eq!(config.port, 3030);
+    assert_eq!(config.max_payload_size, 104_857_600);
+    assert_eq!(config.session_expiry_days, 1);
+    assert_eq!(config.default_admin_email, "admin@localhost");
+    assert_eq!(config.default_admin_password, None);
+    assert_eq!(config.password_complexity, "standard");
+    assert_eq!(config.default_storage_quota_mb, 1000);
+    assert!(!config.enable_hsts);
+    assert!(!config.enforce_storage_quota);
+    assert!(config.rate_limit.enabled);
+    assert_eq!(config.rate_limit.trusted_proxy_hops, 0);
+    assert_eq!(config.cors_allowed_origins, None);
 }
 
 #[test]
-fn test_cors_origins_parsing() {
-    // Test comma-separated list parsing
-    let test_cases = vec![
-        ("https://example.com", vec!["https://example.com"]),
-        (
-            "https://example.com,https://app.example.com",
-            vec!["https://example.com", "https://app.example.com"],
-        ),
-        (
-            "  https://example.com  , https://app.example.com  ",
-            vec!["https://example.com", "https://app.example.com"],
-        ),
-    ];
+fn argon2_defaults_match_the_owasp_minimum() {
+    let config = config(&[]);
 
-    for (input, expected) in test_cases {
-        let parsed: Vec<String> = input
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect();
-
-        assert_eq!(parsed.len(), expected.len());
-        for (i, exp) in expected.iter().enumerate() {
-            assert_eq!(parsed[i], *exp);
-        }
-    }
+    assert_eq!(config.argon2_m_cost, 19456);
+    assert_eq!(config.argon2_t_cost, 2);
+    assert_eq!(config.argon2_p_cost, 1);
 }
 
 #[test]
-fn test_cors_origins_empty_handling() {
-    let empty_cases = vec!["", "  ", "   ,   "];
+fn settings_override_the_defaults() {
+    let config = config(&[
+        ("PORT", "8080"),
+        ("SESSION_EXPIRY_DAYS", "14"),
+        ("ARGON2_M_COST", "65536"),
+        ("DEFAULT_STORAGE_QUOTA_MB", "50"),
+        ("TRUSTED_PROXY_HOPS", "2"),
+        ("RATE_LIMIT_ENABLED", "false"),
+        ("ENFORCE_STORAGE_QUOTA", "true"),
+    ]);
 
-    for input in empty_cases {
-        let parsed: Vec<String> = input
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect();
-
-        assert!(parsed.is_empty(), "Empty input should produce empty list");
-    }
+    assert_eq!(config.port, 8080);
+    assert_eq!(config.session_expiry_days, 14);
+    assert_eq!(config.argon2_m_cost, 65536);
+    assert_eq!(config.default_storage_quota_mb, 50);
+    assert_eq!(config.rate_limit.trusted_proxy_hops, 2);
+    assert!(!config.rate_limit.enabled);
+    assert!(config.enforce_storage_quota);
 }
 
 #[test]
-fn test_config_value_ranges() {
-    // Test that various configuration values fall within reasonable ranges
+fn a_value_that_does_not_parse_falls_back_to_the_default() {
+    let config = config(&[
+        ("PORT", "not-a-port"),
+        ("SESSION_EXPIRY_DAYS", "soon"),
+        ("TRUSTED_PROXY_HOPS", "-1"),
+        ("ENFORCE_STORAGE_QUOTA", "yes please"),
+    ]);
 
-    // Port range
-    let valid_ports = vec![3000, 3030, 8080, 8443, 9000];
-    for port in valid_ports {
-        assert!(port > 0 && port < 65536, "Port {} should be valid", port);
-    }
-
-    // Session expiry range (days)
-    let valid_expiries = vec![1, 7, 14, 30];
-    for days in valid_expiries {
-        assert!(days > 0 && days <= 365, "Session expiry {} should be reasonable", days);
-    }
-
-    // Argon2 memory cost (KiB)
-    let valid_m_costs = vec![8192, 19456, 65536, 262144];
-    for m_cost in valid_m_costs {
-        assert!(m_cost >= 8192, "Memory cost {} should be secure", m_cost);
-    }
-
-    // Argon2 time cost
-    let valid_t_costs = vec![1, 2, 3, 4, 5];
-    for t_cost in valid_t_costs {
-        assert!(t_cost >= 1 && t_cost <= 10, "Time cost {} should be reasonable", t_cost);
-    }
-
-    // Storage quota (MB)
-    let valid_quotas = vec![100, 500, 1000, 5000, 10000];
-    for quota in valid_quotas {
-        assert!(quota > 0, "Storage quota {} should be positive", quota);
-    }
+    assert_eq!(config.port, 3030);
+    assert_eq!(config.session_expiry_days, 1);
+    assert_eq!(config.rate_limit.trusted_proxy_hops, 0);
+    assert!(!config.enforce_storage_quota);
 }
 
-#[cfg(test)]
-mod security_validation {
-    #[test]
-    fn test_session_expiry_security_levels() {
-        // Document and validate session expiry security levels
-        let high_security = 1; // 1 day
-        let medium_security = 7; // 7 days (default)
-        let low_security = 30; // 30 days
-
-        assert!(high_security < medium_security);
-        assert!(medium_security < low_security);
-        assert!(high_security >= 1, "Minimum 1 day");
-        assert!(low_security <= 30, "Maximum recommended 30 days");
-    }
-
-    #[test]
-    fn test_argon2_security_levels() {
-        // Document Argon2 security levels
-        struct SecurityLevel {
-            name: &'static str,
-            m_cost: u32,
-            t_cost: u32,
-            p_cost: u32,
-        }
-
-        let levels = vec![
-            SecurityLevel {
-                name: "Low",
-                m_cost: 19456,
-                t_cost: 2,
-                p_cost: 1,
-            },
-            SecurityLevel {
-                name: "Medium",
-                m_cost: 65536,
-                t_cost: 3,
-                p_cost: 1,
-            },
-            SecurityLevel {
-                name: "High",
-                m_cost: 262144,
-                t_cost: 4,
-                p_cost: 1,
-            },
-        ];
-
-        for level in &levels {
-            assert!(level.m_cost >= 8192, "{} level m_cost should be at least 8192", level.name);
-            assert!(level.t_cost >= 1, "{} level t_cost should be at least 1", level.name);
-            assert!(level.p_cost >= 1, "{} level p_cost should be at least 1", level.name);
-        }
-
-        // Verify security levels are ordered correctly
-        assert!(levels[0].m_cost < levels[1].m_cost);
-        assert!(levels[1].m_cost < levels[2].m_cost);
-    }
-
-    #[test]
-    fn test_default_admin_credentials_warning() {
-        // Document that default credentials are insecure
-        // NOTE: Default credentials are documented in CLAUDE.md and migrations
-        // They MUST be changed before production deployment
-        let default_email = "admin@localhost";
-        let default_password = "changeme";
-
-        // Verify the documented defaults match (without logging sensitive values)
-        assert_eq!(default_email, "admin@localhost");
-        assert!(!default_password.is_empty(), "Default password must be set");
-        assert!(
-            default_password.len() >= 6,
-            "Default password must be at least 6 characters"
-        );
-    }
-
-    #[test]
-    fn test_storage_quota_recommendations() {
-        // Document storage quota recommendations
-        let personal_quota = 1000; // 1 GB
-        let team_quota = 5000; // 5 GB
-        let enterprise_quota = 10000; // 10 GB
-
-        assert!(personal_quota > 0);
-        assert!(personal_quota < team_quota);
-        assert!(team_quota < enterprise_quota);
-    }
+#[test]
+fn hsts_is_only_on_when_clearly_asked_for() {
+    assert!(config(&[("ENABLE_HSTS", "true")]).enable_hsts);
+    assert!(config(&[("ENABLE_HSTS", "TRUE")]).enable_hsts);
+    assert!(!config(&[("ENABLE_HSTS", "1")]).enable_hsts);
+    assert!(!config(&[("ENABLE_HSTS", "false")]).enable_hsts);
 }
 
-#[cfg(test)]
-mod configuration_documentation {
-    #[test]
-    fn document_environment_variables() {
-        println!("\n=== Jottery Server Configuration ===");
-        println!("\nBasic Configuration:");
-        println!("  DATABASE_URL (default: sqlite:jottery.db)");
-        println!("  PORT (default: 3030)");
-        println!("  MAX_PAYLOAD_SIZE (default: 5242880 = 5MB)");
+#[test]
+fn password_complexity_ignores_case() {
+    assert_eq!(config(&[("PASSWORD_COMPLEXITY", "STRONG")]).password_complexity, "strong");
+}
 
-        println!("\nSecurity Configuration:");
-        println!("  SESSION_EXPIRY_DAYS (default: 7)");
-        println!("  DEFAULT_ADMIN_EMAIL (default: admin@localhost)");
-        println!("  DEFAULT_ADMIN_PASSWORD (default: changeme)");
-        println!("  CORS_ALLOWED_ORIGINS (default: none = allow any)");
+#[test]
+fn an_empty_admin_password_counts_as_unset() {
+    assert_eq!(config(&[("DEFAULT_ADMIN_PASSWORD", "")]).default_admin_password, None);
+}
 
-        println!("\nPassword Hashing (Argon2id):");
-        println!("  ARGON2_M_COST (default: 19456 KiB)");
-        println!("  ARGON2_T_COST (default: 2)");
-        println!("  ARGON2_P_COST (default: 1)");
+#[test]
+fn cors_origins_are_split_trimmed_and_tidied() {
+    let config = config(&[(
+        "CORS_ALLOWED_ORIGINS",
+        " https://a.example.com ,,https://b.example.com, ",
+    )]);
 
-        println!("\nUser Settings:");
-        println!("  DEFAULT_STORAGE_QUOTA_MB (default: 1000)");
+    assert_eq!(
+        config.cors_allowed_origins,
+        Some(vec![
+            "https://a.example.com".to_string(),
+            "https://b.example.com".to_string()
+        ])
+    );
+}
 
-        println!("\nSee .env.example for detailed documentation");
-        println!("======================================\n");
-    }
+/// The expiry a real login reports, in whole days from now.
+async fn login_expiry_days(session_expiry_days: i64) -> i64 {
+    let db = migrated_db().await;
+    let config = Config { session_expiry_days, ..test_config() };
+    let app = app_with(&db.pool, config);
+    let email = format!("{}@example.com", new_id());
+    let password = random_password();
+    create_user(&db.pool, &email, &password).await;
 
-    #[test]
-    fn document_security_best_practices() {
-        println!("\n=== Security Best Practices ===");
-        println!("\n1. Change Default Admin Credentials");
-        println!("   Set DEFAULT_ADMIN_EMAIL and DEFAULT_ADMIN_PASSWORD before deployment");
+    let (status, body) = call(
+        &app,
+        "POST",
+        "/api/v1/user/login",
+        None,
+        Some(json!({ "email": email, "password": password })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
 
-        println!("\n2. Configure CORS");
-        println!("   Set CORS_ALLOWED_ORIGINS to specific domains in production");
+    let expires_at = chrono::DateTime::parse_from_rfc3339(body["expiresAt"].as_str().unwrap()).unwrap();
+    // Rounded up, because a little of the first day has passed already
+    (expires_at.with_timezone(&chrono::Utc) - chrono::Utc::now()).num_hours() / 24 + 1
+}
 
-        println!("\n3. Adjust Password Hashing");
-        println!("   Increase ARGON2_M_COST and ARGON2_T_COST for higher security");
-
-        println!("\n4. Set Session Expiry");
-        println!("   Use shorter SESSION_EXPIRY_DAYS for higher security");
-
-        println!("\n5. Use HTTPS");
-        println!("   Configure reverse proxy (Nginx/Caddy) with SSL/TLS");
-
-        println!("\n6. Implement Rate Limiting");
-        println!("   Configure at reverse proxy level (see .env.example)");
-        println!("================================\n");
+#[tokio::test]
+async fn a_session_lasts_as_long_as_configured() {
+    for days in [1, 7, 14, 30] {
+        assert_eq!(login_expiry_days(days).await, days);
     }
 }

@@ -9,6 +9,9 @@ struct SavedSearchesView: View {
     @State private var showAddSheet = false
     @State private var addSearchName = ""
     @State private var addSearchQuery = ""
+    @State private var editingSearch: SavedSearchRepository.SavedSearch?
+    @State private var editMode = EditMode.inactive
+    @State private var showMoveFailed = false
 
     var body: some View {
         NavigationStack {
@@ -35,41 +38,78 @@ struct SavedSearchesView: View {
                     Section(L.savedSearchTitle) {
                         ForEach(appState.savedSearches) { search in
                             Button {
-                                appState.applySavedSearch(id: search.id)
-                                dismiss()
+                                if editMode.isEditing {
+                                    editingSearch = search
+                                } else {
+                                    appState.applySavedSearch(id: search.id)
+                                    dismiss()
+                                }
                             } label: {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(search.name)
                                         .font(.headline)
-                                        .foregroundStyle(.primary)
+                                        .foregroundStyle(Color.primary)
                                     Text(search.query)
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color.secondary)
                                 }
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    try? appState.deleteSavedSearch(id: search.id)
-                                } label: {
-                                    Label(L.noteListDelete, systemImage: "trash")
-                                }
+                                deleteButton(for: search)
+                                editButton(for: search)
+                                    .tint(.blue)
+                            }
+                            .contextMenu {
+                                editButton(for: search)
+                                deleteButton(for: search)
+                            }
+                        }
+                        .onMove { source, destination in
+                            do {
+                                try appState.moveSavedSearches(fromOffsets: source, toOffset: destination)
+                            } catch {
+                                showMoveFailed = true
                             }
                         }
                     }
                 }
             }
             .listStyle(.insetGrouped)
+            .environment(\.editMode, $editMode)
             .navigationTitle(L.savedSearchTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(L.versionHistoryDone) { dismiss() }
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    Button { showAddSheet = true } label: {
-                        Image(systemName: "plus")
+                // Not `EditButton`: a navigation stack keeps the edit mode that
+                // changes to itself, where this view couldn't see it.
+                if editMode.isEditing {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(L.versionHistoryDone) {
+                            withAnimation { editMode = .inactive }
+                        }
+                    }
+                } else {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(L.versionHistoryDone) { dismiss() }
+                    }
+                    ToolbarItem(placement: .primaryAction) {
+                        Button { showAddSheet = true } label: {
+                            Label(L.savedSearchAddTitle, systemImage: "plus")
+                        }
+                    }
+                    if appState.savedSearches.count > 1 {
+                        ToolbarItem(placement: .primaryAction) {
+                            Button(L.savedSearchEdit) {
+                                withAnimation { editMode = .active }
+                            }
+                        }
                     }
                 }
+            }
+            .sheet(item: $editingSearch) { search in
+                SavedSearchEditSheet(search: search)
+            }
+            .alert(L.errorCouldntMoveSavedSearch, isPresented: $showMoveFailed) {
+                Button(L.commonOK, role: .cancel) {}
             }
             .alert(L.savedSearchSaveTitle, isPresented: $showSaveSheet) {
                 TextField(L.savedSearchNamePlaceholder, text: $newSearchName)
@@ -98,6 +138,22 @@ struct SavedSearchesView: View {
                     addSearchQuery = ""
                 }
             }
+        }
+    }
+
+    private func editButton(for search: SavedSearchRepository.SavedSearch) -> some View {
+        Button {
+            editingSearch = search
+        } label: {
+            Label(L.savedSearchEdit, systemImage: "pencil")
+        }
+    }
+
+    private func deleteButton(for search: SavedSearchRepository.SavedSearch) -> some View {
+        Button(role: .destructive) {
+            try? appState.deleteSavedSearch(id: search.id)
+        } label: {
+            Label(L.noteListDelete, systemImage: "trash")
         }
     }
 }

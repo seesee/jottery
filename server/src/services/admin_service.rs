@@ -3,10 +3,11 @@
 //! This module provides the core business logic for administrative operations
 //! that can be used by both CLI tools and web APIs.
 
-use crate::db::UserRepository;
+use crate::audit::{self, AuditActor, AuditEvent};
+use crate::db::{SessionRepository, UserRepository};
 use crate::models::User;
-use crate::utils::password::hash_password_with_params;
-use sqlx::SqlitePool;
+use crate::utils::password::{hash_password_with_params, validate_password_strength};
+use sqlx::{SqliteConnection, SqlitePool};
 
 /// Device information returned by admin service
 #[derive(Debug, Clone)]
@@ -61,14 +62,17 @@ pub enum AdminError {
     #[error("Device not found: {0}")]
     DeviceNotFound(String),
 
-    #[error("Cannot modify admin user")]
-    CannotModifyAdmin,
+    #[error("This is the last admin, and a server needs one")]
+    LastAdmin,
+
+    #[error("{0} matches more than one id: use more of it")]
+    AmbiguousId(String),
 
     #[error("User is already {0}")]
     AlreadyInState(String),
 
-    #[error("Password must be at least 12 characters")]
-    PasswordTooShort,
+    #[error("{0}")]
+    WeakPassword(String),
 
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
@@ -78,6 +82,24 @@ pub enum AdminError {
 }
 
 pub type Result<T> = std::result::Result<T, AdminError>;
+
+/// Shortest id prefix accepted. Some commands act at once with no confirmation, so a
+/// prefix has to be long enough to mean something.
+const MIN_ID_PREFIX: usize = 8;
+
+/// A LIKE pattern for ids that start with `prefix`, with its wildcards made literal.
+/// `None` if it's too short to use.
+fn id_prefix_pattern(prefix: &str) -> Option<String> {
+    if prefix.len() < MIN_ID_PREFIX {
+        return None;
+    }
+
+    let escaped = prefix
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_");
+    Some(format!("{escaped}%"))
+}
 
 /// Admin service for server management operations
 pub struct AdminService;
@@ -118,73 +140,106 @@ impl AdminService {
         })
     }
 
-    /// Approve a pending user
-    pub async fn approve_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
-        let user = Self::find_user(pool, identifier).await?;
+    /// Record an action taken with jottery-admin, which has no account or address.
+    /// The methods that find a user by a prefix are its entry points: the dashboard
+    /// uses the ones below them, and records its own actions with who took them.
+    async fn record_for_cli(pool: &SqlitePool, event: AuditEvent<'_>) {
+        audit::record(pool, &AuditActor::default(), event).await;
+    }
 
+    /// Refuse if taking `user` out of the admin role, however that happens, would
+    /// leave the server without an admin. Nobody could then approve users, and an
+    /// image without jottery-admin can't be repaired from inside. Call it inside
+    /// the write transaction, so that two admins can't each leave the other last.
+    pub async fn ensure_not_last_admin(conn: &mut SqliteConnection, user: &User) -> Result<()> {
+        if user.is_admin != 1 || user.is_active != 1 {
+            return Ok(());
+        }
+
+        let active_admins =
+            sqlx::query_scalar!("SELECT COUNT(*) FROM users WHERE is_admin = 1 AND is_active = 1")
+                .fetch_one(conn)
+                .await?;
+
+        if active_admins <= 1 {
+            return Err(AdminError::LastAdmin);
+        }
+        Ok(())
+    }
+
+    /// Approve a pending user. `approved_by` is the acting admin's id, if any.
+    pub async fn approve(pool: &SqlitePool, user: &User, approved_by: Option<&str>) -> Result<()> {
         if user.approved == 1 {
             return Err(AdminError::AlreadyInState("approved".to_string()));
         }
 
-        UserRepository::approve(pool, &user.id, "admin").await?;
-
-        // Return updated user
-        Self::find_user(pool, &user.id).await
+        UserRepository::approve(pool, &user.id, approved_by).await?;
+        Ok(())
     }
 
-    /// Deactivate a user account
-    pub async fn deactivate_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
-        let user = Self::find_user(pool, identifier).await?;
-
+    /// Deactivate an account. Its devices stop working at once, and a session from
+    /// before must not come back if the account is reactivated.
+    pub async fn deactivate(pool: &SqlitePool, user: &User) -> Result<()> {
         if user.is_active == 0 {
             return Err(AdminError::AlreadyInState("inactive".to_string()));
         }
 
-        if user.is_admin == 1 {
-            return Err(AdminError::CannotModifyAdmin);
-        }
-
-        UserRepository::deactivate(pool, &user.id).await?;
-
-        // Return updated user
-        Self::find_user(pool, &user.id).await
+        let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+        Self::ensure_not_last_admin(&mut tx, user).await?;
+        UserRepository::deactivate(&mut tx, &user.id).await?;
+        SessionRepository::delete_all_for_user(&mut tx, &user.id).await?;
+        tx.commit().await?;
+        Ok(())
     }
 
-    /// Activate a user account
-    pub async fn activate_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
-        let user = Self::find_user(pool, identifier).await?;
-
+    /// Reactivate an account.
+    pub async fn activate(pool: &SqlitePool, user: &User) -> Result<()> {
         if user.is_active == 1 {
             return Err(AdminError::AlreadyInState("active".to_string()));
         }
 
         UserRepository::activate(pool, &user.id).await?;
+        Ok(())
+    }
 
-        // Return updated user
+    /// Delete an account and everything in it.
+    pub async fn delete(pool: &SqlitePool, user: &User) -> Result<()> {
+        let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+        Self::ensure_not_last_admin(&mut tx, user).await?;
+        UserRepository::delete_account_data(&mut tx, &user.id).await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    /// Approve a pending user, found by id, id prefix or email
+    pub async fn approve_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
+        let user = Self::find_user(pool, identifier).await?;
+        Self::approve(pool, &user, None).await?;
+        Self::record_for_cli(pool, AuditEvent::on_user(audit::USER_APPROVE, &user.id)).await;
         Self::find_user(pool, &user.id).await
     }
 
-    /// Delete a user and all their data
+    /// Deactivate a user account, found by id, id prefix or email
+    pub async fn deactivate_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
+        let user = Self::find_user(pool, identifier).await?;
+        Self::deactivate(pool, &user).await?;
+        Self::record_for_cli(pool, AuditEvent::on_user(audit::USER_DEACTIVATE, &user.id)).await;
+        Self::find_user(pool, &user.id).await
+    }
+
+    /// Activate a user account, found by id, id prefix or email
+    pub async fn activate_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
+        let user = Self::find_user(pool, identifier).await?;
+        Self::activate(pool, &user).await?;
+        Self::record_for_cli(pool, AuditEvent::on_user(audit::USER_ACTIVATE, &user.id)).await;
+        Self::find_user(pool, &user.id).await
+    }
+
+    /// Delete a user and all their data, found by id, id prefix or email
     pub async fn delete_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
         let user = Self::find_user(pool, identifier).await?;
-
-        if user.is_admin == 1 {
-            return Err(AdminError::CannotModifyAdmin);
-        }
-
-        // Delete user's notes
-        sqlx::query!("DELETE FROM notes WHERE user_id = ?", user.id)
-            .execute(pool)
-            .await?;
-
-        // Delete user's devices
-        sqlx::query!("DELETE FROM clients WHERE user_id = ?", user.id)
-            .execute(pool)
-            .await?;
-
-        // Delete user
-        UserRepository::delete(pool, &user.id).await?;
-
+        Self::delete(pool, &user).await?;
+        Self::record_for_cli(pool, AuditEvent::on_user(audit::USER_DELETE, &user.id)).await;
         Ok(user)
     }
 
@@ -194,24 +249,23 @@ impl AdminService {
         identifier: &str,
         new_password: &str,
         argon2_params: (u32, u32, u32), // (m_cost, t_cost, p_cost)
+        password_complexity: &str,
     ) -> Result<User> {
         let user = Self::find_user(pool, identifier).await?;
 
-        if new_password.len() < 12 {
-            return Err(AdminError::PasswordTooShort);
-        }
+        validate_password_strength(new_password, password_complexity)
+            .map_err(AdminError::WeakPassword)?;
 
         let (m_cost, t_cost, p_cost) = argon2_params;
         let password_hash = hash_password_with_params(new_password, m_cost, t_cost, p_cost)
             .map_err(|e| AdminError::PasswordHash(e.to_string()))?;
 
-        sqlx::query!(
-            "UPDATE users SET password_hash = ? WHERE id = ?",
-            password_hash,
-            user.id
-        )
-        .execute(pool)
-        .await?;
+        let mut tx = pool.begin().await?;
+        UserRepository::set_password(&mut tx, &user.id, &password_hash).await?;
+        SessionRepository::delete_all_for_user(&mut tx, &user.id).await?;
+        tx.commit().await?;
+
+        Self::record_for_cli(pool, AuditEvent::on_user(audit::USER_PASSWORD_RESET, &user.id)).await;
 
         Ok(user)
     }
@@ -234,6 +288,12 @@ impl AdminService {
             .execute(pool)
             .await?;
 
+        let event = AuditEvent {
+            target_user_id: Some(&device.user_id),
+            ..AuditEvent::on_device(audit::DEVICE_DELETE, &device.id)
+        };
+        Self::record_for_cli(pool, event).await;
+
         Ok(device)
     }
 
@@ -244,6 +304,12 @@ impl AdminService {
         sqlx::query!("UPDATE clients SET is_active = 0 WHERE id = ?", device.id)
             .execute(pool)
             .await?;
+
+        let event = AuditEvent {
+            target_user_id: Some(&device.user_id),
+            ..AuditEvent::on_device(audit::DEVICE_REVOKE, &device.id)
+        };
+        Self::record_for_cli(pool, event).await;
 
         // Return updated device
         Self::find_device(pool, &device.id).await
@@ -334,19 +400,31 @@ impl AdminService {
             }
         }
 
-        // Try ID match (exact or prefix)
-        let id_prefix = format!("{}%", identifier);
-        let user = sqlx::query_as!(
-            User,
-            "SELECT * FROM users WHERE id = ? OR id LIKE ?",
-            identifier,
-            id_prefix
-        )
-        .fetch_optional(pool)
-        .await?
-        .ok_or_else(|| AdminError::UserNotFound(identifier.to_string()))?;
+        // An exact id wins, even if it's also the start of another one
+        if let Some(user) = sqlx::query_as!(User, "SELECT * FROM users WHERE id = ?", identifier)
+            .fetch_optional(pool)
+            .await?
+        {
+            return Ok(user);
+        }
 
-        Ok(user)
+        let not_found = || AdminError::UserNotFound(identifier.to_string());
+        let pattern = id_prefix_pattern(identifier).ok_or_else(not_found)?;
+
+        // Two rows are enough to know it's ambiguous
+        let mut matches = sqlx::query_as!(
+            User,
+            r#"SELECT * FROM users WHERE id LIKE ? ESCAPE '\' LIMIT 2"#,
+            pattern
+        )
+        .fetch_all(pool)
+        .await?;
+
+        match matches.len() {
+            0 => Err(not_found()),
+            1 => Ok(matches.remove(0)),
+            _ => Err(AdminError::AmbiguousId(identifier.to_string())),
+        }
     }
 
     /// Find device by ID (exact or prefix match)
@@ -362,16 +440,36 @@ impl AdminService {
             is_active: Option<i64>,
         }
 
-        let id_prefix = format!("{}%", device_id);
-        let row = sqlx::query_as!(
+        let exact = sqlx::query_as!(
             DeviceRow,
-            "SELECT id, user_id, device_name, device_type, created_at, last_seen_at, is_active FROM clients WHERE id = ? OR id LIKE ?",
-            device_id,
-            id_prefix
+            "SELECT id, user_id, device_name, device_type, created_at, last_seen_at, is_active FROM clients WHERE id = ?",
+            device_id
         )
         .fetch_optional(pool)
-        .await?
-        .ok_or_else(|| AdminError::DeviceNotFound(device_id.to_string()))?;
+        .await?;
+
+        let row = match exact {
+            Some(row) => row,
+            None => {
+                let not_found = || AdminError::DeviceNotFound(device_id.to_string());
+                let pattern = id_prefix_pattern(device_id).ok_or_else(not_found)?;
+
+                let mut matches = sqlx::query_as!(
+                    DeviceRow,
+                    r#"SELECT id, user_id, device_name, device_type, created_at, last_seen_at, is_active
+                       FROM clients WHERE id LIKE ? ESCAPE '\' LIMIT 2"#,
+                    pattern
+                )
+                .fetch_all(pool)
+                .await?;
+
+                match matches.len() {
+                    0 => return Err(not_found()),
+                    1 => matches.remove(0),
+                    _ => return Err(AdminError::AmbiguousId(device_id.to_string())),
+                }
+            }
+        };
 
         Ok(DeviceInfo {
             id: row.id,

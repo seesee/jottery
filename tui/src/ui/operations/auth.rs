@@ -3,17 +3,19 @@
 use anyhow::{Context, Result};
 use rust_i18n::t;
 use std::time::Instant;
-use zeroize::Zeroize;
-
-use base64::Engine as _;
+use zeroize::{Zeroize, Zeroizing};
 
 use crate::{
     db::Database,
-    repository::{EncryptionRepository, SettingsRepository, sync::SyncRepository},
+    repository::{NoteRepository, SettingsRepository, sync::SyncRepository},
+    vault,
 };
 
 use super::super::app::App;
 use super::super::state::AppState;
+
+/// How long a note stays in the bin.
+const BIN_RETENTION_DAYS: i64 = 30;
 
 /// Unlock the database with the password stored in app.password_input
 pub fn unlock(app: &mut App) -> Result<()> {
@@ -21,47 +23,8 @@ pub fn unlock(app: &mut App) -> Result<()> {
     let db = Database::open(&app.db_path, &app.password_input)
         .context("Failed to open database")?;
 
-    let encryption_repo = EncryptionRepository::new(db.connection());
-
-    // Get or create encryption metadata
-    let metadata = encryption_repo.get()?;
-    let key = if let Some(ref meta) = metadata {
-        if meta.envelope_version.is_some() {
-            // === ENVELOPE PATH ===
-            app.debug_log("Unlock - Envelope encryption detected");
-            let device_salt_b64 = meta.device_salt.as_deref()
-                .ok_or_else(|| anyhow::anyhow!("Envelope metadata missing device_salt"))?;
-            let device_salt = base64::engine::general_purpose::STANDARD.decode(device_salt_b64)
-                .context("Invalid device_salt base64")?;
-
-            let device_key = app.crypto.derive_key(&app.password_input, &device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
-
-            let wrapped_json = meta.local_wrapped_master.as_deref()
-                .ok_or_else(|| anyhow::anyhow!("Envelope metadata missing local_wrapped_master"))?;
-            let wrapped: crate::models::encryption::EncryptedData = serde_json::from_str(wrapped_json)
-                .context("Invalid local_wrapped_master JSON")?;
-
-            let master_key = app.crypto.unwrap_master_key(&device_key, &wrapped)?;
-            app.debug_log("Unlock - Master key unwrapped from envelope");
-            master_key
-        } else if let (Some(salt), Some(iterations)) = (&meta.salt, meta.iterations) {
-            // === LEGACY PATH ===
-            app.debug_log(&format!("Unlock - Legacy encryption, iterations: {}", iterations));
-            app.debug_log(&format!("Unlock - Salt (hex): {}", hex::encode(salt)));
-            app.crypto.derive_key(&app.password_input, salt, iterations)?
-        } else {
-            anyhow::bail!("Invalid encryption metadata: neither envelope nor legacy fields found");
-        }
-    } else {
-        // First-time setup: generate new salt and save it
-        let new_salt = app.crypto.generate_salt();
-        let iterations = 256_000;
-        encryption_repo.save(&new_salt, iterations)?;
-        app.debug_log(&format!("Unlock - New database, generated salt, iterations: {}", iterations));
-        app.crypto.derive_key(&app.password_input, &new_salt, iterations)?
-    };
-
-    app.debug_log(&format!("Unlock - Password length: {} chars", app.password_input.len()));
+    // Checks the password, and creates the vault if there isn't one yet
+    let key = vault::unlock(db.connection(), &app.crypto, &app.password_input)?;
 
     app.key_manager.set_master_key(key);
     app.key = Some(key);
@@ -109,6 +72,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
                         metadata.client_id = Some(clone_result.client_id);
                         metadata.user_id = Some(clone_result.user_id.clone());
                         metadata.sync_enabled = true;
+                        metadata.forget_server_state();
                         metadata.pending_device_name = None; // Clear pending name
                         sync_repo.update_metadata(&metadata)?;
 
@@ -182,6 +146,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
                         metadata.sync_endpoint = endpoint.to_string();
                         metadata.api_key = Some(encrypted_api_key);
                         metadata.sync_enabled = true;
+                        metadata.forget_server_state();
                         metadata.pending_device_name = None; // Clear pending name
                         sync_repo.update_metadata(&metadata)?;
 
@@ -206,6 +171,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
                         metadata.sync_endpoint = endpoint.to_string();
                         metadata.api_key = Some(encrypted_api_key);
                         metadata.sync_enabled = true;
+                        metadata.forget_server_state();
                         sync_repo.update_metadata(&metadata)?;
 
                         // Update app settings and save to database
@@ -218,6 +184,15 @@ pub fn unlock(app: &mut App) -> Result<()> {
                     }
                 }
             }
+        }
+    }
+
+    // What's been in the bin long enough goes now, on every client. Not being able to
+    // doesn't stop the unlock, and the next one tries again.
+    if let Some(db) = &app.db {
+        let cutoff = chrono::Utc::now() - chrono::Duration::days(BIN_RETENTION_DAYS);
+        if let Err(e) = NoteRepository::new(db.connection()).purge_expired_bin(cutoff) {
+            app.debug_log(&format!("Unlock - Could not empty the old part of the bin: {e}"));
         }
     }
 
@@ -236,11 +211,13 @@ pub fn unlock(app: &mut App) -> Result<()> {
         app.color_scheme = crate::ui::ColorScheme::by_name(app.settings.theme.scheme_name());
         app.debug_log("Unlock - Color scheme updated");
     }
+    app.apply_auto_lock_setting();
+    super::settings::apply_language(app);
 
     // Store password if remember checkbox was enabled
     if app.remember_password_checkbox {
         // The password is still in app.password_input at this point
-        let password_to_store = app.password_input.clone();
+        let password_to_store = Zeroizing::new(app.password_input.clone());
         if let Err(e) = store_password_for_autounlock(app, &password_to_store) {
             app.error = Some(format!("Failed to store password: {}", e));
         } else {
@@ -256,7 +233,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
     }
 
     // Save unlock password for envelope encryption (server password may differ from notes password)
-    app.unlock_password = Some(app.password_input.clone());
+    app.unlock_password = Some(Zeroizing::new(app.password_input.clone()));
 
     // Clear password fields and reset flags
     app.password_input.zeroize();
@@ -268,6 +245,10 @@ pub fn unlock(app: &mut App) -> Result<()> {
 
     // Start SSE connection for real-time sync notifications
     app.start_sse_if_enabled();
+
+    // Once the device has the password and a sync behind it, it can repair the server's
+    // copy of the key if an older client left it unreadable
+    app.server_key_check_owed = true;
 
     // Trigger an immediate sync to fetch inbox items and any pending changes
     app.trigger_sync();
@@ -282,7 +263,6 @@ pub fn toggle_remember_password(app: &mut App) -> Result<()> {
     if app.settings.remember_password {
         // Disable: clear stored password using the storage backend
         app.settings.remember_password = false;
-        app.settings.stored_password = None;
 
         // Delete stored password
         let _ = app.password_storage.delete();
@@ -305,8 +285,19 @@ pub fn toggle_remember_password(app: &mut App) -> Result<()> {
 
 /// Store password for auto-unlock (call after successful unlock when user confirms)
 pub fn store_password_for_autounlock(app: &mut App, password: &str) -> Result<()> {
-    // Store password using the storage backend (keychain or file)
-    app.password_storage.store(password)?;
+    // Store password using the storage backend (keychain or file). A keychain that
+    // doesn't keep it isn't worth keeping either: the file works, and says what it is.
+    if let Err(e) = app.password_storage.store(password) {
+        if !app.password_storage.backend_type().is_secure() {
+            return Err(e);
+        }
+
+        app.debug_log(&format!("Keychain refused the password, falling back to file: {}", e));
+        let config_dir = app.db_path.parent().context("Invalid db path")?;
+        let file_storage = crate::password_storage::create_file_storage(config_dir);
+        file_storage.store(password)?;
+        app.password_storage = file_storage;
+    }
 
     app.debug_log(&format!(
         "Password stored using {} backend",
@@ -315,7 +306,6 @@ pub fn store_password_for_autounlock(app: &mut App, password: &str) -> Result<()
 
     // Update settings (note: we no longer store encrypted password in settings)
     app.settings.remember_password = true;
-    app.settings.stored_password = None; // No longer needed in settings
 
     if let Some(db) = &app.db {
         let settings_repo = SettingsRepository::new(db.connection());
@@ -332,7 +322,6 @@ pub fn forget_stored_password(app: &mut App) -> Result<()> {
 
     // Update settings
     app.settings.remember_password = false;
-    app.settings.stored_password = None;
 
     if let Some(db) = &app.db {
         let settings_repo = SettingsRepository::new(db.connection());
@@ -342,21 +331,9 @@ pub fn forget_stored_password(app: &mut App) -> Result<()> {
     Ok(())
 }
 
-/// Verify password is correct for enabling remember password
-/// Returns Ok(true) if password is correct, Ok(false) if incorrect, Err on database error
-pub fn verify_password_for_remember(app: &App, password: &str) -> Result<bool> {
-    // Try to open the database with the provided password
-    // This verifies the password without actually unlocking the app
-    match Database::open(&app.db_path, password) {
-        Ok(_) => Ok(true),  // Password is correct
-        Err(e) => {
-            // Check if it's a password error or other error
-            let error_msg = format!("{:?}", e);
-            if error_msg.contains("wrong password") || error_msg.contains("corrupted") {
-                Ok(false)  // Password is incorrect
-            } else {
-                Err(e)  // Other database error
-            }
-        }
-    }
+/// Check a password against the open vault, for actions that ask for it again.
+pub fn verify_password(app: &App, password: &str) -> Result<bool> {
+    let db = app.db.as_ref().context("Database not unlocked")?;
+    let key = app.key.as_ref().context("Vault is locked")?;
+    vault::password_matches(db.connection(), &app.crypto, password, key)
 }

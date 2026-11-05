@@ -47,6 +47,47 @@ data class CloneDeviceRequest(
     val deviceType: String = "android",
 )
 
+// MARK: - Accounts
+
+@Serializable
+data class AccountCredentials(
+    val email: String,
+    val password: String,
+)
+
+@Serializable
+data class RegisterUserResponse(
+    val userId: String? = null,
+)
+
+@Serializable
+data class UserStatusResponse(
+    val exists: Boolean = false,
+    val isApproved: Boolean = false,
+    val isActive: Boolean = false,
+)
+
+@Serializable
+data class UserLoginResponse(
+    val sessionId: String? = null,
+    val mustChangePassword: Boolean = false,
+)
+
+@Serializable
+data class UserAccountInfo(
+    val email: String = "",
+    val noteCount: Int = 0,
+    val attachmentCount: Int = 0,
+    val storageUsedBytes: Long = 0,
+    val storageQuotaMb: Long = 0,
+    val inbox: InboxAccountInfo = InboxAccountInfo(),
+)
+
+@Serializable
+data class InboxAccountInfo(
+    val hasToken: Boolean = false,
+)
+
 // MARK: - Sync Push
 
 @Serializable
@@ -56,6 +97,8 @@ data class SyncPushRequest(
     val versions: List<SyncNoteVersion>,
     val deletions: List<SyncDeletion> = emptyList(),
     val savedSearches: List<SyncSavedSearch> = emptyList(),
+    /** Every note here carries its complete list, so the server can drop the rest. */
+    val attachmentsAuthoritative: Boolean = false,
 )
 
 @Serializable
@@ -68,6 +111,16 @@ data class SyncPushResponse(
      * Absent on older servers; the client re-pushes blobs it has (self-heal).
      */
     val attachmentWarnings: List<AttachmentWarning>? = null,
+    /**
+     * Deletions refused because the note has a newer edit, which comes back on
+     * the next pull. Absent on older servers, which never refuse one.
+     */
+    val rejectedDeletions: List<String>? = null,
+    /**
+     * Notes this push sent that were permanently deleted after the edit. Absent on
+     * older servers, which take them or reject them instead.
+     */
+    val skippedDeleted: List<String>? = null,
 )
 
 /** One accepted note whose attachment references have no data on the server. */
@@ -94,12 +147,20 @@ data class SyncRejected(
     val serverVersion: Int,
     val serverAttachments: List<AttachmentRef>,
     val serverPinned: Boolean,
+    val serverArchived: Boolean = false,
+    val serverArchivedAt: String? = null,
+    val serverLocked: Boolean = false,
+    val serverLockedAt: String? = null,
     val serverSyntaxLanguage: String? = null,
     val serverWordWrap: Boolean? = null,
     val serverShowPreview: Boolean? = null,
+    val serverColor: String? = null,
     val serverContentHash: String? = null,
     val serverParentHash: String? = null,
     val serverHashChain: List<String>? = null,
+    /** Whether the server's copy is in the bin. An older server doesn't say. */
+    val serverDeleted: Boolean = false,
+    val serverDeletedAt: String? = null,
     val ancestorHash: String? = null,
     val ancestorContent: String? = null,
     val ancestorTags: List<String>? = null,
@@ -109,6 +170,8 @@ data class SyncRejected(
 
 @Serializable
 data class SyncPullRequest(
+    /** Selects cursor mode, even when empty. An older server ignores it. */
+    val cursor: String? = null,
     val lastSyncAt: String? = null,
     val knownNoteIds: List<String>,
     val knownAttachmentIds: List<String>,
@@ -126,6 +189,8 @@ data class SyncPullResponse(
     val syncedAt: String? = null,
     val totalCount: Int? = null,
     val hasMore: Boolean? = null,
+    /** Only from a server that supports the cursor. Sent on every page if so. */
+    val nextCursor: String? = null,
 )
 
 // MARK: - Sync Note
@@ -211,11 +276,6 @@ data class InboxTokenResponse(
     val token: String,
 )
 
-@Serializable
-data class InboxTokenStatusResponse(
-    val hasToken: Boolean,
-)
-
 // MARK: - Sync Status
 
 @Serializable
@@ -258,6 +318,8 @@ data class WrappedKeyResponse(
     val blob: String,           // JSON {"ciphertext":"...","iv":"..."}
     val kdfVersion: Int,
     val kdfIterations: Int,
+    /** Opaque. Absent on a server without conditional writes. */
+    val updatedAt: String? = null,
 )
 
 @Serializable
@@ -265,4 +327,6 @@ data class PutWrappedKeyRequest(
     val blob: String,
     val kdfVersion: Int,
     val kdfIterations: Int,
+    /** False: only if the account has no key. True: whatever is there. */
+    val replace: Boolean? = null,
 )

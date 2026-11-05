@@ -186,6 +186,21 @@
     "readOnly": {
       "archivedBanner": "Questa nota è archiviata. Rimuovi dall'archivio per modificare.",
       "lockedBanner": "Questa nota è bloccata. Sblocca per modificare."
+    },
+    "actionFailed": {
+      "archive": "Impossibile archiviare la nota: {error}",
+      "unarchive": "Impossibile rimuovere la nota dall'archivio: {error}",
+      "lock": "Impossibile bloccare la nota: {error}",
+      "unlock": "Impossibile sbloccare la nota: {error}",
+      "delete": "Impossibile eliminare la nota: {error}"
+    },
+    "copyLinkFailed": "Impossibile copiare il link negli appunti",
+    "noteEditor": "Editor di note",
+    "calc": {
+      "tooLong": "Questa nota è troppo lunga da calcolare ({lines} righe, massimo {max}). Accorciala o usa una sintassi diversa.",
+      "consecutiveErrors": "Interrotto dopo {count} errori consecutivi. Non sembrano calcoli: prova una sintassi diversa.",
+      "totalErrors": "Interrotto dopo {count} errori. Prova una sintassi diversa per questa nota.",
+      "tooSlow": "Interrotto perché richiedeva troppo tempo. Le righe seguenti non hanno risultati."
     }
   },
   "noteList": {
@@ -195,7 +210,8 @@
     "noteCountAll": "{total} note"
   },
   "tagInput": {
-    "removeTag": "Rimuovi tag"
+    "removeTag": "Rimuovi tag",
+    "suggestions": "Suggerimenti di tag"
   },
   "backupReminder": {
     "title": "È ora di fare un backup delle note",
@@ -216,7 +232,8 @@
     "frequencyMonthly": "Mensile",
     "frequencyOnChanges": "Dopo un certo numero di modifiche",
     "changesThreshold": "Esegui backup dopo questo numero di modifiche",
-    "description": "I backup automatici vengono scaricati sul tuo dispositivo. Attiva i promemoria per essere avvisato quando è ora di fare un backup."
+    "description": "I backup automatici vengono scaricati sul tuo dispositivo. Attiva i promemoria per essere avvisato quando è ora di fare un backup.",
+    "saveFailed": "Questa impostazione non è stata salvata. Riprova."
   },
   "backup": {
     "title": "Backup Crittografato",
@@ -254,8 +271,10 @@
         "title": "Informazioni Backup",
         "created": "Creato",
         "records": "Record"
-      }
-    }
+      },
+      "storageFull": "Il browser ha esaurito lo spazio, quindi il ripristino non è stato completato e non è stato conservato nulla. Il file di backup è integro: libera spazio e ripristinalo di nuovo."
+    },
+    "autoFailed": "Il backup automatico non è riuscito. Crea un backup manuale."
   },
   "settings": {
     "title": "Impostazioni",
@@ -442,7 +461,22 @@
         "hintExisting": "La password con cui sblocchi le tue note sugli altri dispositivi. Non viene mai inviata al server.",
         "required": "Inserisci la password delle tue note.",
         "incorrect": "Questa non è la password che sblocca le tue note su questo dispositivo. Inserisci la password delle note, non quella del server.",
-        "uploadFailed": "La sincronizzazione è configurata, ma non è stato possibile salvare la chiave di cifratura sul server, quindi gli altri dispositivi non possono ancora connettersi. Verrà fatto un nuovo tentativo al prossimo sblocco"
+        "uploadFailed": "La sincronizzazione è configurata, ma non è stato possibile salvare la chiave di cifratura sul server, quindi gli altri dispositivi non possono ancora connettersi. Verrà fatto un nuovo tentativo al prossimo sblocco",
+        "mustDiffer": "La password delle note e quella dell'account devono essere diverse. Il server di sincronizzazione vede la password dell'account, quindi se coincidono potrebbe leggere le tue note.",
+        "matchesAccountWarning": "La password delle note è uguale a quella dell'account, quindi il server di sincronizzazione potrebbe leggere le tue note. Cambia la password delle note per risolvere il problema."
+      },
+      "existingAccountDetected": "Questa email ha già un account, quindi questo dispositivo si collegherà a esso. Inserisci la password delle note che usi sugli altri dispositivi.",
+      "errors": {
+        "credentialsRequired": "Email e password sono obbligatorie",
+        "passwordTooShort": "La password deve contenere almeno 12 caratteri",
+        "registrationFailed": "Registrazione dell'utente non riuscita",
+        "deviceRegistrationFailed": "Registrazione del dispositivo non riuscita",
+        "loginFailed": "Accesso non riuscito",
+        "accountInfoFailed": "Impossibile caricare le informazioni dell'account",
+        "deleteNotesFailed": "Impossibile eliminare le note",
+        "disconnectFailed": "Disconnessione non riuscita",
+        "syncFailed": "Sincronizzazione non riuscita",
+        "toggleFailed": "Impossibile modificare la sincronizzazione"
       }
     },
     "editorTab": {
@@ -481,7 +515,9 @@
       "formatHelp": "Usa token YYYY, MM, DD, HH, mm, ss",
       "value": "Valore",
       "description": "Descrizione",
-      "preview": "Anteprima"
+      "preview": "Anteprima",
+      "textPlaceholder": "Testo da inserire",
+      "descriptionPlaceholder": "Descrizione mostrata nel completamento automatico"
     },
     "keyboardTab": {
       "description": "Personalizza le scorciatoie da tastiera. Clicca su una scorciatoia per modificarla, quindi premi la combinazione di tasti desiderata.",
@@ -513,7 +549,10 @@
       "duplicateNote": "Duplica nota",
       "exportNote": "Esporta nota",
       "pressKey": "Premi un tasto...",
-      "notSet": "Non impostato"
+      "notSet": "Non impostato",
+      "needsModifier": "Questa scorciatoia funziona mentre scrivi, quindi richiede Ctrl, Cmd o Alt. Premi un altro tasto, o Esc per annullare.",
+      "reserved": "Questo tasto è riservato. Premi un altro tasto, o Esc per annullare.",
+      "toggleCollapse": "Comprimi o espandi"
     },
     "syncTab": {
       "enableSync": "Abilita sincronizzazione",
@@ -566,7 +605,9 @@
         "changing": "Modifica della password in corso...",
         "button": "Cambia password",
         "success": "Password modificata con successo",
-        "error": "Impossibile modificare la password: {error}"
+        "error": "Impossibile modificare la password: {error}",
+        "serverKeyFailed": "La password è stata cambiata su questo dispositivo, ma non è stato possibile aggiornare il server. Verrà riprovato al prossimo sblocco. Fino ad allora, un nuovo dispositivo avrebbe bisogno della vecchia password.",
+        "keyStaysTheSame": "La tua chiave di crittografia resta la stessa, quindi i vecchi backup si aprono ancora con la vecchia password. Conservali al sicuro."
       },
       "connectionDetails": {
         "title": "Dettagli connessione",
@@ -602,11 +643,12 @@
         "dangerZone": "Zona pericolosa",
         "deleteNotesDescription": "Elimina tutte le tue note dal server di sincronizzazione. Questa azione non può essere annullata. Le tue note locali NON saranno eliminate.",
         "deleteNotesButton": "Elimina tutte le note dal server"
-      }
+      },
+      "disconnectNotRevoked": "Questo dispositivo è disconnesso, ma non è stato possibile avvisare il server, quindi è ancora elencato e la sua chiave funziona ancora. Revocalo nel portale utente."
     },
     "advancedTab": {
       "importExport": "Importa/Esporta",
-      "exportDescription": "Esporta note come JSON decifrato. L'importazione unirà le note con i dati esistenti.",
+      "exportDescription": "L'esportazione crea una copia JSON non cifrata per spostare le note altrove: chiunque abbia il file può leggerla. Per una copia cifrata, usa il backup. L'importazione unisce le note a quelle già presenti.",
       "downloadClient": "Scarica client terminale/HTML",
       "downloadTerminalClient": "Scarica client terminale",
       "clientDescription": "Scarica il client terminale per l'accesso da riga di comando, o il client HTML per l'esecuzione locale dal filesystem",
@@ -634,7 +676,8 @@
       "aboutDescription": "Jottery è un'applicazione scratch pad self-hosted incentrata sulla privacy per catturare, organizzare e cercare note con contenuti ricchi, evidenziazione della sintassi e crittografia.",
       "viewOnGithub": "Visualizza su GitHub",
       "license": "Licenza MIT."
-    }
+    },
+    "exportIncomplete": "L'esportazione è incompleta: {notes} note e {attachments} allegati non sono stati letti e sono stati omessi."
   },
   "landing": {
     "languagePicker": {
@@ -647,7 +690,9 @@
       "note": "Nessun account richiesto • Funziona offline • Auto-ospitabile"
     },
     "screenshots": {
-      "mainInterface": "Interfaccia principale che mostra l'elenco delle note e l'editor"
+      "mainInterface": "Interfaccia principale che mostra l'elenco delle note e l'editor",
+      "carouselLabel": "Carosello di screenshot",
+      "fullSizeLabel": "Immagine a dimensione intera"
     },
     "features": {
       "title": "Tutto ciò di cui hai bisogno",
@@ -919,7 +964,9 @@
         "emailRequired": "L'indirizzo e-mail è obbligatorio.",
         "serverPasswordRequired": "La password del server è obbligatoria.",
         "notesPasswordMinLength": "La password delle note deve contenere almeno 8 caratteri.",
-        "onboardingFailed": "Impossibile scaricare le chiavi di crittografia dal server. Assicurati che la password delle note corrisponda a quella degli altri dispositivi e che il dispositivo di origine sia stato sincronizzato"
+        "onboardingFailed": "Impossibile scaricare le chiavi di crittografia dal server. Assicurati che la password delle note corrisponda a quella degli altri dispositivi e che il dispositivo di origine sia stato sincronizzato",
+        "accountKeyUnreadable": "Questa password delle note non può aprire la chiave del tuo account. Controlla la password. Se è corretta, la chiave potrebbe essere stata salvata da una versione precedente di Jottery: sbloccare Jottery su un dispositivo già collegato risolverà il problema. Poi riprova.",
+        "localNotesOrphaned": "Le note su questo dispositivo usano una chiave diversa da quella del tuo account, quindi il collegamento le renderebbe illeggibili. Non è stato modificato nulla. Per conservarle, esporta le note, elimina i dati di questo dispositivo, collegati e poi importale."
       },
       "steps": {
         "initialising": "Inizializzazione della crittografia locale…",
@@ -928,12 +975,15 @@
         "encrypting": "Protezione delle credenziali…",
         "syncing": "Avvio della sincronizzazione iniziale…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "La password delle note è stata cambiata su un altro dispositivo. Questo dispositivo si sblocca ancora con la vecchia password e le tue note sono al sicuro, ma i nuovi dispositivi avranno bisogno di quella nuova."
   },
   "lock": {
     "title": "Blocca applicazione",
     "message": "Bloccare l'applicazione? Le modifiche non salvate andranno perse.",
-    "confirmButton": "Blocca"
+    "confirmButton": "Blocca",
+    "locking": "Blocco in corso...",
+    "savingAndSyncing": "Salvataggio e sincronizzazione delle note"
   },
   "recycleBin": {
     "title": "Cestino",
@@ -997,14 +1047,23 @@
     "markdownCopied": "Link markdown copiato negli appunti",
     "error": {
       "download": "Impossibile scaricare l'allegato",
-      "copyMarkdown": "Impossibile copiare il link markdown"
+      "copyMarkdown": "Impossibile copiare il link markdown",
+      "upload": "Impossibile caricare {name}: {error}",
+      "delete": "Impossibile eliminare l'allegato: {error}",
+      "paste": "Impossibile incollare l'immagine: {error}"
     },
     "preview": {
       "title": "Anteprima allegato",
       "loading": "Caricamento anteprima...",
       "notAvailable": "Anteprima non disponibile per questo tipo di file.",
       "audioNotSupported": "Il tuo browser non supporta la riproduzione audio.",
-      "videoNotSupported": "Il tuo browser non supporta la riproduzione video."
+      "videoNotSupported": "Il tuo browser non supporta la riproduzione video.",
+      "videoLabel": "Anteprima video"
+    },
+    "confirmDelete": {
+      "title": "Rimuovere l'allegato?",
+      "message": "Il file verrà rimosso da questa nota. A meno che non sia ancora presente in una versione precedente della nota, non potrà essere recuperato.",
+      "confirmButton": "Rimuovi"
     }
   },
   "keyboard": {
@@ -1052,7 +1111,8 @@
     "previousPage": "Pagina precedente",
     "nextPage": "Pagina successiva",
     "zoomOut": "Riduci",
-    "zoomIn": "Ingrandisci"
+    "zoomIn": "Ingrandisci",
+    "loadFailed": "Impossibile aprire questo PDF. Puoi comunque scaricarlo."
   },
   "versionHistory": {
     "title": "Cronologia versioni",
@@ -1075,7 +1135,8 @@
       "title": "Ripristina versione",
       "message": "Sei sicuro di voler ripristinare questa versione? La nota corrente verrà salvata come nuova versione prima del ripristino.",
       "confirmButton": "Ripristina"
-    }
+    },
+    "restoreFailed": "Impossibile ripristinare la versione: {error}"
   },
   "header": {
     "menu": "Menu",
@@ -1084,7 +1145,8 @@
     "addContentFirst": "Aggiungi prima contenuto alla nota corrente",
     "lastSynced": "Ultima sincronizzazione: {time}",
     "neverSynced": "Non ancora sincronizzato",
-    "syncDisabled": "La sincronizzazione non è attiva"
+    "syncDisabled": "La sincronizzazione non è attiva",
+    "newNote": "Nuova Nota"
   },
   "confirm": {
     "deleteDatabase": {
@@ -1171,7 +1233,11 @@
     "indicator": "Conflitto di sincronizzazione",
     "bannerText": "Questa nota ha un conflitto di sincronizzazione che deve essere risolto",
     "resolveButton": "Risolvi conflitto",
-    "syncNotification": "{count, plural, one {1 nota ha un conflitto di sincronizzazione} other {{count} note hanno conflitti di sincronizzazione}}"
+    "syncNotification": "{count, plural, one {1 nota ha un conflitto di sincronizzazione} other {{count} note hanno conflitti di sincronizzazione}}",
+    "serverUnreadable": "La copia di questa nota sul server non è leggibile e potrebbe essere stata alterata. Si può conservare solo la tua versione.",
+    "localUnreadable": "La copia di questa nota su questo dispositivo non è leggibile.",
+    "loadFailed": "Impossibile caricare i dati del conflitto",
+    "resolveFailed": "Impossibile risolvere il conflitto"
   },
   "pullToRefresh": {
     "pull": "Scorri verso il basso per sincronizzare",
@@ -1181,7 +1247,14 @@
   },
   "sync": {
     "syncing": "Sincronizzazione...",
-    "syncProgress": "Sincronizzazione: {percentage}% completato"
+    "syncProgress": "Sincronizzazione: {percentage}% completato",
+    "notesRefused": "Alcune note superano il limite di caricamento del tuo account e non sono state sincronizzate. Tutto il resto sì.",
+    "accountDisabled": "Il tuo account è disattivato o in attesa di approvazione, quindi la sincronizzazione si è interrotta. Le tue note su questo dispositivo sono al sicuro. Contatta il tuo amministratore.",
+    "storageQuotaExceeded": "Il tuo account ha raggiunto il limite di archiviazione, quindi le modifiche su questo dispositivo non possono essere caricate. Elimina definitivamente alcune note o allegati per fare spazio.",
+    "massDeletionHeld": "Il server ha chiesto di eliminare {count} note in una volta. Sono nel cestino nel caso non sia stata una tua azione. Ripristinale da lì, oppure svuota il cestino se è stata tua.",
+    "clockAhead": "Alcune modifiche non sono state sincronizzate perché la loro data è avanti di più di un giorno rispetto al server. Controlla la data e l'ora di questo dispositivo.",
+    "deviceRevoked": "Questo dispositivo non è più collegato al tuo account, quindi la sincronizzazione si è interrotta. Le tue note su questo dispositivo sono al sicuro. Ricollegalo dalle Impostazioni.",
+    "databaseLost": "Connessione al database persa. Aggiorna la pagina per continuare."
   },
   "inbox": {
     "title": "Posta in arrivo",
@@ -1420,6 +1493,18 @@
     "openNote": "Apri questa nota",
     "repairNotOnServer": "Assente anche dal server — apri la nota e rimuovi l'allegato",
     "serverMissingTitle": "Assente sul server",
-    "serverMissingHint": "Il server di sincronizzazione non ha alcuna copia di questi allegati e nemmeno questo dispositivo. Apri la nota e rimuovi l'allegato, oppure sincronizza da un dispositivo che possiede ancora il file."
+    "serverMissingHint": "Il server di sincronizzazione non ha alcuna copia di questi allegati e nemmeno questo dispositivo. Apri la nota e rimuovi l'allegato, oppure sincronizza da un dispositivo che possiede ancora il file.",
+    "rejectedTitle": "Rifiutati dal server di sincronizzazione",
+    "rejectedHint": "Il server di sincronizzazione li ha inviati in una forma non attendibile, quindi non sono stati salvati. Le note esistenti non sono interessate. Se continua a succedere, verifica chi controlla il server.",
+    "rejectedKind": {
+      "note": "Nota",
+      "version": "Versione della nota",
+      "conflict": "Conflitto di sincronizzazione",
+      "savedSearch": "Ricerca salvata",
+      "attachment": "Allegato",
+      "inboxItem": "Elemento della posta in arrivo",
+      "deletion": "Eliminazione"
+    },
+    "scanFailed": "La scansione non è terminata. Riprova."
   }
 }

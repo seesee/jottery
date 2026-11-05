@@ -79,10 +79,10 @@ private struct ConflictRowView: View {
 
     private func noteTitle(from content: String) -> String {
         let lines = content.split(separator: "\n", omittingEmptySubsequences: true)
-        guard let firstLine = lines.first else { return "Untitled" }
+        guard let firstLine = lines.first else { return L.noteUntitled }
         let trimmed = firstLine.trimmingCharacters(in: .whitespaces)
             .replacingOccurrences(of: "^#+\\s*", with: "", options: .regularExpression)
-        return trimmed.isEmpty ? "Untitled" : String(trimmed.prefix(80))
+        return trimmed.isEmpty ? L.noteUntitled : String(trimmed.prefix(80))
     }
 
     private func formattedDate(_ iso: String) -> String {
@@ -101,14 +101,26 @@ struct ConflictDetailView: View {
     @Environment(\.dismiss) private var dismiss
     let conflict: ConflictInfo
 
-    @State private var showingLocal = true
+    @State private var version = ConflictVersion.local
+    @State private var couldntResolve = false
+
+    private var shownSideIsUnreadable: Bool {
+        switch version {
+        case .local: conflict.localUnreadable
+        case .server: conflict.serverUnreadable
+        case .ancestor: false  // An ancestor that won't open isn't offered at all.
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Toggle between local and server
-            Picker(L.conflictVersion, selection: $showingLocal) {
-                Text(L.conflictLocal).tag(true)
-                Text(L.conflictServer).tag(false)
+            // Toggle between local, server and where they split, if that's known
+            Picker(L.conflictVersion, selection: $version) {
+                Text(L.conflictLocal).tag(ConflictVersion.local)
+                Text(L.conflictServer).tag(ConflictVersion.server)
+                if conflict.versions.contains(.ancestor) {
+                    Text(L.conflictAncestor).tag(ConflictVersion.ancestor)
+                }
             }
             .pickerStyle(.segmented)
             .padding()
@@ -118,16 +130,15 @@ struct ConflictDetailView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     // Metadata
                     HStack {
-                        Label(
-                            formattedDate(showingLocal ? conflict.localModifiedAt : conflict.serverModifiedAt),
-                            systemImage: "clock"
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        if let modifiedAt = conflict.modifiedAt(of: version) {
+                            Label(formattedDate(modifiedAt), systemImage: "clock")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
 
                         Spacer()
 
-                        let tags = showingLocal ? conflict.localTags : conflict.serverTags
+                        let tags = conflict.tags(of: version)
                         if !tags.isEmpty {
                             HStack(spacing: 4) {
                                 ForEach(tags, id: \.self) { tag in
@@ -141,10 +152,17 @@ struct ConflictDetailView: View {
                     .padding(.horizontal)
 
                     // Content
-                    Text(showingLocal ? conflict.localContent : conflict.serverContent)
-                        .font(.body.monospaced())
-                        .padding(.horizontal)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if shownSideIsUnreadable {
+                        Label(L.conflictUnreadable, systemImage: "lock.trianglebadge.exclamationmark")
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        Text(conflict.content(of: version))
+                            .font(.body.monospaced())
+                            .padding(.horizontal)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
             }
 
@@ -159,6 +177,7 @@ struct ConflictDetailView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .disabled(!conflict.allows(.keepLocal))
 
                 Button {
                     resolveConflict(strategy: .keepServer)
@@ -167,6 +186,7 @@ struct ConflictDetailView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
+                .disabled(!conflict.allows(.keepServer))
 
                 Button {
                     resolveConflict(strategy: .keepBoth)
@@ -176,17 +196,26 @@ struct ConflictDetailView: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(.secondary)
+                .disabled(!conflict.allows(.keepBoth))
             }
             .padding()
         }
         .navigationTitle(L.conflictResolve)
         .navigationBarTitleDisplayMode(.inline)
+        .alert(L.conflictCouldntResolve, isPresented: $couldntResolve) {
+            Button(L.versionHistoryDone, role: .cancel) {}
+        }
     }
 
     private func resolveConflict(strategy: ConflictResolutionStrategy) {
         Task {
-            try? await appState.resolveConflict(noteId: conflict.id, strategy: strategy)
-            dismiss()
+            do {
+                try await appState.resolveConflict(noteId: conflict.id, strategy: strategy)
+                dismiss()
+            } catch {
+                // It stays waiting, so the user can try again.
+                couldntResolve = true
+            }
         }
     }
 

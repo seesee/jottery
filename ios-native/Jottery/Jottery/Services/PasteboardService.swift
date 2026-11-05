@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 /// Reads attachable content (images, PDFs) from the general pasteboard.
 ///
 /// Runestone's editor only pastes strings, so images copied from other
-/// apps are attached via the editor toolbar instead.
+/// apps are attached by `EditorTextView` and the editor's menu instead.
 @MainActor
 enum PasteboardService {
 
@@ -16,15 +16,15 @@ enum PasteboardService {
 
     /// Whether the pasteboard holds content that can be attached to a note.
     /// Only inspects types — does not read data, so no paste banner is shown.
-    static var hasAttachableContent: Bool {
-        let pasteboard = UIPasteboard.general
-        return pasteboard.hasImages
+    static var hasAttachableContent: Bool { hasAttachableContent(in: .general) }
+
+    static func hasAttachableContent(in pasteboard: UIPasteboard) -> Bool {
+        pasteboard.hasImages
             || pasteboard.contains(pasteboardTypes: [UTType.pdf.identifier])
     }
 
     /// Extract attachable items. Reading contents may show the iOS paste banner.
-    static func readItems(now: Date = Date()) -> [PastedItem] {
-        let pasteboard = UIPasteboard.general
+    static func readItems(from pasteboard: UIPasteboard = .general, now: Date = Date()) -> [PastedItem] {
         var items: [PastedItem] = []
 
         let formatter = DateFormatter()

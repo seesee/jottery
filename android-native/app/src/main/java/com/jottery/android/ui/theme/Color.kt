@@ -1,6 +1,11 @@
 package com.jottery.android.ui.theme
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import com.jottery.android.R
+import com.jottery.android.model.NoteCategories
 
 // Light theme
 val md_theme_light_primary = Color(0xFF6750A4)
@@ -64,3 +69,25 @@ object NoteColors {
 
     fun fromString(name: String?): Color? = name?.let { allColors[it] }
 }
+
+/** What the user has named the colours, for anything that shows one. */
+val LocalNoteCategories = staticCompositionLocalOf { NoteCategories() }
+
+/** A note colour's name: the user's own, or the usual one in their language. */
+@Composable
+fun noteColourLabel(name: String): String = LocalNoteCategories.current.names[name] ?: standardColourLabel(name)
+
+/** A note colour's usual name, in the user's language. */
+@Composable
+fun standardColourLabel(name: String): String = stringResource(
+    when (name) {
+        "red" -> R.string.colour_red
+        "orange" -> R.string.colour_orange
+        "yellow" -> R.string.colour_yellow
+        "green" -> R.string.colour_green
+        "teal" -> R.string.colour_teal
+        "blue" -> R.string.colour_blue
+        "purple" -> R.string.colour_purple
+        else -> R.string.colour_pink
+    }
+)

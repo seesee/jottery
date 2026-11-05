@@ -23,11 +23,11 @@ password:
   change_success: Contraseña cambiada con éxito
   change_title: "Cambiar contraseña"
   change_enter_current: "Introduzca su contraseña actual:"
-  change_enter_new: "Introduzca nueva contraseña (mín. 12 caracteres):"
+  change_enter_new: "Introduzca nueva contraseña (mín. 8 caracteres):"
   change_confirm_new: "Confirme la nueva contraseña:"
   change_current_required: "Introduzca su contraseña actual"
   change_wrong_current: "La contraseña actual es incorrecta"
-  change_too_short: "La nueva contraseña debe tener al menos 12 caracteres"
+  change_too_short: "La nueva contraseña debe tener al menos 8 caracteres"
   change_mismatch: "Las contraseñas no coinciden"
   change_failed: "Error al cambiar la contraseña"
   remember: Recordar contraseña
@@ -46,6 +46,11 @@ password:
   enter_to_enable: "Introduzca su contraseña para activar el desbloqueo automático:"
   create_title: Crear contraseña
   unlock_title: Desbloquear
+  too_short: "La contraseña debe tener al menos %{min} caracteres"
+  same_as_account: "Usa contraseñas distintas. El servidor ve la contraseña de tu cuenta, así que no debe abrir también tus notas."
+  same_as_account_warning: "La contraseña de tu cuenta es la misma que la de tus notas, así que el servidor podría leerlas. Cambia la contraseña de las notas en Ajustes."
+  no_file_encryption: "Esta compilación no cifra el archivo de la base de datos. Las notas y etiquetas siguen cifradas, pero tu correo, la dirección del servidor, los nombres de los adjuntos y las fechas no."
+  change_keeps_key: "Esto no cambia tu clave de cifrado: las copias de seguridad antiguas se siguen abriendo con la contraseña antigua."
 menu:
   notes: Notas
   new_note: Nueva nota
@@ -78,6 +83,19 @@ note:
   info: Info de nota
   info_title: Información de nota
   untitled: "Sin título"
+  save_retry_hint: "q: volver a guardar | e: editar | Esc: descartar cambios"
+  empty_bin_title: "Vaciar papelera"
+  empty_bin_confirm: "¿Eliminar definitivamente %{count} notas de la papelera?"
+  empty_bin_warning: "También se eliminarán del servidor y de tus otros dispositivos. No se puede deshacer."
+  bin_emptied: "%{count} notas eliminadas definitivamente"
+  locked_cannot_archive: "No se puede archivar una nota bloqueada"
+  unreadable: "%{count} notas de este almacén no se pueden leer"
+  duplicated: "Nota duplicada"
+  copied: "Copiado al portapapeles"
+  copy_too_large: "Esta nota es demasiado larga para que un terminal la copie de forma fiable"
+  word_wrap_on: "Ajuste de línea activado"
+  word_wrap_off: "Ajuste de línea desactivado"
+  no_links: "No hay enlaces en pantalla"
 archive:
   view: "Ver archivo"
   title: "Archivo"
@@ -107,6 +125,7 @@ editor:
   temp_write_error: Error al escribir en archivo temporal
   temp_read_error: Error al leer archivo temporal
   default_editor: vi
+  temp_on_disk: "Este equipo no tiene carpeta temporal en memoria, así que una nota abierta está en disco hasta que la cierres."
 attachment:
   add: Añadir adjunto
   add_failed: "Error al añadir adjunto: %{error}"
@@ -115,6 +134,18 @@ attachment:
   delete: Eliminar adjunto
   no_attachments: Sin adjuntos
   total: "%{count} adjuntos"
+  press_enter: "Pulsa Intro para continuar..."
+  opened: "Archivo abierto en la aplicación predeterminada."
+  no_opener: "Este sistema no tiene un programa para abrir archivos. Guarda el adjunto con S."
+  delete_failed: "No se pudo eliminar el adjunto: %{error}"
+  deleted: "Eliminado: %{name}"
+  exists: "%{path} ya existe. Elige otro nombre."
+  saved: "Guardado en %{path}"
+  save_failed: "No se pudo guardar el adjunto: %{error}"
+  added: "%{name} adjuntado"
+  too_large: "El archivo es demasiado grande. El límite es %{max_mb} MB."
+  unsafe_title: "Este archivo no se abrirá"
+  unsafe_body: "Abrir este tipo de archivo podría ejecutar código de quien lo envió. ¿Guardarlo en su lugar?"
 version:
   history: Historial de versiones
   restore: Restaurar versión
@@ -153,6 +184,9 @@ settings:
   press_enter_cycle: presione Enter para alternar
   press_enter_toggle: presione Enter para cambiar
   disabled: deshabilitado
+  sort_order: "Orden"
+  language_auto: "Igual que el sistema"
+  default_note_type: "Tipo de nota predeterminado"
 sync:
   push: Enviar al servidor
   pull: Recibir del servidor
@@ -188,8 +222,29 @@ sync:
   reload_failed: "La sincronización tuvo éxito pero falló al recargar las notas: %{error}"
   note: nota
   notes: notas
+  skipped_notes: "%{count} elementos del servidor no se pudieron leer y se omitieron"
+  rejected_notes: "%{count} notas entran en conflicto con el servidor. Abre Jottery para resolverlos."
+  rate_limited: "El servidor ha pedido a Jottery que espere %{seconds} segundos antes de volver a sincronizar."
+  key_refused: "El servidor no ha aceptado la clave API de este dispositivo. Vuelve a registrarlo."
+  server_busy: "El servidor está ocupado. Jottery volverá a intentarlo en %{seconds} segundos."
+  quota_exceeded: "Tu cuenta ha alcanzado su límite de almacenamiento, así que no se han podido subir los cambios. Están a salvo en este dispositivo. Vacía la papelera o elimina adjuntos para hacer sitio."
+  deletions_held_title: "Muchas notas eliminadas"
+  deletions_held: "El servidor indica que %{count} notas se han eliminado definitivamente en otro lugar. ¿Has sido tú?"
+  deletions_held_warning: "y: moverlas a la papelera aquí. n: conservarlas y devolverlas al servidor."
+  deletions_held_cli: "El servidor indica que %{count} notas se han eliminado en otro lugar. Siguen aquí: abre Jottery para decidir."
+  deletions_applied: "%{count} notas movidas a la papelera"
+  force_title: "Forzar resincronización completa"
+  force_confirm: "¿Descargar TODAS las notas y adjuntos del servidor?"
+  force_note: "Los cambios locales sin enviar se conservan."
+  disconnect_title: "Desconectar de la sincronización"
+  disconnect_confirm: "¿Desconectar este dispositivo del servidor?"
+  disconnect_warning: "Tus notas se quedan aquí. El dispositivo se revoca en el servidor."
+  disconnect_conflicts: "%{count} notas tienen conflictos sin resolver. Sus copias del servidor se olvidarán aquí."
+  device_still_registered: "Desconectado aquí, pero no se ha podido avisar al servidor, así que la clave de este dispositivo sigue funcionando. Revócala en el portal de usuario."
 
 # Bandeja de entrada
+  stopped_unexpectedly: "La sincronización se detuvo inesperadamente. No se ha perdido nada y volverá a intentarse."
+  clock_ahead: "Es posible que el reloj de este dispositivo esté mal: algunos cambios tienen una fecha de más de un día por delante del servidor, así que no se han enviado. Se enviarán cuando el reloj sea correcto."
 inbox:
   title: "Bandeja de entrada"
   empty: "La bandeja de entrada está vacía. Las notas enviadas a través de la API de bandeja de entrada aparecerán aquí."
@@ -233,6 +288,8 @@ register:
   device_failed: Error en el registro del dispositivo
   cleared: Registro eliminado. Puede comenzar de nuevo.
   pending_status: Pendiente de aprobación
+  password_differs: "Debe ser distinta de la contraseña de tus notas."
+  insecure_endpoint: "Esta dirección usa HTTP sin cifrar, así que tu contraseña de cuenta y la clave del dispositivo podrían leerse por el camino. Usa https:// o vuelve a introducir esta dirección para aceptarlo."
 color_scheme:
   default_dark: Oscuro predeterminado
   default_light: Claro predeterminado
@@ -301,7 +358,6 @@ help:
   attachments: ADJUNTOS
   global: GLOBAL
   press_esc_or_enter: Presione Esc o Enter para cerrar
-  press_enter_paste: Presione Enter para pegar | Esc para cancelar
   tab_switch: "Tab: cambiar campos | Enter: crear"
   enter_unlock: "Enter: desbloquear | Ctrl+Q: salir"
   type_password_key: Escribir
@@ -386,8 +442,8 @@ help:
   s_q_close_desc: Cerrar panel de configuración
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: Enfocar panel de adjuntos (j/k para navegar, Enter para ver, d para eliminar)
-  A_add_attachment_key: A
-  A_add_attachment_desc: Añadir adjunto (introducir ruta del archivo)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: Añadir adjunto (introducir ruta del archivo)
   a_view_attachment_key: a + número
   a_view_attachment_desc: Ver adjunto (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -450,6 +506,51 @@ help:
   click_tags_desc: Entrar en modo de edición de etiquetas
   scroll_key: Rueda del ratón
   scroll_desc: Desplazar vista previa arriba/abajo
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Bloquear Jottery"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Guardar el adjunto seleccionado en un archivo"
+  z_archive_key: "z"
+  z_archive_desc: "Archivar la nota seleccionada (o recuperarla en modo archivo)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Archivar las notas seleccionadas"
+  search_or_key: "a | b"
+  search_or_desc: "Cualquiera de los dos (O)"
+  search_phrase_key: "\"a phrase\""
+  search_phrase_desc: "Estas palabras en este orden"
+  search_wildcard_key: "word* / *word"
+  search_wildcard_desc: "Una palabra empieza o termina así"
+  search_exclude_tag_key: "-#tag"
+  search_exclude_tag_desc: "Excluir notas con esta etiqueta"
+  search_attachment_key: "has:attachment"
+  search_attachment_desc: "Notas con adjuntos"
+  search_archived_key: "archived"
+  search_archived_desc: "Buscar en el archivo"
+  search_created_key: "created:>2024-01-01"
+  search_created_desc: "Creada después de una fecha (también < y a..b)"
+  search_modified_key: "modified:>2024-01-01"
+  search_modified_desc: "Modificada después de una fecha (también < y a..b)"
+  search_words_key: "words:>100"
+  search_words_desc: "Número de palabras (también < y a..b)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "Quitar etiquetas de las notas seleccionadas"
+  multi_colour_key: "C"
+  multi_colour_desc: "Definir el color de las notas seleccionadas"
+  g_saved_key: "g"
+  g_saved_desc: "Búsquedas guardadas"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "Guardar esta búsqueda"
+  enter_confirm_esc_cancel: "Intro: confirmar | Esc: cancelar"
+  D_duplicate_key: "Mayús+D"
+  D_duplicate_desc: "Duplicar nota"
+  o_copy_key: "o"
+  o_copy_desc: "Copiar el texto de la nota al portapapeles"
+  w_wrap_key: "w"
+  w_wrap_desc: "Activar o desactivar el ajuste de línea"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "Búsquedas anteriores y posteriores"
+  l_link_key: "l, Intro"
+  l_link_desc: "Recorrer los enlaces y seguir uno"
 cli:
   # Alt (usado en algunos lugares)
   list: Listar notas
@@ -513,6 +614,31 @@ cli:
   # Mensajes de salida
   notes_count: "%{count} notas"
   results_count: "%{count} resultados: '%{query}'"
+  attach_about: "Adjuntar un archivo a una nota"
+  save_attachment_about: "Guardar un adjunto de una nota en un archivo"
+  archive_about: "Archivar una nota"
+  unarchive_about: "Recuperar una nota del archivo"
+  note_id_help: "ID de la nota (admite coincidencia parcial)"
+  attach_file_help: "Archivo que adjuntar"
+  attachment_number_help: "Qué adjunto, según la numeración de show"
+  archived_help: "Mostrar las notas archivadas"
+  import_summary: "%{created} añadidas, %{updated} actualizadas, %{skipped} ya al día"
+  import_failed: "No se han podido importar %{count} elementos del archivo"
+  password_change_required: "Esta cuenta debe cambiar antes su contraseña. Inicia sesión en la aplicación web para hacerlo y vuelve a intentarlo."
+  insecure_endpoint: "%{endpoint} usa HTTP sin cifrar, así que la contraseña podría leerse por el camino. Usa https:// o añade --allow-insecure-http para aceptarlo."
+  allow_insecure_http_help: "Permitir enviar una contraseña por HTTP sin cifrar a un host público"
+  password_flag_deprecated: "Una contraseña en la línea de comandos se ve en ps y en el historial del shell. Usa --password-stdin o JOTTERY_PASSWORD."
+  password_stdin_help: "Leer las contraseñas de stdin, una por línea, en lugar de preguntar"
+  reset_yes_help: "No preguntar antes de que --reset elimine nada"
+  reset_confirm: "Esto elimina para siempre %{path} y cualquier contraseña recordada. Escribe %{word} para continuar:"
+  reset_cancelled: "No se ha eliminado nada"
+  reset_done: "Se han eliminado la bóveda y cualquier contraseña recordada"
+  reset_keychain_failed: "No se ha podido quitar la contraseña del llavero"
+  export_force_help: "Reemplazar el archivo si ya existe"
+  account_about: "Ver o eliminar lo que el servidor guarda de tu cuenta"
+  colours_about: "Poner nombre a los colores y asignar un color a las etiquetas"
+  doctor_about: "Comprobar la bóveda en busca de notas que no se abren y adjuntos que faltan"
+  doctor_repair_help: "Obtener del servidor los adjuntos que faltan"
 status:
   locked: Bloqueado
   unlocked: Desbloqueado
@@ -534,6 +660,15 @@ bulk:
   enter_export_path: "Ruta de exportación:"
   add_tags_to: Añadir etiquetas a
   export_notes_to: Exportar
+  archived: "%{count} notas archivadas"
+  tags_removed: "Etiquetas quitadas de %{count} notas: %{tags}"
+  remove_tags_from: "Quitar etiquetas de %{count} notas"
+  enter_colour: "Escribe un nombre de color (vacío para quitarlo):"
+  colour_of: "Definir el color de %{count} notas"
+  colour_set: "Color cambiado en %{count} notas"
+  unknown_colour: "No hay ningún color llamado %{colour}"
+  overwrite_title: "¿Reemplazar este archivo?"
+  overwrite_message: "%{path} ya existe. Reemplazarlo no se puede deshacer."
 time:
   just_now: justo ahora
   minutes_ago: hace %{count} minutos
@@ -568,6 +703,8 @@ backup:
   restoring: "Restaurando datos..."
   restored: "Restaurado"
   key_not_in_backup: "Esta copia de seguridad se creó con una versión anterior de Jottery y no contiene su clave. Solo se puede restaurar en la bóveda de la que procede."
+  incomplete: "Esta copia está incompleta: %{count} elementos del almacén no se pudieron leer y se dejaron fuera."
+  records_failed: "%{count} registros de esta copia no se pudieron restaurar. Todo lo demás, sí."
 
 # Progress indicators
 progress:
@@ -591,6 +728,12 @@ ui:
   type: "Tipo:"
   modified: "Modificado:"
   version: "Versión:"
+  save_attachment: "Guardar adjunto (Tab: completar, ↑↓: seleccionar, Intro: confirmar)"
+  path: "Ruta"
+  attachments_hint: "Adjuntos: (Tab para enfocar)"
+  attachments_focused_hint: "Adjuntos: (Tab para cambiar, j/k para navegar, Intro para ver, S para guardar, d para eliminar)"
+  attachments_keys_hint: "'a' para ver, '+' para añadir, 'X' para quitar el seleccionado"
+  attachment_viewer_hint: "↑/↓: navegar │ 1-9: selección rápida │ Intro: ver │ S: guardar │ +: añadir │ d: eliminar │ Esc: cerrar"
 
 # Texto de ayuda de la barra de estado
 status_bar:
@@ -640,8 +783,65 @@ status_bar:
   quick_select: "Selección rápida"
   view: "ver"
   restore_version: "Restaurar versión"
+  save: "guardar"
+  add: "añadir"
 
 # Virtual tags
 tags:
   virtual:
     title: "título"
+
+calc:
+  line_too_long: "⚠ Línea demasiado larga para calcular (límite %{max} bytes)"
+  numbers_only: "⚠ Calc trabaja con números: el texto, las tuplas y ; no se calculan"
+  too_deep: "⚠ Demasiados paréntesis anidados (límite %{max})"
+  gave_up: "Esta nota tardó demasiado en calcularse, así que se muestra sin resultados."
+
+envelope:
+  unwrap_failed: "La contraseña de tus notas no puede abrir la clave de esta cuenta. Puede que la guardara una versión anterior. Desbloquea Jottery en un dispositivo ya conectado, lo que lo arreglará, y vuelve a intentarlo."
+  rekey_failed: "Tus notas locales no se pudieron pasar a la clave de esta cuenta, así que no ha cambiado nada: %{error}"
+  diverged: "La clave de este dispositivo no coincide con la de la cuenta. Puede que las notas de tus otros dispositivos no se abran aquí."
+  password_changed_elsewhere: "Tu contraseña de notas se cambió en otro dispositivo, así que no se ha sobrescrito nada. Este dispositivo sigue desbloqueándose con la contraseña antigua. Cámbiala aquí para que coincida y puedan unirse dispositivos nuevos."
+  server_update_pending: "Tu contraseña ha cambiado en este dispositivo, pero no se ha podido actualizar la copia de tu clave en el servidor. Jottery volverá a intentarlo. Hasta entonces, un dispositivo nuevo no podrá unirse con la contraseña nueva."
+  key_keeps_changing: "La clave de la cuenta no deja de cambiar en el servidor, así que este dispositivo no la ha tocado. Inténtalo de nuevo en un momento."
+
+saved_search:
+  title: "Búsquedas guardadas"
+  empty: "Aún no hay búsquedas guardadas. Busca con / y pulsa Ctrl+S para guardarla."
+  name_prompt: "Pon nombre a esta búsqueda"
+  nothing_to_save: "Escribe primero una búsqueda"
+  saved: "Búsqueda guardada: %{name}"
+  deleted: "Búsqueda guardada eliminada"
+  delete_confirm: "¿Eliminar '%{name}' en todos los dispositivos? (y/n)"
+  not_found: "No hay ninguna búsqueda guardada llamada %{name}"
+  failed: "Error en la búsqueda guardada: %{error}"
+
+export:
+  file_exists: "Ese archivo ya existe. Elige otro nombre o usa --force para reemplazarlo."
+
+account:
+  email: "Cuenta: %{email}"
+  usage: "Notas: %{notes}, adjuntos: %{attachments}"
+  storage: "Almacenamiento: %{used} MB de %{quota} MB"
+  last_sync: "Última sincronización: %{time}"
+  confirm_delete_notes: "Esto elimina todas las notas del servidor, para todos los dispositivos, y no se puede deshacer. Escribe tu correo electrónico para continuar:"
+  confirm_delete: "Esto elimina tu cuenta y todo lo que hay en el servidor, y no se puede deshacer. Este dispositivo conserva sus notas. Escribe tu correo electrónico para continuar:"
+  cancelled: "No se ha eliminado nada"
+  notes_deleted: "Se han eliminado todas las notas del servidor"
+  deleted: "Se ha eliminado la cuenta"
+
+colours:
+  unknown: "No hay ningún color llamado %{colour}"
+  named: "Color actualizado: %{colour}"
+  tag_set: "Etiqueta actualizada: %{tag}"
+
+doctor:
+  notes: "Notas: %{count}, ilegibles: %{unreadable}"
+  versions: "Versiones: %{count}, ilegibles: %{unreadable}"
+  attachments: "Adjuntos: %{count}, ilegibles: %{unreadable}, faltan: %{missing}"
+  saved_searches: "Búsquedas guardadas: %{count}, ilegibles: %{unreadable}"
+  conflicts: "Conflictos pendientes: %{count}"
+  problems: "Problemas encontrados: %{count}"
+  repaired: "Adjuntos obtenidos: %{count}"
+  repair_needs_sync: "Esta bóveda no está conectada a un servidor, así que no se pueden obtener los adjuntos que faltan"
+  healthy: "No se han encontrado problemas"

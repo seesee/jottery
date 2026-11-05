@@ -1,16 +1,19 @@
 <script lang="ts">
   import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { _ } from 'svelte-i18n';
-  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery, selectNote, isContentOnlyUpdate, refreshEditorTagsSignal, isLocked } from '../stores/appStore';
-  import { updateNoteInStore, updateNoteInStoreAndSearch, removeNoteFromStoreAndSearch, addNoteToStoreAndSearch } from '../stores/storeHelpers';
+  import { selectedNote, clearSelection, notes, remoteNoteUpdate, settings, isDraftMode, exitDraftMode, searchQuery, selectNote, isContentOnlyUpdate, refreshEditorTagsSignal, isLocked } from '../stores/appStore';
+  import { updateNoteInStore, updateNoteInStoreAndSearch, reloadNotesAfterConflict, removeNoteFromStoreAndSearch, addNoteToStoreAndSearch } from '../stores/storeHelpers';
   import { noteService, tagService, attachmentService, syncService, versionRepository, noteRepository, syncRepository } from '../services';
   import { lock } from '../services/initService';
   import { isApplicationLockedError } from '../errors';
   import { EDITOR_AUTOSAVE_DELAY_MS } from '../constants';
   import { formatDateTime } from '../utils/dateFormat';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
+  import type { RemoteNoteUpdate } from '../stores/appStore';
+  import { conflictService } from '../services/conflictService';
   import type { Attachment, KeyboardShortcut, CodeEditorRef, HighlightJsInstance, DecryptedNote } from '../types';
   import VersionHistoryModal from './VersionHistoryModal.svelte';
+  import { registerPendingSave } from '../utils/pendingSave';
   import AttachmentPreviewModal from './AttachmentPreviewModal.svelte';
   import ConflictResolutionModal from './ConflictResolutionModal.svelte';
   import ConfirmModal from './ConfirmModal.svelte';
@@ -94,6 +97,7 @@
   }
 
   let saveTimeout: number | null = null;
+  let saveInFlight = false;
   let language: string = 'plain';
   let wordWrap: boolean = true;
   let showPreview: boolean = false;
@@ -108,6 +112,7 @@
   let showAttachmentsModal: boolean = false; // Mobile: show attachments in modal
   let showColorPicker: boolean = false;
   let showDeleteConfirm: boolean = false;
+  let attachmentToDelete: Attachment | null = null;
   let hasContentChanged: boolean = false; // Track if content modified since note loaded
   let isDarkMode: boolean = false; // Track if dark mode is active (updated via MutationObserver)
   let editorMode: 'raw' | 'wysiwyg' = 'raw'; // Editor mode for markdown notes
@@ -145,7 +150,7 @@
     openLinksInNewTab: $settings.openLinksInNewTab ?? true,
     hljs,
     loadingText: $_('editor.status.loading'),
-    notes: $notes.map(n => ({ id: n.id, content: n.content })),
+    notes: $notes,
   }) : '';
 
   // Check if preview is available for current language
@@ -161,7 +166,7 @@
       ? $_('editor.readOnly.lockedBanner')
       : undefined;
 
-  // Check if preview should use iframe (for HTML/XML with potential scripts)
+  // HTML/XML previews render in a sandboxed iframe, never in the app's document
   $: useIframePreview = language === 'html' || language === 'xml';
 
   // Compute note statistics
@@ -254,16 +259,78 @@
   }
 
   // Handler to open conflict resolution modal
-  function handleResolveConflict() {
+  async function handleResolveConflict() {
     if ($selectedNote?.id) {
+      // The modal shows what's stored, so that has to include what was just typed
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+        await handleSave();
+      }
       showConflictModal = true;
     }
   }
 
   // Handler when conflict is resolved
-  function handleConflictResolved() {
+  async function handleConflictResolved() {
     hasConflict = false;
     showConflictModal = false;
+    if ($selectedNote) {
+      await reloadNotesAfterConflict($selectedNote.id, $settings.sortOrder);
+    }
+  }
+
+  // Text waiting to be saved. hasContentChanged can't answer this: it stays set after
+  // an autosave, so that switching notes still creates a version.
+  function hasUnsavedEdit(): boolean {
+    return saveTimeout !== null || saveInFlight;
+  }
+
+  function loadNoteIntoEditor(note: DecryptedNote) {
+    content = note.content;
+    tags = [...note.tags];
+    attachments = [...note.attachments];
+    language = note.syntaxLanguage || 'plain';
+    wordWrap = note.wordWrap ?? true;
+  }
+
+  /**
+   * A pull landed on the open note while text was unsaved. Neither copy can be dropped,
+   * so the typed text stays and saves as normal, and the pulled copy is kept as the
+   * conflict's other side. New attachments are taken regardless: the save would
+   * otherwise see them as removed.
+   */
+  async function keepEditsAndRaiseConflict(note: DecryptedNote) {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+      saveTimeout = null;
+    }
+
+    const known = new Set(attachments.map(attachment => attachment.id));
+    attachments = [...attachments, ...note.attachments.filter(attachment => !known.has(attachment.id))];
+
+    await conflictService.raiseConflictWithStoredNote(note.id);
+    await checkForConflict(note.id);
+    handleInput();
+  }
+
+  function applyRemoteNoteUpdate(update: RemoteNoteUpdate) {
+    const note = $selectedNote;
+    if (!note || $isDraftMode || !update.ids.includes(note.id)) return;
+
+    if (update.resolved && saveTimeout) {
+      clearTimeout(saveTimeout);
+      saveTimeout = null;
+    }
+
+    if (hasUnsavedEdit()) {
+      void keepEditsAndRaiseConflict(note);
+    } else {
+      loadNoteIntoEditor(note);
+    }
+  }
+
+  $: if ($remoteNoteUpdate) {
+    applyRemoteNoteUpdate($remoteNoteUpdate);
   }
 
   // Watch for note selection changes
@@ -516,13 +583,17 @@
   }
 
   async function handleSave() {
+    saveTimeout = null;
     if (!$selectedNote) return;
 
+    // What's being saved, as the editor can hold another note once the save finishes
+    const saving = { content, tags };
+
+    saveInFlight = true;
     try {
       // Save note and get the updated encrypted note with correct version
       const savedNote = await noteService.updateNote($selectedNote.id, {
-        content,
-        tags: tags,
+        ...saving,
         attachments: attachments,
         syntaxLanguage: language,
         wordWrap,
@@ -533,8 +604,7 @@
       // This ensures we have the correct version without re-reading from DB
       const updatedNote: DecryptedNote = {
         ...savedNote,
-        content,
-        tags,
+        ...saving,
         decryptedAt: Date.now(),
       };
 
@@ -563,6 +633,8 @@
         lock();
         isLocked.set(true);
       }
+    } finally {
+      saveInFlight = false;
     }
   }
 
@@ -627,7 +699,7 @@
       triggerBackgroundSync();
     } catch (error) {
       console.error('Failed to toggle archive:', error);
-      toast.error(`Failed to ${$selectedNote.archived ? 'unarchive' : 'archive'} note: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error($_($selectedNote.archived ? 'editor.actionFailed.unarchive' : 'editor.actionFailed.archive', { values: { error: error instanceof Error ? error.message : String(error) } }));
     }
   }
 
@@ -657,7 +729,7 @@
       triggerBackgroundSync();
     } catch (error) {
       console.error('Failed to toggle lock:', error);
-      toast.error(`Failed to ${$selectedNote.locked ? 'unlock' : 'lock'} note: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error($_($selectedNote.locked ? 'editor.actionFailed.unlock' : 'editor.actionFailed.lock', { values: { error: error instanceof Error ? error.message : String(error) } }));
     }
   }
 
@@ -683,6 +755,7 @@
 
     } catch (error) {
       console.error('[EditorPane] Failed to delete note:', error);
+      toast.error($_('editor.actionFailed.delete', { values: { error: error instanceof Error ? error.message : String(error) } }));
     }
   }
 
@@ -752,7 +825,7 @@
           newAttachments.push(attachment);
         } catch (error) {
           console.error(`Failed to upload ${file.name}:`, error);
-          toast.error(`Failed to upload ${file.name}: ${error instanceof Error ? error.message : String(error)}`);
+          toast.error($_('attachments.error.upload', { values: { name: file.name, error: error instanceof Error ? error.message : String(error) } }));
         }
       }
 
@@ -762,6 +835,19 @@
       }
     } finally {
       isUploading = false;
+    }
+  }
+
+  // The bin icon is small and easy to hit, and a removed file may be gone for good
+  function requestDeleteAttachment(attachment: Attachment) {
+    attachmentToDelete = attachment;
+  }
+
+  function confirmDeleteAttachment() {
+    const attachment = attachmentToDelete;
+    attachmentToDelete = null;
+    if (attachment) {
+      handleDeleteAttachment(attachment);
     }
   }
 
@@ -775,7 +861,7 @@
       handleInput(); // Trigger auto-save
     } catch (error) {
       console.error('Failed to delete attachment:', error);
-      toast.error(`Failed to delete attachment: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error($_('attachments.error.delete', { values: { error: error instanceof Error ? error.message : String(error) } }));
     }
   }
 
@@ -795,7 +881,7 @@
       await attachmentService.downloadAttachment(attachment);
     } catch (error) {
       console.error('Failed to download attachment:', error);
-      toast.error(`Failed to download attachment: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error(`${$_('attachments.error.download')}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -815,7 +901,7 @@
       toast.success($_('editor.linkCopied'));
     } catch (error) {
       console.error('Failed to copy link:', error);
-      toast.error('Failed to copy link to clipboard');
+      toast.error($_('editor.copyLinkFailed'));
     }
   }
 
@@ -945,7 +1031,7 @@
       return `![${altText}](attachment:${attachment.id})`;
     } catch (error) {
       console.error('Failed to create attachment from pasted image:', error);
-      toast.error(`Failed to paste image: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error($_('attachments.error.paste', { values: { error: error instanceof Error ? error.message : String(error) } }));
       return null;
     }
   }
@@ -976,6 +1062,31 @@
     }
 
     return event.key.toLowerCase() === shortcut.key.toLowerCase();
+  }
+
+  // Palette commands that act on the open note. The palette only offers them while a
+  // note is open.
+  const commandPaletteActions: Record<string, () => void> = {
+    togglePreview: handlePreviewToggle,
+    toggleWordWrap: handleWordWrapToggle,
+    copyContent: handleCopy,
+    copyLink: handleCopyLink,
+    duplicateNote: handleDuplicate,
+    exportNote: handleExport,
+    printNote: handlePrintPdf,
+    noteInfo: handleShowInfo,
+    versionHistory: handleShowVersionHistory,
+    deleteNote: requestDelete,
+    lockNote: handleLock,
+    setColor: handleSetColor,
+    archiveNote: handleArchive,
+  };
+
+  function handleCommandPaletteAction(event: Event) {
+    const action = commandPaletteActions[(event as CustomEvent<string>).detail];
+    if (action && $selectedNote) {
+      action();
+    }
   }
 
   function handleEditorKeydown(event: KeyboardEvent) {
@@ -1046,8 +1157,28 @@
 
   let themeObserver: MutationObserver | null = null;
 
+  /** Save now if a debounced save is waiting. Closing the page won't wait for it. */
+  async function saveNowIfPending() {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+      await handleSave();
+    }
+  }
+
+  function handlePageHidden() {
+    if (document.visibilityState === 'hidden') {
+      void saveNowIfPending();
+    }
+  }
+
+  let stopFlushing: (() => void) | undefined;
+
   onMount(() => {
+    stopFlushing = registerPendingSave(saveNowIfPending);
+    window.addEventListener('pagehide', saveNowIfPending);
+    document.addEventListener('visibilitychange', handlePageHidden);
     window.addEventListener('keydown', handleEditorKeydown);
+    window.addEventListener('command-palette-action', handleCommandPaletteAction);
 
     // Set up theme observer to watch for dark mode changes
     const updateTheme = () => {
@@ -1079,7 +1210,11 @@
       saveTimeout = null;
     }
 
+    stopFlushing?.();
+    window.removeEventListener('pagehide', saveNowIfPending);
+    document.removeEventListener('visibilitychange', handlePageHidden);
     window.removeEventListener('keydown', handleEditorKeydown);
+    window.removeEventListener('command-palette-action', handleCommandPaletteAction);
 
     // Disconnect theme observer
     if (themeObserver) {
@@ -1120,9 +1255,9 @@
 {#if isEditing && ($selectedNote || $isDraftMode)}
   <div
     class="h-full flex flex-col bg-white dark:bg-gray-900"
-    use:dropzone={{ onDrop: handleFileUpload, onDragStateChange: handleDragStateChange }}
+    use:dropzone={{ onDrop: handleFileUpload, onDragStateChange: handleDragStateChange, disabled: isReadOnly }}
     role="region"
-    aria-label="Note editor"
+    aria-label={$_('editor.noteEditor')}
   >
     <!-- Toolbar -->
     <EditorToolbar
@@ -1196,13 +1331,14 @@
     <!-- Attachments Section - Only show if attachments exist or dragging files (hidden on mobile) -->
     {#if !forceMobileLayout && (attachments.length > 0 || isDraggingFile)}
       <AttachmentsPanel
+        readOnly={isReadOnly}
         {attachments}
         isExpanded={isAttachmentsExpanded}
         {isDraggingFile}
         {isUploading}
         backgroundColor={noteBackgroundColor ? hexWithOpacity(noteBackgroundColor, 0.15) : undefined}
         onToggleExpanded={toggleAttachments}
-        onDelete={handleDeleteAttachment}
+        onDelete={requestDeleteAttachment}
         onFileUpload={handleFileUpload}
       />
     {/if}
@@ -1247,6 +1383,7 @@
 <!-- Version History Modal -->
 <VersionHistoryModal
   show={showVersionHistory}
+  readOnly={isReadOnly}
   noteId={$selectedNote?.id}
   currentVersion={$selectedNote?.version}
   onClose={() => showVersionHistory = false}
@@ -1274,13 +1411,7 @@
     });
 
     // Restore version data to the note in database
-    currentNote.content = version.content;
-    currentNote.tags = version.tags;
-    currentNote.attachments = version.attachments;
-    currentNote.syntaxLanguage = version.syntaxLanguage;
-    currentNote.wordWrap = version.wordWrap;
-
-    await noteRepository.update(currentNote);
+    await noteService.restoreVersion(currentNote.id, version);
 
     // Reload the note to get decrypted content for display
     const updatedNote = await noteService.getNote($selectedNote.id);
@@ -1308,13 +1439,25 @@
 
 <!-- Attachments Modal (Mobile) -->
 <MobileAttachmentsModal
+  readOnly={isReadOnly}
   show={showAttachmentsModal}
   {forceMobileLayout}
   {attachments}
   {isUploading}
   onClose={() => showAttachmentsModal = false}
-  onDelete={handleDeleteAttachment}
+  onDelete={requestDeleteAttachment}
   onFileUpload={handleFileUpload}
+/>
+
+<!-- Attachment delete confirmation. After the attachments modal, so it sits on top. -->
+<ConfirmModal
+  show={attachmentToDelete !== null}
+  title={$_('attachments.confirmDelete.title')}
+  message={$_('attachments.confirmDelete.message')}
+  confirmText={$_('attachments.confirmDelete.confirmButton')}
+  cancelText={$_('common.cancel')}
+  onConfirm={confirmDeleteAttachment}
+  onCancel={() => attachmentToDelete = null}
 />
 
 <!-- Color Picker Modal -->

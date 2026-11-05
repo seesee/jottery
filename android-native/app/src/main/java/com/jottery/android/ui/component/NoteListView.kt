@@ -1,5 +1,7 @@
 package com.jottery.android.ui.component
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -20,7 +22,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.LabelOff
 import androidx.compose.material.icons.filled.Share
@@ -46,10 +49,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.jottery.android.R
 import com.jottery.android.model.DecryptedNote
 import com.jottery.android.viewmodel.AppState
+import com.jottery.android.viewmodel.defaultExportName
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -67,6 +76,9 @@ fun NoteListView(
     val syncEnabled by appState.syncEnabled.collectAsState()
     val isSyncing by appState.isSyncing.collectAsState()
     val searchQuery by appState.searchQuery.collectAsState()
+    val conflicts by appState.pendingConflicts.collectAsState()
+    val conflictIds = remember(conflicts) { conflicts.map { it.id }.toSet() }
+    val otherViewMatches by appState.otherViewMatches.collectAsState()
 
     // Derive counts from collected state
     val noteCount = if (showArchive) archivedNotes.size else allNotes.size
@@ -79,10 +91,69 @@ fun NoteListView(
     var selectedIds by remember { mutableStateOf(emptySet<String>()) }
     var showBulkDeleteConfirm by remember { mutableStateOf(false) }
 
+    var showAddTags by remember { mutableStateOf(false) }
+    var showRemoveTags by remember { mutableStateOf(false) }
+    var showColours by remember { mutableStateOf(false) }
+    var showCombineConfirm by remember { mutableStateOf(false) }
+
+    fun endSelection() {
+        isSelectMode = false
+        selectedIds = emptySet()
+    }
+
+    val context = LocalContext.current
+    val protectedMessage = stringResource(R.string.note_protected)
+    val cantCombineMessage = stringResource(R.string.bulk_combine_needs_two)
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val ids = selectedIds
+        scope.launch {
+            // The selection clears only once the file has really been written
+            val message = appState.exportTo(context, uri, ids)
+            appState.showMessage(message)
+            if (message.isNotEmpty()) {
+                isSelectMode = false
+                selectedIds = emptySet()
+            }
+        }
+    }
+
     // Reset selection when archive mode changes
     LaunchedEffect(showArchive) {
         isSelectMode = false
         selectedIds = emptySet()
+    }
+
+    val pinLabel = stringResource(R.string.editor_pin)
+    val unpinLabel = stringResource(R.string.editor_unpin)
+    val unarchiveLabel = stringResource(R.string.editor_unarchive)
+    val deleteLabel = stringResource(R.string.editor_delete)
+
+    // A swipe, and the same rules as a swipe, for anyone who can't make one
+    fun rowActions(note: DecryptedNote): List<CustomAccessibilityAction> = buildList {
+        val rightSwipe = when {
+            showArchive -> unarchiveLabel
+            note.pinned -> unpinLabel
+            else -> pinLabel
+        }
+        add(
+            CustomAccessibilityAction(rightSwipe) {
+                scope.launch {
+                    if (showArchive) appState.unarchiveNote(note.id) else appState.togglePin(note.id)
+                }
+                true
+            }
+        )
+        if (!note.pinned && !note.locked) {
+            add(
+                CustomAccessibilityAction(deleteLabel) {
+                    scope.launch { appState.deleteNoteWithUndo(note) }
+                    true
+                }
+            )
+        }
     }
 
     Column(modifier = modifier) {
@@ -121,9 +192,9 @@ fun NoteListView(
                     ) {
                         Text(
                             text = when {
-                                showArchive -> "No Archived Notes"
-                                searchQuery.isNotEmpty() -> "No Results"
-                                else -> "No Notes"
+                                showArchive -> stringResource(R.string.note_list_no_archived_notes)
+                                searchQuery.isNotEmpty() -> stringResource(R.string.note_list_no_results)
+                                else -> stringResource(R.string.note_list_no_notes)
                             },
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -131,14 +202,25 @@ fun NoteListView(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = when {
-                                showArchive -> "Archived notes will appear here."
-                                searchQuery.isNotEmpty() -> "Try a different search term."
-                                else -> "Tap + to create your first note."
+                                showArchive -> stringResource(R.string.note_list_archived_notes_will_appear_here)
+                                searchQuery.isNotEmpty() -> stringResource(R.string.note_list_try_a_different_search_term)
+                                else -> stringResource(R.string.note_list_tap_to_create_your_first)
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             textAlign = TextAlign.Center,
                         )
+                        if (searchQuery.isNotEmpty() && otherViewMatches > 0) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            TextButton(onClick = { appState.toggleArchiveView() }) {
+                                Text(
+                                    stringResource(
+                                        if (showArchive) R.string.search_in_notes else R.string.search_in_archive,
+                                        otherViewMatches,
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
             } else {
@@ -173,6 +255,7 @@ fun NoteListView(
                                 },
                                 onLongClick = {},
                                 modifier = Modifier.animateItem(),
+                                hasConflict = note.id in conflictIds,
                             )
                         } else {
                             // Normal mode with swipe-to-delete
@@ -180,13 +263,21 @@ fun NoteListView(
                                 confirmValueChange = { value ->
                                     when (value) {
                                         SwipeToDismissBoxValue.EndToStart -> {
-                                            // Swipe left to delete
-                                            scope.launch { appState.deleteNote(note.id) }
-                                            true
+                                            // A swipe is easy to make by accident, so
+                                            // protected notes refuse and the rest can be undone
+                                            if (note.pinned || note.locked) {
+                                                appState.showMessage(protectedMessage)
+                                                false
+                                            } else {
+                                                scope.launch { appState.deleteNoteWithUndo(note) }
+                                                true
+                                            }
                                         }
                                         SwipeToDismissBoxValue.StartToEnd -> {
-                                            // Swipe right to pin/unpin
-                                            scope.launch { appState.togglePin(note.id) }
+                                            // Pin here, or back to the notes from the archive
+                                            scope.launch {
+                                                if (showArchive) appState.unarchiveNote(note.id) else appState.togglePin(note.id)
+                                            }
                                             false // Reset after action
                                         }
                                         SwipeToDismissBoxValue.Settled -> false
@@ -197,7 +288,7 @@ fun NoteListView(
                             SwipeToDismissBox(
                                 state = dismissState,
                                 backgroundContent = {
-                                    SwipeToDismissBackground(dismissState.targetValue)
+                                    SwipeToDismissBackground(dismissState.targetValue, showArchive)
                                 },
                                 modifier = Modifier.animateItem(),
                             ) {
@@ -211,6 +302,9 @@ fun NoteListView(
                                         isSelectMode = true
                                         selectedIds = setOf(note.id)
                                     },
+                                    hasConflict = note.id in conflictIds,
+                                    onTagClick = { appState.setSearchQuery("#$it") },
+                                    accessibilityActions = rowActions(note),
                                 )
                             }
                         }
@@ -234,47 +328,99 @@ fun NoteListView(
         ) {
             BulkOperationsToolbar(
                 selectedCount = selectedIds.size,
-                totalCount = notes.size,
-                onSelectAll = { selectedIds = notes.map { it.id }.toSet() },
-                onDeselectAll = {
-                    selectedIds = emptySet()
-                    isSelectMode = false
+                onAddTags = { showAddTags = true },
+                onRemoveTags = { showRemoveTags = true },
+                onSetColour = { showColours = true },
+                onArchive = if (showArchive) null else { ->
+                    val ids = selectedIds
+                    endSelection()
+                    scope.launch {
+                        val skipped = appState.archiveNotes(ids)
+                        if (skipped > 0) {
+                            appState.showMessage(
+                                context.resources.getQuantityString(R.plurals.bulk_skipped_locked, skipped, skipped)
+                            )
+                        }
+                    }
                 },
-                onAddTags = {
-                    // TODO: Show add tags dialog
-                },
-                onRemoveTags = {
-                    // TODO: Show remove tags dialog
-                },
-                onExport = {
-                    scope.launch { appState.exportNotes(selectedIds) }
-                    isSelectMode = false
-                    selectedIds = emptySet()
-                },
+                onExport = { exportLauncher.launch(defaultExportName()) },
                 onDelete = { showBulkDeleteConfirm = true },
-                onDone = {
-                    isSelectMode = false
-                    selectedIds = emptySet()
-                },
+                onCombine = if (selectedIds.size < 2) null else { -> showCombineConfirm = true },
+                onSelectAll = { selectedIds = notes.map { it.id }.toSet() },
+                onDone = { endSelection() },
             )
         }
+    }
+
+    if (showColours) {
+        ColourSheet(
+            onChoose = { colour ->
+                showColours = false
+                val ids = selectedIds
+                scope.launch { appState.setColourOnNotes(ids, colour) }
+            },
+            onDismiss = { showColours = false },
+        )
+    }
+
+    if (showCombineConfirm) {
+        ConfirmDialog(
+            title = stringResource(R.string.bulk_combine),
+            message = pluralStringResource(R.plurals.bulk_combine_message, selectedIds.size, selectedIds.size),
+            confirmText = stringResource(R.string.bulk_combine),
+            onConfirm = {
+                showCombineConfirm = false
+                val ids = selectedIds
+                endSelection()
+                scope.launch {
+                    if (appState.combineNotes(ids) == null) appState.showMessage(cantCombineMessage)
+                }
+            },
+            onDismiss = { showCombineConfirm = false },
+        )
+    }
+
+    if (showAddTags) {
+        AddTagsSheet(
+            onConfirm = { tags ->
+                showAddTags = false
+                val ids = selectedIds
+                scope.launch { appState.addTagsToNotes(ids, tags) }
+            },
+            onDismiss = { showAddTags = false },
+        )
+    }
+
+    if (showRemoveTags) {
+        RemoveTagsSheet(
+            availableTags = notes.filter { it.id in selectedIds }.flatMap { it.tags }.distinct().sorted(),
+            onConfirm = { tags ->
+                showRemoveTags = false
+                val ids = selectedIds
+                scope.launch { appState.removeTagsFromNotes(ids, tags) }
+            },
+            onDismiss = { showRemoveTags = false },
+        )
     }
 
     // Bulk delete confirmation dialog
     if (showBulkDeleteConfirm) {
         ConfirmDialog(
-            title = "Delete Notes",
-            message = "Are you sure you want to delete ${selectedIds.size} note${if (selectedIds.size == 1) "" else "s"}? They will be moved to the recycle bin.",
-            confirmText = "Delete",
+            title = stringResource(R.string.bulk_delete_title),
+            message = pluralStringResource(R.plurals.bulk_delete_message, selectedIds.size, selectedIds.size),
+            confirmText = stringResource(R.string.action_delete),
             onConfirm = {
-                scope.launch {
-                    for (id in selectedIds) {
-                        appState.deleteNote(id)
-                    }
-                    isSelectMode = false
-                    selectedIds = emptySet()
-                }
                 showBulkDeleteConfirm = false
+                val ids = selectedIds
+                endSelection()
+                scope.launch {
+                    val skipped = appState.deleteNotes(ids)
+                    if (skipped > 0) {
+                        appState.showMessage(
+                            context.resources.getQuantityString(R.plurals.bulk_skipped_protected, skipped, skipped)
+                        )
+                    }
+                }
             },
             onDismiss = { showBulkDeleteConfirm = false },
         )
@@ -288,10 +434,12 @@ fun NoteListView(
 @Composable
 private fun SwipeToDismissBackground(
     dismissDirection: SwipeToDismissBoxValue,
+    showArchive: Boolean,
 ) {
     val color = when (dismissDirection) {
         SwipeToDismissBoxValue.EndToStart -> MaterialTheme.colorScheme.error
-        SwipeToDismissBoxValue.StartToEnd -> Color(0xFFFF9800) // Orange for pin
+        SwipeToDismissBoxValue.StartToEnd ->
+            if (showArchive) MaterialTheme.colorScheme.primary else Color(0xFFFF9800) // Orange for pin
         SwipeToDismissBoxValue.Settled -> Color.Transparent
     }
     val alignment = when (dismissDirection) {
@@ -300,7 +448,7 @@ private fun SwipeToDismissBackground(
     }
     val icon = when (dismissDirection) {
         SwipeToDismissBoxValue.EndToStart -> Icons.Default.Delete
-        else -> Icons.Default.Done // Pin icon placeholder
+        else -> if (showArchive) Icons.Default.Unarchive else Icons.Default.PushPin
     }
 
     Box(
@@ -315,94 +463,5 @@ private fun SwipeToDismissBackground(
             tint = color,
             modifier = Modifier.size(24.dp),
         )
-    }
-}
-
-/**
- * Toolbar shown at the bottom of the list during multi-select mode.
- */
-@Composable
-private fun BulkOperationsToolbar(
-    selectedCount: Int,
-    totalCount: Int,
-    onSelectAll: () -> Unit,
-    onDeselectAll: () -> Unit,
-    onAddTags: () -> Unit,
-    onRemoveTags: () -> Unit,
-    onExport: () -> Unit,
-    onDelete: () -> Unit,
-    onDone: () -> Unit,
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        HorizontalDivider()
-
-        // Header row: count + selection controls + done
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "$selectedCount selected",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            TextButton(
-                onClick = onSelectAll,
-                contentPadding = PaddingValues(horizontal = 8.dp),
-            ) {
-                Text("Select All", style = MaterialTheme.typography.labelSmall)
-            }
-
-            TextButton(
-                onClick = onDone,
-                contentPadding = PaddingValues(horizontal = 8.dp),
-            ) {
-                Text("Done", style = MaterialTheme.typography.labelSmall)
-            }
-        }
-
-        // Action buttons row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            IconButton(onClick = onAddTags) {
-                Icon(
-                    Icons.Default.Label,
-                    contentDescription = "Add tags",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = onRemoveTags) {
-                Icon(
-                    Icons.Default.LabelOff,
-                    contentDescription = "Remove tags",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = onExport) {
-                Icon(
-                    Icons.Default.Share,
-                    contentDescription = "Export",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = onDelete) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error,
-                )
-            }
-        }
     }
 }

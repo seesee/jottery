@@ -46,7 +46,7 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -56,11 +56,14 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -69,16 +72,13 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
     // Build router with all routes (similar to main.rs)
-    let app = axum::Router::new()
-        .route("/api/v1/auth/register-user", axum::routing::post(jottery_server::api::auth::register_user))
-        .route("/api/v1/auth/register-device", axum::routing::post(jottery_server::api::auth::register_device))
-        .route("/api/v1/auth/login", axum::routing::post(jottery_server::api::auth::login))
-        .route("/api/v1/user/login", axum::routing::post(jottery_server::api::user::login))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     (app, pool)
 }
@@ -146,7 +146,7 @@ async fn test_user_registration_duplicate_email() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -156,11 +156,14 @@ async fn test_user_registration_duplicate_email() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -169,12 +172,12 @@ async fn test_user_registration_duplicate_email() {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app2 = axum::Router::new()
-        .route("/api/v1/auth/register-user", axum::routing::post(jottery_server::api::auth::register_user))
-        .with_state(app_state);
+    let app2 = jottery_server::app::build_app(app_state);
 
     // Try to register same email again
     let request2 = Request::builder()

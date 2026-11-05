@@ -267,6 +267,17 @@ describe('NoteRepository', () => {
     });
 
     describe('permanentDelete', () => {
+      test('does not send the deletion if the note comes back first', async () => {
+        const note = await noteRepository.create(createTestNote());
+
+        await noteRepository.permanentDelete(note.id);
+        expect((await noteRepository.getPendingDeletions()).map(d => d.id)).toEqual([note.id]);
+
+        await noteRepository.create(note);
+
+        expect(await noteRepository.getPendingDeletions()).toEqual([]);
+      });
+
       test('should permanently delete soft-deleted note', async () => {
         const note = createTestNote();
         await noteRepository.create(note);

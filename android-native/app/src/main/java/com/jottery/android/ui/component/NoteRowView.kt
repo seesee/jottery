@@ -2,7 +2,10 @@ package com.jottery.android.ui.component
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,11 +18,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PushPin
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,10 +34,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.jottery.android.R
 import com.jottery.android.model.DecryptedNote
+import com.jottery.android.ui.theme.LocalNoteCategories
 import com.jottery.android.ui.theme.NoteColors
 import java.time.Duration
 import java.time.Instant
@@ -49,10 +65,15 @@ fun NoteRowView(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
+    hasConflict: Boolean = false,
+    onTagClick: ((String) -> Unit)? = null,
+    /** What a swipe does, for anyone who can't swipe. */
+    accessibilityActions: List<CustomAccessibilityAction> = emptyList(),
 ) {
     val noteColor = NoteColors.fromString(note.color)
+    val categories = LocalNoteCategories.current
     val relativeDate = remember(note.modifiedAt) {
-        formatRelativeDate(note.modifiedAt)
+        relativeTime(note.modifiedAt)
     }
 
     Surface(
@@ -66,11 +87,24 @@ fun NoteRowView(
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick,
-            ),
+                onClickLabel = stringResource(
+                    if (isMultiSelectMode) R.string.note_row_select else R.string.note_row_open
+                ),
+                onLongClickLabel = if (isMultiSelectMode) null else stringResource(R.string.note_row_select),
+            )
+            .semantics {
+                if (accessibilityActions.isNotEmpty()) customActions = accessibilityActions
+                if (isMultiSelectMode) {
+                    role = Role.Checkbox
+                    toggleableState = ToggleableState(isChecked)
+                }
+            },
     ) {
         Row(
+            // Lets the colour stripe follow the text, however large that's set
             modifier = Modifier
                 .fillMaxWidth()
+                .height(IntrinsicSize.Min)
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.Top,
         ) {
@@ -89,8 +123,9 @@ fun NoteRowView(
             if (noteColor != null) {
                 Box(
                     modifier = Modifier
+                        .testTag("colour-stripe")
                         .width(4.dp)
-                        .height(52.dp)
+                        .fillMaxHeight()
                         .clip(RoundedCornerShape(2.dp))
                         .background(noteColor),
                 )
@@ -106,11 +141,22 @@ fun NoteRowView(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
+                    // Sync conflict indicator
+                    if (hasConflict) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = stringResource(R.string.conflict_row_label),
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+
                     // Pin indicator
                     if (note.pinned) {
                         Icon(
                             imageVector = Icons.Default.PushPin,
-                            contentDescription = "Pinned",
+                            contentDescription = stringResource(R.string.note_info_pinned),
                             modifier = Modifier
                                 .size(14.dp)
                                 .padding(end = 2.dp),
@@ -123,7 +169,7 @@ fun NoteRowView(
                     if (note.locked) {
                         Icon(
                             imageVector = Icons.Default.Lock,
-                            contentDescription = "Locked",
+                            contentDescription = stringResource(R.string.note_info_locked),
                             modifier = Modifier
                                 .size(14.dp)
                                 .padding(end = 2.dp),
@@ -175,12 +221,27 @@ fun NoteRowView(
                             modifier = Modifier.weight(1f, fill = false),
                         ) {
                             note.regularTags.take(3).forEach { tag ->
+                                val tagColour = NoteColors.fromString(categories.colourOfTag(tag))
+                                if (tagColour != null) {
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.CenterVertically)
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(tagColour),
+                                    )
+                                }
                                 Text(
                                     text = "#$tag",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
+                                    modifier = if (onTagClick != null) {
+                                        Modifier.clickable { onTagClick(tag) }
+                                    } else {
+                                        Modifier
+                                    },
                                 )
                             }
                             if (note.regularTags.size > 3) {
@@ -200,39 +261,13 @@ fun NoteRowView(
                     if (note.attachments.isNotEmpty()) {
                         Icon(
                             imageVector = Icons.Default.AttachFile,
-                            contentDescription = "Has attachments",
+                            contentDescription = stringResource(R.string.note_row_has_attachments),
                             modifier = Modifier.size(14.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
                     }
                 }
             }
-        }
-    }
-}
-
-/**
- * Format an Instant as a relative date string (e.g. "2h ago", "3d ago", "Jan 15").
- */
-private fun formatRelativeDate(instant: Instant): String {
-    val now = Instant.now()
-    val duration = Duration.between(instant, now)
-
-    return when {
-        duration.isNegative -> "just now"
-        duration.seconds < 60 -> "just now"
-        duration.toMinutes() < 60 -> "${duration.toMinutes()}m ago"
-        duration.toHours() < 24 -> "${duration.toHours()}h ago"
-        duration.toDays() < 7 -> "${duration.toDays()}d ago"
-        duration.toDays() < 365 -> {
-            val formatter = DateTimeFormatter.ofPattern("d MMM")
-                .withZone(ZoneId.systemDefault())
-            formatter.format(instant)
-        }
-        else -> {
-            val formatter = DateTimeFormatter.ofPattern("d MMM yyyy")
-                .withZone(ZoneId.systemDefault())
-            formatter.format(instant)
         }
     }
 }

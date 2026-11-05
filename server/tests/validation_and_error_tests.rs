@@ -96,7 +96,7 @@ async fn test_malformed_json_sync_push() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -106,11 +106,14 @@ async fn test_malformed_json_sync_push() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -119,16 +122,12 @@ async fn test_malformed_json_sync_push() {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
 
@@ -160,7 +159,7 @@ async fn test_malformed_json_user_login() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -170,11 +169,14 @@ async fn test_malformed_json_user_login() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -183,12 +185,12 @@ async fn test_malformed_json_user_login() {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/user/login", axum::routing::post(jottery_server::api::user::login))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let request = Request::builder()
         .uri("/api/v1/user/login")
@@ -218,7 +220,7 @@ async fn test_sync_push_missing_notes_field() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -228,11 +230,14 @@ async fn test_sync_push_missing_notes_field() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -241,16 +246,12 @@ async fn test_sync_push_missing_notes_field() {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
 
@@ -288,7 +289,7 @@ async fn test_sync_push_note_missing_required_fields() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -298,11 +299,14 @@ async fn test_sync_push_note_missing_required_fields() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -311,16 +315,12 @@ async fn test_sync_push_note_missing_required_fields() {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
 
@@ -366,7 +366,7 @@ async fn test_register_user_missing_email() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -376,11 +376,14 @@ async fn test_register_user_missing_email() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -389,12 +392,12 @@ async fn test_register_user_missing_email() {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/auth/register-user", axum::routing::post(jottery_server::api::auth::register_user))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     // Missing email field
     let request = Request::builder()
@@ -428,7 +431,7 @@ async fn test_login_missing_password() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -438,11 +441,14 @@ async fn test_login_missing_password() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -451,12 +457,12 @@ async fn test_login_missing_password() {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/user/login", axum::routing::post(jottery_server::api::user::login))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     // Missing password field
     let request = Request::builder()
@@ -492,7 +498,7 @@ async fn test_sync_push_wrong_data_type() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -502,11 +508,14 @@ async fn test_sync_push_wrong_data_type() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -515,16 +524,12 @@ async fn test_sync_push_wrong_data_type() {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
 
@@ -563,7 +568,7 @@ async fn test_sync_push_version_wrong_type() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -573,11 +578,14 @@ async fn test_sync_push_version_wrong_type() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -586,16 +594,12 @@ async fn test_sync_push_version_wrong_type() {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
     let now = chrono::Utc::now().to_rfc3339();
@@ -652,7 +656,7 @@ async fn test_register_device_wrong_type() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -662,11 +666,14 @@ async fn test_register_device_wrong_type() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -675,12 +682,12 @@ async fn test_register_device_wrong_type() {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/auth/register-device", axum::routing::post(jottery_server::api::auth::register_device))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     // deviceType should be string but is number
     let request = Request::builder()
@@ -719,7 +726,7 @@ async fn test_get_user_invalid_uuid() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -729,11 +736,14 @@ async fn test_get_user_invalid_uuid() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -742,6 +752,8 @@ async fn test_get_user_invalid_uuid() {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
@@ -783,13 +795,7 @@ async fn test_get_user_invalid_uuid() {
     .await
     .unwrap();
 
-    let app = axum::Router::new()
-        .route("/api/v1/admin/users/:id", axum::routing::get(jottery_server::api::admin::users::get_user))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::admin::admin_auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     // Use invalid UUID format - the endpoint will accept it but fail to find it
     let request = Request::builder()
@@ -818,7 +824,7 @@ async fn test_empty_string_fields() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -828,11 +834,14 @@ async fn test_empty_string_fields() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -841,12 +850,12 @@ async fn test_empty_string_fields() {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/auth/register-user", axum::routing::post(jottery_server::api::auth::register_user))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     // Empty email string
     let request = Request::builder()
@@ -883,7 +892,7 @@ async fn test_extremely_large_note_content() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -893,11 +902,14 @@ async fn test_extremely_large_note_content() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -906,22 +918,18 @@ async fn test_extremely_large_note_content() {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
     let now = chrono::Utc::now().to_rfc3339();
 
-    // Create a very large note (2MB of content)
-    let large_content = "A".repeat(2 * 1024 * 1024);
+    // Larger than this config's max_payload_size
+    let large_content = "A".repeat(6 * 1024 * 1024);
 
     let request = Request::builder()
         .uri("/api/v1/sync/push")
@@ -974,7 +982,7 @@ async fn test_many_tags() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -984,11 +992,14 @@ async fn test_many_tags() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -997,16 +1008,12 @@ async fn test_many_tags() {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
     let now = chrono::Utc::now().to_rfc3339();
@@ -1068,7 +1075,7 @@ async fn test_special_characters_in_content() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -1078,11 +1085,14 @@ async fn test_special_characters_in_content() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -1091,16 +1101,12 @@ async fn test_special_characters_in_content() {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
     let now = chrono::Utc::now().to_rfc3339();
@@ -1162,7 +1168,7 @@ async fn test_sync_push_skips_versions_for_rejected_notes() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -1172,11 +1178,14 @@ async fn test_sync_push_skips_versions_for_rejected_notes() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -1185,16 +1194,12 @@ async fn test_sync_push_skips_versions_for_rejected_notes() {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
 
@@ -1315,7 +1320,7 @@ async fn test_sync_push_handles_orphan_attachment_data_gracefully() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -1325,11 +1330,14 @@ async fn test_sync_push_handles_orphan_attachment_data_gracefully() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -1338,16 +1346,12 @@ async fn test_sync_push_handles_orphan_attachment_data_gracefully() {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
     let orphan_attachment_id = uuid::Uuid::new_v4().to_string();
@@ -1381,7 +1385,7 @@ async fn test_sync_push_handles_orphan_attachment_data_gracefully() {
 
     // Verify attachment data was NOT inserted (no corresponding metadata)
     let attachment_count: i32 = sqlx::query_scalar!(
-        "SELECT COUNT(*) as count FROM attachments_data WHERE id = ?",
+        "SELECT COUNT(*) as count FROM attachments_data d JOIN attachments_meta m ON m.id = d.id WHERE m.attachment_id = ?",
         orphan_attachment_id
     )
     .fetch_one(&pool)

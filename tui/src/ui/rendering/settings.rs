@@ -8,6 +8,7 @@ use rust_i18n::t;
 
 use crate::password_storage::StorageBackendType;
 use crate::ui::app::App;
+use crate::ui::rendering::modal::render_confirmation_modal;
 use crate::ui::state::InputMode;
 
 /// Render settings screen
@@ -100,9 +101,11 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
             Span::styled(t!("settings.title"), Style::default().fg(app.color_scheme.title).add_modifier(Modifier::BOLD)),
         ]),
         Line::from(""),
-        field_line(0, format!("{}:              ", t!("settings.language")), app.settings.language.clone()),
+        field_line(0, format!("{}:              ", t!("settings.language")), format!("{} ({})",
+            if app.settings.language == crate::models::AUTO_LANGUAGE { t!("settings.language_auto").to_string() } else { app.settings.language.clone() },
+            t!("settings.press_enter_cycle"))),
         field_line(1, format!("{}:          ", t!("settings.color_scheme")), format!("{} ({})", app.settings.theme, t!("settings.press_enter_cycle"))),
-        field_line(2, format!("{}:            ", t!("menu.search")), format!("{} ({})", app.settings.sort_order, t!("settings.press_enter_cycle"))),
+        field_line(2, format!("{}:            ", t!("settings.sort_order")), format!("{} ({})", app.settings.sort_order, t!("settings.press_enter_cycle"))),
         field_line(3, format!("{}:     ", t!("settings.auto_lock")), format!("{} {}", app.settings.auto_lock_timeout, t!("settings.minutes"))),
         Line::from(""),
         Line::from(vec![
@@ -127,6 +130,7 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
         } else {
             format!("{} ({})", t!("common.no"), t!("settings.press_enter_toggle"))
         }),
+        field_line(8, format!("{}:     ", t!("settings.default_note_type")), format!("{} ({})", app.settings.default_note_type, t!("settings.press_enter_cycle"))),
     ];
 
     // Add security warning when remember password is enabled (different based on backend)
@@ -224,11 +228,35 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
 
     frame.render_widget(paragraph, size);
 
+    if app.show_disconnect_confirm {
+        let conflicts = app.conflict_note_ids.len();
+        let warning = if conflicts > 0 {
+            t!("sync.disconnect_conflicts", count = conflicts)
+        } else {
+            t!("sync.disconnect_warning")
+        };
+
+        render_confirmation_modal(
+            frame,
+            size,
+            &t!("sync.disconnect_title"),
+            vec![
+                Line::from(t!("sync.disconnect_confirm").to_string())
+                    .style(Style::default().fg(app.color_scheme.foreground)),
+                Line::from(warning.to_string())
+                    .style(Style::default().fg(app.color_scheme.muted)),
+            ],
+            app.color_scheme.error,
+            &app.color_scheme,
+            96,
+            7,
+        );
+    }
+
     // Show cursor when editing text fields
-    if matches!(app.input_mode, InputMode::SettingsEdit) && (app.selected_setting == 0 || app.selected_setting == 3 || app.selected_setting == 5 || app.selected_setting == 6) {
+    if matches!(app.input_mode, InputMode::SettingsEdit) && (app.selected_setting == 3 || app.selected_setting == 5 || app.selected_setting == 6) {
         // Calculate cursor position based on selected field
         let line_offset = match app.selected_setting {
-            0 => 2,  // Language is on line 2
             3 => 5,  // Auto-lock timeout is on line 5
             5 => 10, // Sync endpoint is on line 10
             6 => 11, // Auto-sync interval is on line 11

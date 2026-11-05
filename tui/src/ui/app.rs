@@ -21,14 +21,12 @@
 //! All functionality has been preserved with no logic changes.
 
 use anyhow::{Context, Result};
-use crossterm::{
-    event::KeyEvent,
-};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use rust_i18n::t;
 use ratatui::Frame;
-use zeroize::Zeroize;
+use zeroize::{Zeroize, Zeroizing};
 use std::{
-    cell::RefCell,
+    cell::{Cell, RefCell},
     collections::HashSet,
     fs::File,
     io::Write,
@@ -40,9 +38,10 @@ use std::{
 use crate::{
     crypto::{CryptoService, KeyManager},
     db::Database,
-    models::{Note, UserSettings, sync::ConflictData},
+    models::{get_note_title, Note, SortOrder, UserSettings, sync::ConflictData},
     password_storage::{self, PasswordStorage, RetrieveResult, StorageBackendType},
-    repository::{NoteRepository, SettingsRepository, sync::SyncRepository},
+    repository::{SettingsRepository, sync::SyncRepository},
+    search::SearchQuery,
 };
 
 
@@ -50,114 +49,15 @@ use super::state::{AppState, InputMode, ViewMode};
 use super::rendering;
 use super::input;
 
-/// Search modifiers parsed from query string
-#[derive(Debug, Default)]
-struct SearchModifiers {
-    has_attachment: bool,
-    created_after: Option<String>,
-    created_before: Option<String>,
-    modified_after: Option<String>,
-    modified_before: Option<String>,
-    word_count_min: Option<usize>,
-    word_count_max: Option<usize>,
-    colors: Vec<String>,           // Color keys to match
-    color_target: ColorTarget,      // Where to look for colors
-}
-
-#[derive(Debug, Clone, PartialEq, Default)]
-enum ColorTarget {
-    #[default]
-    Both,   // Match colors on notes or tags (default)
-    Note,   // Match only note colors
-    Tag,    // Match only tag colors
-}
-
-/// Check if a note matches search criteria (excluding archive mode)
-///
-/// This is the shared search logic used by both filtered_notes() and count_opposite_mode_matches()
-fn note_matches_search(
-    note: &Note,
-    modifiers: &SearchModifiers,
-    query_parts: &[&str],
-) -> bool {
-    // has:attachment
-    if modifiers.has_attachment && note.attachments.is_empty() {
-        return false;
-    }
-
-    // created:>DATE (created after)
-    if let Some(ref date) = modifiers.created_after {
-        let note_date = note.created_at.format("%Y-%m-%d").to_string();
-        if note_date.as_str() < date.as_str() {
-            return false;
+/// Write a line to the debug log, if there is one.
+pub(crate) fn write_debug_log(debug_log: &Option<Arc<Mutex<File>>>, message: &str) {
+    if let Some(log) = debug_log {
+        if let Ok(mut file) = log.lock() {
+            let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
+            let _ = writeln!(file, "[{}] {}", timestamp, message);
+            let _ = file.flush();
         }
     }
-
-    // created:<DATE (created before)
-    if let Some(ref date) = modifiers.created_before {
-        let note_date = note.created_at.format("%Y-%m-%d").to_string();
-        if note_date.as_str() > date.as_str() {
-            return false;
-        }
-    }
-
-    // modified:>DATE (modified after)
-    if let Some(ref date) = modifiers.modified_after {
-        let note_date = note.modified_at.format("%Y-%m-%d").to_string();
-        if note_date.as_str() < date.as_str() {
-            return false;
-        }
-    }
-
-    // modified:<DATE (modified before)
-    if let Some(ref date) = modifiers.modified_before {
-        let note_date = note.modified_at.format("%Y-%m-%d").to_string();
-        if note_date.as_str() > date.as_str() {
-            return false;
-        }
-    }
-
-    // words:>N (minimum word count)
-    if let Some(min) = modifiers.word_count_min {
-        let word_count = note.content.split_whitespace().count();
-        if word_count < min {
-            return false;
-        }
-    }
-
-    // words:<N (maximum word count)
-    if let Some(max) = modifiers.word_count_max {
-        let word_count = note.content.split_whitespace().count();
-        if word_count > max {
-            return false;
-        }
-    }
-
-    // Check each remaining query part (text/tag search)
-    let content_lower = note.content.to_lowercase();
-    for part in query_parts {
-        if part.is_empty() {
-            continue;
-        }
-        if let Some(tag) = part.strip_prefix('#') {
-            // Tag search
-            if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
-                return false;
-            }
-        } else if let Some(neg_word) = part.strip_prefix('-') {
-            // Negation
-            if content_lower.contains(neg_word) {
-                return false;
-            }
-        } else {
-            // Regular text search
-            if !content_lower.contains(part) {
-                return false;
-            }
-        }
-    }
-
-    true
 }
 
 /// Application state and coordinator
@@ -173,7 +73,7 @@ pub struct App {
     /// Password confirmation buffer (for new databases)
     pub password_confirm: String,
     /// Saved unlock password (for envelope encryption when server password differs from notes password)
-    pub unlock_password: Option<String>,
+    pub unlock_password: Option<Zeroizing<String>>,
     /// Whether database is being created (vs unlocked)
     pub is_new_database: bool,
     /// Which password field is active (false = password, true = confirm)
@@ -216,6 +116,8 @@ pub struct App {
     pub(crate) crypto: CryptoService,
     /// Loaded notes
     pub(crate) notes: Vec<Note>,
+    /// How many notes in the vault couldn't be read at the last load
+    pub(crate) unreadable_notes: usize,
     /// Selected note index
     pub selected_note: usize,
     /// Selected note ID (persists through reloads/syncs)
@@ -244,21 +146,45 @@ pub struct App {
     pub(crate) last_auto_sync: Option<Instant>,
     /// When sync status was set (for auto-clearing)
     pub(crate) sync_status_set_at: Option<Instant>,
+    /// Automatic syncs wait until then, because the server asked or refused
+    pub(crate) sync_paused_until: Option<Instant>,
+    /// Sync on a thread of its own, so a slow server can't freeze the screen. Only the
+    /// terminal app does: a CLI command waits for its result anyway.
+    pub(crate) sync_in_background: bool,
+    /// The sync running in the background
+    pub(crate) sync_job: Option<crate::ui::operations::sync::BackgroundSync>,
+    /// A sync was asked for that has to wait, and whether it's a forced one
+    pub(crate) sync_requested: Option<bool>,
+    /// When the list last caught up with a running sync
+    pub(crate) last_sync_absorb: Option<Instant>,
+    /// Keeps a background sync and this thread from changing the vault at the same time
+    pub(crate) sync_gate: crate::ui::operations::sync::VaultGate,
+    /// The next successful sync should look at the server's copy of the key
+    pub(crate) server_key_check_owed: bool,
     /// Current color scheme (cached from settings)
     pub color_scheme: crate::ui::ColorScheme,
     /// Cached color palette names (for color cycling without allocation)
     pub(crate) color_palette_cache: Vec<String>,
     /// Cached unique tags from all notes (for fast tag completion)
     pub(crate) all_tags_cache: Vec<String>,
-    /// Cached filtered note IDs (for avoiding repeated filtering/sorting)
-    /// Uses RefCell for interior mutability so filtered_notes(&self) can update cache
-    filtered_notes_cache: RefCell<Option<Vec<String>>>,
+    /// Indices into `notes` of the visible notes, in display order, with the length
+    /// of `notes` when they were worked out. A length that no longer matches means
+    /// they're stale. RefCell so that filtered_notes(&self) can update it.
+    filtered_notes_cache: RefCell<Option<(usize, Vec<usize>)>>,
+    /// How many notes the current search matches in the other mode (archive/active)
+    opposite_count_cache: Cell<Option<usize>>,
+    /// Counts loads of `notes`, so a tick can tell whether anything arrived
+    notes_generation: u64,
     /// Selected attachment index in preview pane
     pub selected_attachment: usize,
     /// Which panel is focused in preview pane (content or attachments)
     pub focused_panel: super::state::FocusedPanel,
-    /// File path input buffer (when adding attachments)
+    /// File path input buffer (when adding or saving attachments)
     pub attachment_path_input: String,
+    /// The attachment the path prompt is saving. None when it's adding a file.
+    pub attachment_to_save: Option<crate::models::Attachment>,
+    /// An attachment of a type that won't be opened, waiting for an answer about saving it
+    pub attachment_to_confirm: Option<crate::models::Attachment>,
     /// Path completions for Tab completion
     pub path_completions: Vec<String>,
     /// Selected completion index
@@ -307,16 +233,31 @@ pub struct App {
     pub show_bulk_delete_confirm: bool,
     /// Show bulk combine confirmation modal
     pub show_bulk_combine_confirm: bool,
+    /// Show the confirmation for permanently emptying the recycle bin
+    pub show_empty_bin_confirm: bool,
+    /// Notes the server says to delete, waiting for an answer. Above zero, it asks.
+    pub held_deletions: usize,
+    /// Show the confirmation for disconnecting from the sync server
+    pub show_disconnect_confirm: bool,
+    /// The plain HTTP address the user has been warned about. Entering it again accepts that.
+    pub insecure_endpoint_warned: Option<String>,
     /// Show note info modal
     pub show_note_info: bool,
     /// Rendered area for note list (for mouse click detection)
     pub note_list_area: Option<ratatui::layout::Rect>,
+    /// Index of the first note drawn in the list, kept between frames so that
+    /// moving the selection scrolls only as far as it has to
+    pub note_list_offset: usize,
+    /// Where each drawn note landed in the list area
+    pub note_list_rows: Vec<rendering::note_list::NoteRow>,
     /// Rendered area for tags line in preview (for mouse click detection)
     pub tags_line_area: Option<ratatui::layout::Rect>,
     /// Individual tag positions for click detection: (tag_name, x_start, x_end)
     pub tag_positions: Vec<(String, u16, u16)>,
     /// Note link positions for click detection: (note_id, y_line, x_start, x_end)
     pub note_link_positions: Vec<(String, u16, u16, u16)>,
+    /// Which of the links on screen the keyboard is on
+    pub selected_link: Option<usize>,
     /// Rendered area for preview pane (for link click detection)
     pub preview_area: Option<ratatui::layout::Rect>,
     /// Tag completions for Tab cycling in tag input mode
@@ -327,10 +268,14 @@ pub struct App {
     pub search_tag_completions: Vec<String>,
     /// Selected search tag completion index
     pub search_tag_completion_index: usize,
+    /// Whether this build encrypts the database file
+    pub(crate) database_encrypted: bool,
     /// Password storage backend (keychain or file-based fallback)
     pub(crate) password_storage: Box<dyn PasswordStorage>,
     /// SSE handle for real-time sync notifications (when connected)
     pub(crate) sse_handle: Option<crate::sse::SseHandle>,
+    /// The stream stopped trying. A sync that works shows the device is welcome again.
+    pub(crate) sse_gave_up: bool,
     /// Inbox items from server (unencrypted)
     pub inbox_items: Vec<crate::models::sync::InboxItem>,
     /// Selected inbox item index
@@ -339,20 +284,66 @@ pub struct App {
     pub show_inbox_delete_confirm: bool,
     /// Show inbox delete-all confirmation
     pub show_inbox_delete_all_confirm: bool,
+    /// A file an export would replace, waiting for an answer
+    pub export_overwrite_path: Option<PathBuf>,
+    /// Earlier searches this session, the latest last
+    pub search_history: Vec<String>,
+    /// How far back Ctrl+P has gone, and what was typed before it started
+    pub search_history_position: Option<(usize, String)>,
+    /// The list of saved searches, when it's showing
+    pub saved_searches: Vec<crate::repository::SavedSearch>,
+    /// Selected index in the list of saved searches
+    pub selected_saved_search: usize,
+    /// Show the confirmation for deleting a saved search
+    pub show_saved_search_delete_confirm: bool,
+    /// What the query in the search bar is to be saved as
+    pub saved_search_name_input: String,
 }
 
+
+/// The key is wiped on the way out as well as on lock. `key_manager` looks after its own
+/// copy, but this one is a plain array.
+impl Drop for App {
+    fn drop(&mut self) {
+        if let Some(key) = self.key.as_mut() {
+            key.zeroize();
+        }
+    }
+}
 
 impl App {
     /// Create a new app
     pub fn new(db_path: PathBuf, debug_log: Option<Arc<Mutex<File>>>) -> Result<Self> {
-        let is_new_database = !db_path.exists();
-
         // Initialise password storage with migration from file to keychain if available
         let config_dir = db_path.parent()
             .ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
         let password_storage = password_storage::create_storage(config_dir, true);
 
-        Ok(Self {
+        Ok(Self::with_storage(db_path, debug_log, password_storage))
+    }
+
+    /// An unlocked app with no terminal, for CLI commands that share the TUI's
+    /// logic. The keychain stays out of it: it may not be reachable from a script.
+    pub fn headless(db_path: PathBuf, db: Database, key: [u8; 32]) -> Result<Self> {
+        let config_dir = db_path.parent()
+            .ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
+        let password_storage = password_storage::create_file_storage(config_dir);
+
+        let mut app = Self::with_storage(db_path, None, password_storage);
+        app.db = Some(db);
+        app.key = Some(key);
+        app.key_manager.set_master_key(key);
+        Ok(app)
+    }
+
+    fn with_storage(
+        db_path: PathBuf,
+        debug_log: Option<Arc<Mutex<File>>>,
+        password_storage: Box<dyn PasswordStorage>,
+    ) -> Self {
+        let is_new_database = !db_path.exists();
+
+        Self {
             view_mode: ViewMode::NoteList,
             state: AppState::Locked,
             input_mode: InputMode::Normal,
@@ -380,6 +371,7 @@ impl App {
             key_manager: KeyManager::new(),
             crypto: CryptoService::new(),
             notes: Vec::new(),
+            unreadable_notes: 0,
             selected_note: 0,
             selected_note_id: None,
             selected_note_ids: HashSet::new(),
@@ -394,13 +386,24 @@ impl App {
             syntax_highlighter: crate::ui::syntax::SyntaxHighlighter::new(),
             last_auto_sync: None,
             sync_status_set_at: None,
+            sync_paused_until: None,
+            sync_in_background: false,
+            sync_job: None,
+            sync_requested: None,
+            last_sync_absorb: None,
+            sync_gate: Default::default(),
+            server_key_check_owed: false,
             color_scheme: crate::ui::ColorScheme::default(),
             color_palette_cache: Vec::new(), // Populated when settings are loaded
             all_tags_cache: Vec::new(), // Populated when notes are loaded
             filtered_notes_cache: RefCell::new(None), // Populated on first access, invalidated on changes
+            opposite_count_cache: Cell::new(None),
+            notes_generation: 0,
             selected_attachment: 0,
             focused_panel: super::state::FocusedPanel::default(),
             attachment_path_input: String::new(),
+            attachment_to_save: None,
+            attachment_to_confirm: None,
             path_completions: Vec::new(),
             path_completion_index: 0,
             chafa_available: None,
@@ -425,38 +428,261 @@ impl App {
             bulk_export_path_input: String::new(),
             show_bulk_delete_confirm: false,
             show_bulk_combine_confirm: false,
+            show_empty_bin_confirm: false,
+            held_deletions: 0,
+            show_disconnect_confirm: false,
+            insecure_endpoint_warned: None,
             show_note_info: false,
             note_list_area: None,
+            note_list_offset: 0,
+            note_list_rows: Vec::new(),
             tags_line_area: None,
             tag_positions: Vec::new(),
             note_link_positions: Vec::new(),
+            selected_link: None,
             preview_area: None,
             tag_completions: Vec::new(),
             tag_completion_index: 0,
             search_tag_completions: Vec::new(),
             search_tag_completion_index: 0,
+            database_encrypted: Database::encrypts_files(),
             password_storage,
             sse_handle: None,
+            sse_gave_up: false,
             inbox_items: Vec::new(),
             selected_inbox_item: 0,
             show_inbox_delete_confirm: false,
             show_inbox_delete_all_confirm: false,
-        })
+            export_overwrite_path: None,
+            search_history: Vec::new(),
+            search_history_position: None,
+            saved_searches: Vec::new(),
+            selected_saved_search: 0,
+            show_saved_search_delete_confirm: false,
+            saved_search_name_input: String::new(),
+        }
     }
 
     /// Write to debug log if enabled
     pub(crate) fn debug_log(&self, message: &str) {
-        if let Some(log) = &self.debug_log {
-            if let Ok(mut file) = log.lock() {
-                let timestamp = chrono::Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
-                let _ = writeln!(file, "[{}] {}", timestamp, message);
-                let _ = file.flush();
-            }
+        write_debug_log(&self.debug_log, message);
+    }
+
+    /// Tell the user something went well, in the status bar. It clears itself.
+    pub(crate) fn notify(&mut self, message: String) {
+        self.sync_status = Some(message);
+        self.sync_status_set_at = Some(Instant::now());
+    }
+
+    /// Every loaded note, archived or not, in no particular order
+    pub fn all_notes(&self) -> &[Note] {
+        &self.notes
+    }
+
+    /// Give the database back to a CLI command that's finished with the app.
+    pub fn into_database(mut self) -> Option<Database> {
+        self.db.take()
+    }
+
+    /// The stored sync settings, if the vault is open and has any
+    pub fn sync_metadata(&self) -> Option<crate::models::sync::SyncMetadata> {
+        let db = self.db.as_ref()?;
+        SyncRepository::new(db.connection()).get_metadata().ok().flatten()
+    }
+
+    /// Whether the vault is open
+    pub fn is_unlocked(&self) -> bool {
+        self.key.is_some()
+    }
+
+    /// Note that the user did something, which holds off the auto-lock
+    pub fn register_activity(&self) {
+        self.key_manager.register_activity();
+    }
+
+    /// Take the auto-lock timeout from the settings
+    pub(crate) fn apply_auto_lock_setting(&self) {
+        self.key_manager.set_auto_lock(self.settings.auto_lock_timeout.max(0) as u64);
+    }
+
+    /// Lock the vault if the user has been away for the auto-lock timeout
+    pub fn check_auto_lock(&mut self) {
+        if self.is_unlocked() && self.key_manager.should_lock() {
+            self.debug_log("Auto-lock: timed out");
+            self.lock();
         }
     }
 
-    /// Handle key events
+    /// Lock the vault, keeping nothing of it in memory.
+    ///
+    /// Text that hasn't been saved yet is saved first, or the lock would lose it.
+    /// Anything held as a plain String is wiped, since dropping it would leave the
+    /// bytes behind. Unlocking starts over from the database.
+    pub fn lock(&mut self) {
+        if matches!(self.state, AppState::NoteView) {
+            if let Err(e) = crate::ui::operations::notes::save_note(self) {
+                self.debug_log(&format!("Lock - Could not save the open note: {}", e));
+            }
+        }
+
+        crate::ui::operations::sync::cancel_background_sync(self);
+        self.stop_sse();
+        self.key_manager.clear_master_key();
+        if let Some(key) = self.key.as_mut() {
+            key.zeroize();
+        }
+        self.key = None;
+        self.unlock_password = None;
+        self.db = None;
+
+        for buffer in [
+            &mut self.password_input,
+            &mut self.password_confirm,
+            &mut self.credential_input,
+            &mut self.setting_input,
+            &mut self.note_input,
+            &mut self.tag_input,
+            &mut self.search_input,
+            &mut self.saved_search_name_input,
+            &mut self.bulk_tags_input,
+            &mut self.bulk_export_path_input,
+            &mut self.attachment_path_input,
+            &mut self.conflict_local_content,
+            &mut self.conflict_server_content,
+        ] {
+            buffer.zeroize();
+        }
+        for note in &mut self.notes {
+            note.content.zeroize();
+            note.tags.zeroize();
+        }
+        for version in &mut self.loaded_versions {
+            version.content.zeroize();
+            version.tags.zeroize();
+        }
+        if let Some(content) = self.conflict_ancestor_content.as_mut() {
+            content.zeroize();
+        }
+        self.current_tags.zeroize();
+        self.conflict_local_tags.zeroize();
+        self.conflict_server_tags.zeroize();
+        self.conflict_ancestor_tags = None;
+        self.conflict_ancestor_content = None;
+        self.conflict_data = None;
+        self.conflict_note_id = None;
+
+        self.notes.clear();
+        self.unreadable_notes = 0;
+        self.loaded_versions.clear();
+        self.versions_note_id = None;
+        self.inbox_items.clear();
+        self.search_history.zeroize();
+        self.search_history_position = None;
+        for search in &mut self.saved_searches {
+            search.name.zeroize();
+            search.query.zeroize();
+        }
+        self.saved_searches.clear();
+        self.selected_saved_search = 0;
+        self.show_saved_search_delete_confirm = false;
+        self.selected_note_ids.clear();
+        self.conflict_note_ids.clear();
+        self.all_tags_cache.clear();
+        self.tag_completions.clear();
+        self.search_tag_completions.clear();
+        self.path_completions.clear();
+        self.tag_positions.clear();
+        self.note_link_positions.clear();
+        self.selected_link = None;
+        self.note_list_rows.clear();
+        self.note_list_offset = 0;
+        self.syntax_highlighter.clear_cache();
+        self.invalidate_filter_cache();
+
+        // What's on screen should go too, except the theme the lock screen is drawn in
+        let theme = self.settings.theme.clone();
+        self.settings = UserSettings { theme, ..UserSettings::default() };
+        self.sync_status = None;
+        self.sync_status_set_at = None;
+        self.error = None;
+        self.editing_note_id = None;
+        self.selected_note = 0;
+        self.selected_note_id = None;
+        self.selected_attachment = 0;
+        self.preview_scroll_offset = 0;
+        self.search_active = false;
+        self.archive_mode = false;
+        self.is_multi_select_mode = false;
+        self.last_selected_index = None;
+        self.focused_panel = super::state::FocusedPanel::default();
+        self.view_mode = ViewMode::NoteList;
+        self.input_mode = InputMode::Normal;
+        self.attachment_to_save = None;
+        self.attachment_to_confirm = None;
+        self.show_force_sync_confirm = false;
+        self.show_empty_bin_confirm = false;
+        self.held_deletions = 0;
+        self.show_disconnect_confirm = false;
+        self.export_overwrite_path = None;
+        self.show_bulk_delete_confirm = false;
+        self.show_bulk_combine_confirm = false;
+        self.show_note_info = false;
+        self.show_inbox_delete_confirm = false;
+        self.show_inbox_delete_all_confirm = false;
+        self.last_auto_sync = None;
+        self.server_key_check_owed = false;
+
+        // Dropping the old state wipes any password held in it
+        self.state = AppState::Locked;
+        self.need_redraw = true;
+    }
+
+    /// Handle a key press, holding off a background sync until it's finished with.
     pub fn handle_key(&mut self, key: KeyEvent) -> Result<()> {
+        let gate = self.sync_gate.clone();
+        let _held = gate.hold();
+        crate::ui::operations::sync::absorb_sync_changes(self);
+
+        let result = self.dispatch_key(key);
+
+        self.sync_gate.set_open_note(self.editing_note_id.as_deref());
+        result
+    }
+
+    /// Handle a mouse event, on the same terms as a key press.
+    pub fn handle_mouse(&mut self, mouse: crossterm::event::MouseEvent) {
+        let gate = self.sync_gate.clone();
+        let _held = gate.hold();
+        crate::ui::operations::sync::absorb_sync_changes(self);
+
+        input::mouse::handle_mouse(self, mouse);
+
+        self.sync_gate.set_open_note(self.editing_note_id.as_deref());
+    }
+
+    /// Handle key events
+    fn dispatch_key(&mut self, key: KeyEvent) -> Result<()> {
+        if key.code == KeyCode::Char('l')
+            && key.modifiers.contains(KeyModifiers::CONTROL)
+            && self.is_unlocked()
+        {
+            self.lock();
+            return Ok(());
+        }
+
+        // The terminal is in raw mode, so this arrives as a key rather than a signal.
+        // It means the same in every screen, and it isn't text for a prompt.
+        if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+            if matches!(self.state, AppState::NoteView) {
+                if let Err(e) = crate::ui::operations::notes::save_note(self) {
+                    self.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
+                    return Ok(());
+                }
+            }
+            self.state = AppState::Quit;
+            return Ok(());
+        }
+
         // Handle help and settings screens separately to avoid borrow issues
         if let AppState::Help { .. } = &self.state {
             return input::help::handle_help_key(self, key);
@@ -525,7 +751,7 @@ impl App {
         self.debug_log("Auto-unlock: attempting to retrieve stored password");
         let password = match self.password_storage.retrieve() {
             RetrieveResult::Found(pwd) => {
-                self.debug_log(&format!("Auto-unlock: found password ({} chars)", pwd.len()));
+                self.debug_log("Auto-unlock: found a stored password");
                 pwd
             }
             RetrieveResult::NotFound => {
@@ -549,8 +775,11 @@ impl App {
             }
             Err(e) => {
                 self.password_input.zeroize();
-                // Delete invalid stored password
-                let _ = self.password_storage.delete();
+                // Only a wrong password makes the stored one useless. A locked file or a
+                // server that's down will pass, and the user would have to set it again.
+                if crate::vault::is_wrong_password(&e) {
+                    let _ = self.password_storage.delete();
+                }
                 Err(e).context("Auto-unlock failed")
             }
         }
@@ -569,7 +798,6 @@ impl App {
         if self.settings.remember_password {
             // Disable: clear stored password using the storage backend
             self.settings.remember_password = false;
-            self.settings.stored_password = None;
 
             // Delete stored password
             let _ = self.password_storage.delete();
@@ -603,7 +831,6 @@ impl App {
 
         // Update settings (note: we no longer store encrypted password in settings)
         self.settings.remember_password = true;
-        self.settings.stored_password = None; // No longer needed in settings
 
         if let Some(db) = &self.db {
             let settings_repo = SettingsRepository::new(db.connection());
@@ -613,46 +840,41 @@ impl App {
         Ok(())
     }
 
-    /// Load notes from database
-    #[allow(dead_code)]
-    fn load_notes(&mut self) -> Result<()> {
-        if let (Some(db), Some(key)) = (&self.db, &self.key) {
-            let old_selected_note = self.selected_note;
-            let old_selected_note_id = self.selected_note_id.clone();
+    /// Move the highlight to a position in the visible list.
+    pub(crate) fn select_note_at(&mut self, index: usize) {
+        self.selected_note = index;
+        self.selected_note_id = self.filtered_notes().get(index).map(|note| note.id.clone());
+    }
 
-            let repo = NoteRepository::new(db.connection());
-            self.notes = repo.list(false, key)?;
+    /// The selected notes that are still in the list. The selection outlives a change of
+    /// search or mode, and nothing should act on notes that can't be seen.
+    pub(crate) fn visible_selection(&self) -> Vec<&Note> {
+        self.filtered_notes().into_iter()
+            .filter(|note| self.selected_note_ids.contains(&note.id))
+            .collect()
+    }
 
-            self.debug_log(&format!("load_notes: old_selected_note={}, old_selected_note_id={:?}, notes_count={}",
-                old_selected_note, old_selected_note_id, self.notes.len()));
+    /// The ids of the selected notes a bulk action may change, which leaves out what a
+    /// single-note action would refuse.
+    pub(crate) fn editable_selection(&self) -> Vec<String> {
+        self.visible_selection().into_iter()
+            .filter(|note| !note.locked)
+            .map(|note| note.id.clone())
+            .collect()
+    }
 
-            // Restore selection to the same note if it still exists (using persisted ID)
-            // NOTE: We need to find position in the sorted view (pinned first, then by modified_at)
-            // because selected_note is an index into filtered_notes(), not self.notes
-            if let Some(note_id) = &self.selected_note_id.clone() {
-                // Build sorted view like filtered_notes() does
-                let mut sorted_notes: Vec<&Note> = self.notes.iter().collect();
-                Self::sort_notes_by_pinned_and_date(&mut sorted_notes);
+    /// Point `selected_note`, an index into the visible list, at the note that was
+    /// selected, or the nearest one if that note has left the list.
+    pub(crate) fn keep_selection_on_note(&mut self) {
+        let position = {
+            let filtered = self.filtered_notes();
+            self.selected_note_id.as_ref()
+                .and_then(|id| filtered.iter().position(|note| &note.id == id))
+                .unwrap_or_else(|| self.selected_note.min(filtered.len().saturating_sub(1)))
+        };
 
-                if let Some(index) = sorted_notes.iter().position(|n| &n.id == note_id) {
-                    self.selected_note = index;
-                    self.debug_log(&format!("load_notes: found note {} at sorted index {}", note_id, index));
-                } else {
-                    // Note was deleted, select first note and update ID
-                    self.selected_note = 0;
-                    self.selected_note_id = sorted_notes.first().map(|n| n.id.clone());
-                    self.debug_log(&format!("load_notes: note {} NOT FOUND, defaulting to 0", note_id));
-                }
-            } else {
-                self.selected_note = 0;
-                // Get first note from sorted view
-                let mut sorted_notes: Vec<&Note> = self.notes.iter().collect();
-                Self::sort_notes_by_pinned_and_date(&mut sorted_notes);
-                self.selected_note_id = sorted_notes.first().map(|n| n.id.clone());
-                self.debug_log("load_notes: no selected_note_id, defaulting to 0");
-            }
-        }
-        Ok(())
+        self.selected_note = position;
+        self.selected_note_id = self.filtered_notes().get(position).map(|note| note.id.clone());
     }
 
     /// Refresh the conflict note IDs cache from database
@@ -717,6 +939,13 @@ impl App {
         self.last_selected_index = None;
     }
 
+    /// The note drawn on a row of the list area, as an index into the visible notes
+    pub fn note_at_row(&self, row: u16) -> Option<usize> {
+        self.note_list_rows.iter()
+            .find(|drawn| (drawn.top..drawn.bottom).contains(&row))
+            .map(|drawn| drawn.index)
+    }
+
     /// Reset path completions state
     pub fn reset_path_completions(&mut self) {
         self.path_completions.clear();
@@ -770,17 +999,67 @@ impl App {
     /// - notes (load, add, delete, modify)
     pub fn invalidate_filter_cache(&self) {
         *self.filtered_notes_cache.borrow_mut() = None;
+        self.opposite_count_cache.set(None);
+    }
+
+    /// Note that `notes` was reloaded
+    pub(crate) fn notes_loaded(&mut self) {
+        self.notes_generation = self.notes_generation.wrapping_add(1);
+    }
+
+    /// Run the timed checks, and say whether they changed anything on screen.
+    ///
+    /// Drawing a vault of notes isn't free, and this runs four times a second, so an
+    /// idle app shouldn't redraw.
+    pub fn on_tick(&mut self) -> bool {
+        // A sync is applying a page. The next tick is a moment away.
+        let gate = self.sync_gate.clone();
+        let Some(_held) = gate.try_hold() else {
+            return false;
+        };
+
+        let status = self.sync_status.clone();
+        let error = self.error.clone();
+        let generation = self.notes_generation;
+        let inbox_items = self.inbox_items.len();
+
+        self.check_auto_lock();
+        self.check_auto_sync();
+
+        status != self.sync_status
+            || error != self.error
+            || generation != self.notes_generation
+            || inbox_items != self.inbox_items.len()
+    }
+
+    /// Display order for two notes: pinned notes first, then as the settings say. Alpha
+    /// sorts by title, and is handled by `sort_for_display`, which works each out once.
+    fn display_order(order: SortOrder, a: &Note, b: &Note) -> std::cmp::Ordering {
+        b.pinned.cmp(&a.pinned).then_with(|| match order {
+            SortOrder::Recent | SortOrder::Alpha => b.modified_at.cmp(&a.modified_at),
+            SortOrder::Oldest => a.modified_at.cmp(&b.modified_at),
+            SortOrder::Created => b.created_at.cmp(&a.created_at),
+        })
+    }
+
+    /// Put indices into `notes` in display order.
+    fn sort_for_display(&self, indices: &mut [usize]) {
+        let order = self.settings.sort_order;
+
+        if order == SortOrder::Alpha {
+            indices.sort_by_cached_key(|&index| {
+                let note = &self.notes[index];
+                (!note.pinned, get_note_title(&note.content, &note.tags).to_lowercase())
+            });
+        } else {
+            indices.sort_by(|&a, &b| Self::display_order(order, &self.notes[a], &self.notes[b]));
+        }
     }
 
     /// Sort notes by pinned status first (pinned at top), then by modified_at descending
+    #[cfg(test)]
     pub fn sort_notes_by_pinned_and_date(notes: &mut [&Note]) {
-        notes.sort_by(|a, b| {
-            match (a.pinned, b.pinned) {
-                (true, false) => std::cmp::Ordering::Less,
-                (false, true) => std::cmp::Ordering::Greater,
-                _ => b.modified_at.cmp(&a.modified_at),
-            }
-        });
+        notes.sort_by(|a, b| Self::display_order(SortOrder::Recent, a, b));
     }
 
     /// Filter notes based on search query and sort (pinned first, then by modified date)
@@ -789,85 +1068,33 @@ impl App {
     /// automatically invalidated when search_input, archive_mode, or notes change.
     pub fn filtered_notes(&self) -> Vec<&Note> {
         // Check if we have a valid cache
-        {
-            let cache = self.filtered_notes_cache.borrow();
-            if let Some(cached_ids) = cache.as_ref() {
-                // Rebuild references from cached IDs
-                return cached_ids.iter()
-                    .filter_map(|id| self.notes.iter().find(|n| &n.id == id))
-                    .collect();
+        if let Some((length, indices)) = self.filtered_notes_cache.borrow().as_ref() {
+            if *length == self.notes.len() {
+                return indices.iter().map(|&index| &self.notes[index]).collect();
             }
         }
 
         // Cache miss - compute filtered notes
-        let mut notes: Vec<&Note> = if self.search_input.is_empty() {
-            self.notes.iter()
-                .filter(|note| note.archived == self.archive_mode)
+        let mut indices: Vec<usize> = if self.search_input.is_empty() {
+            (0..self.notes.len())
+                .filter(|&index| self.notes[index].archived == self.archive_mode)
                 .collect()
         } else {
-            let query = self.search_input.to_lowercase();
+            let query = SearchQuery::parse(&self.search_input, &self.settings);
+            let archived = query.archived().unwrap_or(self.archive_mode);
 
-            // Parse advanced modifiers from query
-            let modifiers = Self::parse_search_modifiers(&query, &self.settings);
-            let remaining_query = Self::remove_modifiers_from_query(&query);
-            let query_parts: Vec<&str> = remaining_query.split_whitespace().collect();
-
-            self.notes
-                .iter()
-                .filter(|note| {
-                    // Filter by archive mode first
-                    if note.archived != self.archive_mode {
-                        return false;
-                    }
-
-                    // Apply shared search logic
-                    if !note_matches_search(note, &modifiers, &query_parts) {
-                        return false;
-                    }
-
-                    // Color filtering (only in filtered_notes, not count_opposite_mode_matches)
-                    if !modifiers.colors.is_empty() {
-                        let note_has_color = modifiers.colors.iter().any(|color_key| {
-                            note.color.as_ref().is_some_and(|c| c.to_lowercase() == color_key.to_lowercase())
-                        });
-
-                        let tag_has_color = note.tags.iter().any(|tag| {
-                            let tag_color = self.settings.get_tag_color(tag);
-                            tag_color.is_some_and(|tc| {
-                                modifiers.colors.iter().any(|color_key| tc.to_lowercase() == color_key.to_lowercase())
-                            })
-                        });
-
-                        match modifiers.color_target {
-                            ColorTarget::Note => {
-                                if !note_has_color {
-                                    return false;
-                                }
-                            }
-                            ColorTarget::Tag => {
-                                if !tag_has_color {
-                                    return false;
-                                }
-                            }
-                            ColorTarget::Both => {
-                                if !note_has_color && !tag_has_color {
-                                    return false;
-                                }
-                            }
-                        }
-                    }
-
-                    true
+            (0..self.notes.len())
+                .filter(|&index| {
+                    let note = &self.notes[index];
+                    note.archived == archived && query.matches(note, &self.settings)
                 })
                 .collect()
         };
 
-        // Sort: pinned first, then by modified_at descending
-        Self::sort_notes_by_pinned_and_date(&mut notes);
+        self.sort_for_display(&mut indices);
 
-        // Cache the note IDs for future calls
-        let ids: Vec<String> = notes.iter().map(|n| n.id.clone()).collect();
-        *self.filtered_notes_cache.borrow_mut() = Some(ids);
+        let notes = indices.iter().map(|&index| &self.notes[index]).collect();
+        *self.filtered_notes_cache.borrow_mut() = Some((self.notes.len(), indices));
 
         notes
     }
@@ -879,216 +1106,23 @@ impl App {
             return 0;
         }
 
-        let query = self.search_input.to_lowercase();
-        let modifiers = Self::parse_search_modifiers(&query, &self.settings);
-        let remaining_query = Self::remove_modifiers_from_query(&query);
-        let query_parts: Vec<&str> = remaining_query.split_whitespace().collect();
-
-        self.notes
-            .iter()
-            .filter(|note| {
-                // Filter by OPPOSITE archive mode
-                if note.archived == self.archive_mode {
-                    return false;
-                }
-
-                // Apply shared search logic (no color filtering for opposite mode count)
-                note_matches_search(note, &modifiers, &query_parts)
-            })
-            .count()
-    }
-
-    /// Parse search modifiers from query string
-    fn parse_search_modifiers(query: &str, settings: &crate::models::UserSettings) -> SearchModifiers {
-        use regex::Regex;
-
-        let mut modifiers = SearchModifiers::default();
-
-        // has:attachment
-        if query.contains("has:attachment") {
-            modifiers.has_attachment = true;
+        if let Some(count) = self.opposite_count_cache.get() {
+            return count;
         }
 
-        // created:>DATE
-        if let Some(caps) = Regex::new(r"created:>(\d{4}-\d{2}-\d{2})")
-            .ok()
-            .and_then(|re| re.captures(query))
-        {
-            modifiers.created_after = Some(caps[1].to_string());
-        }
+        // A query that names the archive isn't asking about the other mode
+        let query = SearchQuery::parse(&self.search_input, &self.settings);
+        let count = if query.archived().is_some() {
+            0
+        } else {
+            self.notes
+                .iter()
+                .filter(|note| note.archived != self.archive_mode && query.matches(note, &self.settings))
+                .count()
+        };
 
-        // created:<DATE
-        if let Some(caps) = Regex::new(r"created:<(\d{4}-\d{2}-\d{2})")
-            .ok()
-            .and_then(|re| re.captures(query))
-        {
-            modifiers.created_before = Some(caps[1].to_string());
-        }
-
-        // created:DATE..DATE (range)
-        if let Some(caps) = Regex::new(r"created:(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})")
-            .ok()
-            .and_then(|re| re.captures(query))
-        {
-            modifiers.created_after = Some(caps[1].to_string());
-            modifiers.created_before = Some(caps[2].to_string());
-        }
-
-        // modified:>DATE
-        if let Some(caps) = Regex::new(r"modified:>(\d{4}-\d{2}-\d{2})")
-            .ok()
-            .and_then(|re| re.captures(query))
-        {
-            modifiers.modified_after = Some(caps[1].to_string());
-        }
-
-        // modified:<DATE
-        if let Some(caps) = Regex::new(r"modified:<(\d{4}-\d{2}-\d{2})")
-            .ok()
-            .and_then(|re| re.captures(query))
-        {
-            modifiers.modified_before = Some(caps[1].to_string());
-        }
-
-        // modified:DATE..DATE (range)
-        if let Some(caps) = Regex::new(r"modified:(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})")
-            .ok()
-            .and_then(|re| re.captures(query))
-        {
-            modifiers.modified_after = Some(caps[1].to_string());
-            modifiers.modified_before = Some(caps[2].to_string());
-        }
-
-        // words:>N
-        if let Some(caps) = Regex::new(r"words:>(\d+)")
-            .ok()
-            .and_then(|re| re.captures(query))
-        {
-            modifiers.word_count_min = caps[1].parse().ok();
-        }
-
-        // words:<N
-        if let Some(caps) = Regex::new(r"words:<(\d+)")
-            .ok()
-            .and_then(|re| re.captures(query))
-        {
-            modifiers.word_count_max = caps[1].parse().ok();
-        }
-
-        // words:N..N (range)
-        if let Some(caps) = Regex::new(r"words:(\d+)\.\.(\d+)")
-            .ok()
-            .and_then(|re| re.captures(query))
-        {
-            modifiers.word_count_min = caps[1].parse().ok();
-            modifiers.word_count_max = caps[2].parse().ok();
-        }
-
-        // color:red note (notes with red color)
-        if let Some(caps) = Regex::new(r"(?i)\bcolou?r:([a-z0-9#]+)\s+note\b")
-            .ok()
-            .and_then(|re| re.captures(query))
-        {
-            modifiers.colors.push(caps[1].to_lowercase());
-            modifiers.color_target = ColorTarget::Note;
-        }
-
-        // color:red tag (notes with red-colored tags)
-        if let Some(caps) = Regex::new(r"(?i)\bcolou?r:([a-z0-9#]+)\s+tag\b")
-            .ok()
-            .and_then(|re| re.captures(query))
-        {
-            modifiers.colors.push(caps[1].to_lowercase());
-            modifiers.color_target = ColorTarget::Tag;
-        }
-
-        // color:red (both notes and tags)
-        if modifiers.colors.is_empty() {
-            if let Some(caps) = Regex::new(r"(?i)\bcolou?r:([a-z0-9#]+)\b")
-                .ok()
-                .and_then(|re| re.captures(query))
-            {
-                modifiers.colors.push(caps[1].to_lowercase());
-                modifiers.color_target = ColorTarget::Both;
-            }
-        }
-
-        // category:important note (notes with category named "important")
-        if let Some(caps) = Regex::new(r"(?i)\bcategory:([\w-]+)\s+note\b")
-            .ok()
-            .and_then(|re| re.captures(query))
-        {
-            let category_name = caps[1].trim();
-            // Look up color key by display name
-            if let Some(color_key) = settings.get_color_key_by_display_name(category_name) {
-                modifiers.colors.push(color_key);
-                modifiers.color_target = ColorTarget::Note;
-            }
-        }
-
-        // category:important tag (notes with tags in category named "important")
-        if let Some(caps) = Regex::new(r"(?i)\bcategory:([\w-]+)\s+tag\b")
-            .ok()
-            .and_then(|re| re.captures(query))
-        {
-            let category_name = caps[1].trim();
-            if let Some(color_key) = settings.get_color_key_by_display_name(category_name) {
-                modifiers.colors.push(color_key);
-                modifiers.color_target = ColorTarget::Tag;
-            }
-        }
-
-        // category:important (both notes and tags)
-        if modifiers.colors.is_empty() {
-            if let Some(caps) = Regex::new(r"(?i)\bcategory:([\w-]+)\b")
-                .ok()
-                .and_then(|re| re.captures(query))
-            {
-                let category_name = caps[1].trim();
-                if let Some(color_key) = settings.get_color_key_by_display_name(category_name) {
-                    modifiers.colors.push(color_key);
-                    modifiers.color_target = ColorTarget::Both;
-                }
-            }
-        }
-
-        modifiers
-    }
-
-    /// Remove search modifiers from query string, leaving only text/tag search terms
-    fn remove_modifiers_from_query(query: &str) -> String {
-        use regex::Regex;
-
-        let mut result = query.to_string();
-
-        // Remove all modifier patterns
-        let patterns = [
-            r"has:attachment",
-            r"created:>\d{4}-\d{2}-\d{2}",
-            r"created:<\d{4}-\d{2}-\d{2}",
-            r"created:\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}",
-            r"modified:>\d{4}-\d{2}-\d{2}",
-            r"modified:<\d{4}-\d{2}-\d{2}",
-            r"modified:\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}",
-            r"words:>\d+",
-            r"words:<\d+",
-            r"words:\d+\.\.\d+",
-            r"(?i)\bcolou?r:[a-z0-9#]+\s+note\b",
-            r"(?i)\bcolou?r:[a-z0-9#]+\s+tag\b",
-            r"(?i)\bcolou?r:[a-z0-9#]+\b",
-            r"(?i)\bcategory:[\w-]+\s+note\b",
-            r"(?i)\bcategory:[\w-]+\s+tag\b",
-            r"(?i)\bcategory:[\w-]+\b",
-        ];
-
-        for pattern in patterns {
-            if let Ok(re) = Regex::new(pattern) {
-                result = re.replace_all(&result, "").to_string();
-            }
-        }
-
-        // Clean up extra whitespace
-        result.split_whitespace().collect::<Vec<_>>().join(" ")
+        self.opposite_count_cache.set(Some(count));
+        count
     }
 
     /// Trigger manual sync (delegates to operations module)
@@ -1096,12 +1130,33 @@ impl App {
         crate::ui::operations::sync::trigger_sync(self);
     }
 
+    /// Run syncs on their own thread from now on, as the terminal app does.
+    pub fn enable_background_sync(&mut self) {
+        self.sync_in_background = true;
+    }
+
+    /// Whether the user has a note open, whose text is in a buffer rather than the
+    /// database. A sync that starts now could change the note under them.
+    pub(crate) fn is_editing(&self) -> bool {
+        matches!(self.state, AppState::NoteView) || self.editing_note_id.is_some()
+    }
+
+    /// Wait a moment for a background sync on the way out, so that what was saved last
+    /// reaches the server now. If it doesn't, it's still pending for the next run.
+    pub fn wait_for_sync(&self, patience: std::time::Duration) {
+        if let Some(job) = &self.sync_job {
+            job.wait(patience);
+        }
+    }
+
     /// Check if auto-sync should run and trigger it if needed
     /// Also handles auto-clearing sync status after timeout
     /// Call this periodically (e.g., on Tick events) to enable background sync
     pub fn check_auto_sync(&mut self) {
-        // Auto-clear sync status after 5 seconds
-        if let Some(set_at) = self.sync_status_set_at {
+        crate::ui::operations::sync::poll_background_sync(self);
+
+        // Auto-clear sync status after 5 seconds. A running sync is still news.
+        if let (Some(set_at), None) = (self.sync_status_set_at, &self.sync_job) {
             let now = Instant::now();
             let elapsed = now.duration_since(set_at);
             if elapsed >= std::time::Duration::from_secs(5) {
@@ -1114,6 +1169,17 @@ impl App {
         // This must happen BEFORE the early returns below, as SSE should work
         // even when auto-sync interval is disabled (set to 0)
         self.check_sse_messages();
+
+        // Anything asked for while a note was open, or while another sync ran, goes now
+        if !self.sync_paused_until.is_some_and(|until| Instant::now() < until) {
+            crate::ui::operations::sync::start_requested_sync(self);
+        }
+
+        // A sync that started during an edit could change the note being edited, and one
+        // that's running already covers what this would do
+        if self.is_editing() || self.sync_job.is_some() {
+            return;
+        }
 
         // Check if auto-sync is enabled (interval > 0)
         if self.settings.auto_sync_interval_minutes <= 0 {
@@ -1130,8 +1196,13 @@ impl App {
             return; // Not unlocked, can't sync
         }
 
-        // Check time since last auto-sync
+        // The server said to wait, or that this account can't sync at the moment
         let now = Instant::now();
+        if self.sync_paused_until.is_some_and(|until| now < until) {
+            return;
+        }
+
+        // Check time since last auto-sync
         let should_sync = match self.last_auto_sync {
             None => true, // Never synced, do it now
             Some(last) => {
@@ -1227,6 +1298,7 @@ impl App {
 
         // Stop existing SSE connection if any
         self.stop_sse();
+        self.sse_gave_up = false;
 
         // Start new SSE connection
         self.debug_log(&format!("SSE: Starting connection to {}", endpoint));
@@ -1288,13 +1360,14 @@ impl App {
                     self.debug_log(&format!("SSE: Connection failed: {}", err));
                     self.sync_status = Some(t!("sync.sse_failed").to_string());
                     self.sync_status_set_at = Some(Instant::now());
+                    self.sse_gave_up = true;
                 }
             }
         }
 
-        // Trigger sync if we received a notification
+        // Waits its turn, as the note the user has open is what might change
         if should_sync {
-            self.trigger_sync();
+            self.sync_requested = Some(self.sync_requested.unwrap_or(false));
         }
     }
 
@@ -1310,17 +1383,9 @@ impl App {
 
     /// Render the UI
     pub fn render(&mut self, frame: &mut Frame) {
-        self.debug_log(&format!("render() called, state={:?}", self.state));
         match &self.state {
-            AppState::Locked => {
-                self.debug_log("Rendering locked screen");
-                rendering::locked::render_locked(self, frame)
-            },
-            AppState::NoteList => {
-                self.debug_log("Rendering note list");
-                rendering::note_list::render_note_list(self, frame);
-                self.debug_log("Note list rendered successfully");
-            },
+            AppState::Locked => rendering::locked::render_locked(self, frame),
+            AppState::NoteList => rendering::note_list::render_note_list(self, frame),
             AppState::NoteView => rendering::note_view::render_note_view(self, frame),
             AppState::Settings { .. } => rendering::settings::render_settings(self, frame),
             AppState::Help { .. } => rendering::help::render_help(self, frame),
@@ -1364,119 +1429,231 @@ impl App {
 }
 
 #[cfg(test)]
+mod lock_tests {
+    use super::*;
+    use crate::repository::NoteRepository;
+    use crate::ui::operations::auth;
+    use crossterm::event::KeyEvent;
+
+    /// An app unlocked with a vault on disk, holding one note.
+    fn unlocked_app() -> (App, String) {
+        let dir = tempfile::tempdir().unwrap();
+        let mut app = App::new(dir.path().join("test.db"), None).unwrap();
+        std::mem::forget(dir);
+
+        let password = uuid::Uuid::new_v4().to_string();
+        app.password_input = password.clone();
+        auth::unlock(&mut app).unwrap();
+
+        let note = Note::new("Private".to_string());
+        let repo = NoteRepository::new(app.db.as_ref().unwrap().connection());
+        repo.create(&note, app.key.as_ref().unwrap()).unwrap();
+        crate::ui::operations::notes::load_notes(&mut app).unwrap();
+        (app, password)
+    }
+
+    fn ctrl_l() -> KeyEvent {
+        KeyEvent::new(KeyCode::Char('l'), KeyModifiers::CONTROL)
+    }
+
+    #[test]
+    fn locking_leaves_nothing_of_the_vault_behind() {
+        let (mut app, _) = unlocked_app();
+        app.note_input = "A draft".to_string();
+        app.credential_input = "typed".to_string();
+        app.search_input = "private".to_string();
+
+        app.lock();
+
+        assert!(matches!(app.state, AppState::Locked));
+        assert!(app.key.is_none());
+        assert!(app.key_manager.is_locked());
+        assert!(app.unlock_password.is_none());
+        assert!(app.db.is_none());
+        assert!(app.notes.is_empty());
+        assert!(app.note_input.is_empty());
+        assert!(app.credential_input.is_empty());
+        assert!(app.search_input.is_empty());
+    }
+
+    #[test]
+    fn unlocking_again_brings_everything_back() {
+        let (mut app, password) = unlocked_app();
+        app.lock();
+
+        app.password_input = password;
+        auth::unlock(&mut app).unwrap();
+
+        assert!(matches!(app.state, AppState::NoteList));
+        assert_eq!(app.notes.len(), 1);
+        assert_eq!(app.notes[0].content, "Private");
+    }
+
+    #[test]
+    fn the_wrong_password_does_not_get_back_in() {
+        let (mut app, _) = unlocked_app();
+        app.lock();
+
+        app.password_input = uuid::Uuid::new_v4().to_string();
+
+        assert!(auth::unlock(&mut app).is_err());
+        assert!(app.key.is_none());
+    }
+
+    #[test]
+    fn ctrl_l_locks() {
+        let (mut app, _) = unlocked_app();
+
+        app.handle_key(ctrl_l()).unwrap();
+
+        assert!(matches!(app.state, AppState::Locked));
+    }
+
+    #[test]
+    fn ctrl_l_locks_from_any_screen() {
+        let (mut app, _) = unlocked_app();
+        app.state = AppState::ChangePasswordNew {
+            current_password: Zeroizing::new("in memory".to_string()),
+            previous: Box::new(AppState::NoteList),
+        };
+
+        app.handle_key(ctrl_l()).unwrap();
+
+        assert!(matches!(app.state, AppState::Locked));
+    }
+
+    #[test]
+    fn the_app_locks_itself_after_the_timeout() {
+        let (mut app, _) = unlocked_app();
+        app.settings.auto_lock_timeout = 5;
+        app.apply_auto_lock_setting();
+
+        app.check_auto_lock();
+        assert!(app.is_unlocked());
+
+        app.key_manager.pretend_idle_for(std::time::Duration::from_secs(6 * 60));
+        app.check_auto_lock();
+        assert!(!app.is_unlocked());
+    }
+
+    #[test]
+    fn activity_holds_off_the_auto_lock() {
+        let (mut app, _) = unlocked_app();
+        app.settings.auto_lock_timeout = 5;
+        app.apply_auto_lock_setting();
+
+        app.key_manager.pretend_idle_for(std::time::Duration::from_secs(6 * 60));
+        app.register_activity();
+        app.check_auto_lock();
+
+        assert!(app.is_unlocked());
+    }
+
+    #[test]
+    fn an_idle_tick_asks_for_no_redraw() {
+        let (mut app, _) = unlocked_app();
+        app.settings.auto_sync_interval_minutes = 0;
+
+        assert!(!app.on_tick());
+    }
+
+    #[test]
+    fn a_status_message_expiring_asks_for_a_redraw() {
+        let (mut app, _) = unlocked_app();
+        app.settings.auto_sync_interval_minutes = 0;
+        app.sync_status = Some("Done".to_string());
+        app.sync_status_set_at = Some(Instant::now() - std::time::Duration::from_secs(6));
+
+        assert!(app.on_tick());
+        assert!(app.sync_status.is_none());
+    }
+
+    #[test]
+    fn a_filtered_list_survives_a_note_being_added_without_invalidating() {
+        let (mut app, _) = unlocked_app();
+        assert_eq!(app.filtered_notes().len(), 1);
+
+        app.notes.push(Note::new("Another".to_string()));
+
+        assert_eq!(app.filtered_notes().len(), 2);
+    }
+
+    #[test]
+    fn locking_saves_what_is_open_in_the_note_view() {
+        let (mut app, password) = unlocked_app();
+        app.editing_note_id = Some(app.notes[0].id.clone());
+        app.note_input = "Edited before the lock".to_string();
+        app.state = AppState::NoteView;
+
+        app.lock();
+
+        app.password_input = password;
+        auth::unlock(&mut app).unwrap();
+        assert_eq!(app.notes[0].content, "Edited before the lock");
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{UserSettings, ColorPalette};
-    use std::collections::HashMap;
 
-    fn create_test_settings_with_colors() -> UserSettings {
-        let mut settings = UserSettings::default();
+    /// Holds one password in memory, and says whether it has been asked to forget it.
+    struct RememberedPassword {
+        password: String,
+        deleted: Arc<Mutex<bool>>,
+    }
 
-        // Add tag colors
-        let mut tag_colors = HashMap::new();
-        tag_colors.insert("work".to_string(), "blue".to_string());
-        tag_colors.insert("urgent".to_string(), "red".to_string());
-        settings.tag_colors = Some(tag_colors);
-
-        // Customize color palette with display names
-        let mut palette: ColorPalette = settings.get_color_palette().clone();
-        if let Some(red_def) = palette.get_mut("red") {
-            red_def.display_name = Some("important".to_string());
+    impl PasswordStorage for RememberedPassword {
+        fn store(&self, _password: &str) -> Result<()> {
+            Ok(())
         }
-        settings.color_palette = Some(palette);
 
-        settings
+        fn retrieve(&self) -> RetrieveResult {
+            RetrieveResult::Found(self.password.clone())
+        }
+
+        fn delete(&self) -> Result<()> {
+            *self.deleted.lock().unwrap() = true;
+            Ok(())
+        }
+
+        fn backend_type(&self) -> StorageBackendType {
+            StorageBackendType::File
+        }
+    }
+
+    fn app_remembering(path: PathBuf, password: &str) -> (App, Arc<Mutex<bool>>) {
+        let deleted = Arc::new(Mutex::new(false));
+        let storage = RememberedPassword { password: password.to_string(), deleted: deleted.clone() };
+        (App::with_storage(path, None, Box::new(storage)), deleted)
     }
 
     #[test]
-    fn test_parse_color_search_simple() {
-        let settings = create_test_settings_with_colors();
-        let modifiers = App::parse_search_modifiers("color:red", &settings);
+    fn a_wrong_stored_password_is_forgotten() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.db");
+        let password = uuid::Uuid::new_v4().to_string();
+        let db = Database::open(&path, &password).unwrap();
+        crate::vault::unlock(db.connection(), &CryptoService::new(), &password).unwrap();
+        drop(db);
 
-        assert_eq!(modifiers.colors, vec!["red"]);
-        assert_eq!(modifiers.color_target, ColorTarget::Both);
+        let (mut app, deleted) = app_remembering(path, &uuid::Uuid::new_v4().to_string());
+
+        assert!(app.try_auto_unlock().is_err());
+        assert!(*deleted.lock().unwrap());
     }
 
+    /// The vault can't be opened just now, which says nothing about the password.
     #[test]
-    fn test_parse_color_search_note_qualifier() {
-        let settings = create_test_settings_with_colors();
-        let modifiers = App::parse_search_modifiers("color:blue note", &settings);
+    fn a_stored_password_survives_a_vault_it_cannot_reach() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("not-a-file");
+        std::fs::create_dir(&path).unwrap();
 
-        assert_eq!(modifiers.colors, vec!["blue"]);
-        assert_eq!(modifiers.color_target, ColorTarget::Note);
-    }
+        let (mut app, deleted) = app_remembering(path, &uuid::Uuid::new_v4().to_string());
 
-    #[test]
-    fn test_parse_color_search_tag_qualifier() {
-        let settings = create_test_settings_with_colors();
-        let modifiers = App::parse_search_modifiers("color:green tag", &settings);
-
-        assert_eq!(modifiers.colors, vec!["green"]);
-        assert_eq!(modifiers.color_target, ColorTarget::Tag);
-    }
-
-    #[test]
-    fn test_parse_category_search_simple() {
-        let settings = create_test_settings_with_colors();
-        let modifiers = App::parse_search_modifiers("category:important", &settings);
-
-        // "important" should map to "red" via display name
-        assert_eq!(modifiers.colors, vec!["red"]);
-        assert_eq!(modifiers.color_target, ColorTarget::Both);
-    }
-
-    #[test]
-    fn test_parse_category_search_note_qualifier() {
-        let settings = create_test_settings_with_colors();
-        let modifiers = App::parse_search_modifiers("category:important note", &settings);
-
-        assert_eq!(modifiers.colors, vec!["red"]);
-        assert_eq!(modifiers.color_target, ColorTarget::Note);
-    }
-
-    #[test]
-    fn test_parse_category_search_tag_qualifier() {
-        let settings = create_test_settings_with_colors();
-        let modifiers = App::parse_search_modifiers("category:important tag", &settings);
-
-        assert_eq!(modifiers.colors, vec!["red"]);
-        assert_eq!(modifiers.color_target, ColorTarget::Tag);
-    }
-
-    #[test]
-    fn test_parse_category_search_invalid() {
-        let settings = create_test_settings_with_colors();
-        let modifiers = App::parse_search_modifiers("category:nonexistent", &settings);
-
-        // Should not find any colors for nonexistent category
-        assert!(modifiers.colors.is_empty());
-    }
-
-    #[test]
-    fn test_parse_single_color_modifier() {
-        let settings = create_test_settings_with_colors();
-        let modifiers = App::parse_search_modifiers("color:red some text", &settings);
-
-        // Should capture the color
-        assert_eq!(modifiers.colors.len(), 1);
-        assert_eq!(modifiers.colors[0], "red");
-        assert_eq!(modifiers.color_target, ColorTarget::Both);
-    }
-
-    #[test]
-    fn test_remove_modifiers_from_query() {
-        let cleaned = App::remove_modifiers_from_query("color:red important meeting");
-        assert!(!cleaned.contains("color:red"));
-        assert!(cleaned.contains("important"));
-        assert!(cleaned.contains("meeting"));
-    }
-
-    #[test]
-    fn test_remove_category_modifiers_from_query() {
-        let cleaned = App::remove_modifiers_from_query("category:important urgent task");
-        assert!(!cleaned.contains("category:important"));
-        assert!(cleaned.contains("urgent"));
-        assert!(cleaned.contains("task"));
+        assert!(app.try_auto_unlock().is_err());
+        assert!(!*deleted.lock().unwrap());
     }
 
     #[test]

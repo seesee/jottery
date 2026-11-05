@@ -13,7 +13,7 @@ import { syncRepository } from './syncRepository';
 import { syncService } from './syncService';
 import { cryptoService } from './crypto';
 import { keyManager } from './keyManager';
-import { normalizeEndpoint } from './syncClient';
+import { deleteInboxItem, normalizeEndpoint } from './syncClient';
 import { toast } from '../utils/toast.svelte';
 import { get } from 'svelte/store';
 import { _ } from 'svelte-i18n';
@@ -33,19 +33,6 @@ async function getSyncCredentials(): Promise<{ endpoint: string; apiKey: string 
   const apiKeyEncrypted = JSON.parse(metadata.apiKey);
   const apiKey = await cryptoService.decryptText(apiKeyEncrypted, masterKey.key);
   return { endpoint: normalizeEndpoint(metadata.syncEndpoint), apiKey };
-}
-
-/**
- * Delete an inbox item from the server
- */
-async function deleteFromServer(endpoint: string, apiKey: string, itemId: string): Promise<void> {
-  const response = await fetch(`${endpoint}/api/v1/inbox/${itemId}`, {
-    method: 'DELETE',
-    headers: { 'Authorization': `Bearer ${apiKey}` },
-  });
-  if (!response.ok && response.status !== 404) {
-    throw new Error(`Failed to delete inbox item: ${response.statusText}`);
-  }
 }
 
 class InboxService {
@@ -69,11 +56,15 @@ class InboxService {
       }
     }
 
-    // Delete from server — non-fatal if this fails (note is already created locally)
+    // Delete from server — non-fatal if this fails (note is already created locally).
+    // Until it works the server keeps sending the item, so it's remembered here: it
+    // won't be offered again, and each sync tries the delete once more.
+    await syncRepository.addAcceptedInboxId(item.id);
     try {
-      await deleteFromServer(creds.endpoint, creds.apiKey, item.id);
+      await deleteInboxItem(creds.endpoint, creds.apiKey, item.id);
+      await syncRepository.removeAcceptedInboxIds([item.id]);
     } catch (error) {
-      console.warn('Failed to delete inbox item from server (will be cleaned up on next sync):', error);
+      console.warn('Failed to delete inbox item from server (will be retried on next sync):', error);
     }
 
     // Remove from inbox store
@@ -89,7 +80,7 @@ class InboxService {
     const creds = await getSyncCredentials();
     if (!creds) throw new Error('Sync not configured');
 
-    await deleteFromServer(creds.endpoint, creds.apiKey, itemId);
+    await deleteInboxItem(creds.endpoint, creds.apiKey, itemId);
 
     // Remove from store
     inboxItems.update(items => items.filter(i => i.id !== itemId));

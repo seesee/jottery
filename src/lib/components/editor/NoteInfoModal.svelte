@@ -1,6 +1,7 @@
 <script lang="ts">
   import { _ } from 'svelte-i18n';
   import type { Readable } from 'svelte/store';
+  import { modal } from '../../actions/modal';
 
   // State props
   export let show: boolean;
@@ -31,7 +32,7 @@
     on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onClose())}
     role="button"
     tabindex="-1"
-    aria-label="Close modal"
+    aria-label={$_('common.close')}
   >
     <div
       class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6"
@@ -40,6 +41,7 @@
       role="dialog"
       aria-modal="true"
       tabindex="0"
+      use:modal={{ onEscape: onClose }}
     >
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{$_('editor.noteInformation')}</h2>

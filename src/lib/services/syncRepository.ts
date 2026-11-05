@@ -7,7 +7,29 @@ import { getDB, STORES } from './db';
 
 const METADATA_KEY = 'metadata';
 
+/** Facts about one account on one server, so they can't outlive a change of either. */
+const ACCOUNT_SCOPED_FIELDS: (keyof SyncMetadata)[] = [
+  'lastSyncAt', 'pullCursor', 'cursorFullPullDone', 'serverKeyVerified', 'serverKeyStale', 'acceptedInboxIds',
+];
+
+function isDifferentAccount(current: SyncMetadata, next: Partial<SyncMetadata>): boolean {
+  const moved = (from?: string, to?: string) => !!from && !!to && from !== to;
+  return moved(current.syncEndpoint, next.syncEndpoint) || moved(current.userId, next.userId);
+}
+
 class IndexedDBSyncRepository {
+  /** Remember an inbox item accepted here, until the server confirms deleting it */
+  async addAcceptedInboxId(id: string): Promise<void> {
+    const accepted = (await this.getMetadata())?.acceptedInboxIds ?? [];
+    await this.updateMetadata({ acceptedInboxIds: [...new Set([...accepted, id])] });
+  }
+
+  async removeAcceptedInboxIds(ids: string[]): Promise<void> {
+    const done = new Set(ids);
+    const accepted = (await this.getMetadata())?.acceptedInboxIds ?? [];
+    await this.updateMetadata({ acceptedInboxIds: accepted.filter(id => !done.has(id)) });
+  }
+
   /**
    * Get global sync metadata
    */
@@ -32,7 +54,13 @@ class IndexedDBSyncRepository {
       syncEnabled: false,
       syncEndpoint: '',
     };
-    const updated = { ...current, ...metadata };
+    const kept = { ...current };
+    if (isDifferentAccount(current, metadata)) {
+      for (const field of ACCOUNT_SCOPED_FIELDS) {
+        delete kept[field];
+      }
+    }
+    const updated = { ...kept, ...metadata };
 
     try {
       await db.put(STORES.SYNC_METADATA, updated, METADATA_KEY);

@@ -1,7 +1,8 @@
 <script lang="ts">
+  import { lockApplication } from '../services/lockService';
   import { onMount, onDestroy } from 'svelte';
-  import { searchQuery, isLocked, isLocking, settings, isDraftMode, searchResultCount, notes, isSyncing, syncProgress, archiveMode, toggleArchiveMode } from '../stores/appStore';
-  import { lock, passwordStorageService, settingsRepository, syncService, syncRepository } from '../services';
+  import { searchQuery, settings, isDraftMode, searchResultCount, notes, isSyncing, syncProgress, archiveMode, toggleArchiveMode } from '../stores/appStore';
+  import { passwordStorageService, settingsRepository, syncRepository } from '../services';
   import { getCurrentNotebook } from '../utils/notebookPath';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
@@ -56,10 +57,12 @@
 
   onMount(() => {
     window.addEventListener('open-search-help', handleOpenSearchHelpEvent);
+    window.addEventListener('command-palette-action', handleCommandPaletteAction);
   });
 
   onDestroy(() => {
     window.removeEventListener('open-search-help', handleOpenSearchHelpEvent);
+    window.removeEventListener('command-palette-action', handleCommandPaletteAction);
   });
 
   // Keep recentSearches in sync if settings change externally
@@ -121,6 +124,12 @@
     onNewNote();
   }
 
+  function handleCommandPaletteAction(event: Event) {
+    if ((event as CustomEvent<string>).detail === 'lockApp') {
+      void handleLockRequest();
+    }
+  }
+
   async function handleLockRequest() {
     if (rememberPasswordEnabled) {
       // If remember password is enabled, ask if they want to disable it
@@ -132,28 +141,7 @@
   }
 
   async function handleLockNow() {
-    isLocking.set(true);
-
-    try {
-      // Give any pending auto-saves time to complete (EditorPane has 1s debounce)
-      await new Promise(resolve => setTimeout(resolve, 1200));
-
-      // Trigger sync if enabled (will save all notes to server)
-      if ($settings.syncEnabled) {
-        const syncMetadata = await syncRepository.getMetadata();
-        if (syncMetadata?.apiKey) {
-          await syncService.syncNow();
-        }
-      }
-    } catch (error) {
-      console.error('[Header] Error during pre-lock save/sync:', error);
-      // Continue with lock even if sync fails
-    }
-
-    // Lock the application
-    lock();
-    isLocked.set(true);
-    isLocking.set(false);
+    await lockApplication();
   }
 
   async function handleDisableRememberPasswordConfirm() {
@@ -687,7 +675,7 @@
           disabled={disableNewNote}
           class="min-h-11 min-w-11 p-3 bg-blue-600 active:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title={disableNewNote ? $_('header.creatingNote') : (newNoteShortcut ? `${$_('note.create')} (${newNoteShortcut})` : $_('note.create'))}
-          aria-label="New note"
+          aria-label={$_('header.newNote')}
           data-testid="btn-new-note-mobile"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

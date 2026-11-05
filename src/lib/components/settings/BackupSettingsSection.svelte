@@ -2,6 +2,7 @@
   import { _ } from 'svelte-i18n';
   import { settingsRepository } from '../../services/settingsRepository';
   import { settings } from '../../stores/appStore';
+  import { toast } from '../../utils/toast.svelte';
 
   export let onCreateBackup: () => void;
   export let isCreatingBackup: boolean = false;
@@ -14,8 +15,7 @@
   let autoBackupAfterChanges = $settings.autoBackupAfterChanges ?? 10;
   let lastBackupAt = $settings.lastBackupAt ?? null;
 
-  // Sync with settings store
-  $: {
+  function loadFromSettings() {
     backupReminderEnabled = $settings.backupReminderEnabled ?? false;
     backupReminderFrequency = $settings.backupReminderFrequency ?? 'weekly';
     autoBackupEnabled = $settings.autoBackupEnabled ?? false;
@@ -23,6 +23,9 @@
     autoBackupAfterChanges = $settings.autoBackupAfterChanges ?? 10;
     lastBackupAt = $settings.lastBackupAt ?? null;
   }
+
+  // Sync with settings store
+  $: $settings, loadFromSettings();
 
   /**
    * Format the last backup date for display
@@ -55,6 +58,8 @@
       settings.update(s => ({ ...s, ...update }));
     } catch (error) {
       console.error('Failed to update backup setting:', error);
+      toast.error($_('backupSettings.saveFailed'));
+      loadFromSettings();
     }
   }
 

@@ -1,5 +1,8 @@
 // API client for Jottery User Portal
 
+import { ApiError, DashboardClient } from './dashboardClient';
+import type { RequestOptions } from './dashboardClient';
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 interface LoginRequest {
@@ -8,13 +11,17 @@ interface LoginRequest {
 }
 
 interface LoginResponse {
-  sessionId: string;
+  // Absent when the server keeps the session in an HttpOnly cookie
+  sessionId?: string;
+  cookieSession?: boolean;
   expiresAt: string;
   user: {
     id: string;
     email: string;
     isAdmin: boolean;
   };
+  // Older servers don't send this
+  mustChangePassword?: boolean;
 }
 
 interface InboxAccountInfo {
@@ -55,56 +62,24 @@ interface UserStatusResponse {
   isActive: boolean;
 }
 
-class ApiError extends Error {
-  constructor(
-    public status: number,
-    public message: string,
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
-
 class UserApiClient {
-  private sessionToken: string | null = null;
+  // Separate from the admin session
+  private client = new DashboardClient('user_session_token');
 
-  constructor() {
-    // Try to load session token from localStorage (separate from admin token)
-    this.sessionToken = localStorage.getItem('user_session_token');
+  private get session() {
+    return this.client.session;
   }
 
-  private async request<T>(
-    method: string,
-    path: string,
-    body?: unknown,
-  ): Promise<T> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+  private request<T>(method: string, path: string, body?: unknown, options?: RequestOptions): Promise<T> {
+    return this.client.request<T>(method, path, body, options);
+  }
 
-    // Add session token to Authorization header if available
-    if (this.sessionToken) {
-      headers['Authorization'] = `Bearer ${this.sessionToken}`;
-    }
+  onSessionExpired(listener: () => void): void {
+    this.client.onSessionExpired(listener);
+  }
 
-    const response = await fetch(`${API_BASE}${path}`, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-      credentials: 'include', // Include cookies
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new ApiError(response.status, errorData.error || `HTTP ${response.status}`);
-    }
-
-    // Handle 204 No Content
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    return response.json();
+  onPasswordChangeRequired(listener: () => void): void {
+    this.client.onPasswordChangeRequired(listener);
   }
 
   // Authentication
@@ -112,11 +87,11 @@ class UserApiClient {
     const response = await this.request<LoginResponse>('POST', '/api/v1/user/login', {
       email,
       password,
-    });
+      // Servers without cookie sessions ignore this and return a token
+      cookieSession: true,
+    }, { checksPassword: true });
 
-    // Store session token
-    this.sessionToken = response.sessionId;
-    localStorage.setItem('user_session_token', response.sessionId);
+    this.session.start(response);
 
     return response;
   }
@@ -128,12 +103,11 @@ class UserApiClient {
       // Ignore errors during logout - we'll clear local state anyway
       console.warn('Logout request failed:', e);
     }
-    this.sessionToken = null;
-    localStorage.removeItem('user_session_token');
+    this.session.clear();
   }
 
   isAuthenticated(): boolean {
-    return this.sessionToken !== null;
+    return this.session.isActive;
   }
 
   // Account information
@@ -141,33 +115,37 @@ class UserApiClient {
     return this.request('GET', '/api/v1/user/account');
   }
 
+  /** Who is signed in, which also shows whether the session still works. */
+  async currentUser(): Promise<{ email: string }> {
+    return this.getAccountInfo();
+  }
+
   // Change password
   async changePassword(currentPassword: string, newPassword: string): Promise<void> {
     return this.request('POST', '/api/v1/user/change-password', {
       currentPassword,
       newPassword,
-    });
+    }, { checksPassword: true });
   }
 
-  // Delete all notes (keep account)
-  async deleteAllNotes(): Promise<void> {
-    return this.request('DELETE', '/api/v1/user/notes');
+  // Delete all notes (keep account). Older servers ignore the password. Current ones
+  // refuse these three requests without it, unless the session is minutes old.
+  async deleteAllNotes(currentPassword: string): Promise<void> {
+    return this.request('DELETE', '/api/v1/user/notes', { currentPassword }, { checksPassword: true });
   }
 
   // Deactivate account (can re-register with admin approval)
-  async deactivateAccount(): Promise<void> {
-    await this.request('DELETE', '/api/v1/user/account?mode=deactivate');
+  async deactivateAccount(currentPassword: string): Promise<void> {
+    await this.request('DELETE', '/api/v1/user/account?mode=deactivate', { currentPassword }, { checksPassword: true });
     // Clear local session since account is now inactive
-    this.sessionToken = null;
-    localStorage.removeItem('user_session_token');
+    this.session.clear();
   }
 
   // Permanently delete account and all data
-  async deleteAccount(): Promise<void> {
-    await this.request('DELETE', '/api/v1/user/account?mode=delete');
+  async deleteAccount(currentPassword: string): Promise<void> {
+    await this.request('DELETE', '/api/v1/user/account?mode=delete', { currentPassword }, { checksPassword: true });
     // Clear local session since account no longer exists
-    this.sessionToken = null;
-    localStorage.removeItem('user_session_token');
+    this.session.clear();
   }
 
   // Device management
@@ -192,8 +170,28 @@ class UserApiClient {
     return this.request('GET', '/api/v1/user/inbox-token/status');
   }
 
-  // Check user approval status (no auth required)
-  async checkStatus(email: string): Promise<UserStatusResponse> {
+  /**
+   * Where an account stands, for someone who holds its password. A pending account
+   * can't sign in, so this is how its owner finds out. Older servers only have the
+   * GET, which answers for any address and doesn't need the password.
+   */
+  async checkStatus(email: string, password: string): Promise<UserStatusResponse> {
+    try {
+      return await this.request<UserStatusResponse>(
+        'POST',
+        '/api/v1/user/status',
+        { email, password },
+        { checksPassword: true },
+      );
+    } catch (err) {
+      if (err instanceof ApiError && (err.status === 404 || err.status === 405)) {
+        return this.checkStatusWithoutPassword(email);
+      }
+      throw err;
+    }
+  }
+
+  private async checkStatusWithoutPassword(email: string): Promise<UserStatusResponse> {
     const response = await fetch(`${API_BASE}/api/v1/user/status?email=${encodeURIComponent(email)}`, {
       method: 'GET',
       headers: {
@@ -202,8 +200,8 @@ class UserApiClient {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new ApiError(response.status, errorData.error || `HTTP ${response.status}`);
+      const errorData = await response.json().catch(() => null);
+      throw new ApiError(response.status, errorData?.error ?? '');
     }
 
     return response.json();

@@ -1,0 +1,3 @@
+# Release binaries are built with this, on every platform.
+[toolchain]
+channel = "1.99.1"

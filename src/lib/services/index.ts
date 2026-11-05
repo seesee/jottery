@@ -4,7 +4,7 @@
 
 // Crypto services
 export { cryptoService, encryptJSON, decryptJSON, encryptStringArray, decryptStringArray } from './crypto';
-export { keyManager, setupActivityListeners, removeActivityListeners, requireMasterKey, ApplicationLockedError } from './keyManager';
+export { keyManager, requireMasterKey, ApplicationLockedError } from './keyManager';
 export { passwordStorageService } from './passwordStorageService';
 export { sessionStorageService } from './sessionStorageService';
 
@@ -22,10 +22,9 @@ export { versionRepository } from './versionRepository';
 // Business logic services
 export { syncService } from './syncService';
 export { noteService } from './noteService';
-export { createSyncRecoveryNote, deleteSyncRecoveryNote } from './syncRecoveryService';
 export { attachmentService } from './attachmentService';
 export { conflictService } from './conflictService';
-export { isInitialized, initialize, unlock, lock, isLocked, changePassword, onboardFromServer, tryMigrateToEnvelope, uploadWrappedKeyToServer, verifyUnlockPassword, ensureServerWrappedKey, restoreFromBackup } from './initService';
+export { isInitialized, initialize, unlock, lock, isLocked, deleteAllLocalData, changePassword, onboardFromServer, tryMigrateToEnvelope, uploadWrappedKeyToServer, verifyUnlockPassword, ensureServerWrappedKey, restoreFromBackup } from './initService';
 export { exportAllNotes, exportNotes, importNotes, downloadExport, parseImportFile } from './exportService';
 export { searchService, indexNotes, parseSearchQuery, searchNotes, getSearchSuggestions } from './searchService';
 export { tagService, getAllTags, getTagStats, getPopularTags, getNotesByTag, getNotesByTags, normalizeTag, isValidTag, parseTagString } from './tagService';

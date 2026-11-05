@@ -155,6 +155,7 @@ function flattenVisible(nodes: OutlinerNode[]): OutlinerNode[] {
 let tree: OutlinerNode[] = [];
 let isDark = false;
 let focusedId: string | null = null;
+let isReadOnly = false;
 let draggedId: string | null = null;
 let dropTargetId: string | null = null;
 let dropPosition: 'before' | 'after' | 'child' = 'after';
@@ -162,6 +163,7 @@ let dropPosition: 'before' | 'after' | 'child' = 'after';
 // ---- Content changed notification ----
 
 function notifyChanged(): void {
+  if (isReadOnly) return;
   postToSwift({ type: 'contentChanged', content: serialiseOutliner(tree) });
 }
 
@@ -179,7 +181,7 @@ function renderNode(node: OutlinerNode, depth: number): HTMLElement {
   const row = document.createElement('div');
   row.className = 'outliner-row';
   row.dataset.id = node.id;
-  row.draggable = true;
+  row.draggable = !isReadOnly;
   row.style.paddingLeft = `${depth * 20 + 8}px`;
 
   // Drop indicator
@@ -197,7 +199,7 @@ function renderNode(node: OutlinerNode, depth: number): HTMLElement {
       node.collapsed = !node.collapsed;
       notifyChanged();
       render();
-      focusNode(node.id);
+      if (!isReadOnly) focusNode(node.id);
     });
   } else {
     toggle.textContent = '\u2022';
@@ -208,7 +210,11 @@ function renderNode(node: OutlinerNode, depth: number): HTMLElement {
   // Content (contenteditable)
   const contentEl = document.createElement('div');
   contentEl.className = 'outliner-content';
-  contentEl.contentEditable = 'true';
+  contentEl.contentEditable = isReadOnly ? 'false' : 'true';
+  // What's typed here stays out of the keyboard's learned words, as in the main editor.
+  contentEl.setAttribute('autocorrect', 'off');
+  contentEl.setAttribute('autocapitalize', 'off');
+  contentEl.spellcheck = false;
   contentEl.textContent = node.content;
   contentEl.dataset.id = node.id;
 
@@ -481,7 +487,7 @@ window.bridge = {
     }
     render();
     // Focus first node
-    if (tree.length > 0) {
+    if (tree.length > 0 && !isReadOnly) {
       focusNode(tree[0].id);
     }
   },
@@ -496,6 +502,12 @@ window.bridge = {
 
   resolveAttachment(): void {
     // Not used by outliner
+  },
+
+  setReadOnly(readOnly: boolean): void {
+    isReadOnly = readOnly;
+    if (readOnly) focusedId = null;
+    render();
   },
 };
 

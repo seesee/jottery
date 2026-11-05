@@ -33,7 +33,10 @@ export interface Note {
   syntaxLanguage?: string; // Syntax highlighting language (any supported language ID)
   showPreview?: boolean; // Show preview panel for markdown/html (default: false)
   color?: string; // Semantic color name (e.g., 'red', 'blue') - unencrypted
+  serverHash?: string; // Local-only: the hash the server held when this note last became unsynced
   needsSync?: boolean; // Local-only flag indicating note needs to be synced (never sent to server)
+  deletionHeld?: boolean; // Local-only: in the bin because a server deleted too many at once
+  binnedAt?: string; // Local-only: when this device found it in the bin, which starts its 30 days
 }
 
 /**
@@ -121,6 +124,13 @@ export interface KeyboardShortcuts {
   togglePreview: KeyboardShortcut;
   duplicateNote: KeyboardShortcut;
   exportNote: KeyboardShortcut;
+
+  // Outliner shortcuts
+  outlinerIndent: KeyboardShortcut;
+  outlinerOutdent: KeyboardShortcut;
+  outlinerMoveUp: KeyboardShortcut;
+  outlinerMoveDown: KeyboardShortcut;
+  outlinerToggleCollapse: KeyboardShortcut;
 }
 
 /**
@@ -162,6 +172,7 @@ export interface UserSettings {
   swipeHintsShown?: boolean; // Whether mobile swipe gesture hints have been shown
   recentSearches?: string[]; // Recently used search queries (last 10 unique)
   welcomeNoteCreated?: boolean; // Whether the welcome note has been created for new vaults
+  savedSearchesEncrypted?: boolean; // One-off migration of plaintext saved searches has run
 }
 
 /**
@@ -247,10 +258,16 @@ export interface DecryptedNoteVersion extends Omit<NoteVersion, 'content' | 'tag
 /**
  * Search query structure
  */
+/**
+ * One term of a search query. Values are normalised for comparison.
+ */
+export interface SearchTerm {
+  type: 'contains' | 'phrase' | 'prefix' | 'suffix' | 'tag';
+  value: string;
+}
+
 export interface SearchQuery {
-  text?: string; // Full-text search terms
-  tags?: string[]; // Tags to filter by (AND logic)
-  orTags?: string[]; // Tags to filter by (OR logic)
+  groups?: SearchTerm[][]; // Every group must match, through any one of its terms
   excludeText?: string[]; // Text to exclude
   excludeTags?: string[]; // Tags to exclude
   // Advanced search modifiers
@@ -315,6 +332,8 @@ export interface ExportData {
     colorPalette?: ColorPalette;
     tagColors?: Record<string, string>;
   };
+  /** What couldn't be read, so an export is never quietly incomplete */
+  skipped?: { notes: number; attachments: number };
 }
 
 /**
@@ -408,6 +427,13 @@ export const DEFAULT_KEYBOARD_SHORTCUTS: KeyboardShortcuts = {
   togglePreview: { key: 'p', ctrl: true, shift: true }, // Ctrl/Cmd+Shift+P
   duplicateNote: { key: 'd', ctrl: true }, // Ctrl/Cmd+D
   exportNote: { key: 'e', ctrl: true }, // Ctrl/Cmd+E
+
+  // Outliner shortcuts
+  outlinerIndent: { key: 'Tab' }, // Tab
+  outlinerOutdent: { key: 'Tab', shift: true }, // Shift+Tab
+  outlinerMoveUp: { key: 'ArrowUp', ctrl: true }, // Ctrl/Cmd+Up
+  outlinerMoveDown: { key: 'ArrowDown', ctrl: true }, // Ctrl/Cmd+Down
+  outlinerToggleCollapse: { key: '.', ctrl: true }, // Ctrl/Cmd+.
 };
 
 /**

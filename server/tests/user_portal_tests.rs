@@ -9,8 +9,6 @@
 use axum::{
     body::Body,
     http::{Request, StatusCode},
-    middleware,
-    routing::{delete, get, post},
     Router,
 };
 use http_body_util::BodyExt;
@@ -46,7 +44,7 @@ async fn create_test_app() -> (Router, SqlitePool) {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -56,11 +54,14 @@ async fn create_test_app() -> (Router, SqlitePool) {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -69,25 +70,13 @@ async fn create_test_app() -> (Router, SqlitePool) {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
     // Build router with user routes (both public and protected)
-    let protected_user_routes = Router::new()
-        .route("/api/v1/user/account", get(jottery_server::api::user::get_account_info).delete(jottery_server::api::user::delete_account))
-        .route("/api/v1/user/change-password", post(jottery_server::api::user::change_password))
-        .route("/api/v1/user/logout", post(jottery_server::api::user::logout))
-        .route("/api/v1/user/notes", delete(jottery_server::api::user::delete_all_notes))
-        .layer(middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::user_auth_middleware,
-        ));
-
-    let app = Router::new()
-        .route("/api/v1/user/login", post(jottery_server::api::user::login))
-        .route("/api/v1/auth/register-user", post(jottery_server::api::auth::register_user))
-        .merge(protected_user_routes)
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     (app, pool)
 }
@@ -609,8 +598,7 @@ mod workflow_tests {
         let deactivate_response = app.clone().oneshot(deactivate_request).await.unwrap();
         assert_eq!(deactivate_response.status(), StatusCode::NO_CONTENT);
 
-        // Step 2: Login still works (creates a session token)
-        // Note: The login endpoint doesn't check is_active - it should arguably reject inactive users
+        // Step 2: Login is refused, so no new session can be obtained
         let login_request = Request::builder()
             .uri("/api/v1/user/login")
             .method("POST")
@@ -625,25 +613,21 @@ mod workflow_tests {
             .unwrap();
 
         let login_response = app.clone().oneshot(login_request).await.unwrap();
-        assert_eq!(login_response.status(), StatusCode::OK, "Login endpoint accepts deactivated users");
+        assert_eq!(login_response.status(), StatusCode::FORBIDDEN, "Deactivated users can't sign in");
 
-        // Get the new session token
-        let body = parse_json_response(login_response.into_body()).await;
-        let new_token = body["sessionId"].as_str().expect("Should have session token");
-
-        // Step 3: But using that session to access protected endpoints should fail
+        // Step 3: And the session from before no longer works
         let account_request = Request::builder()
             .uri("/api/v1/user/account")
             .method("GET")
-            .header("authorization", format!("Bearer {}", new_token))
+            .header("authorization", format!("Bearer {}", token))
             .body(Body::empty())
             .unwrap();
 
         let account_response = app.oneshot(account_request).await.unwrap();
         assert_eq!(
             account_response.status(),
-            StatusCode::FORBIDDEN,
-            "Deactivated user should be blocked by auth middleware"
+            StatusCode::UNAUTHORIZED,
+            "Deactivating deletes the user's sessions"
         );
 
         pool.close().await;

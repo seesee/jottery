@@ -1,0 +1,55 @@
+name: Android Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'android-native/**'
+      - 'package.json'  # Android reads its version from here
+      - '.github/workflows/android-tests.yml'
+  workflow_call:  # Run before publishing, from build-multiarch.yml
+  workflow_dispatch:  # Manual trigger
+
+permissions:
+  contents: read
+
+jobs:
+  android-tests:
+    name: Android Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # JDK 21 and the Android SDK are already on the runner. 21 matches the JDK
+      # bundled with Android Studio, which local builds use.
+      - name: Run unit tests
+        working-directory: android-native
+        run: JAVA_HOME="$JAVA_HOME_21_X64" ./gradlew :app:testDebugUnitTest --console=plain
+
+      - name: Upload test report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: failure()
+        with:
+          name: android-test-report
+          path: android-native/app/build/reports/tests/
+          retention-days: 7
+
+  # R8 only runs on a release build, so a broken one can't show up in the debug
+  # unit tests. It needs no secrets: unsigned, it gives app-release-unsigned.apk.
+  android-release-build:
+    name: Android Release Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the minified release
+        working-directory: android-native
+        run: JAVA_HOME="$JAVA_HOME_21_X64" ./gradlew :app:assembleRelease --console=plain

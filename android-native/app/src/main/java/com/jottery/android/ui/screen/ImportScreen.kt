@@ -9,7 +9,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.jottery.android.R
+import com.jottery.android.service.ImportStrategy
 import com.jottery.android.viewmodel.AppState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -26,6 +29,7 @@ fun ImportScreen(
     var isImporting by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var strategy by remember { mutableStateOf(ImportStrategy.SKIP) }
 
     val launcher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -38,12 +42,23 @@ fun ImportScreen(
                 val json = withContext(Dispatchers.IO) {
                     context.contentResolver.openInputStream(uri)?.use { input ->
                         input.bufferedReader().readText()
-                    } ?: throw Exception("Could not read file")
+                    } ?: throw Exception(context.getString(R.string.import_could_not_read_file))
                 }
-                val count = appState.importNotes(json)
-                statusMessage = "Imported $count notes successfully."
+                val result = appState.importNotes(json, strategy)
+                statusMessage = buildString {
+                    append(context.getString(R.string.import_done, result.imported, result.attachments))
+                    if (result.skipped > 0) {
+                        append(' ')
+                        append(context.getString(R.string.import_skipped, result.skipped))
+                    }
+                }
+                errorMessage = if (result.failed > 0 || result.attachmentsFailed > 0) {
+                    context.getString(R.string.import_failures, result.failed, result.attachmentsFailed)
+                } else {
+                    null
+                }
             } catch (e: Exception) {
-                errorMessage = "Import failed: ${e.message}"
+                errorMessage = context.getString(R.string.import_failed, e.message.orEmpty())
             } finally {
                 isImporting = false
             }
@@ -53,10 +68,10 @@ fun ImportScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Import Notes") },
+                title = { Text(stringResource(R.string.import_import_notes)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
             )
@@ -70,9 +85,28 @@ fun ImportScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
-                "Import notes from a JSON export file. Notes will be encrypted with your current vault password.",
+                stringResource(R.string.import_import_notes_from_a_json),
                 style = MaterialTheme.typography.bodyMedium,
             )
+
+            Text(
+                stringResource(R.string.import_duplicates),
+                style = MaterialTheme.typography.labelLarge,
+            )
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                val choices = listOf(
+                    ImportStrategy.SKIP to R.string.import_skip,
+                    ImportStrategy.REPLACE to R.string.import_replace,
+                    ImportStrategy.KEEP_BOTH to R.string.import_keep_both,
+                )
+                choices.forEachIndexed { index, (choice, label) ->
+                    SegmentedButton(
+                        selected = strategy == choice,
+                        onClick = { strategy = choice },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = choices.size),
+                    ) { Text(stringResource(label)) }
+                }
+            }
 
             Button(
                 onClick = { launcher.launch(arrayOf("application/json", "*/*")) },
@@ -83,7 +117,7 @@ fun ImportScreen(
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                     Spacer(Modifier.width(8.dp))
                 }
-                Text("Select JSON File")
+                Text(stringResource(R.string.import_select_json_file))
             }
 
             statusMessage?.let {

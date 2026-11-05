@@ -9,8 +9,6 @@
 use axum::{
     body::Body,
     http::{Request, StatusCode},
-    middleware,
-    routing::{delete, get},
     Router,
 };
 use sha2::{Digest, Sha256};
@@ -44,7 +42,7 @@ fn test_config() -> jottery_server::config::Config {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -54,11 +52,14 @@ fn test_config() -> jottery_server::config::Config {
         default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     }
 }
 
@@ -71,25 +72,13 @@ async fn create_test_app() -> (Router, SqlitePool) {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config: test_config(),
     });
 
     // Sync routes (device API key auth) — mirrors main.rs
-    let sync_routes = Router::new()
-        .route(
-            "/api/v1/sync/status",
-            get(jottery_server::api::sync::get_status),
-        )
-        .route(
-            "/api/v1/sync/device",
-            delete(jottery_server::api::sync::revoke_self),
-        )
-        .layer(middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ));
-
-    let app = Router::new().merge(sync_routes).with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     (app, pool)
 }

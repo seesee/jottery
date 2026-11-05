@@ -1,9 +1,11 @@
 <script lang="ts">
   import { api, ApiError } from '../lib/api';
+  import { describeError } from '../lib/apiErrors';
   import type { UserDetail, Device } from '../lib/api';
   import { toast } from '../lib/toast.svelte';
-  import { _ } from 'svelte-i18n';
+  import { _, locale } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
+  import Modal from './Modal.svelte';
 
   interface Props {
     userId: string;
@@ -11,6 +13,9 @@
   }
 
   let { userId, onClose }: Props = $props();
+
+  const id = $props.id();
+  const titleId = `${id}-title`;
 
   let user = $state<UserDetail | null>(null);
   let loading = $state(true);
@@ -29,6 +34,7 @@
   let showPasswordReset = $state(false);
   let newPassword = $state('');
   let confirmPassword = $state('');
+  let revokeDevices = $state(false);
   let resettingPassword = $state(false);
 
   // Svelte action to focus element on mount (avoids a11y autofocus warning)
@@ -42,7 +48,7 @@
       error = null;
       user = await api.getUser(userId);
     } catch (err) {
-      error = err instanceof Error ? err.message : $_('users.failedToLoad');
+      error = describeError(err, $_, 'users.failedToLoad');
     } finally {
       loading = false;
     }
@@ -60,7 +66,7 @@
       await loadUser();
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error($_('devices.toast.revokeFailed', { values: { error: err.message } }));
+        toast.error($_('devices.toast.revokeFailed', { values: { error: describeError(err, $_) } }));
       } else {
         toast.error($_('devices.toast.revokeFailedGeneric'));
       }
@@ -79,7 +85,7 @@
       await loadUser();
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error($_('devices.toast.deleteFailed', { values: { error: err.message } }));
+        toast.error($_('devices.toast.deleteFailed', { values: { error: describeError(err, $_) } }));
       } else {
         toast.error($_('devices.toast.deleteFailedGeneric'));
       }
@@ -103,7 +109,7 @@
       await loadUser();
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error($_('devices.toast.renameFailed', { values: { error: err.message } }));
+        toast.error($_('devices.toast.renameFailed', { values: { error: describeError(err, $_) } }));
       } else {
         toast.error($_('devices.toast.renameFailedGeneric'));
       }
@@ -137,7 +143,7 @@
       await loadUser();
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error($_('users.detail.settingsSaveFailed', { values: { error: err.message } }));
+        toast.error($_('users.detail.settingsSaveFailed', { values: { error: describeError(err, $_) } }));
       } else {
         toast.error($_('users.detail.settingsSaveFailedGeneric'));
       }
@@ -162,14 +168,13 @@
 
     resettingPassword = true;
     try {
-      await api.resetUserPassword(user.id, newPassword);
+      await api.resetUserPassword(user.id, newPassword, revokeDevices);
       toast.success($_('users.detail.passwordResetSuccess', { values: { email: user.email } }));
-      showPasswordReset = false;
-      newPassword = '';
-      confirmPassword = '';
+      closePasswordReset();
+      await loadUser();
     } catch (err) {
       if (err instanceof ApiError) {
-        toast.error($_('users.detail.passwordResetFailed', { values: { error: err.message } }));
+        toast.error($_('users.detail.passwordResetFailed', { values: { error: describeError(err, $_) } }));
       } else {
         toast.error($_('users.detail.passwordResetFailedGeneric'));
       }
@@ -178,9 +183,16 @@
     }
   }
 
+  function closePasswordReset() {
+    showPasswordReset = false;
+    newPassword = '';
+    confirmPassword = '';
+    revokeDevices = false;
+  }
+
   function formatDate(dateStr: string | null): string {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('en-GB', {
+    return new Date(dateStr).toLocaleDateString($locale ?? undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -189,7 +201,7 @@
 
   function formatDateTime(dateStr: string | null): string {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleString('en-GB', {
+    return new Date(dateStr).toLocaleString($locale ?? undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -220,11 +232,15 @@
   });
 </script>
 
-<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-  <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+<Modal
+  labelledBy={titleId}
+  {onClose}
+  overlayClass="p-4"
+  panelClass="max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+>
     <!-- Header -->
     <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-      <h2 class="text-xl font-semibold text-gray-900">{$_('users.detail.title')}</h2>
+      <h2 id={titleId} class="text-xl font-semibold text-gray-900">{$_('users.detail.title')}</h2>
       <button
         onclick={onClose}
         class="text-gray-400 hover:text-gray-600 transition-colors"
@@ -243,7 +259,7 @@
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       {:else if error}
-        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div role="alert" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
       {:else if user}
@@ -461,11 +477,12 @@
                 <input
                   id="newPassword"
                   type="password"
+                  autocomplete="new-password"
                   bind:value={newPassword}
                   placeholder={$_('users.detail.newPasswordPlaceholder')}
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <p class="mt-1 text-xs text-gray-500">{$_('users.detail.passwordRequirement')}</p>
+                <p class="mt-1 text-xs text-gray-500">{$_('common.passwordRules')}</p>
               </div>
               <div>
                 <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">
@@ -474,10 +491,22 @@
                 <input
                   id="confirmPassword"
                   type="password"
+                  autocomplete="new-password"
                   bind:value={confirmPassword}
                   placeholder={$_('users.detail.confirmPasswordPlaceholder')}
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+              </div>
+              <div>
+                <p class="text-sm text-gray-600">{$_('users.detail.passwordResetDevices')}</p>
+                <label class="mt-2 flex items-start gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    bind:checked={revokeDevices}
+                    class="mt-0.5 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                  />
+                  <span>{$_('users.detail.revokeDevicesOption')}</span>
+                </label>
               </div>
               <div class="flex space-x-2 pt-2">
                 <button
@@ -488,7 +517,7 @@
                   {resettingPassword ? $_('common.saving') : $_('users.detail.resetPassword')}
                 </button>
                 <button
-                  onclick={() => { showPasswordReset = false; newPassword = ''; confirmPassword = ''; }}
+                  onclick={closePasswordReset}
                   disabled={resettingPassword}
                   class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
                 >
@@ -534,10 +563,15 @@
                         {#if editingDevice?.id === device.id}
                           <input
                             type="text"
+                            aria-label={$_('devices.name')}
                             bind:value={editingDevice.name}
                             onkeydown={(e) => {
                               if (e.key === 'Enter') handleRenameDevice();
-                              if (e.key === 'Escape') editingDevice = null;
+                              if (e.key === 'Escape') {
+                                // Ends the rename, not the whole dialog
+                                e.stopPropagation();
+                                editingDevice = null;
+                              }
                             }}
                             class="px-2 py-1 border border-gray-300 rounded text-sm w-full"
                             use:focusOnMount
@@ -630,8 +664,7 @@
         {$_('common.close')}
       </button>
     </div>
-  </div>
-</div>
+</Modal>
 
 {#if confirmAction?.type === 'revoke'}
   <ConfirmModal

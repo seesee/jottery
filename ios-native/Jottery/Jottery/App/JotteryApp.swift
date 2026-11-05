@@ -3,37 +3,22 @@ import SwiftUI
 @main
 struct JotteryApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @State private var appState = AppState()
+    @State private var appState: AppState
+    @State private var privacyCover: PrivacyCoverController
+
+    init() {
+        let state = AppState()
+        _appState = State(initialValue: state)
+        _privacyCover = State(initialValue: PrivacyCoverController(appState: state))
+    }
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environment(appState)
-                .environment(\.locale, resolvedLocale)
         }
         .commands {
-            CommandGroup(after: .newItem) {
-                Button(L.noteListNewNote) {
-                    guard !appState.isLocked else { return }
-                    let _ = try? appState.createNote()
-                }
-                .keyboardShortcut("n", modifiers: .command)
-
-                Button(L.noteListLock) {
-                    appState.lock()
-                }
-                .keyboardShortcut("l", modifiers: .command)
-            }
-        }
-    }
-
-    private var resolvedLocale: Locale {
-        switch appState.settings.language {
-        // "en-US" is no longer offered in Settings, but keep resolving it so
-        // anyone who selected it before the option was removed is unaffected.
-        case "en-US": return Locale(identifier: "en_US")
-        case "en-GB": return Locale(identifier: "en_GB")
-        default: return .current  // "system"
+            JotteryCommands(appState: appState)
         }
     }
 }
@@ -78,16 +63,6 @@ struct ContentView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.scenePhase) private var scenePhase
 
-    /// Whether the privacy cover should be shown over the current content.
-    /// See `PrivacyCover.isVisible` for the underlying (unit-tested) rule.
-    private var showPrivacyCover: Bool {
-        PrivacyCover.isVisible(
-            scenePhase: scenePhase,
-            isLocked: appState.isLocked,
-            isFirstLaunch: appState.isFirstLaunch
-        )
-    }
-
     var body: some View {
         Group {
             if appState.isFirstLaunch {
@@ -100,13 +75,17 @@ struct ContentView: View {
         }
         .animation(.default, value: appState.isLocked)
         .animation(.default, value: appState.isFirstLaunch)
+        .preferredColorScheme(appState.settings.themeMode.colorScheme)
+        // Nothing can be saved until this is done, so nothing can be touched.
         .overlay {
-            if showPrivacyCover {
-                PrivacyCoverView()
-                    .transition(.opacity)
+            if appState.isReKeying {
+                ZStack {
+                    Color.clear.background(.ultraThinMaterial)
+                    ProgressView(L.vaultReKeying)
+                }
+                .ignoresSafeArea()
             }
         }
-        .animation(.easeInOut(duration: 0.15), value: showPrivacyCover)
         .onAppear {
             appState.initialise()
             pickUpPendingShortcut()
@@ -200,6 +179,7 @@ struct ContentView: View {
 
 struct MainView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var accountKeyPassword = ""
     @State private var accountKeyPasswordWasWrong = false
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
@@ -212,8 +192,10 @@ struct MainView: View {
     }
 
     var body: some View {
+        @Bindable var state = appState
+
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            NoteListView()
+            NoteListView(showsTagsInList: horizontalSizeClass == .regular)
                 .modifier(FoldAlignedColumn(width: foldListWidth))
         } detail: {
             if let noteId = appState.selectedNoteId {
@@ -239,6 +221,14 @@ struct MainView: View {
         .onChange(of: appState.selectedNoteId) { _, _ in
             appState.keyManager.recordActivity()
         }
+        .onChange(of: appState.listRevealRequests) { _, _ in
+            if horizontalSizeClass == .compact {
+                appState.selectedNoteId = nil
+            } else {
+                columnVisibility = .all
+            }
+        }
+        .sheet(item: $state.presentedSheet) { AppSheetView(sheet: $0) }
         // iPhone Duo: with a fold running top to bottom, show the list and the
         // note side by side, one either side of the fold, like a book's pages.
         .onGeometryChange(for: FoldGeometry.self) { proxy in
@@ -268,6 +258,70 @@ struct MainView: View {
             }
         } message: {
             Text(accountKeyPasswordWasWrong ? L.accountKeyPromptWrongPassword : L.accountKeyPromptMessage)
+        }
+        // A legacy vault found a different key on the account. Moving onto it
+        // uploads everything under that key, so it never happens unasked.
+        .alert(L.syncMergeTitle, isPresented: Binding(
+            get: { appState.pendingAccountKeyMerge != nil },
+            set: { if !$0 { appState.pendingAccountKeyMerge = nil } }
+        ), presenting: appState.pendingAccountKeyMerge) { pending in
+            Button(L.syncMergeConfirm, role: .destructive) {
+                Task { await appState.mergeOntoAccountKey(pending) }
+            }
+            Button(L.commonCancel, role: .cancel) {}
+        } message: { _ in
+            Text(L.syncMergeMessage(
+                server: SyncEndpoint.displayHost(appState.settings.syncEndpoint ?? ""),
+                noteCount: appState.notes.count + appState.archivedNotes.count
+            ))
+        }
+        // The server can't prove a deletion came from one of the user's devices.
+        // The notes are safe in the bin, and a real clear-out wouldn't get here.
+        .alert(L.syncServerRemovedTitle, isPresented: Binding(
+            get: { !appState.notesRemovedByServer.isEmpty },
+            set: { if !$0 { appState.notesRemovedByServer = [] } }
+        )) {
+            Button(L.syncServerRemovedRestore) {
+                Task { await appState.restoreNotesRemovedByServer() }
+            }
+            Button(L.syncServerRemovedKeep, role: .cancel) {}
+        } message: {
+            Text(L.syncServerRemovedMessage(appState.notesRemovedByServer.count))
+        }
+        .alert(L.unlockEnableFaceIdTitle, isPresented: Binding(
+            get: { appState.offersFaceID },
+            set: { appState.offersFaceID = $0 }
+        )) {
+            Button(L.unlockEnableFaceIdAction) {
+                do {
+                    try appState.keyManager.enableBiometricUnlock()
+                } catch {
+                    appState.reportError(error.localizedDescription)
+                }
+            }
+            Button(L.unlockEnableFaceIdLater, role: .cancel) {
+                appState.declineFaceID()
+            }
+        } message: {
+            Text(L.unlockEnableFaceIdMessage)
+        }
+        .alert(accountKeyNoticeTitle, isPresented: Binding(
+            get: { appState.accountKeyNotice != nil },
+            set: { if !$0 { appState.accountKeyNotice = nil } }
+        ), presenting: appState.accountKeyNotice) { _ in
+            Button(L.commonOK, role: .cancel) {}
+        } message: { notice in
+            switch notice {
+            case .passwordChangedElsewhere: Text(L.accountKeyPasswordChangedElsewhereMessage)
+            case .passwordMatchesAccount: Text(L.accountKeyPasswordMatchesAccountMessage)
+            }
+        }
+    }
+
+    private var accountKeyNoticeTitle: String {
+        switch appState.accountKeyNotice {
+        case .passwordMatchesAccount: L.accountKeyPasswordMatchesAccountTitle
+        default: L.accountKeyPasswordChangedElsewhereTitle
         }
     }
 

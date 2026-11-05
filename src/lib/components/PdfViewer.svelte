@@ -13,6 +13,7 @@
   let scale = 1.0;
   let pdfjsLib: PdfJsLib | null = null;
   let loadingLibrary = true;
+  let loadFailed = false;
 
   async function loadPdf() {
     try {
@@ -37,6 +38,7 @@
     } catch (error) {
       console.error('Error loading PDF:', error);
       loadingLibrary = false;
+      loadFailed = true;
     }
   }
 
@@ -115,7 +117,11 @@
 </script>
 
 <div class="flex flex-col h-full">
-  {#if loadingLibrary}
+  {#if loadFailed}
+    <div class="flex items-center justify-center h-full p-4">
+      <p class="text-gray-600 dark:text-gray-400" role="alert">{$_('pdfViewer.loadFailed')}</p>
+    </div>
+  {:else if loadingLibrary}
     <div class="flex items-center justify-center h-full">
       <div class="text-center">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>

@@ -15,6 +15,7 @@ use axum::{
 };
 use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
+use sqlx::SqlitePool;
 use std::{collections::HashMap, convert::Infallible, sync::Arc, time::Duration};
 use tokio::sync::{broadcast, RwLock};
 use tokio_stream::{wrappers::BroadcastStream, StreamExt};
@@ -78,45 +79,8 @@ pub async fn get_sse_token(
 
     let api_key = &auth_header[7..]; // Remove "Bearer " prefix
 
-    // Hash the API key
-    let hashed_key = hash_sha256(api_key);
-
-    tracing::debug!(
-        "SSE token request: api_key_len={}, hashed_key={}",
-        api_key.len(),
-        &hashed_key[..16]
-    );
-
-    // Look up client in database
-    let client = sqlx::query!(
-        "SELECT id, user_id, is_active FROM clients WHERE api_key = ?",
-        hashed_key
-    )
-    .fetch_optional(&state.pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Database error during SSE token request: {}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
-
-    let client = match client {
-        Some(c) if c.is_active == Some(1) => c,
-        Some(c) => {
-            tracing::warn!(
-                "SSE token request with inactive API key: client_id={}, is_active={:?}",
-                c.id,
-                c.is_active
-            );
-            return Err(StatusCode::UNAUTHORIZED);
-        }
-        None => {
-            tracing::warn!(
-                "SSE token request with unknown API key: hashed_prefix={}",
-                &hashed_key[..16]
-            );
-            return Err(StatusCode::UNAUTHORIZED);
-        }
-    };
+    // The same rules as every other device request
+    let client = crate::api::middleware::authenticate_device(&state.pool, api_key).await?;
 
     // Generate a random token
     let token = uuid::Uuid::new_v4().to_string();
@@ -143,14 +107,14 @@ pub async fn get_sse_token(
             token_hash,
             SseTokenInfo {
                 user_id: client.user_id.clone(),
-                client_id: client.id.clone(),
+                client_id: client.client_id.clone(),
                 expires_at,
             },
         );
 
         tracing::debug!(
             "SSE token issued for client {} (user {}), expires in {}s, store size: {}",
-            client.id,
+            client.client_id,
             client.user_id,
             SSE_TOKEN_VALIDITY_SECS,
             store.len()
@@ -161,6 +125,41 @@ pub async fn get_sse_token(
         token,
         expires_in: SSE_TOKEN_VALIDITY_SECS,
     }))
+}
+
+/// Whether a device can still be told about changes. This reads the database rather
+/// than listening for revocations, so it also sees what jottery-admin does, which
+/// runs in another process.
+async fn device_is_usable(pool: &SqlitePool, client_id: &str) -> Result<bool, sqlx::Error> {
+    let device = sqlx::query!(
+        r#"SELECT c.is_active, u.is_active AS user_is_active, u.approved AS user_approved
+           FROM clients c
+           JOIN users u ON u.id = c.user_id
+           WHERE c.id = ?"#,
+        client_id
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(device.is_some_and(|device| {
+        device.is_active == Some(1) && device.user_is_active == 1 && device.user_approved == 1
+    }))
+}
+
+/// Resolves once a device may no longer have a stream. A failed check isn't a
+/// verdict: the stream carries on, and the next check decides.
+async fn until_revoked(pool: SqlitePool, client_id: String, every: Duration) {
+    loop {
+        tokio::time::sleep(every).await;
+        match device_is_usable(&pool, &client_id).await {
+            Ok(true) => {}
+            Ok(false) => {
+                tracing::info!("Ending the event stream of revoked device {}", client_id);
+                return;
+            }
+            Err(e) => tracing::warn!("Couldn't recheck device {}: {}", client_id, e),
+        }
+    }
 }
 
 /// Query parameters for SSE endpoint
@@ -228,6 +227,17 @@ pub async fn sync_events(
     let user_id = token_info.user_id;
     let client_id = token_info.client_id;
 
+    // A token stays usable for reconnecting, so what it was issued for has to be
+    // checked each time, not only when it was issued
+    let usable = device_is_usable(&state.pool, &client_id).await.map_err(|e| {
+        tracing::error!("Database error during SSE connection: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    if !usable {
+        state.sse_tokens.write().await.remove(&token_hash);
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
     tracing::info!(
         "SSE connection established for user {} (client {})",
         user_id,
@@ -237,8 +247,25 @@ pub async fn sync_events(
     // Subscribe to broadcast channel
     let rx = state.sync_broadcast.subscribe();
 
+    // A stream never ends by itself. The server waits for it on shutdown, and a
+    // device that's been revoked mustn't go on hearing when the user syncs.
+    let stopping = {
+        let shutdown = state.shutdown.clone();
+        let revoked = until_revoked(
+            state.pool.clone(),
+            client_id.clone(),
+            Duration::from_secs(state.config.sse_recheck_secs),
+        );
+        async move {
+            tokio::select! {
+                _ = shutdown.triggered() => {}
+                _ = revoked => {}
+            }
+        }
+    };
+
     // Filter notifications: only for this user, not from this client
-    let stream = BroadcastStream::new(rx)
+    let stream = futures::StreamExt::take_until(BroadcastStream::new(rx), stopping)
         .filter_map(move |result| {
             match result {
                 Ok(notification) => {

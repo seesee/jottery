@@ -15,23 +15,31 @@ import { get } from 'svelte/store';
 import { isLocked, settings as settingsStore } from '../stores/appStore';
 import { lock } from './initService';
 import { settingsRepository } from './settingsRepository';
-import { hasValidSession } from './sessionStorageService';
+import { hasStoredSession, hasValidSession } from './sessionStorageService';
 import { hasStoredPassword } from './passwordStorageService';
 
 let lastActivityTime: number = Date.now();
 let autoLockTimeout: number = 15 * 60 * 1000; // 15 minutes in milliseconds
 let checkInterval: number | null = null;
 
-const ACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'] as const;
+// Deliberate activity only: a mouse left on a desk can drift, and that's no reason to
+// keep a vault open. Listened for on the way down, as editors stop some from bubbling.
+const ACTIVITY_EVENTS = ['mousedown', 'keydown', 'scroll', 'touchstart'] as const;
+const ACTIVITY_LISTENER = { passive: true, capture: true };
+
+const CHECK_INTERVAL_MS = 15 * 1000;
 
 /**
  * Whether the absolute persist-session window has elapsed.
  * Returns false when the feature is off — in that mode the sessionStorage
  * password isn't relevant, so there's nothing to expire.
  */
-function isPersistSessionExpired(): boolean {
+export function isPersistSessionExpired(): boolean {
   const { persistSession, persistSessionTimeout } = get(settingsStore);
   if (!persistSession) return false;
+  // Nothing stored isn't the same as expired. If the store failed, treating it as
+  // expired would lock on the first mouse move, before Settings could be reached.
+  if (!hasStoredSession()) return false;
   return !hasValidSession(persistSessionTimeout ?? 30);
 }
 
@@ -71,28 +79,18 @@ async function checkAutoLock() {
 }
 
 /**
- * Lock the application
- * Skips lock if there's a stored password or valid persist session that would auto-unlock
+ * Lock the application, unless Remember Password would unlock it again at once.
+ * Persist Session doesn't count: it survives a reload, not walking away, and locking
+ * ends it.
  */
 async function performLock() {
   try {
-    // Check if remember password is enabled - would auto-unlock immediately
-    const hasPassword = await hasStoredPassword();
-    if (hasPassword) {
+    // A stored password alone isn't enough: one left behind must not switch auto-lock off
+    const settings = await settingsRepository.get();
+    if (settings.rememberPassword && await hasStoredPassword()) {
       // Reset activity timer instead of locking - no point locking if we'd unlock immediately
       lastActivityTime = Date.now();
       return;
-    }
-
-    // Check if persist session is enabled with a valid session - would auto-unlock immediately
-    const settings = await settingsRepository.get();
-    if (settings.persistSession) {
-      const sessionTimeout = settings.persistSessionTimeout ?? 30;
-      if (hasValidSession(sessionTimeout)) {
-        // Reset activity timer instead of locking - no point locking if we'd unlock immediately
-        lastActivityTime = Date.now();
-        return;
-      }
     }
   } catch (error) {
     // If we can't check settings, proceed with lock for safety
@@ -117,15 +115,14 @@ export function startAutoLock(timeoutMinutes: number = 15): void {
 
   // Set up activity listeners
   ACTIVITY_EVENTS.forEach((event) => {
-    document.addEventListener(event, onActivity, { passive: true });
+    document.addEventListener(event, onActivity, ACTIVITY_LISTENER);
   });
 
   // Re-check when the tab comes back into focus — a window can elapse entirely
   // while the tab is backgrounded and no activity event ever fires.
   document.addEventListener('visibilitychange', onVisibilityChange);
 
-  // Check every minute
-  checkInterval = window.setInterval(checkAutoLock, 60 * 1000);
+  checkInterval = window.setInterval(checkAutoLock, CHECK_INTERVAL_MS);
 }
 
 /**
@@ -139,7 +136,7 @@ export function stopAutoLock(): void {
 
   // Remove activity listeners (must use same options as when added)
   ACTIVITY_EVENTS.forEach((event) => {
-    document.removeEventListener(event, onActivity, { passive: true } as EventListenerOptions);
+    document.removeEventListener(event, onActivity, ACTIVITY_LISTENER);
   });
   document.removeEventListener('visibilitychange', onVisibilityChange);
 }

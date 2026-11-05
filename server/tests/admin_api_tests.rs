@@ -47,7 +47,7 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -57,11 +57,14 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -70,24 +73,13 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
     // Build router with admin routes
-    let app = axum::Router::new()
-        .route("/api/v1/admin/users", axum::routing::get(jottery_server::api::admin::users::list_users))
-        .route("/api/v1/admin/users/:id", axum::routing::get(jottery_server::api::admin::users::get_user))
-        .route("/api/v1/admin/users/:id/approve", axum::routing::post(jottery_server::api::admin::users::approve_user))
-        .route("/api/v1/admin/users/:id/deactivate", axum::routing::post(jottery_server::api::admin::users::deactivate_user))
-        .route("/api/v1/admin/users/:id/activate", axum::routing::post(jottery_server::api::admin::users::activate_user))
-        .route("/api/v1/admin/users/:id/toggle-admin", axum::routing::post(jottery_server::api::admin::users::toggle_admin))
-        .route("/api/v1/admin/users/:id", axum::routing::delete(jottery_server::api::admin::users::delete_user))
-        .route("/api/v1/admin/change-password", axum::routing::post(jottery_server::api::admin::users::change_password))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::admin::admin_auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     (app, pool)
 }

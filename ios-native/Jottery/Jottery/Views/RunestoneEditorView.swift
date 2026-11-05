@@ -21,6 +21,8 @@ struct RunestoneEditorView: UIViewRepresentable {
     var wordWrap: Bool
     var isEditable: Bool
     var fontSize: CGFloat
+    var cursor: EditorCursor?
+    var onPasteAttachment: (() -> Void)?
     @Environment(\.colorScheme) private var colorScheme
 
     init(
@@ -28,22 +30,27 @@ struct RunestoneEditorView: UIViewRepresentable {
         syntaxLanguage: String = "markdown",
         wordWrap: Bool = true,
         isEditable: Bool = true,
-        fontSize: CGFloat = EditorTheme.defaultFontSize
+        fontSize: CGFloat = EditorTheme.defaultFontSize,
+        cursor: EditorCursor? = nil,
+        onPasteAttachment: (() -> Void)? = nil
     ) {
         _text = text
         self.syntaxLanguage = syntaxLanguage
         self.wordWrap = wordWrap
         self.isEditable = isEditable
         self.fontSize = fontSize
+        self.cursor = cursor
+        self.onPasteAttachment = onPasteAttachment
     }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(text: $text)
     }
 
-    func makeUIView(context: Context) -> TextView {
-        let textView = TextView()
+    func makeUIView(context: Context) -> EditorTextView {
+        let textView = EditorTextView()
         textView.editorDelegate = context.coordinator
+        cursor?.attach(textView)
         textView.showLineNumbers = true
         textView.isLineWrappingEnabled = wordWrap
         textView.isEditable = isEditable
@@ -52,7 +59,6 @@ struct RunestoneEditorView: UIViewRepresentable {
         textView.smartDashesType = .no
         textView.smartQuotesType = .no
         textView.smartInsertDeleteType = .no
-        textView.inputAccessoryView = nil
         textView.showPageGuide = false
         textView.showTabs = false
         textView.showSpaces = false
@@ -75,7 +81,7 @@ struct RunestoneEditorView: UIViewRepresentable {
         return textView
     }
 
-    func updateUIView(_ textView: TextView, context: Context) {
+    func updateUIView(_ textView: EditorTextView, context: Context) {
         let isDark = colorScheme == .dark
         let languageChanged = context.coordinator.currentLanguage != syntaxLanguage
         let themeChanged = context.coordinator.currentIsDark != isDark
@@ -120,6 +126,8 @@ struct RunestoneEditorView: UIViewRepresentable {
 
         textView.isEditable = isEditable
         textView.isLineWrappingEnabled = wordWrap
+        textView.onPasteAttachment = onPasteAttachment
+        EditorFormattingBar.install(on: textView, showsFormatting: syntaxLanguage == "markdown")
     }
 
     // MARK: - State Application
@@ -210,6 +218,7 @@ struct RunestoneEditorView: UIViewRepresentable {
         var currentIsDark: Bool = false
         var currentFontSize: CGFloat = 0
         private var endEditingWorkItem: DispatchWorkItem?
+        private var isExpandingCommand = false
 
         init(text: Binding<String>) {
             self.text = text
@@ -236,6 +245,29 @@ struct RunestoneEditorView: UIViewRepresentable {
         @MainActor
         func textViewDidChange(_ textView: TextView) {
             text.wrappedValue = textView.text
+        }
+
+        /// `/now` and the rest turn into what they stand for when a space or a new
+        /// line follows them, as on the web. Text marked by an input method is left
+        /// alone, because a space there picks a word.
+        @MainActor
+        func textView(_ textView: TextView, shouldChangeTextIn range: NSRange, replacementText typed: String) -> Bool {
+            guard !isExpandingCommand, textView.isEditable, range.length == 0, textView.markedTextRange == nil,
+                  QuickCommands.endsCommand(typed) else { return true }
+            let start = max(0, range.location - QuickCommands.lookBehind)
+            guard let before = textView.text(in: NSRange(location: start, length: range.location - start)),
+                  let command = QuickCommands.match(before: before) else { return true }
+
+            isExpandingCommand = true
+            defer { isExpandingCommand = false }
+            let length = command.trigger.utf16.count
+            // Runestone's about to apply `typed` at a location this moves, so it's
+            // told not to, and `typed` goes in here. As typing, so a new line indents.
+            textView.undoManager?.endUndoGrouping()
+            textView.replace(NSRange(location: range.location - length, length: length), withText: command.expansion())
+            textView.insertText(typed)
+            textView.undoManager?.endUndoGrouping()
+            return false
         }
     }
 }

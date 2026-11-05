@@ -61,8 +61,13 @@ struct VersionHistoryView: View {
                     version: version,
                     content: previewContent ?? "",
                     onRestore: {
-                        try? appState.restoreVersion(noteId: note.id, version: version)
-                        dismiss()
+                        do {
+                            try appState.restoreVersion(noteId: note.id, version: version)
+                            dismiss()
+                        } catch {
+                            selectedVersion = nil
+                            appState.reportError(L.errorCouldntRestoreVersion)
+                        }
                     }
                 )
             }
@@ -83,7 +88,7 @@ struct VersionHistoryView: View {
             let enc = try CryptoService.parseEncryptedJSON(version.content)
             previewContent = try CryptoService.decryptText(enc, key: key)
         } catch {
-            previewContent = "(Could not decrypt)"
+            previewContent = L.versionHistoryCouldntDecrypt
         }
     }
 

@@ -11,9 +11,9 @@ struct AttachmentListView: View {
 
     @State private var isExpanded = true
     @State private var previewURL: URL?
-    @State private var shareURL: URL?
-    @State private var showingShareSheet = false
+    @State private var shareFile: ExportFile?
     @State private var errorMessage: String?
+    @State private var attachmentToDelete: AttachmentRef?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -46,14 +46,17 @@ struct AttachmentListView: View {
                 ForEach(attachments) { attachment in
                     AttachmentRowView(
                         attachment: attachment,
+                        attachmentRepo: attachmentRepo,
+                        encryptionKey: encryptionKey,
                         onTap: { decryptAndPreview(attachment) },
                         onShare: { decryptAndShare(attachment) },
-                        onDelete: onDelete != nil ? { onDelete?(attachment.id) } : nil
+                        onCopyMarkdown: { copyMarkdown(attachment) },
+                        onDelete: onDelete != nil ? { attachmentToDelete = attachment } : nil
                     )
 
                     if attachment.id != attachments.last?.id {
                         Divider()
-                            .padding(.leading, 52)
+                            .padding(.leading, 68)
                     }
                 }
             }
@@ -68,10 +71,25 @@ struct AttachmentListView: View {
         }
         .background(Color(.systemGroupedBackground).opacity(0.5))
         .quickLookPreview($previewURL)
-        .sheet(isPresented: $showingShareSheet) {
-            if let shareURL {
-                ShareSheet(url: shareURL)
-            }
+        .onChange(of: previewURL) { closed, _ in
+            if let closed { TemporaryFiles.shared.remove(closed) }
+        }
+        .shareTemporaryFile($shareFile)
+        // Removing an attachment takes its data with it, and the button sits
+        // right next to Share.
+        .confirmationDialog(
+            L.attachmentsDeleteTitle(attachmentToDelete?.filename ?? ""),
+            isPresented: Binding(
+                get: { attachmentToDelete != nil },
+                set: { if !$0 { attachmentToDelete = nil } }
+            ),
+            titleVisibility: .visible,
+            presenting: attachmentToDelete
+        ) { attachment in
+            Button(L.attachmentsDeleteAction, role: .destructive) { onDelete?(attachment.id) }
+            Button(L.commonCancel, role: .cancel) {}
+        } message: { _ in
+            Text(L.attachmentsDeleteMessage)
         }
     }
 
@@ -90,10 +108,14 @@ struct AttachmentListView: View {
         errorMessage = nil
         Task { @MainActor in
             if let url = await decryptToTempFile(attachment) {
-                shareURL = url
-                showingShareSheet = true
+                shareFile = ExportFile(url: url)
             }
         }
+    }
+
+    private func copyMarkdown(_ attachment: AttachmentRef) {
+        UIPasteboard.general.string = AttachmentMarkdown.reference(to: attachment)
+        UIAccessibility.post(notification: .announcement, argument: L.attachmentsMarkdownCopied)
     }
 
     /// Decrypt an attachment blob and write to a temporary file, off the
@@ -125,14 +147,7 @@ struct AttachmentListView: View {
                 let decryptedData = try CryptoService.decrypt(encrypted, key: key)
 
                 // Write to temp file with the correct filename
-                let tempDir = FileManager.default.temporaryDirectory
-                    .appendingPathComponent("jottery-attachments", isDirectory: true)
-                try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-
-                let fileURL = tempDir.appendingPathComponent(filename)
-                try decryptedData.write(to: fileURL)
-
-                return fileURL
+                return try TemporaryFiles.shared.write(decryptedData, named: filename)
             }.value
         } catch AttachmentDecryptError.dataNotAvailable {
             await MainActor.run { errorMessage = L.attachmentsDataNotAvailable }
@@ -158,17 +173,21 @@ private enum AttachmentDecryptError: Error {
 
 private struct AttachmentRowView: View {
     let attachment: AttachmentRef
+    let attachmentRepo: AttachmentRepository
+    let encryptionKey: SymmetricKey
     let onTap: () -> Void
     let onShare: () -> Void
+    let onCopyMarkdown: () -> Void
     var onDelete: (() -> Void)?
 
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
-                Image(systemName: iconName(for: attachment.mimeType))
-                    .font(.title3)
-                    .foregroundStyle(.accent)
-                    .frame(width: 28)
+                AttachmentThumbnailView(
+                    attachment: attachment,
+                    attachmentRepo: attachmentRepo,
+                    encryptionKey: encryptionKey
+                )
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(attachment.filename)
@@ -187,16 +206,22 @@ private struct AttachmentRowView: View {
                     Image(systemName: "square.and.arrow.up")
                         .font(.subheadline)
                         .foregroundStyle(.accent)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(L.attachmentsShare)
 
                 if let onDelete {
                     Button(role: .destructive, action: onDelete) {
                         Image(systemName: "trash")
                             .font(.subheadline)
                             .foregroundStyle(.red)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(L.attachmentsDeleteAction)
                 }
             }
             .padding(.horizontal)
@@ -204,6 +229,67 @@ private struct AttachmentRowView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            Button(action: onCopyMarkdown) {
+                Label(L.attachmentsCopyMarkdown, systemImage: "doc.on.clipboard")
+            }
+            Button(action: onShare) {
+                Label(L.attachmentsShare, systemImage: "square.and.arrow.up")
+            }
+            if let onDelete {
+                Button(role: .destructive, action: onDelete) {
+                    Label(L.attachmentsDeleteAction, systemImage: "trash")
+                }
+            }
+        }
+        .accessibilityAction(named: L.attachmentsCopyMarkdown, onCopyMarkdown)
+    }
+
+    private func formattedSize(_ bytes: Int) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: Int64(bytes))
+    }
+}
+
+// MARK: - Thumbnail
+
+/// A small picture of the attachment, or an icon for its type until there is one
+/// and for anything that can't be drawn. The row's filename says what it is, so
+/// VoiceOver skips this.
+private struct AttachmentThumbnailView: View {
+    let attachment: AttachmentRef
+    let attachmentRepo: AttachmentRepository
+    let encryptionKey: SymmetricKey
+
+    @ScaledMetric(relativeTo: .subheadline) private var side: CGFloat = 40
+    @State private var image: UIImage?
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                Image(systemName: iconName(for: attachment.mimeType))
+                    .font(.title3)
+                    .foregroundStyle(.accent)
+            }
+        }
+        .frame(width: side, height: side)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .accessibilityHidden(true)
+        .task(id: attachment.id) {
+            let repo = attachmentRepo
+            let key = encryptionKey
+            let blobId = attachment.data
+            image = await AttachmentThumbnails.shared.image(for: attachment) {
+                guard let blob = try repo.getBlob(id: blobId),
+                      let json = String(data: blob, encoding: .utf8) else { return nil }
+                return try CryptoService.decrypt(CryptoService.parseEncryptedJSON(json), key: key)
+            }
+        }
     }
 
     private func iconName(for mimeType: String) -> String {
@@ -214,22 +300,4 @@ private struct AttachmentRowView: View {
         if mimeType.hasPrefix("audio/") { return "waveform" }
         return "doc"
     }
-
-    private func formattedSize(_ bytes: Int) -> String {
-        let formatter = ByteCountFormatter()
-        formatter.countStyle = .file
-        return formatter.string(fromByteCount: Int64(bytes))
-    }
-}
-
-// MARK: - Share Sheet
-
-private struct ShareSheet: UIViewControllerRepresentable {
-    let url: URL
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: [url], applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

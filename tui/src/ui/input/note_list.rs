@@ -4,7 +4,6 @@ use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use rust_i18n::t;
 
-use crate::models::SyntaxLanguage;
 use crate::repository::NoteRepository;
 use crate::ui::app::App;
 use crate::ui::input::text_input::{handle_text_input, TextInputResult};
@@ -79,16 +78,50 @@ fn cycle_color_backward(current_color: Option<&String>, app: &App) -> Option<Str
     cycle_color(current_color, app, false)
 }
 
+/// Export the selection, stopping to ask if that would replace a file.
+fn export_selection(app: &mut App, path: std::path::PathBuf, overwrite: bool) {
+    match operations::bulk::export_selected(app, &path, overwrite) {
+        Ok(count) => {
+            app.sync_status = Some(t!("bulk.exported", count = count, path = path.display().to_string()).to_string());
+            app.clear_multi_selection();
+        }
+        Err(e) if e.is::<crate::export::ExportFileExists>() => app.export_overwrite_path = Some(path),
+        Err(e) => app.error = Some(t!("bulk.operation_failed", error = e.to_string()).to_string()),
+    }
+}
+
 /// Handle key events in note list state
 pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
-    // Debug: log which key was pressed
-    if let KeyCode::Char(c) = key.code {
-        app.debug_log(&format!("Key pressed: '{}'", c));
-    }
-
     // Clear sync status on any key (except 'y' which sets it)
     if key.code != KeyCode::Char('y') {
         app.sync_status = None;
+    }
+
+    // An error stays on screen until the next key
+    app.error = None;
+
+    // The keyboard's place among the links lasts until it's used or another key is pressed
+    if !matches!(key.code, KeyCode::Char('l') | KeyCode::Enter) {
+        app.selected_link = None;
+    }
+
+    // Naming a search, whichever list is underneath
+    if matches!(app.input_mode, InputMode::SaveSearchName) {
+        match handle_text_input(&key, &mut app.saved_search_name_input) {
+            TextInputResult::Submit => {
+                if let Err(e) = operations::saved_searches::save_current(app) {
+                    app.error = Some(t!("saved_search.failed", error = e.to_string()).to_string());
+                }
+            }
+            TextInputResult::Cancel => app.input_mode = InputMode::Normal,
+            TextInputResult::Continue | TextInputResult::Unhandled => {}
+        }
+        return Ok(());
+    }
+
+    if matches!(app.view_mode, ViewMode::SavedSearches) {
+        super::saved_searches::handle_saved_searches_key(app, key);
+        return Ok(());
     }
 
     // Handle inbox view mode
@@ -100,6 +133,57 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
     // Handle conflict resolution view mode
     if matches!(app.view_mode, ViewMode::ConflictResolution) {
         return super::conflict::handle_conflict_key(app, key);
+    }
+
+    // Emptying the bin can't be undone, so nothing else gets through while it's asked
+    if app.show_empty_bin_confirm {
+        match key.code {
+            KeyCode::Char('y') => {
+                app.show_empty_bin_confirm = false;
+                if let Err(e) = operations::notes::empty_trash(app) {
+                    app.error = Some(t!("note.delete_failed", error = e.to_string()).to_string());
+                }
+            }
+            KeyCode::Char('n') | KeyCode::Char('q') | KeyCode::Esc => {
+                app.show_empty_bin_confirm = false;
+            }
+            _ => {}
+        }
+        return Ok(());
+    }
+
+    // The server wants a lot of notes gone. Nothing else gets through until that's
+    // answered, and leaving it unanswered keeps the notes where they are.
+    if app.held_deletions > 0 {
+        let answered = match key.code {
+            KeyCode::Char('y') => Some(operations::sync::apply_held_deletions(app)),
+            KeyCode::Char('n') => Some(operations::sync::refuse_held_deletions(app)),
+            KeyCode::Char('q') | KeyCode::Esc => {
+                app.held_deletions = 0;
+                None
+            }
+            _ => None,
+        };
+        if let Some(Err(e)) = answered {
+            app.error = Some(t!("note.delete_failed", error = e.to_string()).to_string());
+        }
+        return Ok(());
+    }
+
+    // An attachment that won't be opened: the only offer is to save it
+    if app.attachment_to_confirm.is_some() {
+        match key.code {
+            KeyCode::Char('y') => {
+                if let Some(attachment) = app.attachment_to_confirm.take() {
+                    operations::attachments::begin_save_attachment(app, attachment);
+                }
+            }
+            KeyCode::Char('n') | KeyCode::Char('q') | KeyCode::Esc => {
+                app.attachment_to_confirm = None;
+            }
+            _ => {}
+        }
+        return Ok(());
     }
 
     // Handle bulk add tags input mode
@@ -136,6 +220,61 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
         return Ok(());
     }
 
+    // Handle bulk remove tags input mode
+    if matches!(app.input_mode, InputMode::BulkRemoveTags) {
+        match handle_text_input(&key, &mut app.bulk_tags_input) {
+            TextInputResult::Submit => {
+                let tags: Vec<String> = app.bulk_tags_input
+                    .split(',')
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())
+                    .collect();
+
+                if !tags.is_empty() {
+                    match operations::bulk::remove_tags_from_selected(app, &tags) {
+                        Ok(count) => app.notify(t!("bulk.tags_removed", count = count, tags = tags.join(", ")).to_string()),
+                        Err(e) => app.error = Some(t!("bulk.operation_failed", error = e.to_string()).to_string()),
+                    }
+                }
+                app.bulk_tags_input.clear();
+                app.input_mode = InputMode::Normal;
+            }
+            TextInputResult::Cancel => {
+                app.input_mode = InputMode::Normal;
+            }
+            TextInputResult::Continue | TextInputResult::Unhandled => {}
+        }
+        return Ok(());
+    }
+
+    // Handle bulk colour input mode
+    if matches!(app.input_mode, InputMode::BulkSetColour) {
+        match handle_text_input(&key, &mut app.bulk_tags_input) {
+            TextInputResult::Submit => {
+                let colour = app.bulk_tags_input.trim().to_lowercase();
+                match operations::bulk::set_colour_of_selected(app, &colour) {
+                    Ok(count) => app.notify(t!("bulk.colour_set", count = count).to_string()),
+                    Err(e) => app.error = Some(t!("bulk.operation_failed", error = e.to_string()).to_string()),
+                }
+                app.bulk_tags_input.clear();
+                app.input_mode = InputMode::Normal;
+            }
+            TextInputResult::Cancel => {
+                app.input_mode = InputMode::Normal;
+            }
+            TextInputResult::Continue | TextInputResult::Unhandled => {}
+        }
+        return Ok(());
+    }
+
+    // An export would replace a file, which can't be undone
+    if let Some(path) = app.export_overwrite_path.take() {
+        if matches!(key.code, KeyCode::Char('y') | KeyCode::Char('Y')) {
+            export_selection(app, path, true);
+        }
+        return Ok(());
+    }
+
     // Handle bulk export path input mode
     if matches!(app.input_mode, InputMode::BulkExportPath) {
         match handle_text_input(&key, &mut app.bulk_export_path_input) {
@@ -143,15 +282,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 // Export selected notes to file
                 if !app.bulk_export_path_input.is_empty() {
                     let path = std::path::PathBuf::from(&app.bulk_export_path_input);
-                    match operations::bulk::export_selected(app, &path) {
-                        Ok(count) => {
-                            app.sync_status = Some(t!("bulk.exported", count = count, path = app.bulk_export_path_input.clone()).to_string());
-                            app.clear_multi_selection();
-                        }
-                        Err(e) => {
-                            app.error = Some(t!("bulk.operation_failed", error = e.to_string()).to_string());
-                        }
-                    }
+                    export_selection(app, path, false);
                 }
                 app.bulk_export_path_input.clear();
                 app.input_mode = InputMode::Normal;
@@ -172,6 +303,15 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
     // Handle search mode
     if super::search::handle_search_key(app, key)? {
         return Ok(());
+    }
+
+    // A held Ctrl or Alt makes a key something other than its letter. Only these have a
+    // meaning with Ctrl, which the arms below look for.
+    if let KeyCode::Char(c) = key.code {
+        let unbound_ctrl = key.modifiers.contains(KeyModifiers::CONTROL) && !matches!(c, 'q' | 'd' | 'u' | 'f' | 'b' | 'a');
+        if unbound_ctrl || key.modifiers.contains(KeyModifiers::ALT) {
+            return Ok(());
+        }
     }
 
     // Normal note list mode
@@ -200,14 +340,15 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         }
                         ViewMode::RecycleBin => {
                             app.view_mode = ViewMode::NoteList;
-                            app.selected_note = 0;
+                            app.select_note_at(0);
                             app.preview_scroll_offset = 0;
                             // Reload normal notes
                             if let Err(e) = operations::notes::load_notes(app) {
                                 app.error = Some(format!("Failed to reload notes: {}", e));
                             }
                         }
-                        ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution | ViewMode::Inbox => {
+                        ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution
+                        | ViewMode::Inbox | ViewMode::SavedSearches => {
                             app.view_mode = ViewMode::NoteList;
                         }
                     }
@@ -288,21 +429,11 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 if matches!(app.view_mode, ViewMode::NoteList) {
                     // Check for existing blank note first
                     let existing_blank = app.notes.iter()
-                        .find(|n| !n.deleted && n.is_blank())
+                        .find(|n| !n.deleted && !n.archived && n.is_blank())
                         .map(|n| n.id.clone());
 
                     if let Some(blank_id) = existing_blank {
-                        // Reuse existing blank note
-                        if let Some(note) = app.notes.iter_mut().find(|n| n.id == blank_id) {
-                            note.touch(); // Update timestamps
-                            // Update in database
-                            if let (Some(db), Some(key)) = (&app.db, &app.key) {
-                                let repo = NoteRepository::new(db.connection());
-                                if let Err(e) = repo.update(note, key) {
-                                    app.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
-                                }
-                            }
-                        }
+                        // Reuse existing blank note, which only changes if text goes in it
                         // Set up for editing this note
                         app.editing_note_id = Some(blank_id.clone());
                         if let Some(note) = app.notes.iter().find(|n| n.id == blank_id) {
@@ -313,25 +444,16 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     } else {
                         // Create new note - clear inputs
                         app.note_input.clear();
-                        app.note_syntax = SyntaxLanguage::default();
+                        app.note_syntax = app.settings.default_note_type;
                         app.current_tags.clear();
                         app.editing_note_id = None;
                     }
 
                     // Open external editor
-                    if let Ok(new_content) = operations::attachments::edit_with_external_editor(app) {
-                        app.note_input = new_content;
-                        // Save the note
-                        if let Err(e) = operations::notes::save_note(app) {
-                            app.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
-                        }
-                        // Reload notes to refresh the list
-                        if let Err(e) = operations::notes::load_notes(app) {
-                            app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
-                        }
-                    }
+                    operations::notes::edit_and_save(app);
                 }
             }
+            KeyCode::Enter if app.selected_link.is_some() && operations::notes::follow_focused_link(app) => {}
             KeyCode::Char('i') | KeyCode::Enter => {
                 // In version history: restore selected version
                 if matches!(app.view_mode, ViewMode::VersionHistory) {
@@ -339,7 +461,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         let version_number = app.loaded_versions[app.selected_version].version;
                         match operations::notes::restore_version(app, version_number) {
                             Ok(()) => {
-                                app.error = Some(t!("version.restored", number = version_number).to_string());
+                                app.notify(t!("version.restored", number = version_number).to_string());
                                 app.view_mode = ViewMode::NoteList;
                                 app.loaded_versions.clear();
                                 app.versions_note_id = None;
@@ -396,20 +518,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                             app.editing_note_id = Some(note_id.clone());
 
                             // Open external editor immediately
-                            if let Ok(new_content) = operations::attachments::edit_with_external_editor(app) {
-                                app.note_input = new_content;
-                                // Save the note
-                                if let Err(e) = operations::notes::save_note(app) {
-                                    app.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
-                                }
-                                // Reload notes to refresh the list
-                                if let Err(e) = operations::notes::load_notes(app) {
-                                    app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
-                                }
-                            }
-
-                            // Clear editing state
-                            app.editing_note_id = None;
+                            operations::notes::edit_and_save(app);
                         }
                     }
                 }
@@ -552,6 +661,10 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                                 }
                             }
 
+                            // Pinning changes the order
+                            app.invalidate_filter_cache();
+                            app.keep_selection_on_note();
+
                             // Trigger sync to push pin change to server
                             if app.settings.sync_enabled {
                                 app.trigger_sync();
@@ -599,7 +712,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     if !filtered.is_empty() && app.selected_note < filtered.len() {
                     let note_id = filtered[app.selected_note].id.clone();
                     if let Some(note) = app.notes.iter_mut().find(|n| n.id == note_id) {
-                        note.syntax_language = note.syntax_language.next();
+                        note.set_syntax(note.syntax_language.next());
 
                         // Save to database
                         if let (Some(db), Some(key)) = (&app.db, &app.key) {
@@ -619,7 +732,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     if !filtered.is_empty() && app.selected_note < filtered.len() {
                     let note_id = filtered[app.selected_note].id.clone();
                     if let Some(note) = app.notes.iter_mut().find(|n| n.id == note_id) {
-                        note.syntax_language = note.syntax_language.prev();
+                        note.set_syntax(note.syntax_language.prev());
 
                         // Save to database
                         if let (Some(db), Some(key)) = (&app.db, &app.key) {
@@ -631,6 +744,16 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
                     }
                 }
+            }
+            KeyCode::Char('T') if app.is_multi_select_mode && matches!(app.view_mode, ViewMode::NoteList) => {
+                // In multi-select mode: remove tags from selected notes
+                app.input_mode = InputMode::BulkRemoveTags;
+                app.bulk_tags_input.clear();
+            }
+            KeyCode::Char('C') if app.is_multi_select_mode && matches!(app.view_mode, ViewMode::NoteList) => {
+                // In multi-select mode: set the colour of selected notes
+                app.input_mode = InputMode::BulkSetColour;
+                app.bulk_tags_input.clear();
             }
             KeyCode::Char('C') => {
                 // Cycle color/category forward for selected note (only in note list view)
@@ -678,7 +801,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     ViewMode::NoteList => {
                         // Switch to recycle bin view
                         app.view_mode = ViewMode::RecycleBin;
-                        app.selected_note = 0;
+                        app.select_note_at(0);
                         app.preview_scroll_offset = 0;
                         if let Err(e) = operations::notes::load_deleted_notes(app) {
                             app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
@@ -690,7 +813,8 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                             app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
                         }
                     }
-                    ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution | ViewMode::Inbox => {
+                    ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution
+                    | ViewMode::Inbox | ViewMode::SavedSearches => {
                         // 'r' does nothing in these views
                     }
                 }
@@ -738,27 +862,26 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 if matches!(app.view_mode, ViewMode::NoteList) {
                     app.archive_mode = !app.archive_mode;
                     app.invalidate_filter_cache();
-                    app.selected_note = 0;
+                    app.select_note_at(0);
                     app.preview_scroll_offset = 0;
                 }
             }
             KeyCode::Char('a') if app.archive_mode && key.modifiers.is_empty() => {
                 // 'a' in archive mode: Unarchive selected note (only in note list view)
                 if matches!(app.view_mode, ViewMode::NoteList) {
-                    let filtered = app.filtered_notes();
-                    if !filtered.is_empty() && app.selected_note < filtered.len() {
-                        let note_id = filtered[app.selected_note].id.clone();
-                        if let Some(note) = app.notes.iter_mut().find(|n| n.id == note_id) {
-                            note.archived = false;
-                            note.touch();
-                            // Save to database
-                            if let (Some(db), Some(key)) = (&app.db, &app.key) {
-                                let repo = NoteRepository::new(db.connection());
-                                if let Err(e) = repo.update(note, key) {
-                                    app.error = Some(t!("note.archive_failed", error = e.to_string()).to_string());
-                                }
-                            }
+                    operations::notes::toggle_archive_selected(app);
+                }
+            }
+            KeyCode::Char('z') => {
+                // Archive the selected notes, or bring one back in archive mode
+                if matches!(app.view_mode, ViewMode::NoteList) {
+                    if app.is_multi_select_mode {
+                        match operations::bulk::archive_selected(app) {
+                            Ok(count) => app.notify(t!("bulk.archived", count = count).to_string()),
+                            Err(e) => app.error = Some(t!("bulk.operation_failed", error = e.to_string()).to_string()),
                         }
+                    } else {
+                        operations::notes::toggle_archive_selected(app);
                     }
                 }
             }
@@ -777,6 +900,10 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                                     app.error = Some(t!("note.lock_failed", error = e.to_string()).to_string());
                                 }
                             }
+
+                            // Locking touches the note, which changes the order
+                            app.invalidate_filter_cache();
+                            app.keep_selection_on_note();
                         }
                     }
                 }
@@ -791,6 +918,29 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
                 }
             }
+            KeyCode::Char('D') if matches!(app.view_mode, ViewMode::NoteList) => {
+                if let Err(e) = operations::notes::duplicate_selected(app) {
+                    app.error = Some(e.to_string());
+                }
+            }
+            KeyCode::Char('o') if matches!(app.view_mode, ViewMode::NoteList) => {
+                if let Err(e) = operations::notes::copy_selected(app) {
+                    app.error = Some(e.to_string());
+                }
+            }
+            KeyCode::Char('w') if matches!(app.view_mode, ViewMode::NoteList) => {
+                if let Err(e) = operations::notes::toggle_word_wrap(app) {
+                    app.error = Some(e.to_string());
+                }
+            }
+            KeyCode::Char('l') if matches!(app.view_mode, ViewMode::NoteList) => {
+                operations::notes::focus_next_link(app);
+            }
+            KeyCode::Char('g') if matches!(app.view_mode, ViewMode::NoteList) => {
+                if let Err(e) = operations::saved_searches::open_picker(app) {
+                    app.error = Some(t!("saved_search.failed", error = e.to_string()).to_string());
+                }
+            }
             KeyCode::Char('b') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
                 // Open inbox (only in note list view)
                 if matches!(app.view_mode, ViewMode::NoteList) {
@@ -801,11 +951,9 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 }
             }
             KeyCode::Char('E') => {
-                // Empty recycle bin (only in recycle bin view)
-                if matches!(app.view_mode, ViewMode::RecycleBin) {
-                    if let Err(e) = operations::notes::empty_trash(app) {
-                        app.error = Some(t!("note.delete_failed", error = e.to_string()).to_string());
-                    }
+                // Empty recycle bin, once confirmed (only in recycle bin view)
+                if matches!(app.view_mode, ViewMode::RecycleBin) && !app.notes.is_empty() {
+                    app.show_empty_bin_confirm = true;
                 }
             }
             KeyCode::Esc => {
@@ -823,7 +971,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     // Exit archive mode
                     app.archive_mode = false;
                     app.invalidate_filter_cache();
-                    app.selected_note = 0;
+                    app.select_note_at(0);
                     app.preview_scroll_offset = 0;
                 } else if matches!(app.view_mode, ViewMode::AttachmentViewer) {
                     // Exit attachment viewer
@@ -837,7 +985,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 } else if matches!(app.view_mode, ViewMode::RecycleBin) {
                     // Exit recycle bin view
                     app.view_mode = ViewMode::NoteList;
-                    app.selected_note = 0;
+                    app.select_note_at(0);
                     app.preview_scroll_offset = 0;
                     // Reload normal notes
                     if let Err(e) = operations::notes::load_notes(app) {
@@ -879,7 +1027,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 // In attachment viewer: delete selected attachment
                 if matches!(app.view_mode, ViewMode::AttachmentViewer) {
                     if let Err(e) = operations::attachments::delete_current_attachment(app) {
-                        app.error = Some(t!("attachment.add_failed", error = e.to_string()).to_string());
+                        app.error = Some(t!("attachment.delete_failed", error = e.to_string()).to_string());
                     }
                 }
                 // Delete attachment when attachment panel is focused
@@ -910,23 +1058,14 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                             return Ok(());
                         }
 
-                        // Find the actual note in the full list
-                        let note_to_delete = filtered[app.selected_note];
-                        if let Some(pos) = app.notes.iter().position(|n| n.id == note_to_delete.id) {
-                            app.selected_note = pos;
-                            operations::notes::delete_note(app)?;
-                            // Adjust selection after delete
-                            let new_count = app.filtered_notes().len();
-                            if app.selected_note >= new_count && app.selected_note > 0 {
-                                app.selected_note -= 1;
-                            }
-                        }
+                        let note_id = filtered[app.selected_note].id.clone();
+                        operations::notes::delete_note(app, &note_id)?;
                     }
                 }
             }
             KeyCode::Char('c') if app.is_multi_select_mode && matches!(app.view_mode, ViewMode::NoteList) => {
                 // In multi-select mode: show bulk combine confirmation (requires 2+ notes)
-                if app.selected_note_ids.len() >= 2 {
+                if app.editable_selection().len() >= 2 {
                     app.show_bulk_combine_confirm = true;
                 } else {
                     app.error = Some(t!("bulk.combine_requires_two").to_string());
@@ -989,11 +1128,29 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
                 }
             }
+            KeyCode::Char('+') => {
+                // Attach a file to the selected note
+                if matches!(app.view_mode, ViewMode::NoteList | ViewMode::AttachmentViewer) && !app.is_multi_select_mode {
+                    if let Err(e) = operations::attachments::begin_add_attachment(app) {
+                        app.error = Some(t!("attachment.add_failed", error = e.to_string()).to_string());
+                    }
+                }
+            }
+            KeyCode::Char('S') => {
+                // Save the selected attachment to a file
+                let in_attachments = matches!(app.view_mode, ViewMode::AttachmentViewer)
+                    || (matches!(app.view_mode, ViewMode::NoteList) && app.focused_panel == FocusedPanel::Attachments);
+                if in_attachments {
+                    if let Some(attachment) = operations::attachments::selected_attachment(app) {
+                        operations::attachments::begin_save_attachment(app, attachment);
+                    }
+                }
+            }
             KeyCode::Char('X') => {
                 // Remove selected attachment (only in note list view)
                 if matches!(app.view_mode, ViewMode::NoteList) {
                     if let Err(e) = operations::attachments::remove_attachment_from_current_note(app) {
-                        app.error = Some(t!("attachment.add_failed", error = e.to_string()).to_string());
+                        app.error = Some(t!("attachment.delete_failed", error = e.to_string()).to_string());
                     }
                 }
             }
@@ -1068,6 +1225,219 @@ mod tests {
     /// Create a key event with no modifiers
     fn key(code: KeyCode) -> KeyEvent {
         KeyEvent::new(code, KeyModifiers::NONE)
+    }
+
+    /// A vault of `count` notes, in the app and the database, in the order given.
+    fn app_with_notes(contents: &[&str]) -> App {
+        let mut app = create_test_app();
+        let key = crate::crypto::CryptoService::new().generate_master_key();
+        let db = crate::db::Database::in_memory(&uuid::Uuid::new_v4().to_string()).unwrap();
+        for (index, content) in contents.iter().enumerate() {
+            let mut note = Note::new(content.to_string());
+            note.modified_at = chrono::Utc::now() - chrono::Duration::minutes(index as i64);
+            NoteRepository::new(db.connection()).create(&note, &key).unwrap();
+            app.notes.push(note);
+        }
+        app.db = Some(db);
+        app.key = Some(key);
+        app.invalidate_filter_cache();
+        app.select_note_at(0);
+        app
+    }
+
+    fn highlighted(app: &App) -> String {
+        app.filtered_notes()[app.selected_note].content.clone()
+    }
+
+    #[test]
+    fn deleting_moves_the_highlight_to_the_next_note() {
+        let mut app = app_with_notes(&["first", "second", "third"]);
+        app.select_note_at(1);
+
+        handle_note_list_key(&mut app, key(KeyCode::Char('d'))).unwrap();
+
+        assert_eq!(highlighted(&app), "third");
+        handle_note_list_key(&mut app, key(KeyCode::Char('d'))).unwrap();
+        assert_eq!(highlighted(&app), "first");
+    }
+
+    /// `notes` and the visible list are in different orders. The index used to be swapped
+    /// between them, so a repeated delete could hit a note the user never highlighted.
+    #[test]
+    fn a_repeated_delete_only_takes_what_was_highlighted() {
+        let mut app = app_with_notes(&["first", "second", "third", "fourth"]);
+        app.notes.reverse();
+        app.invalidate_filter_cache();
+        app.select_note_at(1);
+        assert_eq!(highlighted(&app), "second");
+
+        handle_note_list_key(&mut app, key(KeyCode::Char('d'))).unwrap();
+        assert_eq!(highlighted(&app), "third");
+
+        handle_note_list_key(&mut app, key(KeyCode::Char('d'))).unwrap();
+        assert_eq!(highlighted(&app), "fourth");
+
+        let left: Vec<&str> = app.filtered_notes().iter().map(|n| n.content.as_str()).collect();
+        assert_eq!(left, vec!["first", "fourth"]);
+    }
+
+    #[test]
+    fn pinning_keeps_the_highlight_on_the_note() {
+        let mut app = app_with_notes(&["first", "second", "third"]);
+        app.select_note_at(2);
+
+        handle_note_list_key(&mut app, key(KeyCode::Char('p'))).unwrap();
+
+        assert_eq!(app.selected_note, 0);
+        assert_eq!(highlighted(&app), "third");
+    }
+
+    #[test]
+    fn a_reload_keeps_the_highlight_on_the_note_however_it_got_there() {
+        let mut app = app_with_notes(&["first", "second", "third"]);
+        handle_note_list_key(&mut app, key(KeyCode::Char('j'))).unwrap();
+        assert_eq!(highlighted(&app), "second");
+
+        // A sync brings in a newer note above it
+        let db = app.db.as_ref().unwrap();
+        let key_bytes = app.key.unwrap();
+        let mut newest = Note::new("newest".to_string());
+        newest.modified_at = chrono::Utc::now() + chrono::Duration::hours(1);
+        NoteRepository::new(db.connection()).create(&newest, &key_bytes).unwrap();
+        operations::notes::load_notes(&mut app).unwrap();
+
+        assert_eq!(highlighted(&app), "second");
+    }
+
+    fn bin_with(app: &mut App, contents: &[&str]) {
+        let db = app.db.as_ref().unwrap();
+        let key_bytes = app.key.unwrap();
+        for (index, content) in contents.iter().enumerate() {
+            let mut note = Note::new(content.to_string());
+            note.deleted = true;
+            note.deleted_at = Some(chrono::Utc::now());
+            note.modified_at = chrono::Utc::now() - chrono::Duration::minutes(index as i64);
+            NoteRepository::new(db.connection()).create(&note, &key_bytes).unwrap();
+        }
+        operations::notes::load_deleted_notes(app).unwrap();
+        app.view_mode = ViewMode::RecycleBin;
+        app.select_note_at(0);
+    }
+
+    /// The bin is drawn in display order, and restoring used to index the stored order.
+    #[test]
+    fn restoring_from_the_bin_takes_the_note_highlighted() {
+        let mut app = app_with_notes(&[]);
+        bin_with(&mut app, &["binned first", "binned second", "binned third"]);
+        let chosen = highlighted(&app);
+        assert_ne!(chosen, app.notes[0].content, "the two orders have to differ for this to mean anything");
+
+        operations::notes::restore_note(&mut app).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let live = NoteRepository::new(db.connection()).list(false, &app.key.unwrap()).unwrap();
+        assert_eq!(live.len(), 1);
+        assert_eq!(live[0].content, chosen);
+    }
+
+    /// Enter opens the editor, and quitting it unchanged is the usual way to read a note.
+    #[test]
+    fn opening_a_note_and_closing_it_changes_nothing() {
+        let mut app = app_with_notes(&["unchanged"]);
+        let before = app.notes[0].clone();
+        let db = app.db.as_ref().unwrap();
+        let key_bytes = app.key.unwrap();
+        let mut synced = NoteRepository::new(db.connection()).get(&before.id, &key_bytes).unwrap().unwrap();
+        synced.needs_sync = false;
+        NoteRepository::new(db.connection()).store(&synced, &key_bytes).unwrap();
+
+        app.note_input = before.content.clone();
+        app.current_tags = before.tags.clone();
+        app.editing_note_id = Some(before.id.clone());
+        operations::notes::save_note(&mut app).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let after = NoteRepository::new(db.connection()).get(&before.id, &key_bytes).unwrap().unwrap();
+        assert_eq!(after.modified_at, before.modified_at);
+        assert_eq!(after.version, before.version);
+        assert!(!after.needs_sync);
+        assert_eq!(app.notes[0].version, before.version);
+    }
+
+    #[test]
+    fn a_real_edit_still_saves() {
+        let mut app = app_with_notes(&["before"]);
+        let id = app.notes[0].id.clone();
+
+        app.note_input = "after".to_string();
+        app.editing_note_id = Some(id.clone());
+        operations::notes::save_note(&mut app).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let stored = NoteRepository::new(db.connection()).get(&id, &app.key.unwrap()).unwrap().unwrap();
+        assert_eq!(stored.content, "after");
+        assert!(stored.needs_sync);
+    }
+
+    #[test]
+    fn a_large_deletion_waits_for_an_answer_before_any_other_key() {
+        let mut app = app_with_notes(&["first"]);
+        app.held_deletions = 12;
+
+        handle_note_list_key(&mut app, key(KeyCode::Char('d'))).unwrap();
+        assert_eq!(app.notes.len(), 1);
+        assert_eq!(app.held_deletions, 12);
+
+        handle_note_list_key(&mut app, key(KeyCode::Esc)).unwrap();
+        assert_eq!(app.held_deletions, 0);
+    }
+
+    /// Ctrl+C used to recolour the note, Ctrl+P pin it, Ctrl+S open Settings and Ctrl+R
+    /// open the bin, because the letter arms didn't look at modifiers.
+    #[test]
+    fn a_held_modifier_makes_a_key_something_other_than_its_letter() {
+        for modifier in [KeyModifiers::CONTROL, KeyModifiers::ALT] {
+            for letter in ['p', 's', 'r', 'n', 'z', 'L', 'C', 'y', '/', 't', 'v'] {
+                let mut app = create_test_app();
+                app.notes.push(Note::new("Note".to_string()));
+                app.invalidate_filter_cache();
+
+                handle_note_list_key(&mut app, KeyEvent::new(KeyCode::Char(letter), modifier)).unwrap();
+
+                assert!(matches!(app.state, AppState::NoteList), "{letter} with {modifier:?}");
+                assert!(matches!(app.view_mode, ViewMode::NoteList), "{letter} with {modifier:?}");
+                assert!(!app.notes[0].pinned, "{letter} with {modifier:?}");
+                assert!(!app.search_active, "{letter} with {modifier:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn the_ctrl_shortcuts_still_work() {
+        let mut app = create_test_app();
+        handle_note_list_key(&mut app, KeyEvent::new(KeyCode::Char('d'), KeyModifiers::CONTROL)).unwrap();
+        assert_eq!(app.preview_scroll_offset, 10);
+
+        let mut app = create_test_app();
+        handle_note_list_key(&mut app, KeyEvent::new(KeyCode::Char('q'), KeyModifiers::CONTROL)).unwrap();
+        assert!(matches!(app.state, AppState::Quit));
+    }
+
+    #[test]
+    fn ctrl_c_quits_from_anywhere() {
+        let ctrl_c = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
+
+        let mut app = create_test_app();
+        app.handle_key(ctrl_c).unwrap();
+        assert!(matches!(app.state, AppState::Quit));
+
+        let mut app = create_test_app();
+        app.state = AppState::Locked;
+        let typed = uuid::Uuid::new_v4().to_string();
+        app.password_input = typed.clone();
+        app.handle_key(ctrl_c).unwrap();
+        assert!(matches!(app.state, AppState::Quit));
+        assert_eq!(app.password_input, typed);
     }
 
     /// Create a key event with Ctrl modifier
@@ -1475,6 +1845,33 @@ mod tests {
         assert!(matches!(app.input_mode, InputMode::Normal));
     }
 
+    #[test]
+    fn an_export_asks_before_replacing_a_file() {
+        let mut app = app_with_notes(&["Selected"]);
+        let id = app.notes[0].id.clone();
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("export.json");
+        std::fs::write(&path, "already here").unwrap();
+
+        let export = |app: &mut App| {
+            app.is_multi_select_mode = true;
+            app.selected_note_ids.insert(id.clone());
+            app.input_mode = InputMode::BulkExportPath;
+            app.bulk_export_path_input = path.to_str().unwrap().to_string();
+            handle_note_list_key(app, key(KeyCode::Enter)).unwrap();
+        };
+
+        export(&mut app);
+        assert!(app.export_overwrite_path.is_some());
+        handle_note_list_key(&mut app, key(KeyCode::Char('n'))).unwrap();
+        assert!(app.export_overwrite_path.is_none());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "already here");
+
+        export(&mut app);
+        handle_note_list_key(&mut app, key(KeyCode::Char('y'))).unwrap();
+        assert!(std::fs::read_to_string(&path).unwrap().contains("Selected"));
+    }
+
     // ==================== Navigation Tests ====================
 
     #[test]
@@ -1569,5 +1966,85 @@ mod tests {
         let _ = handle_note_list_key(&mut app, key(KeyCode::Char('?')));
 
         assert!(matches!(app.state, AppState::Help { .. }));
+    }
+
+    // ==================== Emptying the Bin ====================
+
+    /// A connected-looking app in the bin, holding `count` deleted notes.
+    fn app_in_the_bin(count: usize) -> App {
+        let mut app = create_test_app();
+        let db = crate::db::Database::in_memory(&uuid::Uuid::new_v4().to_string()).unwrap();
+        let note_key = crate::crypto::CryptoService::new().generate_master_key();
+
+        for i in 0..count {
+            let mut note = Note::new(format!("Deleted {i}"));
+            note.deleted = true;
+            NoteRepository::new(db.connection()).create(&note, &note_key).unwrap();
+            app.notes.push(note);
+        }
+
+        app.db = Some(db);
+        app.key = Some(note_key);
+        app.view_mode = ViewMode::RecycleBin;
+        app
+    }
+
+    fn notes_in_database(app: &App) -> i64 {
+        app.db.as_ref().unwrap().count_notes(true).unwrap()
+    }
+
+    #[test]
+    fn shift_e_asks_before_emptying_the_bin() {
+        let mut app = app_in_the_bin(2);
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('E')));
+
+        assert!(app.show_empty_bin_confirm);
+        assert_eq!(notes_in_database(&app), 2);
+    }
+
+    #[test]
+    fn confirming_empties_the_bin() {
+        let mut app = app_in_the_bin(2);
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('E')));
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('y')));
+
+        assert!(!app.show_empty_bin_confirm);
+        assert_eq!(notes_in_database(&app), 0);
+    }
+
+    #[test]
+    fn declining_keeps_the_bin() {
+        for answer in [KeyCode::Char('n'), KeyCode::Char('q'), KeyCode::Esc] {
+            let mut app = app_in_the_bin(2);
+
+            let _ = handle_note_list_key(&mut app, key(KeyCode::Char('E')));
+            let _ = handle_note_list_key(&mut app, key(answer));
+
+            assert!(!app.show_empty_bin_confirm);
+            assert_eq!(notes_in_database(&app), 2);
+        }
+    }
+
+    #[test]
+    fn other_keys_do_not_answer_the_question() {
+        let mut app = app_in_the_bin(1);
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('E')));
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('E')));
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Enter));
+
+        assert!(app.show_empty_bin_confirm);
+        assert_eq!(notes_in_database(&app), 1);
+    }
+
+    #[test]
+    fn an_empty_bin_does_not_ask() {
+        let mut app = app_in_the_bin(0);
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('E')));
+
+        assert!(!app.show_empty_bin_confirm);
     }
 }

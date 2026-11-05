@@ -34,12 +34,17 @@ enum CryptoService {
 
     /// Derive a 256-bit AES key from a password using PBKDF2-HMAC-SHA256.
     /// Uses CommonCrypto (`CCKeyDerivationPBKDF`) for compatibility.
-    static func deriveKey(password: String, salt: Data, iterations: UInt32) -> SymmetricKey {
+    ///
+    /// Throws rather than returning a key made of whatever the buffer held: a
+    /// failure here would otherwise put a vault under a key anyone could guess,
+    /// with nothing to show for it.
+    static func deriveKey(password: String, salt: Data, iterations: UInt32) throws -> SymmetricKey {
+        guard !salt.isEmpty else { throw CryptoError.keyDerivationFailed }
         let effectiveIterations = max(iterations, minIterations)
         let passwordData = Array(password.utf8)
 
         var derivedKey = Data(count: keyLength)
-        _ = derivedKey.withUnsafeMutableBytes { derivedKeyPtr in
+        let status = derivedKey.withUnsafeMutableBytes { derivedKeyPtr in
             salt.withUnsafeBytes { saltPtr in
                 CCKeyDerivationPBKDF(
                     CCPBKDFAlgorithm(kCCPBKDF2),
@@ -54,25 +59,29 @@ enum CryptoService {
                 )
             }
         }
+        guard status == kCCSuccess else { throw CryptoError.keyDerivationFailed }
         return SymmetricKey(data: derivedKey)
     }
 
     // MARK: - Envelope Encryption
 
-    /// Generate a random 256-bit master key.
+    /// Generate a random 256-bit master key. CryptoKit stops the app if the
+    /// system can't supply randomness, where `SecRandomCopyBytes` reports it and
+    /// leaves the buffer as it was: a key of zeros, if nobody looks.
     static func generateMasterKey() -> Data {
-        var key = Data(count: keyLength)
-        key.withUnsafeMutableBytes { ptr in
-            _ = SecRandomCopyBytes(kSecRandomDefault, keyLength, ptr.baseAddress!)
-        }
-        return key
+        randomBytes()
+    }
+
+    /// 256 random bits.
+    private static func randomBytes() -> Data {
+        SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) }
     }
 
     /// Derive a wrapping key from password + userId (used as salt).
     /// Uses 1M iterations for extra strength — only called during migration/onboard, not daily unlock.
-    static func deriveWrappingKey(password: String, userId: String) -> SymmetricKey {
+    static func deriveWrappingKey(password: String, userId: String) throws -> SymmetricKey {
         let salt = Data(userId.utf8)
-        return deriveKey(password: password, salt: salt, iterations: wrappingIterations)
+        return try deriveKey(password: password, salt: salt, iterations: wrappingIterations)
     }
 
     /// Wrap (encrypt) a master key with a wrapping/device key using AES-GCM.
@@ -227,11 +236,7 @@ enum CryptoService {
 
     /// Generate random salt (32 bytes).
     static func generateSalt() -> Data {
-        var salt = Data(count: saltLength)
-        salt.withUnsafeMutableBytes { ptr in
-            _ = SecRandomCopyBytes(kSecRandomDefault, saltLength, ptr.baseAddress!)
-        }
-        return salt
+        randomBytes()
     }
 
     /// Generate UUID v4 string.
@@ -295,14 +300,14 @@ enum CryptoError: LocalizedError {
     case invalidUTF8
     case encodingFailed
     case decryptionFailed
+    case keyDerivationFailed
 
     var errorDescription: String? {
         switch self {
-        case .invalidBase64: return "Invalid base64 data"
-        case .ciphertextTooShort: return "Ciphertext too short"
-        case .invalidUTF8: return "Invalid UTF-8 data"
-        case .encodingFailed: return "Encoding failed"
-        case .decryptionFailed: return "Decryption failed. Invalid key or corrupted data."
+        case .invalidBase64, .ciphertextTooShort, .invalidUTF8: return L.cryptoErrorInvalidData
+        case .encodingFailed: return L.cryptoErrorEncodingFailed
+        case .keyDerivationFailed: return L.cryptoErrorKeyDerivationFailed
+        case .decryptionFailed: return L.cryptoErrorDecryptionFailed
         }
     }
 }

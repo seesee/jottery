@@ -1,0 +1,48 @@
+# Keeps the build context small, keeps local data out of image layers, and stops
+# unrelated changes invalidating the build cache. The Dockerfile copies named
+# paths only, so nothing here should be needed by a build stage.
+
+# Version control and tooling
+.git
+.github
+.beads
+.claude
+
+# Dependencies and build output, at any depth
+**/node_modules
+**/target
+**/dist
+dist-electron
+coverage
+test-results
+playwright-report
+releases
+
+# Clients and material the image doesn't contain
+android-native
+ios-native
+tui
+webview-bundles
+demo-generation
+docs
+e2e
+screenshots
+
+# Secrets and real data must never reach a layer, even a builder's. Those layers
+# are pushed to the registry as build cache.
+**/.env
+**/.env.*
+**/*.db
+**/*.db-*
+**/*.db.*
+**/*.sqlite
+**/*.sqlite3
+**/*.jwe
+**/*.enex
+**/*.p12
+**/*.pfx
+**/*.pem
+**/*.key
+**/*.jks
+**/*.keystore
+**/*.mobileprovision

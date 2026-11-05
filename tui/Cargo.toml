@@ -18,11 +18,14 @@ path = "scripts/find-untranslated.rs"
 default = ["sqlite", "keychain"]
 sqlite = ["rusqlite/bundled"]              # normal SQLite
 sqlcipher = ["rusqlite/sqlcipher", "native-tls", "openssl", "openssl-sys"]
+# SQLCipher and OpenSSL compiled in, for release binaries that have to run on a
+# machine without Homebrew. Plain `sqlcipher` links the system library instead.
+sqlcipher-vendored = ["sqlcipher", "rusqlite/bundled-sqlcipher-vendored-openssl"]
 keychain = ["keyring"]                     # OS keychain for secure password storage
 
 [dependencies]
 # TUI Framework
-ratatui = "0.30"
+ratatui = { version = "0.30", features = ["unstable-rendered-line-info"] }
 crossterm = "0.28"
 
 # Database
@@ -33,10 +36,9 @@ openssl = { version = "0.10", optional = true }
 openssl-sys = { version = "0.9", optional = true }
 
 # HTTP client for sync
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "blocking"] }
-
-# HTTP client for SSE (simpler streaming support)
-ureq = { version = "2.10", features = ["tls"] }
+# Both root sets: the bundled ones for a machine with none of its own, and the system's,
+# so a CA the user has installed works, as does SSL_CERT_FILE.
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "rustls-tls-native-roots", "json", "blocking"] }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -55,6 +57,7 @@ tokio = { version = "1.40", features = ["full"] }
 aes-gcm = "0.10"
 pbkdf2 = { version = "0.12", features = ["simple"] }
 sha2 = "0.10"
+hmac = "0.12"
 base64 = "0.22"
 rand = "0.8"
 hex = "0.4"
@@ -69,6 +72,7 @@ urlencoding = "2.1"
 
 # Regex for search parsing
 regex = "1.10"
+unicode-normalization = "0.1"
 
 # Logging
 tracing = "0.1"
@@ -84,7 +88,9 @@ rpassword = "7.5"
 dirs = "5.0"
 
 # OS keychain for secure password storage (optional)
-keyring = { version = "3", optional = true }
+# Without a store chosen here, keyring uses a mock that forgets everything at exit. The
+# Secret Service one is the pure Rust kind, so builds don't need libdbus.
+keyring = { version = "3", optional = true, features = ["apple-native", "windows-native", "async-secret-service", "tokio", "crypto-rust"] }
 
 # Hostname detection
 hostname = "0.4"
@@ -92,8 +98,6 @@ hostname = "0.4"
 # Temporary files for external editor
 tempfile = "3.13"
 
-# Clipboard support
-arboard = "3.4"
 
 # Syntax highlighting
 syntect = "5.3"
@@ -112,6 +116,15 @@ unicode-width = "0.2"
 
 # YAML parsing (for translation scripts)
 serde_yaml = "0.9"
+# Splitting $EDITOR and $PAGER into a program and its arguments
+shell-words = "1"
+# Compression for backups, which the web app writes with zlib
+flate2 = "1"
+
+[target.'cfg(unix)'.dependencies]
+# Clearing decrypted temporary files when the process is told to stop
+signal-hook = "0.3"
+libc = "0.2"
 
 [dev-dependencies]
 

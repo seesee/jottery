@@ -61,8 +61,27 @@ data class NoteVersionRecord(
     val parentHash: String? = null,
 ) {
     companion object {
+        private const val KEY_HASH_LENGTH = 16
+
+        /**
+         * A snapshot of an accepted state. Clients count versions differently, so two
+         * devices can both reach version 5 with different text, and the server keeps
+         * only the first it hears of. The hash keeps them apart, while the same text
+         * still gets the same key. Nothing parses a key, so older clients just store it.
+         */
         fun from(note: NoteRecord, reason: String): NoteVersionRecord {
-            val key = "${note.id}:${note.version}"
+            val hash = note.contentHash?.take(KEY_HASH_LENGTH)
+            return from(note, reason, listOfNotNull(note.id, note.version, hash).joinToString(":"))
+        }
+
+        /**
+         * A local safety snapshot taken before an overwrite. It has its own key,
+         * so it can never replace another snapshot of the same version.
+         */
+        fun safetySnapshot(note: NoteRecord, reason: String): NoteVersionRecord =
+            from(note, reason, "${note.id}:${note.version}:${System.currentTimeMillis()}")
+
+        private fun from(note: NoteRecord, reason: String, key: String): NoteVersionRecord {
             return NoteVersionRecord(
                 versionKey = key,
                 noteId = note.id,

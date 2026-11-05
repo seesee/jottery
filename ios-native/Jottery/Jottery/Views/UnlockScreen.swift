@@ -5,12 +5,15 @@ struct UnlockScreen: View {
     @State private var password = ""
     @State private var error: String?
     @State private var isUnlocking = false
-    @State private var showBiometricPrompt = false
     @State private var failedAttempts = 0
     @State private var showDeleteConfirm = false
     @State private var didAutoAttemptBiometric = false
 
     var body: some View {
+        ScrollableScreen { form }
+    }
+
+    private var form: some View {
         VStack(spacing: 32) {
             Spacer()
 
@@ -89,19 +92,11 @@ struct UnlockScreen: View {
         }
         .alert(L.unlockDeleteConfirmTitle, isPresented: $showDeleteConfirm) {
             Button(L.unlockDeleteConfirmAction, role: .destructive) {
-                appState.wipeAllData()
+                Task { await appState.wipeAfterProvingOwnership() }
             }
             Button(L.unlockDeleteConfirmCancel, role: .cancel) {}
         } message: {
-            Text(L.unlockDeleteConfirmMessage)
-        }
-        .alert(L.unlockEnableFaceIdTitle, isPresented: $showBiometricPrompt) {
-            Button(L.unlockEnableFaceIdAction) {
-                try? appState.keyManager.enableBiometricUnlock()
-            }
-            Button(L.unlockEnableFaceIdLater, role: .cancel) {}
-        } message: {
-            Text(L.unlockEnableFaceIdMessage)
+            Text(L.unlockDeleteConfirmMessage(unsyncedNotes: appState.notesOnlyOnThisDevice()))
         }
     }
 
@@ -115,18 +110,19 @@ struct UnlockScreen: View {
                 password = ""
                 isUnlocking = false
 
-                // Offer to enable biometrics after first successful password unlock
-                if appState.keyManager.isBiometricAvailable
-                    && !appState.keyManager.isBiometricEnabled {
-                    showBiometricPrompt = true
-                }
-            } catch {
+                // Offer to enable biometrics after a successful password unlock.
+                appState.offerFaceIDIfUseful()
+            } catch AppStateError.wrongPassword {
                 failedAttempts += 1
                 if failedAttempts >= 5 {
                     self.error = L.unlockFailedAttempts
                 } else {
                     self.error = L.unlockIncorrectPassword
                 }
+                self.isUnlocking = false
+            } catch {
+                // Not a wrong guess, so it counts for nothing here.
+                self.error = error.localizedDescription
                 self.isUnlocking = false
             }
         }
@@ -148,6 +144,7 @@ struct UnlockScreen: View {
                 // Retry any edit that failed to flush at lock time now that
                 // the key is available again.
                 appState.flushPendingEditorNote()
+                await appState.repairStoredData()
                 try? await appState.loadNotes()
                 appState.isLocked = false
                 Log.debug("[Sync] biometricUnlock: calling setupSync()")

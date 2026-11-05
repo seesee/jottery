@@ -6,6 +6,7 @@ struct InboxView: View {
 
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var showDeleteAllConfirm = false
 
     var body: some View {
         NavigationStack {
@@ -37,7 +38,7 @@ struct InboxView: View {
                         }
 
                         Button(role: .destructive) {
-                            deleteAll()
+                            showDeleteAllConfirm = true
                         } label: {
                             Label(L.inboxDeleteAll, systemImage: "trash")
                         }
@@ -59,6 +60,12 @@ struct InboxView: View {
             }
             .task {
                 await loadItems()
+            }
+            .alert(L.inboxDeleteAllTitle, isPresented: $showDeleteAllConfirm) {
+                Button(L.inboxDeleteAll, role: .destructive) { deleteAll() }
+                Button(L.commonCancel, role: .cancel) {}
+            } message: {
+                Text(L.inboxDeleteAllMessage(appState.inboxCount))
             }
         }
     }
@@ -199,9 +206,9 @@ private struct InboxItemRow: View {
 
     private var itemTitle: String {
         let lines = item.content.split(separator: "\n", omittingEmptySubsequences: true)
-        guard let firstLine = lines.first else { return "Untitled" }
+        guard let firstLine = lines.first else { return L.noteUntitled }
         let trimmed = firstLine.trimmingCharacters(in: .whitespaces)
             .replacingOccurrences(of: "^#+\\s*", with: "", options: .regularExpression)
-        return trimmed.isEmpty ? "Untitled" : String(trimmed.prefix(80))
+        return trimmed.isEmpty ? L.noteUntitled : String(trimmed.prefix(80))
     }
 }

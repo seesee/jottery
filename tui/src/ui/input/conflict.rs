@@ -9,6 +9,13 @@ use crate::ui::app::App;
 use crate::ui::operations::sync;
 use crate::ui::state::ViewMode;
 
+/// Send the outcome of a conflict on its way, rather than wait for the next sync.
+fn sync_resolution(app: &mut App) {
+    if app.settings.sync_enabled {
+        app.trigger_sync();
+    }
+}
+
 /// Handle key events in conflict resolution modal
 pub fn handle_conflict_key(app: &mut App, key: KeyEvent) -> Result<()> {
     match key.code {
@@ -30,6 +37,7 @@ pub fn handle_conflict_key(app: &mut App, key: KeyEvent) -> Result<()> {
         KeyCode::Char('1') => {
             match sync::resolve_keep_local(app) {
                 Ok(()) => {
+                    sync_resolution(app);
                     app.sync_status = Some(t!("conflict.resolved_mine").to_string());
                     app.sync_status_set_at = Some(Instant::now());
                 }
@@ -43,6 +51,7 @@ pub fn handle_conflict_key(app: &mut App, key: KeyEvent) -> Result<()> {
         KeyCode::Char('2') => {
             match sync::resolve_keep_server(app) {
                 Ok(()) => {
+                    sync_resolution(app);
                     app.sync_status = Some(t!("conflict.resolved_server").to_string());
                     app.sync_status_set_at = Some(Instant::now());
                 }
@@ -56,6 +65,7 @@ pub fn handle_conflict_key(app: &mut App, key: KeyEvent) -> Result<()> {
         KeyCode::Char('3') => {
             match sync::resolve_keep_both(app) {
                 Ok(_new_note_id) => {
+                    sync_resolution(app);
                     app.sync_status = Some(t!("conflict.resolved_both").to_string());
                     app.sync_status_set_at = Some(Instant::now());
                 }

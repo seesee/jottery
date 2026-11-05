@@ -48,23 +48,16 @@ struct BulkAddTagsSheet: View {
             .filter { !$0.isEmpty }
         guard !newTags.isEmpty else { return }
 
-        let allNotes = appState.notes + appState.archivedNotes
-        var failureCount = 0
-        for id in noteIds {
-            guard var note = allNotes.first(where: { $0.id == id }) else { continue }
-            let existingSet = Set(note.tags)
-            let tagsToAdd = newTags.filter { !existingSet.contains($0) }
-            if !tagsToAdd.isEmpty {
+        Task {
+            let failures = try? await appState.updateNotes(ids: noteIds) { note in
+                let existing = Set(note.tags)
+                let tagsToAdd = newTags.filter { !existing.contains($0) }
                 note.tags.append(contentsOf: tagsToAdd)
-                do {
-                    try appState.saveNote(note)
-                } catch {
-                    failureCount += 1
-                }
+                return !tagsToAdd.isEmpty
             }
-        }
-        if failureCount > 0 {
-            appState.reportError(L.errorCouldntAddTags(failureCount))
+            if failures != 0 {
+                appState.reportError(L.errorCouldntAddTags(failures ?? noteIds.count))
+            }
         }
     }
 }
@@ -131,22 +124,16 @@ struct BulkRemoveTagsSheet: View {
     }
 
     private func removeTags() {
-        let allNotes = appState.notes + appState.archivedNotes
-        var failureCount = 0
-        for id in noteIds {
-            guard var note = allNotes.first(where: { $0.id == id }) else { continue }
-            let before = note.tags.count
-            note.tags.removeAll { selectedTags.contains($0) }
-            if note.tags.count != before {
-                do {
-                    try appState.saveNote(note)
-                } catch {
-                    failureCount += 1
-                }
+        let removing = selectedTags
+        Task {
+            let failures = try? await appState.updateNotes(ids: noteIds) { note in
+                let before = note.tags.count
+                note.tags.removeAll { removing.contains($0) }
+                return note.tags.count != before
             }
-        }
-        if failureCount > 0 {
-            appState.reportError(L.errorCouldntRemoveTags(failureCount))
+            if failures != 0 {
+                appState.reportError(L.errorCouldntRemoveTags(failures ?? noteIds.count))
+            }
         }
     }
 }
@@ -173,7 +160,7 @@ struct BulkSetColorSheet: View {
                             Circle()
                                 .fill(Color.noteColor(named: name, scheme: colorScheme) ?? .gray)
                                 .frame(width: 24, height: 24)
-                            Text(name.capitalized)
+                            Text(appState.noteColours.displayName(for: name))
                         }
                     }
                     .foregroundStyle(.primary)
@@ -203,21 +190,15 @@ struct BulkSetColorSheet: View {
     }
 
     private func applyColor(_ color: String?) {
-        let allNotes = appState.notes + appState.archivedNotes
-        var failureCount = 0
-        for id in noteIds {
-            guard var note = allNotes.first(where: { $0.id == id }) else { continue }
-            if note.color != color {
+        Task {
+            let failures = try? await appState.updateNotes(ids: noteIds) { note in
+                guard note.color != color else { return false }
                 note.color = color
-                do {
-                    try appState.saveNote(note)
-                } catch {
-                    failureCount += 1
-                }
+                return true
             }
-        }
-        if failureCount > 0 {
-            appState.reportError(L.errorCouldntSetColor(failureCount))
+            if failures != 0 {
+                appState.reportError(L.errorCouldntSetColor(failures ?? noteIds.count))
+            }
         }
     }
 }

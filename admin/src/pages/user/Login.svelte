@@ -1,6 +1,7 @@
 <script lang="ts">
   import { userAuth } from '../../lib/userAuth.svelte';
   import { userApi, ApiError } from '../../lib/userApi';
+  import { describeError } from '../../lib/apiErrors';
   import { _ } from 'svelte-i18n';
 
   let email = $state('');
@@ -11,6 +12,7 @@
   // Status check state
   let showStatusCheck = $state(false);
   let statusEmail = $state('');
+  let statusPassword = $state('');
   let statusLoading = $state(false);
   let statusResult = $state<{ exists: boolean; isApproved: boolean; isActive: boolean } | null>(null);
   let statusError = $state<string | null>(null);
@@ -28,12 +30,14 @@
         if (err.status === 401) {
           error = $_('userPortal.login.errors.invalidCredentials');
         } else if (err.status === 403) {
-          error = $_('userPortal.login.errors.accountInactive');
+          error = err.message === 'Account pending admin approval'
+            ? $_('userPortal.login.errors.accountPending')
+            : $_('userPortal.login.errors.accountInactive');
         } else {
-          error = err.message;
+          error = describeError(err, $_, 'userPortal.login.errors.unexpected');
         }
       } else {
-        error = $_('userPortal.login.errors.unexpected');
+        error = describeError(err, $_, 'userPortal.login.errors.unexpected');
       }
     } finally {
       loading = false;
@@ -47,9 +51,12 @@
     statusLoading = true;
 
     try {
-      statusResult = await userApi.checkStatus(statusEmail);
+      statusResult = await userApi.checkStatus(statusEmail, statusPassword);
     } catch (err) {
-      statusError = $_('userPortal.login.errors.statusCheckFailed');
+      // The same answer for a wrong password and an unknown address
+      statusError = err instanceof ApiError && err.status === 401
+        ? $_('userPortal.login.errors.invalidCredentials')
+        : describeError(err, $_, 'userPortal.login.errors.statusCheckFailed');
     } finally {
       statusLoading = false;
     }
@@ -64,8 +71,14 @@
     </div>
 
     <form onsubmit={handleSubmit} class="space-y-6">
+      {#if userAuth.sessionExpired && !error}
+        <div role="status" class="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded">
+          {$_('session.expired')}
+        </div>
+      {/if}
+
       {#if error}
-        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div role="alert" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
       {/if}
@@ -77,6 +90,7 @@
         <input
           id="email"
           type="email"
+          autocomplete="username"
           required
           bind:value={email}
           disabled={loading}
@@ -92,6 +106,7 @@
         <input
           id="password"
           type="password"
+          autocomplete="current-password"
           required
           bind:value={password}
           disabled={loading}
@@ -129,15 +144,29 @@
             <input
               type="email"
               required
+              autocomplete="username"
+              aria-label={$_('userPortal.login.email')}
               bind:value={statusEmail}
               disabled={statusLoading}
               class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-sm"
               placeholder={$_('userPortal.login.placeholder.email')}
             />
           </div>
+          <div>
+            <input
+              type="password"
+              required
+              autocomplete="current-password"
+              aria-label={$_('userPortal.login.password')}
+              bind:value={statusPassword}
+              disabled={statusLoading}
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 text-sm"
+              placeholder={$_('userPortal.login.placeholder.password')}
+            />
+          </div>
           <button
             type="submit"
-            disabled={statusLoading || !statusEmail}
+            disabled={statusLoading || !statusEmail || !statusPassword}
             class="w-full bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
           >
             {statusLoading ? $_('common.loading') : $_('userPortal.login.statusCheck.checkButton')}
@@ -145,7 +174,7 @@
         </form>
 
         {#if statusError}
-          <div class="mt-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+          <div role="alert" class="mt-3 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
             {statusError}
           </div>
         {/if}

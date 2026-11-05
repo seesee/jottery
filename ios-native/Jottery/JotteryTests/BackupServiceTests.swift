@@ -17,25 +17,40 @@ struct BackupServiceTests {
         return state
     }
 
+    private func temporaryFile() -> URL {
+        FileManager.default.temporaryDirectory.appendingPathComponent("jottery-backup-test-\(UUID().uuidString).jottery-backup")
+    }
+
     private func backup(of state: AppState) throws -> Data {
-        try BackupService.createBackup(
+        let url = temporaryFile()
+        defer { try? FileManager.default.removeItem(at: url) }
+        try BackupService.writeBackup(
+            to: url,
             noteRepo: #require(state.noteRepo),
-            versionRepo: #require(state.versionRepo),
             attachmentRepo: #require(state.attachmentRepo),
             savedSearchRepo: #require(state.savedSearchRepo),
             encryptionRepo: #require(state.encryptionRepo),
             key: #require(state.keyManager.masterKey)
         )
+        return try Data(contentsOf: url)
     }
 
     @discardableResult
     private func restore(_ data: Data, password: String, into state: AppState) throws -> Int {
-        try BackupService.restoreBackup(
-            data: data,
+        try restoreResult(data, password: password, into: state).notes
+    }
+
+    private func restoreResult(_ data: Data, password: String, into state: AppState) throws -> BackupService.RestoreResult {
+        let url = temporaryFile()
+        try data.write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+        return try BackupService.restoreBackup(
+            from: url,
             password: password,
             noteRepo: #require(state.noteRepo),
             versionRepo: #require(state.versionRepo),
             attachmentRepo: #require(state.attachmentRepo),
+            savedSearchRepo: #require(state.savedSearchRepo),
             currentKey: #require(state.keyManager.masterKey)
         )
     }
@@ -119,9 +134,7 @@ struct BackupServiceTests {
         let note = try #require(try source.createNote(content: "original"))
         let data = try withOldHeader(backup(of: source))
 
-        var edited = note
-        edited.content = "changed since the backup"
-        try source.saveNote(edited)
+        try #require(source.noteRepo).permanentlyDelete(id: note.id)
 
         #expect(try restore(data, password: password, into: source) == 1)
         #expect(try content(ofNote: note.id, in: source) == "original")

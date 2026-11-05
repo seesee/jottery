@@ -41,7 +41,7 @@ import com.jottery.android.model.UserSettings
         NoteDeletion::class,
         SavedSearch::class,
     ],
-    version = 3,
+    version = 5,
     exportSchema = true,
 )
 abstract class JotteryDatabase : RoomDatabase() {
@@ -77,7 +77,7 @@ abstract class JotteryDatabase : RoomDatabase() {
         }
 
         /** Migration 1→2: Add envelope encryption columns and userId. */
-        private val MIGRATION_1_2 = object : Migration(1, 2) {
+        internal val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE encryption_metadata ADD COLUMN envelope_version INTEGER")
                 db.execSQL("ALTER TABLE encryption_metadata ADD COLUMN device_salt TEXT")
@@ -88,7 +88,7 @@ abstract class JotteryDatabase : RoomDatabase() {
         }
 
         /** Migration 2→3: Make salt and iterations nullable for envelope encryption. */
-        private val MIGRATION_2_3 = object : Migration(2, 3) {
+        internal val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // SQLite doesn't support ALTER COLUMN, so recreate the table
                 db.execSQL("""
@@ -117,13 +117,44 @@ abstract class JotteryDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration 3→4: track which blobs the server already holds, and clear the
+         * plaintext filenames earlier builds left here. The encrypted name is in
+         * the note's attachment reference, and nothing reads this column.
+         */
+        internal val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE attachments ADD COLUMN uploaded INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE attachments SET filename = ''")
+            }
+        }
+
+        /**
+         * Migration 4→5: remember what this device knows about the account's
+         * wrapped key and how far it has pulled, and when each note in the bin
+         * arrived there. Notes already in the bin get today, because their
+         * deleted_at may have come from the server: they stay a little longer.
+         */
+        internal val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE sync_metadata ADD COLUMN wrapped_key_opened INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE sync_metadata ADD COLUMN pending_wrapped_key TEXT")
+                db.execSQL("ALTER TABLE sync_metadata ADD COLUMN pull_cursor TEXT")
+                db.execSQL("ALTER TABLE sync_metadata ADD COLUMN cursor_adopted INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE notes ADD COLUMN local_deleted_at TEXT")
+                db.execSQL(
+                    "UPDATE notes SET local_deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE deleted = 1"
+                )
+            }
+        }
+
         private fun buildDatabase(context: Context): JotteryDatabase {
             return Room.databaseBuilder(
                 context.applicationContext,
                 JotteryDatabase::class.java,
                 DATABASE_NAME,
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)

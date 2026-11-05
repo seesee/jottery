@@ -30,6 +30,12 @@ All sensitive data is encrypted on the client before transmission to the server:
 
 **The server never sees unencrypted note content, tags, or attachments.**
 
+This depends on your notes password and account password being different. The server receives your account password when you sign in, so if the two match it could unwrap the master key it stores. Clients refuse a match when either password is being chosen, and warn if an existing vault already has one. Changing your notes password restores the guarantee.
+
+### Keys in Memory
+
+Locking overwrites the raw master key bytes and drops the key, but JavaScript can't guarantee more than that: a `CryptoKey` can't be wiped, and copies stay in memory until the browser reclaims them. Someone with access to a running browser's memory could still recover a key after a lock.
+
 ### Envelope Encryption (v1.1.0+)
 
 Jottery uses an envelope encryption model that decouples the master key from the user's password:
@@ -77,12 +83,21 @@ These parameters follow OWASP recommendations for server-side password storage.
 - Each device has a unique API key
 - Keys can be individually revoked or deleted from the admin dashboard
 
+### Admin Audit Log
+
+Approving, deactivating, reactivating and deleting users, resetting passwords, changing roles and storage settings, and revoking or renaming devices are recorded permanently in the `admin_audit_log` table, with the admin, the target, the time, the client address and the user agent. Actions taken with `jottery-admin` are recorded with no admin named. Admins can read it at `GET /api/v1/admin/audit`, filtered by `adminId`, `targetId`, `action`, `from` and `to`.
+
+The record outlives the accounts it mentions, so it keeps ids, addresses and user agents after a user is deleted. There is no automatic expiry. It holds no passwords and nothing from notes. Recording happens after the action and is advisory: if a write fails, the action stands and the server logs an error, so alert on `Audit log write failed` if you depend on it.
+
 ### Session Management
 
 - Admin sessions use UUID v4 tokens, SHA-256 hashed before storage
 - User portal sessions use the same mechanism
-- Default session expiry: 7 days (configurable via `SESSION_EXPIRY_DAYS`)
+- Default session expiry: 1 day (configurable via `SESSION_EXPIRY_DAYS`). A session is a way into the account, its settings and its wrapped key, so it's kept short. The cost is signing in to the dashboards daily. Device keys don't expire, so sync isn't affected
 - Sessions are invalidated on logout
+- Changing a password ends the account's other sessions, and an admin reset ends all of them. Device keys aren't tied to the password, so they keep working unless the admin also asks to revoke them
+- With `ENABLE_HSTS=true`, the admin dashboard and user portal keep their session in an HttpOnly, Secure, SameSite=Strict cookie, scoped to their own API, which script can't read. A request that changes anything must also carry a custom header, so another site can't forge one. HttpOnly stops a token being stolen, not a script in the same origin using the session while it lasts, so serving the dashboards from their own origin is stronger still
+- Without it, on an install reached over plain HTTP, the dashboards keep their session in `sessionStorage`, so it belongs to one browser tab and ends when the tab closes. They share an origin with the web client, so a script running in the web client in another tab can't read it, but one running in that same tab could. Don't use a dashboard tab for your notes
 
 ### SSE Token Security
 
@@ -99,10 +114,10 @@ Before deploying Jottery to production, complete this checklist:
 
 ### Required
 
-- [ ] **Change default admin password**
-  - Default: `admin@localhost` / `changeme`
-  - Set via environment variables or change immediately after first login
-  - Use a strong password (12+ characters recommended)
+- [ ] **Set the admin password**
+  - Set `DEFAULT_ADMIN_PASSWORD` before first run, or use the random password the server logs once and change it at first sign-in
+  - An older install still on the old default password can do nothing in the admin dashboard until the password is changed
+  - Use a strong password (12+ characters)
 
 - [ ] **Enable HTTPS/TLS**
   - Deploy behind a reverse proxy (Caddy, Nginx, Traefik)
@@ -118,7 +133,7 @@ Before deploying Jottery to production, complete this checklist:
 
 - [ ] **Configure session expiry**
   ```bash
-  -e SESSION_EXPIRY_DAYS=1  # Shorter for sensitive environments
+  -e SESSION_EXPIRY_DAYS=1  # The default. Raise it only if daily sign-in is a real cost
   ```
 
 - [ ] **Set up database backups**
@@ -138,15 +153,19 @@ Before deploying Jottery to production, complete this checklist:
 - [ ] **Restrict network access**
   - Use firewall rules to limit access
   - Consider VPN for internal deployments
+  - Limit the admin dashboard to known addresses with `ADMIN_ALLOWED_IPS`. Behind another proxy, restrict `/admin`, `/api/v1/admin` and `/api/v1/auth/login` there instead
 
 ### Environment Variables
 
 | Variable | Default | Security Impact |
 |----------|---------|-----------------|
-| `DEFAULT_ADMIN_PASSWORD` | `changeme` | **Critical** — Change immediately |
-| `SESSION_EXPIRY_DAYS` | `7` | Lower values reduce session hijacking window |
+| `DEFAULT_ADMIN_PASSWORD` | *(none)* | **Critical** — If unset, a random password is generated and logged once |
+| `SESSION_EXPIRY_DAYS` | `1` | Lower values reduce session hijacking window |
 | `CORS_ALLOWED_ORIGINS` | *(none)* | Restrict to trusted domains |
-| `MAX_PAYLOAD_SIZE` | `5242880` | Limits upload size (DoS prevention) |
+| `TRUSTED_PROXY_HOPS` | `0` (`1` in the Docker image) | Set to the number of proxies in front of the server. Too low and clients share one rate limit; too high and they can forge their address |
+| `MAX_PAYLOAD_SIZE` | `104857600` | Limits request size (DoS prevention). Each user's upload limit still applies beneath it |
+| `ENABLE_HSTS` | `false` | Set to `true` on HTTPS deployments so browsers refuse to downgrade to plain HTTP |
+| `ADMIN_ALLOWED_IPS` | *(everyone)* | Limits who can reach the admin dashboard and its API |
 
 ## Known Limitations
 
@@ -158,7 +177,9 @@ The server-side SQLite database is **not encrypted at rest**. While all sensitiv
 
 ### TUI Local Database
 
-The TUI client uses SQLCipher for its local database, which provides transparent AES-256 encryption at rest. The database password is derived from the user's vault password.
+The macOS release of the TUI uses SQLCipher for its local database, which provides transparent AES-256 encryption at rest. The database password is derived from the user's vault password.
+
+The Linux and Windows releases use plain SQLite, so the database file itself isn't encrypted. Notes and tags inside it still are, but your email, server address, attachment names and dates are not. The TUI says so on its unlock screen. On Linux and macOS the file can only be read by your own user. For anything stronger, use full-disk encryption.
 
 ### Remember Password Feature (TUI)
 
@@ -177,7 +198,14 @@ The TUI "Remember Password" feature has two backends:
 
 ### Browser Session Storage
 
-The web client can optionally store an encrypted session token in localStorage for convenience. This is **not** synced to the server.
+The web client can keep your notes password in the browser, so you don't have to type it each time:
+
+- **Remember Password** keeps it in `localStorage`, until you turn the option off.
+- **Persist Session** keeps it in `sessionStorage`, until the tab closes.
+
+Either way it's the password itself, base64 encoded. That isn't encryption: anyone who can read your browser profile, and any script running on the same origin, can recover the actual password. It is **not** synced to the server.
+
+**Recommendation**: Don't use either option on a shared or untrusted machine.
 
 ### Password Recovery
 
@@ -196,6 +224,8 @@ With envelope encryption, the server stores a wrapped copy of the master key, bu
 The server-stored wrapped master key is encrypted with a key derived from `password + userId` using PBKDF2 with 1,000,000 iterations. An attacker who compromises the server database would need to brute-force the user's password to unwrap the master key. The high iteration count makes this computationally expensive.
 
 The wrapped key blob contains no information about the password — it is indistinguishable from random data without the correct wrapping key.
+
+**This depends on your notes password being different from your account password.** The server receives your account password in plaintext when you sign in, so if the two match, whoever controls the server has what it takes to unwrap your master key, with no brute force needed. Clients refuse a match when you choose a new password, and warn about an existing one when they can tell.
 
 ## Security Best Practices
 
@@ -220,7 +250,7 @@ The wrapped key blob contains no information about the password — it is indist
 
 ### What Jottery Protects Against
 
-- **Server compromise** — Attacker gains encrypted blobs, not plaintext. The wrapped master key requires the user's password to unwrap.
+- **Server compromise** — Attacker gains encrypted blobs, not plaintext. The wrapped master key requires the user's notes password to unwrap, which is why it must differ from the account password (see [Wrapped Key Security](#wrapped-key-security)).
 - **Network eavesdropping** — TLS + client-side encryption. Even without TLS, note content is encrypted.
 - **Unauthorised access** — Authentication required for all operations.
 - **Accidental data exposure** — All sensitive data is encrypted before leaving the client.

@@ -2,6 +2,7 @@
 
 use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent};
+use rust_i18n::t;
 use std::collections::HashSet;
 
 use crate::ui::app::App;
@@ -48,8 +49,12 @@ pub fn handle_note_view_key(app: &mut App, key: KeyEvent) -> Result<()> {
         InputMode::Normal => match key.code {
             KeyCode::Char('e') | KeyCode::Enter => {
                 // Edit with external $EDITOR
-                if let Ok(content) = operations::attachments::edit_with_external_editor(app) {
-                    app.note_input = content;
+                match operations::attachments::edit_with_external_editor(app) {
+                    Ok(content) => {
+                        app.note_input = content;
+                        app.error = None;
+                    }
+                    Err(e) => app.error = Some(format!("{e:#}")),
                 }
             }
             KeyCode::Char('t') => {
@@ -65,11 +70,29 @@ pub fn handle_note_view_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     scroll_offset: 0,
                 };
             }
-            KeyCode::Char('q') | KeyCode::Esc => {
-                // Save and return to list
-                operations::notes::save_note(app)?;
-                operations::notes::load_notes(app)?;
+            // After a failed save, Esc gives up on the edit. Otherwise the only way
+            // out of this screen would be a save that may keep failing.
+            KeyCode::Esc if app.error.is_some() => {
+                app.error = None;
+                app.editing_note_id = None;
                 app.state = AppState::NoteList;
+            }
+            KeyCode::Char('q') | KeyCode::Esc => {
+                // Save and return to list. A failed save stays here with the text
+                // intact, as leaving would throw the edit away.
+                match operations::notes::save_note(app) {
+                    Ok(()) => {
+                        app.error = None;
+                        app.editing_note_id = None;
+                        app.state = AppState::NoteList;
+                        if let Err(e) = operations::notes::load_notes(app) {
+                            app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
+                        }
+                    }
+                    Err(e) => {
+                        app.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
+                    }
+                }
             }
             _ => {}
         },
@@ -144,7 +167,8 @@ pub fn handle_note_view_key(app: &mut App, key: KeyEvent) -> Result<()> {
             }
             _ => {}
         },
-        InputMode::AttachmentPath | InputMode::BulkAddTags | InputMode::BulkExportPath => {
+        InputMode::SaveSearchName | InputMode::AttachmentPath | InputMode::BulkAddTags | InputMode::BulkRemoveTags
+        | InputMode::BulkSetColour | InputMode::BulkExportPath => {
             // These modes are handled in note list view, not note view
             // Reset to normal if somehow we end up here
             app.input_mode = InputMode::Normal;

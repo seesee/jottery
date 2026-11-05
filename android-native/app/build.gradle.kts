@@ -6,6 +6,15 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// scripts/set-version.sh sets this for every release, so the app follows it. The code
+// has to rise with each one, or an update can't install over the last.
+val releaseVersion: String = Regex(""""version"\s*:\s*"([^"]+)"""")
+    .find(rootDir.resolve("../package.json").readText())!!
+    .groupValues[1]
+val releaseVersionCode: Int = releaseVersion.substringBefore('-').split('.')
+    .map(String::toInt)
+    .let { (major, minor, patch) -> major * 10_000 + minor * 100 + patch }
+
 android {
     namespace = "com.jottery.android"
     compileSdk = 35
@@ -14,14 +23,27 @@ android {
         applicationId = "com.jottery.android"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = releaseVersionCode
+        versionName = releaseVersion
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        // From CI secrets. Without them a release build comes out unsigned.
+        System.getenv("ANDROID_KEYSTORE_PATH")?.let { path ->
+            create("release") {
+                storeFile = file(path)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -42,8 +64,21 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
+    testOptions {
+        unitTests {
+            // Robolectric needs merged resources and the manifest; the Room
+            // migration tests read exported schemas from assets.
+            isIncludeAndroidResources = true
+        }
+    }
+
+    sourceSets {
+        // Debug only: the migration tests read the exported schemas as assets
+        getByName("debug").assets.srcDir("$projectDir/schemas")
+    }
 }
 
 ksp {
@@ -78,6 +113,7 @@ dependencies {
     implementation(libs.webkit)
 
     // Room
+    implementation(libs.work.runtime)
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
@@ -94,7 +130,15 @@ dependencies {
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.runner)
+    testImplementation(libs.room.testing)
+    testImplementation(libs.work.testing)
+    testImplementation(libs.okhttp.mockwebserver)
     androidTestImplementation(libs.junit.ext)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.okhttp.mockwebserver)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.runner)
     androidTestImplementation(libs.compose.ui.test)

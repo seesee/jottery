@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from 'vitest';
-import { CalcParser, CalcEvaluator } from './calcExtension';
+import { CalcParser, CalcEvaluator, evaluateDocument } from './calcExtension';
 import { Text } from '@codemirror/state';
 
 describe('CalcParser', () => {
@@ -426,5 +426,119 @@ describe('CalcEvaluator', () => {
 			}
 			expect(result.isError).toBe(false);
 		});
+	});
+});
+
+describe('what a calc note can reach', () => {
+	let evaluator: CalcEvaluator;
+
+	beforeEach(() => {
+		evaluator = new CalcEvaluator();
+	});
+
+	const evaluate = (expression: string) =>
+		evaluator.evaluateLine({ lineNumber: 1, expression, isComment: false, isEmpty: false } as never);
+
+	test.each([
+		['a huge matrix of ones', 'ones(30000, 30000)'],
+		['a huge matrix of zeros', 'zeros(100000, 100000)'],
+		['a huge range', 'sum(1:2000000000)'],
+		['a huge range by name', 'range(1, 2000000000)'],
+		['a huge identity matrix', 'identity(100000)'],
+		['a huge random matrix', 'random([100000, 100000])'],
+		['a huge kron product', 'kron(ones(1000), ones(1000))'],
+		['a matrix built up by broadcast', 'ones(1000, 1) + ones(1, 1000)'],
+		['an outer product', 'ones(1000, 1) * ones(1, 1000)'],
+		['a power set', 'setPowerset(1:30)'],
+		['a long factorial', 'factorial(bignumber(1000000000))'],
+		['a long combination', 'combinations(1000000000, 500000000)'],
+	])('refuses %s, and carries on', (_name, expression) => {
+		const result = evaluate(expression);
+
+		expect(result.isError).toBe(true);
+		expect(evaluate('1 + 1').result).toBe('2');
+	});
+
+	test('stops a function that calls itself for ever', () => {
+		evaluate('f(n) = n > 0 ? f(n - 1) + f(n - 1) : 1');
+
+		expect(evaluate('f(60)').isError).toBe(true);
+	});
+
+	test('does not keep a value that was too large', () => {
+		evaluate('a = (ones(1, 1000) == 1) == (ones(1000, 1) == 1)');
+
+		expect(evaluate('a').isError).toBe(true);
+	});
+
+	test.each([
+		['createUnit("knots")'], ['import({})'], ['evaluate("1+1")'], ['parse("1+1")'],
+		['simplify("x+x")'], ['derivative("x^2", "x")'], ['resolve("x")'],
+	])('refuses %s', expression => {
+		expect(evaluate(expression).isError).toBe(true);
+	});
+
+	test('cannot change units for other notes', () => {
+		evaluate('createUnit("wibble")');
+
+		expect(new CalcEvaluator().evaluateLine({ lineNumber: 1, expression: '1 wibble', isComment: false, isEmpty: false } as never).isError).toBe(true);
+	});
+
+	test.each([
+		['1:5', '[1, 2, 3, 4, 5]'],
+		['sum(1:100)', '5050'],
+		['mean([1, 2, 3])', '2'],
+		['det([[1, 2], [3, 4]])', '-2'],
+		['[1, 2] * [3, 4]', '11'],
+		['[[1, 2], [3, 4]] * [[1, 0], [0, 1]]', '[[1, 2], [3, 4]]'],
+		['[1, 2] + 1', '[2, 3]'],
+		['[1, 2] .* [3, 4]', '[3, 8]'],
+		['std([2, 4, 4, 4])', '1'],
+		['5 cm to inch', '1.9685039370079 inch'],
+		['ones(2, 2)', '[[1, 1], [1, 1]]'],
+		['identity(2)', '[[1, 0], [0, 1]]'],
+		['factorial(5)', '120'],
+		['combinations(5, 2)', '10'],
+		['concat([1, 2], [3])', '[1, 2, 3]'],
+		['2 km + 500 m', '2.5 km'],
+		['sqrt(16)', '4'],
+	])('still works out %s', (expression, expected) => {
+		expect(evaluate(expression).result).toBe(expected);
+	});
+
+	test('keeps functions a note defines', () => {
+		evaluate('g(x) = x^2');
+
+		expect(evaluate('g(3)').result).toBe('9');
+	});
+});
+
+describe('evaluateDocument', () => {
+	const line = (lineNumber: number, expression: string) =>
+		({ lineNumber, expression, isComment: false, isEmpty: false }) as never;
+
+	test('stops when a note takes too long, however many lines are left', () => {
+		let time = 0;
+		const clock = () => (time += 600);
+
+		const { results, warning } = evaluateDocument(new CalcEvaluator(), [line(1, '1'), line(2, '2'), line(3, '3'), line(4, '4')], clock);
+
+		expect(results.length).toBeLessThan(4);
+		expect(warning?.key).toBe('tooSlow');
+	});
+
+	test('evaluates everything when there is time', () => {
+		const { results, warning } = evaluateDocument(new CalcEvaluator(), [line(1, 'a = 2'), line(2, 'a * 3')]);
+
+		expect(results.map(result => result.result)).toEqual(['2', '6']);
+		expect(warning).toBeUndefined();
+	});
+
+	test('stops on a run of errors, which means this is not calculations', () => {
+		const lines = Array.from({ length: 20 }, (_, index) => line(index + 1, 'not calculations at all'));
+
+		const { warning } = evaluateDocument(new CalcEvaluator(), lines);
+
+		expect(warning?.key).toBe('consecutiveErrors');
 	});
 });

@@ -66,7 +66,7 @@ pub fn render_inbox(app: &mut App, frame: &mut Frame, area: Rect) {
             ]),
             Line::from(vec![
                 Span::styled(
-                    format!("  {}{}{}", &item.created_at[..10], tags_str, source_str),
+                    format!("  {}{}{}", crate::models::char_prefix(&item.created_at, 10), tags_str, source_str),
                     Style::default().fg(Color::DarkGray),
                 ),
             ]),
@@ -133,7 +133,7 @@ pub fn render_inbox(app: &mut App, frame: &mut Frame, area: Rect) {
     }
 }
 
-fn render_confirm_modal(frame: &mut Frame, area: Rect, title: &str, message: &str) {
+pub(super) fn render_confirm_modal(frame: &mut Frame, area: Rect, title: &str, message: &str) {
     let modal = centered_rect_percent(50, 30, area);
     frame.render_widget(Clear, modal);
 

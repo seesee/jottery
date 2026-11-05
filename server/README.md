@@ -37,9 +37,9 @@ DATABASE_URL=sqlite:jottery.db
 # Server port
 PORT=3030
 
-# Maximum request payload size (bytes)
-# Default: 10MB (10485760 bytes)
-MAX_PAYLOAD_SIZE=10485760
+# Largest request body in bytes. Each user's upload limit still applies beneath it.
+# Default: 100 MB (104857600 bytes)
+MAX_PAYLOAD_SIZE=104857600
 
 # Logging level (trace, debug, info, warn, error)
 RUST_LOG=info
@@ -91,12 +91,14 @@ The server includes a web-based admin dashboard for managing users, viewing stat
 
 Navigate to: `http://localhost:3030/admin`
 
-### Default Credentials
+### Admin Credentials
 
-**⚠️ IMPORTANT: Change the default password immediately after first login!**
+The admin account is `admin@localhost` unless you set `DEFAULT_ADMIN_EMAIL`. On first start:
 
-- **Email**: `admin@localhost`
-- **Password**: `changeme`
+- If `DEFAULT_ADMIN_PASSWORD` is set and meets the password policy, it is applied.
+- Otherwise the server generates a random password and prints it once in its log. You must change it at first sign-in. If you lose it before signing in, restart the server to generate another.
+
+**Upgrading an older install:** an admin account still on the old default password keeps working, so you aren't locked out, but every admin route is blocked until the password is changed. Devices keep syncing in the meantime. Setting `DEFAULT_ADMIN_PASSWORD` and restarting also replaces the old password.
 
 ### Admin Features
 
@@ -117,17 +119,17 @@ The admin dashboard provides comprehensive user and system management:
 
 **Account Management:**
 - Change admin password (requires current password)
-- Session management (configurable expiry, default 7 days)
+- Session management (configurable expiry, default 1 day)
 - Logout functionality
 
 ### Security Recommendations
 
-1. **Change Default Admin Credentials:** Set `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD` in `.env` before deployment, then change password after first login
+1. **Set Admin Credentials:** Set `DEFAULT_ADMIN_EMAIL` and `DEFAULT_ADMIN_PASSWORD` in `.env` before deployment, or use the random password the server logs once
 2. **Configure CORS:** Set `CORS_ALLOWED_ORIGINS` to your frontend domain(s) in production (comma-separated list)
 3. **HTTPS Only:** Always use HTTPS in production (configure with reverse proxy like Nginx/Caddy)
 4. **Strong Password Hashing:** Adjust `ARGON2_M_COST`, `ARGON2_T_COST`, `ARGON2_P_COST` for your security requirements
 5. **Session Security:** Configure `SESSION_EXPIRY_DAYS` based on your security needs (shorter = more secure)
-6. **Rate Limiting:** Configure rate limiting at the reverse proxy level (see `.env.example` for examples)
+6. **Rate Limiting:** Built in, but set `TRUSTED_PROXY_HOPS` if you run behind a reverse proxy (see [Rate Limiting](#rate-limiting))
 7. **Review Users:** Regularly review pending registrations and active users
 8. **Monitor Audit Log:** Check for suspicious sync activity
 9. **Backup Database:** Regular backups include all user data and credentials (passwords are hashed)
@@ -174,7 +176,7 @@ Content-Type: application/json
 
 {
   "email": "admin@localhost",
-  "password": "changeme"
+  "password": "your-admin-password"
 }
 ```
 
@@ -515,7 +517,7 @@ See admin dashboard at `/admin` for full user management UI with visual interfac
 The server uses SQLite with the following tables:
 
 - **`users`**: User accounts with email, Argon2id password hash, approval status, admin role
-- **`sessions`**: Admin dashboard sessions with token hash and expiry (7-day lifespan)
+- **`sessions`**: Admin dashboard sessions with token hash and expiry (1 day by default)
 - **`clients`**: Registered devices with hashed API keys (linked to users via user_id)
 - **`notes`**: Encrypted note data with versioning (linked to users via user_id)
 - **`attachments_meta`**: Attachment metadata
@@ -527,7 +529,7 @@ The server uses SQLite with the following tables:
 - Each note belongs to a user (via user_id foreign key)
 - Device API keys are hashed (SHA-256) before storage
 - Admin passwords use Argon2id hashing (memory=19456, time=2, parallelism=1)
-- Sessions expire after 7 days and are automatically cleaned up
+- Sessions expire after 1 day by default and are automatically cleaned up
 
 - **`sync_operations`**: Audit trail of sync operations
 
@@ -715,7 +717,7 @@ sqlite3 /opt/jottery/jottery.db "PRAGMA integrity_check; VACUUM;"
 1. **API Keys**: Generated with cryptographically secure random bytes, hashed with SHA-256 before storage
 2. **HTTPS Required**: Always use HTTPS in production (configure via Nginx)
 3. **CORS**: Configured to allow all origins by default - restrict in production if needed
-4. **Rate Limiting**: Not implemented - consider adding Nginx rate limiting
+4. **Rate Limiting**: Built in (see [Rate Limiting](#rate-limiting)). Set `TRUSTED_PROXY_HOPS` behind a proxy
 5. **Firewall**: Only expose port 443 (HTTPS) publicly, keep 3030 internal
 6. **Updates**: Keep Rust dependencies updated with `cargo update`
 
@@ -755,6 +757,33 @@ SQLite connection pool can be tuned in `src/db.rs`:
 // Reduce max connections
 .max_connections(5)  // Default is 10
 ```
+
+### Rate Limiting
+
+The server throttles anonymous routes itself, so every deployment gets this without extra configuration:
+
+| What | Limit | Setting |
+|------|-------|---------|
+| Sign-in, device registration, device cloning | 20 a minute per address | `RATE_LIMIT_AUTH_PER_MINUTE` |
+| Account registration | 20 an hour per address | `RATE_LIMIT_REGISTER_PER_HOUR` |
+| Approval status check | 60 a minute per address | `RATE_LIMIT_STATUS_PER_MINUTE` |
+| Wrong passwords for one email, across all three password routes | 5 free, then waits doubling from 1 second up to 15 minutes | |
+
+A refused request gets a 429 with a `Retry-After` header. A correct password during a wait is refused too, so a wait tells a guesser nothing. Waits end by themselves, a successful sign-in clears the count, and a lock never affects device sync, which uses API keys rather than passwords. `RATE_LIMIT_ENABLED=false` turns all of this off.
+
+**Behind a reverse proxy, set `TRUSTED_PROXY_HOPS`.** The default of 0 ignores `X-Forwarded-For`, because any client can send one, and uses the connection's address. Behind a proxy that address is the proxy's, so every client shares one limit. Set it to the number of proxies in front of the server, and the server takes the entry that many from the right, which is the one your outermost proxy wrote. Don't set it higher than the proxies you really have, or clients can forge their address. A warning appears in the log if the header arrives while the setting is 0.
+
+The Docker image sets `TRUSTED_PROXY_HOPS=1` for its bundled Caddy, which replaces any `X-Forwarded-For` a client sends. If you run another proxy in front of the container, Caddy replaces that proxy's header too, so all clients appear as that proxy and share a limit. That's safe, but to separate them, add [`trusted_proxies`](https://caddyserver.com/docs/caddyfile/options#trusted-proxies) to the Caddyfile and set `TRUSTED_PROXY_HOPS=2`.
+
+### Upgrading
+
+The server applies migrations itself when it starts. **Take a backup first** (see above), then let the server do it: never run `sqlx migrate run` against a database that holds data.
+
+Some migrations rebuild tables, and SQLite's `DROP TABLE` deletes through `ON DELETE CASCADE` while foreign keys are on, which would empty the child tables. The server turns foreign keys off for the migration; `sqlx migrate run` doesn't. Migration 016 checks its row counts and rolls back rather than lose data, but migrations 003 and 004 predate that check.
+
+A failed migration rolls back and the server exits, leaving the database as it was.
+
+Servers older than migration 004 that were already upgraded with an earlier release lost their child rows at that point, and that can't be repaired here. A full sync from a device that still holds the notes restores them.
 
 ### Migration Failures
 
@@ -799,6 +828,17 @@ sqlx migrate add <migration_name>
 # Then run the server to apply it automatically
 ```
 
+A migration that rebuilds a table is safe only because `db::run_migrations` runs it with foreign keys off. Don't reach for the `-- no-transaction` marker: sqlx's SQLite driver ignores it, so a `BEGIN` in the file fails, and a `PRAGMA foreign_keys = OFF` silently does nothing and the rebuild cascade-deletes. Test any rebuild against a populated database, as `tests/migration_tests.rs` does.
+
+If you change a `sqlx::query!` macro, regenerate the offline cache, because the Docker build compiles with `SQLX_OFFLINE`. Use a database built from the migrations:
+
+```bash
+export DATABASE_URL=sqlite:///tmp/jottery-prepare.db
+rm -f /tmp/jottery-prepare.db
+sqlx database setup --source migrations
+cargo sqlx prepare -- --all-targets
+```
+
 ### Environment Variables
 
 See `.env.example` for a complete list of configuration options with documentation.
@@ -809,17 +849,17 @@ Key environment variables:
 # Basic configuration
 DATABASE_URL=sqlite:jottery.db
 PORT=3030
-MAX_PAYLOAD_SIZE=5242880
+MAX_PAYLOAD_SIZE=104857600
 
 # CORS security
 CORS_ALLOWED_ORIGINS=https://example.com
 
 # Session security
-SESSION_EXPIRY_DAYS=7
+SESSION_EXPIRY_DAYS=1
 
-# Default admin account (CHANGE IN PRODUCTION!)
+# Admin account. Leave the password unset to have one generated and logged once.
 DEFAULT_ADMIN_EMAIL=admin@localhost
-DEFAULT_ADMIN_PASSWORD=changeme
+DEFAULT_ADMIN_PASSWORD=
 
 # Password hashing (Argon2id)
 ARGON2_M_COST=19456  # Memory in KiB

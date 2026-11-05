@@ -7,6 +7,10 @@ import UIKit
 @MainActor
 struct PasteboardServiceTests {
 
+    /// Its own, not `.general`: suites run in parallel, and `SyncSetupReopenTests`
+    /// pastes through the general pasteboard for real.
+    private let pasteboard = UIPasteboard(name: UIPasteboard.Name(UUID().uuidString), create: true)!
+
     private func makeTestImage() -> UIImage {
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: 4, height: 4))
         return renderer.image { ctx in
@@ -16,11 +20,10 @@ struct PasteboardServiceTests {
     }
 
     @Test func readsImageFromPasteboard() throws {
-        UIPasteboard.general.items = []
-        UIPasteboard.general.image = makeTestImage()
+        pasteboard.image = makeTestImage()
 
-        #expect(PasteboardService.hasAttachableContent)
-        let items = PasteboardService.readItems(now: Date(timeIntervalSince1970: 1_751_600_000))
+        #expect(PasteboardService.hasAttachableContent(in: pasteboard))
+        let items = PasteboardService.readItems(from: pasteboard, now: Date(timeIntervalSince1970: 1_751_600_000))
         #expect(items.count == 1)
         let item = try #require(items.first)
         #expect(item.mimeType == "image/png")
@@ -30,15 +33,13 @@ struct PasteboardServiceTests {
     }
 
     @Test func emptyPasteboardHasNoAttachableContent() {
-        UIPasteboard.general.items = []
-        #expect(!PasteboardService.hasAttachableContent)
-        #expect(PasteboardService.readItems().isEmpty)
+        #expect(!PasteboardService.hasAttachableContent(in: pasteboard))
+        #expect(PasteboardService.readItems(from: pasteboard).isEmpty)
     }
 
     @Test func plainTextIsNotAttachable() {
-        UIPasteboard.general.items = []
-        UIPasteboard.general.string = "just text"
+        pasteboard.string = "just text"
         // Text pastes natively into the editor — the attachment path must not claim it.
-        #expect(!PasteboardService.hasAttachableContent)
+        #expect(!PasteboardService.hasAttachableContent(in: pasteboard))
     }
 }

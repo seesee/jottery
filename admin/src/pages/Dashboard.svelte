@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api } from '../lib/api';
+  import { describeError } from '../lib/apiErrors';
   import type { StatsResponse } from '../lib/api';
   import { onMount } from 'svelte';
   import { _ } from 'svelte-i18n';
@@ -14,7 +15,7 @@
       error = null;
       stats = await api.getStats();
     } catch (err) {
-      error = err instanceof Error ? err.message : $_('dashboard.failedToLoad');
+      error = describeError(err, $_, 'dashboard.failedToLoad');
     } finally {
       loading = false;
     }
@@ -38,7 +39,7 @@
   </div>
 
   {#if error}
-    <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+    <div role="alert" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
       {error}
     </div>
   {/if}

@@ -68,9 +68,15 @@ pub fn render_input_email_for_status(app: &App, frame: &mut Frame) {
     frame.render_widget(input, chunks[1]);
 
     // Render help text
-    let help = Paragraph::new(t!("help.press_enter_paste"))
-        .alignment(Alignment::Center)
-        .style(Style::default().fg(app.color_scheme.muted));
+    // A refused entry says why, or Enter would just appear to do nothing
+    let help = match &app.error {
+        Some(error) => Paragraph::new(error.as_str())
+            .style(Style::default().fg(app.color_scheme.error))
+            .wrap(ratatui::widgets::Wrap { trim: true }),
+        None => Paragraph::new(t!("help.enter_confirm_esc_cancel"))
+            .style(Style::default().fg(app.color_scheme.muted)),
+    }
+    .alignment(Alignment::Center);
 
     frame.render_widget(help, chunks[2]);
 }
@@ -172,6 +178,7 @@ pub fn render_register_input_password(app: &App, frame: &mut Frame) {
     } else {
         t!("register.enter_password")
     };
+    let prompt = format!("{}\n{}", prompt, t!("register.password_differs"));
 
     render_registration_input_modal(
         app,
@@ -266,7 +273,8 @@ pub fn render_change_password(app: &App, frame: &mut Frame, step: &str) {
         "confirm" => t!("password.change_confirm_new").to_string(),
         _ => t!("password.enter").to_string(),
     };
-    render_registration_input_modal(app, frame, &title, &instruction, &app.credential_input, true);
+    let note = t!("password.change_keeps_key").to_string();
+    draw_input_modal(app, frame, &title, &instruction, &app.credential_input, true, Some(&note));
 }
 
 /// Helper to render a registration input modal
@@ -277,6 +285,19 @@ fn render_registration_input_modal(
     instruction: &str,
     input: &str,
     is_password: bool,
+) {
+    draw_input_modal(app, frame, title, instruction, input, is_password, None);
+}
+
+/// Draw an input modal, with a note above the keys if there's something to say.
+fn draw_input_modal(
+    app: &App,
+    frame: &mut Frame,
+    title: &str,
+    instruction: &str,
+    input: &str,
+    is_password: bool,
+    note: Option<&str>,
 ) {
     let size = frame.area();
 
@@ -313,10 +334,8 @@ fn render_registration_input_modal(
 
     frame.render_widget(block, modal_area);
 
-    let instruction_widget = Paragraph::new(Line::from(Span::styled(
-        instruction,
-        Style::default().fg(app.color_scheme.accent),
-    )));
+    let instruction_widget = Paragraph::new(instruction.to_string())
+        .style(Style::default().fg(app.color_scheme.accent));
     frame.render_widget(instruction_widget, chunks[0]);
 
     let display_value = if is_password {
@@ -332,8 +351,10 @@ fn render_registration_input_modal(
 
     frame.render_widget(input_widget, chunks[1]);
 
-    let help = Paragraph::new(t!("help.press_enter_paste"))
+    let keys = t!("help.enter_confirm_esc_cancel");
+    let help = Paragraph::new(note.map_or_else(|| keys.to_string(), |note| format!("{note}\n{keys}")))
         .alignment(Alignment::Center)
+        .wrap(ratatui::widgets::Wrap { trim: true })
         .style(Style::default().fg(app.color_scheme.muted));
 
     frame.render_widget(help, chunks[2]);

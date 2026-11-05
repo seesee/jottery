@@ -30,51 +30,54 @@ data class DecryptedNote(
     var parentHash: String? = null,
     var hashChain: List<String> = emptyList(),
     var needsSync: Boolean,
-    val decryptedAt: Instant = Instant.now(),
 ) {
-    /** Title from virtual tag (t: or title:) or first non-empty line. */
-    val title: String
-        get() {
-            // Check for virtual title tag
-            val titleTag = tags.firstOrNull { it.startsWith("t:") || it.startsWith("title:") }
-            if (titleTag != null) {
-                val prefix = if (titleTag.startsWith("t:")) "t:" else "title:"
-                val tagTitle = titleTag.removePrefix(prefix).trim()
-                if (tagTitle.isNotEmpty()) return tagTitle.take(80)
-            }
-            // Fall back to first non-empty line of content
-            val lines = content.split("\n").filter { it.isNotBlank() }
-            val firstLine = lines.firstOrNull() ?: return "Untitled"
-            val trimmed = firstLine.trim().replace(Regex("^#+\\s*"), "")
-            if (trimmed.isEmpty()) return "Untitled"
-            return trimmed.take(80)
+    /**
+     * Title from virtual tag (t: or title:) or first non-empty line. Sorting asks
+     * for this on every comparison, so it's worked out once: an edit makes a new
+     * instance, so nothing here can go stale.
+     */
+    val title: String by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        val titleTag = tags.firstOrNull { it.startsWith("t:") || it.startsWith("title:") }
+        if (titleTag != null) {
+            val prefix = if (titleTag.startsWith("t:")) "t:" else "title:"
+            val tagTitle = titleTag.removePrefix(prefix).trim()
+            if (tagTitle.isNotEmpty()) return@lazy tagTitle.take(80)
         }
+        val firstLine = nonBlankLines.firstOrNull() ?: return@lazy untitled
+        val trimmed = firstLine.trim().replace(HEADING_MARK, "")
+        if (trimmed.isEmpty()) untitled else trimmed.take(80)
+    }
 
     /** Preview snippet: second non-empty line, truncated. */
-    val preview: String
-        get() {
-            val lines = content.split("\n").filter { it.isNotBlank() }
-            if (lines.size <= 1) return ""
-            return lines[1].trim().take(120)
-        }
+    val preview: String by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        nonBlankLines.getOrNull(1)?.trim()?.take(120).orEmpty()
+    }
+
+    /** The first two lines are all a title and preview need. */
+    private val nonBlankLines: List<String>
+        get() = content.lineSequence().filter { it.isNotBlank() }.take(2).toList()
+
+    /** Lowercase once per note, not once per search. */
+    val searchableContent: String by lazy(LazyThreadSafetyMode.PUBLICATION) { content.lowercase() }
+
+    val searchableTags: List<String> by lazy(LazyThreadSafetyMode.PUBLICATION) { tags.map { it.lowercase() } }
 
     /** Tags excluding virtual tags (e.g. title tags). */
     val regularTags: List<String>
         get() = tags.filter { !isTitleTag(it) }
 
     /** Word count for the note. */
-    val wordCount: Int
-        get() = content.split(Regex("[\\s\\n]+")).count { it.isNotEmpty() }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is DecryptedNote) return false
-        return id == other.id && modifiedAt == other.modifiedAt && version == other.version
+    val wordCount: Int by lazy(LazyThreadSafetyMode.PUBLICATION) {
+        content.split(WORD_BREAK).count { it.isNotEmpty() }
     }
 
-    override fun hashCode(): Int = id.hashCode()
-
     companion object {
+        private val HEADING_MARK = Regex("^#+\\s*")
+        private val WORD_BREAK = Regex("[\\s\\n]+")
+
+        /** Shown for a note with no text. Set from resources when the app starts. */
+        @Volatile var untitled: String = "Untitled"
+
         /** Whether a tag is a virtual title tag (t: or title: prefix). */
         fun isTitleTag(tag: String): Boolean =
             tag.startsWith("t:") || tag.startsWith("title:")
@@ -90,3 +93,11 @@ data class DecryptedNote(
         }
     }
 }
+
+/** Each tag and how many of these notes carry it, most used first. */
+fun List<DecryptedNote>.tagCounts(): List<Pair<String, Int>> =
+    flatMap { it.regularTags.distinct() }
+        .groupingBy { it }
+        .eachCount()
+        .toList()
+        .sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first.lowercase() })

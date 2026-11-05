@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM attachments_meta\n             WHERE unreferenced_at < ?\n               AND NOT EXISTS (\n                   SELECT 1 FROM note_attachments na\n                   WHERE na.user_id = attachments_meta.user_id\n                     AND na.attachment_id = attachments_meta.attachment_id\n               )\n               AND NOT EXISTS (\n                   SELECT 1 FROM note_versions v\n                   WHERE v.user_id = attachments_meta.user_id\n                     AND instr(v.attachments, attachments_meta.attachment_id) > 0\n               )",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "bd181d2491a756748242770d57b64f8a3a9dcb84f7c03e27611a30e1df001618"
+}

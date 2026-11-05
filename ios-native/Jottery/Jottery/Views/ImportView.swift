@@ -7,8 +7,14 @@ struct ImportView: View {
 
     @State private var showFilePicker = false
     @State private var strategy: ImportService.Strategy = .skip
-    @State private var parsedExport: ExportService.ExportData?
+    @State private var parsedExport: ImportService.ImportFile?
+    /// The picked file is read in place, so its security scope stays open
+    /// until the import ends or this view goes away.
+    @State private var scopedURL: URL?
+    @State private var isOpeningFile = false
+    @State private var work: Task<Void, Never>?
     @State private var importResult: ImportService.ImportResult?
+    @State private var didStartImport = false
     @State private var isImporting = false
     @State private var progress: (current: Int, total: Int)?
     @State private var errorMessage: String?
@@ -22,7 +28,7 @@ struct ImportView: View {
                         HStack {
                             Text(L.importNoteCount)
                             Spacer()
-                            Text("\(export.notes.count)")
+                            Text("\(export.noteCount)")
                                 .foregroundStyle(.secondary)
                         }
                         HStack {
@@ -118,8 +124,16 @@ struct ImportView: View {
                         Button {
                             showFilePicker = true
                         } label: {
-                            Label(L.importSelectFile, systemImage: "doc.badge.plus")
+                            HStack {
+                                Label(L.importSelectFile, systemImage: "doc.badge.plus")
+                                Spacer()
+                                if isOpeningFile {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                }
+                            }
                         }
+                        .disabled(isOpeningFile)
                     }
 
                     if let error = errorMessage {
@@ -136,15 +150,17 @@ struct ImportView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(importResult != nil ? L.versionHistoryDone : L.commonCancel) {
-                        if importResult != nil {
-                            Task {
-                                try? await appState.loadNotes()
-                                dismiss()
-                            }
-                        } else {
-                            dismiss()
-                        }
+                        dismiss()
                     }
+                }
+            }
+            .onDisappear {
+                work?.cancel()
+                releaseScopedFile()
+                // However the sheet went: a swipe skips the toolbar button, and an
+                // import stopped part way has still written notes.
+                if didStartImport {
+                    Task { await appState.reloadAfterImport() }
                 }
             }
             .fileImporter(
@@ -163,46 +179,62 @@ struct ImportView: View {
         switch result {
         case .success(let urls):
             guard let url = urls.first else { return }
-            let accessing = url.startAccessingSecurityScopedResource()
-            defer { if accessing { url.stopAccessingSecurityScopedResource() } }
-            do {
-                let data = try Data(contentsOf: url)
-                parsedExport = try ImportService.parse(data)
-                errorMessage = nil
-            } catch {
-                errorMessage = error.localizedDescription
+            if url.startAccessingSecurityScopedResource() {
+                scopedURL = url
+            }
+            isOpeningFile = true
+            errorMessage = nil
+            work = Task { @MainActor in
+                defer { isOpeningFile = false }
+                do {
+                    parsedExport = try await offMainActor { try ImportService.open(url) }
+                } catch {
+                    releaseScopedFile()
+                    errorMessage = error.localizedDescription
+                }
             }
         case .failure(let error):
             errorMessage = error.localizedDescription
         }
     }
 
-    private func performImport(_ export: ExportService.ExportData) {
+    private func releaseScopedFile() {
+        scopedURL?.stopAccessingSecurityScopedResource()
+        scopedURL = nil
+    }
+
+    private func performImport(_ file: ImportService.ImportFile) {
         guard let noteRepo = appState.noteRepo,
               let attachmentRepo = appState.attachmentRepo,
               let key = appState.keyManager.masterKey else { return }
 
         isImporting = true
+        didStartImport = true
         let currentStrategy = strategy
-        // Run on background thread to avoid blocking UI
-        Task.detached {
-            let result = try? ImportService.importNotes(
-                export,
-                strategy: currentStrategy,
-                noteRepo: noteRepo,
-                attachmentRepo: attachmentRepo,
-                key: key,
-                progress: { current, total in
-                    Task { @MainActor in
-                        progress = (current, total)
-                    }
-                }
-            )
-            await MainActor.run {
-                importResult = result ?? ImportService.ImportResult(errors: ["Import failed"])
+        work = Task { @MainActor in
+            defer {
                 parsedExport = nil
                 isImporting = false
                 progress = nil
+                releaseScopedFile()
+            }
+            do {
+                importResult = try await offMainActor {
+                    try ImportService.importNotes(
+                        from: file,
+                        strategy: currentStrategy,
+                        noteRepo: noteRepo,
+                        attachmentRepo: attachmentRepo,
+                        key: key,
+                        progress: { current, total in
+                            Task { @MainActor in
+                                progress = (current, total)
+                            }
+                        }
+                    )
+                }
+            } catch {
+                importResult = ImportService.ImportResult(errors: [error.localizedDescription])
             }
         }
     }

@@ -241,6 +241,39 @@ test.describe('Conflict Resolution UI', () => {
     expect(noteId).not.toBeNull();
   });
 
+  test('should stay closed once dismissed', async ({ page }) => {
+    const jp = new JotteryPage(page);
+    await jp.newNoteButton.click();
+    const editor = jp.editorContent;
+    await editor.click();
+    await editor.pressSequentially('My local changes');
+    await waitForAutosave(page, 'My local changes');
+
+    const noteId = await getCurrentNoteId(page);
+    await injectConflictData(page, noteId!, {
+      serverContent: 'Server made different changes',
+      serverContentHash: 'server-hash-123',
+      serverParentHash: 'common-ancestor-hash',
+    });
+    // Conflicts are only looked for when sync is on
+    await page.evaluate(async () => {
+      const { settingsRepository } = await import('/src/lib/services/settingsRepository.ts' as string);
+      await settingsRepository.update({ syncEnabled: true });
+    });
+    await reloadAndUnlock(page, jp);
+
+    await page.locator('[data-testid="note-list-item"]').first().click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+
+    // It used to come back 100ms later, for as long as the note stayed selected
+    await page.waitForTimeout(500);
+    await expect(dialog).toHaveCount(0);
+  });
+
   test('should open conflict resolution modal and show 3-way merge UI with ancestor', async ({ page }) => {
     const jp = new JotteryPage(page);
 
@@ -511,6 +544,8 @@ test.describe('Hash Chain Conflict Detection', () => {
   });
 
   test('should preserve content hash fields after conflict resolution', async ({ page }) => {
+    // Two notes, two reloads and an unlock take most of the default budget by themselves
+    test.slow();
     const jp = new JotteryPage(page);
 
     // Create a note
@@ -556,6 +591,8 @@ test.describe('Hash Chain Conflict Detection', () => {
   });
 
   test('should handle multiple conflicts simultaneously', async ({ page }) => {
+    // Two notes, two reloads and an unlock take most of the default budget by themselves
+    test.slow();
     const jp = new JotteryPage(page);
 
     // Create first note

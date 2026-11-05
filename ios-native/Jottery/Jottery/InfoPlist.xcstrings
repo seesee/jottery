@@ -1,0 +1,196 @@
+{
+  "sourceLanguage": "en-GB",
+  "strings": {
+    "NSFaceIDUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jottery mit Face ID entsperren"
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ξεκλείδωμα του Jottery με Face ID"
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock Jottery with Face ID"
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock Jottery with Face ID"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desbloquear Jottery con Face ID"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déverrouiller Jottery avec Face ID"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sblocca Jottery con Face ID"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Face IDでJotteryのロックを解除します"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Face ID로 Jottery 잠금 해제"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ontgrendel Jottery met Face ID"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Odblokuj Jottery za pomocą Face ID"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desbloquear o Jottery com Face ID"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Разблокировка Jottery с помощью Face ID"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jottery'nin kilidini Face ID ile aç"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 Face ID 解锁 Jottery"
+          }
+        }
+      }
+    },
+    "NSLocalNetworkUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jottery verbindet sich mit Ihrem eigenen Sync-Server. Erlauben Sie den Zugriff auf das lokale Netzwerk, wenn dieser Server in diesem Netzwerk läuft."
+          }
+        },
+        "el": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Το Jottery συνδέεται στον δικό σας διακομιστή συγχρονισμού. Επιτρέψτε την πρόσβαση στο τοπικό δίκτυο, αν ο διακομιστής εκτελείται σε αυτό το δίκτυο."
+          }
+        },
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jottery connects to your own sync server. Allow local network access if that server runs on this network."
+          }
+        },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jottery connects to your own sync server. Allow local network access if that server runs on this network."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jottery se conecta a su propio servidor de sincronización. Permita el acceso a la red local si ese servidor se ejecuta en esta red."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jottery se connecte à votre propre serveur de synchronisation. Autorisez l’accès au réseau local si ce serveur fonctionne sur ce réseau."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jottery si connette al tuo server di sincronizzazione. Consenti l’accesso alla rete locale se il server si trova su questa rete."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jotteryはお使いの同期サーバーに接続します。そのサーバーがこのネットワーク上にある場合は、ローカルネットワークへのアクセスを許可してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jottery는 사용자의 동기화 서버에 연결합니다. 해당 서버가 이 네트워크에서 실행 중이면 로컬 네트워크 접근을 허용하세요."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jottery maakt verbinding met je eigen synchronisatieserver. Sta toegang tot het lokale netwerk toe als die server op dit netwerk draait."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jottery łączy się z Twoim własnym serwerem synchronizacji. Zezwól na dostęp do sieci lokalnej, jeśli ten serwer działa w tej sieci."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Jottery liga-se ao seu próprio servidor de sincronização. Permita o acesso à rede local se esse servidor estiver nesta rede."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jottery подключается к вашему собственному серверу синхронизации. Разрешите доступ к локальной сети, если сервер работает в этой сети."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jottery kendi eşitleme sunucunuza bağlanır. Bu sunucu bu ağda çalışıyorsa yerel ağ erişimine izin verin."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jottery 会连接到你自己的同步服务器。如果该服务器运行在此网络上，请允许访问本地网络。"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.1"
+}

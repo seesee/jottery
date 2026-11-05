@@ -5,6 +5,10 @@ struct SetupScreen: View {
     @State private var selectedTab = 0
 
     var body: some View {
+        ScrollableScreen { form }
+    }
+
+    private var form: some View {
         VStack(spacing: 32) {
             Spacer()
 
@@ -27,6 +31,7 @@ struct SetupScreen: View {
 
             if selectedTab == 0 {
                 NewVaultView()
+                RestoreFromBackupButton()
             } else {
                 ConnectToServerView()
             }
@@ -50,6 +55,10 @@ private struct NewVaultView: View {
         !password.isEmpty && password == confirmPassword
     }
 
+    var passwordIsTooShort: Bool {
+        PasswordPolicy.violation(newNotesPassword: password) == .tooShort
+    }
+
     var body: some View {
         VStack(spacing: 16) {
             PasswordField(L.setupPassword, text: $password)
@@ -59,6 +68,12 @@ private struct NewVaultView: View {
             PasswordField(L.setupConfirmPassword, text: $confirmPassword)
                 .textFieldStyle(.roundedBorder)
                 .frame(maxWidth: 320)
+
+            if !password.isEmpty && passwordIsTooShort {
+                Text(L.notesPasswordTooShort(PasswordPolicy.minimumNotesPasswordLength))
+                    .foregroundStyle(.red)
+                    .font(.callout)
+            }
 
             if !confirmPassword.isEmpty && !passwordsMatch {
                 Text(L.setupPasswordsDoNotMatch)
@@ -87,12 +102,12 @@ private struct NewVaultView: View {
                 }
             }
             .buttonStyle(.borderedProminent)
-            .disabled(!passwordsMatch || isCreating)
+            .disabled(!passwordsMatch || passwordIsTooShort || isCreating)
         }
     }
 
     private func createVault() {
-        guard passwordsMatch else { return }
+        guard passwordsMatch, !passwordIsTooShort else { return }
         error = nil
         isCreating = true
 
@@ -262,10 +277,7 @@ private struct ConnectToServerView: View {
                 try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
 
                 // Store userId for envelope encryption
-                if var syncMeta = try? appState.syncRepo?.getMetadata() {
-                    syncMeta.userId = response.userId
-                    try? appState.syncRepo?.saveMetadata(syncMeta)
-                }
+                try appState.syncRepo?.beginAccount(userId: response.userId)
 
                 appState.settings.syncEnabled = true
                 appState.settings.syncEndpoint = normalised
@@ -298,6 +310,9 @@ private struct ConnectToServerView: View {
                 // be shown, and carrying on with a key of our own would leave this
                 // device unable to read the account's notes (and vice versa).
                 // Server failures are not swallowed either: they stop setup here.
+                //
+                // Only the encryption password is ever tried: the server knows
+                // the server password, so it could wrap a key of its own with it.
                 var serverKeyData: Data?
                 var onboardingContext: (client: SyncClient, userId: String)?
                 if let syncRepo = appState.syncRepo,
@@ -307,19 +322,18 @@ private struct ConnectToServerView: View {
                    let apiKey = registeredApiKey {
                     let client = SyncClient(endpoint: endpoint, apiKey: apiKey)
                     onboardingContext = (client, userId)
-                    do {
-                        // The server key is wrapped with the encryption password;
-                        // builds before the fix wrapped it with the server
-                        // password, so that is tried as a fallback.
-                        serverKeyData = try await EnvelopeService.fetchServerKey(
-                            syncClient: client,
-                            userId: userId,
-                            password: encryptionPassword,
-                            alternatePassword: password
-                        )
-                    } catch EnvelopeError.cannotUnwrapServerKey {
-                        throw SyncSetupError.encryptionPasswordMismatch
-                    }
+                    serverKeyData = try await EnvelopeService.accountKeyForNewVault(
+                        syncClient: client,
+                        userId: userId,
+                        notesPassword: encryptionPassword,
+                        accountPassword: password
+                    )
+                } else if let violation = PasswordPolicy.violation(
+                    newNotesPassword: encryptionPassword, accountPassword: password
+                ) {
+                    throw violation == .tooShort
+                        ? SyncSetupError.notesPasswordTooShort
+                        : SyncSetupError.notesPasswordMatchesAccountPassword
                 }
 
                 syncProgress = L.setupProgressCreatingVault
@@ -346,6 +360,10 @@ private struct ConnectToServerView: View {
                                 localPassword: encryptionPassword
                             )
                             appState.keyManager.unlockWithKeyData(serverKeyData)
+                            try appState.syncRepo?.markServerKeyOpened()
+                            if PasswordPolicy.matchesAccountPassword(encryptionPassword, accountPassword: password) {
+                                appState.accountKeyNotice = .passwordMatchesAccount
+                            }
                         } catch {
                             // Never sync with a key of our own: stop here.
                             Log.debug("[Envelope] Adopting server key failed: \(error)")
@@ -366,8 +384,10 @@ private struct ConnectToServerView: View {
                                 syncClient: context.client,
                                 userId: context.userId,
                                 password: encryptionPassword,
-                                masterKeyData: masterKey.withUnsafeBytes { Data($0) }
+                                masterKeyData: masterKey.withUnsafeBytes { Data($0) },
+                                as: .firstUpload
                             )
+                            try appState.syncRepo?.markServerKeyOpened()
                         } catch {
                             Log.debug("[Envelope] Publishing key failed (will retry on unlock): \(error)")
                         }
@@ -399,7 +419,7 @@ private struct ConnectToServerView: View {
                 appState.isSyncing = false
 
                 let count = appState.notes.count
-                appState.syncStatusMessage = "Synced — \(count) note\(count == 1 ? "" : "s")"
+                appState.syncStatusMessage = L.syncStatusNotes(count)
                 isWorking = false
 
                 // Clear the status message after a few seconds
@@ -412,6 +432,9 @@ private struct ConnectToServerView: View {
                 appState.isSyncing = false
                 syncProgress = nil
                 isWorking = false
+                // Only a wrong guess at the real password counts towards offering
+                // to start over, not a password the rules refuse or a failed request.
+                guard case SyncSetupError.encryptionPasswordMismatch = error else { return }
                 failedAttempts += 1
                 if failedAttempts >= 5 {
                     self.error = L.unlockFailedAttempts

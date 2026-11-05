@@ -56,6 +56,7 @@ import { cryptoService } from './crypto';
 import { keyManager } from './keyManager';
 import { base64ToUint8Array } from '../utils/base64';
 import { CRYPTO_PBKDF2_ITERATIONS } from '../constants';
+import { BackupStorageFullError } from '../errors';
 
 const BACKUP_VERSION_LEGACY = '2.1';
 const BACKUP_VERSION = '3.0';
@@ -65,6 +66,7 @@ const BACKUP_FILE_EXTENSION = '.jottery-backup';
 // Batch sizes for different record types
 const NOTE_BATCH_SIZE = 250;
 const ATTACHMENT_BATCH_SIZE = 50; // Larger items, smaller batches
+const ATTACHMENT_BATCH_BYTES = 16 * 1024 * 1024; // Fifty photos are too much for one batch
 const VERSION_BATCH_SIZE = 250;
 
 // JWE algorithms
@@ -402,15 +404,8 @@ export async function createBackup(onProgress?: BackupProgressCallback): Promise
   return backup;
 }
 
-/**
- * Create a batched, compressed backup (v3.0)
- *
- * Items are batched, then each batch is: JSON → compress → encrypt.
- * This significantly reduces backup size and memory usage for large collections.
- */
-export async function createBatchedBackup(
-  onProgress?: BackupProgressCallback
-): Promise<BackupDataV3> {
+/** The key and metadata a backup needs, which also means the app is unlocked */
+async function backupKeyAndMetadata(): Promise<{ keyBytes: Uint8Array; encryption: EncryptionMetadata }> {
   // Get master key (required - must be unlocked)
   const masterKey = keyManager.getMasterKey();
   if (!masterKey) {
@@ -423,8 +418,21 @@ export async function createBatchedBackup(
     throw new Error('No encryption metadata found. Application not initialised.');
   }
 
-  const keyBytes = masterKey.keyBytes;
+  return { keyBytes: masterKey.keyBytes, encryption };
+}
 
+/**
+ * Make every batch of a backup, handing each to `write` as soon as it exists. The
+ * caller decides what to keep, so a backup need never hold more than one batch of
+ * attachments.
+ *
+ * Items are batched, then each batch is: JSON → compress → encrypt.
+ */
+async function writeBatches(
+  keyBytes: Uint8Array,
+  write: (batch: BatchRecord) => void,
+  onProgress?: BackupProgressCallback
+): Promise<BackupSummary> {
   onProgress?.({ phase: 'counting' });
 
   // Gather all data
@@ -446,14 +454,13 @@ export async function createBatchedBackup(
   const totalBatches = noteBatches + attachmentBatches + versionBatches + 2; // +2 for settings/sync batches
 
   let currentBatch = 0;
-  const batches: BatchRecord[] = [];
 
   // Process notes in batches
   const noteBatchArrays = splitIntoBatches(notes, NOTE_BATCH_SIZE);
   for (let i = 0; i < noteBatchArrays.length; i++) {
     const batch = noteBatchArrays[i];
     const jwe = await encryptBatch(batch, keyBytes);
-    batches.push({
+    write({
       type: 'notes',
       index: i,
       count: batch.length,
@@ -469,9 +476,27 @@ export async function createBatchedBackup(
     onProgress?.({ phase: 'encrypting', current: currentBatch, total: totalBatches, item: 'notes' });
   }
 
-  // Process attachments in batches (need to load blob data first)
-  // Report progress during loading since this can be slow for many attachments
-  const attachmentRecords: AttachmentRecord[] = [];
+  // Attachments are encrypted as they're read. These are what can run to gigabytes,
+  // and they're base64 strings by this point, so only one batch of them can be held.
+  let pending: AttachmentRecord[] = [];
+  let pendingBytes = 0;
+  let attachmentBatchIndex = 0;
+  let attachmentCount = 0;
+
+  const writePendingAttachments = async () => {
+    if (pending.length === 0) return;
+    const jwe = await encryptBatch(pending, keyBytes);
+    write({
+      type: 'attachments',
+      index: attachmentBatchIndex++,
+      count: pending.length,
+      data: jwe,
+    });
+    attachmentCount += pending.length;
+    pending = [];
+    pendingBytes = 0;
+  };
+
   for (let idx = 0; idx < attachmentIds.length; idx++) {
     const id = attachmentIds[idx];
     onProgress?.({
@@ -485,50 +510,35 @@ export async function createBatchedBackup(
     const thumbnail = await attachmentRepository.getThumbnail(id);
 
     if (blob) {
-      attachmentRecords.push({
+      const record: AttachmentRecord = {
         id,
         blob: arrayBufferToBase64(blob),
         thumbnail: thumbnail ? arrayBufferToBase64(thumbnail) : undefined,
-      });
+      };
+      pending.push(record);
+      pendingBytes += record.blob.length + (record.thumbnail?.length ?? 0);
+    }
+
+    if (pending.length >= ATTACHMENT_BATCH_SIZE || pendingBytes >= ATTACHMENT_BATCH_BYTES) {
+      await writePendingAttachments();
     }
   }
+  await writePendingAttachments();
 
-  const attachmentBatchArrays = splitIntoBatches(attachmentRecords, ATTACHMENT_BATCH_SIZE);
-  for (let i = 0; i < attachmentBatchArrays.length; i++) {
-    const batch = attachmentBatchArrays[i];
-    const jwe = await encryptBatch(batch, keyBytes);
-    batches.push({
-      type: 'attachments',
-      index: i,
-      count: batch.length,
-      data: jwe,
-    });
-    currentBatch++;
-    onProgress?.({
-      phase: 'encrypting',
-      current: currentBatch,
-      total: totalBatches,
-      item: 'attachments',
-    });
-  }
-
-  // If no attachments, still report progress
-  if (attachmentBatchArrays.length === 0) {
-    currentBatch++;
-    onProgress?.({
-      phase: 'encrypting',
-      current: currentBatch,
-      total: totalBatches,
-      item: 'attachments',
-    });
-  }
+  currentBatch += attachmentBatches;
+  onProgress?.({
+    phase: 'encrypting',
+    current: currentBatch,
+    total: totalBatches,
+    item: 'attachments',
+  });
 
   // Process versions in batches
   const versionBatchArrays = splitIntoBatches(versions, VERSION_BATCH_SIZE);
   for (let i = 0; i < versionBatchArrays.length; i++) {
     const batch = versionBatchArrays[i];
     const jwe = await encryptBatch(batch, keyBytes);
-    batches.push({
+    write({
       type: 'versions',
       index: i,
       count: batch.length,
@@ -557,7 +567,7 @@ export async function createBatchedBackup(
   // Process saved searches (usually small, single batch)
   if (savedSearches.length > 0) {
     const jwe = await encryptBatch(savedSearches, keyBytes);
-    batches.push({
+    write({
       type: 'saved_searches',
       index: 0,
       count: savedSearches.length,
@@ -570,7 +580,7 @@ export async function createBatchedBackup(
   // Process settings (single item batch)
   const settings = await settingsRepository.get();
   const settingsJwe = await encryptBatch([settings], keyBytes);
-  batches.push({
+  write({
     type: 'settings',
     index: 0,
     count: 1,
@@ -583,7 +593,7 @@ export async function createBatchedBackup(
   const syncMetadata = await syncRepository.getMetadata();
   if (syncMetadata) {
     const jwe = await encryptBatch([syncMetadata], keyBytes);
-    batches.push({
+    write({
       type: 'sync_metadata',
       index: 0,
       count: 1,
@@ -593,21 +603,58 @@ export async function createBatchedBackup(
 
   onProgress?.({ phase: 'complete', current: totalBatches, total: totalBatches });
 
-  const backup: BackupDataV3 = {
+  return {
+    notes: notes.length,
+    attachments: attachmentCount,
+    versions: versions.length,
+    savedSearches: savedSearches.length,
+  };
+}
+
+/**
+ * Create a batched, compressed backup (v3.0) as an object in memory.
+ *
+ * The whole backup stays in memory, so for saving one use createBackupFile.
+ */
+export async function createBatchedBackup(
+  onProgress?: BackupProgressCallback
+): Promise<BackupDataV3> {
+  const { keyBytes, encryption } = await backupKeyAndMetadata();
+
+  const batches: BatchRecord[] = [];
+  const summary = await writeBatches(keyBytes, batch => batches.push(batch), onProgress);
+
+  return {
     version: BACKUP_VERSION,
     type: BACKUP_TYPE,
     createdAt: new Date().toISOString(),
     encryption,
     batches,
-    summary: {
-      notes: notes.length,
-      attachments: attachmentRecords.length,
-      versions: versions.length,
-      savedSearches: savedSearches.length,
-    },
+    summary,
   };
+}
 
-  return backup;
+/**
+ * Create a backup file (v3.0), one batch at a time. Each goes into a Blob as soon as
+ * it's made, which the browser keeps out of the page's memory, so the size of a vault
+ * doesn't decide whether it can be backed up.
+ */
+export async function createBackupFile(onProgress?: BackupProgressCallback): Promise<Blob> {
+  const { keyBytes, encryption } = await backupKeyAndMetadata();
+
+  const parts: BlobPart[] = [
+    backupFileHeader({ version: BACKUP_VERSION, type: BACKUP_TYPE, createdAt: new Date().toISOString(), encryption }),
+    ',\n"batches":[\n',
+  ];
+  let separator = '';
+
+  const summary = await writeBatches(keyBytes, batch => {
+    parts.push(new Blob([separator, JSON.stringify(batch)]));
+    separator = ',\n';
+  }, onProgress);
+
+  parts.push('\n],\n"summary":', JSON.stringify(summary), '\n}');
+  return new Blob(parts, { type: 'application/json' });
 }
 
 /**
@@ -675,6 +722,14 @@ async function parseBackupFile(
     if (header.version === '2.1' || header.version === '2.0') {
       const data = await parseBackupV2Data(file, onProgress);
       if (!data) return null;
+
+      // A second, independent count. A record lost here would only show up after a
+      // restore, once the original has gone.
+      const expected = await countV2Records(file);
+      if (data.length !== expected) {
+        console.error(`[backupService] Read ${data.length} records from a backup that holds ${expected}`);
+        return null;
+      }
 
       onProgress?.({ phase: 'complete', bytesRead: file.size, totalBytes: file.size, percent: 100 });
       return {
@@ -748,7 +803,7 @@ async function parseBackupBatches(
             try {
               batches.push(JSON.parse(currentBatch));
             } catch {
-              // Skip malformed batch
+              return null;
             }
             currentBatch = '';
           }
@@ -776,7 +831,7 @@ async function parseBackupBatches(
           try {
             batches.push(JSON.parse(currentBatch));
           } catch {
-            // Skip malformed batch
+            return null;
           }
           currentBatch = '';
         }
@@ -830,23 +885,36 @@ async function parseBackupV2Data(
       inDataArray = true;
     }
 
-    // Extract JWE tokens (strings starting with "eyJ")
-    const tokenRegex = /"(eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+)"/g;
-    let match;
-    while ((match = tokenRegex.exec(buffer)) !== null) {
-      data.push(match[1]);
-    }
+    // Take each complete string. A JWE token holds no quotes or brackets, so its
+    // closing quote is the next quote. Whatever hasn't closed yet stays in the
+    // buffer, however long it is: a record can be larger than a chunk.
+    let position = 0;
+    for (;;) {
+      const open = buffer.indexOf('"', position);
+      const arrayEnd = buffer.indexOf(']', position);
 
-    // Check for end of array
-    if (buffer.includes(']}') || buffer.includes(']\n}')) {
-      break;
-    }
+      if (arrayEnd !== -1 && (open === -1 || arrayEnd < open)) {
+        return data.length > 0 ? data : null;
+      }
 
-    // Keep last part in case token spans chunks
-    buffer = buffer.slice(-1000);
+      if (open === -1) {
+        buffer = '';
+        break;
+      }
+
+      const close = buffer.indexOf('"', open + 1);
+      if (close === -1) {
+        buffer = buffer.slice(open);
+        break;
+      }
+
+      data.push(buffer.slice(open + 1, close));
+      position = close + 1;
+    }
   }
 
-  return data.length > 0 ? data : null;
+  // The array never closed, so the file is cut short
+  return null;
 }
 
 /**
@@ -1101,6 +1169,12 @@ export async function verifyBackupPassword(
     }
     const { key, keyBytes } = backupKey;
 
+    // Decrypting a record is what proves the password. With no records there is
+    // nothing to prove it against, and nothing to restore.
+    if (isEmptyBackup(backup)) {
+      return { valid: false, error: 'This backup contains nothing to restore' };
+    }
+
     // Verify by attempting to decrypt the first record/batch
     if (isBackupV3(backup)) {
       // v3.0: decrypt first batch
@@ -1138,6 +1212,74 @@ export async function verifyBackupPassword(
 }
 
 /**
+ * The error for a record that couldn't be stored. Nothing is ever skipped: a restore
+ * that left records out and reported success would be found out only when they were
+ * needed.
+ */
+function restoreFailure(error: unknown, what: string): Error {
+  if (error instanceof Error && error.name === 'QuotaExceededError') {
+    return new BackupStorageFullError(error);
+  }
+  return new Error(`Failed to restore ${what}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+}
+
+function isEmptyBackup(backup: BackupData): boolean {
+  if (isBackupV3(backup)) return backup.batches.length === 0;
+  if (isBackupV2(backup)) return backup.data.length === 0;
+  return true;
+}
+
+/**
+ * Decrypt everything in a backup and check that it's complete. A restore deletes the
+ * vault first, because IndexedDB only frees space on delete, so this has to pass
+ * before that happens. Checking the first record isn't enough: a backup damaged
+ * further in would otherwise leave nothing behind but part of itself.
+ */
+export async function verifyBackupContents(
+  backup: BackupData,
+  keyBytes: Uint8Array,
+  onProgress?: RestoreProgressCallback
+): Promise<void> {
+  if (isEmptyBackup(backup)) {
+    throw new Error('This backup contains nothing to restore');
+  }
+
+  if (isBackupV2(backup)) {
+    for (let i = 0; i < backup.data.length; i++) {
+      onProgress?.({ phase: 'validating', current: i + 1, total: backup.data.length });
+      await decryptJWEToRecord(backup.data[i], keyBytes);
+    }
+    return;
+  }
+
+  const { batches, summary } = backup as BackupDataV3;
+  const found: Record<string, number> = {};
+
+  for (let i = 0; i < batches.length; i++) {
+    const batch = batches[i];
+    onProgress?.({ phase: 'validating', current: i + 1, total: batches.length });
+
+    const items = await decryptBatch<unknown>(batch.data, keyBytes);
+    if (items.length !== batch.count) {
+      throw new Error(`Backup is damaged: batch ${i + 1} holds ${items.length} items, but its count says ${batch.count}`);
+    }
+    found[batch.type] = (found[batch.type] ?? 0) + items.length;
+  }
+
+  const expected: Array<[string, number]> = [
+    ['notes', summary.notes],
+    ['attachments', summary.attachments],
+    ['versions', summary.versions],
+    ['saved_searches', summary.savedSearches],
+  ];
+  for (const [type, count] of expected) {
+    if ((found[type] ?? 0) !== count) {
+      throw new Error(`Backup is damaged: found ${found[type] ?? 0} ${type}, but its summary says ${count}`);
+    }
+  }
+}
+
+/**
  * Restore data from a v2.x backup (legacy)
  *
  * Decrypts each JWE record and restores based on its type.
@@ -1160,26 +1302,6 @@ export async function restoreBackup(
 
   onProgress?.({ phase: 'decrypting', current: 0, total });
 
-  // Track skipped items for summary at end (due to quota errors)
-  const skippedItems: Record<string, number> = {};
-
-  // Helper to store item with quota error handling
-  const storeWithQuotaHandling = async (
-    type: string,
-    storeFn: () => Promise<unknown>
-  ): Promise<boolean> => {
-    try {
-      await storeFn();
-      return true;
-    } catch (error) {
-      if (error instanceof Error && error.name === 'QuotaExceededError') {
-        skippedItems[type] = (skippedItems[type] || 0) + 1;
-        return false;
-      }
-      throw error;
-    }
-  };
-
   // 2. Decrypt and restore each record
   for (let i = 0; i < backup.data.length; i++) {
     const jwe = backup.data[i];
@@ -1191,35 +1313,31 @@ export async function restoreBackup(
 
       switch (record.type) {
         case 'note':
-          await storeWithQuotaHandling('notes', () => db.put(STORES.NOTES, record.data as Note));
+          await db.put(STORES.NOTES, record.data as Note);
           break;
 
         case 'attachment': {
           const attachment = record.data as AttachmentRecord;
-          await storeWithQuotaHandling('attachments', async () => {
-            const blob = base64ToArrayBuffer(attachment.blob);
-            await attachmentRepository.storeBlob(attachment.id, blob);
+          const blob = base64ToArrayBuffer(attachment.blob);
+          await attachmentRepository.storeBlob(attachment.id, blob);
 
-            if (attachment.thumbnail) {
-              const thumbnail = base64ToArrayBuffer(attachment.thumbnail);
-              await attachmentRepository.storeThumbnail(attachment.id, thumbnail);
-            }
-          });
+          if (attachment.thumbnail) {
+            const thumbnail = base64ToArrayBuffer(attachment.thumbnail);
+            await attachmentRepository.storeThumbnail(attachment.id, thumbnail);
+          }
           break;
         }
 
         case 'version':
-          await storeWithQuotaHandling('versions', () => db.put(STORES.NOTE_VERSIONS, record.data as NoteVersion));
+          await db.put(STORES.NOTE_VERSIONS, record.data as NoteVersion);
           break;
 
         case 'saved_search':
-          await storeWithQuotaHandling('saved_searches', () => db.put(STORES.SAVED_SEARCHES, record.data as SavedSearch));
+          await db.put(STORES.SAVED_SEARCHES, record.data as SavedSearch);
           break;
 
         case 'settings':
-          await storeWithQuotaHandling('settings', () =>
-            settingsRepository.update(record.data as UserSettings)
-          );
+          await settingsRepository.update(withoutDeviceSettings(record.data as UserSettings));
           break;
 
         case 'sync_metadata': {
@@ -1234,9 +1352,7 @@ export async function restoreBackup(
           if (syncMeta.apiKey && !syncMeta.apiKey.startsWith('RESTORE:')) {
             syncMeta.apiKey = 'RESTORE:' + syncMeta.apiKey;
           }
-          await storeWithQuotaHandling('sync_metadata', () =>
-            syncRepository.updateMetadata(syncMeta)
-          );
+          await syncRepository.updateMetadata(syncMeta);
           break;
         }
 
@@ -1245,21 +1361,21 @@ export async function restoreBackup(
       }
     } catch (error) {
       console.error(`[backupService] Failed to restore record ${i}:`, error);
-      throw new Error(`Failed to restore record ${i + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw restoreFailure(error, `record ${i + 1}`);
     }
-  }
-
-  // Log summary if there were any skipped items
-  const totalSkipped = Object.values(skippedItems).reduce((a, b) => a + b, 0);
-  if (totalSkipped > 0) {
-    console.log(`[backupService] Restore completed. Skipped ${totalSkipped} items due to browser storage quota:`);
-    for (const [type, count] of Object.entries(skippedItems)) {
-      console.log(`  - ${type}: ${count} skipped`);
-    }
-    console.log('[backupService] Skipped items may re-sync from server if sync is enabled.');
   }
 
   onProgress?.({ phase: 'complete' });
+}
+
+/**
+ * Settings to bring from a backup. These three are security choices about one device,
+ * made with a warning and the password. A restore on a shared computer mustn't make
+ * them without either.
+ */
+function withoutDeviceSettings(settings: UserSettings): Partial<UserSettings> {
+  const { rememberPassword: _remember, persistSession: _persist, persistSessionTimeout: _timeout, ...rest } = settings;
+  return rest;
 }
 
 /**
@@ -1310,25 +1426,7 @@ export async function restoreBatchedBackup(
 
   onProgress?.({ phase: 'decrypting', current: 0, total: totalBatches });
 
-  // Track skipped items for summary at end
-  const skippedItems: Record<string, number> = {};
-
-  // Helper to store item with quota error handling
-  const storeWithQuotaHandling = async (
-    type: string,
-    storeFn: () => Promise<unknown>
-  ): Promise<boolean> => {
-    try {
-      await storeFn();
-      return true;
-    } catch (error) {
-      if (error instanceof Error && error.name === 'QuotaExceededError') {
-        skippedItems[type] = (skippedItems[type] || 0) + 1;
-        return false;
-      }
-      throw error;
-    }
-  };
+  let orphanedAttachments = 0;
 
   // 2. First pass: collect all referenced attachment IDs from notes and versions
   //    This lets us skip orphaned attachments during restore
@@ -1373,7 +1471,7 @@ export async function restoreBatchedBackup(
       switch (batch.type) {
         case 'notes':
           for (const note of items) {
-            await storeWithQuotaHandling('notes', () => db.put(STORES.NOTES, note as Note));
+            await db.put(STORES.NOTES, note as Note);
           }
           break;
 
@@ -1382,39 +1480,36 @@ export async function restoreBatchedBackup(
             const attachment = item as AttachmentRecord;
             // Skip orphaned attachments (not referenced by any note or version)
             if (!referencedAttachmentIds.has(attachment.id)) {
-              skippedItems['orphaned_attachments'] = (skippedItems['orphaned_attachments'] || 0) + 1;
+              orphanedAttachments++;
               continue;
             }
-            await storeWithQuotaHandling('attachments', async () => {
-              const blob = base64ToArrayBuffer(attachment.blob);
-              await attachmentRepository.storeBlob(attachment.id, blob);
 
-              if (attachment.thumbnail) {
-                const thumbnail = base64ToArrayBuffer(attachment.thumbnail);
-                await attachmentRepository.storeThumbnail(attachment.id, thumbnail);
-              }
-            });
+            const blob = base64ToArrayBuffer(attachment.blob);
+            await attachmentRepository.storeBlob(attachment.id, blob);
+
+            if (attachment.thumbnail) {
+              const thumbnail = base64ToArrayBuffer(attachment.thumbnail);
+              await attachmentRepository.storeThumbnail(attachment.id, thumbnail);
+            }
           }
           break;
 
         case 'versions':
           for (const version of items) {
-            await storeWithQuotaHandling('versions', () => db.put(STORES.NOTE_VERSIONS, version as NoteVersion));
+            await db.put(STORES.NOTE_VERSIONS, version as NoteVersion);
           }
           break;
 
         case 'saved_searches':
           for (const savedSearch of items) {
-            await storeWithQuotaHandling('saved_searches', () => db.put(STORES.SAVED_SEARCHES, savedSearch as SavedSearch));
+            await db.put(STORES.SAVED_SEARCHES, savedSearch as SavedSearch);
           }
           break;
 
         case 'settings':
           // Settings batch contains a single item
           if (items.length > 0) {
-            await storeWithQuotaHandling('settings', () =>
-              settingsRepository.update(items[0] as UserSettings)
-            );
+            await settingsRepository.update(withoutDeviceSettings(items[0] as UserSettings));
           }
           break;
 
@@ -1426,9 +1521,7 @@ export async function restoreBatchedBackup(
             if (syncMeta.apiKey && !syncMeta.apiKey.startsWith('RESTORE:')) {
               syncMeta.apiKey = 'RESTORE:' + syncMeta.apiKey;
             }
-            await storeWithQuotaHandling('sync_metadata', () =>
-              syncRepository.updateMetadata(syncMeta)
-            );
+            await syncRepository.updateMetadata(syncMeta);
           }
           break;
 
@@ -1436,25 +1529,13 @@ export async function restoreBatchedBackup(
           console.warn(`[backupService] Unknown batch type: ${batch.type}`);
       }
     } catch (error) {
-      // Only fail on non-quota errors
       console.error(`[backupService] Failed to restore batch ${i} (${batch.type}):`, error);
-      throw new Error(
-        `Failed to restore batch ${i + 1} (${batch.type}): ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      throw restoreFailure(error, `batch ${i + 1} (${batch.type})`);
     }
   }
 
-  // Log summary if there were any skipped items
-  const totalSkipped = Object.values(skippedItems).reduce((a, b) => a + b, 0);
-  if (totalSkipped > 0) {
-    console.log(`[backupService] Restore completed. Skipped ${totalSkipped} items:`);
-    for (const [type, count] of Object.entries(skippedItems)) {
-      if (type === 'orphaned_attachments') {
-        console.log(`  - ${count} orphaned attachments (not referenced by any note)`);
-      } else {
-        console.log(`  - ${type}: ${count} skipped (storage quota)`);
-      }
-    }
+  if (orphanedAttachments > 0) {
+    console.log(`[backupService] Left out ${orphanedAttachments} orphaned attachments (not referenced by any note)`);
   }
 
   onProgress?.({ phase: 'complete' });
@@ -1482,6 +1563,16 @@ export async function restoreFromBackup(
   throw new Error('Unknown backup format');
 }
 
+/** A backup file up to its batches. docs/backup-format.md says why the order matters. */
+function backupFileHeader(backup: Pick<BackupData, 'version' | 'type' | 'createdAt' | 'encryption'>): string {
+  return [
+    '{\n"version":', JSON.stringify(backup.version),
+    ',\n"type":', JSON.stringify(backup.type),
+    ',\n"createdAt":', JSON.stringify(backup.createdAt),
+    ',\n"encryption":', JSON.stringify(backup.encryption),
+  ].join('');
+}
+
 /**
  * Download a backup as a file
  *
@@ -1491,17 +1582,7 @@ export async function restoreFromBackup(
 export function downloadBackup(backup: BackupData): void {
   // Build JSON in chunks to avoid string length limits
   // Use newlines between records to enable streaming parsing on import
-  const chunks: string[] = [];
-
-  // Opening structure (with newlines for readability and streaming)
-  chunks.push('{\n"version":');
-  chunks.push(JSON.stringify(backup.version));
-  chunks.push(',\n"type":');
-  chunks.push(JSON.stringify(backup.type));
-  chunks.push(',\n"createdAt":');
-  chunks.push(JSON.stringify(backup.createdAt));
-  chunks.push(',\n"encryption":');
-  chunks.push(JSON.stringify(backup.encryption));
+  const chunks: string[] = [backupFileHeader(backup)];
 
   if (isBackupV3(backup)) {
     // v3.0 format: batches array and summary
@@ -1529,7 +1610,11 @@ export function downloadBackup(backup: BackupData): void {
     chunks.push('\n]\n}');
   }
 
-  const blob = new Blob(chunks, { type: 'application/json' });
+  downloadBackupFile(new Blob(chunks, { type: 'application/json' }));
+}
+
+/** Save a backup file made by createBackupFile */
+export function downloadBackupFile(blob: Blob): void {
   const url = URL.createObjectURL(blob);
 
   // Generate filename with date
@@ -1646,15 +1731,21 @@ async function countV2Records(file: File): Promise<number> {
   // Each JWE token starts with "eyJ" (base64 of '{"')
   let count = 0;
   const chunkSize = 1024 * 1024; // 1MB chunks
+  const overlap = 1024; // Longer than a token's protected header, so none can be split
+  let carried = '';
 
   for (let offset = 0; offset < file.size; offset += chunkSize) {
     const chunk = file.slice(offset, offset + chunkSize);
-    const text = await chunk.text();
-    // Count occurrences of JWE token starts (rough count)
-    const matches = text.match(/"eyJ[A-Za-z0-9_-]+\./g);
-    if (matches) {
-      count += matches.length;
+    const text = carried + (await chunk.text());
+
+    // A match ending inside the carried text was counted on the previous read
+    for (const match of text.matchAll(/"eyJ[A-Za-z0-9_-]+\./g)) {
+      if (match.index + match[0].length > carried.length) {
+        count++;
+      }
     }
+
+    carried = text.slice(-overlap);
   }
 
   return count;
@@ -1744,14 +1835,17 @@ function base64ToArrayBuffer(base64: string): ArrayBuffer {
  * Backup service singleton export
  */
 export const backupService = {
+  verifyBackupContents,
   createBackup,
   createBatchedBackup,
+  createBackupFile,
   validateBackup,
   verifyBackupPassword,
   restoreBackup,
   restoreBatchedBackup,
   restoreFromBackup,
   downloadBackup,
+  downloadBackupFile,
   getBackupStats,
   BACKUP_FILE_EXTENSION,
   // Constants for external use

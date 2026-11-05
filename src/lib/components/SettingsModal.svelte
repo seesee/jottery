@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import { settings, isLocked, notes } from '../stores/appStore';
-  import { settingsRepository, deleteDB, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, lock, passwordStorageService, sessionStorageService, createSyncRecoveryNote, onboardFromServer, uploadWrappedKeyToServer, verifyUnlockPassword } from '../services';
+  import { settingsRepository, deleteAllLocalData, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, lock, passwordStorageService, sessionStorageService, onboardFromServer, uploadWrappedKeyToServer, verifyUnlockPassword } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
-  import { createBatchedBackup, downloadBackup } from '../services/backupService';
+  import { createBackupFile, downloadBackupFile } from '../services/backupService';
   import { backupSchedulerService } from '../services/backupSchedulerService';
   import { authService } from '../services/authService';
   import { _ } from 'svelte-i18n';
@@ -17,6 +17,10 @@
   import TabContainer from './TabContainer.svelte';
   import { GeneralTab, EditorTab, KeyboardTab, SyncTab, AdvancedTab, AboutTab, ColorsTab } from './settings';
   import { toast } from '../utils/toast.svelte';
+  import { isSamePassword } from '../utils/passwordRules';
+  import { shortcutProblem, type ShortcutProblem } from '../utils/shortcutRecording';
+  import { onboardingErrorKey } from '../utils/onboardingErrors';
+  import { isConnectionRestricted } from '../services/cspService';
 
   export let show = false;
   export let onClose: () => void = () => {};
@@ -99,6 +103,7 @@
 
   // Keyboard shortcut recording
   let recordingShortcut: keyof KeyboardShortcuts | null = null;
+  let recordingProblem: ShortcutProblem | null = null;
   let tempShortcuts: KeyboardShortcuts = { ...DEFAULT_KEYBOARD_SHORTCUTS, ...$settings.keyboardShortcuts };
 
   // Documentation and downloads
@@ -247,17 +252,22 @@
   // Multi-user registration flow
   async function handleRegisterUser() {
     if (!syncEndpoint) {
-      syncError = 'Please enter a sync endpoint URL';
+      syncError = $_('unlock.connectExisting.errors.endpointRequired');
       return;
     }
 
     if (!userEmail.trim()) {
-      syncError = 'Please enter your email address';
+      syncError = $_('unlock.connectExisting.errors.emailRequired');
       return;
     }
 
     if (!userPassword.trim() || userPassword.length < 12) {
-      syncError = 'Password must be at least 12 characters';
+      syncError = $_('settings.syncSetup.errors.passwordTooShort');
+      return;
+    }
+
+    if (isSamePassword(notesPassword, userPassword)) {
+      syncError = $_('settings.syncSetup.notesPassword.mustDiffer');
       return;
     }
 
@@ -284,13 +294,14 @@
       }
     } catch (error) {
       console.error('User registration failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'User registration failed';
+      const errorMessage = error instanceof Error ? error.message : $_('settings.syncSetup.errors.registrationFailed');
 
-      // Handle "Email already registered" - allow resuming registration
+      // The account exists, so this device is joining it, not creating it: it must
+      // take the account's key rather than upload its own over the top.
       if (errorMessage.includes('Email already registered')) {
-        // Assume they might be approved and let device registration handle the auth check
-        registrationStep = 'device';
-        syncError = ''; // Clear error, let device registration validate approval status
+        registrationMode = 'existingUser';
+        registrationStep = 'email';
+        syncError = $_('settings.syncSetup.existingAccountDetected');
       } else {
         syncError = errorMessage;
       }
@@ -301,17 +312,24 @@
 
   async function handleRegisterDevice() {
     if (!userEmail || !userPassword) {
-      syncError = 'Email and password are required';
+      syncError = $_('settings.syncSetup.errors.credentialsRequired');
       return;
     }
 
     if (!deviceName.trim()) {
-      syncError = 'Please provide a device name';
+      syncError = $_('unlock.connectExisting.errors.deviceNameRequired');
       return;
     }
 
     if (!notesPassword) {
       syncError = $_('settings.syncSetup.notesPassword.required');
+      return;
+    }
+
+    // Joining an account chooses neither password, so a match is warned about below.
+    // Refusing would stop anyone who already has one adding a device.
+    if (registrationMode !== 'existingUser' && isSamePassword(notesPassword, userPassword)) {
+      syncError = $_('settings.syncSetup.notesPassword.mustDiffer');
       return;
     }
 
@@ -325,12 +343,18 @@
         deviceName.trim()
       );
 
+      // A key on the account means this isn't the first device, whichever option was
+      // picked. This runs before anything is saved, because uploading over that key
+      // would lose it and the full sync below would push notes the account can't read.
+      if (registrationMode === 'newUser' && await authService.getWrappedKey(syncEndpoint, response.apiKey)) {
+        registrationMode = 'existingUser';
+      }
+
       // For existing users: download the shared master key from the server.
       // This must happen BEFORE encrypting the API key, because onboarding replaces the local master key.
-      // The key is wrapped with the notes password; devices set up by older versions
-      // used the server password, so that is tried as a fallback. A failure must stop
-      // the flow: carrying on would leave this device on a different master key from
-      // the rest of the account, and its notes would be unreadable everywhere else.
+      // Only the notes password may open it. A failure must stop the flow: carrying on
+      // would leave this device on a different master key from the rest of the
+      // account, and its notes would be unreadable everywhere else.
       if (registrationMode === 'existingUser') {
         try {
           await onboardFromServer(
@@ -338,15 +362,17 @@
             syncEndpoint,
             response.userId,
             response.apiKey,
-            notesPassword,
-            userPassword
+            notesPassword
           );
           console.log('[SettingsModal] ✓ Onboarded from server via envelope encryption');
         } catch (onboardError) {
           console.error('[SettingsModal] Onboarding from server failed:', onboardError);
+          const specificError = onboardingErrorKey(onboardError);
           throw new Error(
-            $_('unlock.connectExisting.errors.onboardingFailed') +
-            (onboardError instanceof Error ? ': ' + onboardError.message : '')
+            specificError
+              ? $_(specificError)
+              : $_('unlock.connectExisting.errors.onboardingFailed') +
+                (onboardError instanceof Error ? ': ' + onboardError.message : '')
           );
         }
       }
@@ -410,13 +436,12 @@
       registrationStep = 'complete';
       syncError = keyUploadError;
 
-      // Create sync recovery note (non-blocking)
-      createSyncRecoveryNote().catch(err =>
-        console.warn('[SettingsModal] Failed to create recovery note:', err)
-      );
+      if (isSamePassword(notesPassword, userPassword)) {
+        toast.error($_('settings.syncSetup.notesPassword.matchesAccountWarning'));
+      }
     } catch (error) {
       console.error('Device registration failed:', error);
-      syncError = error instanceof Error ? error.message : 'Device registration failed';
+      syncError = error instanceof Error ? error.message : $_('settings.syncSetup.errors.deviceRegistrationFailed');
     } finally {
       registeringDevice = false;
     }
@@ -436,12 +461,12 @@
   // Account management functions
   async function handleAccountLogin() {
     if (!syncEndpoint) {
-      syncError = 'Please enter a sync endpoint URL first';
+      syncError = $_('unlock.connectExisting.errors.endpointRequired');
       return;
     }
 
     if (!accountEmail.trim() || !accountPassword.trim()) {
-      syncError = 'Please enter email and password';
+      syncError = $_('settings.syncSetup.errors.credentialsRequired');
       return;
     }
 
@@ -461,13 +486,13 @@
       });
 
       if (!response.ok) {
-        let errorMessage = 'Login failed';
+        let errorMessage = $_('settings.syncSetup.errors.loginFailed');
         try {
           const error = await response.json();
           errorMessage = error.error || errorMessage;
         } catch (e) {
           // Response body is not JSON, use status text
-          errorMessage = response.statusText || `Login failed (${response.status})`;
+          errorMessage = response.statusText || $_('settings.syncSetup.errors.loginFailed');
         }
         throw new Error(errorMessage);
       }
@@ -479,12 +504,17 @@
         isAdmin: data.user.isAdmin,
       };
 
+      // Older clients never stopped these matching. Warn, but don't block: the vault
+      // is still usable, and a password change on this device fixes it.
+      if (await verifyUnlockPassword(accountPassword)) {
+        toast.error($_('settings.syncSetup.notesPassword.matchesAccountWarning'));
+      }
 
       // Fetch account info
       await fetchAccountInfo();
     } catch (error) {
       console.error('Account login failed:', error);
-      syncError = error instanceof Error ? error.message : 'Login failed';
+      syncError = error instanceof Error ? error.message : $_('settings.syncSetup.errors.loginFailed');
     } finally {
       loggingIn = false;
     }
@@ -506,7 +536,7 @@
 
 
       if (!response.ok) {
-        let errorMessage = `Failed to fetch account info (${response.status})`;
+        let errorMessage = $_('settings.syncSetup.errors.accountInfoFailed');
         try {
           const error = await response.json();
           errorMessage = error.error || errorMessage;
@@ -519,7 +549,7 @@
       accountInfo = await response.json();
     } catch (error) {
       console.error('Failed to fetch account info:', error);
-      syncError = error instanceof Error ? error.message : 'Failed to load account info';
+      syncError = error instanceof Error ? error.message : $_('settings.syncSetup.errors.accountInfoFailed');
     } finally {
       loadingAccountInfo = false;
     }
@@ -538,7 +568,7 @@
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete notes');
+        throw new Error($_('settings.syncSetup.errors.deleteNotesFailed'));
       }
 
 
@@ -548,13 +578,24 @@
       showDeleteServerNotesConfirm = false;
     } catch (error) {
       console.error('Failed to delete notes:', error);
-      syncError = error instanceof Error ? error.message : 'Failed to delete notes';
+      syncError = error instanceof Error ? error.message : $_('settings.syncSetup.errors.deleteNotesFailed');
     }
   }
 
   async function handleDisconnect() {
     try {
-      await syncService.disconnect();
+      const { revoked } = await syncService.disconnect();
+      if (!revoked) {
+        toast.error($_('settings.syncTab.disconnectNotRevoked'));
+      }
+
+      // Connections are limited to the old server for this page load, and only a
+      // reload can lift that, so a new server couldn't be reached otherwise
+      if (isConnectionRestricted()) {
+        window.location.reload();
+        return;
+      }
+
       // Reset UI state
       syncStatus = null;
       syncEndpoint = '';
@@ -567,7 +608,7 @@
       syncStatus = await syncService.getSyncStatus();
     } catch (error) {
       console.error('Failed to disconnect:', error);
-      syncError = error instanceof Error ? error.message : 'Failed to disconnect';
+      syncError = error instanceof Error ? error.message : $_('settings.syncSetup.errors.disconnectFailed');
     }
   }
 
@@ -588,11 +629,11 @@
       if (result.success) {
         await loadSyncStatus();
       } else {
-        syncError = result.error || 'Sync failed';
+        syncError = result.error || $_('settings.syncSetup.errors.syncFailed');
       }
     } catch (error) {
       console.error('Sync failed:', error);
-      syncError = error instanceof Error ? error.message : 'Sync failed';
+      syncError = error instanceof Error ? error.message : $_('settings.syncSetup.errors.syncFailed');
     } finally {
       syncing = false;
     }
@@ -607,11 +648,11 @@
       if (result.success) {
         await loadSyncStatus();
       } else {
-        syncError = result.error || 'Sync failed';
+        syncError = result.error || $_('settings.syncSetup.errors.syncFailed');
       }
     } catch (error) {
       console.error('Full sync failed:', error);
-      syncError = error instanceof Error ? error.message : 'Full sync failed';
+      syncError = error instanceof Error ? error.message : $_('settings.syncSetup.errors.syncFailed');
     } finally {
       syncing = false;
     }
@@ -644,18 +685,31 @@
 
     } catch (error) {
       console.error('Failed to toggle sync feature:', error);
-      syncError = error instanceof Error ? error.message : 'Failed to toggle sync';
+      syncError = error instanceof Error ? error.message : $_('settings.syncSetup.errors.toggleFailed');
     }
   }
 
   function startRecording(shortcutName: keyof KeyboardShortcuts) {
     recordingShortcut = shortcutName;
+    recordingProblem = null;
+
+    const stopRecording = () => {
+      recordingShortcut = null;
+      window.removeEventListener('keydown', handleKeyDown, { capture: true });
+    };
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Prevent default browser behavior
       e.preventDefault();
       e.stopPropagation();
       e.stopImmediatePropagation();
+
+      // Escape cancels, and has to be caught here: this is where keys get recorded
+      if (e.key === 'Escape') {
+        recordingProblem = null;
+        stopRecording();
+        return;
+      }
 
       // Ignore just modifier keys by themselves
       if (['Control', 'Alt', 'Shift', 'Meta', 'Command'].includes(e.key)) {
@@ -682,29 +736,22 @@
         shift: hasShift || undefined,
       };
 
+      // Keep listening: the user can press something else
+      recordingProblem = shortcutProblem(shortcutName, newShortcut);
+      if (recordingProblem) {
+        return;
+      }
+
       tempShortcuts = {
         ...tempShortcuts,
         [shortcutName]: newShortcut,
       };
 
-      recordingShortcut = null;
-      window.removeEventListener('keydown', handleKeyDown, { capture: true });
-      window.removeEventListener('keyup', handleKeyUp, { capture: true });
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      // Cancel recording on Escape
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        recordingShortcut = null;
-        window.removeEventListener('keydown', handleKeyDown, { capture: true });
-        window.removeEventListener('keyup', handleKeyUp, { capture: true });
-      }
+      stopRecording();
     };
 
     // Use capture phase to intercept before browser shortcuts
     window.addEventListener('keydown', handleKeyDown, { capture: true, passive: false });
-    window.addEventListener('keyup', handleKeyUp, { capture: true, passive: false });
   }
 
   function resetShortcuts() {
@@ -818,8 +865,7 @@
   async function confirmDeleteDatabase() {
     showDeleteConfirm = false;
     try {
-      // Close database and delete
-      await deleteDB();
+      await deleteAllLocalData();
 
       // Lock the app and reload
       isLocked.set(true);
@@ -845,8 +891,7 @@
       // Just enabled (value is now true) - show confirmation to get password
       showPersistSessionConfirm = true;
     } else {
-      // Just disabled (value is now false) - clear session storage. The setting
-      // goes first: while it's on, auto-lock reads a missing session as expired.
+      // Just disabled (value is now false) - clear session storage
       settings.update(s => ({ ...s, persistSession: false }));
       sessionStorageService.clear();
     }
@@ -868,8 +913,14 @@
         return;
       }
 
-      // Password is correct! Store it in session storage
-      sessionStorageService.store(persistSessionConfirmInput);
+      // Password is correct! Store it in session storage. If that fails the option
+      // would do nothing, so it isn't switched on.
+      if (!sessionStorageService.store(persistSessionConfirmInput)) {
+        persistSessionError = $_('settings.persistSessionUnavailable');
+        persistSessionConfirmInput = '';
+        persistSession = false;
+        return;
+      }
 
       // Save the setting immediately to persist it
       await settingsRepository.update({ persistSession: true, persistSessionTimeout });
@@ -989,6 +1040,12 @@
         if (progress.current) progressCurrent = progress.current;
       });
       await downloadExport(data);
+      if (data.skipped) {
+        toast.error($_('settings.exportIncomplete', { values: {
+          notes: String(data.skipped.notes),
+          attachments: String(data.skipped.attachments),
+        } }));
+      }
     } catch (error) {
       console.error('Failed to export notes:', error);
       toast.error($_('settings.exportFailed', { values: { error: error instanceof Error ? error.message : String(error) } }));
@@ -1006,7 +1063,7 @@
     progressTotal = 0;
 
     try {
-      const backup = await createBatchedBackup((progress) => {
+      const backup = await createBackupFile((progress) => {
         if (progress.total) progressTotal = progress.total;
         if (progress.current) progressCurrent = progress.current;
         // Show phase-specific message
@@ -1016,7 +1073,7 @@
           progressMessage = $_('backup.encrypting');
         }
       });
-      downloadBackup(backup);
+      downloadBackupFile(backup);
       // Record the backup to reset counters and hide reminder
       await backupSchedulerService.recordBackup();
       toast.success($_('backup.created'));
@@ -1051,7 +1108,7 @@
       });
 
       // Reload notes
-      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      const allNotes = await noteService.getNotesForList($settings.sortOrder);
       notes.set(allNotes);
       searchService.indexNotes(allNotes);
 
@@ -1189,6 +1246,7 @@
           <KeyboardTab
             bind:tempShortcuts
             bind:recordingShortcut
+            {recordingProblem}
             onStartRecording={startRecording}
             onResetShortcuts={resetShortcuts}
             {onOpenShortcutsHelp}

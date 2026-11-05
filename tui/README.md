@@ -4,10 +4,10 @@ Terminal User Interface for Jottery - A privacy-focused, encrypted note-taking a
 
 ## Features
 
-- 🔐 **End-to-End Encryption**: AES-256-GCM encryption with PBKDF2 key derivation (256k iterations)
+- 🔐 **End-to-End Encryption**: AES-256-GCM encryption with a random master key, wrapped using PBKDF2 (600k iterations)
 - 📝 **Full Note Management**: Create, edit, delete, search, and tag notes
 - 🔄 **Bidirectional Sync**: Full sync with Jottery server including auto-sync
-- 💾 **Local Storage**: SQLite database with SQLCipher encryption
+- 💾 **Local Storage**: SQLite database. Note content and tags are always encrypted, and the whole file is too when built with SQLCipher
 - ⌨️ **Keyboard-Driven**: Efficient Vim-style keyboard shortcuts for all operations
 - 🎨 **Syntax Highlighting**: Support for JavaScript, Python, Markdown, JSON, HTML, CSS, SQL, Bash, Perl
 - 📋 **Markdown Rendering**: Beautiful markdown preview with tables, lists, code blocks, and inline formatting
@@ -25,7 +25,7 @@ Terminal User Interface for Jottery - A privacy-focused, encrypted note-taking a
 
 ### Prerequisites
 
-**SQLCipher** is required for database encryption:
+Notes and tags are encrypted in every build. To encrypt the rest of the database file as well, such as your email, the server address, attachment names and dates, build with **SQLCipher**. The default build doesn't include it, and says so on the unlock screen. Either way the file is readable only by your user.
 
 **macOS:**
 ```bash
@@ -46,7 +46,7 @@ sudo dnf install sqlcipher-devel
 
 ```bash
 cd tui
-cargo build --release
+cargo build --release                      # or: cargo build --release --features sqlcipher
 sudo cp target/release/jottery /usr/local/bin/
 ```
 
@@ -113,6 +113,22 @@ echo "Task item" | jottery note -p yourpassword --tags todo,work
 jottery note --password yourpassword
 ```
 
+#### Attachments and the Archive via CLI
+
+```bash
+# Attach a file to a note, then save it somewhere else
+jottery attach 1a2b3c4d ~/Documents/report.pdf
+jottery show 1a2b3c4d
+jottery save-attachment 1a2b3c4d -n 1 -o ~/Downloads/report.pdf
+
+# Archive a note, list the archive, and bring the note back
+jottery archive 1a2b3c4d
+jottery list --archived
+jottery unarchive 1a2b3c4d
+```
+
+These sync afterwards if this device is connected. `$EDITOR` and `$PAGER` can include arguments, such as `code -w`.
+
 #### Other Commands
 
 ```bash
@@ -128,8 +144,32 @@ jottery show <note-id> --password yourpassword
 jottery delete <note-id> --password yourpassword
 
 # Reset database (deletes all data)
-jottery --reset
+jottery --reset        # asks first; --yes skips that
 ```
+
+Other commands:
+
+```bash
+# Run a saved search
+jottery search --saved "Work"
+
+# See what the server holds, or delete it (the destructive ones ask for your email)
+jottery account info -e you@example.com
+jottery account delete-notes -e you@example.com
+jottery account delete -e you@example.com
+
+# Name a colour, and give a tag one
+jottery colours name red Urgent
+jottery colours tag work Urgent
+jottery colours list
+
+# Check the vault. Exits non-zero if something's wrong
+jottery doctor
+jottery doctor --repair     # also fetches missing attachments from the server
+```
+
+Exports are decrypted, so they're readable by you alone, and `export` won't replace a
+file unless you add `--force`.
 
 ### First Run
 
@@ -230,14 +270,15 @@ jottery register-device --server https://your-server.com --email your@email.com
 
 You'll be prompted for:
 - **Server password**: Your account password from Step 1
-- **Local database password**: Separate password for encrypting your local database
-  - This can be different from your server password
-  - Used to encrypt your local notes database
+- **Notes password**: The password that protects your notes
+  - It must be different from your server password. The server sees your server password, so that one can't also open your notes
+  - If this account already has notes, use the notes password from your other devices. A new notes password needs at least 8 characters
   - Required each time you open the TUI (unless "Remember Password" is enabled)
 
 The device registration will:
 - Authenticate with your approved user account
 - Receive an API key from the server
+- Unlock the account's master key with your notes password, and move any local notes onto it. If the notes password can't open it, the key may have been saved by an older version: unlock Jottery on a device that's already connected, which fixes it, then try again
 - Store encrypted credentials in your local database
 - Enable sync automatically
 
@@ -253,6 +294,40 @@ jottery
 - Manual sync: Press `s` → navigate to "Sync Now" → press `Enter`
 - Sync settings available in the settings panel (`s` key)
 
+Sync runs in the background, so a slow server doesn't hold up the screen. Automatic
+syncs wait while a note is open, and a sync that's already running won't replace it:
+if the note changed elsewhere, that shows as a conflict.
+
+If your server uses a private certificate authority, such as Caddy's internal CA or
+mkcert, install it in your system's trust store, or point `SSL_CERT_FILE` at it. The
+bundled roots are trusted too.
+
+## Passwords on the Command Line
+
+Commands prompt for a password when they need one. For scripts, pipe it in with
+`--password-stdin` (one password per line, ahead of anything else on stdin), or set
+`JOTTERY_PASSWORD`, `JOTTERY_ACCOUNT_PASSWORD` or `JOTTERY_KEY_PASSWORD`.
+
+`--password` still works, but it's visible in `ps` and your shell history, so it's
+deprecated and says so.
+
+## Temporary Files
+
+An editor, a pager or a viewer can only work on a file, so a note or attachment leaves the
+vault while it's open. It goes in a private folder (`0700`), under `$XDG_RUNTIME_DIR` or
+`/dev/shm` where there is one, so that it stays in memory. Elsewhere, including macOS, it's
+in the system temp folder on disk, and Jottery says so the first time.
+
+The folder is emptied when the file closes, and if Jottery gets SIGHUP, SIGTERM or SIGINT,
+as it does when an SSH connection drops. If it's killed outright, or the power goes, the
+next run clears up.
+
+vim and neovim are started with swap, backup, undo and viminfo turned off. Other editors
+keep their own copies, and those are up to you. Side files beside the note go with the
+folder, such as nano's `.save` and emacs's `file~` and `#file#`, but anything an editor
+keeps elsewhere doesn't. Check your editor's settings if that matters, for example
+`backup-directory-alist` and `auto-save-file-name-transforms` in emacs.
+
 ## Search Syntax
 
 The search bar supports powerful query syntax:
@@ -262,6 +337,7 @@ The search bar supports powerful query syntax:
 #tagname                    # Notes with this tag
 #tag1 #tag2                 # Notes with both tags (AND)
 #tag1 | #tag2               # Notes with either tag (OR)
+-#tagname                   # Notes without this tag
 ```
 
 ### Text Search
@@ -271,13 +347,27 @@ dog                         # Contains "dog"
 dog cat                     # Contains both words (AND)
 dog | cat                   # Contains either word (OR)
 -cat                        # Does NOT contain "cat"
+-"exact phrase"             # Does NOT contain this phrase
 ```
 
 ### Wildcards
 ```
-dog*                        # Starts with "dog"
-*dog                        # Ends with "dog"
+dog*                        # A word starts with "dog"
+*dog                        # A word ends with "dog"
 *dog*                       # Contains "dog" anywhere
+```
+
+### Modifiers
+```
+has:attachment              # Notes with attachments
+archived                    # Search the archive (archived:false for active notes)
+created:>2024-01-01         # Created after a date
+created:<2024-06-30         # Created before a date
+created:2024-01-01..2024-06-30  # Created in a date range
+modified:>2024-01-01        # The same for the modified date
+words:>100                  # More than 100 words (also words:<50, words:50..200)
+color:red                   # This colour on the note or a tag (add note or tag to narrow it)
+category:important          # The same, by a colour's name
 ```
 
 ### Combined Queries
@@ -285,6 +375,9 @@ dog*                        # Starts with "dog"
 #work project -meeting      # Tagged #work, contains "project", not "meeting"
 #personal "family vacation" # Tagged #personal with exact phrase
 ```
+
+`jottery search` takes the same queries. The rules are shared with the other clients, and
+written down with test cases in `docs/search-query-fixture.json`.
 
 ## Markdown Rendering
 
@@ -332,36 +425,69 @@ The preview pane renders markdown with full formatting support:
 | Key | Action |
 |-----|--------|
 | `n` | Create new note |
-| `Enter` | Open selected note in external editor |
-| `Space` | Toggle preview pane |
+| `Enter`/`i` | Open selected note in external editor |
 | `p` | Pin/unpin selected note |
+| `L` | Lock/unlock selected note against changes |
+| `t` | Edit tags |
 | `d` | Delete selected note (moves to recycle bin) |
-| `r` | Restore note from recycle bin |
-| `D` | Permanently delete note |
+| `z` | Archive selected note (or bring it back in archive mode) |
+| `A` | Show or leave the archive |
+| `r` | Open the recycle bin |
 | `v` | Open version history for selected note |
+| `I` | Show note info |
+| `x` | Resolve a sync conflict on the selected note |
+| `b` | Open the inbox |
+| `g` | Open your saved searches |
+| `Shift+D` | Duplicate selected note |
+| `o` | Copy the note's text to the clipboard (through the terminal, so it also works over SSH) |
+| `w` | Turn word wrap on or off for selected note |
+| `l` | Move through the links in the preview (`Enter` follows one) |
 | `j`/`↓` | Move down |
 | `k`/`↑` | Move up |
-| `g` | Jump to top |
-| `G` | Jump to bottom |
-| `l` | Cycle syntax language forward (Plain → JavaScript → Python → Markdown → ...) |
-| `L` | Cycle syntax language backward |
-| `/` | Focus search input |
-| `t` | Focus tag input |
-| `Esc` | Clear search/tag filters |
+| `]`/`[` | Cycle syntax language forward/backward |
+| `C`/`c` | Cycle note colour forward/backward |
+| `/` | Search (`Ctrl+S` saves the query, `Ctrl+P`/`Ctrl+N` go through earlier searches) |
+| `y` | Sync now |
+| `Y` | Force a full resync |
 | `s` | Open settings |
 | `?` | Show keyboard shortcuts help |
-| `Ctrl+l` | Lock database |
+| `Ctrl+l` | Lock Jottery |
+| `q` | Quit |
 | `Ctrl+q` | Quit application |
 
-### Preview Pane (when open)
+### Multi-Select
 | Key | Action |
 |-----|--------|
-| `j`/`↓` | Scroll down |
-| `k`/`↑` | Scroll up |
-| `Ctrl+d` | Scroll down half page |
-| `Ctrl+u` | Scroll up half page |
-| `g` | Jump to top |
-| `G` | Jump to bottom |
+| `Space` | Toggle selection of the current note |
+| `V` | Select a range |
+| `Ctrl+a` | Select all listed notes |
+| `t` | Add tags to selected notes |
+| `d` | Delete selected notes |
+| `z` | Archive selected notes |
+| `c` | Combine selected notes |
+| `e` | Export selected notes to JSON |
+| `Esc` | Clear selection |
+
+### Attachments
+| Key | Action |
+|-----|--------|
+| `+` | Attach a file to the selected note |
+| `a` | Open the attachment list |
+| `Tab` | Focus the attachments of the selected note |
+| `j`/`k` | Move between attachments |
+| `Enter` | View the selected attachment |
+| `S` | Save the selected attachment to a file |
+| `d` | Delete the selected attachment |
+| `X` | Remove the selected attachment |
+
+Images, PDFs and plain text open in a viewer. Anything else could run code from whoever sent it, so Jottery offers to save it instead.
+
+### Preview
+| Key | Action |
+|-----|--------|
+| `Ctrl+d`/`Ctrl+u` | Scroll down/up half a page |
+| `Ctrl+f`/`Ctrl+b` | Scroll down/up a page |
+| `PageDown`/`PageUp` | Scroll down/up a page |
 
 ### Settings Screen
 | Key | Action |
@@ -370,7 +496,6 @@ The preview pane renders markdown with full formatting support:
 | `k`/`↑` | Move to previous setting |
 | `Enter`/`i`/`Space` | Edit setting (cycle for theme/sort order) |
 | `I`/`Shift+Enter` | Cycle backward (theme/sort order) |
-| `p` | Paste sync credentials from clipboard |
 | `Esc`/`q` | Close settings |
 
 ### Version History
@@ -385,7 +510,7 @@ The preview pane renders markdown with full formatting support:
 | Key | Action |
 |-----|--------|
 | `r` | Restore selected note |
-| `D` | Permanently delete |
+| `E` | Empty the bin, after asking |
 | `Esc`/`q` | Return to note list |
 
 ## Development Status
@@ -394,7 +519,7 @@ The preview pane renders markdown with full formatting support:
 - [x] Project setup and build configuration
 - [x] Database layer (SQLite + SQLCipher)
 - [x] Data models (Rust structs)
-- [x] Encryption layer (AES-256-GCM + PBKDF2 with 256k iterations)
+- [x] Encryption layer (AES-256-GCM + PBKDF2 with 600k iterations)
 - [x] Repository pattern for data access
 - [x] TUI framework (ratatui)
 - [x] Note management (create, edit, delete, list)

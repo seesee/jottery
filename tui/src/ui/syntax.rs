@@ -3,6 +3,8 @@
 //! This module provides syntax highlighting functionality for code blocks and markdown
 //! rendering using syntect and pulldown-cmark.
 
+use std::cell::RefCell;
+
 use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span, Text};
@@ -18,6 +20,8 @@ use super::calc;
 pub struct SyntaxHighlighter {
     syntax_set: SyntaxSet,
     theme: Theme,
+    /// The last calc note rendered, with its source text
+    calc_cache: RefCell<Option<(String, Text<'static>)>>,
 }
 
 impl SyntaxHighlighter {
@@ -36,7 +40,13 @@ impl SyntaxHighlighter {
         Self {
             syntax_set,
             theme,
+            calc_cache: RefCell::new(None),
         }
+    }
+
+    /// Forget anything derived from note text. Called when the vault locks.
+    pub fn clear_cache(&self) {
+        *self.calc_cache.borrow_mut() = None;
     }
 
     /// Highlight text with syntax highlighting or render markdown/calc/outliner
@@ -46,9 +56,18 @@ impl SyntaxHighlighter {
             return self.render_markdown(text);
         }
 
-        // Special handling for calc - evaluate and render with results
+        // Special handling for calc - evaluate and render with results. A frame
+        // can be drawn many times over one note, so the last result is kept.
         if language == SyntaxLanguage::Calc {
-            return calc::render_calc(text);
+            let mut cache = self.calc_cache.borrow_mut();
+            return match cache.as_ref() {
+                Some((source, rendered)) if source == text => rendered.clone(),
+                _ => {
+                    let rendered = calc::render_calc(text);
+                    *cache = Some((text.to_string(), rendered.clone()));
+                    rendered
+                }
+            };
         }
 
         // Special handling for outliner - render as tree structure
@@ -59,11 +78,12 @@ impl SyntaxHighlighter {
         // Map our SyntaxLanguage enum to syntect syntax names
         let syntax_name = match language {
             SyntaxLanguage::Plain => return Text::raw(text),
-            SyntaxLanguage::Javascript => "JavaScript",
+            // syntect has no TypeScript or a useful XML, and these come close
+            SyntaxLanguage::Javascript | SyntaxLanguage::Typescript => "JavaScript",
             SyntaxLanguage::Python => "Python",
             SyntaxLanguage::Markdown => "Markdown", // Won't reach here due to above check
             SyntaxLanguage::Json => "JSON",
-            SyntaxLanguage::Html => "HTML",
+            SyntaxLanguage::Html | SyntaxLanguage::Xml => "HTML",
             SyntaxLanguage::Css => "CSS",
             SyntaxLanguage::Sql => "SQL",
             SyntaxLanguage::Bash => "Bash",

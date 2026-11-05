@@ -63,8 +63,8 @@ fn contains_html_injection(s: &str) -> bool {
 
 /// Validate and sanitize device name
 ///
-/// Device names are displayed in admin interfaces and logs, so we apply
-/// strict validation to prevent XSS and log injection attacks.
+/// Device names are displayed in admin interfaces, so we apply strict validation to
+/// prevent XSS. Newlines are allowed, so anything logging a name must use `{:?}`.
 pub fn validate_device_name(name: &str, config: &Config) -> Result<(), AppError> {
     // Check for empty/whitespace-only
     if name.trim().is_empty() {
@@ -79,7 +79,7 @@ pub fn validate_device_name(name: &str, config: &Config) -> Result<(), AppError>
         )));
     }
 
-    // Reject control characters (log injection prevention)
+    // Reject control characters
     if contains_forbidden_chars(name) {
         return Err(AppError::BadRequest(
             "Device name contains invalid characters".to_string()
@@ -125,6 +125,22 @@ pub fn validate_note_content(content: &str, config: &Config) -> Result<(), AppEr
     Ok(())
 }
 
+/// Longest `source` label on an inbox item, in bytes.
+const MAX_INBOX_SOURCE_BYTES: usize = 255;
+
+/// Validate an inbox item's `source`. It's a short label such as an app's name, and
+/// a leaked inbox token must not be able to use it to store whatever it likes.
+pub fn validate_inbox_source(source: &str) -> Result<(), AppError> {
+    if source.len() > MAX_INBOX_SOURCE_BYTES {
+        return Err(AppError::BadRequest(format!(
+            "Source exceeds maximum length of {} bytes",
+            MAX_INBOX_SOURCE_BYTES
+        )));
+    }
+
+    Ok(())
+}
+
 /// Validate tags (individual length and count)
 pub fn validate_tags(tags: &[String], config: &Config) -> Result<(), AppError> {
     if tags.len() > config.max_tags_per_note {
@@ -157,7 +173,7 @@ mod tests {
             cors_allowed_origins: None,
             session_expiry_days: 7,
             default_admin_email: String::new(),
-            default_admin_password: String::new(),
+            default_admin_password: None,
             argon2_m_cost: 19456,
             argon2_t_cost: 2,
             argon2_p_cost: 1,
@@ -167,11 +183,14 @@ mod tests {
             default_inbox_max_size_mb: 10,
             password_complexity: "standard".to_string(),
             enable_hsts: false,
+            rate_limit: Default::default(),
             max_device_name_length: 255,
             max_inbox_content_size: 1_048_576,
             max_note_content_size: 10_485_760,
             max_tag_length: 100,
             max_tags_per_note: 50,
+            enforce_storage_quota: false,
+            sse_recheck_secs: 60,
         }
     }
 
@@ -183,6 +202,8 @@ mod tests {
             max_note_content_size: 200,
             max_tag_length: 5,
             max_tags_per_note: 3,
+            enforce_storage_quota: false,
+            sse_recheck_secs: 60,
             ..test_config()
         }
     }

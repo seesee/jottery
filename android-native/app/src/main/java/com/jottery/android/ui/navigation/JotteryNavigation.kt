@@ -9,6 +9,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.jottery.android.ui.screen.BackupScreen
+import com.jottery.android.ui.screen.ChangePasswordScreen
+import com.jottery.android.ui.screen.ColoursScreen
 import com.jottery.android.ui.screen.ConflictResolutionScreen
 import com.jottery.android.ui.screen.ImportScreen
 import com.jottery.android.ui.screen.InboxScreen
@@ -17,7 +19,10 @@ import com.jottery.android.ui.screen.RecycleBinScreen
 import com.jottery.android.ui.screen.SavedSearchesScreen
 import com.jottery.android.ui.screen.SettingsScreen
 import com.jottery.android.ui.screen.SetupScreen
+import com.jottery.android.ui.screen.SyncAccountScreen
 import com.jottery.android.ui.screen.SyncSetupScreen
+import com.jottery.android.ui.screen.TagsScreen
+import com.jottery.android.ui.screen.VaultHealthScreen
 import com.jottery.android.ui.screen.UnlockScreen
 import com.jottery.android.viewmodel.AppState
 
@@ -29,9 +34,13 @@ object Routes {
     const val RECYCLE_BIN = "recycle_bin"
     const val SETTINGS = "settings"
     const val SYNC_SETUP = "sync_setup"
+    const val CHANGE_PASSWORD = "change_password"
     const val BACKUP = "backup"
     const val IMPORT = "import"
     const val SAVED_SEARCHES = "saved_searches"
+    const val TAGS = "tags"
+    const val COLOURS = "colours"
+    const val VAULT_HEALTH = "vault_health"
     const val CONFLICT_RESOLUTION = "conflict_resolution"
     const val INBOX = "inbox"
 }
@@ -58,6 +67,10 @@ fun JotteryNavigation(
     // React to state changes (e.g. wipeAllData sets isFirstLaunch=true while on
     // the unlock screen). NavHost's startDestination only affects initial composition,
     // so we must navigate explicitly when the auth state changes.
+    LaunchedEffect(Unit) {
+        appState.showNotesRequests.collect { navController.popBackStack(Routes.MAIN, inclusive = false) }
+    }
+
     LaunchedEffect(isFirstLaunch, isLocked) {
         val currentRoute = navController.currentBackStackEntry?.destination?.route
         when {
@@ -84,14 +97,8 @@ fun JotteryNavigation(
         startDestination = startDestination,
     ) {
         composable(Routes.SETUP) {
-            SetupScreen(
-                appState = appState,
-                onVaultCreated = {
-                    navController.navigate(Routes.MAIN) {
-                        popUpTo(Routes.SETUP) { inclusive = true }
-                    }
-                },
-            )
+            // Leaves through the LaunchedEffect above, when the vault exists
+            SetupScreen(appState = appState)
         }
 
         composable(Routes.UNLOCK) {
@@ -110,6 +117,10 @@ fun JotteryNavigation(
                 appState = appState,
                 onNavigateToRecycleBin = { navController.navigate(Routes.RECYCLE_BIN) },
                 onNavigateToSettings = { navController.navigate(Routes.SETTINGS) },
+                onNavigateToConflicts = { navController.navigate(Routes.CONFLICT_RESOLUTION) },
+                onNavigateToInbox = { navController.navigate(Routes.INBOX) },
+                onNavigateToSavedSearches = { navController.navigate(Routes.SAVED_SEARCHES) },
+                onNavigateToTags = { navController.navigate(Routes.TAGS) },
             )
         }
 
@@ -128,25 +139,68 @@ fun JotteryNavigation(
                 onNavigateToBackup = { navController.navigate(Routes.BACKUP) },
                 onNavigateToImport = { navController.navigate(Routes.IMPORT) },
                 onNavigateToSavedSearches = { navController.navigate(Routes.SAVED_SEARCHES) },
+                onNavigateToColours = { navController.navigate(Routes.COLOURS) },
+                onNavigateToChangePassword = { navController.navigate(Routes.CHANGE_PASSWORD) },
+            )
+        }
+
+        composable(Routes.CHANGE_PASSWORD) {
+            ChangePasswordScreen(
+                appState = appState,
+                onBack = { navController.popBackStack() },
             )
         }
 
         composable(Routes.SYNC_SETUP) {
-            SyncSetupScreen(
-                appState = appState,
-                onBack = { navController.popBackStack() },
-            )
+            val syncEnabled by appState.syncEnabled.collectAsState()
+            if (syncEnabled) {
+                SyncAccountScreen(
+                    appState = appState,
+                    onBack = { navController.popBackStack() },
+                )
+            } else {
+                SyncSetupScreen(
+                    appState = appState,
+                    onBack = { navController.popBackStack() },
+                )
+            }
         }
 
         composable(Routes.BACKUP) {
             BackupScreen(
                 appState = appState,
                 onBack = { navController.popBackStack() },
+                onOpenVaultHealth = { navController.navigate(Routes.VAULT_HEALTH) },
+            )
+        }
+
+        composable(Routes.VAULT_HEALTH) {
+            VaultHealthScreen(
+                appState = appState,
+                onBack = { navController.popBackStack() },
+                onOpenNote = { id ->
+                    appState.setSelectedNoteId(id)
+                    navController.popBackStack(Routes.MAIN, inclusive = false)
+                },
             )
         }
 
         composable(Routes.IMPORT) {
             ImportScreen(
+                appState = appState,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(Routes.COLOURS) {
+            ColoursScreen(
+                appState = appState,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(Routes.TAGS) {
+            TagsScreen(
                 appState = appState,
                 onBack = { navController.popBackStack() },
             )

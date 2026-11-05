@@ -183,7 +183,7 @@ struct SavedSearchRepository: Sendable {
         try db.dbPool.write { db in
             if let existing = try SavedSearchRecord.fetchOne(db, key: record.id) {
                 // LWW: only overwrite if remote is newer
-                if record.modifiedAt > existing.modifiedAt {
+                if Date.isLater(record.modifiedAt, than: existing.modifiedAt) {
                     try record.update(db)
                 }
             } else {

@@ -7,6 +7,7 @@
  */
 
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import hljs from 'highlight.js/lib/core';
 import { postToSwift } from '../bridge';
 
@@ -67,6 +68,10 @@ import 'highlight.js/styles/github.css';
 let isDark = false;
 const pendingAttachments = new Map<string, HTMLElement[]>();
 
+/** The notes a link can reach, by lower-case id and by lower-case title. */
+let notesById = new Map<string, { id: string; title: string }>();
+let notesByTitle = new Map<string, { id: string; title: string }>();
+
 // ---- Theme ----
 
 function applyTheme(dark: boolean): void {
@@ -81,6 +86,43 @@ function onRequestAttachment(id: string, element: HTMLElement): void {
   list.push(element);
   pendingAttachments.set(id, list);
   postToSwift({ type: 'requestAttachment', id });
+}
+
+// ---- Note links ----
+
+const NOTE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function setNoteTitles(titles: Record<string, string>): void {
+  const notes = Object.entries(titles).map(([id, title]) => ({ id, title }));
+  notesById = new Map(notes.map((note) => [note.id.toLowerCase(), note]));
+  notesByTitle = new Map(notes.map((note) => [note.title.toLowerCase(), note]));
+}
+
+function escapeLinkText(text: string): string {
+  return text.replace(/([\\[\]])/g, '\\$1');
+}
+
+/**
+ * [[Note Title]], [[uuid]] and [[either|Display Text]] become markdown links
+ * with the note: protocol, as on the web. Code is left as it was written.
+ */
+function parseWikiLinks(content: string): string {
+  return content.replace(/(```[\s\S]*?```|`[^`\n]*`)|\[\[([^\]]+)\]\]/g, (match, code, inner: string) => {
+    if (code) return match;
+
+    const pipe = inner.indexOf('|');
+    const reference = (pipe === -1 ? inner : inner.slice(0, pipe)).trim();
+    const display = (pipe === -1 ? reference : inner.slice(pipe + 1)).trim();
+    const note = NOTE_ID.test(reference)
+      ? notesById.get(reference.toLowerCase())
+      : notesByTitle.get(reference.toLowerCase());
+
+    if (note) {
+      const text = pipe === -1 ? note.title : display;
+      return `[${escapeLinkText(text)}](note:${note.id})`;
+    }
+    return `[${escapeLinkText(display)}](note:not-found)`;
+  });
 }
 
 // ---- Markdown rendering ----
@@ -128,46 +170,102 @@ function renderMarkdown(content: string): string {
     return `<pre><code>${escaped}</code></pre>`;
   };
 
+  // The sanitiser removes form controls, so a task's box is a character. The
+  // reader still needs to see what's done.
+  renderer.checkbox = function ({ checked }) {
+    return `<span class="task-box">${checked ? '\u2611' : '\u2610'}</span> `;
+  };
+
   // Custom image renderer to handle attachment: URLs
   renderer.image = function (token) {
-    const href = token.href;
-    const alt = token.text || '';
-    const title = token.title || '';
+    const href = token.href ?? '';
+    const alt = escapeAttribute(token.text || '');
+    const titleAttr = token.title ? ` title="${escapeAttribute(token.title)}"` : '';
 
-    if (href && href.startsWith('attachment:')) {
+    if (href.startsWith('attachment:')) {
       const attachmentId = href.substring('attachment:'.length);
-      const titleAttr = title ? ` title="${title}"` : '';
-      // Render a placeholder that will be resolved by Swift
+      if (!ATTACHMENT_ID.test(attachmentId)) return alt;
+      // Render a placeholder that will be resolved by the native side
       return `<img src="" data-attachment-id="${attachmentId}" alt="${alt}"${titleAttr} class="attachment-image" style="max-width:100%;height:auto;display:none;" />`;
     }
 
-    const titleAttr = title ? ` title="${title}"` : '';
-    return `<img src="${href}" alt="${alt}"${titleAttr} style="max-width:100%;height:auto;" />`;
+    if (href.startsWith('data:image/')) {
+      return `<img src="${escapeAttribute(href)}" alt="${alt}"${titleAttr} style="max-width:100%;height:auto;" />`;
+    }
+
+    // Loading a remote image would tell its host this device's address the moment
+    // a note is opened, so it stays a link the reader can choose to follow.
+    if (isSafeLink(href)) {
+      return `<a href="${escapeAttribute(href)}" class="external-link blocked-image">${alt || escapeAttribute(href)}</a>`;
+    }
+    return alt;
   };
 
   // Custom link renderer to handle attachment: and note: URLs
   renderer.link = function (token) {
-    const href = token.href;
-    const text = token.text || '';
+    const href = token.href ?? '';
+    const text = escapeAttribute(token.text || '');
 
     // Attachment download link
-    if (href && href.startsWith('attachment:')) {
+    if (href.startsWith('attachment:')) {
       const attachmentId = href.substring('attachment:'.length);
+      if (!ATTACHMENT_ID.test(attachmentId)) return text;
       return `<span class="attachment-link" data-attachment-id="${attachmentId}">${text || attachmentId}</span>`;
     }
 
-    // Note link (from [[wiki-style]] conversion)
-    if (href && (href.startsWith('note:') || href.startsWith('link:'))) {
-      return `<span class="note-link">${text}</span>`;
+    // Note link: [[wiki-style]], or [](link:id) from the web's Copy Link. A note
+    // that isn't here says so natively when tapped, so its link stays tappable.
+    if (href.startsWith('note:') || href.startsWith('link:')) {
+      const id = href.substring(5);
+      if (!NOTE_ID.test(id)) return `<span class="note-link missing">${text}</span>`;
+      const note = notesById.get(id.toLowerCase());
+      const label = text || escapeAttribute(note?.title ?? id.substring(0, 8));
+      return `<span class="note-link" role="link" data-note-id="${note?.id ?? id}">${label}</span>`;
     }
 
-    // External link - delegate to Swift on click
-    const titleAttr = token.title ? ` title="${token.title}"` : '';
-    return `<a href="${href}"${titleAttr} class="external-link">${text}</a>`;
+    // In-page anchor
+    if (href.startsWith('#')) {
+      return `<a href="${escapeAttribute(href)}">${text}</a>`;
+    }
+
+    // Anything but http, https and mailto is shown as text, never made a link
+    if (!isSafeLink(href)) return text;
+
+    // External link - delegate to the native side on click
+    const titleAttr = token.title ? ` title="${escapeAttribute(token.title)}"` : '';
+    return `<a href="${escapeAttribute(href)}"${titleAttr} class="external-link">${text}</a>`;
   };
 
   marked.setOptions({ breaks: true, gfm: true });
-  return marked.parse(content, { renderer }) as string;
+  const html = marked.parse(parseWikiLinks(content), { renderer }) as string;
+
+  // A note is untrusted input: it may have been pasted or imported, or come from
+  // the server. The result goes into innerHTML next to a bridge that can open
+  // links and read attachments, so nothing active may survive this.
+  return DOMPurify.sanitize(html, {
+    ADD_ATTR: ['data-attachment-id', 'data-note-id'],
+    FORBID_TAGS: ['style', 'form', 'input', 'button', 'textarea', 'select', 'iframe', 'object', 'embed', 'base', 'meta', 'link'],
+    FORBID_ATTR: ['srcset', 'ping', 'formaction', 'action'],
+    // `src=""` on an unresolved attachment placeholder must survive too
+    ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|data:image\/|#|$)/i,
+  });
+}
+
+// ---- Escaping ----
+
+const ATTACHMENT_ID = /^[0-9a-zA-Z-]{1,64}$/;
+
+function escapeAttribute(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function isSafeLink(href: string): boolean {
+  return /^(?:https?:|mailto:)/i.test(href);
 }
 
 // ---- Content rendering ----
@@ -185,12 +283,6 @@ function setContent(content: string, dark: boolean): void {
     onRequestAttachment(id, img);
   });
 
-  // Request resolution for attachment links
-  container.querySelectorAll<HTMLElement>('.attachment-link[data-attachment-id]').forEach((el) => {
-    const id = el.dataset.attachmentId!;
-    onRequestAttachment(id, el);
-  });
-
   // Set up click handlers for external links
   container.querySelectorAll<HTMLAnchorElement>('a.external-link').forEach((a) => {
     a.addEventListener('click', (e) => {
@@ -199,6 +291,14 @@ function setContent(content: string, dark: boolean): void {
       if (url) {
         postToSwift({ type: 'openLink', url });
       }
+    });
+  });
+
+  // Note links go to the native side, which opens the note, or says it's gone.
+  // A message of their own, kept apart from openLink, which leaves the app.
+  container.querySelectorAll<HTMLElement>('.note-link[data-note-id]').forEach((el) => {
+    el.addEventListener('click', () => {
+      postToSwift({ type: 'openNote', id: el.dataset.noteId! });
     });
   });
 
@@ -219,6 +319,7 @@ function setContent(content: string, dark: boolean): void {
 
 window.bridge = {
   setContent,
+  setNoteTitles,
   setTheme: applyTheme,
   setFontSize(px: number): void {
     document.body.style.fontSize = `${px}px`;
@@ -351,7 +452,7 @@ style.textContent = `
   tr:nth-child(even) { background: var(--table-stripe); }
   img { max-width: 100%; height: auto; border-radius: 4px; }
   del { opacity: 0.6; }
-  input[type="checkbox"] { margin-right: 0.4em; }
+  li:has(> .task-box), li:has(> p > .task-box) { list-style: none; margin-left: -1.2em; }
   .attachment-link {
     display: inline-flex;
     align-items: center;
@@ -371,8 +472,10 @@ style.textContent = `
     border-radius: 4px;
     font-size: 0.9em;
     color: var(--link);
+    cursor: pointer;
   }
   .note-link::before { content: '📄 '; }
+  .note-link.missing { opacity: 0.6; cursor: default; }
 
   /* Override highlight.js background to match our theme */
   .hljs { background: transparent !important; }

@@ -82,6 +82,52 @@ impl<'a> AttachmentRepository<'a> {
         }
     }
 
+    /// Note that the server has this attachment's file, so a push needn't send it.
+    pub fn mark_pushed(&self, id: &str) -> Result<()> {
+        self.conn.execute("UPDATE attachments SET pushed = 1 WHERE id = ?1", params![id])?;
+        Ok(())
+    }
+
+    /// Whether the server is known to have this attachment's file
+    pub fn is_pushed(&self, id: &str) -> Result<bool> {
+        let pushed = self.conn
+            .query_row("SELECT pushed FROM attachments WHERE id = ?1", params![id], |row| row.get::<_, i32>(0))
+            .optional()?;
+        Ok(pushed.is_some_and(|pushed| pushed != 0))
+    }
+
+    /// Every attachment's id
+    pub fn list_ids(&self) -> Result<Vec<String>> {
+        let mut stmt = self.conn.prepare("SELECT id FROM attachments")?;
+        let ids = stmt.query_map([], |row| row.get(0))?
+            .collect::<rusqlite::Result<_>>()?;
+        Ok(ids)
+    }
+
+    /// Attachments the notes here refer to whose files this device doesn't hold.
+    ///
+    /// The list reads the notes' own attachment column, which isn't encrypted here. A
+    /// note in the bin counts, as it can be restored.
+    pub fn list_missing_blobs(&self) -> Result<Vec<crate::models::Attachment>> {
+        let held: std::collections::HashSet<String> = self.list_ids()?.into_iter().collect();
+
+        let mut stmt = self.conn.prepare("SELECT attachments FROM notes WHERE attachments != '[]'")?;
+        let lists = stmt.query_map([], |row| row.get::<_, String>(0))?;
+
+        let mut seen = std::collections::HashSet::new();
+        let mut missing = Vec::new();
+        for list in lists {
+            let attachments: Vec<crate::models::Attachment> = serde_json::from_str(&list?).unwrap_or_default();
+            for attachment in attachments {
+                if !held.contains(&attachment.id) && seen.insert(attachment.id.clone()) {
+                    missing.push(attachment);
+                }
+            }
+        }
+
+        Ok(missing)
+    }
+
     /// Delete an attachment
     pub fn delete(&self, id: &str) -> Result<()> {
         self.conn
@@ -126,8 +172,13 @@ mod tests {
     /// Get test password from environment variable or use default.
     /// Set JOTTERY_TEST_PASSWORD env var to override.
     fn test_password() -> String {
-        std::env::var("JOTTERY_TEST_PASSWORD")
-            .unwrap_or_else(|_| "test_password_placeholder".to_string())
+        static PASSWORD: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+        PASSWORD
+            .get_or_init(|| {
+                std::env::var("JOTTERY_TEST_PASSWORD")
+                    .unwrap_or_else(|_| uuid::Uuid::new_v4().to_string())
+            })
+            .clone()
     }
 
     fn setup_test_db() -> (Database, [u8; 32]) {

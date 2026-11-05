@@ -1,952 +1,302 @@
-// Integration security tests for Jottery server
-//
-// Tests cover:
-// - User isolation (can't access other users' data)
-// - SQL injection prevention on real endpoints
-// - Admin privilege escalation prevention
-// - Session expiry enforcement
-// - API authentication and authorization
+// Attacks on the real routes. Isolation between users is in sync_isolation_tests,
+// and which credentials open which route is in route_auth_tests.
 
+mod common;
+
+use axum::http::StatusCode;
+use common::*;
+use jottery_server::{db::SessionRepository, models::CreateSessionParams};
+use serde_json::json;
 use sqlx::SqlitePool;
+use std::collections::HashSet;
 
-// Helper to create test database
-async fn setup_test_db() -> SqlitePool {
-    let pool = SqlitePool::connect("sqlite::memory:")
+const INJECTIONS: &[&str] = &[
+    "' OR '1'='1",
+    "admin@localhost' --",
+    "'; DROP TABLE users; --",
+    "\" OR \"\"=\"",
+];
+
+async fn table_exists(pool: &SqlitePool, name: &str) -> bool {
+    sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?")
+        .bind(name)
+        .fetch_one(pool)
         .await
-        .expect("Failed to create in-memory database");
-
-    // Run migrations
-    sqlx::query(
-        r#"
-        CREATE TABLE IF NOT EXISTS users (
-            id TEXT PRIMARY KEY,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            approved INTEGER NOT NULL DEFAULT 0,
-            is_active INTEGER NOT NULL DEFAULT 1,
-            is_admin INTEGER NOT NULL DEFAULT 0,
-            created_at TEXT NOT NULL,
-            last_login_at TEXT
-        )
-        "#,
-    )
-    .execute(&pool)
-    .await
-    .expect("Failed to create users table");
-
-    sqlx::query(
-        r#"
-        CREATE TABLE IF NOT EXISTS notes (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            content TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            modified_at TEXT NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-        "#,
-    )
-    .execute(&pool)
-    .await
-    .expect("Failed to create notes table");
-
-    sqlx::query(
-        r#"
-        CREATE TABLE IF NOT EXISTS sessions (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            token_hash TEXT UNIQUE NOT NULL,
-            created_at TEXT NOT NULL,
-            expires_at TEXT NOT NULL,
-            last_used_at TEXT NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-        "#,
-    )
-    .execute(&pool)
-    .await
-    .expect("Failed to create sessions table");
-
-    sqlx::query(
-        r#"
-        CREATE TABLE IF NOT EXISTS clients (
-            id TEXT PRIMARY KEY,
-            user_id TEXT NOT NULL,
-            api_key TEXT NOT NULL,
-            device_name TEXT NOT NULL,
-            device_type TEXT,
-            created_at TEXT NOT NULL,
-            last_seen_at TEXT NOT NULL,
-            is_active INTEGER NOT NULL DEFAULT 1,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-        "#,
-    )
-    .execute(&pool)
-    .await
-    .expect("Failed to create clients table");
-
-    pool
+        .unwrap()
+        > 0
 }
 
-#[cfg(test)]
-mod user_isolation {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_user_cannot_access_other_users_notes() {
-        let pool = setup_test_db().await;
-
-        // Create two users
-        let user1_id = "user1";
-        let user2_id = "user2";
-        let now = chrono::Utc::now().to_rfc3339();
-
-        sqlx::query!(
-            r#"INSERT INTO users (id, email, password_hash, approved, created_at)
-               VALUES (?, ?, ?, 1, ?)"#,
-            user1_id,
-            "user1@example.com",
-            "hash1",
-            now
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create user1");
-
-        sqlx::query!(
-            r#"INSERT INTO users (id, email, password_hash, approved, created_at)
-               VALUES (?, ?, ?, 1, ?)"#,
-            user2_id,
-            "user2@example.com",
-            "hash2",
-            now
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create user2");
-
-        // Create notes for each user
-        let note1_id = "note1";
-        let note2_id = "note2";
-
-        sqlx::query!(
-            r#"INSERT INTO notes (id, user_id, content, created_at, modified_at)
-               VALUES (?, ?, ?, ?, ?)"#,
-            note1_id,
-            user1_id,
-            "User 1's private note",
-            now,
-            now
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create note1");
-
-        sqlx::query!(
-            r#"INSERT INTO notes (id, user_id, content, created_at, modified_at)
-               VALUES (?, ?, ?, ?, ?)"#,
-            note2_id,
-            user2_id,
-            "User 2's private note",
-            now,
-            now
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create note2");
-
-        // Verify user1 can only see their note
-        let user1_notes = sqlx::query!(
-            r#"SELECT id FROM notes WHERE user_id = ?"#,
-            user1_id
-        )
-        .fetch_all(&pool)
-        .await
-        .expect("Failed to fetch user1 notes");
-
-        assert_eq!(user1_notes.len(), 1, "User1 should see exactly 1 note");
-        assert_eq!(user1_notes[0].id, note1_id, "User1 should see their own note");
-
-        // Verify user2 can only see their note
-        let user2_notes = sqlx::query!(
-            r#"SELECT id FROM notes WHERE user_id = ?"#,
-            user2_id
-        )
-        .fetch_all(&pool)
-        .await
-        .expect("Failed to fetch user2 notes");
-
-        assert_eq!(user2_notes.len(), 1, "User2 should see exactly 1 note");
-        assert_eq!(user2_notes[0].id, note2_id, "User2 should see their own note");
-
-        // Verify user1 cannot access user2's note by ID
-        let cross_user_access = sqlx::query!(
-            r#"SELECT id FROM notes WHERE id = ? AND user_id = ?"#,
-            note2_id,
-            user1_id
-        )
-        .fetch_optional(&pool)
-        .await
-        .expect("Failed to query note");
-
-        assert!(
-            cross_user_access.is_none(),
-            "User1 should not be able to access User2's note"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_foreign_key_prevents_orphaned_notes() {
-        let pool = setup_test_db().await;
-
-        // Enable foreign keys
-        sqlx::query("PRAGMA foreign_keys = ON")
-            .execute(&pool)
-            .await
-            .expect("Failed to enable foreign keys");
-
-        let user_id = "test_user";
-        let now = chrono::Utc::now().to_rfc3339();
-
-        sqlx::query!(
-            r#"INSERT INTO users (id, email, password_hash, approved, created_at)
-               VALUES (?, ?, ?, 1, ?)"#,
-            user_id,
-            "test@example.com",
-            "hash",
-            now
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create user");
-
-        // Try to create note with non-existent user_id
-        let result = sqlx::query!(
-            r#"INSERT INTO notes (id, user_id, content, created_at, modified_at)
-               VALUES (?, ?, ?, ?, ?)"#,
-            "note1",
-            "nonexistent_user",
-            "Orphaned note",
-            now,
-            now
-        )
-        .execute(&pool)
-        .await;
-
-        assert!(
-            result.is_err(),
-            "Should fail to create note with invalid user_id (foreign key violation)"
-        );
-    }
+async fn signed_in_user(app: &axum::Router, pool: &SqlitePool) -> (String, String) {
+    let email = format!("{}@example.com", new_id());
+    let password = random_password();
+    let id = create_user(pool, &email, &password).await;
+    let (status, body) = call(
+        app,
+        "POST",
+        "/api/v1/user/login",
+        None,
+        Some(json!({ "email": email, "password": password })),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    (id, body["sessionId"].as_str().unwrap().to_string())
 }
 
-#[cfg(test)]
-mod sql_injection {
-    use super::*;
+#[tokio::test]
+async fn sql_in_a_login_address_is_only_ever_an_address() {
+    let db = migrated_db().await;
+    let app = app(&db.pool);
 
-    #[tokio::test]
-    async fn test_email_sql_injection_prevention() {
-        let pool = setup_test_db().await;
-
-        // SQL injection attempts in email field
-        let injection_attempts = vec![
-            "user@example.com'; DROP TABLE users; --",
-            "user@example.com' OR '1'='1",
-            "admin'--@example.com",
-            "user'; UPDATE users SET is_admin=1 WHERE email='user@example.com",
-        ];
-
-        for malicious_email in injection_attempts {
-            // Try to insert with malicious email
-            let now = chrono::Utc::now().to_rfc3339();
-            let result = sqlx::query!(
-                r#"INSERT INTO users (id, email, password_hash, approved, created_at)
-                   VALUES (?, ?, ?, 0, ?)"#,
-                "test_id",
-                malicious_email,
-                "test_hash",
-                now
+    for email in INJECTIONS {
+        for uri in ["/api/v1/auth/login", "/api/v1/user/login", "/api/v1/user/status"] {
+            let (status, _) = call(
+                &app,
+                "POST",
+                uri,
+                None,
+                Some(json!({ "email": email, "password": random_password() })),
             )
-            .execute(&pool)
             .await;
-
-            // The query should execute safely (parameterized)
-            // Email might be invalid format, but shouldn't allow SQL injection
-            if result.is_ok() {
-                // If it succeeded, verify tables still exist
-                let tables_exist = sqlx::query("SELECT name FROM sqlite_master WHERE type='table'")
-                    .fetch_all(&pool)
-                    .await
-                    .expect("Tables should still exist");
-
-                assert!(
-                    tables_exist.len() >= 4,
-                    "All tables should still exist after injection attempt"
-                );
-
-                // Verify no users became admin
-                let admin_count = sqlx::query!(r#"SELECT COUNT(*) as count FROM users WHERE is_admin = 1"#)
-                    .fetch_one(&pool)
-                    .await
-                    .expect("Should query admin count");
-
-                assert_eq!(
-                    admin_count.count, 0,
-                    "No users should have been promoted to admin"
-                );
-            }
+            assert_eq!(status, StatusCode::UNAUTHORIZED, "{uri} with {email}");
         }
     }
 
-    #[tokio::test]
-    async fn test_note_content_sql_injection_prevention() {
-        let pool = setup_test_db().await;
-
-        let user_id = "test_user";
-        let now = chrono::Utc::now().to_rfc3339();
-
-        sqlx::query!(
-            r#"INSERT INTO users (id, email, password_hash, approved, created_at)
-               VALUES (?, ?, ?, 1, ?)"#,
-            user_id,
-            "test@example.com",
-            "hash",
-            now
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create user");
-
-        // SQL injection attempts in note content
-        let malicious_content = "'; DROP TABLE notes; --";
-
-        sqlx::query!(
-            r#"INSERT INTO notes (id, user_id, content, created_at, modified_at)
-               VALUES (?, ?, ?, ?, ?)"#,
-            "note1",
-            user_id,
-            malicious_content,
-            now,
-            now
-        )
-        .execute(&pool)
-        .await
-        .expect("Should safely insert malicious content as data");
-
-        // Verify notes table still exists
-        let note_exists = sqlx::query!(r#"SELECT id FROM notes WHERE id = ?"#, "note1")
-            .fetch_optional(&pool)
-            .await
-            .expect("Notes table should still exist");
-
-        assert!(note_exists.is_some(), "Note should be inserted safely");
-
-        // Verify content is stored as literal string
-        let note = note_exists.unwrap();
-        let content = sqlx::query!(r#"SELECT content FROM notes WHERE id = ?"#, note.id)
-            .fetch_one(&pool)
-            .await
-            .expect("Should fetch note");
-
-        assert_eq!(
-            content.content, malicious_content,
-            "SQL injection should be stored as literal content"
-        );
-    }
+    assert!(table_exists(&db.pool, "users").await);
 }
 
-#[cfg(test)]
-mod admin_privilege_escalation {
-    use super::*;
+#[tokio::test]
+async fn sql_in_note_content_is_stored_as_written() {
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let user = create_user(&db.pool, &format!("{}@example.com", new_id()), &random_password()).await;
+    let (_, key) = create_device(&db.pool, &user).await;
 
-    #[tokio::test]
-    async fn test_regular_user_cannot_become_admin() {
-        let pool = setup_test_db().await;
+    for (index, content) in INJECTIONS.iter().enumerate() {
+        let id = new_id();
+        let time = format!("2026-02-0{}T00:00:00Z", index + 1);
+        push(&app, &key, json!({ "notes": [note(&id, content, &time)] })).await;
 
-        let user_id = "regular_user";
-        let now = chrono::Utc::now().to_rfc3339();
-
-        // Create regular user
-        sqlx::query!(
-            r#"INSERT INTO users (id, email, password_hash, approved, is_admin, created_at)
-               VALUES (?, ?, ?, 1, 0, ?)"#,
-            user_id,
-            "user@example.com",
-            "hash",
-            now
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create user");
-
-        // Verify user is not admin
-        let user = sqlx::query!(r#"SELECT is_admin FROM users WHERE id = ?"#, user_id)
-            .fetch_one(&pool)
-            .await
-            .expect("Should fetch user");
-
-        assert_eq!(user.is_admin, 0, "User should not be admin");
-
-        // Regular user should not be able to modify their own is_admin flag
-        // (This would be prevented at the API level, but verify DB constraint)
-        sqlx::query!(
-            r#"UPDATE users SET is_admin = 1 WHERE id = ?"#,
-            user_id
-        )
-        .execute(&pool)
-        .await
-        .expect("DB allows update, but API should prevent this");
-
-        // In a real application, the API should check admin privileges
-        // before allowing any admin operations
+        let pulled = pull_all(&app, &key).await;
+        let stored = pulled["notes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|n| n["id"] == id.as_str())
+            .unwrap();
+        assert_eq!(stored["content"], json!(content));
     }
 
-    #[tokio::test]
-    async fn test_unapproved_user_cannot_register_device() {
-        let pool = setup_test_db().await;
-
-        let user_id = "unapproved_user";
-        let now = chrono::Utc::now().to_rfc3339();
-
-        // Create unapproved user
-        sqlx::query!(
-            r#"INSERT INTO users (id, email, password_hash, approved, created_at)
-               VALUES (?, ?, ?, 0, ?)"#,
-            user_id,
-            "unapproved@example.com",
-            "hash",
-            now
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create unapproved user");
-
-        // Try to register device for unapproved user
-        let device_result = sqlx::query!(
-            r#"INSERT INTO clients (id, user_id, api_key, device_name, created_at, last_seen_at)
-               VALUES (?, ?, ?, ?, ?, ?)"#,
-            "device1",
-            user_id,
-            "api_key_hash",
-            "Test Device",
-            now,
-            now
-        )
-        .execute(&pool)
-        .await;
-
-        // Database allows it, but API should check approved status first
-        if device_result.is_ok() {
-            // Verify user is still unapproved
-            let user = sqlx::query!(r#"SELECT approved FROM users WHERE id = ?"#, user_id)
-                .fetch_one(&pool)
-                .await
-                .expect("Should fetch user");
-
-            assert_eq!(
-                user.approved, 0,
-                "User should remain unapproved even with device"
-            );
-        }
-
-        // In real API: device registration endpoint should check:
-        // 1. User exists
-        // 2. Password is correct
-        // 3. User is approved (approved = 1)
-        // 4. User is active (is_active = 1)
-    }
-
-    #[tokio::test]
-    async fn test_inactive_user_cannot_access_api() {
-        let pool = setup_test_db().await;
-
-        let user_id = "inactive_user";
-        let now = chrono::Utc::now().to_rfc3339();
-
-        // Create inactive user
-        sqlx::query!(
-            r#"INSERT INTO users (id, email, password_hash, approved, is_active, created_at)
-               VALUES (?, ?, ?, 1, 0, ?)"#,
-            user_id,
-            "inactive@example.com",
-            "hash",
-            now
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create inactive user");
-
-        // Verify user is inactive
-        let user = sqlx::query!(
-            r#"SELECT is_active, approved FROM users WHERE id = ?"#,
-            user_id
-        )
-        .fetch_one(&pool)
-        .await
-        .expect("Should fetch user");
-
-        assert_eq!(user.is_active, 0, "User should be inactive");
-        assert_eq!(user.approved, 1, "User should be approved");
-
-        // API should reject requests from inactive users
-        // even if they are approved and have valid credentials
-    }
+    assert!(table_exists(&db.pool, "notes").await);
 }
 
-#[cfg(test)]
-mod session_security {
-    use super::*;
+#[tokio::test]
+async fn sql_in_a_path_is_only_ever_an_id() {
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let user = create_user(&db.pool, &format!("{}@example.com", new_id()), &random_password()).await;
+    let (_, key) = create_device(&db.pool, &user).await;
 
-    #[tokio::test]
-    async fn test_session_expiry_seven_days() {
-        let pool = setup_test_db().await;
+    let (status, _) = call(
+        &app,
+        "GET",
+        "/api/v1/sync/attachments/x%27%20OR%20%271%27%3D%271",
+        Some(&key),
+        None,
+    )
+    .await;
 
-        let user_id = "test_user";
-        let now = chrono::Utc::now();
-        let now_str = now.to_rfc3339();
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}
 
-        // Create user
-        sqlx::query!(
-            r#"INSERT INTO users (id, email, password_hash, approved, created_at)
-               VALUES (?, ?, ?, 1, ?)"#,
-            user_id,
-            "test@example.com",
-            "hash",
-            now_str
-        )
-        .execute(&pool)
+#[tokio::test]
+async fn a_regular_user_cannot_make_themselves_an_admin() {
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let (id, token) = signed_in_user(&app, &db.pool).await;
+
+    let (status, _) = call(
+        &app,
+        "POST",
+        &format!("/api/v1/admin/users/{id}/toggle-admin"),
+        Some(&token),
+        Some(json!({ "is_admin": true })),
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let is_admin: i64 = sqlx::query_scalar("SELECT is_admin FROM users WHERE id = ?")
+        .bind(&id)
+        .fetch_one(&db.pool)
         .await
-        .expect("Failed to create user");
+        .unwrap();
+    assert_eq!(is_admin, 0);
+}
 
-        // Create session that expires in 7 days
-        let expires_at = (now + chrono::Duration::days(7)).to_rfc3339();
+#[tokio::test]
+async fn an_unapproved_user_cannot_enrol_a_device() {
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let email = format!("{}@example.com", new_id());
+    let password = random_password();
+    let id = create_user(&db.pool, &email, &password).await;
+    sqlx::query("UPDATE users SET approved = 0 WHERE id = ?")
+        .bind(&id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
 
-        sqlx::query!(
-            r#"INSERT INTO sessions (id, user_id, token_hash, created_at, expires_at, last_used_at)
-               VALUES (?, ?, ?, ?, ?, ?)"#,
-            "session1",
-            user_id,
-            "token_hash",
-            now_str,
+    let (status, _) = call(
+        &app,
+        "POST",
+        "/api/v1/auth/register-device",
+        None,
+        Some(json!({
+            "email": email,
+            "password": password,
+            "deviceName": "phone",
+            "deviceType": "ios",
+        })),
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let devices: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clients WHERE user_id = ?")
+        .bind(&id)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+    assert_eq!(devices, 0);
+}
+
+async fn session_expiring(pool: &SqlitePool, user_id: &str, expires_at: String) -> String {
+    let token = new_id();
+    SessionRepository::create(
+        pool,
+        CreateSessionParams {
+            user_id: user_id.to_string(),
+            token: token.clone(),
             expires_at,
-            now_str
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create session");
-
-        // Verify session expiry is exactly 7 days
-        let session = sqlx::query!(
-            r#"SELECT created_at, expires_at FROM sessions WHERE id = ?"#,
-            "session1"
-        )
-        .fetch_one(&pool)
-        .await
-        .expect("Should fetch session");
-
-        let created = chrono::DateTime::parse_from_rfc3339(&session.created_at)
-            .expect("Should parse created_at");
-        let expires = chrono::DateTime::parse_from_rfc3339(&session.expires_at)
-            .expect("Should parse expires_at");
-
-        let duration = expires.signed_duration_since(created);
-
-        assert_eq!(
-            duration.num_days(),
-            7,
-            "Session should expire in exactly 7 days"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_expired_session_detection() {
-        let pool = setup_test_db().await;
-
-        let user_id = "test_user";
-        let now = chrono::Utc::now();
-        let now_str = now.to_rfc3339();
-
-        sqlx::query!(
-            r#"INSERT INTO users (id, email, password_hash, approved, created_at)
-               VALUES (?, ?, ?, 1, ?)"#,
-            user_id,
-            "test@example.com",
-            "hash",
-            now_str
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create user");
-
-        // Create expired session (expired 1 day ago)
-        let created_str = (now - chrono::Duration::days(8)).to_rfc3339();
-        let expires_at = (now - chrono::Duration::days(1)).to_rfc3339();
-
-        sqlx::query!(
-            r#"INSERT INTO sessions (id, user_id, token_hash, created_at, expires_at, last_used_at)
-               VALUES (?, ?, ?, ?, ?, ?)"#,
-            "expired_session",
-            user_id,
-            "token_hash",
-            created_str,
-            expires_at,
-            created_str
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create session");
-
-        // Check if session is expired
-        let session = sqlx::query!(
-            r#"SELECT expires_at FROM sessions WHERE id = ?"#,
-            "expired_session"
-        )
-        .fetch_one(&pool)
-        .await
-        .expect("Should fetch session");
-
-        let expires = chrono::DateTime::parse_from_rfc3339(&session.expires_at)
-            .expect("Should parse expires_at");
-
-        let is_expired = expires < now;
-
-        assert!(is_expired, "Session should be detected as expired");
-
-        // API should reject requests with expired sessions
-        // even if the session token is valid
-    }
-
-    #[tokio::test]
-    async fn test_session_token_uniqueness() {
-        let pool = setup_test_db().await;
-
-        let user_id = "test_user";
-        let now = chrono::Utc::now();
-        let now_str = now.to_rfc3339();
-
-        sqlx::query!(
-            r#"INSERT INTO users (id, email, password_hash, approved, created_at)
-               VALUES (?, ?, ?, 1, ?)"#,
-            user_id,
-            "test@example.com",
-            "hash",
-            now_str
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create user");
-
-        // Create first session
-        let session_token = "unique_token_hash";
-        let expires_str = (now + chrono::Duration::days(7)).to_rfc3339();
-
-        sqlx::query!(
-            r#"INSERT INTO sessions (id, user_id, token_hash, created_at, expires_at, last_used_at)
-               VALUES (?, ?, ?, ?, ?, ?)"#,
-            "session1",
-            user_id,
-            session_token,
-            now_str,
-            expires_str,
-            now_str
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create first session");
-
-        // Try to create second session with same token
-        let result = sqlx::query!(
-            r#"INSERT INTO sessions (id, user_id, token_hash, created_at, expires_at, last_used_at)
-               VALUES (?, ?, ?, ?, ?, ?)"#,
-            "session2",
-            user_id,
-            session_token,
-            now_str,
-            expires_str,
-            now_str
-        )
-        .execute(&pool)
-        .await;
-
-        assert!(
-            result.is_err(),
-            "Should fail to create session with duplicate token (UNIQUE constraint)"
-        );
-    }
+            user_agent: None,
+            ip_address: None,
+        },
+    )
+    .await
+    .unwrap();
+    token
 }
 
-#[cfg(test)]
-mod api_key_security {
-    use super::*;
+#[tokio::test]
+async fn an_expired_session_opens_nothing_and_is_removed() {
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let user = create_user(&db.pool, &format!("{}@example.com", new_id()), &random_password()).await;
+    let expired = (chrono::Utc::now() - chrono::Duration::seconds(1)).to_rfc3339();
+    let token = session_expiring(&db.pool, &user, expired).await;
 
-    #[tokio::test]
-    async fn test_api_key_uniqueness_per_device() {
-        let pool = setup_test_db().await;
+    let (status, _) = call(&app, "GET", "/api/v1/user/account", Some(&token), None).await;
 
-        let user_id = "test_user";
-        let now = chrono::Utc::now().to_rfc3339();
-
-        sqlx::query!(
-            r#"INSERT INTO users (id, email, password_hash, approved, created_at)
-               VALUES (?, ?, ?, 1, ?)"#,
-            user_id,
-            "test@example.com",
-            "hash",
-            now
-        )
-        .execute(&pool)
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let sessions: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sessions WHERE user_id = ?")
+        .bind(&user)
+        .fetch_one(&db.pool)
         .await
-        .expect("Failed to create user");
-
-        // Create device with API key
-        let api_key_hash = "api_key_hash_1";
-
-        sqlx::query!(
-            r#"INSERT INTO clients (id, user_id, api_key, device_name, created_at, last_seen_at)
-               VALUES (?, ?, ?, ?, ?, ?)"#,
-            "device1",
-            user_id,
-            api_key_hash,
-            "Device 1",
-            now,
-            now
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create device");
-
-        // Each device should have unique API key
-        // Try to create another device with different key
-        let api_key_hash_2 = "api_key_hash_2";
-
-        let result = sqlx::query!(
-            r#"INSERT INTO clients (id, user_id, api_key, device_name, created_at, last_seen_at)
-               VALUES (?, ?, ?, ?, ?, ?)"#,
-            "device2",
-            user_id,
-            api_key_hash_2,
-            "Device 2",
-            now,
-            now
-        )
-        .execute(&pool)
-        .await;
-
-        assert!(
-            result.is_ok(),
-            "Should allow multiple devices with different API keys"
-        );
-
-        // Verify each device has its own API key
-        let devices = sqlx::query!(
-            r#"SELECT id, api_key FROM clients WHERE user_id = ?"#,
-            user_id
-        )
-        .fetch_all(&pool)
-        .await
-        .expect("Should fetch devices");
-
-        assert_eq!(devices.len(), 2, "User should have 2 devices");
-        assert_ne!(
-            devices[0].api_key, devices[1].api_key,
-            "Each device should have unique API key"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_inactive_device_tracking() {
-        let pool = setup_test_db().await;
-
-        let user_id = "test_user";
-        let now = chrono::Utc::now().to_rfc3339();
-
-        sqlx::query!(
-            r#"INSERT INTO users (id, email, password_hash, approved, created_at)
-               VALUES (?, ?, ?, 1, ?)"#,
-            user_id,
-            "test@example.com",
-            "hash",
-            now
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create user");
-
-        // Create inactive device
-        sqlx::query!(
-            r#"INSERT INTO clients (id, user_id, api_key, device_name, is_active, created_at, last_seen_at)
-               VALUES (?, ?, ?, ?, 0, ?, ?)"#,
-            "inactive_device",
-            user_id,
-            "api_key_hash",
-            "Inactive Device",
-            now,
-            now
-        )
-        .execute(&pool)
-        .await
-        .expect("Failed to create device");
-
-        // Verify device is inactive
-        let device = sqlx::query!(
-            r#"SELECT is_active FROM clients WHERE id = ?"#,
-            "inactive_device"
-        )
-        .fetch_one(&pool)
-        .await
-        .expect("Should fetch device");
-
-        assert_eq!(device.is_active, Some(0), "Device should be inactive");
-
-        // API should reject requests from inactive devices
-        // even if API key is valid
-    }
+        .unwrap();
+    assert_eq!(sessions, 0);
 }
 
-#[cfg(test)]
-mod security_documentation {
-    #[test]
-    fn document_integration_test_coverage() {
-        let test_areas = vec![
-            "User Isolation (cross-user data access)",
-            "SQL Injection (email, note content)",
-            "Admin Privilege Escalation",
-            "Unapproved User Restrictions",
-            "Inactive User/Device Enforcement",
-            "Session Expiry (7 days)",
-            "Session Token Uniqueness",
-            "API Key Uniqueness",
-            "Foreign Key Constraints",
-        ];
+#[tokio::test]
+async fn a_session_works_until_it_expires() {
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let user = create_user(&db.pool, &format!("{}@example.com", new_id()), &random_password()).await;
+    let later = (chrono::Utc::now() + chrono::Duration::minutes(5)).to_rfc3339();
+    let token = session_expiring(&db.pool, &user, later).await;
 
-        for area in &test_areas {
-            println!("Integration test coverage: {}", area);
-        }
+    let (status, _) = call(&app, "GET", "/api/v1/user/account", Some(&token), None).await;
 
-        assert!(
-            test_areas.len() >= 9,
-            "Should have comprehensive integration test coverage"
-        );
+    assert_eq!(status, StatusCode::OK);
+}
+
+#[tokio::test]
+async fn sessions_are_stored_hashed_and_never_repeat() {
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let email = format!("{}@example.com", new_id());
+    let password = random_password();
+    create_user(&db.pool, &email, &password).await;
+
+    let mut tokens = HashSet::new();
+    for _ in 0..5 {
+        let (_, body) = call(
+            &app,
+            "POST",
+            "/api/v1/user/login",
+            None,
+            Some(json!({ "email": email, "password": password })),
+        )
+        .await;
+        tokens.insert(body["sessionId"].as_str().unwrap().to_string());
     }
+    assert_eq!(tokens.len(), 5);
 
-    #[test]
-    fn document_missing_security_features() {
-        // Document security features that should be implemented
-        let missing_features = vec![
-            "Rate Limiting (not yet implemented)",
-            "CSRF Token Validation (relies on CORS)",
-            "Request Logging for Audit Trail",
-            "Failed Login Attempt Tracking",
-            "IP-based Access Control",
-            "Two-Factor Authentication (2FA)",
-        ];
+    let stored: Vec<String> = sqlx::query_scalar("SELECT token_hash FROM sessions")
+        .fetch_all(&db.pool)
+        .await
+        .unwrap();
+    assert!(stored.iter().all(|hash| !tokens.contains(hash)));
+}
 
-        for feature in &missing_features {
-            println!("Missing security feature: {}", feature);
-        }
+#[tokio::test]
+async fn each_device_gets_its_own_key_stored_hashed() {
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let email = format!("{}@example.com", new_id());
+    let password = random_password();
+    create_user(&db.pool, &email, &password).await;
 
-        // Note: Rate limiting is the most critical missing feature
-        assert!(
-            missing_features.contains(&"Rate Limiting (not yet implemented)"),
-            "Rate limiting should be documented as missing"
-        );
+    let mut keys = HashSet::new();
+    for name in ["one", "two", "three"] {
+        let (status, body) = call(
+            &app,
+            "POST",
+            "/api/v1/auth/register-device",
+            None,
+            Some(json!({
+                "email": email,
+                "password": password,
+                "deviceName": name,
+                "deviceType": "tui",
+            })),
+        )
+        .await;
+        assert_eq!(status, StatusCode::CREATED, "{body}");
+        keys.insert(body["apiKey"].as_str().unwrap().to_string());
     }
+    assert_eq!(keys.len(), 3);
 
-    #[test]
-    fn document_security_headers() {
-        // Document security headers that should be set on all responses
-        // These are configured in main.rs and verified by manual testing
-        let required_headers = vec![
-            ("X-Frame-Options", "DENY", "Prevents clickjacking attacks"),
-            ("X-Content-Type-Options", "nosniff", "Prevents MIME-type sniffing"),
-            ("Referrer-Policy", "strict-origin-when-cross-origin", "Limits referrer leakage"),
-            ("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'", "XSS protection for API"),
-            ("Cache-Control", "no-store, no-cache, must-revalidate, private", "Prevents sensitive data caching"),
-            ("X-Permitted-Cross-Domain-Policies", "none", "Prevents Adobe cross-domain policy loading"),
-        ];
+    let stored: Vec<String> = sqlx::query_scalar("SELECT api_key FROM clients")
+        .fetch_all(&db.pool)
+        .await
+        .unwrap();
+    assert!(stored.iter().all(|hash| !keys.contains(hash)));
+}
 
-        let optional_headers = vec![
-            ("Strict-Transport-Security", "max-age=31536000; includeSubDomains", "HSTS - only for HTTPS"),
-        ];
+#[tokio::test]
+async fn a_revoked_device_stays_on_record_but_stops_working() {
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let user = create_user(&db.pool, &format!("{}@example.com", new_id()), &random_password()).await;
+    let (device, key) = create_device(&db.pool, &user).await;
 
-        println!("=== Required Security Headers ===");
-        for (name, value, purpose) in &required_headers {
-            println!("{}: {} ({})", name, value, purpose);
-        }
+    let (status, _) = call(&app, "DELETE", "/api/v1/sync/device", Some(&key), None).await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
 
-        println!("\n=== Optional Security Headers ===");
-        for (name, value, purpose) in &optional_headers {
-            println!("{}: {} ({})", name, value, purpose);
-        }
-
-        assert_eq!(required_headers.len(), 6, "Should have 6 required security headers");
-    }
-
-    #[test]
-    fn document_owasp_top_10_mitigations() {
-        // Document OWASP Top 10 (2021) mitigations
-        let mitigations = vec![
-            ("A01:2021 - Broken Access Control", vec![
-                "User isolation via user_id in all queries",
-                "API key authentication required for all endpoints",
-                "Session-based auth for admin portal",
-                "Composite keys (id, user_id) enforce ownership",
-            ]),
-            ("A02:2021 - Cryptographic Failures", vec![
-                "Argon2id for password hashing (m=19456, t=2, p=1)",
-                "SHA-256 for API key hashing",
-                "TLS required for production (HSTS optional)",
-                "No sensitive data in URLs or logs",
-            ]),
-            ("A03:2021 - Injection", vec![
-                "All SQL via parameterized queries (sqlx::query!)",
-                "QueryBuilder with push_bind for dynamic queries",
-                "Input validation rejects control characters",
-                "XSS patterns rejected in device names",
-            ]),
-            ("A04:2021 - Insecure Design", vec![
-                "Defence in depth (validation + parameterized queries)",
-                "Principle of least privilege",
-                "Secure defaults (CORS same-origin by default)",
-            ]),
-            ("A05:2021 - Security Misconfiguration", vec![
-                "Security headers set on all responses",
-                "CORS configurable via environment",
-                "Debug info not exposed in production errors",
-            ]),
-            ("A06:2021 - Vulnerable Components", vec![
-                "Regular dependency updates via Cargo.lock",
-                "cargo audit for vulnerability scanning",
-            ]),
-            ("A07:2021 - Auth Failures", vec![
-                "Strong password requirements (configurable)",
-                "Session expiry (7 days default)",
-                "Account approval workflow",
-                "Rate limiting TODO (documented as missing)",
-            ]),
-            ("A08:2021 - Data Integrity Failures", vec![
-                "Content hashing for sync integrity",
-                "Version tracking for conflict detection",
-            ]),
-            ("A09:2021 - Logging Failures", vec![
-                "tracing for structured logging",
-                "User-Agent and IP captured for sessions",
-                "Security events logged (failed auth, XSS attempts)",
-            ]),
-            ("A10:2021 - SSRF", vec![
-                "No server-side URL fetching",
-                "API only accepts JSON payloads",
-            ]),
-        ];
-
-        for (category, items) in &mitigations {
-            println!("\n{}", category);
-            for item in items {
-                println!("  ✓ {}", item);
-            }
-        }
-
-        assert_eq!(mitigations.len(), 10, "Should cover all OWASP Top 10 categories");
-    }
+    let (status, _) = call(&app, "GET", "/api/v1/sync/status", Some(&key), None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let kept: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM clients WHERE id = ?")
+        .bind(&device)
+        .fetch_one(&db.pool)
+        .await
+        .unwrap();
+    assert_eq!(kept, 1);
 }

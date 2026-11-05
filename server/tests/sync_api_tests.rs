@@ -43,7 +43,7 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -53,11 +53,14 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -66,22 +69,13 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
     // Build router with sync routes
-    let app = axum::Router::new()
-        .route("/api/v1/sync/status", axum::routing::get(jottery_server::api::sync::get_status))
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .route("/api/v1/sync/pull", axum::routing::post(jottery_server::api::sync::pull))
-        .route("/api/v1/sync/notes/:id", axum::routing::delete(jottery_server::api::sync::delete_note))
-        .route("/api/v1/auth/register-user", axum::routing::post(jottery_server::api::auth::register_user))
-        .route("/api/v1/auth/register-device", axum::routing::post(jottery_server::api::auth::register_device))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     (app, pool)
 }
@@ -752,10 +746,10 @@ async fn test_sync_push_conflict_with_attachments() {
 
     // Insert attachment into attachments_meta table (separate from notes table)
     sqlx::query!(
-        r#"INSERT INTO attachments_meta (id, note_id, note_user_id, filename, mime_type, size, created_at)
+        r#"INSERT INTO attachments_meta (id, attachment_id, user_id, filename, mime_type, size, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?)"#,
         attachment_id,
-        note_id,
+        attachment_id,
         user_id,
         "server-file.pdf",
         "application/pdf",
@@ -765,6 +759,16 @@ async fn test_sync_push_conflict_with_attachments() {
     .execute(&pool)
     .await
     .expect("Failed to insert attachment metadata");
+
+    sqlx::query!(
+        r#"INSERT INTO note_attachments (user_id, note_id, attachment_id) VALUES (?, ?, ?)"#,
+        user_id,
+        note_id,
+        attachment_id
+    )
+    .execute(&pool)
+    .await
+    .expect("Failed to link attachment to note");
 
     // Try to push outdated client version
     let client_time = "2024-01-01T12:00:00Z";

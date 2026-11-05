@@ -1,0 +1,43 @@
+name: Repository Checks
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_call:  # Run before publishing, from build-multiarch.yml
+  workflow_dispatch:  # Manual trigger
+
+permissions:
+  contents: read
+
+jobs:
+  tracked-files:
+    name: Tracked Files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check for databases, secrets and large files
+        run: scripts/check-tracked-files.sh
+
+      - name: Check the settings documentation matches the code
+        run: python3 -I scripts/check-env-docs.py
+
+      - name: Check the server's tests and image use one compiler
+        run: scripts/check-rust-toolchain.sh
+
+  docker-entrypoint:
+    name: Docker Entrypoint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Test the entrypoint and healthcheck
+        run: scripts/test-docker-entrypoint.sh

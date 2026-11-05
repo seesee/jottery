@@ -1,6 +1,7 @@
 <script lang="ts">
   import { auth } from '../lib/auth.svelte';
   import { ApiError } from '../lib/api';
+  import { describeError } from '../lib/apiErrors';
   import { _ } from 'svelte-i18n';
 
   let email = $state('');
@@ -23,10 +24,10 @@
         } else if (err.status === 403) {
           error = $_('login.errors.adminRequired');
         } else {
-          error = err.message;
+          error = describeError(err, $_, 'login.errors.unexpected');
         }
       } else {
-        error = $_('login.errors.unexpected');
+        error = describeError(err, $_, 'login.errors.unexpected');
       }
     } finally {
       loading = false;
@@ -42,8 +43,14 @@
     </div>
 
     <form onsubmit={handleSubmit} class="space-y-6">
+      {#if auth.sessionExpired && !error}
+        <div role="status" class="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded">
+          {$_('session.expired')}
+        </div>
+      {/if}
+
       {#if error}
-        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div role="alert" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
       {/if}
@@ -55,6 +62,7 @@
         <input
           id="email"
           type="email"
+          autocomplete="username"
           required
           bind:value={email}
           disabled={loading}
@@ -70,6 +78,7 @@
         <input
           id="password"
           type="password"
+          autocomplete="current-password"
           required
           bind:value={password}
           disabled={loading}

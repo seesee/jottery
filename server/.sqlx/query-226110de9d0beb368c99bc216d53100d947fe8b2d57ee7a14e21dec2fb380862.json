@@ -1,0 +1,122 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT content, tags, pinned, archived, archived_at, locked, locked_at, server_version, syntax_language, word_wrap, show_preview, color, modified_at,\n                          content_hash, parent_hash, hash_chain, deleted, deleted_at\n                   FROM notes WHERE id = ? AND user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "content",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "tags",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "pinned",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "archived",
+        "ordinal": 3,
+        "type_info": "Bool"
+      },
+      {
+        "name": "archived_at",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "locked",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "locked_at",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "server_version",
+        "ordinal": 7,
+        "type_info": "Integer"
+      },
+      {
+        "name": "syntax_language",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "word_wrap",
+        "ordinal": 9,
+        "type_info": "Integer"
+      },
+      {
+        "name": "show_preview",
+        "ordinal": 10,
+        "type_info": "Integer"
+      },
+      {
+        "name": "color",
+        "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "modified_at",
+        "ordinal": 12,
+        "type_info": "Text"
+      },
+      {
+        "name": "content_hash",
+        "ordinal": 13,
+        "type_info": "Text"
+      },
+      {
+        "name": "parent_hash",
+        "ordinal": 14,
+        "type_info": "Text"
+      },
+      {
+        "name": "hash_chain",
+        "ordinal": 15,
+        "type_info": "Text"
+      },
+      {
+        "name": "deleted",
+        "ordinal": 16,
+        "type_info": "Integer"
+      },
+      {
+        "name": "deleted_at",
+        "ordinal": 17,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      true
+    ]
+  },
+  "hash": "226110de9d0beb368c99bc216d53100d947fe8b2d57ee7a14e21dec2fb380862"
+}

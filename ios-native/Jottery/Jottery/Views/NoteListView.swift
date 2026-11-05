@@ -1,20 +1,26 @@
 import SwiftUI
 
 struct NoteListView: View {
+    /// Whether the tags go at the top of this list. Otherwise they're a sheet.
+    /// Decided by `MainView`, as a split view's column can be told it's compact.
+    let showsTagsInList: Bool
+
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var colorScheme
-    @State private var showSettings = false
-    @State private var showRecycleBin = false
     @State private var isSelectMode = false
     @State private var selectedIds: Set<String> = []
     @State private var showBulkTagSheet = false
     @State private var showBulkRemoveTagSheet = false
     @State private var showBulkColorSheet = false
+    @State private var showBulkCombineSheet = false
     @State private var showBulkDeleteConfirm = false
     @State private var bulkExportFile: ExportFile?
+    @State private var noteShareFile: ExportFile?
+    @State private var bulkExportTask: Task<Void, Never>?
     @State private var showSavedSearches = false
     @State private var showConflicts = false
     @State private var showInbox = false
+    @State private var showTags = false
     @State private var searchIsActive = false
 
     var body: some View {
@@ -30,6 +36,17 @@ struct NoteListView: View {
         .listStyle(.insetGrouped)
         .refreshable { await appState.triggerSync() }
         .searchable(text: $state.searchQuery, isPresented: $searchIsActive, prompt: L.noteListSearch)
+        // As in the editor: search terms stay out of the keyboard's learned words.
+        .autocorrectionDisabled()
+        .textInputAutocapitalization(.never)
+        .searchSuggestions {
+            let completions = SearchSuggestions.tagCompletions(for: appState.searchQuery, tags: appState.allTags)
+            // Anything here takes the place of the results, so typing shows them.
+            if appState.searchQuery.isEmpty || !completions.isEmpty {
+                SearchSuggestionRows(tagCompletions: completions)
+            }
+        }
+        .onSubmit(of: .search) { appState.recordRecentSearch() }
         .navigationTitle(appState.showArchive ? L.noteListArchiveTitle : L.noteListTitle)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
@@ -55,7 +72,10 @@ struct NoteListView: View {
                     }
 
                     Menu {
-                        Picker(L.noteListSort, selection: $state.sortOrder) {
+                        Picker(L.noteListSort, selection: Binding(
+                            get: { appState.sortOrder },
+                            set: { appState.setSortOrder($0) }
+                        )) {
                             ForEach(SortOrder.allCases, id: \.self) { order in
                                 Text(order.displayName).tag(order)
                             }
@@ -76,11 +96,16 @@ struct NoteListView: View {
                     }
                 }
 
+                if !isSelectMode && !showsTagsInList {
+                    Button {
+                        showTags = true
+                    } label: {
+                        Label(L.tagsTitle, systemImage: "tag")
+                    }
+                }
+
                 Button {
-                    appState.showArchive.toggle()
-                    appState.selectedNoteId = nil
-                    isSelectMode = false
-                    selectedIds.removeAll()
+                    toggleArchiveView()
                 } label: {
                     Label(
                         appState.showArchive ? L.noteListShowNotes : L.noteListShowArchive,
@@ -89,13 +114,13 @@ struct NoteListView: View {
                 }
 
                 Button {
-                    showRecycleBin = true
+                    appState.presentedSheet = .recycleBin
                 } label: {
                     Label(L.noteListRecycleBin, systemImage: "trash")
                 }
 
                 Button {
-                    showSettings = true
+                    appState.presentedSheet = .settings
                 } label: {
                     Label(L.noteListSettings, systemImage: "gear")
                 }
@@ -134,11 +159,8 @@ struct NoteListView: View {
         .sheet(isPresented: $showSavedSearches) {
             SavedSearchesView()
         }
-        .sheet(isPresented: $showSettings) {
-            SettingsView()
-        }
-        .sheet(isPresented: $showRecycleBin) {
-            RecycleBinView()
+        .sheet(isPresented: $showTags) {
+            TagBrowserSheet()
         }
         .sheet(isPresented: $showBulkTagSheet) {
             BulkAddTagsSheet(noteIds: selectedIds) {
@@ -158,24 +180,31 @@ struct NoteListView: View {
                 selectedIds.removeAll()
             }
         }
-        .sheet(item: $bulkExportFile) { file in
-            ActivityView(activityItems: [file.url])
+        .sheet(isPresented: $showBulkCombineSheet) {
+            BulkCombineSheet(noteIds: selectedIds) {
+                isSelectMode = false
+                selectedIds.removeAll()
+            }
+        }
+        .background { findShortcut }
+        .shareTemporaryFile($bulkExportFile)
+        .shareTemporaryFile($noteShareFile)
+        .onDisappear {
+            // The app can lock during an export, which takes this view away.
+            bulkExportTask?.cancel()
         }
         .alert(L.bulkDeleteConfirmTitle, isPresented: $showBulkDeleteConfirm) {
             Button(L.bulkDeleteConfirmAction, role: .destructive) {
-                var failureCount = 0
-                for id in selectedIds {
-                    do {
-                        try appState.deleteNote(id: id)
-                    } catch {
-                        failureCount += 1
-                    }
-                }
-                if failureCount > 0 {
-                    appState.reportError(L.errorCouldntDeleteNotes(failureCount))
-                }
+                let ids = selectedIds
                 isSelectMode = false
                 selectedIds.removeAll()
+                Task {
+                    do {
+                        try await appState.deleteNotes(ids: ids)
+                    } catch {
+                        appState.reportError(L.errorCouldntDeleteNotes(ids.count))
+                    }
+                }
             }
             Button(L.commonCancel, role: .cancel) {}
         } message: {
@@ -195,6 +224,9 @@ struct NoteListView: View {
                     appState.searchFocused = false
                 }
             }
+        }
+        .onChange(of: appState.selectedNoteId) { _, opened in
+            if opened != nil { appState.recordRecentSearch() }
         }
         .onChange(of: appState.searchQuery) { _, _ in appState.scheduleSearch() }
         .onChange(of: appState.sortOrder) { _, _ in appState.scheduleSearch() }
@@ -219,7 +251,9 @@ struct NoteListView: View {
             }
         }
         .overlay {
-            if appState.showArchive && appState.archivedNotes.isEmpty {
+            if appState.filteredNotes.isEmpty && !appState.searchQuery.isEmpty {
+                noSearchResults
+            } else if appState.showArchive && appState.archivedNotes.isEmpty {
                 ContentUnavailableView(
                     L.noteListArchiveEmpty,
                     systemImage: "archivebox",
@@ -231,10 +265,53 @@ struct NoteListView: View {
                     systemImage: "doc.text",
                     description: Text(L.noteListNoNotesDescription)
                 )
-            } else if appState.filteredNotes.isEmpty && !appState.searchQuery.isEmpty {
-                ContentUnavailableView.search(text: appState.searchQuery)
             }
         }
+    }
+
+    // MARK: - Find
+
+    /// ⌘F finds in the open note, and the editor owns that. With no note open
+    /// there's nothing to find in, so it goes to the search field. This is here and
+    /// not in the menus so that it can't exist at the same time as the editor's.
+    @ViewBuilder
+    private var findShortcut: some View {
+        if appState.selectedNoteId == nil {
+            Button(L.commandsSearch) {
+                searchIsActive = true
+            }
+            .keyboardShortcut("f", modifiers: .command)
+            .frame(width: 0, height: 0)
+            .opacity(0)
+            .accessibilityHidden(true)
+        }
+    }
+
+    // MARK: - No Results
+
+    /// What a search that found nothing says, with a way to what it would have
+    /// found in the other view.
+    @ViewBuilder
+    private var noSearchResults: some View {
+        let elsewhere = appState.matchesInOtherView
+        if elsewhere > 0 {
+            ContentUnavailableView {
+                Label(L.searchNoResults(appState.searchQuery), systemImage: "magnifyingglass")
+            } actions: {
+                Button(appState.showArchive ? L.searchMatchesInNotes(elsewhere) : L.searchMatchesInArchive(elsewhere)) {
+                    toggleArchiveView()
+                }
+                .buttonStyle(.bordered)
+            }
+        } else {
+            ContentUnavailableView.search(text: appState.searchQuery)
+        }
+    }
+
+    private func toggleArchiveView() {
+        appState.toggleArchiveView()
+        isSelectMode = false
+        selectedIds.removeAll()
     }
 
     // MARK: - Single-Select List (normal navigation)
@@ -242,6 +319,9 @@ struct NoteListView: View {
     private var singleSelectList: some View {
         @Bindable var state = appState
         return List(selection: $state.selectedNoteId) {
+            if showsTagsInList {
+                TagSidebarSection()
+            }
             noteRows
         }
     }
@@ -257,6 +337,8 @@ struct NoteListView: View {
 
     // MARK: - Note Rows
 
+    private var noteActions: NoteActions { NoteActions(appState: appState) }
+
     @ViewBuilder
     private var noteRows: some View {
         ForEach(appState.filteredNotes) { note in
@@ -265,27 +347,20 @@ struct NoteListView: View {
                 hasConflict: appState.pendingConflicts.contains { $0.id == note.id }
             )
                 .tag(note.id)
+                .contextMenu {
+                    NoteRowMenu(note: note, shareFile: $noteShareFile, isSelecting: isSelectMode)
+                }
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     if appState.showArchive {
                         Button {
-                            Task {
-                                do {
-                                    try await appState.unarchiveNote(id: note.id)
-                                } catch {
-                                    appState.reportError(L.errorCouldntUnarchiveNote)
-                                }
-                            }
+                            Task { await noteActions.unarchive(note) }
                         } label: {
                             Label(L.noteListUnarchive, systemImage: "tray.and.arrow.up")
                         }
                         .tint(.blue)
                     } else {
                         Button(role: .destructive) {
-                            do {
-                                try appState.deleteNote(id: note.id)
-                            } catch {
-                                appState.reportError(L.errorCouldntDeleteNote)
-                            }
+                            Task { await noteActions.moveToBin(note) }
                         } label: {
                             Label(L.noteListDelete, systemImage: "trash")
                         }
@@ -296,12 +371,7 @@ struct NoteListView: View {
                         // No pin action in archive mode
                     } else {
                         Button {
-                            let wasPinned = note.pinned
-                            do {
-                                try appState.togglePin(id: note.id)
-                            } catch {
-                                appState.reportError(wasPinned ? L.errorCouldntUnpinNote : L.errorCouldntPinNote)
-                            }
+                            noteActions.togglePin(note)
                         } label: {
                             Label(
                                 note.pinned ? L.noteListUnpin : L.noteListPin,
@@ -311,11 +381,7 @@ struct NoteListView: View {
                         .tint(.orange)
 
                         Button {
-                            do {
-                                try appState.archiveNote(id: note.id)
-                            } catch {
-                                appState.reportError(L.errorCouldntArchiveNote)
-                            }
+                            noteActions.archive(note)
                         } label: {
                             Label(L.noteListArchive, systemImage: "archivebox")
                         }
@@ -378,21 +444,26 @@ struct NoteListView: View {
                         Label(L.bulkSetColour, systemImage: "paintbrush")
                     }
 
+                    if !appState.showArchive && selectedIds.count >= 2 {
+                        Button {
+                            showBulkCombineSheet = true
+                        } label: {
+                            Label(L.bulkCombine, systemImage: "rectangle.stack")
+                        }
+                    }
+
                     if !appState.showArchive {
                         Button {
-                            var failureCount = 0
-                            for id in selectedIds {
-                                do {
-                                    try appState.archiveNote(id: id)
-                                } catch {
-                                    failureCount += 1
-                                }
-                            }
-                            if failureCount > 0 {
-                                appState.reportError(L.errorCouldntArchiveNotes(failureCount))
-                            }
+                            let ids = selectedIds
                             isSelectMode = false
                             selectedIds.removeAll()
+                            Task {
+                                do {
+                                    try await appState.archiveNotes(ids: ids)
+                                } catch {
+                                    appState.reportError(L.errorCouldntArchiveNotes(ids.count))
+                                }
+                            }
                         } label: {
                             Label(L.noteListArchive, systemImage: "archivebox")
                         }
@@ -401,8 +472,13 @@ struct NoteListView: View {
                     Button {
                         exportSelectedNotes()
                     } label: {
-                        Label(L.bulkExport, systemImage: "square.and.arrow.up")
+                        if bulkExportTask != nil {
+                            ProgressView()
+                        } else {
+                            Label(L.bulkExport, systemImage: "square.and.arrow.up")
+                        }
                     }
+                    .disabled(bulkExportTask != nil)
 
                     Button(role: .destructive) {
                         showBulkDeleteConfirm = true
@@ -423,18 +499,22 @@ struct NoteListView: View {
 
     private func exportSelectedNotes() {
         guard let key = appState.keyManager.masterKey else { return }
-        let allNotes = appState.notes + appState.archivedNotes
-        guard let data = try? ExportService.exportSelected(
-            notes: allNotes,
-            ids: selectedIds,
-            attachmentRepo: appState.attachmentRepo,
-            key: key
-        ) else { return }
-
-        let filename = ExportService.defaultFilename()
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
-        try? data.write(to: tempURL)
-        bulkExportFile = ExportFile(url: tempURL)
+        let selected = (appState.notes + appState.archivedNotes).filter { selectedIds.contains($0.id) }
+        bulkExportTask = Task {
+            defer { bulkExportTask = nil }
+            do {
+                let url = try await ExportService.exportToTemporaryFile(
+                    notes: selected,
+                    attachmentRepo: appState.attachmentRepo,
+                    key: key
+                )
+                bulkExportFile = ExportFile(url: url)
+            } catch is CancellationError {
+                // The list went away, so there's nobody to tell.
+            } catch {
+                appState.reportError(L.errorCouldntExport)
+            }
+        }
     }
 
     // MARK: - Conflict Banner

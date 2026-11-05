@@ -10,7 +10,16 @@
  * unreachable and has been removed rather than left as dead code.
  */
 
-const STORAGE_KEY = 'jottery_stored_password';
+import { decodeStoredPassword, encodeStoredPassword } from '../utils/storedPassword';
+import { getCurrentNotebook } from '../utils/notebookPath';
+
+/** Before each notebook had its own. Still read, so nobody has to sign in again. */
+const SHARED_STORAGE_KEY = 'jottery_stored_password';
+
+/** Notebooks are separate vaults, so one must not get or clear another's password. */
+function storageKey(): string {
+  return `${SHARED_STORAGE_KEY}:${getCurrentNotebook().dbName}`;
+}
 
 /**
  * Store the password.
@@ -19,7 +28,8 @@ const STORAGE_KEY = 'jottery_stored_password';
  */
 export async function storePassword(password: string): Promise<void> {
   try {
-    localStorage.setItem(STORAGE_KEY, btoa(password));
+    localStorage.setItem(storageKey(), encodeStoredPassword(password));
+    localStorage.removeItem(SHARED_STORAGE_KEY);
   } catch (error) {
     console.error('Failed to store password:', error);
     throw new Error('Failed to store password in localStorage');
@@ -34,11 +44,11 @@ export async function storePassword(password: string): Promise<void> {
  */
 export async function getStoredPassword(): Promise<string | null> {
   try {
-    const encoded = localStorage.getItem(STORAGE_KEY);
+    const encoded = localStorage.getItem(storageKey()) ?? localStorage.getItem(SHARED_STORAGE_KEY);
     if (!encoded) return null;
 
     try {
-      return atob(encoded);
+      return decodeStoredPassword(encoded);
     } catch (decodeError) {
       console.error('Failed to decode stored password:', decodeError);
       clearStoredPasswordSync();
@@ -62,7 +72,8 @@ export async function clearStoredPassword(): Promise<void> {
  */
 function clearStoredPasswordSync(): void {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(storageKey());
+    localStorage.removeItem(SHARED_STORAGE_KEY);
   } catch (error) {
     console.error('Failed to clear stored password:', error);
   }

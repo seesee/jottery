@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { isLocked, isLocking, filteredNotes, selectedNoteId, selectedNote, selectNote, clearSelection, notes, settings } from '../stores/appStore';
-  import { lock, noteService, searchService, syncService, syncRepository } from '../services';
+  import { isLocking, filteredNotes, selectedNoteId, selectedNote, selectNote, clearSelection, notes, settings } from '../stores/appStore';
+  import { noteService, searchService, syncService } from '../services';
+  import { lockApplication } from '../services/lockService';
   import { _ } from 'svelte-i18n';
   import type { KeyboardShortcut } from '../types';
 
@@ -11,32 +12,6 @@
   export let onOpenShortcutsHelp: () => void;
   export let onOpenRecycleBin: () => void;
   export let onOpenCommandPalette: (() => void) | undefined = undefined;
-
-  async function handleLockNow() {
-    isLocking.set(true);
-
-    try {
-      // Give any pending auto-saves time to complete (EditorPane has 1s debounce)
-      await new Promise(resolve => setTimeout(resolve, 1200));
-
-      // Trigger sync if enabled (will save all notes to server)
-      if ($settings.syncEnabled) {
-        const syncMetadata = await syncRepository.getMetadata();
-        if (syncMetadata?.apiKey) {
-          console.log('[KeyboardShortcuts] Syncing before lock...');
-          await syncService.syncNow();
-        }
-      }
-    } catch (error) {
-      console.error('[KeyboardShortcuts] Error during pre-lock save/sync:', error);
-      // Continue with lock even if sync fails
-    }
-
-    // Lock the application
-    lock();
-    isLocked.set(true);
-    isLocking.set(false);
-  }
 
   function matchesShortcut(event: KeyboardEvent, shortcut: KeyboardShortcut | undefined): boolean {
     // Null check - shortcut might be undefined
@@ -63,6 +38,8 @@
   }
 
   function handleKeydown(event: KeyboardEvent) {
+    if ($isLocking) return;
+
     // Don't trigger shortcuts when typing in inputs/textareas
     const target = event.target as HTMLElement;
     const isEditing = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
@@ -94,7 +71,7 @@
 
     if (matchesShortcut(event, shortcuts.lockApp)) {
       event.preventDefault();
-      handleLockNow();
+      void lockApplication();
       return;
     }
 
@@ -124,17 +101,12 @@
       return;
     }
 
-    // Editor shortcuts - only close note if no modals are open
-    if (event.key === 'Escape' && $selectedNoteId) {
-      // Check if any modal is open (they have z-50 class and are visible)
-      const modals = document.querySelectorAll('.z-50');
-      const hasOpenModal = Array.from(modals).some(modal => {
-        const style = window.getComputedStyle(modal as HTMLElement);
-        return style.display !== 'none' && style.visibility !== 'hidden';
-      });
-
-      // Only close the note if no modal is open
-      if (!hasOpenModal) {
+    // Escape closes the note, unless something else wants it: a dialog, a field such
+    // as search or tags, or anything that has handled it already. In vim mode, that
+    // includes the editor leaving insert mode.
+    if (event.key === 'Escape' && $selectedNoteId && !event.defaultPrevented) {
+      const inField = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT';
+      if (!inField && !document.querySelector('[role="dialog"]')) {
         event.preventDefault();
         clearSelection();
         return;
@@ -207,7 +179,7 @@
       clearSelection();
 
       // Reload all notes to refresh the UI
-      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      const allNotes = await noteService.getNotesForList($settings.sortOrder);
       notes.set(allNotes);
       searchService.indexNotes(allNotes);
     } catch (error) {
@@ -221,7 +193,7 @@
       await noteService.togglePin($selectedNoteId);
 
       // Reload all notes to refresh the UI
-      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      const allNotes = await noteService.getNotesForList($settings.sortOrder);
       notes.set(allNotes);
       searchService.indexNotes(allNotes);
 

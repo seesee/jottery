@@ -365,3 +365,43 @@ test.describe('Settings', () => {
     await expect(tabPanel).toBeVisible();
   });
 });
+
+test.describe('Failures that used to be silent', () => {
+  let jp: JotteryPage;
+
+  test.beforeEach(async ({ page }) => {
+    jp = new JotteryPage(page);
+    await jp.setup();
+  });
+
+  test('a backup setting that cannot be saved goes back, and says so', async ({ page }) => {
+    await jp.openSettings();
+    await page.evaluate(async () => {
+      const { settingsRepository } = await import('/src/lib/services/settingsRepository.ts' as string);
+      settingsRepository.update = async () => { throw new Error('quota'); };
+    });
+    await jp.dialog.first().locator('button, [role="tab"]').filter({ hasText: /Advanced/ }).first().click();
+    const toggle = jp.dialog.first().locator('label').filter({ hasText: /automatic/i }).locator('input[type="checkbox"]').first();
+    await expect(toggle).not.toBeChecked();
+
+    await toggle.click();
+
+    await expect(page.getByText(/wasn't saved/)).toBeVisible();
+    await expect(toggle).not.toBeChecked();
+  });
+
+  test('a note that cannot be deleted says so', async ({ page }) => {
+    await jp.createNote('Stays where it is');
+    await page.evaluate(async () => {
+      const { noteService } = await import('/src/lib/services/noteService.ts' as string);
+      noteService.deleteNote = async () => { throw new Error('storage'); };
+    });
+
+    await page.getByRole('button', { name: 'More actions' }).click();
+    await page.locator('button').filter({ hasText: /^\s*(🗑️\s*)?Delete/ }).first().click();
+    await jp.dialog.locator('button').filter({ hasText: /Delete/ }).last().click();
+
+    await expect(page.getByText(/Failed to delete note/)).toBeVisible();
+  });
+});
+

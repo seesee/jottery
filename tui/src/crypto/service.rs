@@ -2,11 +2,12 @@
 #![allow(dead_code)]
 
 use aes_gcm::{
-    aead::{Aead, AeadCore, KeyInit, OsRng, rand_core::RngCore},
+    aead::{Aead, AeadCore, KeyInit, OsRng, Payload, rand_core::RngCore},
     Aes256Gcm, Nonce,
 };
 use anyhow::{Context, Result};
 use base64::{engine::general_purpose, Engine as _};
+use hmac::{Hmac, Mac};
 use pbkdf2::pbkdf2_hmac_array;
 use sha2::{Digest, Sha256};
 
@@ -28,6 +29,15 @@ pub const WRAPPING_KDF_VERSION: u32 = 1;
 pub const MAX_HASH_CHAIN_LENGTH: usize = 50;
 
 type NonceType = [u8; NONCE_LENGTH];
+
+/// A nonce read back from stored or received data. `Nonce::from_slice` panics on
+/// the wrong length, and that length comes from whoever wrote the ciphertext.
+fn nonce_from(bytes: &[u8]) -> Result<&Nonce<<Aes256Gcm as AeadCore>::NonceSize>> {
+    if bytes.len() != NONCE_LENGTH {
+        anyhow::bail!("Invalid nonce length: {} (expected {})", bytes.len(), NONCE_LENGTH);
+    }
+    Ok(Nonce::from_slice(bytes))
+}
 
 /// Cryptography service for encryption/decryption operations
 pub struct CryptoService;
@@ -105,7 +115,7 @@ impl CryptoService {
             .decode(&encrypted.nonce)
             .context("Invalid base64 nonce")?;
 
-        let nonce = Nonce::from_slice(&nonce_bytes);
+        let nonce = nonce_from(&nonce_bytes)?;
 
         let plaintext = cipher
             .decrypt(nonce, ciphertext.as_ref())
@@ -152,13 +162,46 @@ impl CryptoService {
             .decode(&encrypted.nonce)
             .context("Invalid base64 nonce")?;
 
-        let nonce = Nonce::from_slice(&nonce_bytes);
+        let nonce = nonce_from(&nonce_bytes)?;
 
         let plaintext = cipher
             .decrypt(nonce, ciphertext.as_ref())
             .map_err(|_| anyhow::anyhow!("Decryption failed. Invalid key or corrupted data."))?;
 
         Ok(plaintext)
+    }
+
+    /// Encrypt binary data, authenticating `aad` along with it
+    pub fn encrypt_binary_with_aad(&self, data: &[u8], aad: &[u8], key: &[u8; KEY_LENGTH]) -> Result<EncryptedData> {
+        let cipher = Aes256Gcm::new(key.into());
+        let nonce = self.generate_nonce();
+
+        let ciphertext = cipher
+            .encrypt(Nonce::from_slice(&nonce), Payload { msg: data, aad })
+            .map_err(|_| anyhow::anyhow!("Encryption failed"))?;
+
+        Ok(EncryptedData {
+            ciphertext: general_purpose::STANDARD.encode(&ciphertext),
+            nonce: general_purpose::STANDARD.encode(nonce),
+            tag: String::new(),
+        })
+    }
+
+    /// Decrypt binary data that was encrypted with `aad`
+    pub fn decrypt_binary_with_aad(&self, encrypted: &EncryptedData, aad: &[u8], key: &[u8; KEY_LENGTH]) -> Result<Vec<u8>> {
+        let cipher = Aes256Gcm::new(key.into());
+
+        let ciphertext = general_purpose::STANDARD
+            .decode(&encrypted.ciphertext)
+            .context("Invalid base64 ciphertext")?;
+
+        let nonce_bytes = general_purpose::STANDARD
+            .decode(&encrypted.nonce)
+            .context("Invalid base64 nonce")?;
+
+        cipher
+            .decrypt(nonce_from(&nonce_bytes)?, Payload { msg: &ciphertext, aad })
+            .map_err(|_| anyhow::anyhow!("Decryption failed. Invalid key or corrupted data."))
     }
 
     /// Generate random salt for key derivation (32 bytes)
@@ -181,9 +224,13 @@ impl CryptoService {
         general_purpose::STANDARD.encode(result)
     }
 
-    /// Compute content hash for a note (for git-like conflict detection)
-    /// Matches web client implementation in src/lib/services/crypto.ts
-    pub fn compute_content_hash(&self, note: &crate::models::Note) -> String {
+    /// Compute content hash for a note (for git-like conflict detection).
+    ///
+    /// Other clients hash a note's ciphertext. Nothing compares a hash with what's in a
+    /// note, only with other hashes, so the value just has to change when the note does
+    /// and stay opaque. This device holds plaintext, and a plain hash of that would let
+    /// the server test guesses at short notes, so this one is keyed.
+    pub fn compute_content_hash(&self, note: &crate::models::Note, key: &[u8; KEY_LENGTH]) -> String {
         use serde_json::json;
 
         // Get sorted attachment IDs for consistent hashing
@@ -192,17 +239,24 @@ impl CryptoService {
             .collect();
         attachment_ids.sort();
 
-        // Build hash data matching web client structure
+        // The same fields as the web client's: everything that counts as a change
         let hash_data = json!({
             "content": note.content,
             "tags": note.tags,
             "attachments": attachment_ids,
             "pinned": note.pinned,
-            "syntaxLanguage": note.syntax_language.to_string(),
+            "archived": note.archived,
+            "locked": note.locked,
+            "syntaxLanguage": note.syntax_name(),
             "wordWrap": note.word_wrap,
+            "showPreview": note.show_preview.unwrap_or(false),
+            "color": note.color,
         });
 
-        self.hash(&hash_data.to_string())
+        let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(key).expect("HMAC takes a key of any length");
+        mac.update(b"jottery.content-hash\0");
+        mac.update(hash_data.to_string().as_bytes());
+        general_purpose::STANDARD.encode(mac.finalize().into_bytes())
     }
 
     // === Envelope Encryption Methods ===
@@ -315,8 +369,29 @@ mod tests {
     /// Get test password from environment variable or use default.
     /// Set JOTTERY_TEST_PASSWORD env var to override.
     fn test_password() -> String {
-        std::env::var("JOTTERY_TEST_PASSWORD")
-            .unwrap_or_else(|_| "test_password_placeholder".to_string())
+        static PASSWORD: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+        PASSWORD
+            .get_or_init(|| {
+                std::env::var("JOTTERY_TEST_PASSWORD")
+                    .unwrap_or_else(|_| uuid::Uuid::new_v4().to_string())
+            })
+            .clone()
+    }
+
+    #[test]
+    fn a_nonce_of_the_wrong_length_is_an_error_not_a_panic() {
+        let service = CryptoService::new();
+        let key = service.generate_master_key();
+
+        for length in [0usize, 1, 11, 13, 32] {
+            let mut text = service.encrypt_text("secret", &key).unwrap();
+            text.nonce = general_purpose::STANDARD.encode(vec![0u8; length]);
+            assert!(service.decrypt_text(&text, &key).is_err());
+
+            let mut binary = service.encrypt_binary(b"secret", &key).unwrap();
+            binary.nonce = general_purpose::STANDARD.encode(vec![0u8; length]);
+            assert!(service.decrypt_binary(&binary, &key).is_err());
+        }
     }
 
     #[test]
@@ -586,6 +661,27 @@ mod tests {
         assert_ne!(key1, key3);
     }
 
+    /// One key for the tests below, generated at runtime as a key should be.
+    fn hash_key() -> &'static [u8; KEY_LENGTH] {
+        static KEY: std::sync::OnceLock<[u8; KEY_LENGTH]> = std::sync::OnceLock::new();
+        KEY.get_or_init(|| CryptoService::new().generate_master_key())
+    }
+
+    /// The server sees this hash. A plain hash of the text would let it test guesses.
+    #[test]
+    fn a_content_hash_depends_on_the_key() {
+        use crate::models::Note;
+
+        let service = CryptoService::new();
+        let note = Note::new("Short note".to_string());
+        let other_key = service.generate_master_key();
+
+        assert_ne!(
+            service.compute_content_hash(&note, hash_key()),
+            service.compute_content_hash(&note, &other_key),
+        );
+    }
+
     #[test]
     fn test_compute_content_hash_deterministic() {
         use crate::models::Note;
@@ -593,8 +689,8 @@ mod tests {
         let service = CryptoService::new();
         let note = Note::new("Test content".to_string());
 
-        let hash1 = service.compute_content_hash(&note);
-        let hash2 = service.compute_content_hash(&note);
+        let hash1 = service.compute_content_hash(&note, hash_key());
+        let hash2 = service.compute_content_hash(&note, hash_key());
 
         // Same note should produce same hash
         assert_eq!(hash1, hash2);
@@ -615,8 +711,8 @@ mod tests {
         // Use same ID to isolate content difference
         note2.id = note1.id.clone();
 
-        let hash1 = service.compute_content_hash(&note1);
-        let hash2 = service.compute_content_hash(&note2);
+        let hash1 = service.compute_content_hash(&note1, hash_key());
+        let hash2 = service.compute_content_hash(&note2, hash_key());
 
         assert_ne!(hash1, hash2);
     }
@@ -634,8 +730,8 @@ mod tests {
         note2.id = note1.id.clone();
         note2.tags = vec!["tag2".to_string()];
 
-        let hash1 = service.compute_content_hash(&note1);
-        let hash2 = service.compute_content_hash(&note2);
+        let hash1 = service.compute_content_hash(&note1, hash_key());
+        let hash2 = service.compute_content_hash(&note2, hash_key());
 
         assert_ne!(hash1, hash2);
     }
@@ -653,8 +749,8 @@ mod tests {
         note2.id = note1.id.clone();
         note2.pinned = true;
 
-        let hash1 = service.compute_content_hash(&note1);
-        let hash2 = service.compute_content_hash(&note2);
+        let hash1 = service.compute_content_hash(&note1, hash_key());
+        let hash2 = service.compute_content_hash(&note2, hash_key());
 
         assert_ne!(hash1, hash2);
     }
@@ -672,8 +768,8 @@ mod tests {
         note2.created_at = note1.created_at + Duration::hours(1);
         note2.modified_at = note1.modified_at + Duration::hours(1);
 
-        let hash1 = service.compute_content_hash(&note1);
-        let hash2 = service.compute_content_hash(&note2);
+        let hash1 = service.compute_content_hash(&note1, hash_key());
+        let hash2 = service.compute_content_hash(&note2, hash_key());
 
         // Timestamps should not affect hash
         assert_eq!(hash1, hash2);

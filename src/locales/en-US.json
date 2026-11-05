@@ -186,6 +186,21 @@
     "confirmDelete": {
       "title": "Delete Note",
       "message": "This will move the note to the recycle bin. You can restore it later if needed."
+    },
+    "actionFailed": {
+      "archive": "Failed to archive note: {error}",
+      "unarchive": "Failed to unarchive note: {error}",
+      "lock": "Failed to lock note: {error}",
+      "unlock": "Failed to unlock note: {error}",
+      "delete": "Failed to delete note: {error}"
+    },
+    "copyLinkFailed": "Failed to copy link to clipboard",
+    "noteEditor": "Note editor",
+    "calc": {
+      "tooLong": "This note is too long to calculate ({lines} lines, at most {max}). Shorten it, or use a different syntax.",
+      "consecutiveErrors": "Stopped after {count} errors in a row. This doesn't look like calculations, so try a different syntax.",
+      "totalErrors": "Stopped after {count} errors. Try a different syntax for this note.",
+      "tooSlow": "Stopped because this was taking too long. Lines below here have no results."
     }
   },
   "noteList": {
@@ -195,7 +210,8 @@
     "noteCountAll": "{total} notes"
   },
   "tagInput": {
-    "removeTag": "Remove tag"
+    "removeTag": "Remove tag",
+    "suggestions": "Tag suggestions"
   },
   "backupReminder": {
     "title": "Time to back up your notes",
@@ -216,7 +232,8 @@
     "frequencyMonthly": "Monthly",
     "frequencyOnChanges": "After a number of changes",
     "changesThreshold": "Back up after this many note changes",
-    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up."
+    "description": "Automatic backups are downloaded to your device. Enable reminders to get notified when it's time to back up.",
+    "saveFailed": "That setting wasn't saved. Try again."
   },
   "backup": {
     "title": "Encrypted Backup",
@@ -254,8 +271,10 @@
         "title": "Backup Information",
         "created": "Created",
         "records": "Records"
-      }
-    }
+      },
+      "storageFull": "The browser ran out of storage, so the restore didn't finish and nothing was kept. Your backup file is fine: free up some space and restore it again."
+    },
+    "autoFailed": "Automatic backup failed. Please create a manual backup."
   },
   "settings": {
     "title": "Settings",
@@ -429,7 +448,22 @@
         "hintExisting": "The password you unlock your notes with on your other devices. It is never sent to the server.",
         "required": "Please enter your notes password.",
         "incorrect": "That is not the password that unlocks your notes on this device. Enter your notes password, not your server password.",
-        "uploadFailed": "Sync is set up, but the encryption key could not be stored on the server, so other devices cannot connect yet. It will be retried the next time you unlock"
+        "uploadFailed": "Sync is set up, but the encryption key could not be stored on the server, so other devices cannot connect yet. It will be retried the next time you unlock",
+        "mustDiffer": "Your notes password and account password must be different. The sync server sees your account password, so if they match it could read your notes.",
+        "matchesAccountWarning": "Your notes password is the same as your account password, so the sync server could read your notes. Change your notes password to fix this."
+      },
+      "existingAccountDetected": "This email already has an account, so this device will connect to it. Enter the notes password you use on your other devices.",
+      "errors": {
+        "credentialsRequired": "Email and password are required",
+        "passwordTooShort": "Password must be at least 12 characters",
+        "registrationFailed": "User registration failed",
+        "deviceRegistrationFailed": "Device registration failed",
+        "loginFailed": "Login failed",
+        "accountInfoFailed": "Failed to load account info",
+        "deleteNotesFailed": "Failed to delete notes",
+        "disconnectFailed": "Failed to disconnect",
+        "syncFailed": "Sync failed",
+        "toggleFailed": "Failed to change sync"
       }
     },
     "editorTab": {
@@ -468,7 +502,9 @@
       "formatHelp": "Use YYYY, MM, DD, HH, mm, ss tokens",
       "value": "Value",
       "description": "Description",
-      "preview": "Preview"
+      "preview": "Preview",
+      "textPlaceholder": "Text to insert",
+      "descriptionPlaceholder": "Description shown in autocomplete"
     },
     "keyboardTab": {
       "description": "Customize keyboard shortcuts. Click on a shortcut to change it, then press your desired key combination.",
@@ -500,7 +536,10 @@
       "duplicateNote": "Duplicate Note",
       "exportNote": "Export Note",
       "pressKey": "Press a key...",
-      "notSet": "Not set"
+      "notSet": "Not set",
+      "needsModifier": "This shortcut works while you type, so it needs Ctrl, Cmd or Alt. Press another key, or Esc to cancel.",
+      "reserved": "That key is reserved. Press another key, or Esc to cancel.",
+      "toggleCollapse": "Collapse or expand"
     },
     "syncTab": {
       "enableSync": "Enable Sync",
@@ -539,7 +578,9 @@
         "changing": "Changing password...",
         "button": "Change Password",
         "success": "Password changed successfully",
-        "error": "Failed to change password: {error}"
+        "error": "Failed to change password: {error}",
+        "serverKeyFailed": "Your password was changed on this device, but the server couldn't be updated. It will try again the next time you unlock. Until then, a new device would need your old password.",
+        "keyStaysTheSame": "Your encryption key stays the same, so old backups still open with your old password. Keep them safe."
       },
       "connectionDetails": {
         "title": "Connection Details",
@@ -575,11 +616,12 @@
         "dangerZone": "Danger Zone",
         "deleteNotesDescription": "Delete all your notes from the sync server. This action cannot be undone. Your local notes will NOT be deleted.",
         "deleteNotesButton": "Delete All Notes from Server"
-      }
+      },
+      "disconnectNotRevoked": "This device is disconnected, but the server couldn't be told, so it's still listed there and its key still works. Revoke it in the user portal."
     },
     "advancedTab": {
       "importExport": "Import/Export",
-      "exportDescription": "Export notes as decrypted JSON. Import will merge notes with existing data.",
+      "exportDescription": "Export makes an unencrypted JSON copy for moving notes elsewhere: anyone with the file can read it. For an encrypted copy, use Backup. Import merges notes with what's already here.",
       "downloadClient": "Download Terminal/HTML Client",
       "downloadTerminalClient": "Download Terminal Client",
       "clientDescription": "Download the terminal client for command-line access, or the HTML client to run locally from the filesystem",
@@ -620,7 +662,8 @@
     "persistSessionModal": {
       "confirmPassword": "Enter your password to enable:",
       "enableButton": "Enable Session Persistence"
-    }
+    },
+    "exportIncomplete": "The export is incomplete: {notes} notes and {attachments} attachments couldn't be read and were left out."
   },
   "landing": {
     "languagePicker": {
@@ -633,7 +676,9 @@
       "note": "No account required • Works offline • Self-hostable"
     },
     "screenshots": {
-      "mainInterface": "Main interface showing note list and editor"
+      "mainInterface": "Main interface showing note list and editor",
+      "carouselLabel": "Screenshot carousel",
+      "fullSizeLabel": "Full size image view"
     },
     "features": {
       "title": "Everything You Need",
@@ -905,7 +950,9 @@
         "emailRequired": "Email address is required.",
         "serverPasswordRequired": "Server password is required.",
         "notesPasswordMinLength": "Notes password must be at least 8 characters.",
-        "onboardingFailed": "Failed to download encryption keys from server. Ensure your notes password matches the one used on your other devices and the source device has synced"
+        "onboardingFailed": "Failed to download encryption keys from server. Ensure your notes password matches the one used on your other devices and the source device has synced",
+        "accountKeyUnreadable": "This notes password can't open your account's key. Check the password. If it's right, the key may have been saved by an older version of Jottery: unlocking Jottery on a device that's already connected will fix it. Then try again.",
+        "localNotesOrphaned": "Notes on this device use a different key from your account, so connecting would make them unreadable. Nothing has changed. To keep them, export your notes, delete this device's data, connect, and then import them."
       },
       "steps": {
         "initialising": "Initializing local encryption…",
@@ -914,12 +961,15 @@
         "encrypting": "Securing credentials…",
         "syncing": "Starting initial sync…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "Your notes password was changed on another device. This device still unlocks with its old password and your notes are safe, but new devices will need the new one."
   },
   "lock": {
     "title": "Lock Application",
     "message": "Lock the application? Unsaved changes will be lost.",
-    "confirmButton": "Lock"
+    "confirmButton": "Lock",
+    "locking": "Locking...",
+    "savingAndSyncing": "Saving and syncing your notes"
   },
   "recycleBin": {
     "title": "Recycle Bin",
@@ -1079,14 +1129,23 @@
     "markdownCopied": "Markdown link copied to clipboard",
     "error": {
       "download": "Failed to download attachment",
-      "copyMarkdown": "Failed to copy markdown link"
+      "copyMarkdown": "Failed to copy markdown link",
+      "upload": "Failed to upload {name}: {error}",
+      "delete": "Failed to delete attachment: {error}",
+      "paste": "Failed to paste image: {error}"
     },
     "preview": {
       "title": "Attachment preview",
       "loading": "Loading preview...",
       "notAvailable": "Preview not available for this file type.",
       "audioNotSupported": "Your browser does not support audio playback.",
-      "videoNotSupported": "Your browser does not support video playback."
+      "videoNotSupported": "Your browser does not support video playback.",
+      "videoLabel": "Video preview"
+    },
+    "confirmDelete": {
+      "title": "Remove attachment?",
+      "message": "The file will be removed from this note. Unless an earlier version of the note still has it, it can't be recovered.",
+      "confirmButton": "Remove"
     }
   },
   "keyboard": {
@@ -1134,7 +1193,8 @@
     "previousPage": "Previous page",
     "nextPage": "Next page",
     "zoomOut": "Zoom out",
-    "zoomIn": "Zoom in"
+    "zoomIn": "Zoom in",
+    "loadFailed": "This PDF couldn't be opened. You can still download it."
   },
   "versionHistory": {
     "title": "Version history",
@@ -1157,7 +1217,8 @@
       "title": "Restore version",
       "message": "Are you sure you want to restore this version? Your current note will be saved as a new version before restoring.",
       "confirmButton": "Restore"
-    }
+    },
+    "restoreFailed": "Failed to restore version: {error}"
   },
   "header": {
     "menu": "Menu",
@@ -1166,7 +1227,8 @@
     "addContentFirst": "Add content to current note first",
     "lastSynced": "Last synced: {time}",
     "neverSynced": "Not synced yet",
-    "syncDisabled": "Sync is not enabled"
+    "syncDisabled": "Sync is not enabled",
+    "newNote": "New note"
   },
   "confirm": {
     "deleteDatabase": {
@@ -1227,7 +1289,11 @@
     "resolveButton": "Resolve Conflict",
     "syncNotification": "{count, plural, one {1 note has a sync conflict} other {{count} notes have sync conflicts}}",
     "commonAncestor": "Common ancestor",
-    "ancestorDescription": "The version you both started from"
+    "ancestorDescription": "The version you both started from",
+    "serverUnreadable": "The server's copy of this note can't be read, and may have been altered. Only your version can be kept.",
+    "localUnreadable": "This device's copy of the note can't be read.",
+    "loadFailed": "Failed to load conflict data",
+    "resolveFailed": "Failed to resolve conflict"
   },
   "pullToRefresh": {
     "pull": "Pull down to sync",
@@ -1263,7 +1329,14 @@
   },
   "sync": {
     "syncing": "Syncing...",
-    "syncProgress": "Syncing: {percentage}% complete"
+    "syncProgress": "Syncing: {percentage}% complete",
+    "notesRefused": "Some notes are too large for your account's upload limit and weren't synced. Everything else was.",
+    "accountDisabled": "Your account is deactivated or waiting for approval, so sync has stopped. Your notes on this device are safe. Contact your administrator.",
+    "storageQuotaExceeded": "Your account has reached its storage limit, so changes on this device can't be uploaded. Permanently delete some notes or attachments to make room.",
+    "massDeletionHeld": "The server asked to delete {count} notes at once. They're in the recycle bin in case that wasn't you. Restore them there, or empty the bin if it was.",
+    "clockAhead": "Some changes weren't synced because they're dated more than a day ahead of the server. Check the date and time on this device.",
+    "deviceRevoked": "This device is no longer connected to your account, so sync has stopped. Your notes on this device are safe. Connect it again in Settings.",
+    "databaseLost": "Database connection lost. Please refresh the page to continue."
   },
   "outliner": {
     "name": "Outliner",
@@ -1406,6 +1479,18 @@
     "openNote": "Open this note",
     "repairNotOnServer": "Not on the server either — open the note and remove the attachment",
     "serverMissingTitle": "Missing on the server",
-    "serverMissingHint": "The sync server has no copy of these attachments and neither does this device. Open the note and remove the attachment, or sync from a device that still has the file."
+    "serverMissingHint": "The sync server has no copy of these attachments and neither does this device. Open the note and remove the attachment, or sync from a device that still has the file.",
+    "rejectedTitle": "Rejected from the sync server",
+    "rejectedHint": "The sync server sent these in a form that can't be trusted, so they weren't saved. Your existing notes are unaffected. If this keeps happening, check who controls the server.",
+    "rejectedKind": {
+      "note": "Note",
+      "version": "Note version",
+      "conflict": "Sync conflict",
+      "savedSearch": "Saved search",
+      "attachment": "Attachment",
+      "inboxItem": "Inbox item",
+      "deletion": "Deletion"
+    },
+    "scanFailed": "The scan didn't finish. Try again."
   }
 }

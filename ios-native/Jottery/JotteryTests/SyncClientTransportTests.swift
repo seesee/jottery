@@ -9,6 +9,8 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
         var method: String
         var url: String
         var authorization: String?
+        var contentType: String?
+        var body: Data
     }
 
     nonisolated(unsafe) static var status: Int = 204
@@ -29,7 +31,9 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
             Recorded(
                 method: request.httpMethod ?? "?",
                 url: request.url?.absoluteString ?? "?",
-                authorization: request.value(forHTTPHeaderField: "Authorization")
+                authorization: request.value(forHTTPHeaderField: "Authorization"),
+                contentType: request.value(forHTTPHeaderField: "Content-Type"),
+                body: request.httpBody ?? Self.read(request.httpBodyStream)
             )
         )
 
@@ -45,6 +49,20 @@ final class StubURLProtocol: URLProtocol, @unchecked Sendable {
     }
 
     override func stopLoading() {}
+
+    private static func read(_ stream: InputStream?) -> Data {
+        guard let stream else { return Data() }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            if count <= 0 { break }
+            data.append(buffer, count: count)
+        }
+        return data
+    }
 }
 
 private func makeStubbedClient(status: Int, body: String = "", apiKey: String) -> SyncClient {
@@ -185,7 +203,7 @@ struct SyncClientTransportTests {
         @Test func deleteAccountUsesSessionTokenNotApiKey() async throws {
             let client = makeClient(status: 204)
 
-            try await client.deleteAccount(sessionId: "sess-123", mode: .delete)
+            try await client.deleteAccount(sessionId: "sess-123", mode: .delete, currentPassword: "the-password")
 
             let call = StubURLProtocol.recorded.first
             #expect(call?.method == "DELETE")
@@ -195,22 +213,114 @@ struct SyncClientTransportTests {
 
         @Test func deleteAccountSendsRequestedMode() async throws {
             let client = makeClient(status: 204)
-            try await client.deleteAccount(sessionId: "s", mode: .delete)
+            try await client.deleteAccount(sessionId: "s", mode: .delete, currentPassword: "the-password")
             #expect(StubURLProtocol.recorded.first?.url.hasSuffix("/api/v1/user/account?mode=delete") == true)
 
             let client2 = makeClient(status: 204)
-            try await client2.deleteAccount(sessionId: "s", mode: .deactivate)
+            try await client2.deleteAccount(sessionId: "s", mode: .deactivate, currentPassword: "the-password")
             #expect(StubURLProtocol.recorded.first?.url.hasSuffix("/api/v1/user/account?mode=deactivate") == true)
+        }
+
+        /// Without it, this only works within five minutes of signing in.
+        @Test func deleteAccountSendsThePassword() async throws {
+            let client = makeStubbedClient(status: 204, apiKey: "device-key")
+
+            try await client.deleteAccount(sessionId: "s", mode: .delete, currentPassword: "the-password")
+
+            let request = try #require(StubURLProtocol.recorded.first)
+            #expect(request.contentType == "application/json")
+            let sent = try JSONDecoder().decode(DeleteAccountRequest.self, from: request.body)
+            #expect(sent.currentPassword == "the-password")
         }
 
         @Test func deleteAccountPropagatesFailure() async throws {
             let client = makeClient(status: 500, body: "boom")
 
             do {
-                try await client.deleteAccount(sessionId: "s", mode: .delete)
+                try await client.deleteAccount(sessionId: "s", mode: .delete, currentPassword: "the-password")
                 Issue.record("expected deleteAccount to throw")
             } catch SyncClientError.httpError(let status, _) {
                 #expect(status == 500)
+            }
+        }
+    }
+
+    // MARK: - Creating an account (R2-138)
+
+    @Suite struct Registration {
+
+        private func makeClient(status: Int, body: String = "") -> SyncClient {
+            makeStubbedClient(status: status, body: body, apiKey: "test-api-key")
+        }
+
+        @Test func anAccountIsCreatedWithoutADeviceKey() async throws {
+            let client = makeClient(status: 201, body: #"{"userId":"u","email":"a@b.c","status":"pending_approval","message":"m"}"#)
+
+            let account = try await client.registerUser(email: "a@b.c", password: "a-long-account-password")
+
+            #expect(!account.isApproved)
+            let call = StubURLProtocol.recorded.first
+            #expect(call?.method == "POST")
+            #expect(call?.url.hasSuffix("/api/v1/auth/register-user") == true)
+            #expect(call?.authorization == nil)
+        }
+
+        @Test func anApprovedAccountCanConnectAtOnce() async throws {
+            let client = makeClient(status: 201, body: #"{"userId":"u","email":"a@b.c","status":"approved","message":"m"}"#)
+
+            #expect(try await client.registerUser(email: "a@b.c", password: "a-long-account-password").isApproved)
+        }
+
+        @Test func anAddressWithAnAccountSaysSo() async throws {
+            let client = makeClient(status: 409, body: #"{"error":"Email already registered"}"#)
+
+            await #expect {
+                _ = try await client.registerUser(email: "a@b.c", password: "a-long-account-password")
+            } throws: { error in
+                if case SyncClientError.accountExists = error { return true }
+                return false
+            }
+        }
+
+        /// The server's password rules are configurable, so only it can say.
+        @Test func aRefusalGivesTheServersReason() async throws {
+            let client = makeClient(status: 400, body: #"{"error":"Password is too short"}"#)
+
+            await #expect {
+                _ = try await client.registerUser(email: "a@b.c", password: "short")
+            } throws: { error in
+                error.localizedDescription == "Password is too short"
+            }
+        }
+
+        @Test func statusIsAskedForWithThePassword() async throws {
+            let client = makeClient(status: 200, body: #"{"exists":true,"isApproved":true,"isActive":true}"#)
+
+            let status = try await client.userStatus(email: "a@b.c", password: "a-long-account-password")
+
+            #expect(status.isApproved)
+            #expect(StubURLProtocol.recorded.first?.method == "POST")
+        }
+
+        @Test func anOlderServerIsAskedTheOldWay() async throws {
+            let client = makeClient(status: 405, body: "")
+
+            // The stub answers 405 to both, so the second call shows the fallback.
+            _ = try? await client.userStatus(email: "a@b.c", password: "a-long-account-password")
+
+            let calls = StubURLProtocol.recorded
+            #expect(calls.map(\.method) == ["POST", "GET"])
+            #expect(calls.last?.url.contains("user/status?email=a@b.c") == true)
+        }
+
+        @Test func aPendingAccountIsToldApartFromADisabledOne() async throws {
+            let client = makeClient(status: 403, body: #"{"error":"Account pending admin approval"}"#)
+
+            await #expect {
+                _ = try await client.logIn(email: "a@b.c", password: "a-long-account-password")
+            } throws: { error in
+                if case SyncClientError.accountPendingApproval = error { return true }
+                return false
             }
         }
     }

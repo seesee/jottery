@@ -26,7 +26,7 @@ impl HelpEntry {
 }
 
 /// Render the help screen showing all keyboard shortcuts
-pub fn render_help(app: &App, frame: &mut Frame) {
+pub fn render_help(app: &mut App, frame: &mut Frame) {
     let size = frame.area();
 
     // Get current scroll offset
@@ -64,11 +64,18 @@ pub fn render_help(app: &App, frame: &mut Frame) {
                 HelpEntry::new("help.d_delete_key", "help.d_delete_desc"),
                 HelpEntry::new("help.p_pin_key", "help.p_pin_desc"),
                 HelpEntry::new("help.r_recycle_key", "help.r_recycle_desc"),
+                HelpEntry::new("help.z_archive_key", "help.z_archive_desc"),
                 HelpEntry::new("help.shift_a_archive_key", "help.shift_a_archive_desc"),
                 HelpEntry::new("help.L_lock_key", "help.L_lock_desc"),
+                HelpEntry::new("help.ctrl_l_lock_key", "help.ctrl_l_lock_desc"),
                 HelpEntry::new("help.I_info_key", "help.I_info_desc"),
                 HelpEntry::new("help.v_versions_key", "help.v_versions_desc"),
                 HelpEntry::new("help.b_inbox_key", "help.b_inbox_desc"),
+                HelpEntry::new("help.g_saved_key", "help.g_saved_desc"),
+                HelpEntry::new("help.D_duplicate_key", "help.D_duplicate_desc"),
+                HelpEntry::new("help.o_copy_key", "help.o_copy_desc"),
+                HelpEntry::new("help.w_wrap_key", "help.w_wrap_desc"),
+                HelpEntry::new("help.l_link_key", "help.l_link_desc"),
                 HelpEntry::new("help.bracket_cycle_key", "help.bracket_cycle_desc"),
                 HelpEntry::new("help.color_cycle_key", "help.color_cycle_desc"),
                 HelpEntry::new("help.j_down_key", "help.j_down_desc"),
@@ -87,10 +94,25 @@ pub fn render_help(app: &App, frame: &mut Frame) {
                 HelpEntry::new("help.search_tag_key", "help.search_tag_desc"),
                 HelpEntry::new("help.search_exclude_key", "help.search_exclude_desc"),
                 HelpEntry::new("help.search_and_key", "help.search_and_desc"),
+                HelpEntry::new("help.search_or_key", "help.search_or_desc"),
+                HelpEntry::new("help.search_phrase_key", "help.search_phrase_desc"),
+                HelpEntry::new("help.search_wildcard_key", "help.search_wildcard_desc"),
+                HelpEntry::new("help.search_exclude_tag_key", "help.search_exclude_tag_desc"),
+                HelpEntry::new("help.search_attachment_key", "help.search_attachment_desc"),
+                HelpEntry::new("help.search_archived_key", "help.search_archived_desc"),
+                HelpEntry::new("help.search_created_key", "help.search_created_desc"),
+                HelpEntry::new("help.search_modified_key", "help.search_modified_desc"),
+                HelpEntry::new("help.search_words_key", "help.search_words_desc"),
+                HelpEntry::new("help.search_color_key", "help.search_color_desc"),
+                HelpEntry::new("help.search_color_note_key", "help.search_color_note_desc"),
+                HelpEntry::new("help.search_color_tag_key", "help.search_color_tag_desc"),
+                HelpEntry::new("help.search_category_key", "help.search_category_desc"),
                 HelpEntry::new("help.enter_open_editor_key", "help.enter_open_editor_desc"),
                 HelpEntry::new("help.esc_exit_search_key", "help.esc_exit_search_desc"),
                 HelpEntry::new("help.arrows_navigate_key", "help.arrows_navigate_desc"),
                 HelpEntry::new("help.tab_search_key", "help.tab_search_desc"),
+                HelpEntry::new("help.ctrl_s_save_search_key", "help.ctrl_s_save_search_desc"),
+                HelpEntry::new("help.ctrl_p_history_key", "help.ctrl_p_history_desc"),
             ],
         ),
         (
@@ -126,7 +148,8 @@ pub fn render_help(app: &App, frame: &mut Frame) {
             "help.attachments",
             vec![
                 HelpEntry::new("help.tab_focus_attachment_key", "help.tab_focus_attachment_desc"),
-                HelpEntry::new("help.A_add_attachment_key", "help.A_add_attachment_desc"),
+                HelpEntry::new("help.plus_add_attachment_key", "help.plus_add_attachment_desc"),
+                HelpEntry::new("help.S_save_attachment_key", "help.S_save_attachment_desc"),
                 HelpEntry::new("help.a_view_attachment_key", "help.a_view_attachment_desc"),
                 HelpEntry::new("help.shift_jk_attachment_key", "help.shift_jk_attachment_desc"),
                 HelpEntry::new("help.X_remove_attachment_key", "help.X_remove_attachment_desc"),
@@ -140,7 +163,10 @@ pub fn render_help(app: &App, frame: &mut Frame) {
                 HelpEntry::new("help.shift_v_range_key", "help.shift_v_range_desc"),
                 HelpEntry::new("help.ctrl_a_all_key", "help.ctrl_a_all_desc"),
                 HelpEntry::new("help.multi_t_tags_key", "help.multi_t_tags_desc"),
+                HelpEntry::new("help.multi_remove_tags_key", "help.multi_remove_tags_desc"),
+                HelpEntry::new("help.multi_colour_key", "help.multi_colour_desc"),
                 HelpEntry::new("help.multi_d_delete_key", "help.multi_d_delete_desc"),
+                HelpEntry::new("help.multi_z_archive_key", "help.multi_z_archive_desc"),
                 HelpEntry::new("help.multi_c_combine_key", "help.multi_c_combine_desc"),
                 HelpEntry::new("help.multi_e_export_key", "help.multi_e_export_desc"),
                 HelpEntry::new("help.esc_clear_key", "help.esc_clear_desc"),
@@ -186,10 +212,10 @@ pub fn render_help(app: &App, frame: &mut Frame) {
             .split(size);
 
         // Build left column text
-        let left_text = build_column_text(left_sections, max_key_width, app, scroll_offset);
+        let left_text = build_column_text(left_sections, max_key_width, app);
 
         // Build right column text
-        let right_text = build_column_text(right_sections, max_key_width, app, scroll_offset);
+        let right_text = build_column_text(right_sections, max_key_width, app);
 
         // Render both columns
         let left_block = Block::default()
@@ -209,26 +235,40 @@ pub fn render_help(app: &App, frame: &mut Frame) {
             .block(right_block)
             .wrap(Wrap { trim: false });
 
-        frame.render_widget(left_paragraph, chunks[0]);
-        frame.render_widget(right_paragraph, chunks[1]);
+        // They scroll together, as far as the longer one needs
+        let furthest = super::furthest_scroll(&left_paragraph, chunks[0]).max(super::furthest_scroll(&right_paragraph, chunks[1]));
+        let offset = scroll_offset.min(furthest);
+        keep_help_scroll(app, offset);
+
+        frame.render_widget(left_paragraph.scroll((super::scroll_rows(offset), 0)), chunks[0]);
+        frame.render_widget(right_paragraph.scroll((super::scroll_rows(offset), 0)), chunks[1]);
     } else {
         // Single column layout with scrolling
-        let help_text = build_column_text(&sections, max_key_width, app, scroll_offset);
+        let help_text = build_column_text(&sections, max_key_width, app);
 
         let paragraph = Paragraph::new(help_text)
             .block(block)
             .wrap(Wrap { trim: false });
 
-        frame.render_widget(paragraph, size);
+        let offset = scroll_offset.min(super::furthest_scroll(&paragraph, size));
+        keep_help_scroll(app, offset);
+
+        frame.render_widget(paragraph.scroll((super::scroll_rows(offset), 0)), size);
     }
 }
 
-/// Build text for a column of help sections with scroll support
+/// Remember where the text really stopped, so the way back up starts from there.
+fn keep_help_scroll(app: &mut App, offset: usize) {
+    if let AppState::Help { scroll_offset, .. } = &mut app.state {
+        *scroll_offset = offset;
+    }
+}
+
+/// Build text for a column of help sections
 fn build_column_text(
     sections: &[(&str, Vec<HelpEntry>)],
     max_key_width: usize,
     app: &App,
-    scroll_offset: usize,
 ) -> Vec<Line<'static>> {
     let mut all_lines = Vec::new();
 
@@ -256,6 +296,62 @@ fn build_column_text(
         all_lines.push(Line::from("".to_string()));
     }
 
-    // Apply scroll offset by skipping lines
-    all_lines.into_iter().skip(scroll_offset).collect()
+    all_lines
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ratatui::{backend::TestBackend, Terminal};
+
+    fn app_on_help(scroll_offset: usize) -> App {
+        let dir = tempfile::tempdir().unwrap();
+        let mut app = App::new(dir.path().join("test.db"), None).unwrap();
+        std::mem::forget(dir);
+        app.state = AppState::Help { previous: Box::new(AppState::NoteList), scroll_offset };
+        app
+    }
+
+    fn help_screen(app: &mut App, width: u16) -> String {
+        let mut terminal = Terminal::new(TestBackend::new(width, 24)).unwrap();
+        terminal.draw(|frame| render_help(app, frame)).unwrap();
+        let buffer = terminal.backend().buffer();
+        (0..buffer.area.height)
+            .map(|y| (0..buffer.area.width).map(|x| buffer[(x, y)].symbol().to_string()).collect::<String>())
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    fn offset(app: &App) -> usize {
+        match app.state {
+            AppState::Help { scroll_offset, .. } => scroll_offset,
+            _ => panic!("not on the help screen"),
+        }
+    }
+
+    /// End asks for the very bottom by asking for everything.
+    #[test]
+    fn scrolling_to_the_end_stops_at_the_end() {
+        for width in [80, 200] {
+            let mut app = app_on_help(usize::MAX);
+
+            let screen = help_screen(&mut app, width);
+
+            assert!(offset(&app) > 0 && offset(&app) < 1000, "{}", offset(&app));
+            let text = screen.chars().filter(|c| c.is_alphanumeric()).count();
+            assert!(text > 100, "the screen is nearly blank:\n{screen}");
+        }
+    }
+
+    #[test]
+    fn the_way_back_up_starts_from_where_the_text_stopped() {
+        let mut app = app_on_help(usize::MAX);
+        help_screen(&mut app, 80);
+        let bottom = offset(&app);
+
+        let mut above = app_on_help(bottom - 1);
+        help_screen(&mut above, 80);
+
+        assert_eq!(offset(&above), bottom - 1);
+    }
 }

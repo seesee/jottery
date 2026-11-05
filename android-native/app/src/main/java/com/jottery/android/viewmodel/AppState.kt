@@ -2,10 +2,13 @@ package com.jottery.android.viewmodel
 
 import android.app.Application
 import android.util.Log
+import com.jottery.android.R
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.room.withTransaction
 import com.jottery.android.crypto.CryptoService
 import com.jottery.android.crypto.KeyManager
+import com.jottery.android.crypto.KeyWipedException
 import com.jottery.android.crypto.KeystoreService
 import com.jottery.android.database.JotteryDatabase
 import com.jottery.android.database.repository.AttachmentRepository
@@ -15,6 +18,7 @@ import com.jottery.android.database.repository.SavedSearchRepository
 import com.jottery.android.database.repository.SettingsRepository
 import com.jottery.android.database.repository.SyncRepository
 import com.jottery.android.database.repository.VersionRepository
+import com.jottery.android.model.AccountCredentials
 import com.jottery.android.model.AttachmentRecord
 import com.jottery.android.model.AttachmentRef
 import com.jottery.android.model.ConflictInfo
@@ -23,34 +27,68 @@ import com.jottery.android.model.DecryptedNote
 import com.jottery.android.model.DecryptedSavedSearch
 import com.jottery.android.model.EncryptionMetadata
 import com.jottery.android.model.InboxItem
+import com.jottery.android.model.NoteCategories
+import com.jottery.android.model.NoteRecord
 import com.jottery.android.model.NoteVersionRecord
 import com.jottery.android.model.CloneDeviceRequest
 import com.jottery.android.model.CredentialPayload
 import com.jottery.android.model.LegacyCredentialPayload
 import com.jottery.android.model.RegisterDeviceRequest
 import com.jottery.android.model.SortOrder
+import com.jottery.android.model.UserAccountInfo
 import com.jottery.android.model.UserSettings
 import com.jottery.android.network.SSEClient
 import com.jottery.android.network.SyncClient
+import com.jottery.android.network.SyncClientException
 import com.jottery.android.crypto.EncryptedData
-import com.jottery.android.service.BackupService
+import com.jottery.android.service.backup.BackupService
+import com.jottery.android.service.backup.BackupSource
+import com.jottery.android.service.backup.RestorePlan
+import com.jottery.android.service.backup.RestoreResult
+import com.jottery.android.service.backup.keyBytes
+import com.jottery.android.service.AccountKeyService
 import com.jottery.android.service.EnvelopeException
 import com.jottery.android.service.EnvelopeService
+import com.jottery.android.service.VaultReKeyService
+import com.jottery.android.service.ExportService
 import com.jottery.android.service.ImportService
+import com.jottery.android.service.ImportStrategy
+import com.jottery.android.service.BackupReminder
+import com.jottery.android.service.BlobRepair
+import com.jottery.android.service.NotePurger
+import com.jottery.android.service.VaultHealthService
+import com.jottery.android.service.SearchService
+import com.jottery.android.service.SyncPhase
+import com.jottery.android.service.SyncRetryPolicy
+import com.jottery.android.service.SyncValidator
 import com.jottery.android.service.SyncService
 import javax.crypto.spec.SecretKeySpec
+import com.jottery.android.util.AttachmentFiles
+import com.jottery.android.util.BiometricHelper
+import com.jottery.android.util.ConnectivityMonitor
 import com.jottery.android.util.DateUtils
+import com.jottery.android.util.NotePrinter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
+import com.jottery.android.util.KeyboardCommand
+import com.jottery.android.util.QuickAction
+import com.jottery.android.util.SearchSuggestions
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.time.Instant
+import java.util.concurrent.atomic.AtomicLong
 import javax.crypto.SecretKey
 
 /**
@@ -135,6 +173,41 @@ class AppState(application: Application) : AndroidViewModel(application) {
     )
     val editorFontScale: StateFlow<Float> = _editorFontScale.asStateFlow()
 
+    // MARK: - New Notes
+
+    private val _defaultNoteType = MutableStateFlow(
+        application.getSharedPreferences(PREFS_NAME, 0)
+            .getString(KEY_DEFAULT_NOTE_TYPE, DEFAULT_NOTE_TYPE) ?: DEFAULT_NOTE_TYPE
+    )
+    /** Per device, like the web's, and read for every note made here. */
+    val defaultNoteType: StateFlow<String> = _defaultNoteType.asStateFlow()
+
+    fun setDefaultNoteType(type: String) {
+        _defaultNoteType.value = type
+        getApplication<Application>()
+            .getSharedPreferences(PREFS_NAME, 0)
+            .edit()
+            .putString(KEY_DEFAULT_NOTE_TYPE, type)
+            .apply()
+    }
+
+    // MARK: - Screen Security
+
+    private val _screenSecurity = MutableStateFlow(
+        application.getSharedPreferences(PREFS_NAME, 0).getBoolean(KEY_SCREEN_SECURITY, true)
+    )
+    /** Keep notes out of screenshots, screen recording and the recents thumbnail. */
+    val screenSecurity: StateFlow<Boolean> = _screenSecurity.asStateFlow()
+
+    fun setScreenSecurity(enabled: Boolean) {
+        _screenSecurity.value = enabled
+        getApplication<Application>()
+            .getSharedPreferences(PREFS_NAME, 0)
+            .edit()
+            .putBoolean(KEY_SCREEN_SECURITY, enabled)
+            .apply()
+    }
+
     // MARK: - Settings
 
     private val _settings = MutableStateFlow(UserSettings.defaults)
@@ -144,6 +217,24 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
     private val _pendingEditorNote = MutableStateFlow<DecryptedNote?>(null)
     val pendingEditorNote: StateFlow<DecryptedNote?> = _pendingEditorNote.asStateFlow()
+
+    // MARK: - User Messages
+
+    /** A one-off message for the snackbar on the main screen. */
+    private val _userMessage = MutableStateFlow<String?>(null)
+    val userMessage: StateFlow<String?> = _userMessage.asStateFlow()
+
+    fun showMessage(message: String) {
+        _userMessage.value = message
+    }
+
+    fun clearMessage() {
+        _userMessage.value = null
+    }
+
+    /** A note just deleted by swipe, which the user can still undo. */
+    private val _undoableDelete = MutableStateFlow<String?>(null)
+    val undoableDelete: StateFlow<String?> = _undoableDelete.asStateFlow()
 
     // MARK: - Internal
 
@@ -166,7 +257,22 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
     private var searchJob: Job? = null
     private var syncDebounceJob: Job? = null
-    private var backgroundedAt: Instant? = null
+    private var syncRetryJob: Job? = null
+    private var periodicSyncJob: Job? = null
+    private var syncRetryAttempt = 0
+    private var connectivityMonitor: ConnectivityMonitor? = null
+    private var isBackgrounded = false
+
+    /** The user hears once per session that a password change hasn't reached the server. */
+    private var rewrapWarningShown = false
+
+    /** Bumped by every local change to the note lists, so a slow load can see it. */
+    private val notesRevision = AtomicLong()
+    private val loadTicket = AtomicLong()
+
+    /** One sync at a time; a request during a sync runs once more afterwards. */
+    private val syncMutex = Mutex()
+    @Volatile private var syncRequested = false
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -184,10 +290,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         get() = _inboxItems.value.size
 
     val selectedNote: DecryptedNote?
-        get() {
-            val id = _selectedNoteId.value ?: return null
-            return _notes.value.firstOrNull { it.id == id }
-        }
+        get() = resolveSelectedNote(_selectedNoteId.value, _notes.value, _archivedNotes.value)
 
     /** All unique tags across all notes, sorted alphabetically. */
     val allTags: List<String>
@@ -200,6 +303,14 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
     init {
         initialise()
+        viewModelScope.launch {
+            _isLocked.collect { locked ->
+                if (!locked) {
+                    applyPendingShare()
+                    applyPendingQuickAction()
+                }
+            }
+        }
     }
 
     /**
@@ -211,6 +322,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
         val context = getApplication<Application>()
 
+        // Anything still decrypted for another app from the last session goes now
+        AttachmentFiles.clear(context)
+
         // Wire auto-lock so the timer triggers a full app lock (UI + key wipe)
         keyManager.onAutoLock = {
             lock()
@@ -221,7 +335,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
             this.db = database
             val verRepo = VersionRepository(database.noteVersionDao())
             this.versionRepo = verRepo
-            this.noteRepo = NoteRepository(database.noteDao(), database.noteVersionDao())
+            this.noteRepo = NoteRepository(database.noteDao(), database.noteVersionDao()) { block ->
+                database.withTransaction { block() }
+            }
             this.encryptionRepo = EncryptionRepository(database.encryptionMetadataDao())
             this.settingsRepo = SettingsRepository(database.settingsDao())
             this.syncRepo = SyncRepository(
@@ -245,14 +361,14 @@ class AppState(application: Application) : AndroidViewModel(application) {
                         keyManager.autoLockTimeout = loaded.autoLockTimeout.toLong() * 60L
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Initialisation error: ${e.message}")
+                    Log.e(TAG, "Initialisation error: ${e.javaClass.simpleName}")
                     _isFirstLaunch.value = true
                 } finally {
                     _isInitialised.value = true
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Database init failed: ${e.message}")
+            Log.e(TAG, "Database init failed: ${e.javaClass.simpleName}")
             _isFirstLaunch.value = true
             _isInitialised.value = true
         }
@@ -276,7 +392,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         val iterations = existingIterations ?: CryptoService.DEFAULT_ITERATIONS
 
         // Derive key first so we can create the verification token
-        val key = keyManager.unlock(password, salt, iterations)
+        val key = withContext(Dispatchers.Default) { keyManager.unlock(password, salt, iterations) }
 
         // Encrypt a known plaintext to verify the password later
         val verificationEncrypted = CryptoService.encryptText(
@@ -317,7 +433,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
             val deviceSalt = android.util.Base64.decode(deviceSaltB64, android.util.Base64.NO_WRAP)
             val wrappedJSON = metadata.localWrappedMaster ?: throw AppStateError.InvalidSalt
 
-            val deviceKey = CryptoService.deriveKey(password, deviceSalt, CryptoService.DEFAULT_ITERATIONS)
+            val deviceKey = withContext(Dispatchers.Default) {
+                CryptoService.deriveKey(password, deviceSalt, CryptoService.DEFAULT_ITERATIONS)
+            }
             val wrapped = CryptoService.parseEncryptedJSON(wrappedJSON)
             val masterKeyData: ByteArray
             try {
@@ -328,8 +446,8 @@ class AppState(application: Application) : AndroidViewModel(application) {
                 throw AppStateError.WrongPassword
             }
 
-            key = SecretKeySpec(masterKeyData, "AES")
-            keyManager.unlockWithKeyData(masterKeyData)
+            key = keyManager.unlockWithKeyData(masterKeyData)
+            masterKeyData.fill(0)
 
             // Verify with token if available
             if (metadata.verification != null) {
@@ -343,11 +461,13 @@ class AppState(application: Application) : AndroidViewModel(application) {
             // Legacy unlock path — derive key directly from password + salt
             val saltData = metadata.saltData ?: throw AppStateError.InvalidSalt
 
-            key = keyManager.unlock(
-                password = password,
-                salt = saltData,
-                iterations = metadata.iterations ?: CryptoService.DEFAULT_ITERATIONS,
-            )
+            key = withContext(Dispatchers.Default) {
+                keyManager.unlock(
+                    password = password,
+                    salt = saltData,
+                    iterations = metadata.iterations ?: CryptoService.DEFAULT_ITERATIONS,
+                )
+            }
 
             // Verify password
             val verified = if (metadata.verification != null) {
@@ -363,43 +483,152 @@ class AppState(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        loadNotes()
-        _isLocked.value = false
+        finishUnlock(key, metadata, password)
+        offerBiometricIfUseful()
+        return true
+    }
+
+    /**
+     * Everything after the key is proved. A failure here is never a wrong password,
+     * so nothing here may be mistaken for one or leave the key loaded on the lock
+     * screen. Sync is optional: its problems are reported and the vault still opens.
+     *
+     * @param notesPassword null for an unlock that doesn't use it, such as a
+     *   biometric one, which therefore can't reconcile the account's wrapped key.
+     */
+    private suspend fun finishUnlock(key: SecretKey, metadata: EncryptionMetadata, notesPassword: String?) {
+        try {
+            loadNotes()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            keyManager.lock()
+            throw e
+        }
 
         // Auto-purge deleted notes older than 30 days
         try {
-            val purged = noteRepo?.purgeOldDeletedNotes() ?: 0
+            val purged = purger()?.purgeExpired() ?: 0
             if (purged > 0) {
                 Log.i(TAG, "[Purge] Removed $purged deleted note(s) older than 30 days")
             }
-        } catch (_: Exception) { /* ignore */ }
+        } catch (e: Exception) {
+            Log.w(TAG, "[Purge] Failed: ${e.javaClass.simpleName}")
+        }
 
         Log.d(TAG, "[Sync] unlock: calling setupSync()")
-        setupSync()
+        try {
+            setupSync()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "[Sync] Setup failed: ${e.javaClass.simpleName}")
+            _syncError.value = text(R.string.sync_error_setup)
+        }
 
-        // Upgrade old vaults: store a verification token if missing
+        // Upgrade old vaults: store a verification token if missing. Only a key that
+        // has proved itself may be written down as the right one, or a mistyped
+        // password on an empty vault would lock out the real one for good.
         if (metadata.verification == null) {
             try {
-                upgradeVaultVerification(key)
+                val proved = metadata.envelopeVersion != null || opensANote(noteRepo?.listAllRaw().orEmpty(), key)
+                if (proved) upgradeVaultVerification(key)
             } catch (_: Exception) { /* ignore */ }
         }
 
-        // Auto-migrate legacy vaults to envelope in background (non-fatal)
-        if (metadata.envelopeVersion == null && _settings.value.syncEnabled) {
-            val syncRepository = syncRepo
-            val encRepo = encryptionRepo
-            val client = syncClient
-            if (syncRepository != null && encRepo != null && client != null) {
-                val unlockPassword = password
-                viewModelScope.launch(Dispatchers.IO) {
-                    EnvelopeService.tryEnvelopeSetup(
-                        this@AppState, syncRepository, encRepo, client, unlockPassword, key,
-                    )
+        // Encrypt any filenames an older build left in plaintext
+        viewModelScope.launch {
+            try {
+                val repaired = noteRepo?.repairPlaintextFilenames(key) ?: 0
+                if (repaired > 0) {
+                    Log.i(TAG, "[Repair] Encrypted filenames on $repaired note(s)")
+                    scheduleDebouncedSync()
                 }
+            } catch (e: Exception) {
+                Log.w(TAG, "[Repair] Filename repair failed: ${e.javaClass.simpleName}")
             }
         }
 
-        return true
+        // Keep the account's wrapped key in step, in the background
+        if (notesPassword != null && _settings.value.syncEnabled) {
+            viewModelScope.launch { reconcileAccountKey(notesPassword) }
+        }
+
+        // Last: this leaves the unlock screen, which cancels the caller's scope
+        _isLocked.value = false
+    }
+
+    // MARK: - Biometric Unlock
+
+    private val _biometricEnabled = MutableStateFlow(KeystoreService.hasBiometricKey(application))
+    val biometricEnabled: StateFlow<Boolean> = _biometricEnabled.asStateFlow()
+
+    /** Asked once, after a password unlock on a device that could use it. */
+    private val _offerBiometric = MutableStateFlow(false)
+    val offerBiometric: StateFlow<Boolean> = _offerBiometric.asStateFlow()
+
+    fun dismissBiometricOffer() {
+        _offerBiometric.value = false
+        getApplication<Application>().getSharedPreferences(PREFS_NAME, 0)
+            .edit().putBoolean(KEY_BIOMETRIC_OFFERED, true).apply()
+    }
+
+    private fun offerBiometricIfUseful() {
+        val app = getApplication<Application>()
+        val offered = app.getSharedPreferences(PREFS_NAME, 0).getBoolean(KEY_BIOMETRIC_OFFERED, false)
+        if (!offered && !_biometricEnabled.value && BiometricHelper.isBiometricAvailable(app)) {
+            _offerBiometric.value = true
+        }
+    }
+
+    /** Store the open vault's key behind a biometric. [cipher] came through BiometricPrompt. */
+    fun enableBiometric(cipher: javax.crypto.Cipher) {
+        val key = keyManager.masterKey ?: return
+        val bytes = key.encoded
+        try {
+            KeystoreService.storeBiometricKey(getApplication(), cipher, bytes)
+            _biometricEnabled.value = true
+        } finally {
+            bytes.fill(0)
+        }
+    }
+
+    fun disableBiometric() {
+        KeystoreService.deleteBiometricKey(getApplication())
+        _biometricEnabled.value = false
+    }
+
+    /**
+     * The cipher to unlock with, or null if there's no usable key. Null after
+     * enrolments changed, in which case the stored key has gone with the Keystore's.
+     */
+    fun biometricUnlockCipher(): javax.crypto.Cipher? {
+        val cipher = try {
+            KeystoreService.getBiometricDecryptCipher(getApplication())
+        } catch (e: Exception) {
+            Log.w(TAG, "[Biometric] Key unavailable: ${e.javaClass.simpleName}")
+            null
+        }
+        _biometricEnabled.value = KeystoreService.hasBiometricKey(getApplication())
+        return cipher
+    }
+
+    /** Unlock with a cipher BiometricPrompt has authorised. */
+    suspend fun unlockWithBiometric(cipher: javax.crypto.Cipher) {
+        val repo = encryptionRepo ?: throw AppStateError.NotInitialised
+        val metadata = repo.get() ?: throw AppStateError.NoVault
+        val bytes = KeystoreService.decryptBiometricKey(getApplication(), cipher)
+            ?: throw AppStateError.BiometricUnavailable
+        val key = keyManager.unlockWithKeyData(bytes)
+        bytes.fill(0)
+
+        // A key from before the vault moved to another can't be used
+        if (metadata.verification != null && !verifyWithToken(metadata.verification, key)) {
+            keyManager.lock()
+            disableBiometric()
+            throw AppStateError.BiometricUnavailable
+        }
+        finishUnlock(key, metadata, notesPassword = null)
     }
 
     /**
@@ -420,30 +649,24 @@ class AppState(application: Application) : AndroidViewModel(application) {
      * Returns true if decryption succeeds, or if there are no notes to test against.
      */
     private suspend fun verifyByDecryptingNote(key: SecretKey): Boolean {
-        val repo = noteRepo ?: return false
-        return try {
-            val record = repo.getRaw(
-                // Try to get any non-deleted note to verify against
-                id = "" // We need a different approach -- check if any active notes exist
-            )
-            // If getRaw returns null for empty id, try listing active notes
-            val activeNotes = repo.listActive(key)
-            // If listing succeeded without exception, the key is valid
-            true
-        } catch (_: Exception) {
-            // Try counting active notes -- if there are none, empty vault is safe
-            try {
-                val count = repo.countActive()
-                count == 0 // If no notes, can't verify but safe to enter
-            } catch (_: Exception) {
-                false
-            }
-        }
+        val records = noteRepo?.listAllRaw() ?: return false
+        return records.isEmpty() || opensANote(records, key)
     }
 
     /**
-     * Store a verification token on an old vault that doesn't have one.
+     * AES-GCM can't decrypt under the wrong key, so one note opening proves the key.
+     * It takes only one: a damaged note mustn't lock out the right password. This reads
+     * rows directly, because listActive skips what it can't read, and so proves nothing.
      */
+    private fun opensANote(records: List<NoteRecord>, key: SecretKey): Boolean = records.any { record ->
+        try {
+            CryptoService.decryptText(CryptoService.parseEncryptedJSON(record.content), key)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     private suspend fun upgradeVaultVerification(key: SecretKey) {
         val repo = encryptionRepo ?: return
         val metadata = repo.get() ?: return
@@ -464,33 +687,73 @@ class AppState(application: Application) : AndroidViewModel(application) {
     fun lock() {
         Log.d(TAG, "[Sync] lock: clearing sync state, syncEnabled=false")
 
-        // Flush any pending editor save while the key is still available
+        // The key leaves KeyManager now, so nothing new can start with it, but is
+        // kept until the last of the typing has been written.
         val pending = _pendingEditorNote.value
-        val key = keyManager.masterKey
-        if (pending != null && key != null) {
-            viewModelScope.launch {
-                try {
-                    noteRepo?.update(pending, key)
-                } catch (_: Exception) { /* ignore */ }
-            }
-            _pendingEditorNote.value = null
-        }
+        _pendingEditorNote.value = null
+        val key = keyManager.release()
+        val repo = noteRepo
 
-        // Stop SSE and release sync objects
-        sseClientInstance?.stop()
-        syncClientInstance = null
-        syncServiceInstance = null
-        sseClientInstance = null
-        _syncEnabled.value = false
+        stopSync()
+        searchJob?.cancel()
+        syncDebounceJob?.cancel()
 
-        keyManager.lock()
+        AttachmentFiles.clear(getApplication())
+        NotePrinter.release()
         _isLocked.value = true
         _notes.value = emptyList()
         _archivedNotes.value = emptyList()
         _filteredNotes.value = emptyList()
+        _recentSearches.value = emptyList()
+        _otherViewMatches.value = 0
+        _savedSearches.value = emptyList()
         _pendingConflicts.value = emptyList()
         _inboxItems.value = emptyList()
         _selectedNoteId.value = null
+        _searchQuery.value = ""
+        _userMessage.value = null
+
+        viewModelScope.launch(NonCancellable) {
+            try {
+                if (pending != null && key != null) repo?.update(pending, key)
+            } catch (e: Exception) {
+                Log.w(TAG, "[Lock] Couldn't save the last edit: ${e.javaClass.simpleName}")
+            } finally {
+                key?.destroy()
+            }
+        }
+    }
+
+    /** Stop everything sync runs, leaving what's stored as it is. */
+    private fun stopSync() {
+        sseClientInstance?.stop()
+        syncClientInstance = null
+        syncServiceInstance = null
+        sseClientInstance = null
+        syncRetryJob?.cancel()
+        periodicSyncJob?.cancel()
+        connectivityMonitor?.stop()
+        connectivityMonitor = null
+        syncRetryAttempt = 0
+        _syncEnabled.value = false
+    }
+
+    /** The activity is finishing for good, so anything running goes with it. */
+    override fun onCleared() {
+        val pending = _pendingEditorNote.value
+        val key = keyManager.release()
+        stopSync()
+        try {
+            // viewModelScope is about to go, and this is the user's last keystrokes
+            if (pending != null && key != null) {
+                kotlinx.coroutines.runBlocking { noteRepo?.update(pending, key) }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "[Lock] Couldn't save the last edit: ${e.javaClass.simpleName}")
+        } finally {
+            key?.destroy()
+        }
+        super.onCleared()
     }
 
     // MARK: - Notes CRUD
@@ -501,22 +764,52 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun loadNotes() {
         val repo = noteRepo ?: return
         val key = keyManager.masterKey ?: return
+        val ticket = loadTicket.incrementAndGet()
 
-        val result = repo.listActiveWithStats(key)
+        // Anything saved during the read must not be overwritten by it, so a read
+        // that a local write overtook starts again.
+        repeat(MAX_LOAD_ATTEMPTS) {
+            val revision = notesRevision.get()
+            // A sync usually changes a few notes: the rest needn't be decrypted again
+            val known = (_notes.value + _archivedNotes.value).associateBy { it.id }
+            val loaded = withContext(Dispatchers.Default) {
+                LoadedNotes(
+                    active = repo.listActiveWithStats(key, known),
+                    archived = repo.listArchived(key, known),
+                    searches = savedSearchRepo?.listActive(key) ?: emptyList(),
+                )
+            }
+            // A newer load owns the result, and a locked vault shows nothing
+            if (ticket != loadTicket.get() || keyManager.masterKey !== key) return
+            if (revision == notesRevision.get()) {
+                publish(loaded)
+                return
+            }
+        }
+    }
+
+    private class LoadedNotes(
+        val active: NoteRepository.ListResult,
+        val archived: List<DecryptedNote>,
+        val searches: List<DecryptedSavedSearch>,
+    )
+
+    private fun publish(loaded: LoadedNotes) {
+        val result = loaded.active
         _notes.value = result.notes
-        _archivedNotes.value = repo.listArchived(key)
-        _savedSearches.value = savedSearchRepo?.listActive(key) ?: emptyList()
+        _archivedNotes.value = loaded.archived
+        _savedSearches.value = loaded.searches
 
         Log.d(TAG, "[loadNotes] ${result.notes.size} decrypted, " +
             "${result.failedCount} failed, ${result.totalRecords} total in DB")
 
         // Surface decryption failures so the user knows something is wrong
         if (result.failedCount > 0 && result.notes.isEmpty()) {
-            _syncError.value = "${result.failedCount} notes in database could not be decrypted. " +
-                "This usually means the encryption key differs from the device that created them. " +
-                "Try wiping and re-importing credentials (including the encryption salt) from your other device."
+            _syncError.value = getApplication<Application>().resources.getQuantityString(
+                R.plurals.notes_all_unreadable, result.failedCount, result.failedCount,
+            )
         } else if (result.failedCount > 0) {
-            _syncError.value = "${result.failedCount} of ${result.totalRecords} notes failed to decrypt"
+            _syncError.value = text(R.string.notes_some_unreadable, result.failedCount, result.totalRecords)
         }
 
         scheduleSearch()
@@ -526,10 +819,15 @@ class AppState(application: Application) : AndroidViewModel(application) {
      * Create a new note with the given content and tags.
      * Returns the created DecryptedNote, or null on failure.
      */
-    suspend fun createNote(content: String = "", tags: List<String> = emptyList()): DecryptedNote? {
+    suspend fun createNote(
+        content: String = "",
+        tags: List<String> = emptyList(),
+        syntaxLanguage: String = _defaultNoteType.value,
+    ): DecryptedNote? {
         val repo = noteRepo ?: return null
         val key = keyManager.masterKey ?: return null
-        val note = repo.create(content = content, tags = tags, key = key)
+        val note = repo.create(content = content, tags = tags, key = key, syntaxLanguage = syntaxLanguage)
+        notesRevision.incrementAndGet()
         _notes.value = listOf(note) + _notes.value
         _selectedNoteId.value = note.id
         scheduleSearch()
@@ -543,18 +841,28 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun saveNote(note: DecryptedNote) {
         val repo = noteRepo ?: return
         val key = keyManager.masterKey ?: return
-        repo.update(note, key)
-
-        // Update in-memory
-        val currentNotes = _notes.value.toMutableList()
-        val index = currentNotes.indexOfFirst { it.id == note.id }
-        if (index >= 0) {
-            val updated = note.copy(modifiedAt = Instant.now())
-            currentNotes[index] = updated
-            _notes.value = currentNotes
-            scheduleSearch()
+        try {
+            if (!repo.update(note, key)) return
+        } catch (_: KeyWipedException) {
+            // Locked mid-save. The lock wrote this same text from the pending note.
+            return
         }
+        refreshNote(note.id)
         scheduleDebouncedSync()
+    }
+
+    /**
+     * Republish one note from the database. Flags and timestamps always come
+     * from the row, never from a copy of an earlier in-memory note.
+     */
+    private suspend fun refreshNote(id: String) {
+        val repo = noteRepo ?: return
+        val key = keyManager.masterKey ?: return
+        notesRevision.incrementAndGet()
+        val fresh = repo.get(id = id, key = key) ?: return
+        _notes.value = _notes.value.map { if (it.id == id) fresh else it }
+        _archivedNotes.value = _archivedNotes.value.map { if (it.id == id) fresh else it }
+        scheduleSearch()
     }
 
     /**
@@ -563,8 +871,23 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun duplicateNote(id: String) {
         val repo = noteRepo ?: return
         val key = keyManager.masterKey ?: return
+        // What's on screen is what the user means to copy
+        flushPendingEditor()
         val original = repo.get(id = id, key = key) ?: return
-        val duplicate = repo.create(content = original.content, tags = original.tags, key = key)
+        val created = repo.create(
+            content = original.content,
+            tags = original.tags,
+            key = key,
+            syntaxLanguage = original.syntaxLanguage,
+            wordWrap = original.wordWrap,
+            showPreview = original.showPreview,
+            color = original.color,
+        )
+        // Both notes point at the same blobs, which stay until nothing refers to them
+        val refs = repo.rawAttachmentRefs(id)
+        if (refs.isNotEmpty()) repo.setAttachments(created.id, refs, key)
+        val duplicate = repo.get(id = created.id, key = key) ?: created
+        notesRevision.incrementAndGet()
         _notes.value = listOf(duplicate) + _notes.value
         _selectedNoteId.value = duplicate.id
         scheduleSearch()
@@ -577,12 +900,29 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun deleteNote(id: String) {
         val repo = noteRepo ?: return
         repo.softDelete(id)
+        notesRevision.incrementAndGet()
         _notes.value = _notes.value.filter { it.id != id }
+        _archivedNotes.value = _archivedNotes.value.filter { it.id != id }
         if (_selectedNoteId.value == id) {
             _selectedNoteId.value = null
         }
         scheduleSearch()
         scheduleDebouncedSync()
+    }
+
+    /**
+     * Delete a note from a gesture, which is easy to make by accident. Pinned and
+     * locked notes are protected: returns false, changing nothing, for those.
+     */
+    suspend fun deleteNoteWithUndo(note: DecryptedNote): Boolean {
+        if (note.pinned || note.locked) return false
+        deleteNote(note.id)
+        _undoableDelete.value = note.id
+        return true
+    }
+
+    fun clearUndoableDelete() {
+        _undoableDelete.value = null
     }
 
     /**
@@ -601,14 +941,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun togglePin(id: String) {
         val repo = noteRepo ?: return
         repo.togglePin(id)
-        val currentNotes = _notes.value.toMutableList()
-        val index = currentNotes.indexOfFirst { it.id == id }
-        if (index >= 0) {
-            val note = currentNotes[index]
-            currentNotes[index] = note.copy(pinned = !note.pinned)
-            _notes.value = currentNotes
-            scheduleSearch()
-        }
+        refreshNote(id)
         scheduleDebouncedSync()
     }
 
@@ -618,6 +951,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun archiveNote(id: String) {
         val repo = noteRepo ?: return
         repo.archive(id)
+        notesRevision.incrementAndGet()
         _notes.value = _notes.value.filter { it.id != id }
         if (_selectedNoteId.value == id) {
             _selectedNoteId.value = null
@@ -633,6 +967,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun unarchiveNote(id: String) {
         val repo = noteRepo ?: return
         repo.unarchive(id)
+        notesRevision.incrementAndGet()
         _archivedNotes.value = _archivedNotes.value.filter { it.id != id }
         if (_selectedNoteId.value == id) {
             _selectedNoteId.value = null
@@ -647,30 +982,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun toggleLock(id: String) {
         val repo = noteRepo ?: return
         repo.toggleLock(id)
-
-        val currentNotes = _notes.value.toMutableList()
-        val noteIndex = currentNotes.indexOfFirst { it.id == id }
-        if (noteIndex >= 0) {
-            val note = currentNotes[noteIndex]
-            val newLocked = !note.locked
-            currentNotes[noteIndex] = note.copy(
-                locked = newLocked,
-                lockedAt = if (newLocked) Instant.now() else null,
-            )
-            _notes.value = currentNotes
-        }
-
-        val currentArchived = _archivedNotes.value.toMutableList()
-        val archivedIndex = currentArchived.indexOfFirst { it.id == id }
-        if (archivedIndex >= 0) {
-            val note = currentArchived[archivedIndex]
-            val newLocked = !note.locked
-            currentArchived[archivedIndex] = note.copy(
-                locked = newLocked,
-                lockedAt = if (newLocked) Instant.now() else null,
-            )
-            _archivedNotes.value = currentArchived
-        }
+        refreshNote(id)
         scheduleDebouncedSync()
     }
 
@@ -693,23 +1005,29 @@ class AppState(application: Application) : AndroidViewModel(application) {
     fun scheduleSearch() {
         searchJob?.cancel()
         val query = _searchQuery.value
-        val source = displayedNotes
-        val order = _sortOrder.value
-
-        // No debounce needed when query is empty -- just sort (cheap)
-        if (query.isBlank()) {
-            _filteredNotes.value = sortNotes(source, order)
-            return
+        val source = if (SearchService.searchesArchive(query)) {
+            _notes.value + _archivedNotes.value
+        } else {
+            displayedNotes
         }
+        val order = _sortOrder.value
+        val categories = NoteCategories.from(_settings.value)
+        val otherView = if (_showArchive.value) _notes.value else _archivedNotes.value
 
         searchJob = viewModelScope.launch {
-            // Debounce while typing
-            delay(150)
+            // Debounce while typing. With no query there's nothing to wait for.
+            if (query.isNotBlank()) delay(150)
 
-            // Run expensive filter + sort
-            val filtered = filterNotes(source, query)
-            val results = sortNotes(filtered, order)
-            _filteredNotes.value = results
+            _filteredNotes.value = withContext(Dispatchers.Default) {
+                val matches = if (query.isBlank()) source else SearchService.filter(source, query, categories).notes
+                SearchService.sort(matches, order)
+            }
+            // An archive search already covers both views
+            _otherViewMatches.value = if (query.isBlank() || source.size > displayedNotes.size) {
+                0
+            } else {
+                withContext(Dispatchers.Default) { SearchService.filter(otherView, query, categories).matchCount }
+            }
         }
     }
 
@@ -724,196 +1042,6 @@ class AppState(application: Application) : AndroidViewModel(application) {
             delay(3_000)
             triggerSync()
         }
-    }
-
-    /**
-     * Filter notes by a search query string.
-     * Supports tags (#tagname), negation (-term), exact phrases ("..."),
-     * and plain text matching.
-     */
-    private fun filterNotes(notes: List<DecryptedNote>, query: String): List<DecryptedNote> {
-        val trimmed = query.trim()
-        if (trimmed.isEmpty()) return notes
-
-        // Parse query into tokens
-        val tokens = mutableListOf<SearchToken>()
-        var remaining = trimmed
-
-        while (remaining.isNotEmpty()) {
-            remaining = remaining.trimStart()
-            if (remaining.isEmpty()) break
-
-            when {
-                // Tag filter: #tagname
-                remaining.startsWith("#") -> {
-                    val tagEnd = remaining.indexOfFirst { it == ' ' || it == '|' }.let {
-                        if (it < 0) remaining.length else it
-                    }
-                    val tag = remaining.substring(1, tagEnd)
-                    if (tag.isNotEmpty()) {
-                        tokens.add(SearchToken.Tag(tag))
-                    }
-                    remaining = remaining.substring(tagEnd)
-                }
-                // Negation: -term
-                remaining.startsWith("-") && remaining.length > 1 && remaining[1] != ' ' -> {
-                    val termEnd = remaining.indexOf(' ').let {
-                        if (it < 0) remaining.length else it
-                    }
-                    val term = remaining.substring(1, termEnd)
-                    if (term.isNotEmpty()) {
-                        tokens.add(SearchToken.Negation(term))
-                    }
-                    remaining = remaining.substring(termEnd)
-                }
-                // Exact phrase: "..."
-                remaining.startsWith("\"") -> {
-                    val closeIdx = remaining.indexOf('"', 1)
-                    if (closeIdx > 0) {
-                        val phrase = remaining.substring(1, closeIdx)
-                        if (phrase.isNotEmpty()) {
-                            tokens.add(SearchToken.Phrase(phrase))
-                        }
-                        remaining = remaining.substring(closeIdx + 1)
-                    } else {
-                        // No closing quote -- treat rest as phrase
-                        val phrase = remaining.substring(1)
-                        if (phrase.isNotEmpty()) {
-                            tokens.add(SearchToken.Phrase(phrase))
-                        }
-                        remaining = ""
-                    }
-                }
-                // OR operator
-                remaining.startsWith("|") -> {
-                    tokens.add(SearchToken.Or)
-                    remaining = remaining.substring(1)
-                }
-                // Has modifier
-                remaining.startsWith("has:") -> {
-                    val modEnd = remaining.indexOf(' ').let {
-                        if (it < 0) remaining.length else it
-                    }
-                    val modifier = remaining.substring(4, modEnd)
-                    tokens.add(SearchToken.HasModifier(modifier))
-                    remaining = remaining.substring(modEnd)
-                }
-                // Plain word
-                else -> {
-                    val wordEnd = remaining.indexOf(' ').let {
-                        if (it < 0) remaining.length else it
-                    }
-                    val word = remaining.substring(0, wordEnd)
-                    if (word.isNotEmpty()) {
-                        tokens.add(SearchToken.Word(word))
-                    }
-                    remaining = remaining.substring(wordEnd)
-                }
-            }
-        }
-
-        return notes.filter { note ->
-            matchesTokens(note, tokens)
-        }
-    }
-
-    /**
-     * Check if a note matches the parsed search tokens.
-     */
-    private fun matchesTokens(note: DecryptedNote, tokens: List<SearchToken>): Boolean {
-        val contentLower = note.content.lowercase()
-        val tagsLower = note.tags.map { it.lowercase() }
-
-        // Group tokens by OR boundaries
-        var i = 0
-        while (i < tokens.size) {
-            val token = tokens[i]
-
-            // Look ahead for OR
-            if (i + 2 < tokens.size && tokens[i + 1] is SearchToken.Or) {
-                val left = matchesSingleToken(note, token, contentLower, tagsLower)
-                val right = matchesSingleToken(note, tokens[i + 2], contentLower, tagsLower)
-                if (!left && !right) return false
-                i += 3
-                continue
-            }
-
-            if (token is SearchToken.Or) {
-                i++
-                continue
-            }
-
-            if (!matchesSingleToken(note, token, contentLower, tagsLower)) {
-                return false
-            }
-            i++
-        }
-        return true
-    }
-
-    /**
-     * Check if a note matches a single search token.
-     */
-    private fun matchesSingleToken(
-        note: DecryptedNote,
-        token: SearchToken,
-        contentLower: String,
-        tagsLower: List<String>,
-    ): Boolean {
-        return when (token) {
-            is SearchToken.Tag -> tagsLower.any { it == token.name.lowercase() }
-            is SearchToken.Negation -> !contentLower.contains(token.term.lowercase())
-            is SearchToken.Phrase -> contentLower.contains(token.text.lowercase())
-            is SearchToken.Word -> {
-                val lower = token.text.lowercase()
-                when {
-                    lower.startsWith("*") && lower.endsWith("*") -> {
-                        val inner = lower.trim('*')
-                        contentLower.contains(inner) || tagsLower.any { it.contains(inner) }
-                    }
-                    lower.startsWith("*") -> {
-                        val suffix = lower.removePrefix("*")
-                        contentLower.contains(suffix) || tagsLower.any { it.endsWith(suffix) }
-                    }
-                    lower.endsWith("*") -> {
-                        val prefix = lower.removeSuffix("*")
-                        contentLower.contains(prefix) || tagsLower.any { it.startsWith(prefix) }
-                    }
-                    else -> contentLower.contains(lower) || tagsLower.any { it.contains(lower) }
-                }
-            }
-            is SearchToken.HasModifier -> {
-                when (token.modifier.lowercase()) {
-                    "attachment" -> note.attachments.isNotEmpty()
-                    else -> true
-                }
-            }
-            is SearchToken.Or -> true
-        }
-    }
-
-    /**
-     * Sort notes by the given order, respecting pinned-first.
-     */
-    private fun sortNotes(notes: List<DecryptedNote>, order: SortOrder): List<DecryptedNote> {
-        val pinned = notes.filter { it.pinned }
-        val unpinned = notes.filter { !it.pinned }
-
-        val sortedPinned = when (order) {
-            SortOrder.RECENT -> pinned.sortedByDescending { it.modifiedAt }
-            SortOrder.OLDEST -> pinned.sortedBy { it.modifiedAt }
-            SortOrder.ALPHA -> pinned.sortedBy { it.title.lowercase() }
-            SortOrder.CREATED -> pinned.sortedByDescending { it.createdAt }
-        }
-
-        val sortedUnpinned = when (order) {
-            SortOrder.RECENT -> unpinned.sortedByDescending { it.modifiedAt }
-            SortOrder.OLDEST -> unpinned.sortedBy { it.modifiedAt }
-            SortOrder.ALPHA -> unpinned.sortedBy { it.title.lowercase() }
-            SortOrder.CREATED -> unpinned.sortedByDescending { it.createdAt }
-        }
-
-        return sortedPinned + sortedUnpinned
     }
 
     // MARK: - State Setters
@@ -975,8 +1103,25 @@ class AppState(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { triggerSync() }
     }
 
+    /** Typing not yet saved, which a lock or a sync must write first. */
     fun setPendingEditorNote(note: DecryptedNote?) {
         _pendingEditorNote.value = note
+    }
+
+    /** The editor has saved [note], unless it has been typing since. */
+    fun clearPendingEditorNote(note: DecryptedNote) {
+        if (_pendingEditorNote.value === note) _pendingEditorNote.value = null
+    }
+
+    /**
+     * Write unsaved typing so a pull can see it. Otherwise a remote change would
+     * land in the row first, and the save after it would silently replace that
+     * change rather than raise the conflict it is.
+     */
+    private suspend fun flushPendingEditor() {
+        val pending = _pendingEditorNote.value ?: return
+        saveNote(pending)
+        clearPendingEditorNote(pending)
     }
 
     fun setEditorFontScale(scale: Float) {
@@ -998,20 +1143,24 @@ class AppState(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Permanently delete a note (hard delete, no recovery).
+     * Permanently delete notes: no recovery here, and a tombstone for every other
+     * device. Everything that went with them goes too.
      */
-    suspend fun permanentlyDeleteNote(id: String) {
-        val repo = noteRepo ?: return
-        repo.hardDelete(id)
+    suspend fun permanentlyDeleteNotes(ids: Collection<String>) {
+        val service = purger() ?: return
+        service.deletePermanently(ids)
+        scheduleDebouncedSync()
     }
 
-    /**
-     * Export selected notes to JSON.
-     * TODO: Phase 5 -- implement full export with attachments and share intent.
-     */
-    suspend fun exportNotes(ids: Set<String>) {
-        Log.i(TAG, "[Export] Export requested for ${ids.size} notes")
-        // TODO: Implement export to JSON file via share intent
+    private fun purger(): NotePurger? {
+        val database = db ?: return null
+        return NotePurger(
+            noteRepo = noteRepo ?: return null,
+            versionRepo = versionRepo ?: return null,
+            attachmentRepo = attachmentRepo ?: return null,
+            syncRepo = syncRepo ?: return null,
+            transaction = { block -> database.withTransaction { block() } },
+        )
     }
 
     // MARK: - Saved Searches
@@ -1022,8 +1171,32 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun saveSearch(name: String, query: String) {
         val repo = savedSearchRepo ?: return
         val key = keyManager.masterKey ?: return
-        val search = repo.create(name = name, query = query, key = key)
+        val order = (_savedSearches.value.maxOfOrNull { it.displayOrder } ?: -1) + 1
+        val search = repo.create(name = name, query = query, key = key, order = order)
         _savedSearches.value = _savedSearches.value + search
+        scheduleDebouncedSync()
+    }
+
+    /** Give a saved search a new name. */
+    suspend fun renameSavedSearch(id: String, name: String) {
+        val repo = savedSearchRepo ?: return
+        val key = keyManager.masterKey ?: return
+        repo.rename(id, name, key)
+        _savedSearches.value = _savedSearches.value.map { if (it.id == id) it.copy(name = name) else it }
+        scheduleDebouncedSync()
+    }
+
+    /** Move a saved search up or down the list. */
+    suspend fun moveSavedSearch(id: String, offset: Int) {
+        val repo = savedSearchRepo ?: return
+        val searches = _savedSearches.value.toMutableList()
+        val from = searches.indexOfFirst { it.id == id }
+        val to = from + offset
+        if (from < 0 || to !in searches.indices) return
+        searches.add(to, searches.removeAt(from))
+        repo.setOrder(searches.map { it.id })
+        _savedSearches.value = searches.mapIndexed { index, search -> search.copy(displayOrder = index) }
+        scheduleDebouncedSync()
     }
 
     /**
@@ -1033,6 +1206,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         val repo = savedSearchRepo ?: return
         repo.delete(id)
         _savedSearches.value = _savedSearches.value.filter { it.id != id }
+        scheduleDebouncedSync()
     }
 
     /**
@@ -1046,69 +1220,57 @@ class AppState(application: Application) : AndroidViewModel(application) {
     // MARK: - Attachments
 
     /**
-     * Add an attachment to a note.
+     * Add an attachment to a note. Returns its id, or null if nothing was added.
+     * The name is stored only as ciphertext, in the note's reference.
      */
     suspend fun addAttachment(
         noteId: String,
         data: ByteArray,
         filename: String,
         mimeType: String,
-    ) {
-        val noteRepository = noteRepo ?: return
-        val attachmentRepository = attachmentRepo ?: return
-        val key = keyManager.masterKey ?: return
-        val note = noteRepository.get(id = noteId, key = key) ?: return
+    ): String? {
+        val noteRepository = noteRepo ?: return null
+        val attachmentRepository = attachmentRepo ?: return null
+        val key = keyManager.masterKey ?: return null
 
-        // Encrypt the file data
-        val encrypted = CryptoService.encrypt(data, key)
-        val encryptedJSON = CryptoService.serializeEncryptedJSON(encrypted)
-        val blobData = encryptedJSON.toByteArray(Charsets.UTF_8)
-
-        // Single ID for both metadata and blob
         val attachmentId = CryptoService.generateUUID()
-
-        // Store encrypted blob
-        val record = AttachmentRecord(
-            id = attachmentId,
-            filename = filename,
-            mimeType = mimeType,
-            size = data.size,
-            data = blobData,
+        val blobData = withContext(Dispatchers.Default) {
+            CryptoService.serializeEncryptedJSON(CryptoService.encrypt(data, key)).toByteArray(Charsets.UTF_8)
+        }
+        attachmentRepository.insertOrReplace(
+            AttachmentRecord(id = attachmentId, filename = "", mimeType = mimeType, size = data.size, data = blobData)
         )
-        attachmentRepository.insertOrReplace(record)
 
-        // Encrypt the filename for storage
-        val encFilename = CryptoService.encryptText(filename, key)
-        val encFilenameJSON = CryptoService.serializeEncryptedJSON(encFilename)
-
-        // Create attachment ref (data = attachmentId so blob lookup matches)
+        // One ID for both metadata and blob
         val ref = AttachmentRef(
             id = attachmentId,
-            filename = encFilenameJSON,
+            filename = CryptoService.serializeEncryptedJSON(CryptoService.encryptText(filename, key)),
             mimeType = mimeType,
             size = data.size,
             data = attachmentId,
         )
+        noteRepository.addAttachment(noteId = noteId, ref = ref, key = key)
 
-        // Update note with encrypted filename in the raw record
-        noteRepository.addAttachment(noteId = noteId, ref = ref)
-
-        // Update in-memory (with plaintext filename for display)
-        val currentNotes = _notes.value.toMutableList()
-        val index = currentNotes.indexOfFirst { it.id == noteId }
-        if (index >= 0) {
-            val currentNote = currentNotes[index]
-            val updatedAttachments = currentNote.attachments + AttachmentRef(
-                id = attachmentId,
-                filename = filename,
-                mimeType = mimeType,
-                size = data.size,
-                data = attachmentId,
-            )
-            currentNotes[index] = currentNote.copy(attachments = updatedAttachments)
-            _notes.value = currentNotes
-        }
+        refreshNote(noteId)
         scheduleDebouncedSync()
+        return attachmentId
+    }
+
+    /** An attachment's decrypted bytes, or null if it can't be read. */
+    suspend fun attachmentData(ref: AttachmentRef): ByteArray? {
+        val attachmentRepository = attachmentRepo ?: return null
+        val key = keyManager.masterKey ?: return null
+        return withContext(Dispatchers.Default) {
+            try {
+                val blob = attachmentRepository.getBlob(ref.data) ?: return@withContext null
+                CryptoService.decrypt(CryptoService.parseEncryptedJSON(String(blob, Charsets.UTF_8)), key)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "[Attachments] Can't read ${ref.id}: ${e.javaClass.simpleName}")
+                null
+            }
+        }
     }
 
     /**
@@ -1124,23 +1286,14 @@ class AppState(application: Application) : AndroidViewModel(application) {
         val ref = note.attachments.firstOrNull { it.id == attachmentId } ?: return
 
         // Remove from note
-        noteRepository.removeAttachment(noteId = noteId, attachmentId = attachmentId)
+        noteRepository.removeAttachment(noteId = noteId, attachmentId = attachmentId, key = key)
 
-        // Delete blob
+        // The blob goes only if nothing else needs it: restoring a version might
         try {
-            attachmentRepository.delete(ref.data)
+            purger()?.deleteUnreferencedBlobs(setOf(ref.data))
         } catch (_: Exception) { /* ignore */ }
 
-        // Update in-memory
-        val currentNotes = _notes.value.toMutableList()
-        val index = currentNotes.indexOfFirst { it.id == noteId }
-        if (index >= 0) {
-            val currentNote = currentNotes[index]
-            currentNotes[index] = currentNote.copy(
-                attachments = currentNote.attachments.filter { it.id != attachmentId }
-            )
-            _notes.value = currentNotes
-        }
+        refreshNote(noteId)
         scheduleDebouncedSync()
     }
 
@@ -1171,7 +1324,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             val base64 = android.util.Base64.encodeToString(decryptedData, android.util.Base64.NO_WRAP)
             "data:${ref.mimeType};base64,$base64"
         } catch (e: Exception) {
-            Log.w("AppState", "Failed to resolve attachment $attachmentId: ${e.message}")
+            Log.w("AppState", "Failed to resolve attachment $attachmentId: ${e.javaClass.simpleName}")
             null
         }
     }
@@ -1194,7 +1347,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             val enc = CryptoService.parseEncryptedJSON(version.content)
             CryptoService.decryptText(enc, key)
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to decrypt version content: ${e.message}")
+            Log.w(TAG, "Failed to decrypt version content: ${e.javaClass.simpleName}")
             null
         }
     }
@@ -1202,46 +1355,30 @@ class AppState(application: Application) : AndroidViewModel(application) {
     // MARK: - Version Restore
 
     /**
-     * Restore a note to a previous version. Creates a snapshot of the current state first.
+     * Restore a note to a previous version, keeping a snapshot of the current
+     * state. Returns false, having changed nothing, if the version can't be read.
      */
-    suspend fun restoreVersion(noteId: String, version: NoteVersionRecord) {
-        val noteRepository = noteRepo ?: return
-        val versionRepository = versionRepo ?: return
-        val key = keyManager.masterKey ?: return
+    suspend fun restoreVersion(noteId: String, version: NoteVersionRecord): Boolean {
+        val noteRepository = noteRepo ?: return false
+        val versionRepository = versionRepo ?: return false
+        val key = keyManager.masterKey ?: return false
 
-        // Snapshot current state before restoring
-        val currentRecord = noteRepository.getRaw(noteId)
-        if (currentRecord != null) {
-            versionRepository.insertOrReplace(
-                NoteVersionRecord.from(currentRecord, "pre-restore")
-            )
+        val note: DecryptedNote
+        val content: String
+        val tags: List<String>
+        try {
+            note = noteRepository.get(id = noteId, key = key) ?: return false
+            content = CryptoService.decryptText(CryptoService.parseEncryptedJSON(version.content), key)
+            tags = decryptVersionTags(version.tags, key)
+        } catch (e: Exception) {
+            Log.w(TAG, "[Versions] Can't read version ${version.versionKey}: ${e.javaClass.simpleName}")
+            return false
         }
 
-        // Decrypt the version's content and tags
-        val encContent = CryptoService.parseEncryptedJSON(version.content)
-        val content = CryptoService.decryptText(encContent, key)
-
-        val encTags = CryptoService.parseEncryptedJSON(version.tags)
-        val tagsText = CryptoService.decryptText(encTags, key)
-        val tags: List<String> = when {
-            tagsText.isEmpty() -> emptyList()
-            tagsText.startsWith("[") -> {
-                try {
-                    json.decodeFromString(tagsText)
-                } catch (_: Exception) {
-                    emptyList()
-                }
-            }
-            else -> {
-                tagsText.split(",")
-                    .map { it.trim() }
-                    .filter { it.isNotEmpty() }
-            }
+        noteRepository.getRaw(noteId)?.let {
+            versionRepository.insertOrReplace(NoteVersionRecord.safetySnapshot(it, "pre-restore"))
         }
-
-        // Get current decrypted note and update with restored content
-        val note = noteRepository.get(id = noteId, key = key) ?: return
-        val restoredNote = note.copy(
+        val restored = note.copy(
             content = content,
             tags = tags,
             syntaxLanguage = version.syntaxLanguage ?: note.syntaxLanguage,
@@ -1249,17 +1386,22 @@ class AppState(application: Application) : AndroidViewModel(application) {
             showPreview = version.showPreview ?: note.showPreview,
             color = version.color,
         )
-        noteRepository.update(restoredNote, key)
+        if (!noteRepository.update(restored, key)) return false
 
-        // Update in-memory
-        val currentNotes = _notes.value.toMutableList()
-        val index = currentNotes.indexOfFirst { it.id == noteId }
-        if (index >= 0) {
-            val refreshed = noteRepository.get(id = noteId, key = key)
-            if (refreshed != null) {
-                currentNotes[index] = refreshed
-                _notes.value = currentNotes
-            }
+        refreshNote(noteId)
+        scheduleDebouncedSync()
+        return true
+    }
+
+    /** Older builds stored '[]' for a version with no tags. */
+    private fun decryptVersionTags(tags: String, key: SecretKey): List<String> {
+        if (tags == "[]") return emptyList()
+        val text = CryptoService.decryptText(CryptoService.parseEncryptedJSON(tags), key)
+        return when {
+            text.isEmpty() -> emptyList()
+            text.startsWith("[") -> json.decodeFromString(text)
+            text.startsWith("\"") -> listOf(json.decodeFromString<String>(text))
+            else -> text.split(",").map { it.trim() }.filter { it.isNotEmpty() }
         }
     }
 
@@ -1276,6 +1418,18 @@ class AppState(application: Application) : AndroidViewModel(application) {
         keyManager.autoLockTimeout = newSettings.autoLockTimeout.toLong() * 60L
     }
 
+    /** Name a colour, or clear its name with a blank one. */
+    suspend fun setCategoryName(colour: String, name: String) = changeCategories { it.named(colour, name) }
+
+    /** Give a tag a colour, or take it away with null. */
+    suspend fun setTagColour(tag: String, colour: String?) = changeCategories { it.withTag(tag, colour) }
+
+    private suspend fun changeCategories(change: (NoteCategories) -> NoteCategories) {
+        val settings = _settings.value
+        updateSettings(change(NoteCategories.from(settings)).appliedTo(settings))
+        scheduleSearch()
+    }
+
     // MARK: - Wipe & Re-onboard
 
     /**
@@ -1284,10 +1438,15 @@ class AppState(application: Application) : AndroidViewModel(application) {
      */
     fun wipeAllData() {
         val context = getApplication<Application>()
+        BackupReminder.forget(context)
 
-        // Clear secure storage
-        KeystoreService.deleteAPIKey(context)
-        KeystoreService.deleteClientId(context)
+        // Clear secure storage. Failing here can't be allowed to stop a wipe.
+        try {
+            KeystoreService.deleteAPIKey(context)
+            KeystoreService.deleteClientId(context)
+        } catch (e: Exception) {
+            Log.w(TAG, "[Wipe] Secure preferences: ${e.javaClass.simpleName}")
+        }
         KeystoreService.deleteBiometricKey(context)
 
         // Close and clear the database singleton before deleting the file
@@ -1297,10 +1456,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         context.deleteDatabase("jottery.db")
 
         // Stop sync and SSE
-        sseClientInstance?.stop()
-        syncClientInstance = null
-        syncServiceInstance = null
-        sseClientInstance = null
+        stopSync()
 
         // Reset all in-memory state
         db = null
@@ -1314,12 +1470,15 @@ class AppState(application: Application) : AndroidViewModel(application) {
         _notes.value = emptyList()
         _archivedNotes.value = emptyList()
         _filteredNotes.value = emptyList()
+        _recentSearches.value = emptyList()
+        _otherViewMatches.value = 0
         _savedSearches.value = emptyList()
         _pendingConflicts.value = emptyList()
         _inboxItems.value = emptyList()
         _showArchive.value = false
         _selectedNoteId.value = null
         _searchQuery.value = ""
+        _biometricEnabled.value = false
         _syncEnabled.value = false
         _isSyncing.value = false
         _lastSyncAt.value = null
@@ -1338,375 +1497,444 @@ class AppState(application: Application) : AndroidViewModel(application) {
     // MARK: - Password Change
 
     /**
-     * Change the vault password. Re-derives a new key from the new password with a new salt,
-     * then re-encrypts all notes, attachments, versions, and the verification token.
+     * Change the vault password. The key stays the same and only its wrapping
+     * changes, in one write: no note is touched, so a kill can't leave a mix and
+     * other devices keep working. A legacy vault moves to an envelope here, which
+     * replaces the full re-encryption that used to run.
      */
     suspend fun changePassword(currentPassword: String, newPassword: String) {
         val encRepo = encryptionRepo ?: throw AppStateError.NotInitialised
-        val noteRepository = noteRepo ?: throw AppStateError.NotInitialised
-        val versionRepository = versionRepo ?: throw AppStateError.NotInitialised
-
+        val database = db ?: throw AppStateError.NotInitialised
         val metadata = encRepo.get() ?: throw AppStateError.NoVault
 
-        if (metadata.envelopeVersion != null) {
-            // FAST PATH: envelope active — re-wrap only, no note re-encryption
-            val deviceSaltB64 = metadata.deviceSalt ?: throw AppStateError.InvalidSalt
-            val deviceSalt = android.util.Base64.decode(deviceSaltB64, android.util.Base64.NO_WRAP)
-            val wrappedJSON = metadata.localWrappedMaster ?: throw AppStateError.InvalidSalt
+        val masterKeyData = unwrapVaultKey(metadata, currentPassword)
+            ?: throw AppStateError.WrongPassword
 
-            // Verify current password by unwrapping the master key
-            val currentDeviceKey = CryptoService.deriveKey(currentPassword, deviceSalt, CryptoService.DEFAULT_ITERATIONS)
-            val wrapped = CryptoService.parseEncryptedJSON(wrappedJSON)
-            val masterKeyData: ByteArray
-            try {
-                masterKeyData = CryptoService.unwrapMasterKey(wrapped, currentDeviceKey)
-            } catch (_: Exception) {
-                throw AppStateError.WrongPassword
-            }
-
-            // Verify with token as extra check
-            if (metadata.verification != null) {
-                val masterKey = SecretKeySpec(masterKeyData, "AES")
-                if (!verifyWithToken(metadata.verification, masterKey)) {
-                    throw AppStateError.WrongPassword
-                }
-            }
-
-            // Synchronous: local re-wrap (throws on failure)
-            EnvelopeService.changePasswordLocal(encRepo, newPassword, masterKeyData)
-
-            // Synchronous: update biometric key if enabled (master key unchanged)
-            if (KeystoreService.hasBiometricKey(getApplication())) {
-                try {
-                    KeystoreService.storeBiometricKey(getApplication(), masterKeyData)
-                } catch (_: Exception) { /* ignore */ }
-            }
-
-            // Background: server re-wrap (non-fatal)
-            val syncRepository = syncRepo
-            val client = syncClientInstance
-            if (syncRepository != null && client != null) {
-                val dataForServer = masterKeyData.copyOf()
-                viewModelScope.launch(Dispatchers.IO) {
-                    EnvelopeService.changePasswordServer(syncRepository, client, newPassword, dataForServer)
-                }
-            }
-            return
+        // The account's blob has to follow the new password. Only this device can
+        // tell that the server's copy is now out of date, so the rewrap is written
+        // with the password change and kept until the server has it.
+        val userId = syncRepo?.getSyncMetadata()?.userId
+        val rewrapped = if (userId.isNullOrEmpty()) null else {
+            EnvelopeService.wrapForAccount(userId, newPassword, masterKeyData)
+        }
+        val envelope = EnvelopeService.localEnvelope(masterKeyData, newPassword)
+        database.withTransaction {
+            encRepo.store(EnvelopeService.metadataFor(envelope, metadata))
+            if (rewrapped != null) syncRepo?.setPendingWrappedKey(rewrapped)
         }
 
-        // LEGACY PATH: full re-encryption
-        val saltData = metadata.saltData ?: throw AppStateError.InvalidSalt
+        // Biometric unlock is unaffected: it holds the master key, which hasn't changed
 
-        // Verify current password
-        val currentKey = CryptoService.deriveKey(
-            password = currentPassword,
-            salt = saltData,
-            iterations = metadata.iterations ?: CryptoService.DEFAULT_ITERATIONS,
-        )
-        if (metadata.verification != null) {
-            if (!verifyWithToken(metadata.verification, currentKey)) {
-                throw AppStateError.WrongPassword
-            }
-        } else {
-            if (!verifyByDecryptingNote(currentKey)) {
-                throw AppStateError.WrongPassword
-            }
-        }
+        if (rewrapped != null) uploadPendingRewrap()
+    }
 
-        // Generate new salt and derive new key
-        val newSalt = CryptoService.generateSalt()
-        val iterations = metadata.iterations ?: CryptoService.DEFAULT_ITERATIONS
-        val newKey = CryptoService.deriveKey(
-            password = newPassword,
-            salt = newSalt,
-            iterations = iterations,
-        )
-
-        // Re-encrypt all active, deleted, and archived notes
-        val allNotes = noteRepository.listActive(currentKey) +
-            noteRepository.listDeleted(currentKey) +
-            noteRepository.listArchived(currentKey)
-
-        for (note in allNotes) {
-            val encContent = CryptoService.encryptText(note.content, newKey)
-            val encTags = CryptoService.encryptStringArray(note.tags, newKey)
-            val contentJSON = CryptoService.serializeEncryptedJSON(encContent)
-            val tagsJSON = CryptoService.serializeEncryptedJSON(encTags)
-
-            // Re-encrypt attachment filenames
-            val reEncryptedAttachments = note.attachments.map { ref ->
-                val encFilename = CryptoService.encryptText(ref.filename, newKey)
-                ref.copy(filename = CryptoService.serializeEncryptedJSON(encFilename))
-            }
-            val attachmentsString = json.encodeToString(reEncryptedAttachments)
-
-            val record = noteRepository.getRaw(note.id) ?: continue
-            val updatedRecord = record.copy(
-                content = contentJSON,
-                tags = tagsJSON,
-                attachments = attachmentsString,
-                needsSync = true,
-            )
-            noteRepository.updateRaw(updatedRecord)
-        }
-
-        // Re-encrypt attachment blobs
-        val attachmentRepository = attachmentRepo
-        if (attachmentRepository != null) {
-            val blobIds = attachmentRepository.listBlobIds()
-            for (blobId in blobIds) {
-                val blobData = attachmentRepository.getBlob(blobId) ?: continue
-                val blobStr = String(blobData, Charsets.UTF_8)
-                if (blobStr.isEmpty()) continue
-                try {
-                    val encrypted = CryptoService.parseEncryptedJSON(blobStr)
-                    val plainData = CryptoService.decrypt(encrypted, currentKey)
-                    val reEncrypted = CryptoService.encrypt(plainData, newKey)
-                    val reEncryptedJSON = CryptoService.serializeEncryptedJSON(reEncrypted)
-                    attachmentRepository.updateBlobData(blobId, reEncryptedJSON.toByteArray(Charsets.UTF_8))
-                } catch (e: Exception) {
-                    Log.w(TAG, "[ChangePassword] Skipping blob $blobId: ${e.message}")
-                }
-            }
-        }
-
-        // Re-encrypt version snapshots
-        for (noteId in allNotes.map { it.id }.toSet()) {
-            val versions = versionRepository.getVersions(noteId)
-            for (ver in versions) {
-                try {
-                    val encVerContent = CryptoService.parseEncryptedJSON(ver.content)
-                    val plainContent = CryptoService.decryptText(encVerContent, currentKey)
-                    val newEncContent = CryptoService.encryptText(plainContent, newKey)
-
-                    val encVerTags = CryptoService.parseEncryptedJSON(ver.tags)
-                    val plainTagsStr = CryptoService.decryptText(encVerTags, currentKey)
-                    val newEncTags = CryptoService.encryptText(plainTagsStr, newKey)
-
-                    val updated = ver.copy(
-                        content = CryptoService.serializeEncryptedJSON(newEncContent),
-                        tags = CryptoService.serializeEncryptedJSON(newEncTags),
-                    )
-                    versionRepository.insertOrReplace(updated)
-                } catch (e: Exception) {
-                    Log.w(TAG, "[ChangePassword] Skipping version ${ver.versionKey}: ${e.message}")
-                }
-            }
-        }
-
-        // Re-encrypt saved searches
-        val searchRepo = savedSearchRepo
-        if (searchRepo != null) {
-            val searches = searchRepo.listAll(currentKey)
-            for (search in searches) {
-                val encName = CryptoService.encryptText(search.name, newKey)
-                val encQuery = CryptoService.encryptText(search.query, newKey)
-                searchRepo.updateEncrypted(
-                    id = search.id,
-                    name = CryptoService.serializeEncryptedJSON(encName),
-                    query = CryptoService.serializeEncryptedJSON(encQuery),
-                )
-            }
-        }
-
-        // Update encryption metadata with new salt and verification token
-        val verificationEncrypted = CryptoService.encryptText(
-            EncryptionMetadata.VERIFICATION_PLAINTEXT, newKey
-        )
-        val verificationJSON = CryptoService.serializeEncryptedJSON(verificationEncrypted)
-
-        val newMetadata = metadata.copy(
-            salt = android.util.Base64.encodeToString(newSalt, android.util.Base64.NO_WRAP),
-            verification = verificationJSON,
-        )
-        encRepo.store(newMetadata)
-
-        // Update in-memory master key
-        keyManager.masterKey = newKey
-
-        // Update biometric key if enabled
-        if (KeystoreService.hasBiometricKey(getApplication())) {
-            try {
-                KeystoreService.storeBiometricKey(getApplication(), newKey.encoded)
-            } catch (_: Exception) { /* ignore */ }
-        }
-
-        // Reload notes with new key
-        loadNotes()
-
-        // Try envelope migration after legacy password change
-        if (_settings.value.syncEnabled) {
-            val syncRepository = syncRepo
-            val encRepo = encryptionRepo
-            val client = syncClientInstance
-            if (syncRepository != null && encRepo != null && client != null) {
-                viewModelScope.launch(Dispatchers.IO) {
-                    EnvelopeService.tryEnvelopeSetup(
-                        this@AppState, syncRepository, encRepo, client, newPassword, newKey,
-                    )
-                }
-            }
+    /** Sends any rewrap still owed to the server, telling the user if it has to wait. */
+    private suspend fun uploadPendingRewrap() {
+        val service = accountKeyService() ?: return
+        if (!service.uploadPending() && !rewrapWarningShown) {
+            rewrapWarningShown = true
+            showMessage(text(R.string.account_key_update_pending))
         }
     }
 
-    // MARK: - Re-encryption
-
-    /**
-     * Re-encrypt all notes, attachments, versions, and saved searches from one
-     * key to another. Used when onboarding from the server discovers a different master key.
-     */
-    suspend fun reEncryptAllData(oldKey: javax.crypto.SecretKey, newKey: javax.crypto.SecretKey) {
-        val noteRepository = noteRepo ?: throw AppStateError.NotInitialised
-        val versionRepository = versionRepo ?: throw AppStateError.NotInitialised
-
-        val allNotes = noteRepository.listActive(oldKey) +
-            noteRepository.listDeleted(oldKey) +
-            noteRepository.listArchived(oldKey)
-
-        for (note in allNotes) {
-            val encContent = CryptoService.encryptText(note.content, newKey)
-            val encTags = CryptoService.encryptStringArray(note.tags, newKey)
-            val contentJSON = CryptoService.serializeEncryptedJSON(encContent)
-            val tagsJSON = CryptoService.serializeEncryptedJSON(encTags)
-
-            val reEncryptedAttachments = note.attachments.map { ref ->
-                val encFilename = CryptoService.encryptText(ref.filename, newKey)
-                ref.copy(filename = CryptoService.serializeEncryptedJSON(encFilename))
-            }
-            val attachmentsString = json.encodeToString(reEncryptedAttachments)
-
-            val record = noteRepository.getRaw(note.id) ?: continue
-            val updatedRecord = record.copy(
-                content = contentJSON,
-                tags = tagsJSON,
-                attachments = attachmentsString,
-                needsSync = true,
-            )
-            noteRepository.updateRaw(updatedRecord)
-        }
-
-        // Re-encrypt attachment blobs
-        val attachmentRepository = attachmentRepo
-        if (attachmentRepository != null) {
-            val blobIds = attachmentRepository.listBlobIds()
-            for (blobId in blobIds) {
-                val blobData = attachmentRepository.getBlob(blobId) ?: continue
-                val blobStr = String(blobData, Charsets.UTF_8)
-                if (blobStr.isEmpty()) continue
-                try {
-                    val encrypted = CryptoService.parseEncryptedJSON(blobStr)
-                    val plainData = CryptoService.decrypt(encrypted, oldKey)
-                    val reEncrypted = CryptoService.encrypt(plainData, newKey)
-                    val reEncryptedJSON = CryptoService.serializeEncryptedJSON(reEncrypted)
-                    attachmentRepository.updateBlobData(blobId, reEncryptedJSON.toByteArray(Charsets.UTF_8))
-                } catch (e: Exception) {
-                    Log.w(TAG, "[ReEncrypt] Skipping blob $blobId: ${e.message}")
-                }
-            }
-        }
-
-        // Re-encrypt version snapshots
-        for (noteId in allNotes.map { it.id }.toSet()) {
-            val versions = versionRepository.getVersions(noteId)
-            for (ver in versions) {
-                try {
-                    val encContent = CryptoService.parseEncryptedJSON(ver.content)
-                    val plainContent = CryptoService.decryptText(encContent, oldKey)
-                    val newEncContent = CryptoService.encryptText(plainContent, newKey)
-
-                    val encTags = CryptoService.parseEncryptedJSON(ver.tags)
-                    val plainTagsStr = CryptoService.decryptText(encTags, oldKey)
-                    val newEncTags = CryptoService.encryptText(plainTagsStr, newKey)
-
-                    val updated = ver.copy(
-                        content = CryptoService.serializeEncryptedJSON(newEncContent),
-                        tags = CryptoService.serializeEncryptedJSON(newEncTags),
-                    )
-                    versionRepository.insertOrReplace(updated)
-                } catch (e: Exception) {
-                    Log.w(TAG, "[ReEncrypt] Skipping version ${ver.versionKey}: ${e.message}")
-                }
-            }
-        }
-
-        // Re-encrypt saved searches
-        val searchRepo = savedSearchRepo
-        if (searchRepo != null) {
-            val searches = searchRepo.listAll(oldKey)
-            for (search in searches) {
-                val encName = CryptoService.encryptText(search.name, newKey)
-                val encQuery = CryptoService.encryptText(search.query, newKey)
-                searchRepo.updateEncrypted(
-                    id = search.id,
-                    name = CryptoService.serializeEncryptedJSON(encName),
-                    query = CryptoService.serializeEncryptedJSON(encQuery),
-                )
-            }
-        }
-
-        Log.i(TAG, "[ReEncrypt] All data re-encrypted successfully")
+    private fun accountKeyService(): AccountKeyService? {
+        val client = syncClientInstance ?: return null
+        return AccountKeyService(client, syncRepo ?: return null, encryptionRepo ?: return null)
     }
 
-    // MARK: - Sync (Phase 5 Stubs)
+    /** The vault's key, if [password] opens it. */
+    private suspend fun unwrapVaultKey(metadata: EncryptionMetadata, password: String): ByteArray? =
+        withContext(Dispatchers.Default) {
+            val candidate: ByteArray? = if (metadata.envelopeVersion != null) {
+                val deviceSalt = metadata.deviceSalt ?: throw AppStateError.InvalidSalt
+                val wrappedJSON = metadata.localWrappedMaster ?: throw AppStateError.InvalidSalt
+                val deviceKey = CryptoService.deriveKey(
+                    password,
+                    android.util.Base64.decode(deviceSalt, android.util.Base64.NO_WRAP),
+                    CryptoService.DEFAULT_ITERATIONS,
+                )
+                try {
+                    CryptoService.unwrapMasterKey(CryptoService.parseEncryptedJSON(wrappedJSON), deviceKey)
+                } catch (_: Exception) {
+                    null
+                }
+            } else {
+                val salt = metadata.saltData ?: throw AppStateError.InvalidSalt
+                CryptoService.deriveKey(
+                    password, salt, metadata.iterations ?: CryptoService.DEFAULT_ITERATIONS,
+                ).encoded
+            }
+            candidate?.takeIf {
+                val key = SecretKeySpec(it, "AES")
+                if (metadata.verification != null) verifyWithToken(metadata.verification, key)
+                else verifyByDecryptingNote(key)
+            }
+        }
+
+    // MARK: - Joining an Account
 
     /**
-     * Attempt envelope onboarding from the server.
-     * If another device has already uploaded a wrapped master key, fetch and
-     * unwrap it so this device uses the same encryption key. Must be called
-     * after createVault and before setupSync.
+     * A device registered with a server but not yet holding the account's key.
+     * Sync stays off until it does. Kept in memory only, and it survives rotation
+     * here in the ViewModel, so the setup screen can't lose track of the device.
      */
-    /**
-     * Create vault, onboard envelope, and start sync.
-     * Runs in viewModelScope so it survives Compose navigation changes.
-     */
-    fun unlockAndSync(encryptionPassword: String) {
+    data class PendingConnection(
+        val endpoint: String,
+        val apiKey: String,
+        val clientId: String,
+        val userId: String,
+        val accountPassword: String?,
+    )
+
+    /** Progress of a setup or connect action, which outlives any one screen. */
+    sealed interface ConnectState {
+        data object Idle : ConnectState
+        data object Working : ConnectState
+        data class Failed(val message: String) : ConnectState
+
+        /** No account key yet, so this password is new: it has to be typed twice. */
+        data object ConfirmNewPassword : ConnectState
+
+        /** The account uses another key: the user chooses whether to move to it. */
+        data object NeedsMerge : ConnectState
+        data object Done : ConnectState
+    }
+
+    private val _pendingConnection = MutableStateFlow<PendingConnection?>(null)
+    val pendingConnection: StateFlow<PendingConnection?> = _pendingConnection.asStateFlow()
+
+    private val _connectState = MutableStateFlow<ConnectState>(ConnectState.Idle)
+    val connectState: StateFlow<ConnectState> = _connectState.asStateFlow()
+
+    /** Held while the user decides whether to move this vault onto the account's key. */
+    private var pendingMerge: PendingMerge? = null
+
+    private class PendingMerge(
+        val connection: PendingConnection,
+        val accountKey: ByteArray,
+        val notesPassword: String,
+    )
+
+    fun clearConnectState() {
+        _connectState.value = ConnectState.Idle
+    }
+
+    private fun text(id: Int, vararg args: Any): String =
+        getApplication<Application>().getString(id, *args)
+
+    /** Whatever went wrong while joining, as something the user can act on. */
+    private fun connectErrorText(e: Exception): String = when (e) {
+        is EnvelopeException.CannotUnwrap -> text(R.string.connect_error_cannot_unwrap)
+        is ConnectRefused -> e.message.orEmpty()
+        is SyncClientException, is java.io.IOException -> text(R.string.connect_error_network)
+        else -> e.message ?: text(R.string.connect_error_network)
+    }
+
+    private class ConnectRefused(message: String) : Exception(message)
+
+    /** Runs a connect action in viewModelScope, so leaving a screen can't cancel it. */
+    private fun connecting(block: suspend () -> Unit) {
+        _connectState.value = ConnectState.Working
         viewModelScope.launch {
             try {
-                createVault(encryptionPassword)
-                tryEnvelopeOnboarding(encryptionPassword)
-                setupSync()
+                block()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
-                Log.e(TAG, "[Setup] unlockAndSync failed: ${e.message}", e)
-                _syncError.value = e.message
+                Log.e(TAG, "[Connect] Failed: ${e.javaClass.simpleName}")
+                _connectState.value = ConnectState.Failed(connectErrorText(e))
             }
         }
     }
 
-    suspend fun tryEnvelopeOnboarding(encryptionPassword: String) {
-        Log.d(TAG, "[Envelope] tryEnvelopeOnboarding called")
-        val encRepo = encryptionRepo
-        if (encRepo == null) { Log.w(TAG, "[Envelope] encryptionRepo is null"); return }
-        val syncRepository = syncRepo
-        if (syncRepository == null) { Log.w(TAG, "[Envelope] syncRepo is null"); return }
-        val currentSettings = _settings.value
-        val endpoint = currentSettings.syncEndpoint
-        if (endpoint.isNullOrEmpty()) { Log.w(TAG, "[Envelope] no syncEndpoint"); return }
-        val context = getApplication<Application>()
-        val apiKey = KeystoreService.getAPIKey(context)
-        if (apiKey.isNullOrEmpty()) { Log.w(TAG, "[Envelope] no API key in Keystore"); return }
-        val clientId = KeystoreService.getClientId(context)
-        if (clientId.isNullOrEmpty()) { Log.w(TAG, "[Envelope] no clientId in Keystore"); return }
+    private fun refuseMatchingPasswords(notesPassword: String, accountPassword: String?) {
+        if (accountPassword != null && notesPassword == accountPassword) {
+            throw ConnectRefused(text(R.string.password_same_as_account))
+        }
+    }
 
-        val syncMeta = syncRepository.getSyncMetadata()
-        val userId = syncMeta?.userId
-        if (userId.isNullOrEmpty()) {
-            Log.w(TAG, "[Envelope] Skipped onboarding — no userId (syncMeta=$syncMeta)")
-            return
+    /**
+     * For a password that already exists, which can't be refused: that would stop
+     * these users adding a device. They should still know, and change it.
+     */
+    private fun warnIfMatchingPasswords(notesPassword: String, accountPassword: String?) {
+        if (accountPassword != null && notesPassword == accountPassword) {
+            showMessage(text(R.string.password_matches_account_warning))
+        }
+    }
+
+    private fun refuseShortNewPassword(password: String) {
+        if (password.length < MIN_NOTES_PASSWORD_LENGTH) {
+            throw ConnectRefused(text(R.string.password_too_short, MIN_NOTES_PASSWORD_LENGTH))
+        }
+    }
+
+    /** Best effort: a failed join shouldn't leave an orphaned device on the account. */
+    private suspend fun revokeQuietly(connection: PendingConnection) {
+        try {
+            withContext(Dispatchers.IO) {
+                SyncClient(connection.endpoint, connection.apiKey, connection.clientId).revokeThisDevice()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "[Connect] Couldn't revoke device: ${e.javaClass.simpleName}")
+        }
+    }
+
+    /**
+     * Sync starts only here, once this device holds the account's key.
+     *
+     * @param openedBlob this device opened or uploaded the account's wrapped key
+     *   while joining. False only when the account has none yet.
+     */
+    private suspend fun finishConnection(connection: PendingConnection, openedBlob: Boolean = true) {
+        val context = getApplication<Application>()
+        KeystoreService.setAPIKey(context, connection.apiKey)
+        KeystoreService.setClientId(context, connection.clientId)
+
+        syncRepo?.let { repo ->
+            val syncMeta = repo.getSyncMetadata() ?: com.jottery.android.model.SyncMetadata()
+            // What this device knew about any earlier connection doesn't carry over
+            repo.saveSyncMetadata(
+                syncMeta.copy(
+                    userId = connection.userId,
+                    lastSyncAt = null,
+                    pullCursor = null,
+                    cursorAdopted = false,
+                    wrappedKeyOpened = openedBlob,
+                    pendingWrappedKey = null,
+                )
+            )
+        }
+        attachmentRepo?.markAllNotUploaded()
+        updateSettings(_settings.value.copy(syncEnabled = true, syncEndpoint = connection.endpoint))
+
+        _pendingConnection.value = null
+        setupSync(connection.apiKey)
+        _connectState.value = ConnectState.Done
+    }
+
+    /**
+     * Setup: create a vault with no account. In viewModelScope, because the vault
+     * appearing is what navigates away from the screen that asked for it.
+     */
+    fun createNewVault(password: String) {
+        connecting {
+            refuseShortNewPassword(password)
+            createVault(password)
+            _connectState.value = ConnectState.Idle
+        }
+    }
+
+    /**
+     * Setup: create this device's vault for the registered account. The server's
+     * key is checked BEFORE any vault exists, so a wrong password or a network
+     * failure leaves the user on the screen with nothing created.
+     */
+    fun connectNewVault(notesPassword: String, confirmation: String? = null) {
+        val connection = _pendingConnection.value ?: return
+        connecting {
+            val client = SyncClient(connection.endpoint, connection.apiKey, connection.clientId)
+            var master = EnvelopeService.fetchServerKey(client, connection.userId, notesPassword)
+            if (master == null) {
+                // First device on the account: its key becomes the account's, and
+                // is published before anything else, so no second device can
+                // start on a key of its own in the meantime.
+                refuseMatchingPasswords(notesPassword, connection.accountPassword)
+                refuseShortNewPassword(notesPassword)
+                // Nothing can recover a mistyped password, so a new one is typed
+                // twice. A password that opened the account's key has proved itself.
+                if (confirmation == null) {
+                    _connectState.value = ConnectState.ConfirmNewPassword
+                    return@connecting
+                }
+                if (confirmation != notesPassword) {
+                    throw ConnectRefused(text(R.string.password_mismatch))
+                }
+                master = try {
+                    CryptoService.generateSalt().also {
+                        EnvelopeService.publishKey(
+                            client, connection.userId, notesPassword, it, EnvelopeService.KeyWrite.FirstUpload,
+                        )
+                    }
+                } catch (e: SyncClientException) {
+                    if (e.statusCode != HTTP_CONFLICT) throw e
+                    // Another device got there first, so its key is the account's
+                    EnvelopeService.fetchServerKey(client, connection.userId, notesPassword) ?: throw e
+                }
+            } else {
+                warnIfMatchingPasswords(notesPassword, connection.accountPassword)
+            }
+            createVaultFromMasterKey(master, notesPassword)
+            finishConnection(connection)
+        }
+    }
+
+    /** Create the vault directly on a master key, as an envelope. */
+    private suspend fun createVaultFromMasterKey(masterKey: ByteArray, password: String) {
+        val repo = encryptionRepo ?: throw AppStateError.NotInitialised
+        val base = EncryptionMetadata(createdAt = DateUtils.nowISO8601())
+        repo.store(EnvelopeService.metadataFor(EnvelopeService.localEnvelope(masterKey, password), base))
+        keyManager.unlockWithKeyData(masterKey)
+        _isFirstLaunch.value = false
+        _isLocked.value = false
+        loadNotes()
+    }
+
+    /**
+     * Settings: join an account with the vault that's already open. Compares the
+     * account's key with this vault's and only starts sync once they agree, so
+     * notes are never pushed under a key other devices can't read.
+     */
+    fun connectExistingVault(connection: PendingConnection, notesPassword: String) {
+        connecting {
+            // This vault's password already exists, so it can't be refused here
+            warnIfMatchingPasswords(notesPassword, connection.accountPassword)
+            joinAccount(connection, notesPassword)
+        }
+    }
+
+    private suspend fun joinAccount(
+        connection: PendingConnection,
+        notesPassword: String,
+        readAgain: Boolean = true,
+    ) {
+        val encRepo = encryptionRepo ?: throw AppStateError.NotInitialised
+        val localKey = keyManager.masterKey?.encoded ?: throw AppStateError.NotInitialised
+        val metadata = encRepo.get() ?: throw AppStateError.NoVault
+        val client = SyncClient(connection.endpoint, connection.apiKey, connection.clientId)
+
+        val status = try {
+            EnvelopeService.checkAccountKey(client, connection.userId, notesPassword, localKey)
+        } catch (e: Exception) {
+            revokeQuietly(connection)
+            throw e
         }
 
-        val client = SyncClient(endpoint, apiKey, clientId)
-        Log.d(TAG, "[Envelope] Attempting onboard from server, userId=$userId, endpoint=$endpoint")
-        try {
-            val serverKey = withContext(Dispatchers.IO) {
-                EnvelopeService.onboardFromServer(client, encRepo, encryptionPassword, userId)
+        when (status) {
+            EnvelopeService.AccountKeyStatus.NoServerKey -> {
+                // This password is about to protect the account's key, so it must
+                // be the one that really opens this vault.
+                if (unwrapVaultKey(metadata, notesPassword) == null) {
+                    revokeQuietly(connection)
+                    throw ConnectRefused(text(R.string.connect_error_wrong_notes_password))
+                }
+                try {
+                    EnvelopeService.publishKey(
+                        client, connection.userId, notesPassword, localKey, EnvelopeService.KeyWrite.FirstUpload,
+                    )
+                } catch (e: SyncClientException) {
+                    // Another device got there first: compare with what it wrote
+                    if (e.statusCode == HTTP_CONFLICT && readAgain) {
+                        joinAccount(connection, notesPassword, readAgain = false)
+                        return
+                    }
+                    revokeQuietly(connection)
+                    throw e
+                }
+                if (metadata.envelopeVersion == null) {
+                    EnvelopeService.saveLocalEnvelope(encRepo, localKey, notesPassword)
+                }
+                finishConnection(connection)
             }
-            val serverKeyData = serverKey.encoded
-            keyManager.unlockWithKeyData(serverKeyData)
-            Log.i(TAG, "[Envelope] Onboarded from server — master key replaced (${serverKeyData.size} bytes)")
-        } catch (_: EnvelopeException) {
-            Log.d(TAG, "[Envelope] No server key — this device is the first")
+            EnvelopeService.AccountKeyStatus.MatchesLocalKey -> {
+                if (metadata.envelopeVersion == null) {
+                    EnvelopeService.saveLocalEnvelope(encRepo, localKey, notesPassword)
+                }
+                finishConnection(connection)
+            }
+            is EnvelopeService.AccountKeyStatus.Differs -> {
+                pendingMerge = PendingMerge(connection, status.accountKey, notesPassword)
+                _connectState.value = ConnectState.NeedsMerge
+            }
+        }
+    }
+
+    /** The user chose to move this vault onto the account's key. */
+    fun confirmMerge() {
+        val merge = pendingMerge ?: return
+        pendingMerge = null
+        connecting {
+            try {
+                switchVaultToMasterKey(merge.accountKey, merge.notesPassword)
+            } catch (e: Exception) {
+                revokeQuietly(merge.connection)
+                throw e
+            }
+            finishConnection(merge.connection)
+        }
+    }
+
+    /** The user chose not to merge: leave the account and stay as they were. */
+    fun cancelMerge() {
+        val merge = pendingMerge ?: return
+        pendingMerge = null
+        _connectState.value = ConnectState.Idle
+        viewModelScope.launch { revokeQuietly(merge.connection) }
+    }
+
+    /**
+     * Move the whole vault onto [masterKey] in one transaction, then switch to it.
+     * From now on the vault opens with [notesPassword].
+     */
+    private suspend fun switchVaultToMasterKey(masterKey: ByteArray, notesPassword: String) {
+        val encRepo = encryptionRepo ?: throw AppStateError.NotInitialised
+        val oldKey = keyManager.masterKey ?: throw AppStateError.NotInitialised
+        val current = encRepo.get() ?: throw AppStateError.NoVault
+        val newMetadata = EnvelopeService.metadataFor(
+            EnvelopeService.localEnvelope(masterKey, notesPassword), current,
+        )
+        val database = db ?: throw AppStateError.NotInitialised
+        val service = VaultReKeyService(
+            noteRepo = noteRepo ?: throw AppStateError.NotInitialised,
+            versionRepo = versionRepo ?: throw AppStateError.NotInitialised,
+            attachmentRepo = attachmentRepo ?: throw AppStateError.NotInitialised,
+            savedSearchRepo = savedSearchRepo ?: throw AppStateError.NotInitialised,
+            encryptionRepo = encRepo,
+            transaction = { block -> database.withTransaction { block() } },
+        )
+
+        // No sync may read or write rows halfway through, and the key changes
+        // only once the transaction has committed.
+        syncMutex.withLock {
+            withContext(Dispatchers.Default) {
+                service.reKey(oldKey, SecretKeySpec(masterKey, "AES"), newMetadata)
+            }
+            keyManager.unlockWithKeyData(masterKey)
+        }
+        // The stored key is the old one now
+        disableBiometric()
+        loadNotes()
+    }
+
+    /**
+     * Bring the vault and the account's wrapped key into line after an unlock. See
+     * [EnvelopeService.reconcile]. Any failure leaves things as they are, and the
+     * next unlock tries again.
+     */
+    private suspend fun reconcileAccountKey(notesPassword: String) {
+        val service = accountKeyService() ?: return
+        val localKey = keyManager.masterKey ?: return
+
+        try {
+            val outcome = service.settle(notesPassword, localKey.encoded) {
+                syncRepo?.getSyncMetadata()?.lastSyncAt != null &&
+                    noteRepo?.allNotesOpenWith(localKey) == true
+            }
+            when (outcome) {
+                AccountKeyService.Outcome.InStep -> Unit
+                is AccountKeyService.Outcome.MoveToAccountKey -> {
+                    switchVaultToMasterKey(outcome.accountKey, notesPassword)
+                    triggerSync()
+                }
+                AccountKeyService.Outcome.Diverged -> showMessage(text(R.string.connect_key_diverged))
+                AccountKeyService.Outcome.PasswordChangedElsewhere ->
+                    showMessage(text(R.string.account_password_changed_elsewhere))
+                AccountKeyService.Outcome.CannotHeal -> showMessage(text(R.string.account_key_cannot_heal))
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Log.e(TAG, "[Envelope] Onboarding failed: ${e.message}", e)
+            Log.w(TAG, "[Envelope] Reconcile failed (will retry on next unlock): ${e.javaClass.simpleName}")
         }
     }
 
@@ -1735,17 +1963,16 @@ class AppState(application: Application) : AndroidViewModel(application) {
         val resolvedApiKey = apiKey ?: KeystoreService.getAPIKey(context)
         if (resolvedApiKey.isNullOrEmpty()) {
             Log.d(TAG, "[Sync] setupSync: no API key in Keystore")
-            _syncError.value = "No API key found. Please re-register the device."
+            _syncError.value = text(R.string.sync_error_device_removed)
             return
         }
         val clientId = KeystoreService.getClientId(context)
         if (clientId.isNullOrEmpty()) {
             Log.d(TAG, "[Sync] setupSync: no client ID in Keystore")
-            _syncError.value = "No client ID found. Please re-register the device."
+            _syncError.value = text(R.string.sync_error_device_removed)
             return
         }
 
-        Log.d(TAG, "[Sync] setupSync: OK -- endpoint=$endpoint")
 
         val noteRepository = noteRepo ?: return
         val versionRepository = versionRepo ?: return
@@ -1763,18 +1990,33 @@ class AppState(application: Application) : AndroidViewModel(application) {
             attachmentRepo = attachmentRepository,
             syncRepo = syncRepository,
             savedSearchRepo = savedSearchRepository,
-            key = key,
+            keyProvider = { keyManager.masterKey },
             scope = viewModelScope,
+            transaction = { block -> db?.withTransaction { block() } },
         )
 
-        service.onSyncStatusChanged = { status ->
-            _syncStatusMessage.value = status
+        service.onSyncPhaseChanged = { phase ->
+            _syncStatusMessage.value = when (phase) {
+                SyncPhase.PUSHING -> text(R.string.sync_pushing)
+                SyncPhase.PULLING -> text(R.string.sync_pulling)
+                null -> null
+            }
+        }
+        service.onNotesQuarantined = { count ->
+            _syncError.value = getApplication<Application>().resources
+                .getQuantityString(R.plurals.sync_notes_quarantined, count, count)
         }
         service.onConflictDetected = { conflict ->
-            _pendingConflicts.value = _pendingConflicts.value + conflict
+            _pendingConflicts.value = _pendingConflicts.value.filter { it.id != conflict.id } + conflict
         }
-        service.onSyncComplete = { _ ->
-            viewModelScope.launch { loadNotes() }
+        service.onClockLooksWrong = {
+            showMessage(getApplication<Application>().getString(R.string.sync_clock_ahead))
+        }
+        service.onManyNotesBinned = { count ->
+            showMessage(
+                getApplication<Application>().resources
+                    .getQuantityString(R.plurals.sync_notes_binned, count, count)
+            )
         }
 
         // Wire SSE to trigger sync on server-sent events
@@ -1788,21 +2030,96 @@ class AppState(application: Application) : AndroidViewModel(application) {
         _syncEnabled.value = true
         _syncError.value = null
 
+        startSyncTriggers(sse)
+
         // Start SSE and run initial sync
         viewModelScope.launch {
-            try { service.startSSE() } catch (e: Exception) {
-                Log.w(TAG, "[Sync] SSE start failed: ${e.message}")
+            // Conflicts are kept across lock and restart
+            try {
+                val stored = withContext(Dispatchers.Default) { service.loadConflicts() }
+                _pendingConflicts.value = stored
+            } catch (e: Exception) {
+                Log.w(TAG, "[Sync] Couldn't load conflicts: ${e.javaClass.simpleName}")
             }
+            service.startSSE()
             try { triggerSync() } catch (e: Exception) {
-                Log.w(TAG, "[Sync] Initial sync failed: ${e.message}")
+                Log.w(TAG, "[Sync] Initial sync failed: ${e.javaClass.simpleName}")
             }
         }
+    }
+
+    /**
+     * What keeps changes moving when nobody edits: the network returning, and a
+     * periodic sync while the app is open, for when SSE is down. Both stop on lock.
+     * With the vault locked nothing can sync, so there's no background job.
+     */
+    private fun startSyncTriggers(sse: SSEClient) {
+        connectivityMonitor?.stop()
+        connectivityMonitor = ConnectivityMonitor(getApplication()).also { monitor ->
+            monitor.onConnected = {
+                viewModelScope.launch {
+                    if (!isBackgrounded) {
+                        sse.reconnectNow()
+                        triggerSync()
+                    }
+                }
+            }
+            monitor.start()
+        }
+
+        periodicSyncJob?.cancel()
+        periodicSyncJob = viewModelScope.launch {
+            val minutes = syncRepo?.getSyncMetadata()?.autoSyncInterval?.takeIf { it > 0 } ?: DEFAULT_SYNC_MINUTES
+            while (true) {
+                delay(minutes * 60_000L)
+                if (!isBackgrounded) triggerSync()
+            }
+        }
+    }
+
+    /** Try a failed sync again after a while, if that could help. */
+    private fun scheduleSyncRetry(error: Exception) {
+        val seconds = SyncRetryPolicy.delaySeconds(error, syncRetryAttempt) ?: return
+        syncRetryAttempt++
+        syncRetryJob?.cancel()
+        syncRetryJob = viewModelScope.launch {
+            delay(seconds * 1000)
+            triggerSync()
+        }
+    }
+
+    /** Why a sync failed. Never raw server text, which isn't trusted. */
+    private fun syncFailureText(e: Exception): String = when {
+        e is SyncClientException && e.statusCode == 401 -> text(R.string.sync_error_device_removed)
+        e is SyncClientException && e.statusCode == 403 -> text(R.string.sync_error_account_disabled)
+        e is SyncClientException && e.statusCode == 507 -> text(R.string.sync_error_storage_full)
+        e is SyncClientException && (e.statusCode == 429 || e.statusCode == 503) ->
+            text(R.string.sync_error_rate_limited)
+        e is java.io.IOException -> text(R.string.sync_error_offline)
+        else -> text(R.string.sync_error_failed)
     }
 
     /**
      * Trigger a sync cycle (push then pull).
      */
     suspend fun triggerSync() {
+        // Overlapping cycles interleave pushes and pulls, so a request that
+        // arrives during a sync just asks for one more run afterwards.
+        if (!syncMutex.tryLock()) {
+            syncRequested = true
+            return
+        }
+        try {
+            do {
+                syncRequested = false
+                runSyncCycle()
+            } while (syncRequested)
+        } finally {
+            syncMutex.unlock()
+        }
+    }
+
+    private suspend fun runSyncCycle() {
         val service = syncServiceInstance
         if (service == null || !_syncEnabled.value) {
             Log.d(TAG, "[Sync] triggerSync: sync not enabled or no service -- aborting")
@@ -1813,26 +2130,45 @@ class AppState(application: Application) : AndroidViewModel(application) {
         _syncError.value = null
 
         try {
+            flushPendingEditor()
+            uploadPendingRewrap()
             val newCount = withContext(Dispatchers.IO) { service.fullSync() }
             _isSyncing.value = false
             _lastSyncAt.value = Instant.now()
+            syncRetryAttempt = 0
+            syncRetryJob?.cancel()
             _syncStatusMessage.value = if (newCount > 0) {
-                "Synced \u2014 $newCount new note${if (newCount == 1) "" else "s"}"
+                getApplication<Application>().resources
+                    .getQuantityString(R.plurals.sync_done_new_notes, newCount, newCount)
             } else {
-                "Synced \u2014 up to date"
+                text(R.string.sync_done)
             }
             loadNotes()
-        } catch (e: Exception) {
-            Log.e(TAG, "[Sync] triggerSync failed: ${e.message}", e)
+            // A pull can move the server's side of a conflict on
+            val conflicts = withContext(Dispatchers.Default) { service.loadConflicts() }
+            if (syncServiceInstance === service) _pendingConflicts.value = conflicts
+            loadInboxItems()
+        } catch (e: kotlinx.coroutines.CancellationException) {
             _isSyncing.value = false
-            _syncError.value = "Sync failed: ${e.message}"
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "[Sync] triggerSync failed: ${e.javaClass.simpleName}")
+            _isSyncing.value = false
             _syncStatusMessage.value = null
+            // A lock during a sync isn't a failure worth reporting
+            if (syncServiceInstance === service) {
+                _syncError.value = syncFailureText(e)
+                scheduleSyncRetry(e)
+            }
         }
 
+        clearStatusAfterAWhile(text(R.string.sync_done))
+    }
+
+    private fun clearStatusAfterAWhile(message: String) {
         viewModelScope.launch {
             delay(4_000)
-            val current = _syncStatusMessage.value
-            if (current != null && current.startsWith("Synced")) {
+            if (_syncStatusMessage.value?.startsWith(message) == true) {
                 _syncStatusMessage.value = null
             }
         }
@@ -1844,41 +2180,43 @@ class AppState(application: Application) : AndroidViewModel(application) {
     suspend fun forceFullSync() {
         val service = syncServiceInstance
         if (service == null || !_syncEnabled.value) return
-        _isSyncing.value = true
-        _syncError.value = null
-        _syncStatusMessage.value = "Full sync in progress\u2026"
 
-        try {
-            val newCount = withContext(Dispatchers.IO) { service.fullSync() }
-            _isSyncing.value = false
-            _lastSyncAt.value = Instant.now()
-            _syncStatusMessage.value = "Full sync complete"
-            loadNotes()
-        } catch (e: Exception) {
-            Log.e(TAG, "[Sync] forceFullSync failed: ${e.message}", e)
-            _isSyncing.value = false
-            _syncError.value = "Full sync failed: ${e.message}"
-            _syncStatusMessage.value = null
-        }
+        syncMutex.withLock {
+            _isSyncing.value = true
+            _syncError.value = null
+            _syncStatusMessage.value = text(R.string.sync_full_in_progress)
 
-        viewModelScope.launch {
-            delay(4_000)
-            if (_syncStatusMessage.value == "Full sync complete") {
+            try {
+                flushPendingEditor()
+                withContext(Dispatchers.IO) { service.fullSync(fullPull = true) }
+                _isSyncing.value = false
+                _lastSyncAt.value = Instant.now()
+                _syncStatusMessage.value = text(R.string.sync_full_done)
+                loadNotes()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                _isSyncing.value = false
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "[Sync] forceFullSync failed: ${e.javaClass.simpleName}")
+                _isSyncing.value = false
+                _syncError.value = syncFailureText(e)
                 _syncStatusMessage.value = null
             }
         }
+
+        clearStatusAfterAWhile(text(R.string.sync_full_done))
     }
 
     /**
-     * Register this device with a Jottery sync server.
-     * Stores the returned API key and client ID, enables sync.
+     * Register this device with a sync server. Nothing is enabled yet: the device
+     * becomes [pendingConnection] until it holds the account's key.
      */
     suspend fun registerDevice(
         serverUrl: String,
         email: String,
         password: String,
         deviceName: String,
-    ): Result<String> {
+    ): Result<PendingConnection> {
         return try {
             val tempClient = SyncClient(serverUrl, "", "")
             val response = withContext(Dispatchers.IO) {
@@ -1890,323 +2228,619 @@ class AppState(application: Application) : AndroidViewModel(application) {
                     )
                 )
             }
-
-            val context = getApplication<Application>()
-            KeystoreService.setAPIKey(context, response.apiKey)
-            KeystoreService.setClientId(context, response.clientId)
-
-            // Store userId for envelope encryption
-            val syncRepository = syncRepo
-            if (syncRepository != null) {
-                val syncMeta = syncRepository.getSyncMetadata()
-                    ?: com.jottery.android.model.SyncMetadata()
-                syncRepository.saveSyncMetadata(syncMeta.copy(userId = response.userId))
-            }
-
-            val newSettings = _settings.value.copy(
-                syncEnabled = true,
-                syncEndpoint = serverUrl,
+            val connection = PendingConnection(
+                endpoint = serverUrl,
+                apiKey = response.apiKey,
+                clientId = response.clientId,
+                userId = response.userId,
+                accountPassword = password,
             )
-            updateSettings(newSettings)
-
-            Result.success("Device registered successfully.")
+            _pendingConnection.value = connection
+            Result.success(connection)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Log.e(TAG, "[Sync] registerDevice failed: ${e.message}", e)
+            Log.e(TAG, "[Sync] registerDevice failed: ${e.javaClass.simpleName}")
             Result.failure(e)
         }
     }
 
     /**
-     * Import sync credentials from another device.
-     * Stores the API key and client ID, enables sync.
+     * Register this device, in the view model's scope. A rotation mustn't cancel a
+     * request the server may already have acted on, or the user would register again
+     * and leave a second device on their account.
      */
-    suspend fun importCredentials(
+    fun beginRegistration(
         serverUrl: String,
-        apiKey: String,
-        clientId: String,
-    ): Result<String> {
-        return try {
-            val context = getApplication<Application>()
-            KeystoreService.setAPIKey(context, apiKey)
-            KeystoreService.setClientId(context, clientId)
-
-            val newSettings = _settings.value.copy(
-                syncEnabled = true,
-                syncEndpoint = serverUrl,
-            )
-            updateSettings(newSettings)
-            setupSync(apiKey)
-
-            Result.success("Credentials imported successfully.")
-        } catch (e: Exception) {
-            Log.e(TAG, "[Sync] importCredentials failed: ${e.message}", e)
-            Result.failure(e)
+        email: String,
+        password: String,
+        deviceName: String,
+        onRegistered: (PendingConnection) -> Unit = {},
+    ) {
+        _connectState.value = ConnectState.Working
+        viewModelScope.launch {
+            registerDevice(serverUrl, email, password, deviceName)
+                .onSuccess {
+                    _connectState.value = ConnectState.Idle
+                    onRegistered(it)
+                }
+                .onFailure { _connectState.value = ConnectState.Failed(describeAccountFailure(it)) }
         }
+    }
+
+    /** Give up on a registered device that never finished joining. */
+    fun abandonPendingConnection() {
+        val connection = _pendingConnection.value ?: return
+        _pendingConnection.value = null
+        viewModelScope.launch { revokeQuietly(connection) }
+    }
+
+    // MARK: - Sharing In
+
+    private class PendingShare(val text: String?, val files: List<AttachmentFiles.Picked>)
+
+    /** Held in memory only, until the vault is open. */
+    private var pendingShare: PendingShare? = null
+
+    /** Something arrived through the share sheet: it becomes a note once unlocked. */
+    fun receiveShare(text: String?, files: List<AttachmentFiles.Picked>) {
+        if (text == null && files.isEmpty()) return
+        pendingShare = PendingShare(text, files)
+        if (!_isLocked.value) viewModelScope.launch { applyPendingShare() }
+    }
+
+    private suspend fun applyPendingShare() {
+        val shared = pendingShare ?: return
+        pendingShare = null
+        // Text from another app is text, whatever new notes here usually are
+        val note = createNote(shared.text.orEmpty(), syntaxLanguage = DEFAULT_NOTE_TYPE) ?: return
+        var failed = 0
+        for (file in shared.files) {
+            if (addAttachment(note.id, file.data, file.name, file.mimeType) == null) failed++
+        }
+        showMessage(text(if (failed == 0) R.string.share_saved else R.string.share_file_failed))
+    }
+
+    // MARK: - Search Help
+
+    private val _otherViewMatches = MutableStateFlow(0)
+    /** How many notes match in the view not showing, so a search can't quietly miss them. */
+    val otherViewMatches: StateFlow<Int> = _otherViewMatches.asStateFlow()
+
+    private val _recentSearches = MutableStateFlow<List<String>>(emptyList())
+    /** In memory only, and gone on lock: what someone searched for says a lot about them. */
+    val recentSearches: StateFlow<List<String>> = _recentSearches.asStateFlow()
+
+    fun rememberSearch(query: String) {
+        _recentSearches.value = SearchSuggestions.remember(_recentSearches.value, query)
+    }
+
+    // MARK: - Quick Actions
+
+    /** Held until the vault is open, like a share. */
+    private var pendingQuickAction: QuickAction? = null
+
+    private val _searchRequested = MutableStateFlow(false)
+    /** Stays set until the screen has taken it up, which may not exist yet. */
+    val searchRequested: StateFlow<Boolean> = _searchRequested.asStateFlow()
+
+    private val _showNotesRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    /** A quick action can arrive with any screen showing. */
+    val showNotesRequests: SharedFlow<Unit> = _showNotesRequests.asSharedFlow()
+
+    fun receiveQuickAction(action: QuickAction) {
+        pendingQuickAction = action
+        if (!_isLocked.value) viewModelScope.launch { applyPendingQuickAction() }
+    }
+
+    private suspend fun applyPendingQuickAction() {
+        val action = pendingQuickAction ?: return
+        pendingQuickAction = null
+        _showNotesRequests.tryEmit(Unit)
+        when (action) {
+            QuickAction.NEW_NOTE -> createNote()
+            QuickAction.SEARCH -> requestSearch()
+        }
+    }
+
+    private val _findRequested = MutableStateFlow(false)
+    /** Stays set until the editor has opened its find bar. */
+    val findRequested: StateFlow<Boolean> = _findRequested.asStateFlow()
+
+    fun findRequestHandled() {
+        _findRequested.value = false
+    }
+
+    /** Returns false for anything that doesn't apply yet, so the key goes on as usual. */
+    fun perform(command: KeyboardCommand): Boolean {
+        if (_isLocked.value) return false
+        when (command) {
+            KeyboardCommand.NEW_NOTE -> receiveQuickAction(QuickAction.NEW_NOTE)
+            KeyboardCommand.SEARCH -> receiveQuickAction(QuickAction.SEARCH)
+            KeyboardCommand.SAVE -> viewModelScope.launch { flushPendingEditor() }
+            KeyboardCommand.FIND -> {
+                if (_selectedNoteId.value == null) return false
+                _findRequested.value = true
+            }
+            KeyboardCommand.LOCK -> lock()
+        }
+        return true
+    }
+
+    /** Leave the open note and put the cursor in the search bar. */
+    fun requestSearch() {
+        _selectedNoteId.value = null
+        _searchRequested.value = true
+    }
+
+    fun searchRequestHandled() {
+        _searchRequested.value = false
+    }
+
+    // MARK: - Leaving and Managing an Account
+
+    /**
+     * Unlink this device and keep its notes. The server is told first, while the
+     * key still works, but going ahead regardless: a user who is offline, or whose
+     * server predates the call, must still be able to disconnect. Returns false if
+     * the device is still listed on the server, so they can be told to remove it.
+     */
+    suspend fun disconnectSync(): Boolean {
+        val client = syncClientInstance
+        val revoked = client == null || try {
+            withContext(Dispatchers.IO) { client.revokeThisDevice() }
+            true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "[Sync] Couldn't revoke this device: ${e.javaClass.simpleName}")
+            false
+        }
+        forgetConnection()
+        return revoked
+    }
+
+    /** Clear what belongs to the connection. The notes stay. */
+    private suspend fun forgetConnection() {
+        stopSync()
+        val context = getApplication<Application>()
+        try {
+            KeystoreService.deleteAPIKey(context)
+            KeystoreService.deleteClientId(context)
+        } catch (e: Exception) {
+            Log.w(TAG, "[Sync] Secure preferences: ${e.javaClass.simpleName}")
+        }
+        syncRepo?.let { repo ->
+            val meta = repo.getSyncMetadata() ?: com.jottery.android.model.SyncMetadata()
+            repo.saveSyncMetadata(
+                meta.copy(
+                    userId = null,
+                    lastSyncAt = null,
+                    pullCursor = null,
+                    cursorAdopted = false,
+                    wrappedKeyOpened = false,
+                    pendingWrappedKey = null,
+                )
+            )
+        }
+        updateSettings(_settings.value.copy(syncEnabled = false, syncEndpoint = null))
+        _syncError.value = null
+        _syncStatusMessage.value = null
+        _lastSyncAt.value = null
+        _inboxItems.value = emptyList()
+        _pendingConflicts.value = emptyList()
+    }
+
+    /** The name the server has for this device. */
+    suspend fun syncDeviceName(): String? {
+        val client = syncClientInstance ?: return null
+        return try {
+            withContext(Dispatchers.IO) { client.status() }.deviceName.take(MAX_DEVICE_NAME)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /** Create an account. It can't be used until an administrator approves it. */
+    suspend fun createAccount(serverUrl: String, email: String, password: String) {
+        withContext(Dispatchers.IO) {
+            SyncClient(serverUrl, "", "").registerUser(AccountCredentials(email, password))
+        }
+    }
+
+    suspend fun isAccountApproved(serverUrl: String, email: String, password: String): Boolean {
+        val status = withContext(Dispatchers.IO) {
+            SyncClient(serverUrl, "", "").userStatus(AccountCredentials(email, password))
+        }
+        return status.isApproved && status.isActive
+    }
+
+    /** Sign in for account actions, returning the session. Kept by the caller only. */
+    suspend fun signInToAccount(email: String, password: String): String {
+        val client = syncClientInstance ?: throw AppStateError.NotInitialised
+        val response = withContext(Dispatchers.IO) { client.logIn(AccountCredentials(email, password)) }
+        return response.sessionId ?: throw SyncClientException("No session")
+    }
+
+    suspend fun accountInfo(sessionId: String): UserAccountInfo {
+        val client = syncClientInstance ?: throw AppStateError.NotInitialised
+        return withContext(Dispatchers.IO) { client.accountInfo(sessionId) }
+    }
+
+    /** A token for sending things to the inbox. Shown once: the server keeps a hash. */
+    suspend fun generateInboxToken(sessionId: String): String {
+        val client = syncClientInstance ?: throw AppStateError.NotInitialised
+        return withContext(Dispatchers.IO) { client.generateInboxToken(sessionId) }.token
+    }
+
+    suspend fun revokeInboxToken(sessionId: String) {
+        val client = syncClientInstance ?: throw AppStateError.NotInitialised
+        withContext(Dispatchers.IO) { client.revokeInboxToken(sessionId) }
+    }
+
+    suspend fun deleteServerNotes(sessionId: String) {
+        val client = syncClientInstance ?: throw AppStateError.NotInitialised
+        withContext(Dispatchers.IO) { client.deleteServerNotes(sessionId) }
+    }
+
+    /**
+     * Deactivate or delete the account this device syncs with. The notes on this
+     * device stay: closing a sync account isn't deleting notes. No revoke is sent,
+     * because the account's devices are already gone.
+     */
+    suspend fun closeAccount(sessionId: String, mode: AccountDeletionMode) {
+        val client = syncClientInstance ?: throw AppStateError.NotInitialised
+        withContext(Dispatchers.IO) { client.deleteAccount(sessionId, mode.wireValue) }
+        forgetConnection()
+    }
+
+    /** Why an account action failed, as something the user can act on. */
+    fun describeAccountFailure(e: Throwable): String = when {
+        e is SyncClientException && e.statusCode == 401 -> text(R.string.account_error_credentials)
+        e is SyncClientException && e.statusCode == 409 -> text(R.string.account_error_exists)
+        // 403 and 429 carry the server's reason: not approved, deactivated, or how long to wait
+        e is SyncClientException && e.serverMessage != null && (e.statusCode == 403 || e.statusCode == 429) ->
+            e.serverMessage
+        e is SyncClientException -> text(R.string.account_error_server)
+        else -> text(R.string.connect_error_network)
     }
 
     // MARK: - Credential Import (multi-device setup)
 
-    /**
-     * Import credentials from another device.
-     * Supports both encrypted (jottery:v1:) and legacy (base64 JSON) formats.
-     *
-     * This is the main entry point called from SetupScreen's Import mode.
-     */
-    suspend fun importFromDevice(
-        credentialString: String,
-        password: String,
-        deviceName: String,
-    ): Result<String> {
-        return try {
-            val trimmed = credentialString.trim()
+    /** What a credential string decrypts to. */
+    private class ImportedCredentials(
+        val endpoint: String,
+        val apiKey: String,
+        val salt: ByteArray,
+        val iterations: Int,
+    )
 
-            if (trimmed.startsWith("jottery:v1:")) {
-                importEncryptedCredentials(trimmed, password, deviceName)
-            } else {
-                importLegacyCredentials(trimmed, password, deviceName)
+    /**
+     * Setup: join an account with a credential string from another device.
+     * Supports encrypted (jottery:v1:) and legacy (base64 JSON) strings.
+     */
+    fun importFromDevice(credentialString: String, password: String, deviceName: String) {
+        connecting {
+            val credentials = parseCredentials(credentialString.trim(), password)
+            val connection = cloneDevice(credentials, deviceName)
+            val client = SyncClient(connection.endpoint, connection.apiKey, connection.clientId)
+
+            // Any failure but an explicit 404 stops the import: carrying on would
+            // leave this device on a key of its own.
+            val master = try {
+                EnvelopeService.fetchServerKey(client, connection.userId, password)
+            } catch (e: Exception) {
+                revokeQuietly(connection)
+                throw e
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "[Import] importFromDevice failed: ${e.message}", e)
-            Result.failure(e)
+
+            if (master != null) {
+                createVaultFromMasterKey(master, password)
+            } else {
+                // The account has no wrapped key: its key comes from this salt
+                createVault(password, credentials.salt, credentials.iterations)
+            }
+            finishConnection(connection, openedBlob = master != null)
         }
     }
+
+    /** Settings: join an account with a credential string, keeping this vault. */
+    fun importIntoExistingVault(credentialString: String, password: String, deviceName: String) {
+        connecting {
+            val credentials = parseCredentials(credentialString.trim(), password)
+            joinAccount(cloneDevice(credentials, deviceName), password)
+        }
+    }
+
+    private suspend fun cloneDevice(credentials: ImportedCredentials, deviceName: String): PendingConnection {
+        val response = withContext(Dispatchers.IO) {
+            SyncClient(credentials.endpoint, "", "").cloneDevice(
+                CloneDeviceRequest(apiKey = credentials.apiKey, deviceName = deviceName)
+            )
+        }
+        return PendingConnection(
+            endpoint = credentials.endpoint,
+            apiKey = response.apiKey,
+            clientId = response.clientId,
+            userId = response.userId,
+            accountPassword = null,
+        )
+    }
+
+    private suspend fun parseCredentials(input: String, password: String): ImportedCredentials =
+        if (input.startsWith("jottery:v1:")) {
+            parseEncryptedCredentials(input, password)
+        } else {
+            parseLegacyCredentials(input)
+        }
 
     /**
      * Handle encrypted credential format:
      * jottery:v1:<salt_b64>.<base64(JSON({"ciphertext":"...","iv":"..."}))>
      */
-    private suspend fun importEncryptedCredentials(
-        input: String,
-        password: String,
-        deviceName: String,
-    ): Result<String> {
+    private suspend fun parseEncryptedCredentials(input: String, password: String): ImportedCredentials {
         val payload = input.removePrefix("jottery:v1:")
         val dotIndex = payload.indexOf('.')
-        if (dotIndex == -1) {
-            return Result.failure(Exception("Invalid credential format: missing separator"))
+        if (dotIndex == -1) throw ConnectRefused(text(R.string.connect_error_bad_credentials))
+
+        val salt: ByteArray
+        val encrypted: EncryptedData
+        try {
+            salt = android.util.Base64.decode(payload.substring(0, dotIndex), android.util.Base64.DEFAULT)
+            val payloadBytes = android.util.Base64.decode(payload.substring(dotIndex + 1), android.util.Base64.DEFAULT)
+            encrypted = CryptoService.parseEncryptedJSON(String(payloadBytes, Charsets.UTF_8))
+        } catch (_: Exception) {
+            throw ConnectRefused(text(R.string.connect_error_bad_credentials))
         }
+        if (salt.size < 32) throw ConnectRefused(text(R.string.connect_error_bad_credentials))
 
-        val saltB64 = payload.substring(0, dotIndex)
-        val encryptedPayloadB64 = payload.substring(dotIndex + 1)
-
-        // Decode salt from base64
-        val salt = android.util.Base64.decode(saltB64, android.util.Base64.DEFAULT)
-        if (salt.size < 32) {
-            return Result.failure(Exception("Invalid credential format: salt too short"))
-        }
-
-        // Decode encrypted payload: base64 → JSON string → EncryptedData
-        val payloadBytes = android.util.Base64.decode(encryptedPayloadB64, android.util.Base64.DEFAULT)
-        val payloadJSON = String(payloadBytes, Charsets.UTF_8)
-        val encrypted = CryptoService.parseEncryptedJSON(payloadJSON)
-
-        // Try decrypting with common iteration counts
-        // (the jottery:v1: format does not include the iteration count)
-        val iterationCandidates = listOf(
-            CryptoService.DEFAULT_ITERATIONS,  // 600,000
-            CryptoService.MIN_ITERATIONS,      // 100,000
-        )
-
-        var decryptedJSON: String? = null
-        var matchedIterations = CryptoService.DEFAULT_ITERATIONS
-
+        // The jottery:v1: format doesn't record the iteration count
+        val iterationCandidates = listOf(CryptoService.DEFAULT_ITERATIONS, CryptoService.MIN_ITERATIONS)
         for (candidate in iterationCandidates) {
-            try {
-                val key = withContext(Dispatchers.Default) {
-                    CryptoService.deriveKey(password, salt, candidate)
-                }
-                decryptedJSON = CryptoService.decryptText(encrypted, key)
-                matchedIterations = candidate
-                break
-            } catch (_: Exception) {
-                // Try next iteration count
-            }
-        }
-
-        if (decryptedJSON == null) {
-            return Result.failure(Exception("Wrong password or corrupted credentials"))
-        }
-
-        // Parse decrypted payload: {"endpoint":"...","apiKey":"...","clientId":"..."}
-        val jsonParser = Json { ignoreUnknownKeys = true }
-        val creds = jsonParser.decodeFromString<CredentialPayload>(decryptedJSON)
-
-        if (creds.endpoint.isBlank() || creds.apiKey.isBlank()) {
-            return Result.failure(Exception("Invalid credential payload: missing endpoint or API key"))
-        }
-
-        val endpoint = creds.endpoint.trimEnd('/')
-        return finishImport(endpoint, creds.apiKey, deviceName, password, salt, matchedIterations)
-    }
-
-    /**
-     * Handle legacy credential format: base64(JSON with endpoint, apiKey, clientId, salt).
-     */
-    private suspend fun importLegacyCredentials(
-        input: String,
-        password: String,
-        deviceName: String,
-    ): Result<String> {
-        val jsonStr = try {
-            val bytes = android.util.Base64.decode(input, android.util.Base64.DEFAULT)
-            String(bytes, Charsets.UTF_8)
-        } catch (e: Exception) {
-            return Result.failure(Exception("Invalid credential format: not valid base64"))
-        }
-
-        val jsonParser = Json { ignoreUnknownKeys = true }
-        val creds = try {
-            jsonParser.decodeFromString<LegacyCredentialPayload>(jsonStr)
-        } catch (e: Exception) {
-            return Result.failure(Exception("Invalid credential format: could not parse JSON"))
-        }
-
-        if (creds.endpoint.isBlank() || creds.apiKey.isBlank()) {
-            return Result.failure(Exception("Invalid credentials: missing required fields"))
-        }
-
-        if (creds.salt.isNullOrBlank()) {
-            return Result.failure(Exception("Invalid credentials: missing salt"))
-        }
-
-        val salt = android.util.Base64.decode(creds.salt, android.util.Base64.DEFAULT)
-        val endpoint = creds.endpoint.trimEnd('/')
-
-        return finishImport(endpoint, creds.apiKey, deviceName, password, salt, CryptoService.DEFAULT_ITERATIONS)
-    }
-
-    /**
-     * Common finishing logic: clone device, create vault with imported salt, setup sync.
-     */
-    private suspend fun finishImport(
-        endpoint: String,
-        sourceApiKey: String,
-        deviceName: String,
-        password: String,
-        salt: ByteArray,
-        iterations: Int,
-    ): Result<String> {
-        // Clone device to get a fresh API key for this device
-        val tempClient = SyncClient(endpoint, "", "")
-        val response = withContext(Dispatchers.IO) {
-            tempClient.cloneDevice(
-                CloneDeviceRequest(
-                    apiKey = sourceApiKey,
-                    deviceName = deviceName,
-                )
-            )
-        }
-
-        // Store API key and client ID
-        val context = getApplication<Application>()
-        KeystoreService.setAPIKey(context, response.apiKey)
-        KeystoreService.setClientId(context, response.clientId)
-
-        // Store userId for envelope encryption
-        syncRepo?.let { repo ->
-            val syncMeta = repo.getSyncMetadata() ?: com.jottery.android.model.SyncMetadata()
-            repo.saveSyncMetadata(syncMeta.copy(userId = response.userId))
-        }
-
-        // Create vault with the imported salt so the same password derives the same key
-        createVault(password, existingSalt = salt, existingIterations = iterations)
-
-        // Enable sync
-        val newSettings = _settings.value.copy(
-            syncEnabled = true,
-            syncEndpoint = endpoint,
-        )
-        updateSettings(newSettings)
-
-        // Envelope onboarding: if the server has a wrapped master key
-        // (from a device using envelope encryption), fetch and unwrap it
-        // so this device uses the same key. Must happen before setupSync.
-        val encRepo = encryptionRepo
-        val syncRepository = syncRepo
-        if (encRepo != null && syncRepository != null) {
-            val importClient = SyncClient(endpoint, response.apiKey, response.clientId)
-            val userId = response.userId
-            if (userId.isNotEmpty()) {
+            val decrypted = withContext(Dispatchers.Default) {
                 try {
-                    val serverKey = EnvelopeService.onboardFromServer(
-                        importClient, encRepo, password, userId,
-                    )
-                    val serverKeyData = serverKey.encoded
-                    keyManager.unlockWithKeyData(serverKeyData)
-                } catch (_: EnvelopeException) {
-                    Log.d(TAG, "[Envelope] No server key — this device is the first")
-                } catch (e: Exception) {
-                    Log.w(TAG, "[Envelope] Onboarding failed: ${e.message}")
+                    CryptoService.decryptText(encrypted, CryptoService.deriveKey(password, salt, candidate))
+                } catch (_: Exception) {
+                    null
                 }
+            } ?: continue
+
+            val creds = try {
+                json.decodeFromString<CredentialPayload>(decrypted)
+            } catch (_: Exception) {
+                throw ConnectRefused(text(R.string.connect_error_bad_credentials))
             }
-        }
-
-        setupSync(response.apiKey)
-
-        // Trigger initial sync in the background
-        viewModelScope.launch {
-            try {
-                _isSyncing.value = true
-                _syncStatusMessage.value = "Pulling notes\u2026"
-                val service = syncServiceInstance ?: return@launch
-                withContext(Dispatchers.IO) { service.fullSync() }
-                _isSyncing.value = false
-                _lastSyncAt.value = Instant.now()
-                loadNotes()
-                val count = _notes.value.size
-                _syncStatusMessage.value = "Synced \u2014 $count note${if (count == 1) "" else "s"}"
-                delay(4_000)
-                _syncStatusMessage.value = null
-            } catch (e: Exception) {
-                Log.e(TAG, "[Import] Initial sync failed: ${e.message}", e)
-                _isSyncing.value = false
-                _syncError.value = "Initial sync failed: ${e.message}"
-                _syncStatusMessage.value = null
+            if (creds.endpoint.isBlank() || creds.apiKey.isBlank()) {
+                throw ConnectRefused(text(R.string.connect_error_bad_credentials))
             }
+            return ImportedCredentials(creds.endpoint.trimEnd('/'), creds.apiKey, salt, candidate)
         }
+        throw ConnectRefused(text(R.string.connect_error_wrong_credentials_password))
+    }
 
-        return Result.success("Credentials imported successfully.")
+    /** Handle legacy credential format: base64(JSON with endpoint, apiKey, clientId, salt). */
+    private fun parseLegacyCredentials(input: String): ImportedCredentials {
+        val creds = try {
+            val bytes = android.util.Base64.decode(input, android.util.Base64.DEFAULT)
+            json.decodeFromString<LegacyCredentialPayload>(String(bytes, Charsets.UTF_8))
+        } catch (_: Exception) {
+            throw ConnectRefused(text(R.string.connect_error_bad_credentials))
+        }
+        if (creds.endpoint.isBlank() || creds.apiKey.isBlank() || creds.salt.isNullOrBlank()) {
+            throw ConnectRefused(text(R.string.connect_error_bad_credentials))
+        }
+        return ImportedCredentials(
+            endpoint = creds.endpoint.trimEnd('/'),
+            apiKey = creds.apiKey,
+            salt = android.util.Base64.decode(creds.salt, android.util.Base64.DEFAULT),
+            iterations = CryptoService.DEFAULT_ITERATIONS,
+        )
     }
 
     // MARK: - Backup & Import
 
-    /**
-     * Create an encrypted backup of all notes.
-     */
-    suspend fun createBackup(): String {
-        val nRepo = noteRepo ?: throw AppStateError.NotInitialised
-        val vRepo = versionRepo ?: throw AppStateError.NotInitialised
-        val aRepo = attachmentRepo ?: throw AppStateError.NotInitialised
-        val service = BackupService(nRepo, vRepo, aRepo, savedSearchRepo)
-        return withContext(Dispatchers.IO) { service.createBackup() }
-    }
+    private fun backupService(): BackupService = BackupService(
+        noteRepo = noteRepo ?: throw AppStateError.NotInitialised,
+        versionRepo = versionRepo ?: throw AppStateError.NotInitialised,
+        attachmentRepo = attachmentRepo ?: throw AppStateError.NotInitialised,
+        savedSearchRepo = savedSearchRepo ?: throw AppStateError.NotInitialised,
+        encryptionRepo = encryptionRepo ?: throw AppStateError.NotInitialised,
+        transaction = { block ->
+            (db ?: throw AppStateError.NotInitialised).withTransaction { block() }
+        },
+    )
 
-    /**
-     * Restore notes from an encrypted backup.
-     * Returns the number of notes restored.
-     */
-    suspend fun restoreBackup(backupJson: String): Int {
-        val nRepo = noteRepo ?: throw AppStateError.NotInitialised
-        val vRepo = versionRepo ?: throw AppStateError.NotInitialised
-        val aRepo = attachmentRepo ?: throw AppStateError.NotInitialised
-        val service = BackupService(nRepo, vRepo, aRepo, savedSearchRepo)
-        val count = withContext(Dispatchers.IO) { service.restoreBackup(backupJson) }
-        loadNotes()
-        return count
-    }
-
-    /**
-     * Import notes from a JSON export file.
-     * Returns the number of notes imported.
-     */
-    suspend fun importNotes(jsonString: String): Int {
-        val nRepo = noteRepo ?: throw AppStateError.NotInitialised
-        val aRepo = attachmentRepo ?: throw AppStateError.NotInitialised
+    /** Write an encrypted backup of the whole vault to [out]. */
+    suspend fun createBackup(out: java.io.OutputStream): BackupService.Summary {
         val key = keyManager.masterKey ?: throw AppStateError.NotInitialised
-        val service = ImportService(nRepo, aRepo)
-        val count = withContext(Dispatchers.IO) { service.`import`(jsonString, key) }
+        val summary = withContext(Dispatchers.IO) { backupService().write(out, key) }
+        BackupReminder.recordBackup(getApplication())
+        return summary
+    }
+
+    /** Look for what can't be read, or isn't here. */
+    suspend fun scanVaultHealth(): VaultHealthService.Report {
+        val notes = noteRepo ?: return VaultHealthService.Report()
+        val attachments = attachmentRepo ?: return VaultHealthService.Report()
+        val key = keyManager.masterKey ?: return VaultHealthService.Report()
+        return withContext(Dispatchers.Default) { VaultHealthService(notes, attachments).scan(key) }
+    }
+
+    /** Ask the server for a blob this device doesn't have. */
+    suspend fun repairAttachment(blobId: String): BlobRepair =
+        syncServiceInstance?.repairBlob(blobId) ?: BlobRepair.FAILED
+
+    /**
+     * Establish a backup's key from [password] and check the whole file, changing
+     * nothing, so the user can confirm what a restore will do.
+     */
+    suspend fun inspectBackup(source: BackupSource, password: String): RestorePlan =
+        withContext(Dispatchers.Default) {
+            backupService().inspect(source, password, keyManager.masterKey)
+        }
+
+    /** Merge a checked backup into the open vault. */
+    suspend fun restoreBackup(source: BackupSource, plan: RestorePlan): RestoreResult {
+        val key = keyManager.masterKey ?: throw AppStateError.NotInitialised
+        val result = withContext(Dispatchers.Default) { backupService().restore(source, plan, key) }
         loadNotes()
-        return count
+        scheduleDebouncedSync()
+        return result
+    }
+
+    /**
+     * Fresh install: make the backup's vault this device's vault and open it.
+     * Runs in viewModelScope because opening the vault leaves the setup screen.
+     */
+    fun restoreAsNewVault(source: BackupSource, password: String, onFailure: (Throwable) -> Unit) {
+        viewModelScope.launch {
+            try {
+                val plan = inspectBackup(source, password)
+                withContext(Dispatchers.Default) { backupService().restoreAsNewVault(source, plan) }
+                keyManager.unlockWithKeyData(plan.keyBytes())
+                _isFirstLaunch.value = false
+                _isLocked.value = false
+                loadNotes()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "[Backup] Restore into a new vault failed: ${e.javaClass.simpleName}")
+                onFailure(e)
+            }
+        }
+    }
+
+    /** Import notes from a JSON export file. */
+    suspend fun importNotes(jsonString: String, strategy: ImportStrategy): ImportService.Result {
+        val nRepo = noteRepo ?: throw AppStateError.NotInitialised
+        val aRepo = attachmentRepo ?: throw AppStateError.NotInitialised
+        val database = db ?: throw AppStateError.NotInitialised
+        val key = keyManager.masterKey ?: throw AppStateError.NotInitialised
+        val service = ImportService(nRepo, aRepo) { block -> database.withTransaction { block() } }
+        val result = withContext(Dispatchers.Default) { service.`import`(jsonString, key, strategy) }
+        loadNotes()
+        scheduleDebouncedSync()
+        return result
+    }
+
+    /**
+     * Export notes to a file the user chose. With no [ids] that's every note,
+     * including archived ones. Returns a message to show the user.
+     */
+    suspend fun exportTo(context: android.content.Context, uri: android.net.Uri, ids: Set<String>?): String {
+        val aRepo = attachmentRepo ?: return ""
+        val key = keyManager.masterKey ?: return ""
+        val all = _notes.value + _archivedNotes.value
+        val notes = if (ids == null) all else all.filter { it.id in ids }
+        return try {
+            val result = withContext(Dispatchers.IO) {
+                val stream = context.contentResolver.openOutputStream(uri) ?: throw java.io.FileNotFoundException()
+                stream.use { ExportService(aRepo).export(notes, key, it) }
+            }
+            if (result.skippedAttachments > 0) {
+                text(R.string.export_done_skipped, result.notes, result.skippedAttachments)
+            } else {
+                text(R.string.export_done, result.notes)
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e(TAG, "[Export] Failed: ${e.javaClass.simpleName}")
+            text(R.string.export_failed, e.message ?: e.javaClass.simpleName)
+        }
+    }
+
+    /** Add tags to several notes. */
+    suspend fun addTagsToNotes(ids: Set<String>, tags: List<String>) =
+        changeTags(ids) { current -> (current + tags).distinct() }
+
+    /** Remove tags from several notes. */
+    suspend fun removeTagsFromNotes(ids: Set<String>, tags: List<String>) =
+        changeTags(ids) { current -> current - tags.toSet() }
+
+    private suspend fun changeTags(ids: Set<String>, change: (List<String>) -> List<String>) {
+        val repo = noteRepo ?: return
+        val key = keyManager.masterKey ?: return
+        ids.forEach { repo.changeTags(it, key, change) }
+        afterBulkChange()
+    }
+
+    /** Set or clear the colour of several notes. Locked ones are left alone. */
+    suspend fun setColourOnNotes(ids: Set<String>, colour: String?) {
+        val repo = noteRepo ?: return
+        val key = keyManager.masterKey ?: return
+        for (id in ids) {
+            val note = repo.get(id, key) ?: continue
+            if (!note.locked && note.color != colour) repo.update(note.copy(color = colour), key)
+        }
+        afterBulkChange()
+    }
+
+    /** Archive several notes. Returns how many were left because they're locked. */
+    suspend fun archiveNotes(ids: Set<String>): Int {
+        val repo = noteRepo ?: return 0
+        val key = keyManager.masterKey ?: return 0
+        var skipped = 0
+        for (id in ids) {
+            val note = repo.get(id, key) ?: continue
+            if (note.locked) skipped++ else if (!note.archived) repo.archive(id)
+        }
+        if (_selectedNoteId.value in ids) _selectedNoteId.value = null
+        afterBulkChange()
+        return skipped
+    }
+
+    /**
+     * Delete several notes to the bin, as web does: pinned and locked ones stay.
+     * Returns how many were left.
+     */
+    suspend fun deleteNotes(ids: Set<String>): Int {
+        val repo = noteRepo ?: return 0
+        val key = keyManager.masterKey ?: return 0
+        var skipped = 0
+        for (id in ids) {
+            val note = repo.get(id, key) ?: continue
+            if (note.pinned || note.locked) skipped++ else repo.softDelete(id)
+        }
+        if (_selectedNoteId.value in ids) _selectedNoteId.value = null
+        afterBulkChange()
+        return skipped
+    }
+
+    /**
+     * Combine notes into one, oldest first, and move the originals to the bin.
+     * Locked notes take no part. Returns the new note, or null if fewer than two
+     * notes could be used, having changed nothing.
+     */
+    suspend fun combineNotes(ids: Set<String>): DecryptedNote? {
+        val repo = noteRepo ?: return null
+        val key = keyManager.masterKey ?: return null
+        val sources = ids.mapNotNull { repo.get(it, key) }
+            .filter { !it.locked }
+            .sortedBy { it.createdAt }
+        if (sources.size < 2) return null
+
+        val combined = repo.create(
+            content = sources.joinToString(COMBINED_NOTE_SEPARATOR) { it.content },
+            tags = sources.flatMap { it.tags }.distinct(),
+            key = key,
+        )
+        val refs = sources.flatMap { repo.rawAttachmentRefs(it.id) }.distinctBy { it.id }
+        if (refs.isNotEmpty()) repo.setAttachments(combined.id, refs, key)
+        sources.forEach { repo.softDelete(it.id) }
+
+        _selectedNoteId.value = combined.id
+        afterBulkChange()
+        return combined
+    }
+
+    /** One reload for the whole batch, rather than one per note. */
+    private suspend fun afterBulkChange() {
+        notesRevision.incrementAndGet()
+        loadNotes()
+        scheduleDebouncedSync()
     }
 
     /**
@@ -2216,16 +2850,12 @@ class AppState(application: Application) : AndroidViewModel(application) {
         Log.d(TAG, "[Sync] resolveConflict: noteId=$noteId, strategy=$strategy")
 
         val conflict = _pendingConflicts.value.firstOrNull { it.id == noteId } ?: return
-        val service = syncServiceInstance
+        val service = syncServiceInstance ?: return
 
-        if (service != null) {
-            try {
-                withContext(Dispatchers.IO) {
-                    service.resolveConflict(conflict, strategy)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "[Sync] resolveConflict failed: ${e.message}", e)
-            }
+        // On failure the conflict stays: the caller shows the error and the user
+        // can choose again. Nothing has been lost.
+        withContext(Dispatchers.IO) {
+            service.resolveConflict(conflict, strategy)
         }
 
         _pendingConflicts.value = _pendingConflicts.value.filter { it.id != noteId }
@@ -2233,113 +2863,146 @@ class AppState(application: Application) : AndroidViewModel(application) {
         triggerSync()
     }
 
-    // MARK: - Inbox (Phase 5 Stubs)
+    // MARK: - Inbox
 
-    /**
-     * Load inbox items from the server.
-     *
-     * TODO: Phase 5 -- fetch from SyncClient.
-     */
+    /** Fetch the inbox. A failure keeps what's already shown, and is no sync error. */
     suspend fun loadInboxItems() {
-        // TODO: Phase 5 -- syncClient.listInboxItems()
-        Log.d(TAG, "[Sync] loadInboxItems: stub")
+        val client = syncClientInstance ?: return
+        try {
+            val items = withContext(Dispatchers.IO) { client.getInboxItems() }
+            // The server is not trusted: ids go into a URL path on delete
+            _inboxItems.value = items.filter { SyncValidator.isUuid(it.id) }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "[Inbox] Load failed: ${e.javaClass.simpleName}")
+        }
     }
 
     /**
-     * Accept an inbox item -- create a local note from it and delete from server.
-     *
-     * TODO: Phase 5 -- create note from item, delete from server.
+     * Turn an inbox item into a note. The server's copy is deleted only once the
+     * note is saved, so a failure can't lose the item. If the delete itself fails
+     * the item stays listed, and accepting it again would make a second note, so
+     * the user is told.
      */
     suspend fun acceptInboxItem(item: InboxItem) {
         val repo = noteRepo ?: return
         val key = keyManager.masterKey ?: return
+        val client = syncClientInstance ?: return
 
-        // Create a new encrypted note from the inbox item
         val note = repo.create(content = item.content, tags = item.tags, key = key)
+        notesRevision.incrementAndGet()
         _notes.value = listOf(note) + _notes.value
+        scheduleSearch()
+        scheduleDebouncedSync()
 
-        // TODO: Phase 5 -- syncClient.deleteInboxItem(id = item.id)
-        _inboxItems.value = _inboxItems.value.filter { it.id != item.id }
+        try {
+            withContext(Dispatchers.IO) { client.deleteInboxItem(item.id) }
+            _inboxItems.value = _inboxItems.value.filter { it.id != item.id }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            showMessage(text(R.string.inbox_delete_failed))
+        }
     }
 
-    /**
-     * Delete a single inbox item from the server.
-     *
-     * TODO: Phase 5 -- delete from SyncClient.
-     */
+    /** Delete one inbox item from the server. */
     suspend fun deleteInboxItem(item: InboxItem) {
-        // TODO: Phase 5 -- syncClient.deleteInboxItem(id = item.id)
-        _inboxItems.value = _inboxItems.value.filter { it.id != item.id }
+        val client = syncClientInstance ?: return
+        try {
+            withContext(Dispatchers.IO) { client.deleteInboxItem(item.id) }
+            _inboxItems.value = _inboxItems.value.filter { it.id != item.id }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            showMessage(text(R.string.inbox_delete_failed))
+        }
     }
 
-    /**
-     * Delete all inbox items from the server.
-     *
-     * TODO: Phase 5 -- delete all from SyncClient.
-     */
+    /** Delete every inbox item from the server. */
     suspend fun deleteAllInboxItems() {
-        // TODO: Phase 5 -- syncClient.deleteAllInboxItems()
-        _inboxItems.value = emptyList()
+        val client = syncClientInstance ?: return
+        try {
+            withContext(Dispatchers.IO) { client.deleteAllInboxItems() }
+            _inboxItems.value = emptyList()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            showMessage(text(R.string.inbox_delete_failed))
+        }
     }
 
     // MARK: - Lifecycle
 
     /**
-     * Handle foreground/background transitions.
-     * Call with started=true when app comes to foreground, false when going to background.
+     * Handle foreground/background transitions, called from MainActivity. The
+     * timeout counts from the last user activity, so time in the background and
+     * idle time before it both count, and timers that froze don't matter.
      */
     fun handleLifecycleEvent(started: Boolean) {
         if (!started) {
-            // Going to background -- record timestamp for auto-lock
-            if (backgroundedAt == null) {
-                backgroundedAt = Instant.now()
-            }
+            isBackgrounded = true
             sseClientInstance?.stop()
-        } else {
-            // Coming to foreground
-            if (_isLocked.value) return
+            return
+        }
 
-            // Check auto-lock (timeout 0 means "never")
-            val bg = backgroundedAt
-            if (bg != null && keyManager.autoLockTimeout > 0) {
-                val elapsedSeconds = java.time.Duration.between(bg, Instant.now()).seconds
-                if (elapsedSeconds >= keyManager.autoLockTimeout) {
-                    lock()
-                    backgroundedAt = null
-                    return
-                }
-            }
-            val wasBackgrounded = backgroundedAt != null
-            backgroundedAt = null
-            keyManager.recordActivity()
+        if (!isBackgrounded) return
+        isBackgrounded = false
+        if (_isLocked.value) return
 
-            // Restart SSE and sync when returning from genuine background
-            if (wasBackgrounded && _syncEnabled.value) {
-                viewModelScope.launch {
-                    try { syncServiceInstance?.startSSE() } catch (_: Exception) {}
-                    triggerSync()
-                }
+        if (keyManager.isIdleTimeoutExceeded()) {
+            lock()
+            return
+        }
+        keyManager.recordActivity()
+
+        // Restart SSE and catch up on what was missed
+        if (_syncEnabled.value) {
+            viewModelScope.launch {
+                syncServiceInstance?.startSSE()
+                triggerSync()
             }
         }
     }
 
     companion object {
+        /** New notes passwords only: existing short passwords must keep working. */
+        const val MIN_NOTES_PASSWORD_LENGTH = 8
+
         private const val TAG = "AppState"
         private const val PREFS_NAME = "jottery_prefs"
         private const val KEY_EDITOR_FONT_SCALE = "editorFontScale"
+        private const val KEY_DEFAULT_NOTE_TYPE = "defaultNoteType"
+        private const val DEFAULT_NOTE_TYPE = "markdown"
+        private const val KEY_SCREEN_SECURITY = "screenSecurity"
+        private const val KEY_BIOMETRIC_OFFERED = "biometricOffered"
+        private const val MAX_LOAD_ATTEMPTS = 3
+        private const val DEFAULT_SYNC_MINUTES = 5
+        private const val HTTP_CONFLICT = 409
+        private const val MAX_DEVICE_NAME = 100
+
+        /** What web puts between notes it combines. */
+        private const val COMBINED_NOTE_SEPARATOR = "\n\n---\n\n"
     }
 }
 
-// MARK: - Search Token Types
-
-private sealed class SearchToken {
-    data class Tag(val name: String) : SearchToken()
-    data class Negation(val term: String) : SearchToken()
-    data class Phrase(val text: String) : SearchToken()
-    data class Word(val text: String) : SearchToken()
-    data class HasModifier(val modifier: String) : SearchToken()
-    data object Or : SearchToken()
+/** The note a selection refers to, wherever it is and whatever the search shows. */
+fun resolveSelectedNote(
+    id: String?,
+    notes: List<DecryptedNote>,
+    archived: List<DecryptedNote>,
+): DecryptedNote? = id?.let { wanted ->
+    notes.firstOrNull { it.id == wanted } ?: archived.firstOrNull { it.id == wanted }
 }
+
+/** What closing an account does, with the value the server expects. */
+enum class AccountDeletionMode(val wireValue: String) {
+    DEACTIVATE("deactivate"),
+    DELETE("delete"),
+}
+
+/** A default name for an export file. */
+fun defaultExportName(): String = "jottery-export-${java.time.LocalDate.now()}.json"
 
 // MARK: - Error Types
 
@@ -2348,4 +3011,5 @@ sealed class AppStateError(message: String) : Exception(message) {
     data object NoVault : AppStateError("No vault found")
     data object InvalidSalt : AppStateError("Invalid encryption salt")
     data object WrongPassword : AppStateError("Incorrect password")
+    data object BiometricUnavailable : AppStateError("Biometric unlock isn't available")
 }

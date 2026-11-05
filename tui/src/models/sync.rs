@@ -2,6 +2,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use super::validation::{self, Lenient};
+
 /// Sync metadata stored in the database
 /// Contains global sync configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -19,6 +21,16 @@ pub struct SyncMetadata {
     pub pending_registration_email: Option<String>, // Email of pending registration awaiting approval
     #[serde(default)]
     pub pending_device_name: Option<String>, // Device name for pending clone-device call (during import)
+    /// Hash of the wrapped key this device last opened or uploaded. See `envelope`.
+    #[serde(default)]
+    pub server_key_seen: Option<String>,
+    /// This device changed the notes password and owes the server the new wrapping.
+    #[serde(default)]
+    pub server_key_stale: bool,
+    /// Where the next pull starts, as the server gave it. It belongs to one account on
+    /// one server, so anything that changes those clears it.
+    #[serde(default)]
+    pub pull_cursor: Option<String>,
 }
 
 impl Default for SyncMetadata {
@@ -36,7 +48,19 @@ impl Default for SyncMetadata {
             auto_sync_interval: Some(1),
             pending_registration_email: None,
             pending_device_name: None,
+            server_key_seen: None,
+            server_key_stale: false,
+            pull_cursor: None,
         }
+    }
+}
+
+impl SyncMetadata {
+    /// Forget what belongs to one account on one server, when either changes.
+    pub fn forget_server_state(&mut self) {
+        self.pull_cursor = None;
+        self.server_key_seen = None;
+        self.server_key_stale = false;
     }
 }
 
@@ -97,6 +121,29 @@ pub struct SyncPushRequest {
     /// Hard-deleted note IDs (from emptying trash)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub deletions: Vec<SyncDeletion>,
+    /// Each note's `attachments` is its whole list, so the server can drop what's gone.
+    /// Older servers ignore this.
+    #[serde(rename = "attachmentsAuthoritative", default, skip_serializing_if = "std::ops::Not::not")]
+    pub attachments_authoritative: bool,
+    /// Saved searches to create or update
+    #[serde(rename = "savedSearches", default, skip_serializing_if = "Vec::is_empty")]
+    pub saved_searches: Vec<SyncSavedSearch>,
+}
+
+/// A saved search as it goes over the wire. `name` and `query` are ciphertext.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncSavedSearch {
+    pub id: String,
+    pub name: String,
+    pub query: String,
+    pub order: i64,
+    pub created_at: DateTime<Utc>,
+    pub modified_at: DateTime<Utc>,
+    pub deleted: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub version: i32,
 }
 
 /// Note structure for sync (matches server expectations)
@@ -110,14 +157,18 @@ pub struct SyncNote {
     pub tags: Vec<String>,            // Array of encrypted JSON strings
     pub attachments: Vec<AttachmentRef>,
     pub pinned: bool,
+    #[serde(default)]
     pub archived: bool,
     pub archived_at: Option<DateTime<Utc>>,
+    #[serde(default)]
     pub locked: bool,
     pub locked_at: Option<DateTime<Utc>>,
     pub deleted: bool,
     pub deleted_at: Option<DateTime<Utc>>,
     pub version: i32,
     pub word_wrap: Option<bool>,
+    #[serde(default)]
+    pub show_preview: Option<bool>,
     pub syntax_language: Option<String>,
     pub color: Option<String>,        // Semantic color name (unencrypted)
     // Hash chain fields for git-like conflict detection
@@ -147,16 +198,58 @@ pub struct SyncAttachment {
     pub data: String,                 // Base64 encoded encrypted blob
 }
 
-/// Push response from server
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Push response from server. Read it with [`SyncPushResponse::parse`], which checks
+/// what the server sent.
+#[derive(Debug, Clone, Default)]
 pub struct SyncPushResponse {
     pub accepted: Vec<SyncAccepted>,
     pub rejected: Vec<SyncRejected>,
-    pub errors: Vec<String>,
     /// Accepted notes referencing attachment data the server does not hold.
     /// Absent on older servers; clients re-push blobs they have (self-heal).
-    #[serde(rename = "attachmentWarnings", default)]
     pub attachment_warnings: Vec<AttachmentWarning>,
+    /// Deletions refused because the note has a newer edit. Older servers don't send
+    /// this, which means the same as an empty list.
+    pub rejected_deletions: Vec<String>,
+    /// Pushed notes skipped because they were permanently deleted after this edit. Older
+    /// servers don't send this either.
+    pub skipped_deleted: Vec<String>,
+}
+
+/// A push response as it arrives, before anything in it is trusted.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WirePushResponse {
+    #[serde(default)]
+    accepted: Lenient<SyncAccepted>,
+    #[serde(default)]
+    rejected: Lenient<SyncRejected>,
+    #[serde(default)]
+    attachment_warnings: Lenient<AttachmentWarning>,
+    #[serde(default)]
+    rejected_deletions: Lenient<String>,
+    #[serde(default)]
+    skipped_deleted: Lenient<String>,
+}
+
+impl SyncPushResponse {
+    /// Read a response, dropping entries that fail the checks at the sync boundary.
+    pub fn parse(json: &str) -> Result<Self, serde_json::Error> {
+        let wire: WirePushResponse = serde_json::from_str(json)?;
+
+        Ok(Self {
+            accepted: wire.accepted.items.into_iter().filter(|a| validation::is_uuid(&a.id)).collect(),
+            rejected: wire.rejected.items.into_iter().filter(|r| validation::is_uuid(&r.id)).collect(),
+            attachment_warnings: wire.attachment_warnings.items.into_iter()
+                .filter(|warning| validation::is_uuid(&warning.note_id))
+                .map(|warning| AttachmentWarning {
+                    attachment_ids: warning.attachment_ids.into_iter().filter(|id| validation::is_uuid(id)).collect(),
+                    ..warning
+                })
+                .collect(),
+            rejected_deletions: wire.rejected_deletions.items.into_iter().filter(|id| validation::is_uuid(id)).collect(),
+            skipped_deleted: wire.skipped_deleted.items.into_iter().filter(|id| validation::is_uuid(id)).collect(),
+        })
+    }
 }
 
 /// One accepted note whose attachment references have no data on the server
@@ -195,6 +288,8 @@ pub struct SyncRejected {
     pub server_locked_at: Option<DateTime<Utc>>,
     pub server_syntax_language: Option<String>,
     pub server_word_wrap: Option<bool>,
+    #[serde(default)]
+    pub server_show_preview: Option<bool>,
     pub server_color: Option<String>,     // Semantic color name
     // Hash chain fields for git-like conflict detection
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -229,6 +324,8 @@ pub struct ConflictData {
     pub server_locked_at: Option<DateTime<Utc>>,
     pub server_syntax_language: Option<String>,
     pub server_word_wrap: Option<bool>,
+    #[serde(default)]
+    pub server_show_preview: Option<bool>,
     pub server_color: Option<String>,     // Semantic color name
     pub detected_at: DateTime<Utc>,       // When conflict was detected
     // Hash chain fields for git-like conflict detection
@@ -251,6 +348,9 @@ pub struct ConflictData {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncPullRequest {
+    /// Opaque position in the server's changes. Sending it, even empty, selects cursor
+    /// mode. Older servers ignore it.
+    pub cursor: Option<String>,
     pub last_sync_at: Option<DateTime<Utc>>,
     pub known_note_ids: Vec<String>,
     pub known_attachment_ids: Vec<String>,
@@ -258,22 +358,86 @@ pub struct SyncPullRequest {
     pub offset: Option<i64>,
 }
 
-/// Pull response from server
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+/// Pull response from server. Read it with [`SyncPullResponse::parse`]: everything
+/// here has been through the checks at the sync boundary.
+#[derive(Debug, Clone)]
 pub struct SyncPullResponse {
     pub notes: Vec<SyncNote>,
     pub deletions: Vec<SyncDeletion>,
     pub attachments: Vec<SyncAttachment>,
     pub versions: Vec<SyncNoteVersion>,
+    pub saved_searches: Vec<SyncSavedSearch>,
     pub synced_at: DateTime<Utc>,
-    /// More notes remain: ask again with a larger offset.
-    #[serde(default)]
+    /// More remains. In cursor mode ask again from `next_cursor`, or with a larger
+    /// offset otherwise.
     pub has_more: bool,
-    #[serde(default)]
+    /// Only a server with the pull cursor sends this
+    pub next_cursor: Option<String>,
     pub inbox_items: Option<Vec<InboxItem>>,
-    #[serde(default)]
     pub inbox_count: Option<i64>,
+    /// Entries that were dropped, because they didn't parse or failed the checks
+    pub dropped: usize,
+}
+
+/// A pull response as it arrives, before anything in it is trusted.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WirePullResponse {
+    #[serde(default)]
+    notes: Lenient<SyncNote>,
+    #[serde(default)]
+    deletions: Lenient<SyncDeletion>,
+    #[serde(default)]
+    attachments: Lenient<SyncAttachment>,
+    #[serde(default)]
+    versions: Lenient<SyncNoteVersion>,
+    #[serde(default)]
+    saved_searches: Lenient<SyncSavedSearch>,
+    synced_at: DateTime<Utc>,
+    #[serde(default)]
+    has_more: bool,
+    #[serde(default)]
+    next_cursor: Option<String>,
+    #[serde(default)]
+    inbox_items: Option<Lenient<InboxItem>>,
+    #[serde(default)]
+    inbox_count: Option<i64>,
+}
+
+impl SyncPullResponse {
+    /// Read a response, dropping entries that don't parse or fail the checks, so that
+    /// one bad entry costs that entry and the rest of the sync carries on.
+    pub fn parse(json: &str) -> Result<Self, serde_json::Error> {
+        let wire: WirePullResponse = serde_json::from_str(json)?;
+
+        let mut dropped = wire.notes.dropped + wire.deletions.dropped
+            + wire.attachments.dropped + wire.versions.dropped + wire.saved_searches.dropped;
+
+        let notes = validation::keep_valid(wire.notes.items, SyncNote::is_valid, &mut dropped)
+            .into_iter().map(SyncNote::sanitised).collect();
+        let deletions = validation::keep_valid(wire.deletions.items, |d: &SyncDeletion| validation::is_uuid(&d.id), &mut dropped);
+        let attachments = validation::keep_valid(wire.attachments.items, |a: &SyncAttachment| validation::is_uuid(&a.id), &mut dropped);
+        let versions = validation::keep_valid(wire.versions.items, SyncNoteVersion::is_valid, &mut dropped);
+        let saved_searches = validation::keep_valid(wire.saved_searches.items, |s: &SyncSavedSearch| validation::is_uuid(&s.id), &mut dropped);
+        let inbox_items = wire.inbox_items.map(|list| {
+            dropped += list.dropped;
+            validation::keep_valid(list.items, InboxItem::is_valid, &mut dropped)
+        });
+
+        Ok(Self {
+            notes,
+            deletions,
+            attachments,
+            versions,
+            saved_searches,
+            synced_at: wire.synced_at,
+            has_more: wire.has_more,
+            next_cursor: wire.next_cursor,
+            inbox_items,
+            inbox_count: wire.inbox_count,
+            dropped,
+        })
+    }
 }
 
 /// Inbox item (unencrypted note submitted via Inbox API)
@@ -369,18 +533,17 @@ mod tests {
 
     #[test]
     fn push_response_decodes_with_and_without_attachment_warnings() {
-        let with: SyncPushResponse = serde_json::from_str(
-            r#"{"accepted":[],"rejected":[],"errors":[],"attachmentWarnings":[{"noteId":"n1","attachmentIds":["a1"]}]}"#,
-        )
+        let note_id = "6f1c3a52-0d1e-4b8a-9c3e-2f6a1c0e7a11";
+        let attachment_id = "0b9e4d6c-7a21-4f3e-8c55-1d2e3f4a5b6c";
+        let with = SyncPushResponse::parse(&format!(
+            r#"{{"accepted":[],"rejected":[],"errors":[],"attachmentWarnings":[{{"noteId":"{note_id}","attachmentIds":["{attachment_id}"]}}]}}"#,
+        ))
         .unwrap();
         assert_eq!(with.attachment_warnings.len(), 1);
-        assert_eq!(with.attachment_warnings[0].note_id, "n1");
-        assert_eq!(with.attachment_warnings[0].attachment_ids, vec!["a1"]);
+        assert_eq!(with.attachment_warnings[0].note_id, note_id);
+        assert_eq!(with.attachment_warnings[0].attachment_ids, vec![attachment_id]);
 
-        let without: SyncPushResponse = serde_json::from_str(
-            r#"{"accepted":[],"rejected":[],"errors":[]}"#,
-        )
-        .unwrap();
+        let without = SyncPushResponse::parse(r#"{"accepted":[],"rejected":[],"errors":[]}"#).unwrap();
         assert!(without.attachment_warnings.is_empty());
     }
 
@@ -410,6 +573,7 @@ mod tests {
             deleted_at: None,
             version: 1,
             word_wrap: Some(true),
+            show_preview: None,
             syntax_language: Some("markdown".to_string()),
             archived: false,
             archived_at: None,
@@ -444,6 +608,7 @@ mod tests {
             deleted_at: None,
             version: 1,
             word_wrap: Some(true),
+            show_preview: None,
             syntax_language: Some("markdown".to_string()),
             color: None,
             archived: false,
@@ -502,6 +667,7 @@ mod tests {
             server_pinned: false,
             server_syntax_language: Some("markdown".to_string()),
             server_word_wrap: Some(true),
+            server_show_preview: None,
             server_color: Some("green".to_string()),
             server_archived: false,
             server_archived_at: None,
@@ -537,6 +703,7 @@ mod tests {
             server_pinned: false,
             server_syntax_language: Some("markdown".to_string()),
             server_word_wrap: Some(true),
+            server_show_preview: None,
             server_color: Some("yellow".to_string()),
             server_archived: false,
             server_archived_at: None,
@@ -572,6 +739,7 @@ mod tests {
             deleted_at: None,
             version: 1,
             word_wrap: Some(true),
+            show_preview: None,
             syntax_language: Some("markdown".to_string()),
             color: Some("purple".to_string()),
             archived: false,

@@ -306,7 +306,7 @@
       on:click={toggleMoreMenu}
       class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
       title={$_('editor.moreActions')}
-      aria-label="More actions"
+      aria-label={$_('editor.moreActions')}
       data-testid="btn-more-actions"
     >
       <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -482,7 +482,7 @@
     on:click={onClose}
     class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors flex-shrink-0"
     title={$_('editor.closeNote')}
-    aria-label="Close note"
+    aria-label={$_('editor.closeNote')}
   >
     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

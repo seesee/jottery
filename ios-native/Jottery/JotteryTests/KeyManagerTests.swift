@@ -8,21 +8,26 @@ struct KeyManagerTests {
 
     @Test func concurrentBiometricUnlockAttemptsOnlyTriggerOnePrompt() async {
         let manager = KeyManager()
-        // Each retriever invocation stands in for one Face ID prompt.
+        // Each retriever invocation stands in for one Face ID prompt, which
+        // stays up until the test ends it.
         let counter = PromptCounter()
-        let slowRetrieve: @Sendable () async throws -> Data = {
+        let prompt = AsyncGate()
+        let retrieve: @Sendable () async throws -> Data = {
             await counter.increment()
-            try await Task.sleep(for: .milliseconds(200))
+            await prompt.wait()
             return Data(repeating: 7, count: 32)
         }
 
         // Two overlapping attempts — mirrors UnlockScreen.onAppear firing twice.
-        async let first = manager.attemptBiometricUnlock(retrieve: slowRetrieve)
-        async let second = manager.attemptBiometricUnlock(retrieve: slowRetrieve)
-        let results = await [first, second]
+        // The second starts while the first is provably still waiting on Face ID.
+        let first = Task { await manager.attemptBiometricUnlock(retrieve: retrieve) }
+        await waitUntil { await prompt.waitingCount == 1 }
+        let second = await manager.attemptBiometricUnlock(retrieve: retrieve)
+        await prompt.open()
 
+        #expect(second == false)                   // refused while one is in flight
+        #expect(await first.value == true)         // the real attempt succeeded
         #expect(await counter.count == 1)          // one prompt, not two
-        #expect(results.contains(true))            // the real attempt succeeded
         #expect(manager.isUnlocked)
     }
 
@@ -46,4 +51,62 @@ struct KeyManagerTests {
 private actor PromptCounter {
     var count = 0
     func increment() { count += 1 }
+}
+
+/// "Never" used to lock within 30 seconds (jottery-7wi1).
+@MainActor
+struct KeyManagerAutoLockTests {
+
+    @Test func neverMeansNever() {
+        let manager = KeyManager()
+        manager.unlockWithKeyData(Data(repeating: 7, count: 32))
+
+        manager.autoLockTimeout = 0
+        manager.checkAutoLock()
+
+        #expect(manager.isUnlocked)
+    }
+
+    @Test func aTimeoutThatHasPassedLocks() {
+        let manager = KeyManager()
+        manager.unlockWithKeyData(Data(repeating: 7, count: 32))
+        manager.autoLockTimeout = 60
+
+        manager.recordActivity(at: .now - .seconds(61))
+        manager.checkAutoLock()
+
+        #expect(!manager.isUnlocked)
+    }
+
+    @Test func aTimeoutThatHasntPassedDoesntLock() {
+        let manager = KeyManager()
+        manager.unlockWithKeyData(Data(repeating: 7, count: 32))
+        manager.autoLockTimeout = 60
+
+        manager.recordActivity(at: .now - .seconds(30))
+        manager.checkAutoLock()
+
+        #expect(manager.isUnlocked)
+    }
+
+    @Test func choosingNeverStopsTheTimer() {
+        let manager = KeyManager()
+        manager.unlockWithKeyData(Data(repeating: 7, count: 32))
+        #expect(manager.isAutoLockTimerRunning)
+
+        manager.autoLockTimeout = 0
+
+        #expect(!manager.isAutoLockTimerRunning)
+    }
+
+    @Test func choosingATimeoutAfterNeverStartsTheTimer() {
+        let manager = KeyManager()
+        manager.autoLockTimeout = 0
+        manager.unlockWithKeyData(Data(repeating: 7, count: 32))
+        #expect(!manager.isAutoLockTimerRunning)
+
+        manager.autoLockTimeout = 60
+
+        #expect(manager.isAutoLockTimerRunning)
+    }
 }

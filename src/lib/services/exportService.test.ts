@@ -4,9 +4,12 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { exportAllNotes, exportNotes, downloadExport, type ExportProgressCallback } from './exportService';
+import { exportAllNotes, exportNotes, downloadExport, importNotes, type ExportProgressCallback } from './exportService';
 import { noteService } from './noteService';
+import { noteRepository } from './noteRepository';
+import type { Note } from '../types';
 import { keyManager } from './keyManager';
+import { cryptoService } from './crypto';
 import { initTestDB, cleanupTestDB } from '../../test/db-utils';
 
 describe('exportService', () => {
@@ -27,6 +30,53 @@ describe('exportService', () => {
   afterEach(async () => {
     keyManager.clearMasterKey();
     await cleanupTestDB();
+  });
+
+  describe('exportAllNotes, for someone moving away', () => {
+    it('includes archived notes', async () => {
+      const note = await noteService.createNote('in the archive');
+      await noteRepository.archive(note.id);
+
+      const data = await exportAllNotes();
+
+      expect(data.notes.map(n => n.id)).toContain(note.id);
+      expect(data.notes.find(n => n.id === note.id)?.archived).toBe(true);
+    });
+
+    it('leaves out what is in the recycle bin', async () => {
+      const note = await noteService.createNote('binned');
+      await noteRepository.softDelete(note.id);
+
+      expect((await exportAllNotes()).notes.map(n => n.id)).not.toContain(note.id);
+    });
+
+    it('says when an attachment could not be read', async () => {
+      const note = await noteService.createNote('with a lost file');
+      const stored = await noteRepository.getById(note.id) as Note;
+      await noteRepository.update({
+        ...stored,
+        attachments: [{ id: 'gone', filename: 'name', mimeType: 'text/plain', size: 1, data: 'gone' }],
+      }, false, true);
+
+      expect((await exportAllNotes()).skipped).toEqual({ notes: 0, attachments: 1 });
+    });
+
+    it('says nothing when nothing was left out', async () => {
+      await noteService.createNote('fine');
+
+      expect((await exportAllNotes()).skipped).toBeUndefined();
+    });
+
+    it('brings an archived note back archived', async () => {
+      const note = await noteService.createNote('archived', [], { id: 'a0000000-0000-4000-8000-000000000099' });
+      await noteRepository.archive(note.id);
+      const data = await exportAllNotes();
+      await noteRepository.delete(note.id);
+
+      await importNotes(data);
+
+      expect((await noteRepository.getById(note.id))?.archived).toBe(true);
+    });
   });
 
   describe('exportAllNotes', () => {
@@ -129,6 +179,58 @@ describe('exportService', () => {
 
       expect(exportData.notes.length).toBe(2);
       expect(exportData.notes.map(n => n.content).sort()).toEqual(['Note 1', 'Note 2']);
+    });
+  });
+
+  describe('a note that cannot be decrypted', () => {
+    async function corrupted(field: 'content' | 'tags') {
+      const note = await noteService.createNote('Secret', ['tag']);
+      const stored = await noteRepository.getById(note.id);
+      const otherKey = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+      const foreign = JSON.stringify(await cryptoService.encryptText('other', otherKey));
+      await noteRepository.update({ ...stored!, ...(field === 'content' ? { content: foreign } : { tags: [foreign] }) }, false, true);
+      return note;
+    }
+
+    it.each(['content', 'tags'] as const)('is left out, and counted, when its %s fails', async field => {
+      await corrupted(field);
+      await noteService.createNote('Readable', ['fine']);
+
+      const data = await exportAllNotes();
+
+      expect(data.notes.map(note => note.content)).toEqual(['Readable']);
+      expect(data.skipped).toEqual({ notes: 1, attachments: 0 });
+      expect(JSON.stringify(data.notes)).not.toContain('ciphertext');
+    });
+
+    it('does not stop an export of chosen notes', async () => {
+      const bad = await corrupted('content');
+      const good = await noteService.createNote('Readable');
+
+      const data = await exportNotes([bad.id, good.id]);
+
+      expect(data.notes.map(note => note.content)).toEqual(['Readable']);
+      expect(data.skipped?.notes).toBe(1);
+    });
+
+    it('still exports content from before notes were encrypted, which isn\'t ciphertext', async () => {
+      const note = await noteService.createNote('placeholder');
+      const stored = await noteRepository.getById(note.id);
+      await noteRepository.update({ ...stored!, content: 'plain old text' }, false, true);
+
+      const data = await exportAllNotes();
+
+      expect(data.notes[0].content).toBe('plain old text');
+    });
+
+    it('still exports old plain text that happens to be valid JSON', async () => {
+      const note = await noteService.createNote('placeholder');
+      const stored = await noteRepository.getById(note.id);
+      await noteRepository.update({ ...stored!, content: '{"a": 1}' }, false, true);
+
+      const data = await exportAllNotes();
+
+      expect(data.notes[0].content).toBe('{"a": 1}');
     });
   });
 

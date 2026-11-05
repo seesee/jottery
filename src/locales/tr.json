@@ -186,6 +186,21 @@
     "confirmDelete": {
       "title": "Notu Sil",
       "message": "Bu not geri dönüşüm kutusuna taşınacaktır. Gerekirse daha sonra geri yükleyebilirsiniz."
+    },
+    "actionFailed": {
+      "archive": "Not arşivlenemedi: {error}",
+      "unarchive": "Not arşivden çıkarılamadı: {error}",
+      "lock": "Not kilitlenemedi: {error}",
+      "unlock": "Notun kilidi açılamadı: {error}",
+      "delete": "Not silinemedi: {error}"
+    },
+    "copyLinkFailed": "Bağlantı panoya kopyalanamadı",
+    "noteEditor": "Not düzenleyici",
+    "calc": {
+      "tooLong": "Bu not hesaplama için çok uzun ({lines} satır, en fazla {max}). Kısaltın veya başka bir sözdizimi kullanın.",
+      "consecutiveErrors": "Art arda {count} hatadan sonra durduruldu. Bu hesaplama gibi görünmüyor, başka bir sözdizimi deneyin.",
+      "totalErrors": "{count} hatadan sonra durduruldu. Bu not için başka bir sözdizimi deneyin.",
+      "tooSlow": "Çok uzun sürdüğü için durduruldu. Aşağıdaki satırların sonucu yok."
     }
   },
   "noteList": {
@@ -195,7 +210,8 @@
     "noteCountAll": "{total} not"
   },
   "tagInput": {
-    "removeTag": "Etiketi kaldır"
+    "removeTag": "Etiketi kaldır",
+    "suggestions": "Etiket önerileri"
   },
   "backupReminder": {
     "title": "Notlarınızı yedekleme zamanı",
@@ -216,7 +232,8 @@
     "frequencyMonthly": "Aylık",
     "frequencyOnChanges": "Belirli sayıda değişiklikten sonra",
     "changesThreshold": "Bu kadar not değişikliğinden sonra yedekle",
-    "description": "Otomatik yedeklemeler cihazınıza indirilir. Yedekleme zamanı geldiğinde bildirim almak için hatırlatıcıları etkinleştirin."
+    "description": "Otomatik yedeklemeler cihazınıza indirilir. Yedekleme zamanı geldiğinde bildirim almak için hatırlatıcıları etkinleştirin.",
+    "saveFailed": "Bu ayar kaydedilmedi. Yeniden deneyin."
   },
   "backup": {
     "title": "Şifreli Yedekleme",
@@ -254,8 +271,10 @@
         "title": "Yedekleme Bilgileri",
         "created": "Oluşturulma",
         "records": "Kayıtlar"
-      }
-    }
+      },
+      "storageFull": "Tarayıcının depolama alanı bitti, bu yüzden geri yükleme tamamlanmadı ve hiçbir şey saklanmadı. Yedek dosyanız sağlam: yer açıp yeniden geri yükleyin."
+    },
+    "autoFailed": "Otomatik yedekleme başarısız oldu. Lütfen elle yedek oluşturun."
   },
   "settings": {
     "title": "Ayarlar",
@@ -442,7 +461,22 @@
         "hintExisting": "Diğer cihazlarınızda notlarınızın kilidini açtığınız parola. Sunucuya hiçbir zaman gönderilmez.",
         "required": "Lütfen not parolanızı girin.",
         "incorrect": "Bu, notlarınızın bu cihazdaki kilidini açan parola değil. Sunucu parolanızı değil, not parolanızı girin.",
-        "uploadFailed": "Eşitleme kuruldu, ancak şifreleme anahtarı sunucuya kaydedilemedi; bu nedenle diğer cihazlar henüz bağlanamıyor. Bir sonraki kilit açışınızda yeniden denenecek"
+        "uploadFailed": "Eşitleme kuruldu, ancak şifreleme anahtarı sunucuya kaydedilemedi; bu nedenle diğer cihazlar henüz bağlanamıyor. Bir sonraki kilit açışınızda yeniden denenecek",
+        "mustDiffer": "Not parolanız ile hesap parolanız farklı olmalıdır. Eşitleme sunucusu hesap parolanızı görür, bu yüzden aynı olurlarsa notlarınızı okuyabilir.",
+        "matchesAccountWarning": "Not parolanız hesap parolanızla aynı, bu yüzden eşitleme sunucusu notlarınızı okuyabilir. Bunu düzeltmek için not parolanızı değiştirin."
+      },
+      "existingAccountDetected": "Bu e-postanın zaten bir hesabı var, bu yüzden bu cihaz ona bağlanacak. Diğer cihazlarınızda kullandığınız not parolasını girin.",
+      "errors": {
+        "credentialsRequired": "E-posta ve parola gerekli",
+        "passwordTooShort": "Parola en az 12 karakter olmalıdır",
+        "registrationFailed": "Kullanıcı kaydı başarısız oldu",
+        "deviceRegistrationFailed": "Cihaz kaydı başarısız oldu",
+        "loginFailed": "Giriş başarısız oldu",
+        "accountInfoFailed": "Hesap bilgileri yüklenemedi",
+        "deleteNotesFailed": "Notlar silinemedi",
+        "disconnectFailed": "Bağlantı kesilemedi",
+        "syncFailed": "Eşitleme başarısız oldu",
+        "toggleFailed": "Eşitleme değiştirilemedi"
       }
     },
     "editorTab": {
@@ -481,7 +515,9 @@
       "formatHelp": "YYYY, MM, DD, HH, mm, ss belirteçlerini kullanın",
       "value": "Değer",
       "description": "Açıklama",
-      "preview": "Önizleme"
+      "preview": "Önizleme",
+      "textPlaceholder": "Eklenecek metin",
+      "descriptionPlaceholder": "Otomatik tamamlamada gösterilen açıklama"
     },
     "keyboardTab": {
       "description": "Klavye kısayollarını özelleştirin. Değiştirmek için bir kısayola tıklayın, ardından istediğiniz tuş kombinasyonuna basın.",
@@ -513,7 +549,10 @@
       "duplicateNote": "Notu Çoğalt",
       "exportNote": "Notu Dışa Aktar",
       "pressKey": "Bir tuşa basın...",
-      "notSet": "Ayarlanmadı"
+      "notSet": "Ayarlanmadı",
+      "needsModifier": "Bu kısayol yazarken de çalışır, bu yüzden Ctrl, Cmd veya Alt gerekir. Başka bir tuşa basın ya da iptal etmek için Esc'ye basın.",
+      "reserved": "Bu tuş ayrılmıştır. Başka bir tuşa basın ya da iptal etmek için Esc'ye basın.",
+      "toggleCollapse": "Daralt veya genişlet"
     },
     "syncTab": {
       "enableSync": "Senkronizasyonu Etkinleştir",
@@ -566,7 +605,9 @@
         "changing": "Şifre değiştiriliyor...",
         "button": "Şifre Değiştir",
         "success": "Şifre başarıyla değiştirildi",
-        "error": "Şifre değiştirilemedi: {error}"
+        "error": "Şifre değiştirilemedi: {error}",
+        "serverKeyFailed": "Parolanız bu cihazda değiştirildi ancak sunucu güncellenemedi. Bir sonraki kilit açışınızda yeniden denenecek. O zamana kadar yeni bir cihaz eski parolanıza ihtiyaç duyar.",
+        "keyStaysTheSame": "Şifreleme anahtarınız aynı kalır, bu yüzden eski yedekler eski parolanızla açılmaya devam eder. Onları güvenle saklayın."
       },
       "connectionDetails": {
         "title": "Bağlantı Detayları",
@@ -602,11 +643,12 @@
         "dangerZone": "Tehlikeli Bölge",
         "deleteNotesDescription": "Senkronizasyon sunucusundan tüm notlarınızı silin. Bu işlem geri alınamaz. Yerel notlarınız SİLİNMEYECEKTİR.",
         "deleteNotesButton": "Sunucudan Tüm Notları Sil"
-      }
+      },
+      "disconnectNotRevoked": "Bu cihazın bağlantısı kesildi ancak sunucuya bildirilemedi, bu yüzden hâlâ orada listeleniyor ve anahtarı çalışıyor. Kullanıcı portalından iptal edin."
     },
     "advancedTab": {
       "importExport": "İçe/Dışa Aktar",
-      "exportDescription": "Notları şifresi çözülmüş JSON olarak dışa aktarın. İçe aktarma, notları mevcut verilerle birleştirir.",
+      "exportDescription": "Dışa aktarma, notları başka yere taşımak için şifrelenmemiş bir JSON kopyası oluşturur: dosyaya sahip olan herkes okuyabilir. Şifreli bir kopya için yedeklemeyi kullanın. İçe aktarma, notları mevcut olanlarla birleştirir.",
       "downloadClient": "Terminal/HTML İstemcisini İndir",
       "downloadTerminalClient": "Terminal İstemcisini İndir",
       "clientDescription": "Komut satırı erişimi için terminal istemcisini veya dosya sisteminden yerel olarak çalıştırmak için HTML istemcisini indirin",
@@ -634,7 +676,8 @@
       "aboutDescription": "Jottery, zengin içerik, sözdizimi vurgulama ve şifreleme ile notları yakalamak, düzenlemek ve aramak için gizlilik odaklı, kendi barındırılan bir not defteri uygulamasıdır.",
       "viewOnGithub": "GitHub'da Görüntüle",
       "license": "MIT Lisansı altında lisanslanmıştır."
-    }
+    },
+    "exportIncomplete": "Dışa aktarma eksik: {notes} not ve {attachments} ek okunamadı ve dışarıda bırakıldı."
   },
   "landing": {
     "languagePicker": {
@@ -647,7 +690,9 @@
       "note": "Hesap gerekmez • Çevrimdışı çalışır • Kendi sunucunuza kurabilirsiniz"
     },
     "screenshots": {
-      "mainInterface": "Not listesi ve düzenleyiciyi gösteren ana arayüz"
+      "mainInterface": "Not listesi ve düzenleyiciyi gösteren ana arayüz",
+      "carouselLabel": "Ekran görüntüsü galerisi",
+      "fullSizeLabel": "Tam boyutlu görsel"
     },
     "features": {
       "title": "İhtiyacınız olan her şey",
@@ -919,7 +964,9 @@
         "emailRequired": "E-posta adresi gereklidir.",
         "serverPasswordRequired": "Sunucu şifresi gereklidir.",
         "notesPasswordMinLength": "Not şifresi en az 8 karakter olmalıdır.",
-        "onboardingFailed": "Şifreleme anahtarları sunucudan indirilemedi. Not şifrenizin diğer cihazlarınızdakiyle aynı olduğundan ve kaynak cihazın senkronize edildiğinden emin olun"
+        "onboardingFailed": "Şifreleme anahtarları sunucudan indirilemedi. Not şifrenizin diğer cihazlarınızdakiyle aynı olduğundan ve kaynak cihazın senkronize edildiğinden emin olun",
+        "accountKeyUnreadable": "Bu not parolası hesabınızın anahtarını açamıyor. Parolayı kontrol edin. Doğruysa anahtar Jottery'nin eski bir sürümüyle kaydedilmiş olabilir: zaten bağlı bir cihazda Jottery'nin kilidini açmak bunu düzeltir. Ardından yeniden deneyin.",
+        "localNotesOrphaned": "Bu cihazdaki notlar hesabınızdan farklı bir anahtar kullanıyor, bu yüzden bağlanmak onları okunamaz hale getirir. Hiçbir şey değiştirilmedi. Korumak için notlarınızı dışa aktarın, bu cihazın verilerini silin, bağlanın ve ardından içe aktarın."
       },
       "steps": {
         "initialising": "Yerel şifreleme başlatılıyor…",
@@ -928,12 +975,15 @@
         "encrypting": "Kimlik bilgileri güvence altına alınıyor…",
         "syncing": "İlk senkronizasyon başlatılıyor…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "Not parolanız başka bir cihazda değiştirildi. Bu cihazın kilidi hâlâ eski parolayla açılıyor ve notlarınız güvende, ancak yeni cihazlar yeni parolaya ihtiyaç duyacak."
   },
   "lock": {
     "title": "Uygulamayı Kilitle",
     "message": "Uygulama kilitlensin mi? Kaydedilmemiş değişiklikler kaybolacak.",
-    "confirmButton": "Kilitle"
+    "confirmButton": "Kilitle",
+    "locking": "Kilitleniyor...",
+    "savingAndSyncing": "Notlarınız kaydediliyor ve eşitleniyor"
   },
   "recycleBin": {
     "title": "Geri Dönüşüm Kutusu",
@@ -997,14 +1047,23 @@
     "markdownCopied": "Markdown bağlantısı panoya kopyalandı",
     "error": {
       "download": "Ek indirilemedi",
-      "copyMarkdown": "Markdown bağlantısı kopyalanamadı"
+      "copyMarkdown": "Markdown bağlantısı kopyalanamadı",
+      "upload": "{name} yüklenemedi: {error}",
+      "delete": "Ek silinemedi: {error}",
+      "paste": "Görsel yapıştırılamadı: {error}"
     },
     "preview": {
       "title": "Ek önizlemesi",
       "loading": "Önizleme yükleniyor...",
       "notAvailable": "Bu dosya türü için önizleme kullanılamıyor.",
       "audioNotSupported": "Tarayıcınız ses oynatmayı desteklemiyor.",
-      "videoNotSupported": "Tarayıcınız video oynatmayı desteklemiyor."
+      "videoNotSupported": "Tarayıcınız video oynatmayı desteklemiyor.",
+      "videoLabel": "Video önizlemesi"
+    },
+    "confirmDelete": {
+      "title": "Ek kaldırılsın mı?",
+      "message": "Dosya bu nottan kaldırılacak. Notun önceki bir sürümünde hâlâ yoksa kurtarılamaz.",
+      "confirmButton": "Kaldır"
     }
   },
   "keyboard": {
@@ -1052,7 +1111,8 @@
     "previousPage": "Önceki sayfa",
     "nextPage": "Sonraki sayfa",
     "zoomOut": "Uzaklaştır",
-    "zoomIn": "Yakınlaştır"
+    "zoomIn": "Yakınlaştır",
+    "loadFailed": "Bu PDF açılamadı. Yine de indirebilirsiniz."
   },
   "versionHistory": {
     "title": "Sürüm geçmişi",
@@ -1075,7 +1135,8 @@
       "title": "Sürümü geri yükle",
       "message": "Bu sürümü geri yüklemek istediğinizden emin misiniz? Mevcut notunuz geri yüklemeden önce yeni bir sürüm olarak kaydedilecektir.",
       "confirmButton": "Geri Yükle"
-    }
+    },
+    "restoreFailed": "Sürüm geri yüklenemedi: {error}"
   },
   "header": {
     "menu": "Menü",
@@ -1084,7 +1145,8 @@
     "addContentFirst": "Önce mevcut nota içerik ekleyin",
     "lastSynced": "Son senkronizasyon: {time}",
     "neverSynced": "Henüz senkronize edilmedi",
-    "syncDisabled": "Senkronizasyon etkin değil"
+    "syncDisabled": "Senkronizasyon etkin değil",
+    "newNote": "Yeni Not"
   },
   "confirm": {
     "deleteDatabase": {
@@ -1171,7 +1233,11 @@
     "indicator": "Senkronizasyon çakışması",
     "bannerText": "Bu notun çözülmesi gereken bir senkronizasyon çakışması var",
     "resolveButton": "Çakışmayı çöz",
-    "syncNotification": "{count, plural, one {1 not senkronizasyon çakışması var} other {{count} not senkronizasyon çakışması var}}"
+    "syncNotification": "{count, plural, one {1 not senkronizasyon çakışması var} other {{count} not senkronizasyon çakışması var}}",
+    "serverUnreadable": "Bu notun sunucudaki kopyası okunamıyor ve değiştirilmiş olabilir. Yalnızca kendi sürümünüz korunabilir.",
+    "localUnreadable": "Notun bu cihazdaki kopyası okunamıyor.",
+    "loadFailed": "Çakışma verileri yüklenemedi",
+    "resolveFailed": "Çakışma çözülemedi"
   },
   "pullToRefresh": {
     "pull": "Senkronize etmek için aşağı çekin",
@@ -1181,7 +1247,14 @@
   },
   "sync": {
     "syncing": "Senkronize ediliyor...",
-    "syncProgress": "Senkronizasyon: %{percentage} tamamlandı"
+    "syncProgress": "Senkronizasyon: %{percentage} tamamlandı",
+    "notesRefused": "Bazı notlar hesabınızın yükleme sınırını aşıyor ve eşitlenmedi. Geri kalan her şey eşitlendi.",
+    "accountDisabled": "Hesabınız devre dışı veya onay bekliyor, bu yüzden eşitleme durduruldu. Bu cihazdaki notlarınız güvende. Yöneticinizle iletişime geçin.",
+    "storageQuotaExceeded": "Hesabınız depolama sınırına ulaştı, bu yüzden bu cihazdaki değişiklikler yüklenemiyor. Yer açmak için bazı notları veya ekleri kalıcı olarak silin.",
+    "massDeletionHeld": "Sunucu aynı anda {count} notun silinmesini istedi. Siz yapmadıysanız diye geri dönüşüm kutusundalar. Oradan geri yükleyin ya da siz yaptıysanız kutuyu boşaltın.",
+    "clockAhead": "Tarihleri sunucunun bir günden fazla ilerisinde olduğu için bazı değişiklikler eşitlenmedi. Bu cihazın tarih ve saatini kontrol edin.",
+    "deviceRevoked": "Bu cihaz artık hesabınıza bağlı değil, bu yüzden eşitleme durdu. Bu cihazdaki notlarınız güvende. Ayarlar'dan yeniden bağlayın.",
+    "databaseLost": "Veritabanı bağlantısı kesildi. Devam etmek için sayfayı yenileyin."
   },
   "inbox": {
     "title": "Gelen Kutusu",
@@ -1420,6 +1493,18 @@
     "openNote": "Bu notu aç",
     "repairNotOnServer": "Sunucuda da yok — notu açın ve eki kaldırın",
     "serverMissingTitle": "Sunucuda eksik",
-    "serverMissingHint": "Senkronizasyon sunucusunda bu eklerin kopyası yok, bu cihazda da yok. Notu açıp eki kaldırın veya dosyaya hâlâ sahip bir cihazdan senkronize edin."
+    "serverMissingHint": "Senkronizasyon sunucusunda bu eklerin kopyası yok, bu cihazda da yok. Notu açıp eki kaldırın veya dosyaya hâlâ sahip bir cihazdan senkronize edin.",
+    "rejectedTitle": "Eşitleme sunucusundan reddedilenler",
+    "rejectedHint": "Eşitleme sunucusu bunları güvenilemeyecek bir biçimde gönderdi, bu yüzden kaydedilmediler. Mevcut notlarınız etkilenmedi. Bu tekrarlanırsa sunucuyu kimin yönettiğini kontrol edin.",
+    "rejectedKind": {
+      "note": "Not",
+      "version": "Not sürümü",
+      "conflict": "Eşitleme çakışması",
+      "savedSearch": "Kayıtlı arama",
+      "attachment": "Ek",
+      "inboxItem": "Gelen kutusu öğesi",
+      "deletion": "Silme"
+    },
+    "scanFailed": "Tarama tamamlanmadı. Yeniden deneyin."
   }
 }

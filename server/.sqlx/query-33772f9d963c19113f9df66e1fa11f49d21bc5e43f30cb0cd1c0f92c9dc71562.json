@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO sync_state (user_id, last_seq) VALUES (?, 1)\n         ON CONFLICT(user_id) DO UPDATE SET last_seq = last_seq + 1\n         RETURNING last_seq",
+  "describe": {
+    "columns": [
+      {
+        "name": "last_seq",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "33772f9d963c19113f9df66e1fa11f49d21bc5e43f30cb0cd1c0f92c9dc71562"
+}

@@ -14,6 +14,20 @@ export interface SyncMetadata {
   syncEnabled: boolean;
   syncEndpoint: string;
   autoSyncInterval?: number;      // Minutes (0 = disabled, default: 5)
+  /**
+   * This device has opened or uploaded the account's wrapped key. That proves the
+   * blob isn't old-format, so if it later won't open, the password changed on
+   * another device and it must not be replaced.
+   */
+  serverKeyVerified?: boolean;
+  /** A password change here hasn't reached the server yet. Retried at unlock. */
+  serverKeyStale?: boolean;
+  /** Opaque position in the server's change sequence. Sent back, never interpreted. */
+  pullCursor?: string;
+  /** The one full pull on moving to the cursor has been done (see docs/sync-protocol.md) */
+  cursorFullPullDone?: boolean;
+  /** Inbox items accepted here that the server hasn't confirmed deleting yet */
+  acceptedInboxIds?: string[];
   pendingDeviceName?: string;     // Device name for pending clone-device call (during import)
 }
 
@@ -26,6 +40,8 @@ export interface NoteSyncMetadata {
   lastSyncStatus: 'synced' | 'pending' | 'conflict' | 'error';
   errorMessage?: string;
   conflictData?: ConflictData;    // Server version data when in conflict
+  /** Attachments of this note the server already has, so their blobs needn't be sent again */
+  uploadedAttachmentIds?: string[];
 }
 
 // Current sync status for UI display
@@ -61,6 +77,8 @@ export interface SyncPushRequest {
   savedSearches?: SyncSavedSearch[];
   /** Hard-deleted note IDs (from emptying trash) */
   deletions?: SyncDeletion[];
+  /** Each note's attachments are its complete list, so the server can remove what's gone */
+  attachmentsAuthoritative?: boolean;
 }
 
 // Note structure for sync (matches server expectations)
@@ -109,6 +127,10 @@ export interface SyncPushResponse {
   accepted: SyncAccepted[];
   rejected: SyncRejected[];
   errors?: string[]; // Optional, for backward compatibility
+  /** Deletions refused because the note has a newer edit. Older servers don't send it */
+  rejectedDeletions?: string[];
+  /** Notes skipped because they were permanently deleted after this edit. Older servers don't send it */
+  skippedDeleted?: string[];
   attachmentWarnings?: AttachmentWarning[]; // Accepted notes referencing attachment data the server lacks
 }
 
@@ -174,6 +196,8 @@ export interface ConflictData {
 
 // Pull request payload
 export interface SyncPullRequest {
+  /** Selects cursor mode. A server that doesn't know it ignores it */
+  cursor?: string;
   lastSyncAt?: string;
   knownNoteIds: string[];
   knownAttachmentIds: string[];
@@ -203,6 +227,8 @@ export interface SyncPullResponse {
   // Pagination metadata for large datasets
   totalCount?: number;
   hasMore?: boolean;
+  /** Only from a server that supports the cursor */
+  nextCursor?: string;
   // Inbox items (unencrypted, pending acceptance)
   inboxItems?: InboxItem[];
   inboxCount?: number;

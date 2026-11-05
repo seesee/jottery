@@ -7,6 +7,7 @@
 
 import type { Attachment } from '../types';
 import { attachmentService, cryptoService, keyManager } from '../services';
+import { imageObjectUrl } from './safeObjectUrl';
 
 export interface AttachmentResolverOptions {
   /** Container element to search for attachment references */
@@ -62,7 +63,7 @@ async function resolveImagesById(
       if (attachment) {
         // Load and decrypt the blob using attachmentService
         const blob = await attachmentService.getAttachmentData(attachment);
-        const blobUrl = URL.createObjectURL(blob);
+        const blobUrl = await imageObjectUrl(blob);
         img.setAttribute('src', blobUrl);
         img.setAttribute('data-loaded', 'true');
 
@@ -106,7 +107,7 @@ async function resolveImagesByFilename(
       if (foundAttachment) {
         // Load and decrypt the blob using attachmentService
         const blob = await attachmentService.getAttachmentData(foundAttachment);
-        const blobUrl = URL.createObjectURL(blob);
+        const blobUrl = await imageObjectUrl(blob);
         img.setAttribute('src', blobUrl);
         img.setAttribute('data-loaded', 'true');
 

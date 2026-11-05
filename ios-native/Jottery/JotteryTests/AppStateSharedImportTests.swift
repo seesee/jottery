@@ -103,4 +103,75 @@ struct AppStateSharedImportTests {
         #expect(note.attachments.isEmpty)
         #expect(SharedInboxStore.pendingItems(in: root).count == 1)  // still staged — attachment still missing
     }
+
+    // MARK: - Resuming (jottery-bp2j)
+
+    /// Staged, with the note made and the attachment still to come.
+    private func stageHalfImported(in state: AppState, root: URL) throws -> String {
+        try SharedInboxStore.write(
+            text: "Shared and then thought better of",
+            urls: [],
+            files: [(data: Data([0x01]), filename: "photo.png", mimeType: "image/png")],
+            in: root
+        )
+        let item = try #require(SharedInboxStore.pendingItems(in: root).first)
+        let note = try #require(try state.createNote(content: "Shared and then thought better of"))
+        try SharedInboxStore.markImported(item.directory, noteId: note.id)
+        return note.id
+    }
+
+    @Test func aNoteDeletedBetweenTriesIsLeftDeleted() throws {
+        let state = try makeUnlockedState()
+        let root = try makeRoot()
+        let id = try stageHalfImported(in: state, root: root)
+        try state.deleteNote(id: id)
+
+        state.importSharedInboxItems(from: root)
+
+        #expect(state.notes.isEmpty, "the note was deleted on purpose")
+        let key = try #require(state.keyManager.masterKey)
+        #expect(try state.noteRepo?.get(id: id, key: key)?.attachments.isEmpty == true)
+        #expect(SharedInboxStore.pendingItems(in: root).isEmpty)
+    }
+
+    @Test func aNotePermanentlyDeletedBetweenTriesIsNotMadeAgain() throws {
+        let state = try makeUnlockedState()
+        let root = try makeRoot()
+        let id = try stageHalfImported(in: state, root: root)
+        try state.deleteNote(id: id)
+        try state.permanentlyDeleteNote(id: id)
+
+        state.importSharedInboxItems(from: root)
+
+        #expect(state.notes.isEmpty)
+        #expect(SharedInboxStore.pendingItems(in: root).isEmpty)
+    }
+
+    @Test func filesWithTheSameNameAllArrive() throws {
+        let state = try makeUnlockedState()
+        let root = try makeRoot()
+        try SharedInboxStore.write(
+            text: nil,
+            urls: [],
+            files: [
+                (data: Data([0x01]), filename: "IMG.jpg", mimeType: "image/jpeg"),
+                (data: Data([0x02]), filename: "IMG.jpg", mimeType: "image/jpeg"),
+            ],
+            in: root
+        )
+        // The first pass gets as far as the first file.
+        let item = try #require(SharedInboxStore.pendingItems(in: root).first)
+        let second = item.directory.appendingPathComponent(item.manifest.files[1].storedName)
+        let secondData = try Data(contentsOf: second)
+        try FileManager.default.removeItem(at: second)
+        state.importSharedInboxItems(from: root)
+        #expect(state.notes.first?.attachments.count == 1)
+
+        try secondData.write(to: second)
+        state.importSharedInboxItems(from: root)
+
+        #expect(state.notes.count == 1)
+        #expect(state.notes.first?.attachments.count == 2, "the second has the same name, and is another file")
+        #expect(SharedInboxStore.pendingItems(in: root).isEmpty)
+    }
 }

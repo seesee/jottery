@@ -2,13 +2,32 @@
  * Bulk operations service for multi-note actions
  */
 
-import type { DecryptedNote, ExportNote, ExportData } from '../types';
+import type { DecryptedNote } from '../types';
 import { noteRepository } from './noteRepository';
 import { noteService } from './noteService';
+import { exportNotes as exportSelectedNotes } from './exportService';
 import { notes, clearMultiSelection, selectNote } from '../stores/appStore';
 import { searchService } from './searchService';
 import { get } from 'svelte/store';
 import { normaliseForComparison } from '../utils/stringUtils';
+import { compareTimestamps } from '../utils/timestamps';
+
+function notesById(): Map<string, DecryptedNote> {
+  return new Map(get(notes).map(note => [note.id, note]));
+}
+
+/**
+ * Update the store once for a whole operation. Every update re-runs search, sorting
+ * and the tag scan over all notes, so doing it per note took tens of seconds.
+ */
+function applyToStore(updates: Map<string, DecryptedNote>): void {
+  if (updates.size === 0) return;
+
+  notes.update(all => all.map(note => updates.get(note.id) ?? note));
+  for (const note of updates.values()) {
+    searchService.updateNote(note);
+  }
+}
 
 export interface BulkProgress {
   current: number;
@@ -28,15 +47,16 @@ export async function addTagsToNotes(
   tagsToAdd: string[],
   onProgress?: ProgressCallback
 ): Promise<void> {
-  const allNotes = get(notes);
+  const allNotes = notesById();
   const total = noteIds.length;
+  const updates = new Map<string, DecryptedNote>();
 
   for (let i = 0; i < noteIds.length; i++) {
     const noteId = noteIds[i];
-    const note = allNotes.find((n) => n.id === noteId);
+    const note = allNotes.get(noteId);
 
-    // Skip locked notes - they cannot be modified
-    if (note && !note.locked) {
+    // Skip read-only notes - they cannot be modified
+    if (note && !note.locked && !note.archived) {
       // Add tags that aren't already present
       const newTags = [...new Set([...note.tags, ...tagsToAdd])];
 
@@ -44,18 +64,7 @@ export async function addTagsToNotes(
         // Update note with new tags (properly encrypts via noteService)
         await noteService.updateNote(noteId, { tags: newTags });
 
-        // Update store with decrypted version
-        const updated: DecryptedNote = {
-          ...note,
-          tags: newTags,
-          modifiedAt: new Date().toISOString(),
-        };
-        notes.update((n) =>
-          n.map((existingNote) => (existingNote.id === noteId ? updated : existingNote))
-        );
-
-        // Update search index
-        searchService.updateNote(updated);
+        updates.set(noteId, { ...note, tags: newTags, modifiedAt: new Date().toISOString() });
       }
     }
 
@@ -65,6 +74,8 @@ export async function addTagsToNotes(
       status: 'running',
     });
   }
+
+  applyToStore(updates);
 
   onProgress?.({
     current: total,
@@ -82,16 +93,17 @@ export async function removeTagsFromNotes(
   tagsToRemove: string[],
   onProgress?: ProgressCallback
 ): Promise<void> {
-  const allNotes = get(notes);
+  const allNotes = notesById();
   const total = noteIds.length;
   const tagsLower = tagsToRemove.map(normaliseForComparison);
+  const updates = new Map<string, DecryptedNote>();
 
   for (let i = 0; i < noteIds.length; i++) {
     const noteId = noteIds[i];
-    const note = allNotes.find((n) => n.id === noteId);
+    const note = allNotes.get(noteId);
 
-    // Skip locked notes - they cannot be modified
-    if (note && !note.locked) {
+    // Skip read-only notes - they cannot be modified
+    if (note && !note.locked && !note.archived) {
       // Remove matching tags (case-insensitive)
       const newTags = note.tags.filter(
         (tag) => !tagsLower.includes(normaliseForComparison(tag))
@@ -101,18 +113,7 @@ export async function removeTagsFromNotes(
         // Update note with new tags (properly encrypts via noteService)
         await noteService.updateNote(noteId, { tags: newTags });
 
-        // Update store with decrypted version
-        const updated: DecryptedNote = {
-          ...note,
-          tags: newTags,
-          modifiedAt: new Date().toISOString(),
-        };
-        notes.update((n) =>
-          n.map((existingNote) => (existingNote.id === noteId ? updated : existingNote))
-        );
-
-        // Update search index
-        searchService.updateNote(updated);
+        updates.set(noteId, { ...note, tags: newTags, modifiedAt: new Date().toISOString() });
       }
     }
 
@@ -122,6 +123,8 @@ export async function removeTagsFromNotes(
       status: 'running',
     });
   }
+
+  applyToStore(updates);
 
   onProgress?.({
     current: total,
@@ -186,18 +189,16 @@ export async function archiveNotes(
 ): Promise<void> {
   const total = noteIds.length;
 
+  const updates = new Map<string, DecryptedNote>();
+
   for (let i = 0; i < noteIds.length; i++) {
     const noteId = noteIds[i];
 
     await noteService.archiveNote(noteId);
 
-    // Get updated note and update store
     const updatedNote = await noteService.getNote(noteId);
     if (updatedNote) {
-      notes.update((allNotes) =>
-        allNotes.map((n) => (n.id === noteId ? updatedNote : n))
-      );
-      searchService.updateNote(updatedNote);
+      updates.set(noteId, updatedNote);
     }
 
     onProgress?.({
@@ -206,6 +207,8 @@ export async function archiveNotes(
       status: 'running',
     });
   }
+
+  applyToStore(updates);
 
   // Clear multi-selection after archive
   clearMultiSelection();
@@ -224,55 +227,13 @@ export async function exportNotes(
   noteIds: string[],
   onProgress?: ProgressCallback
 ): Promise<string> {
-  const allNotes = get(notes);
   const total = noteIds.length;
 
-  const exportNotes: ExportNote[] = [];
-
-  for (let i = 0; i < noteIds.length; i++) {
-    const noteId = noteIds[i];
-    const note = allNotes.find((n) => n.id === noteId);
-
-    if (note) {
-      exportNotes.push({
-        id: note.id,
-        createdAt: note.createdAt,
-        modifiedAt: note.modifiedAt,
-        content: note.content,
-        tags: note.tags,
-        attachments: note.attachments.map((a) => ({
-          filename: a.filename,
-          mimeType: a.mimeType,
-          data: a.data,
-        })),
-        pinned: note.pinned,
-        archived: note.archived,
-        locked: note.locked,
-        wordWrap: note.wordWrap,
-        syntaxLanguage: note.syntaxLanguage,
-        showPreview: note.showPreview,
-        color: note.color,
-      });
-    }
-
-    onProgress?.({
-      current: i + 1,
-      total,
-      status: 'running',
-    });
-  }
-
-  const exportData: ExportData = {
-    version: '1.0',
-    exportDate: new Date().toISOString(),
-    notes: exportNotes,
-  };
-
-  onProgress?.({
-    current: total,
-    total,
-    status: 'complete',
+  const exportData = await exportSelectedNotes(noteIds, ({ current = 0 }) => {
+    onProgress?.({ current, total, status: 'running' });
   });
+
+  onProgress?.({ current: total, total, status: 'complete' });
 
   return JSON.stringify(exportData, null, 2);
 }
@@ -305,30 +266,20 @@ export async function setColorForNotes(
   color: string | undefined,
   onProgress?: ProgressCallback
 ): Promise<void> {
-  const allNotes = get(notes);
+  const allNotes = notesById();
   const total = noteIds.length;
+  const updates = new Map<string, DecryptedNote>();
 
   for (let i = 0; i < noteIds.length; i++) {
     const noteId = noteIds[i];
-    const note = allNotes.find((n) => n.id === noteId);
+    const note = allNotes.get(noteId);
 
     // Skip locked notes - they cannot be modified
     if (note && !note.locked) {
       // Update note with new color (properly persists via noteService)
       await noteService.updateNote(noteId, { color });
 
-      // Update store with decrypted version
-      const updated: DecryptedNote = {
-        ...note,
-        color,
-        modifiedAt: new Date().toISOString(),
-      };
-      notes.update((n) =>
-        n.map((existingNote) => (existingNote.id === noteId ? updated : existingNote))
-      );
-
-      // Update search index
-      searchService.updateNote(updated);
+      updates.set(noteId, { ...note, color, modifiedAt: new Date().toISOString() });
     }
 
     onProgress?.({
@@ -337,6 +288,8 @@ export async function setColorForNotes(
       status: 'running',
     });
   }
+
+  applyToStore(updates);
 
   onProgress?.({
     current: total,
@@ -366,7 +319,7 @@ export async function combineNotes(
   // Exclude locked notes - they cannot be modified/combined
   const selectedNotes = allNotes
     .filter((n) => noteIds.includes(n.id) && !n.locked)
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    .sort((a, b) => compareTimestamps(a.createdAt, b.createdAt));
 
   if (selectedNotes.length < 2) {
     throw new Error('At least 2 unlocked notes are required to combine');

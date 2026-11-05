@@ -5,7 +5,9 @@
 import type { NoteRepository } from '../types';
 import type { Note } from '../types';
 import { getDB, STORES } from './db';
+import { advanceContentHash } from './crypto';
 import { NotFoundError } from '../errors';
+import { compareTimestamps } from '../utils/timestamps';
 
 class IndexedDBNoteRepository implements NoteRepository {
   /**
@@ -142,6 +144,8 @@ class IndexedDBNoteRepository implements NoteRepository {
     }
     note.deleted = false;
     note.deletedAt = undefined;
+    note.deletionHeld = undefined;
+    note.binnedAt = undefined;
     await this.update(note);
   }
 
@@ -155,6 +159,7 @@ class IndexedDBNoteRepository implements NoteRepository {
     }
     note.archived = true;
     note.archivedAt = new Date().toISOString();
+    await advanceContentHash(note);
     await this.update(note);
   }
 
@@ -168,6 +173,7 @@ class IndexedDBNoteRepository implements NoteRepository {
     }
     note.archived = false;
     note.archivedAt = undefined;
+    await advanceContentHash(note);
     await this.update(note);
   }
 
@@ -181,6 +187,7 @@ class IndexedDBNoteRepository implements NoteRepository {
     }
     note.locked = true;
     note.lockedAt = new Date().toISOString();
+    await advanceContentHash(note);
     await this.update(note);
   }
 
@@ -194,6 +201,7 @@ class IndexedDBNoteRepository implements NoteRepository {
     }
     note.locked = false;
     note.lockedAt = undefined;
+    await advanceContentHash(note);
     await this.update(note);
   }
 
@@ -220,8 +228,17 @@ class IndexedDBNoteRepository implements NoteRepository {
   async getPendingDeletions(): Promise<Array<{ id: string; deletedAt: string }>> {
     const db = getDB();
     const all = await db.getAll(STORES.DELETIONS);
-    return all
-      .filter(d => !d.synced)
+    const pending = all.filter(d => !d.synced);
+
+    // A hard delete removes the note, so a deletion whose note exists again is
+    // stale: the note came back from a backup or an import, and sending it would
+    // delete the note again, on every device.
+    const stillGone = await Promise.all(
+      pending.map(async d => (await db.get(STORES.NOTES, d.id)) === undefined)
+    );
+
+    return pending
+      .filter((_, index) => stillGone[index])
       .map(d => ({ id: d.id, deletedAt: d.deletedAt }));
   }
 
@@ -238,6 +255,21 @@ class IndexedDBNoteRepository implements NoteRepository {
         deletion.synced = true;
         await tx.store.put(deletion);
       }
+    }
+
+    await tx.done;
+  }
+
+  /**
+   * Stop sending deletions the server refused. The note has a newer edit, and comes
+   * back through the next pull.
+   */
+  async forgetDeletions(ids: string[]): Promise<void> {
+    const db = getDB();
+    const tx = db.transaction(STORES.DELETIONS, 'readwrite');
+
+    for (const id of ids) {
+      await tx.store.delete(id);
     }
 
     await tx.done;
@@ -342,25 +374,32 @@ class IndexedDBNoteRepository implements NoteRepository {
     const notes = await db.getAll(STORES.NOTES);
     return notes
       .filter((note) => !note.deleted)
-      .sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
+      .sort((a, b) => compareTimestamps(b.modifiedAt, a.modifiedAt));
   }
 
   /**
    * Count all active notes
    */
   async countActive(): Promise<number> {
-    const db = getDB();
-    const notes = await db.getAll(STORES.NOTES);
-    return notes.filter((note) => !note.deleted).length;
+    return this.countWhere((note) => !note.deleted);
   }
 
   /**
    * Count deleted notes
    */
   async countDeleted(): Promise<number> {
-    const db = getDB();
-    const notes = await db.getAll(STORES.NOTES);
-    return notes.filter((note) => note.deleted).length;
+    return this.countWhere((note) => note.deleted);
+  }
+
+  /** Count with a cursor, so that counting doesn't hold every note's text at once */
+  private async countWhere(matches: (note: Note) => boolean): Promise<number> {
+    let count = 0;
+    let cursor = await getDB().transaction(STORES.NOTES, 'readonly').store.openCursor();
+    while (cursor) {
+      if (matches(cursor.value)) count++;
+      cursor = await cursor.continue();
+    }
+    return count;
   }
 }
 

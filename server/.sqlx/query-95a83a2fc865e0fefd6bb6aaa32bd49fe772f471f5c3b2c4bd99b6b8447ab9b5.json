@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT size_bytes FROM inbox_items WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "size_bytes",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "95a83a2fc865e0fefd6bb6aaa32bd49fe772f471f5c3b2c4bd99b6b8447ab9b5"
+}

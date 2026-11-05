@@ -111,8 +111,7 @@ struct DeleteAccountView: View {
         defer { isWorking = false }
 
         do {
-            let sessionId = try await client.logIn(email: email, password: password)
-            try await client.deleteAccount(sessionId: sessionId, mode: mode)
+            try await client.deleteAccount(email: email, password: password, mode: mode)
             onDeleted()
             dismiss()
         } catch SyncClientError.httpError(let status, _) where status == 401 {

@@ -46,11 +46,21 @@ export class SyncApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
-    public readonly responseText: string
+    public readonly responseText: string,
+    /** From Retry-After, which a 429 and a 503 can carry */
+    public readonly retryAfterSeconds?: number
   ) {
     super(message);
     this.name = 'SyncApiError';
   }
+}
+
+/** Bounded, because a server shouldn't be able to stop a client syncing for a year */
+const MAX_RETRY_AFTER_SECONDS = 3600;
+
+function retryAfterSeconds(response: Response): number | undefined {
+  const seconds = Number(response.headers.get('Retry-After'));
+  return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, MAX_RETRY_AFTER_SECONDS) : undefined;
 }
 
 /**
@@ -58,9 +68,11 @@ export class SyncApiError extends Error {
  */
 function handleHttpError(response: Response, errorText: string, operation: string): never {
   if (response.status === 413) {
-    const errorMessage = operation === 'push'
-      ? 'Upload too large. Please reduce attachment sizes or sync fewer notes at once. Maximum size: 5MB'
-      : 'Server response too large. Please contact your administrator.';
+    // A refused push is split and retried, so the caller reports the outcome once
+    if (operation === 'push') {
+      throw new SyncApiError('Upload too large', response.status, errorText);
+    }
+    const errorMessage = 'Server response too large. Please contact your administrator.';
     toast.error(errorMessage);
     throw new SyncApiError(errorMessage, response.status, errorText);
   }
@@ -68,8 +80,22 @@ function handleHttpError(response: Response, errorText: string, operation: strin
   throw new SyncApiError(
     `${operation} failed: ${response.statusText} - ${errorText}`,
     response.status,
-    errorText
+    errorText,
+    retryAfterSeconds(response)
   );
+}
+
+/**
+ * Delete an inbox item from the server. One that's already gone counts as deleted.
+ */
+export async function deleteInboxItem(endpoint: string, apiKey: string, itemId: string): Promise<void> {
+  const response = await fetchWithTimeout(`${endpoint}/api/${API_VERSION}/inbox/${itemId}`, {
+    method: 'DELETE',
+    headers: { 'Authorization': `Bearer ${apiKey}` },
+  });
+  if (!response.ok && response.status !== 404) {
+    throw new Error(`Failed to delete inbox item: ${response.statusText}`);
+  }
 }
 
 /**
@@ -158,6 +184,24 @@ export async function pullFromServer(
   }
 
   return await response.json();
+}
+
+/**
+ * Revoke the calling device, so its API key stops working
+ */
+export async function revokeDevice(endpoint: string, apiKey: string): Promise<void> {
+  endpoint = normalizeEndpoint(endpoint);
+
+  const response = await fetchWithTimeout(`${endpoint}/api/${API_VERSION}/sync/device`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+    },
+  }, 10000);
+
+  if (!response.ok) {
+    handleHttpError(response, await response.text(), 'revoke device');
+  }
 }
 
 /**

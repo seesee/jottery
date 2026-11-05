@@ -23,11 +23,11 @@ password:
   change_success: Şifre başarıyla değiştirildi
   change_title: "Şifre Değiştir"
   change_enter_current: "Mevcut şifrenizi girin:"
-  change_enter_new: "Yeni şifre girin (en az 12 karakter):"
+  change_enter_new: "Yeni şifre girin (en az 8 karakter):"
   change_confirm_new: "Yeni şifreyi onaylayın:"
   change_current_required: "Lütfen mevcut şifrenizi girin"
   change_wrong_current: "Mevcut şifre yanlış"
-  change_too_short: "Yeni şifre en az 12 karakter olmalıdır"
+  change_too_short: "Yeni şifre en az 8 karakter olmalıdır"
   change_mismatch: "Şifreler eşleşmiyor"
   change_failed: "Şifre değiştirilemedi"
   remember: Şifreyi hatırla
@@ -46,6 +46,11 @@ password:
   enter_to_enable: "Otomatik kilit açmayı etkinleştirmek için şifrenizi girin:"
   create_title: Şifre Oluştur
   unlock_title: Kilidi Aç
+  too_short: "Parola en az %{min} karakter olmalıdır"
+  same_as_account: "Farklı parolalar kullanın. Sunucu hesap parolanızı görür, bu yüzden aynı parola notlarınızı da açmamalıdır."
+  same_as_account_warning: "Hesap parolanız not parolanızla aynı, bu yüzden sunucu notlarınızı okuyabilir. Ayarlar bölümünden not parolanızı değiştirin."
+  no_file_encryption: "Bu derleme veritabanı dosyasını şifrelemez. Notlar ve etiketler şifreli kalır, ancak e-posta adresiniz, sunucu adresi, ek adları ve tarihler şifrelenmez."
+  change_keeps_key: "Şifreleme anahtarınız değişmez: eski yedekler eski parolayla açılmaya devam eder."
 menu:
   notes: Notlar
   new_note: Yeni not
@@ -78,6 +83,19 @@ note:
   info: Not bilgisi
   info_title: Not Bilgileri
   untitled: "Başlıksız"
+  save_retry_hint: "q: yeniden kaydetmeyi dene | e: düzenle | Esc: değişiklikleri at"
+  empty_bin_title: "Geri dönüşüm kutusunu boşalt"
+  empty_bin_confirm: "Çöp kutusundaki %{count} not kalıcı olarak silinsin mi?"
+  empty_bin_warning: "Sunucudan ve diğer cihazlarınızdan da silinirler. Bu geri alınamaz."
+  bin_emptied: "%{count} not kalıcı olarak silindi"
+  locked_cannot_archive: "Kilitli not arşivlenemez"
+  unreadable: "Bu kasadaki %{count} not okunamıyor"
+  duplicated: "Not çoğaltıldı"
+  copied: "Panoya kopyalandı"
+  copy_too_large: "Bu not, terminalin güvenilir biçimde kopyalaması için çok uzun"
+  word_wrap_on: "Sözcük kaydırma açık"
+  word_wrap_off: "Sözcük kaydırma kapalı"
+  no_links: "Ekranda bağlantı yok"
 archive:
   view: "Arşivi görüntüle"
   title: "Arşiv"
@@ -107,6 +125,7 @@ editor:
   temp_write_error: Geçici dosyaya yazma başarısız
   temp_read_error: Geçici dosya okuma başarısız
   default_editor: vi
+  temp_on_disk: "Bu makinede bellek tabanlı geçici klasör yok, bu yüzden açık bir not siz kapatana kadar diskte durur."
 attachment:
   add: Ek ekle
   add_failed: "Ek ekleme başarısız: %{error}"
@@ -115,6 +134,18 @@ attachment:
   delete: Ek sil
   no_attachments: Ek yok
   total: "%{count} ek"
+  press_enter: "Devam etmek için Enter tuşuna basın..."
+  opened: "Dosya varsayılan uygulamada açıldı."
+  no_opener: "Bu sistemde dosya açacak bir program yok. Bunun yerine eki S ile kaydedin."
+  delete_failed: "Ek silinemedi: %{error}"
+  deleted: "Silindi: %{name}"
+  exists: "%{path} zaten var. Başka bir ad seçin."
+  saved: "%{path} konumuna kaydedildi"
+  save_failed: "Ek kaydedilemedi: %{error}"
+  added: "%{name} eklendi"
+  too_large: "Dosya çok büyük. Sınır %{max_mb} MB."
+  unsafe_title: "Bu dosya açılmayacak"
+  unsafe_body: "Bu tür bir dosyayı açmak gönderenin kodunu çalıştırabilir. Bunun yerine kaydedilsin mi?"
 version:
   history: Sürüm geçmişi
   restore: Sürümü geri yükle
@@ -153,6 +184,9 @@ settings:
   press_enter_cycle: değiştirmek için Enter tuşuna basın
   press_enter_toggle: açıp kapatmak için Enter tuşuna basın
   disabled: devre dışı
+  sort_order: "Sıralama"
+  language_auto: "Sistemle aynı"
+  default_note_type: "Varsayılan not türü"
 sync:
   push: Sunucuya gönder
   pull: Sunucudan çek
@@ -188,8 +222,29 @@ sync:
   reload_failed: "Senkronizasyon başarılı ancak notlar yeniden yüklenemedi: %{error}"
   note: not
   notes: not
+  skipped_notes: "Sunucudan gelen %{count} öğe okunamadı ve atlandı"
+  rejected_notes: "%{count} not sunucuyla çakışıyor. Çözmek için Jottery uygulamasını açın."
+  rate_limited: "Sunucu, Jottery'den yeniden eşitlemeden önce %{seconds} saniye beklemesini istedi."
+  key_refused: "Sunucu bu cihazın API anahtarını kabul etmedi. Cihazı yeniden kaydedin."
+  server_busy: "Sunucu meşgul. Jottery %{seconds} saniye sonra yeniden deneyecek."
+  quota_exceeded: "Hesabınız depolama sınırına ulaştı, bu yüzden değişiklikler yüklenemedi. Bu cihazda güvendeler. Yer açmak için çöp kutusunu boşaltın veya ekleri kaldırın."
+  deletions_held_title: "Çok sayıda not silindi"
+  deletions_held: "Sunucuya göre %{count} not başka bir yerde kalıcı olarak silindi. Bunu siz mi yaptınız?"
+  deletions_held_warning: "y: burada çöp kutusuna taşı. n: sakla ve sunucuya geri koy."
+  deletions_held_cli: "Sunucuya göre %{count} not başka bir yerde silindi. Hâlâ buradalar: karar vermek için Jottery'yi açın."
+  deletions_applied: "%{count} not çöp kutusuna taşındı"
+  force_title: "Tam yeniden eşitlemeyi zorla"
+  force_confirm: "TÜM notlar ve ekler sunucudan çekilsin mi?"
+  force_note: "Gönderilmemiş yerel değişiklikler korunur."
+  disconnect_title: "Eşitleme bağlantısını kes"
+  disconnect_confirm: "Bu cihazın sunucuyla bağlantısı kesilsin mi?"
+  disconnect_warning: "Notlarınız burada kalır. Cihaz sunucuda iptal edilir."
+  disconnect_conflicts: "%{count} notta çözülmemiş çakışma var. Sunucu kopyaları burada unutulacak."
+  device_still_registered: "Burada bağlantı kesildi, ancak sunucuya bildirilemedi, bu yüzden bu cihazın anahtarı hâlâ çalışıyor. Kullanıcı portalından iptal edin."
 
 # Gelen Kutusu
+  stopped_unexpectedly: "Eşitleme beklenmedik şekilde durdu. Hiçbir şey kaybolmadı, yeniden denenecek."
+  clock_ahead: "Bu cihazın saati yanlış olabilir: bazı değişikliklerin tarihi sunucudan bir günden fazla ileride olduğu için gönderilmedi. Saat düzeltildiğinde gönderilecekler."
 inbox:
   title: "Gelen Kutusu"
   empty: "Gelen kutusu boş. Gelen Kutusu API'si üzerinden gönderilen notlar burada görünecek."
@@ -233,6 +288,8 @@ register:
   device_failed: Cihaz kaydı başarısız
   cleared: Kayıt temizlendi. Yeniden başlayabilirsiniz.
   pending_status: Onay bekleniyor
+  password_differs: "Not parolanızdan farklı olmalıdır."
+  insecure_endpoint: "Bu adres şifresiz HTTP kullanıyor, bu yüzden hesap parolanız ve cihaz anahtarınız yolda okunabilir. https:// kullanın veya bunu kabul etmek için bu adresi yeniden girin."
 color_scheme:
   default_dark: Varsayılan koyu
   default_light: Varsayılan açık
@@ -301,7 +358,6 @@ help:
   attachments: EKLER
   global: GENEL
   press_esc_or_enter: Kapatmak için Esc veya Enter tuşuna basın
-  press_enter_paste: Yapıştırmak için Enter | İptal etmek için Esc
   tab_switch: "Tab: alanları değiştir | Enter: oluştur"
   enter_unlock: "Enter: kilidi aç | Ctrl+Q: çık"
   type_password_key: Yaz
@@ -386,8 +442,8 @@ help:
   s_q_close_desc: Ayarlar panelini kapat
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: Ek paneline odaklan (j/k ile gezin, Enter ile görüntüle, d ile sil)
-  A_add_attachment_key: A
-  A_add_attachment_desc: Ek ekle (dosya yolunu girin)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: Ek ekle (dosya yolunu girin)
   a_view_attachment_key: a + numara
   a_view_attachment_desc: Ek görüntüle (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -450,6 +506,51 @@ help:
   click_tags_desc: Etiket düzenleme moduna gir
   scroll_key: Kaydırma tekerleği
   scroll_desc: Önizlemeyi yukarı/aşağı kaydır
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Jottery uygulamasını kilitle"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Seçili eki bir dosyaya kaydet"
+  z_archive_key: "z"
+  z_archive_desc: "Seçili notu arşivle (arşiv modunda geri getir)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Seçili notları arşivle"
+  search_or_key: "a | b"
+  search_or_desc: "İkisinden biri (VEYA)"
+  search_phrase_key: "\"a phrase\""
+  search_phrase_desc: "Bu sözcükler bu sırayla"
+  search_wildcard_key: "word* / *word"
+  search_wildcard_desc: "Bir sözcük bununla başlar veya biter"
+  search_exclude_tag_key: "-#tag"
+  search_exclude_tag_desc: "Bu etiketli notları hariç tut"
+  search_attachment_key: "has:attachment"
+  search_attachment_desc: "Eki olan notlar"
+  search_archived_key: "archived"
+  search_archived_desc: "Arşivde ara"
+  search_created_key: "created:>2024-01-01"
+  search_created_desc: "Bir tarihten sonra oluşturuldu (< ve a..b de olur)"
+  search_modified_key: "modified:>2024-01-01"
+  search_modified_desc: "Bir tarihten sonra değiştirildi (< ve a..b de olur)"
+  search_words_key: "words:>100"
+  search_words_desc: "Sözcük sayısı (< ve a..b de olur)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "Seçili notlardan etiket kaldır"
+  multi_colour_key: "C"
+  multi_colour_desc: "Seçili notların rengini ayarla"
+  g_saved_key: "g"
+  g_saved_desc: "Kayıtlı aramalar"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "Bu aramayı kaydet"
+  enter_confirm_esc_cancel: "Enter: onayla | Esc: iptal"
+  D_duplicate_key: "Shift+D"
+  D_duplicate_desc: "Notu çoğalt"
+  o_copy_key: "o"
+  o_copy_desc: "Not metnini panoya kopyala"
+  w_wrap_key: "w"
+  w_wrap_desc: "Sözcük kaydırmayı aç veya kapat"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "Önceki ve sonraki aramalar"
+  l_link_key: "l, Enter"
+  l_link_desc: "Bağlantılar arasında gez ve birini aç"
 cli:
   # Eski (bazı yerlerde kullanılıyor)
   list: Notları listele
@@ -513,6 +614,31 @@ cli:
   # Çıktı mesajları
   notes_count: "%{count} not"
   results_count: "%{count} sonuç: '%{query}'"
+  attach_about: "Nota dosya ekle"
+  save_attachment_about: "Bir notun ekini dosyaya kaydet"
+  archive_about: "Bir notu arşivle"
+  unarchive_about: "Bir notu arşivden geri getir"
+  note_id_help: "Not kimliği (kısmi eşleşme desteklenir)"
+  attach_file_help: "Eklenecek dosya"
+  attachment_number_help: "Hangi ek (show numaralandırmasına göre)"
+  archived_help: "Bunun yerine arşivlenmiş notları listele"
+  import_summary: "%{created} eklendi, %{updated} güncellendi, %{skipped} zaten güncel"
+  import_failed: "Dosyadaki %{count} öğe içe aktarılamadı"
+  password_change_required: "Bu hesabın önce parolasını değiştirmesi gerekiyor. Bunun için web uygulamasında oturum açın ve yeniden deneyin."
+  insecure_endpoint: "%{endpoint} şifresiz HTTP kullanıyor, bu yüzden parola yolda okunabilir. https:// kullanın veya bunu kabul etmek için --allow-insecure-http verin."
+  allow_insecure_http_help: "Parolanın şifresiz HTTP ile herkese açık bir sunucuya gönderilmesine izin ver"
+  password_flag_deprecated: "Komut satırındaki parola ps ve kabuk geçmişinde görünür. Bunun yerine --password-stdin veya JOTTERY_PASSWORD kullanın."
+  password_stdin_help: "Sormak yerine parolaları stdin'den satır satır oku"
+  reset_yes_help: "--reset bir şey silmeden önce sorma"
+  reset_confirm: "Bu işlem %{path} dosyasını ve hatırlanan parolayı kalıcı olarak siler. Devam etmek için %{word} yazın:"
+  reset_cancelled: "Hiçbir şey silinmedi"
+  reset_done: "Kasa ve hatırlanan parola silindi"
+  reset_keychain_failed: "Parola anahtar zincirinden kaldırılamadı"
+  export_force_help: "Dosya zaten varsa değiştir"
+  account_about: "Sunucunun hesabınız için tuttuklarını görün veya silin"
+  colours_about: "Renklere ad verin ve etiketlere renk atayın"
+  doctor_about: "Kasada açılmayan notları ve eksik ekleri denetle"
+  doctor_repair_help: "Eksik ekleri sunucudan al"
 status:
   locked: Kilitli
   unlocked: Kilitsiz
@@ -534,6 +660,15 @@ bulk:
   enter_export_path: "Dışa aktarma yolu:"
   add_tags_to: Etiket ekle
   export_notes_to: Dışa aktar
+  archived: "%{count} not arşivlendi"
+  tags_removed: "%{count} nottan etiketler kaldırıldı: %{tags}"
+  remove_tags_from: "%{count} nottan etiket kaldır"
+  enter_colour: "Renk adı girin (temizlemek için boş bırakın):"
+  colour_of: "%{count} notun rengini ayarla"
+  colour_set: "%{count} notun rengi değişti"
+  unknown_colour: "%{colour} adında bir renk yok"
+  overwrite_title: "Bu dosya değiştirilsin mi?"
+  overwrite_message: "%{path} zaten var. Değiştirme işlemi geri alınamaz."
 time:
   just_now: az önce
   minutes_ago: "%{count} dakika önce"
@@ -568,6 +703,8 @@ backup:
   restoring: "Veriler geri yükleniyor..."
   restored: "Geri yüklendi"
   key_not_in_backup: "Bu yedek, Jottery'nin eski bir sürümüyle oluşturuldu ve anahtarını içermiyor. Yalnızca oluşturulduğu kasaya geri yüklenebilir."
+  incomplete: "Bu yedek eksik: kasadaki %{count} öğe okunamadı ve dışarıda bırakıldı."
+  records_failed: "Bu yedekteki %{count} kayıt geri yüklenemedi. Geri kalanı yüklendi."
 
 # Progress indicators
 progress:
@@ -591,6 +728,12 @@ ui:
   type: "Tür:"
   modified: "Değiştirildi:"
   version: "Sürüm:"
+  save_attachment: "Eki kaydet (Tab: tamamla, ↑↓: seç, Enter: onayla)"
+  path: "Yol"
+  attachments_hint: "Ekler: (odaklanmak için Tab)"
+  attachments_focused_hint: "Ekler: (geçmek için Tab, gezinmek için j/k, görüntülemek için Enter, kaydetmek için S, silmek için d)"
+  attachments_keys_hint: "Görüntülemek için 'a', eklemek için '+', seçileni kaldırmak için 'X'"
+  attachment_viewer_hint: "↑/↓: gezin │ 1-9: hızlı seçim │ Enter: görüntüle │ S: kaydet │ +: ekle │ d: sil │ Esc: kapat"
 
 # Durum çubuğu yardım metni
 status_bar:
@@ -640,8 +783,65 @@ status_bar:
   quick_select: "Hızlı seçim"
   view: "görüntüle"
   restore_version: "Sürümü geri yükle"
+  save: "kaydet"
+  add: "ekle"
 
 # Virtual tags
 tags:
   virtual:
     title: "başlık"
+
+calc:
+  line_too_long: "⚠ Satır hesaplamak için çok uzun (sınır %{max} bayt)"
+  numbers_only: "⚠ Calc sayılarla çalışır: metin, demetler ve ; hesaplanmaz"
+  too_deep: "⚠ Çok fazla iç içe parantez (sınır %{max})"
+  gave_up: "Bu notun hesaplanması çok uzun sürdü, bu yüzden sonuçlar olmadan gösteriliyor."
+
+envelope:
+  unwrap_failed: "Not parolanız bu hesabın anahtarını açamıyor. Anahtar eski bir sürüm tarafından kaydedilmiş olabilir. Zaten bağlı bir cihazda Jottery kilidini açın, bu sorunu düzeltir, sonra yeniden deneyin."
+  rekey_failed: "Yerel notlarınız bu hesabın anahtarına taşınamadı, bu yüzden hiçbir şey değişmedi: %{error}"
+  diverged: "Bu cihazın anahtarı hesabın anahtarından farklı. Diğer cihazlarınızdaki notlar burada açılmayabilir."
+  password_changed_elsewhere: "Not parolanız başka bir cihazda değiştirildi, bu yüzden hiçbir şeyin üzerine yazılmadı. Bu cihazın kilidi hâlâ eski parolayla açılıyor. Yeni cihazların bağlanabilmesi için parolayı burada da değiştirin."
+  server_update_pending: "Parolanız bu cihazda değişti, ancak anahtarınızın sunucudaki kopyası güncellenemedi. Jottery yeniden deneyecek. O zamana kadar yeni bir cihaz yeni parolayla bağlanamaz."
+  key_keeps_changing: "Hesabın anahtarı sunucuda sürekli değişiyor, bu yüzden bu cihaz ona dokunmadı. Birazdan yeniden deneyin."
+
+saved_search:
+  title: "Kayıtlı aramalar"
+  empty: "Henüz kayıtlı arama yok. / ile arayın, ardından kaydetmek için Ctrl+S tuşuna basın."
+  name_prompt: "Bu aramaya bir ad verin"
+  nothing_to_save: "Önce bir arama yazın"
+  saved: "Arama kaydedildi: %{name}"
+  deleted: "Kayıtlı arama silindi"
+  delete_confirm: "'%{name}' tüm cihazlarda silinsin mi? (y/n)"
+  not_found: "%{name} adında kayıtlı arama yok"
+  failed: "Kayıtlı arama başarısız: %{error}"
+
+export:
+  file_exists: "Bu dosya zaten var. Başka bir ad seçin ya da değiştirmek için --force kullanın."
+
+account:
+  email: "Hesap: %{email}"
+  usage: "Notlar: %{notes}, ekler: %{attachments}"
+  storage: "Depolama: %{used} MB / %{quota} MB"
+  last_sync: "Son eşitleme: %{time}"
+  confirm_delete_notes: "Bu işlem sunucudaki tüm notları tüm cihazlar için siler ve geri alınamaz. Devam etmek için e-posta adresinizi yazın:"
+  confirm_delete: "Bu işlem hesabınızı ve sunucudaki her şeyi siler ve geri alınamaz. Bu cihaz notlarını korur. Devam etmek için e-posta adresinizi yazın:"
+  cancelled: "Hiçbir şey silinmedi"
+  notes_deleted: "Sunucudaki tüm notlar silindi"
+  deleted: "Hesap silindi"
+
+colours:
+  unknown: "%{colour} adında renk yok"
+  named: "Renk güncellendi: %{colour}"
+  tag_set: "Etiket güncellendi: %{tag}"
+
+doctor:
+  notes: "Notlar: %{count}, okunamayan: %{unreadable}"
+  versions: "Sürümler: %{count}, okunamayan: %{unreadable}"
+  attachments: "Ekler: %{count}, okunamayan: %{unreadable}, eksik: %{missing}"
+  saved_searches: "Kayıtlı aramalar: %{count}, okunamayan: %{unreadable}"
+  conflicts: "Sizi bekleyen çakışmalar: %{count}"
+  problems: "Bulunan sorunlar: %{count}"
+  repaired: "Alınan ekler: %{count}"
+  repair_needs_sync: "Bu kasa bir sunucuya bağlı değil, bu yüzden eksik ekler alınamıyor"
+  healthy: "Sorun bulunamadı"

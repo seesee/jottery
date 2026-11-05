@@ -189,6 +189,11 @@ class WebCryptoService implements CryptoService {
    * This hash uniquely identifies the note's content state for conflict detection.
    * Includes all fields that constitute a "change" to the note.
    *
+   * This is a version token, not an integrity check. Nothing recomputes a hash to compare
+   * it, and each client builds its own differently, so two clients never produce the same
+   * value for one note. It's only compared with the values already in a chain. Changing
+   * how it's computed would need every client to change at once.
+   *
    * @param note - The note to hash (with encrypted content/tags)
    * @returns SHA-256 hash of the note's change-triggering fields
    */
@@ -210,7 +215,7 @@ class WebCryptoService implements CryptoService {
       color: note.color ?? null,
     };
 
-    // JSON.stringify produces deterministic output for this simple object
+    // JSON.stringify keeps this order: ECMAScript has guaranteed it since ES2020
     const data = JSON.stringify(hashData);
     return this.hash(data);
   }
@@ -231,12 +236,16 @@ class WebCryptoService implements CryptoService {
    * Used only during onboarding/migration — not for daily unlock.
    * The userId serves as a deterministic, per-user salt.
    */
-  async deriveWrappingKey(password: string, userId: string): Promise<CryptoKey> {
+  async deriveWrappingKey(
+    password: string,
+    userId: string,
+    iterations: number = CRYPTO_WRAPPING_ITERATIONS
+  ): Promise<CryptoKey> {
     const salt = stringToArrayBuffer(userId);
     return this.deriveKey({
       password,
       salt: new Uint8Array(salt),
-      iterations: CRYPTO_WRAPPING_ITERATIONS,
+      iterations,
       extractable: false,
     });
   }
@@ -334,14 +343,40 @@ export async function decryptStringArray(
  *
  * @param currentHash - The new content hash to add
  * @param parentChain - The previous hash chain (or empty array for new notes)
+ * @param keepThrough - A hash that must stay in the chain, however far back it is
  * @returns Updated hash chain with current hash prepended
  */
 export function updateHashChain(
   currentHash: string,
-  parentChain: string[] = []
+  parentChain: string[] = [],
+  keepThrough?: string
 ): string[] {
   const newChain = [currentHash, ...parentChain];
-  return newChain.slice(0, MAX_HASH_CHAIN_LENGTH);
+  const needed = keepThrough ? newChain.indexOf(keepThrough) + 1 : 0;
+  return newChain.slice(0, Math.max(MAX_HASH_CHAIN_LENGTH, needed));
+}
+
+/**
+ * Record a change to a note in its hash chain, so other devices see a new version
+ * descending from the old one. Call this after any local change to a field the hash
+ * covers. It does nothing if the hash hasn't changed.
+ */
+export async function advanceContentHash(note: Note): Promise<void> {
+  const contentHash = await cryptoService.computeContentHash(note);
+  if (contentHash === note.contentHash) {
+    return;
+  }
+
+  // The server accepts a push only if its hash appears in the chain. A clean note's
+  // hash is what the server holds, so it has to survive every save until the next
+  // sync, or a long writing session would come back as a conflict with itself.
+  if (!note.needsSync && note.contentHash) {
+    note.serverHash = note.contentHash;
+  }
+
+  note.hashChain = updateHashChain(contentHash, note.hashChain ?? [], note.serverHash);
+  note.parentHash = note.contentHash ?? null;
+  note.contentHash = contentHash;
 }
 
 /**

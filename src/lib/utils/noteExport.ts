@@ -12,6 +12,9 @@
 import type { Attachment } from '../types';
 import { attachmentService, cryptoService, keyManager } from '../services';
 import { stripMarkdownSignifiers, isMarkdownLanguage } from './markdownStrip';
+import { escapeHtml, sanitiseHtml } from './htmlSanitiser';
+import { renderMarkdown } from './markdownPreview';
+import { removePrintFrame, trackPrintFrame } from './printFrames';
 
 /**
  * Map syntax language to file extension
@@ -153,16 +156,6 @@ function blobToDataUrl(blob: Blob): Promise<string> {
 }
 
 /**
- * Escape HTML special characters
- */
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-/**
  * Generate print-ready HTML document
  */
 export async function generatePrintHtml(options: PrintOptions): Promise<string | null> {
@@ -187,12 +180,12 @@ export async function generatePrintHtml(options: PrintOptions): Promise<string |
   // Build the HTML content based on language type
   let htmlContent: string;
 
-  if (language === 'markdown' && previewHtml) {
-    // Use rendered markdown preview
-    htmlContent = previewHtml;
+  if (language === 'markdown') {
+    // There's no preview HTML unless the preview happens to be open
+    htmlContent = sanitiseHtml(previewHtml || renderMarkdown(content, { attachments, openLinksInNewTab: false }));
   } else if (language === 'html' || language === 'xml') {
-    // Use raw HTML/XML content directly
-    htmlContent = content;
+    // The note's own markup, reduced to what can't run
+    htmlContent = sanitiseHtml(content);
   } else {
     // For code/plain text, wrap in a pre/code block with styling
     const escapedContent = escapeHtml(content);
@@ -348,22 +341,47 @@ async function findAttachmentByFilename(
 }
 
 /**
+ * Print a document from a hidden frame, removing it afterwards so decrypted
+ * content doesn't stay around.
+ *
+ * The sandbox leaves out allow-scripts, so nothing in the document can run.
+ * That makes allow-same-origin safe here: it only lets this page call print() on
+ * the frame, and allow-modals is what permits the print dialog itself.
+ */
+function printInSandboxedFrame(html: string): Promise<boolean> {
+  return new Promise(resolve => {
+    const frame = document.createElement('iframe');
+    frame.setAttribute('sandbox', 'allow-same-origin allow-modals');
+    frame.setAttribute('aria-hidden', 'true');
+    frame.tabIndex = -1;
+    frame.style.cssText = 'position: fixed; right: 0; bottom: 0; width: 0; height: 0; border: 0;';
+
+    frame.addEventListener('load', () => {
+      try {
+        const printWindow = frame.contentWindow as Window;
+        printWindow.addEventListener('afterprint', () => removePrintFrame(frame), { once: true });
+        printWindow.focus();
+        printWindow.print();
+        resolve(true);
+      } catch (error) {
+        console.error('Failed to print note:', error);
+        removePrintFrame(frame);
+        resolve(false);
+      }
+    }, { once: true });
+
+    frame.srcdoc = html;
+    trackPrintFrame(frame);
+    document.body.appendChild(frame);
+  });
+}
+
+/**
  * Open print dialog with note content
  */
 export async function printNote(options: PrintOptions): Promise<boolean> {
   const html = await generatePrintHtml(options);
   if (!html) return false;
 
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) return false;
-
-  printWindow.document.write(html);
-  printWindow.document.close();
-
-  // Wait for content to load, then print
-  printWindow.onload = () => {
-    printWindow.print();
-  };
-
-  return true;
+  return printInSandboxedFrame(html);
 }

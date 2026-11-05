@@ -8,12 +8,13 @@
 
 import { EditorView, ViewPlugin, Decoration, WidgetType, keymap } from '@codemirror/view';
 import type { ViewUpdate, DecorationSet } from '@codemirror/view';
-import { EditorState, Text, Range } from '@codemirror/state';
+import { Compartment, EditorState, Text, Range } from '@codemirror/state';
 import { HighlightStyle, syntaxHighlighting, LanguageSupport, StreamLanguage } from '@codemirror/language';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { tags as t } from '@lezer/highlight';
-import * as math from 'mathjs';
+import type { MathType } from 'mathjs';
 import { postToSwift } from '../bridge';
+import { math } from './limits';
 
 // ---- Constants ----
 
@@ -168,7 +169,7 @@ class CalcEvaluator {
     }
   }
 
-  private formatResult(value: math.MathType): string {
+  private formatResult(value: MathType): string {
     if (typeof value === 'number') {
       return Number.isInteger(value)
         ? value.toString()
@@ -345,6 +346,12 @@ const calcTheme = EditorView.baseTheme({
 let isDark = false;
 let currentFontSize = 15;
 let editorView: EditorView | null = null;
+let isReadOnly = false;
+const readOnlyCompartment = new Compartment();
+
+function readOnlyExtensions() {
+  return [EditorState.readOnly.of(isReadOnly), EditorView.editable.of(!isReadOnly)];
+}
 
 // ---- Theme application ----
 
@@ -366,6 +373,7 @@ function createEditor(content: string, dark: boolean): void {
     state: EditorState.create({
       doc: content,
       extensions: [
+        readOnlyCompartment.of(readOnlyExtensions()),
         new LanguageSupport(calcLanguage),
         syntaxHighlighting(dark ? calcHighlightStyleDark : calcHighlightStyleLight),
         calcPlugin,
@@ -441,6 +449,11 @@ window.bridge = {
 
   resolveAttachment(): void {
     // Not used by calc editor
+  },
+
+  setReadOnly(readOnly: boolean): void {
+    isReadOnly = readOnly;
+    editorView?.dispatch({ effects: readOnlyCompartment.reconfigure(readOnlyExtensions()) });
   },
 };
 

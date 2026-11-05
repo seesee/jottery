@@ -3,7 +3,9 @@
 use ratatui::Frame;
 use ratatui::layout::{Alignment, Constraint, Direction, Layout};
 use ratatui::style::Style;
+use ratatui::text::Line;
 use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
+use rust_i18n::t;
 
 use crate::ui::app::App;
 use crate::ui::state::InputMode;
@@ -17,7 +19,8 @@ pub fn render_note_view(app: &App, frame: &mut Frame) {
         InputMode::Tag => "TAG",
         InputMode::AttachmentPath => "ATTACHMENT",
         InputMode::Insert | InputMode::SettingsEdit | InputMode::PasswordVerify
-            | InputMode::BulkAddTags | InputMode::BulkExportPath => "PREVIEW", // Should not happen in note view
+            | InputMode::BulkAddTags | InputMode::BulkRemoveTags | InputMode::BulkSetColour | InputMode::BulkExportPath
+            | InputMode::SaveSearchName => "PREVIEW", // Should not happen in note view
     };
 
     let block = Block::default()
@@ -74,7 +77,8 @@ pub fn render_note_view(app: &App, frame: &mut Frame) {
     // Help text
     let help = match app.input_mode {
         InputMode::Normal | InputMode::Insert | InputMode::SettingsEdit | InputMode::PasswordVerify
-            | InputMode::BulkAddTags | InputMode::BulkExportPath => {
+            | InputMode::BulkAddTags | InputMode::BulkRemoveTags | InputMode::BulkSetColour | InputMode::BulkExportPath
+            | InputMode::SaveSearchName => {
             Paragraph::new("Enter/e: edit with $EDITOR | t: tags | q/Esc: save & quit")
                 .style(Style::default().fg(app.color_scheme.muted))
                 .alignment(Alignment::Center)
@@ -89,6 +93,14 @@ pub fn render_note_view(app: &App, frame: &mut Frame) {
                 .style(Style::default().fg(app.color_scheme.muted))
                 .alignment(Alignment::Center)
         }
+    };
+    let help = match &app.error {
+        Some(error) => Paragraph::new(vec![
+            Line::styled(error.as_str(), Style::default().fg(app.color_scheme.error)),
+            Line::styled(t!("note.save_retry_hint").to_string(), Style::default().fg(app.color_scheme.muted)),
+        ])
+        .alignment(Alignment::Center),
+        None => help,
     };
     frame.render_widget(help, chunks[2]);
 

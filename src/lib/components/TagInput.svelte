@@ -207,7 +207,7 @@
     <div
       id="tag-input-suggestions"
       role="listbox"
-      aria-label="Tag suggestions"
+      aria-label={$_('tagInput.suggestions')}
       class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-48 overflow-y-auto"
     >
       {#each suggestions as suggestion, index}

@@ -44,6 +44,15 @@ extension Date {
         return nil
     }
 
+    /// Whether one timestamp is later than another, compared as instants:
+    /// different devices don't format them alike.
+    static func isLater(_ first: String, than second: String) -> Bool {
+        guard let firstDate = Date(iso8601: first), let secondDate = Date(iso8601: second) else {
+            return first > second
+        }
+        return firstDate > secondDate
+    }
+
     /// Relative time description (e.g. "2 hours ago", "Yesterday").
     var relativeDescription: String {
         RelativeDateTimeFormatter.shared.localizedString(for: self, relativeTo: Date())

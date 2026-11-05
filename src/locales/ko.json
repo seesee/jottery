@@ -186,6 +186,21 @@
     "readOnly": {
       "archivedBanner": "이 노트는 보관되어 있습니다. 편집하려면 보관 해제하세요.",
       "lockedBanner": "이 노트는 잠겨 있습니다. 편집하려면 잠금을 해제하세요."
+    },
+    "actionFailed": {
+      "archive": "노트 보관 실패: {error}",
+      "unarchive": "노트 보관 해제 실패: {error}",
+      "lock": "노트 잠금 실패: {error}",
+      "unlock": "노트 잠금 해제 실패: {error}",
+      "delete": "노트 삭제 실패: {error}"
+    },
+    "copyLinkFailed": "링크를 클립보드에 복사하지 못했습니다",
+    "noteEditor": "노트 편집기",
+    "calc": {
+      "tooLong": "이 노트는 너무 길어 계산할 수 없습니다({lines}줄, 최대 {max}줄). 줄이거나 다른 구문을 사용하세요.",
+      "consecutiveErrors": "오류가 {count}번 연속 발생하여 중지했습니다. 계산 내용이 아닌 것 같으니 다른 구문을 사용해 보세요.",
+      "totalErrors": "오류 {count}개가 발생하여 중지했습니다. 이 노트에는 다른 구문을 사용해 보세요.",
+      "tooSlow": "시간이 너무 오래 걸려 중지했습니다. 아래 줄에는 결과가 없습니다."
     }
   },
   "noteList": {
@@ -195,7 +210,8 @@
     "noteCountAll": "{total}개 노트"
   },
   "tagInput": {
-    "removeTag": "태그 제거"
+    "removeTag": "태그 제거",
+    "suggestions": "태그 제안"
   },
   "backupReminder": {
     "title": "노트를 백업할 시간입니다",
@@ -216,7 +232,8 @@
     "frequencyMonthly": "매월",
     "frequencyOnChanges": "일정 횟수 변경 후",
     "changesThreshold": "이 횟수만큼 변경 후 백업",
-    "description": "자동 백업은 장치에 다운로드됩니다. 알림을 활성화하면 백업할 시간이 되면 알려드립니다."
+    "description": "자동 백업은 장치에 다운로드됩니다. 알림을 활성화하면 백업할 시간이 되면 알려드립니다.",
+    "saveFailed": "설정이 저장되지 않았습니다. 다시 시도하세요."
   },
   "backup": {
     "title": "암호화된 백업",
@@ -254,8 +271,10 @@
         "title": "백업 정보",
         "created": "생성일",
         "records": "레코드"
-      }
-    }
+      },
+      "storageFull": "브라우저의 저장 공간이 부족해 복원이 완료되지 않았으며 아무것도 유지되지 않았습니다. 백업 파일은 문제없습니다. 공간을 확보한 뒤 다시 복원하세요."
+    },
+    "autoFailed": "자동 백업에 실패했습니다. 수동으로 백업을 만드세요."
   },
   "settings": {
     "title": "설정",
@@ -442,7 +461,22 @@
         "hintExisting": "다른 기기에서 노트 잠금을 해제할 때 사용하는 비밀번호입니다. 서버로 전송되지 않습니다.",
         "required": "노트 비밀번호를 입력하세요.",
         "incorrect": "이 기기에서 노트 잠금을 해제하는 비밀번호가 아닙니다. 서버 비밀번호가 아니라 노트 비밀번호를 입력하세요.",
-        "uploadFailed": "동기화는 설정되었지만 암호화 키를 서버에 저장하지 못해 다른 기기는 아직 연결할 수 없습니다. 다음에 잠금을 해제할 때 다시 시도합니다"
+        "uploadFailed": "동기화는 설정되었지만 암호화 키를 서버에 저장하지 못해 다른 기기는 아직 연결할 수 없습니다. 다음에 잠금을 해제할 때 다시 시도합니다",
+        "mustDiffer": "메모 비밀번호와 계정 비밀번호는 서로 달라야 합니다. 동기화 서버는 계정 비밀번호를 볼 수 있으므로, 두 비밀번호가 같으면 메모를 읽을 수 있습니다.",
+        "matchesAccountWarning": "메모 비밀번호가 계정 비밀번호와 같아 동기화 서버가 메모를 읽을 수 있습니다. 메모 비밀번호를 변경해 해결하세요."
+      },
+      "existingAccountDetected": "이 이메일에는 이미 계정이 있으므로 이 기기를 해당 계정에 연결합니다. 다른 기기에서 사용하는 메모 비밀번호를 입력하세요.",
+      "errors": {
+        "credentialsRequired": "이메일과 비밀번호가 필요합니다",
+        "passwordTooShort": "비밀번호는 12자 이상이어야 합니다",
+        "registrationFailed": "사용자 등록 실패",
+        "deviceRegistrationFailed": "기기 등록 실패",
+        "loginFailed": "로그인 실패",
+        "accountInfoFailed": "계정 정보 불러오기 실패",
+        "deleteNotesFailed": "노트 삭제 실패",
+        "disconnectFailed": "연결 해제 실패",
+        "syncFailed": "동기화 실패",
+        "toggleFailed": "동기화 변경 실패"
       }
     },
     "editorTab": {
@@ -481,7 +515,9 @@
       "formatHelp": "YYYY, MM, DD, HH, mm, ss 토큰 사용",
       "value": "값",
       "description": "설명",
-      "preview": "미리보기"
+      "preview": "미리보기",
+      "textPlaceholder": "삽입할 텍스트",
+      "descriptionPlaceholder": "자동 완성에 표시되는 설명"
     },
     "keyboardTab": {
       "description": "단축키를 사용자 정의하세요. 단축키를 클릭하여 변경한 다음 원하는 키 조합을 누르세요.",
@@ -513,7 +549,10 @@
       "duplicateNote": "노트 복제",
       "exportNote": "노트 내보내기",
       "pressKey": "키를 누르세요...",
-      "notSet": "설정되지 않음"
+      "notSet": "설정되지 않음",
+      "needsModifier": "이 단축키는 입력 중에도 작동하므로 Ctrl, Cmd 또는 Alt가 필요합니다. 다른 키를 누르거나 Esc를 눌러 취소하세요.",
+      "reserved": "해당 키는 예약되어 있습니다. 다른 키를 누르거나 Esc를 눌러 취소하세요.",
+      "toggleCollapse": "접기 또는 펼치기"
     },
     "syncTab": {
       "enableSync": "동기화 활성화",
@@ -566,7 +605,9 @@
         "changing": "비밀번호 변경 중...",
         "button": "비밀번호 변경",
         "success": "비밀번호가 성공적으로 변경되었습니다",
-        "error": "비밀번호 변경 실패: {error}"
+        "error": "비밀번호 변경 실패: {error}",
+        "serverKeyFailed": "이 기기의 비밀번호는 변경되었지만 서버를 업데이트하지 못했습니다. 다음 잠금 해제 시 다시 시도합니다. 그때까지 새 기기에는 이전 비밀번호가 필요합니다.",
+        "keyStaysTheSame": "암호화 키는 그대로이므로 이전 백업은 이전 비밀번호로 계속 열 수 있습니다. 안전하게 보관하세요."
       },
       "connectionDetails": {
         "title": "연결 세부정보",
@@ -602,11 +643,12 @@
         "dangerZone": "위험 구역",
         "deleteNotesDescription": "동기화 서버에서 모든 노트를 삭제합니다. 이 작업은 취소할 수 없습니다. 로컬 노트는 삭제되지 않습니다.",
         "deleteNotesButton": "서버에서 모든 노트 삭제"
-      }
+      },
+      "disconnectNotRevoked": "이 기기의 연결이 해제되었지만 서버에 알리지 못해 목록에 남아 있으며 키도 계속 유효합니다. 사용자 포털에서 취소하세요."
     },
     "advancedTab": {
       "importExport": "가져오기/내보내기",
-      "exportDescription": "노트를 복호화된 JSON으로 내보냅니다. 가져오기는 노트를 기존 데이터와 병합합니다.",
+      "exportDescription": "내보내기는 메모를 다른 곳으로 옮기기 위한 암호화되지 않은 JSON 사본을 만듭니다. 파일을 가진 사람은 누구나 읽을 수 있습니다. 암호화된 사본은 백업을 사용하세요. 가져오기는 메모를 기존 메모와 병합합니다.",
       "downloadClient": "터미널/HTML 클라이언트 다운로드",
       "downloadTerminalClient": "터미널 클라이언트 다운로드",
       "clientDescription": "명령줄 액세스용 터미널 클라이언트 또는 파일 시스템에서 로컬로 실행하는 HTML 클라이언트 다운로드",
@@ -634,7 +676,8 @@
       "aboutDescription": "Jottery는 풍부한 콘텐츠, 구문 강조 및 암호화를 사용하여 노트를 캡처, 구성 및 검색하기 위한 개인정보 중심의 자체 호스팅 메모장 애플리케이션입니다.",
       "viewOnGithub": "GitHub에서 보기",
       "license": "MIT 라이선스로 제공됩니다."
-    }
+    },
+    "exportIncomplete": "내보내기가 완전하지 않습니다: 메모 {notes}개와 첨부 파일 {attachments}개를 읽을 수 없어 제외했습니다."
   },
   "landing": {
     "languagePicker": {
@@ -647,7 +690,9 @@
       "note": "계정 불필요 • 오프라인 작동 • 자체 호스팅 가능"
     },
     "screenshots": {
-      "mainInterface": "노트 목록과 편집기를 보여주는 메인 인터페이스"
+      "mainInterface": "노트 목록과 편집기를 보여주는 메인 인터페이스",
+      "carouselLabel": "스크린샷 캐러셀",
+      "fullSizeLabel": "전체 크기 이미지 보기"
     },
     "features": {
       "title": "필요한 모든 기능",
@@ -919,7 +964,9 @@
         "emailRequired": "이메일 주소는 필수입니다.",
         "serverPasswordRequired": "서버 비밀번호는 필수입니다.",
         "notesPasswordMinLength": "노트 비밀번호는 최소 8자 이상이어야 합니다.",
-        "onboardingFailed": "서버에서 암호화 키를 다운로드하지 못했습니다. 노트 비밀번호가 다른 기기와 일치하는지, 원본 기기가 동기화되었는지 확인하세요"
+        "onboardingFailed": "서버에서 암호화 키를 다운로드하지 못했습니다. 노트 비밀번호가 다른 기기와 일치하는지, 원본 기기가 동기화되었는지 확인하세요",
+        "accountKeyUnreadable": "이 메모 비밀번호로는 계정 키를 열 수 없습니다. 비밀번호를 확인하세요. 비밀번호가 맞다면 이전 버전의 Jottery가 키를 저장했을 수 있습니다. 이미 연결된 기기에서 Jottery 잠금을 해제하면 해결됩니다. 그런 다음 다시 시도하세요.",
+        "localNotesOrphaned": "이 기기의 메모는 계정과 다른 키를 사용하므로 연결하면 읽을 수 없게 됩니다. 아무것도 변경되지 않았습니다. 메모를 유지하려면 내보내고 이 기기의 데이터를 삭제한 뒤 연결하고 다시 가져오세요."
       },
       "steps": {
         "initialising": "로컬 암호화 초기화 중…",
@@ -928,12 +975,15 @@
         "encrypting": "자격 증명 보호 중…",
         "syncing": "초기 동기화 시작 중…"
       }
-    }
+    },
+    "passwordChangedElsewhere": "메모 비밀번호가 다른 기기에서 변경되었습니다. 이 기기는 계속 이전 비밀번호로 잠금 해제되며 메모는 안전하지만, 새 기기에는 새 비밀번호가 필요합니다."
   },
   "lock": {
     "title": "애플리케이션 잠금",
     "message": "애플리케이션을 잠글까요? 저장하지 않은 변경 사항이 손실됩니다.",
-    "confirmButton": "잠금"
+    "confirmButton": "잠금",
+    "locking": "잠그는 중...",
+    "savingAndSyncing": "노트를 저장하고 동기화하는 중"
   },
   "recycleBin": {
     "title": "휴지통",
@@ -997,14 +1047,23 @@
     "markdownCopied": "Markdown 링크가 클립보드에 복사되었습니다",
     "error": {
       "download": "첨부파일 다운로드 실패",
-      "copyMarkdown": "Markdown 링크 복사 실패"
+      "copyMarkdown": "Markdown 링크 복사 실패",
+      "upload": "{name} 업로드 실패: {error}",
+      "delete": "첨부파일 삭제 실패: {error}",
+      "paste": "이미지 붙여넣기 실패: {error}"
     },
     "preview": {
       "title": "첨부파일 미리보기",
       "loading": "미리보기 로딩 중...",
       "notAvailable": "이 파일 형식은 미리보기가 불가능합니다.",
       "audioNotSupported": "브라우저가 오디오 재생을 지원하지 않습니다.",
-      "videoNotSupported": "브라우저가 비디오 재생을 지원하지 않습니다."
+      "videoNotSupported": "브라우저가 비디오 재생을 지원하지 않습니다.",
+      "videoLabel": "동영상 미리 보기"
+    },
+    "confirmDelete": {
+      "title": "첨부 파일을 제거할까요?",
+      "message": "이 파일이 메모에서 제거됩니다. 메모의 이전 버전에 남아 있지 않으면 복구할 수 없습니다.",
+      "confirmButton": "제거"
     }
   },
   "keyboard": {
@@ -1052,7 +1111,8 @@
     "previousPage": "이전 페이지",
     "nextPage": "다음 페이지",
     "zoomOut": "축소",
-    "zoomIn": "확대"
+    "zoomIn": "확대",
+    "loadFailed": "이 PDF를 열 수 없습니다. 다운로드는 가능합니다."
   },
   "versionHistory": {
     "title": "버전 기록",
@@ -1075,7 +1135,8 @@
       "title": "버전 복원",
       "message": "이 버전을 복원하시겠습니까? 현재 노트는 복원하기 전에 새 버전으로 저장됩니다.",
       "confirmButton": "복원"
-    }
+    },
+    "restoreFailed": "버전 복원 실패: {error}"
   },
   "header": {
     "menu": "메뉴",
@@ -1084,7 +1145,8 @@
     "addContentFirst": "먼저 현재 노트에 내용을 추가하세요",
     "lastSynced": "마지막 동기화: {time}",
     "neverSynced": "아직 동기화되지 않음",
-    "syncDisabled": "동기화가 활성화되어 있지 않습니다"
+    "syncDisabled": "동기화가 활성화되어 있지 않습니다",
+    "newNote": "새 노트"
   },
   "confirm": {
     "deleteDatabase": {
@@ -1171,7 +1233,11 @@
     "indicator": "동기화 충돌",
     "bannerText": "이 노트에 해결해야 할 동기화 충돌이 있습니다",
     "resolveButton": "충돌 해결",
-    "syncNotification": "{count}개의 노트에 동기화 충돌이 있습니다"
+    "syncNotification": "{count}개의 노트에 동기화 충돌이 있습니다",
+    "serverUnreadable": "서버에 있는 이 메모의 사본을 읽을 수 없으며 변조되었을 수 있습니다. 내 버전만 유지할 수 있습니다.",
+    "localUnreadable": "이 기기에 있는 메모의 사본을 읽을 수 없습니다.",
+    "loadFailed": "충돌 데이터 불러오기 실패",
+    "resolveFailed": "충돌 해결 실패"
   },
   "pullToRefresh": {
     "pull": "아래로 당겨서 동기화",
@@ -1181,7 +1247,14 @@
   },
   "sync": {
     "syncing": "동기화 중...",
-    "syncProgress": "동기화: {percentage}% 완료"
+    "syncProgress": "동기화: {percentage}% 완료",
+    "notesRefused": "일부 메모가 계정의 업로드 제한을 초과하여 동기화되지 않았습니다. 나머지는 모두 동기화되었습니다.",
+    "accountDisabled": "계정이 비활성화되었거나 승인 대기 중이어서 동기화가 중지되었습니다. 이 기기의 메모는 안전합니다. 관리자에게 문의하세요.",
+    "storageQuotaExceeded": "계정의 저장 용량 한도에 도달하여 이 기기의 변경 사항을 업로드할 수 없습니다. 일부 메모나 첨부 파일을 영구 삭제하여 공간을 확보하세요.",
+    "massDeletionHeld": "서버가 메모 {count}개를 한 번에 삭제하도록 요청했습니다. 본인이 한 일이 아닐 경우를 대비해 휴지통에 보관했습니다. 그곳에서 복원하거나, 본인이 한 일이면 휴지통을 비우세요.",
+    "clockAhead": "날짜가 서버보다 하루 이상 앞서 있어 일부 변경 사항이 동기화되지 않았습니다. 이 기기의 날짜와 시간을 확인하세요.",
+    "deviceRevoked": "이 기기가 더 이상 계정에 연결되어 있지 않아 동기화가 중지되었습니다. 이 기기의 메모는 안전합니다. 설정에서 다시 연결하세요.",
+    "databaseLost": "데이터베이스 연결이 끊어졌습니다. 계속하려면 페이지를 새로 고치세요."
   },
   "inbox": {
     "title": "받은 편지함",
@@ -1420,6 +1493,18 @@
     "openNote": "이 노트 열기",
     "repairNotOnServer": "서버에도 없습니다 — 노트를 열어 첨부 파일을 제거하세요",
     "serverMissingTitle": "서버에 없음",
-    "serverMissingHint": "동기화 서버에도 이 기기에도 이 첨부 파일의 사본이 없습니다. 노트를 열어 첨부 파일을 제거하거나, 파일이 남아 있는 기기에서 동기화하세요."
+    "serverMissingHint": "동기화 서버에도 이 기기에도 이 첨부 파일의 사본이 없습니다. 노트를 열어 첨부 파일을 제거하거나, 파일이 남아 있는 기기에서 동기화하세요.",
+    "rejectedTitle": "동기화 서버에서 거부된 항목",
+    "rejectedHint": "동기화 서버가 신뢰할 수 없는 형식으로 보내서 저장하지 않았습니다. 기존 메모에는 영향이 없습니다. 계속 발생하면 서버를 누가 관리하는지 확인하세요.",
+    "rejectedKind": {
+      "note": "메모",
+      "version": "메모 버전",
+      "conflict": "동기화 충돌",
+      "savedSearch": "저장된 검색",
+      "attachment": "첨부 파일",
+      "inboxItem": "받은편지함 항목",
+      "deletion": "삭제"
+    },
+    "scanFailed": "검사가 완료되지 않았습니다. 다시 시도하세요."
   }
 }

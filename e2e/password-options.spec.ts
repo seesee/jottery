@@ -107,7 +107,6 @@ test.describe('Password options', () => {
         await page.waitForTimeout(AUTOSAVE_DELAY_MS);
         await page.mouse.move(200, 200);
         await page.locator(option.input).pressSequentially(PASSWORD, { delay: 10 });
-        await page.waitForTimeout(500);
 
         await expect(page.locator(option.input)).toHaveValue(PASSWORD);
         await page.getByRole('button', { name: option.enable }).click();

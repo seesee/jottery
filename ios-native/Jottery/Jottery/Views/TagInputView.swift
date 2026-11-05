@@ -29,6 +29,9 @@ struct TagInputView: View {
                     }
 
                     TextField(L.tagsAddTag, text: $newTag)
+                        // As in the editor: these stay out of the keyboard's learned words.
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
                         .font(.callout)
                         .frame(minWidth: 80, maxWidth: 150)
                         .focused($isInputFocused)
@@ -111,7 +114,8 @@ private struct TagChip: View {
     var body: some View {
         HStack(spacing: 4) {
             if isTitle, let value = titleValue {
-                Text("title: \(value)")
+                // `title:` is what you type in every language, so it isn't translated.
+                Text(verbatim: "title: \(value)")
                     .font(.callout)
                     .italic()
             } else {

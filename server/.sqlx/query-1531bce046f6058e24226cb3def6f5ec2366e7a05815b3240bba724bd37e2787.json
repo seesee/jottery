@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT approved, approved_at FROM users WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "approved",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "approved_at",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "1531bce046f6058e24226cb3def6f5ec2366e7a05815b3240bba724bd37e2787"
+}

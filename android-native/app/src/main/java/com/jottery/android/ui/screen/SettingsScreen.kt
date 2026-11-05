@@ -1,5 +1,7 @@
 package com.jottery.android.ui.screen
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -10,11 +12,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.jottery.android.BuildConfig
+import com.jottery.android.R
 import com.jottery.android.model.SortOrder
 import com.jottery.android.model.ThemeMode
+import com.jottery.android.model.tagCounts
+import com.jottery.android.ui.component.autoLockLabel
+import com.jottery.android.ui.component.enableBiometricUnlock
+import com.jottery.android.ui.component.relativeTime
+import com.jottery.android.ui.component.sortOrderLabel
+import com.jottery.android.ui.component.syntaxLanguages
+import com.jottery.android.ui.component.themeModeLabel
+import com.jottery.android.util.BiometricHelper
 import com.jottery.android.viewmodel.AppState
+import com.jottery.android.viewmodel.defaultExportName
+import java.text.NumberFormat
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,25 +42,45 @@ fun SettingsScreen(
     onNavigateToBackup: () -> Unit,
     onNavigateToImport: () -> Unit,
     onNavigateToSavedSearches: () -> Unit,
+    onNavigateToColours: () -> Unit,
+    onNavigateToChangePassword: () -> Unit,
 ) {
+    val screenSecurity by appState.screenSecurity.collectAsState()
+    val biometricEnabled by appState.biometricEnabled.collectAsState()
+    val context = LocalContext.current
+    val biometricsAvailable = remember { BiometricHelper.isBiometricAvailable(context) }
     val settings by appState.settings.collectAsState()
     val syncEnabled by appState.syncEnabled.collectAsState()
     val lastSyncAt by appState.lastSyncAt.collectAsState()
     val syncError by appState.syncError.collectAsState()
     var showThemeDialog by remember { mutableStateOf(false) }
     var showSortDialog by remember { mutableStateOf(false) }
+    var showNoteTypeDialog by remember { mutableStateOf(false) }
+    val defaultNoteType by appState.defaultNoteType.collectAsState()
     var showAutoLockDialog by remember { mutableStateOf(false) }
     var showWipeConfirm by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
+    val notes by appState.notes.collectAsState()
+    val archivedNotes by appState.archivedNotes.collectAsState()
+    var binCount by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) { binCount = appState.loadDeletedNotes().size }
+    var exportStatus by remember { mutableStateOf<String?>(null) }
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            scope.launch { exportStatus = appState.exportTo(context, uri, ids = null) }
+        }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
             )
@@ -57,75 +93,116 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
         ) {
             // General Section
-            SettingsSectionHeader("General")
+            SettingsSectionHeader(stringResource(R.string.settings_general))
             SettingsRow(
-                title = "Theme",
-                subtitle = when (settings.themeMode) {
-                    ThemeMode.LIGHT -> "Light"
-                    ThemeMode.DARK -> "Dark"
-                    ThemeMode.AUTO -> "System"
-                },
+                title = stringResource(R.string.settings_theme),
+                subtitle = themeModeLabel(settings.themeMode),
                 onClick = { showThemeDialog = true },
             )
             SettingsRow(
-                title = "Sort order",
-                subtitle = when (settings.sort) {
-                    SortOrder.RECENT -> "Most recent"
-                    SortOrder.OLDEST -> "Oldest first"
-                    SortOrder.ALPHA -> "Alphabetical"
-                    SortOrder.CREATED -> "Created date"
-                },
+                title = stringResource(R.string.settings_sort_order2),
+                subtitle = sortOrderLabel(settings.sort),
                 onClick = { showSortDialog = true },
             )
             SettingsRow(
-                title = "Auto-lock timeout",
-                subtitle = if (settings.autoLockTimeout == 0) "Never" else "${settings.autoLockTimeout} minutes",
+                title = stringResource(R.string.settings_auto_lock_timeout),
+                subtitle = autoLockLabel(settings.autoLockTimeout),
                 onClick = { showAutoLockDialog = true },
             )
             SettingsRow(
-                title = "Saved searches",
+                title = stringResource(R.string.settings_default_note_type),
+                subtitle = defaultNoteType.replaceFirstChar { it.uppercase() },
+                onClick = { showNoteTypeDialog = true },
+            )
+            SettingsRow(
+                title = stringResource(R.string.settings_colours),
+                onClick = onNavigateToColours,
+            )
+            SettingsRow(
+                title = stringResource(R.string.saved_searches_title),
                 onClick = onNavigateToSavedSearches,
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             // Security Section
-            SettingsSectionHeader("Security")
+            SettingsSectionHeader(stringResource(R.string.settings_security))
             SettingsRow(
-                title = "Lock now",
+                title = stringResource(R.string.settings_lock_now),
                 onClick = { appState.lock() },
+            )
+            SettingsRow(
+                title = stringResource(R.string.settings_change_password),
+                onClick = onNavigateToChangePassword,
+            )
+            if (biometricsAvailable) {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.biometric_setting)) },
+                    supportingContent = { Text(stringResource(R.string.biometric_setting_detail)) },
+                    trailingContent = {
+                        Switch(
+                            checked = biometricEnabled,
+                            onCheckedChange = { enable ->
+                                if (enable) {
+                                    enableBiometricUnlock(context, appState) { appState.showMessage(it) }
+                                } else {
+                                    appState.disableBiometric()
+                                }
+                            },
+                        )
+                    },
+                )
+            }
+            ListItem(
+                headlineContent = { Text(stringResource(R.string.settings_screen_security)) },
+                supportingContent = {
+                    Text(
+                        stringResource(R.string.settings_screen_security_detail),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+                trailingContent = {
+                    Switch(checked = screenSecurity, onCheckedChange = appState::setScreenSecurity)
+                },
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             // Sync Section
-            SettingsSectionHeader("Sync")
+            SettingsSectionHeader(stringResource(R.string.settings_sync))
             if (syncEnabled) {
                 SettingsRow(
-                    title = "Sync status",
-                    subtitle = syncError ?: lastSyncAt?.let { "Last synced: $it" } ?: "Not yet synced",
+                    title = stringResource(R.string.settings_sync_status),
+                    subtitle = syncError
+                        ?: lastSyncAt?.let { stringResource(R.string.sync_account_last_synced, relativeTime(it)) }
+                        ?: stringResource(R.string.sync_account_not_synced),
                 )
                 SettingsRow(
-                    title = "Force full sync",
+                    title = stringResource(R.string.settings_force_full_sync),
                     onClick = {
                         scope.launch { appState.forceFullSync() }
                     },
                 )
             }
             SettingsRow(
-                title = if (syncEnabled) "Sync settings" else "Set up sync",
+                title = if (syncEnabled) stringResource(R.string.settings_sync_settings) else stringResource(R.string.settings_set_up_sync),
                 onClick = onNavigateToSyncSetup,
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             // Data Section
-            SettingsSectionHeader("Data")
-            SettingsRow(title = "Backup & Restore", onClick = onNavigateToBackup)
-            SettingsRow(title = "Import notes", onClick = onNavigateToImport)
+            SettingsSectionHeader(stringResource(R.string.settings_data))
+            SettingsRow(title = stringResource(R.string.settings_backup), onClick = onNavigateToBackup)
+            SettingsRow(title = stringResource(R.string.settings_import_notes), onClick = onNavigateToImport)
             SettingsRow(
-                title = "Wipe all data",
-                subtitle = "Delete everything and start fresh",
+                title = stringResource(R.string.export_all),
+                subtitle = exportStatus ?: stringResource(R.string.export_all_detail),
+                onClick = { exportLauncher.launch(defaultExportName()) },
+            )
+            SettingsRow(
+                title = stringResource(R.string.settings_wipe_all_data),
+                subtitle = stringResource(R.string.settings_delete_everything_and_start_fresh),
                 onClick = { showWipeConfirm = true },
                 isDestructive = true,
             )
@@ -133,8 +210,22 @@ fun SettingsScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             // About Section
-            SettingsSectionHeader("About")
-            SettingsRow(title = "Jottery for Android", subtitle = "Version 1.0.0")
+            SettingsSectionHeader(stringResource(R.string.settings_about2))
+            SettingsRow(
+                title = stringResource(R.string.settings_about_app),
+                subtitle = stringResource(R.string.settings_about_version, BuildConfig.VERSION_NAME),
+            )
+            val numbers = remember { NumberFormat.getInstance() }
+            val counts = listOf(
+                R.string.settings_about_notes to notes.size,
+                R.string.note_info_archived to archivedNotes.size,
+                R.string.recycle_bin_title to binCount,
+                R.string.note_info_tags to (notes + archivedNotes).tagCounts().size,
+                R.string.note_info_attachments to (notes + archivedNotes).sumOf { it.attachments.size },
+            )
+            for ((label, count) in counts) {
+                SettingsRow(title = stringResource(label), subtitle = numbers.format(count))
+            }
 
             Spacer(Modifier.height(32.dp))
         }
@@ -143,8 +234,8 @@ fun SettingsScreen(
     // Theme dialog
     if (showThemeDialog) {
         SingleChoiceDialog(
-            title = "Theme",
-            options = listOf("System" to ThemeMode.AUTO, "Light" to ThemeMode.LIGHT, "Dark" to ThemeMode.DARK),
+            title = stringResource(R.string.settings_theme),
+            options = listOf(ThemeMode.AUTO, ThemeMode.LIGHT, ThemeMode.DARK).map { themeModeLabel(it) to it },
             selected = settings.themeMode,
             onSelect = { mode ->
                 showThemeDialog = false
@@ -156,16 +247,24 @@ fun SettingsScreen(
         )
     }
 
+    if (showNoteTypeDialog) {
+        SingleChoiceDialog(
+            title = stringResource(R.string.settings_default_note_type),
+            options = syntaxLanguages.map { it.replaceFirstChar { first -> first.uppercase() } to it },
+            selected = defaultNoteType,
+            onSelect = { type ->
+                showNoteTypeDialog = false
+                appState.setDefaultNoteType(type)
+            },
+            onDismiss = { showNoteTypeDialog = false },
+        )
+    }
+
     // Sort dialog
     if (showSortDialog) {
         SingleChoiceDialog(
-            title = "Sort order",
-            options = listOf(
-                "Most recent" to SortOrder.RECENT,
-                "Oldest first" to SortOrder.OLDEST,
-                "Alphabetical" to SortOrder.ALPHA,
-                "Created date" to SortOrder.CREATED,
-            ),
+            title = stringResource(R.string.settings_sort_order2),
+            options = SortOrder.entries.map { sortOrderLabel(it) to it },
             selected = settings.sort,
             onSelect = { order ->
                 showSortDialog = false
@@ -180,15 +279,8 @@ fun SettingsScreen(
     // Auto-lock dialog
     if (showAutoLockDialog) {
         SingleChoiceDialog(
-            title = "Auto-lock timeout",
-            options = listOf(
-                "Never" to 0,
-                "1 minute" to 1,
-                "5 minutes" to 5,
-                "15 minutes" to 15,
-                "30 minutes" to 30,
-                "1 hour" to 60,
-            ),
+            title = stringResource(R.string.settings_auto_lock_timeout),
+            options = listOf(0, 1, 5, 15, 30, 60).map { autoLockLabel(it) to it },
             selected = settings.autoLockTimeout,
             onSelect = { timeout ->
                 showAutoLockDialog = false
@@ -204,13 +296,8 @@ fun SettingsScreen(
     if (showWipeConfirm) {
         AlertDialog(
             onDismissRequest = { showWipeConfirm = false },
-            title = { Text("Wipe all data?") },
-            text = {
-                Text(
-                    "This will permanently delete all notes, settings, and encryption keys. " +
-                    "This action cannot be undone."
-                )
-            },
+            title = { Text(stringResource(R.string.settings_wipe_all_data2)) },
+            text = { Text(stringResource(R.string.unlock_this_will_permanently_delete_all)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -220,14 +307,15 @@ fun SettingsScreen(
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.error,
                     ),
-                ) { Text("Wipe Everything") }
+                ) { Text(stringResource(R.string.settings_wipe_everything)) }
             },
             dismissButton = {
-                TextButton(onClick = { showWipeConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { showWipeConfirm = false }) { Text(stringResource(R.string.dialog_cancel)) }
             },
         )
     }
 }
+
 
 @Composable
 private fun SettingsSectionHeader(title: String) {
@@ -295,7 +383,7 @@ private fun <T> SingleChoiceDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
         },
     )
 }

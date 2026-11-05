@@ -14,8 +14,6 @@
 use axum::{
     body::Body,
     http::{Request, StatusCode},
-    middleware,
-    routing::{delete, get, patch, post},
     Router,
 };
 use http_body_util::BodyExt;
@@ -51,7 +49,7 @@ fn test_config() -> jottery_server::config::Config {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -61,11 +59,14 @@ fn test_config() -> jottery_server::config::Config {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
+        sse_recheck_secs: 60,
     }
 }
 
@@ -79,86 +80,13 @@ async fn create_test_app() -> (Router, SqlitePool) {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
+        shutdown: Default::default(),
         config: test_config(),
     });
 
     // Inbox submission routes (inbox token auth)
-    let inbox_submit_routes = Router::new()
-        .route("/api/v1/inbox", post(jottery_server::api::inbox::create_item))
-        .layer(middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::inbox_auth_middleware,
-        ));
-
-    // Inbox management routes (device API key auth)
-    let inbox_manage_routes = Router::new()
-        .route(
-            "/api/v1/inbox",
-            get(jottery_server::api::inbox::list_items)
-                .delete(jottery_server::api::inbox::delete_all),
-        )
-        .route(
-            "/api/v1/inbox/:id",
-            delete(jottery_server::api::inbox::delete_item),
-        )
-        .route(
-            "/api/v1/inbox/status",
-            get(jottery_server::api::inbox::get_status),
-        )
-        .layer(middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ));
-
-    // Sync routes (device API key auth)
-    let sync_routes = Router::new()
-        .route(
-            "/api/v1/sync/pull",
-            post(jottery_server::api::sync::pull),
-        )
-        .layer(middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ));
-
-    // User routes (session auth) — for inbox token management
-    let user_routes = Router::new()
-        .route(
-            "/api/v1/user/inbox-token",
-            post(jottery_server::api::user::generate_inbox_token)
-                .delete(jottery_server::api::user::revoke_inbox_token),
-        )
-        .route(
-            "/api/v1/user/inbox-token/status",
-            get(jottery_server::api::user::get_inbox_token_status),
-        )
-        .layer(middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::user_auth_middleware,
-        ));
-
-    // Admin routes (for quota management)
-    let admin_routes = Router::new()
-        .route(
-            "/api/v1/admin/users/:id/settings",
-            patch(jottery_server::api::admin::users::update_user_settings),
-        )
-        .route(
-            "/api/v1/admin/users/:id",
-            get(jottery_server::api::admin::users::get_user),
-        )
-        .layer(middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::admin::admin_auth_middleware,
-        ));
-
-    let app = Router::new()
-        .merge(inbox_submit_routes)
-        .merge(inbox_manage_routes)
-        .merge(sync_routes)
-        .merge(user_routes)
-        .merge(admin_routes)
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     (app, pool)
 }
@@ -1298,4 +1226,71 @@ async fn test_admin_user_detail_includes_inbox_info() {
     assert!(body["inboxMaxSizeMb"].is_number());
 
     pool.close().await;
+}
+
+mod source_limits {
+    use super::*;
+
+    async fn app_with_token() -> (Router, SqlitePool, String, String) {
+        let (app, pool) = create_test_app().await;
+        let user_id = uuid::Uuid::new_v4().to_string();
+        let token = uuid::Uuid::new_v4().to_string();
+        let hash = jottery_server::utils::crypto::hash_sha256(&token);
+        sqlx::query(
+            "INSERT INTO users (id, email, password_hash, approved, is_active, created_at, inbox_token_hash)
+             VALUES (?, ?, 'unused', 1, 1, '2026-01-01T00:00:00+00:00', ?)",
+        )
+        .bind(&user_id)
+        .bind(format!("{user_id}@example.com"))
+        .bind(hash)
+        .execute(&pool)
+        .await
+        .unwrap();
+        (app, pool, user_id, token)
+    }
+
+    async fn submit(app: &Router, token: &str, source: &str) -> StatusCode {
+        let request = Request::builder()
+            .method("POST")
+            .uri("/api/v1/inbox")
+            .header("content-type", "application/json")
+            .header("Authorization", format!("Bearer {token}"))
+            .body(Body::from(json!({ "content": "hello", "source": source }).to_string()))
+            .unwrap();
+        app.clone().oneshot(request).await.unwrap().status()
+    }
+
+    #[tokio::test]
+    async fn a_source_of_the_maximum_length_is_accepted() {
+        let (app, _pool, _, token) = app_with_token().await;
+
+        assert_eq!(submit(&app, &token, &"s".repeat(255)).await, StatusCode::CREATED);
+    }
+
+    #[tokio::test]
+    async fn a_longer_source_is_refused() {
+        let (app, pool, _, token) = app_with_token().await;
+
+        assert_eq!(submit(&app, &token, &"s".repeat(256)).await, StatusCode::BAD_REQUEST);
+
+        let stored: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM inbox_items")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(stored, 0);
+    }
+
+    #[tokio::test]
+    async fn the_source_counts_towards_the_quota() {
+        let (app, pool, _, token) = app_with_token().await;
+
+        assert_eq!(submit(&app, &token, "sixteen-bytes-!!").await, StatusCode::CREATED);
+
+        // "hello", "[]" and the source
+        let size: i64 = sqlx::query_scalar("SELECT size_bytes FROM inbox_items")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(size, 5 + 2 + 16);
+    }
 }

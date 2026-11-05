@@ -174,32 +174,36 @@ Svelte error: lifecycle_function_unavailable
 **Jobs:**
 1. **Unit & Integration Tests**
    - Runs all Vitest tests
-   - Uploads coverage to Codecov
-   - Runs on: push to main, pull requests
 
 2. **E2E Tests (Chromium)**
    - Runs all Playwright E2E tests
    - Uploads test reports on failure
-   - Runs on: push to main, pull requests
 
 3. **Smoke Tests (Quick)**
    - Fast sanity checks only
    - Catches critical breakage early
-   - Runs on: push to main, pull requests
 
 4. **Type Check**
    - Runs svelte-check for TypeScript validation
    - Catches type errors before merge
-   - Runs on: push to main, pull requests
 
-**Native clients:**
+**Other clients:**
+- `.github/workflows/server-tests.yml` runs `cargo test` against a database built from the migrations
+- `.github/workflows/admin-tests.yml` runs the dashboard's unit tests and type check
 - `.github/workflows/tui-tests.yml` runs `cargo test` on Linux
 - `.github/workflows/ios-tests.yml` runs `xcodebuild test` on macOS
-- Each runs on pull requests that touch that client, on `v*` tags and on manual trigger
+- `.github/workflows/android-tests.yml` runs the Android unit tests
+- Each runs on pull requests that touch that client
+
+**Repository and image:**
+- `.github/workflows/repo-checks.yml` fails on tracked databases, secrets and large files
+- `.github/workflows/docker-check.yml` builds and starts the image on pull requests that touch it, without pushing
+- `.github/workflows/dependency-audit.yml` runs `cargo audit` weekly
 
 **Triggers:**
-- Push to `main` branch
-- Pull requests to `main` branch
+- `test.yml` and `repo-checks.yml` run on every pull request to `main`
+- Every suite runs before a release: `build-multiarch.yml` calls them on `v*` tags, and nothing is published unless they all pass
+- All of them can also be started by hand
 
 **Test Execution Time:**
 - Smoke tests: ~10 seconds

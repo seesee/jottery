@@ -23,11 +23,11 @@ password:
   change_success: Mot de passe modifié avec succès
   change_title: "Changer le mot de passe"
   change_enter_current: "Entrez votre mot de passe actuel :"
-  change_enter_new: "Entrez le nouveau mot de passe (min. 12 caractères) :"
+  change_enter_new: "Entrez le nouveau mot de passe (min. 8 caractères) :"
   change_confirm_new: "Confirmez le nouveau mot de passe :"
   change_current_required: "Veuillez entrer votre mot de passe actuel"
   change_wrong_current: "Le mot de passe actuel est incorrect"
-  change_too_short: "Le nouveau mot de passe doit comporter au moins 12 caractères"
+  change_too_short: "Le nouveau mot de passe doit comporter au moins 8 caractères"
   change_mismatch: "Les mots de passe ne correspondent pas"
   change_failed: "Échec du changement de mot de passe"
   remember: Mémoriser le mot de passe
@@ -46,6 +46,11 @@ password:
   enter_to_enable: "Entrez votre mot de passe pour activer le déverrouillage automatique :"
   create_title: Créer un mot de passe
   unlock_title: Déverrouiller
+  too_short: "Le mot de passe doit contenir au moins %{min} caractères"
+  same_as_account: "Utilisez des mots de passe différents. Le serveur voit le mot de passe de votre compte : il ne doit pas aussi ouvrir vos notes."
+  same_as_account_warning: "Le mot de passe de votre compte est identique à celui de vos notes : le serveur pourrait les lire. Changez le mot de passe des notes dans les paramètres."
+  no_file_encryption: "Cette version ne chiffre pas le fichier de base de données. Les notes et les tags restent chiffrés, mais pas votre e-mail, l'adresse du serveur, les noms des pièces jointes ni les dates."
+  change_keeps_key: "Votre clé de chiffrement ne change pas : les anciennes sauvegardes s'ouvrent toujours avec l'ancien mot de passe."
 menu:
   notes: Notes
   new_note: Nouvelle note
@@ -78,6 +83,19 @@ note:
   info: Info de note
   info_title: Informations sur la note
   untitled: "Sans titre"
+  save_retry_hint: "q : réessayer d'enregistrer | e : modifier | Esc : abandonner les modifications"
+  empty_bin_title: "Vider la corbeille"
+  empty_bin_confirm: "Supprimer définitivement %{count} notes de la corbeille ?"
+  empty_bin_warning: "Elles seront aussi supprimées du serveur et de vos autres appareils. Cette action est irréversible."
+  bin_emptied: "%{count} notes supprimées définitivement"
+  locked_cannot_archive: "Impossible d'archiver une note verrouillée"
+  unreadable: "%{count} notes de ce coffre sont illisibles"
+  duplicated: "Note dupliquée"
+  copied: "Copié dans le presse-papiers"
+  copy_too_large: "Cette note est trop longue pour qu'un terminal la copie de façon fiable"
+  word_wrap_on: "Retour à la ligne activé"
+  word_wrap_off: "Retour à la ligne désactivé"
+  no_links: "Aucun lien à l'écran"
 archive:
   view: "Voir les archives"
   title: "Archives"
@@ -107,6 +125,7 @@ editor:
   temp_write_error: Échec de l'écriture dans le fichier temporaire
   temp_read_error: Échec de la lecture du fichier temporaire
   default_editor: vi
+  temp_on_disk: "Cette machine n'a pas de dossier temporaire en mémoire : une note ouverte reste sur le disque jusqu'à sa fermeture."
 attachment:
   add: Ajouter une pièce jointe
   add_failed: "Échec de l'ajout de la pièce jointe : %{error}"
@@ -115,6 +134,18 @@ attachment:
   delete: Supprimer la pièce jointe
   no_attachments: Aucune pièce jointe
   total: "%{count} pièces jointes"
+  press_enter: "Appuyez sur Entrée pour continuer..."
+  opened: "Fichier ouvert dans l'application par défaut."
+  no_opener: "Aucun programme pour ouvrir des fichiers sur ce système. Enregistrez plutôt la pièce jointe avec S."
+  delete_failed: "Impossible de supprimer la pièce jointe : %{error}"
+  deleted: "Supprimé : %{name}"
+  exists: "%{path} existe déjà. Choisissez un autre nom."
+  saved: "Enregistré dans %{path}"
+  save_failed: "Impossible d'enregistrer la pièce jointe : %{error}"
+  added: "%{name} joint"
+  too_large: "Le fichier est trop volumineux. La limite est de %{max_mb} Mo."
+  unsafe_title: "Ce fichier ne sera pas ouvert"
+  unsafe_body: "Ouvrir ce type de fichier pourrait exécuter du code de son expéditeur. L'enregistrer plutôt ?"
 version:
   history: Historique des versions
   restore: Restaurer la version
@@ -153,6 +184,9 @@ settings:
   press_enter_cycle: appuyez sur Entrée pour cycler
   press_enter_toggle: appuyez sur Entrée pour basculer
   disabled: désactivé
+  sort_order: "Tri"
+  language_auto: "Comme le système"
+  default_note_type: "Type de note par défaut"
 sync:
   push: Pousser vers le serveur
   pull: Tirer du serveur
@@ -188,8 +222,29 @@ sync:
     approved: Votre compte est approuvé et actif. Vous pouvez synchroniser vos notes.
     pending: Votre compte est en attente d'approbation. Veuillez attendre qu'un administrateur approuve votre inscription.
     inactive: Votre compte a été désactivé. Veuillez contacter un administrateur.
+  skipped_notes: "%{count} éléments du serveur n'ont pas pu être lus et ont été ignorés"
+  rejected_notes: "%{count} notes sont en conflit avec le serveur. Ouvrez Jottery pour les résoudre."
+  rate_limited: "Le serveur a demandé à Jottery d'attendre %{seconds} secondes avant de synchroniser à nouveau."
+  key_refused: "Le serveur n'a pas accepté la clé API de cet appareil. Enregistrez à nouveau l'appareil."
+  server_busy: "Le serveur est occupé. Jottery réessaiera dans %{seconds} secondes."
+  quota_exceeded: "Votre compte a atteint sa limite de stockage, les modifications n'ont donc pas pu être envoyées. Elles sont en sécurité sur cet appareil. Videz la corbeille ou retirez des pièces jointes pour faire de la place."
+  deletions_held_title: "Beaucoup de notes supprimées"
+  deletions_held: "Le serveur indique que %{count} notes ont été supprimées définitivement ailleurs. Est-ce vous ?"
+  deletions_held_warning: "y : les déplacer dans la corbeille ici. n : les garder et les remettre sur le serveur."
+  deletions_held_cli: "Le serveur indique que %{count} notes ont été supprimées ailleurs. Elles sont toujours ici : ouvrez Jottery pour décider."
+  deletions_applied: "%{count} notes déplacées dans la corbeille"
+  force_title: "Forcer une resynchronisation complète"
+  force_confirm: "Récupérer TOUTES les notes et pièces jointes du serveur ?"
+  force_note: "Les modifications locales non envoyées sont conservées."
+  disconnect_title: "Se déconnecter de la synchronisation"
+  disconnect_confirm: "Déconnecter cet appareil du serveur ?"
+  disconnect_warning: "Vos notes restent ici. L'appareil est révoqué sur le serveur."
+  disconnect_conflicts: "%{count} notes ont des conflits non résolus. Leurs copies du serveur seront oubliées ici."
+  device_still_registered: "Déconnecté ici, mais le serveur n'a pas pu être prévenu : la clé de cet appareil fonctionne encore. Révoquez-la dans le portail utilisateur."
 
 # Boîte de réception
+  stopped_unexpectedly: "La synchronisation s'est arrêtée de façon inattendue. Rien n'a été perdu et elle sera relancée."
+  clock_ahead: "L'horloge de cet appareil est peut-être incorrecte : certaines modifications sont datées de plus d'un jour après l'heure du serveur et n'ont pas été envoyées. Elles partiront une fois l'horloge corrigée."
 inbox:
   title: "Boîte de réception"
   empty: "La boîte de réception est vide. Les notes soumises via l'API de boîte de réception apparaîtront ici."
@@ -233,6 +288,8 @@ register:
   device_failed: Échec de l'enregistrement de l'appareil
   cleared: Inscription effacée. Vous pouvez recommencer.
   pending_status: En attente d'approbation
+  password_differs: "Il doit être différent du mot de passe de vos notes."
+  insecure_endpoint: "Cette adresse utilise HTTP en clair : votre mot de passe de compte et la clé de l'appareil pourraient être lus en chemin. Utilisez https://, ou saisissez à nouveau cette adresse pour l'accepter."
 color_scheme:
   default_dark: Sombre par défaut
   default_light: Clair par défaut
@@ -301,7 +358,6 @@ help:
   attachments: PIÈCES JOINTES
   global: GLOBAL
   press_esc_or_enter: Appuyez sur Échap ou Entrée pour fermer
-  press_enter_paste: Appuyez sur Entrée pour coller | Échap pour annuler
   tab_switch: "Tab : changer de champs | Entrée : créer"
   enter_unlock: "Entrée : déverrouiller | Ctrl+Q : quitter"
   type_password_key: Taper
@@ -386,8 +442,8 @@ help:
   s_q_close_desc: Fermer le panneau des paramètres
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: Focuser le panneau des pièces jointes (j/k pour naviguer, Entrée pour afficher, d pour supprimer)
-  A_add_attachment_key: A
-  A_add_attachment_desc: Ajouter une pièce jointe (entrez le chemin du fichier)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: Ajouter une pièce jointe (entrez le chemin du fichier)
   a_view_attachment_key: a + numéro
   a_view_attachment_desc: Voir la pièce jointe (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -450,6 +506,51 @@ help:
   click_tags_desc: Entrer en mode édition d'étiquettes
   scroll_key: Molette de défilement
   scroll_desc: Faire défiler l'aperçu haut/bas
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Verrouiller Jottery"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Enregistrer la pièce jointe sélectionnée dans un fichier"
+  z_archive_key: "z"
+  z_archive_desc: "Archiver la note sélectionnée (ou la restaurer en mode archive)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Archiver les notes sélectionnées"
+  search_or_key: "a | b"
+  search_or_desc: "L'un ou l'autre (OU)"
+  search_phrase_key: "\"a phrase\""
+  search_phrase_desc: "Ces mots dans cet ordre"
+  search_wildcard_key: "word* / *word"
+  search_wildcard_desc: "Un mot commence ou finit ainsi"
+  search_exclude_tag_key: "-#tag"
+  search_exclude_tag_desc: "Exclure les notes avec ce tag"
+  search_attachment_key: "has:attachment"
+  search_attachment_desc: "Notes avec pièces jointes"
+  search_archived_key: "archived"
+  search_archived_desc: "Chercher dans les archives"
+  search_created_key: "created:>2024-01-01"
+  search_created_desc: "Créée après une date (aussi < et a..b)"
+  search_modified_key: "modified:>2024-01-01"
+  search_modified_desc: "Modifiée après une date (aussi < et a..b)"
+  search_words_key: "words:>100"
+  search_words_desc: "Nombre de mots (aussi < et a..b)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "Retirer des tags des notes sélectionnées"
+  multi_colour_key: "C"
+  multi_colour_desc: "Définir la couleur des notes sélectionnées"
+  g_saved_key: "g"
+  g_saved_desc: "Recherches enregistrées"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "Enregistrer cette recherche"
+  enter_confirm_esc_cancel: "Entrée : confirmer | Échap : annuler"
+  D_duplicate_key: "Maj+D"
+  D_duplicate_desc: "Dupliquer la note"
+  o_copy_key: "o"
+  o_copy_desc: "Copier le texte de la note dans le presse-papiers"
+  w_wrap_key: "w"
+  w_wrap_desc: "Activer ou désactiver le retour à la ligne"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "Recherches précédentes et suivantes"
+  l_link_key: "l, Entrée"
+  l_link_desc: "Parcourir les liens et en suivre un"
 cli:
   # Alt (utilisé à certains endroits)
   list: Lister les notes
@@ -513,6 +614,31 @@ cli:
   # Messages de sortie
   notes_count: "%{count} notes"
   results_count: "%{count} résultats : '%{query}'"
+  attach_about: "Joindre un fichier à une note"
+  save_attachment_about: "Enregistrer la pièce jointe d'une note dans un fichier"
+  archive_about: "Archiver une note"
+  unarchive_about: "Restaurer une note depuis l'archive"
+  note_id_help: "ID de la note (correspondance partielle possible)"
+  attach_file_help: "Fichier à joindre"
+  attachment_number_help: "Quelle pièce jointe, selon la numérotation de show"
+  archived_help: "Lister plutôt les notes archivées"
+  import_summary: "%{created} ajoutées, %{updated} mises à jour, %{skipped} déjà à jour"
+  import_failed: "%{count} éléments du fichier n'ont pas pu être importés"
+  password_change_required: "Ce compte doit d'abord changer son mot de passe. Connectez-vous à l'application web pour le faire, puis réessayez."
+  insecure_endpoint: "%{endpoint} utilise HTTP en clair : le mot de passe pourrait être lu en chemin. Utilisez https://, ou passez --allow-insecure-http pour l'accepter."
+  allow_insecure_http_help: "Autoriser l'envoi d'un mot de passe en HTTP clair vers un hôte public"
+  password_flag_deprecated: "Un mot de passe en ligne de commande est visible dans ps et l'historique du shell. Utilisez plutôt --password-stdin ou JOTTERY_PASSWORD."
+  password_stdin_help: "Lire les mots de passe sur stdin, un par ligne, au lieu de les demander"
+  reset_yes_help: "Ne pas demander avant que --reset supprime quoi que ce soit"
+  reset_confirm: "Ceci supprime définitivement %{path} et tout mot de passe mémorisé. Saisissez %{word} pour continuer :"
+  reset_cancelled: "Rien n'a été supprimé"
+  reset_done: "Coffre et mot de passe mémorisé supprimés"
+  reset_keychain_failed: "Impossible de retirer le mot de passe du trousseau"
+  export_force_help: "Remplacer le fichier s'il existe déjà"
+  account_about: "Voir ou supprimer ce que le serveur conserve pour votre compte"
+  colours_about: "Nommer les couleurs et attribuer une couleur aux étiquettes"
+  doctor_about: "Vérifier le coffre : notes illisibles et pièces jointes manquantes"
+  doctor_repair_help: "Récupérer les pièces jointes manquantes depuis le serveur"
 status:
   locked: Verrouillé
   unlocked: Déverrouillé
@@ -534,6 +660,15 @@ bulk:
   enter_export_path: "Chemin d'exportation :"
   add_tags_to: Ajouter des étiquettes à
   export_notes_to: Exporter
+  archived: "%{count} notes archivées"
+  tags_removed: "Tags retirés de %{count} notes : %{tags}"
+  remove_tags_from: "Retirer des tags de %{count} notes"
+  enter_colour: "Saisissez un nom de couleur (vide pour effacer) :"
+  colour_of: "Définir la couleur de %{count} notes"
+  colour_set: "Couleur modifiée sur %{count} notes"
+  unknown_colour: "Aucune couleur ne s'appelle %{colour}"
+  overwrite_title: "Remplacer ce fichier ?"
+  overwrite_message: "%{path} existe déjà. Son remplacement est irréversible."
 time:
   just_now: à l'instant
   minutes_ago: il y a %{count} minutes
@@ -568,6 +703,8 @@ backup:
   restoring: "Restauration des données..."
   restored: "Restauré"
   key_not_in_backup: "Cette sauvegarde a été créée par une ancienne version de Jottery et ne contient pas sa clé. Elle ne peut être restaurée que dans le coffre d'où elle provient."
+  incomplete: "Cette sauvegarde est incomplète : %{count} éléments du coffre étaient illisibles et ont été omis."
+  records_failed: "%{count} enregistrements de cette sauvegarde n'ont pas pu être restaurés. Tout le reste l'a été."
 
 # Progress indicators
 progress:
@@ -591,6 +728,12 @@ ui:
   type: "Type :"
   modified: "Modifié :"
   version: "Version :"
+  save_attachment: "Enregistrer la pièce jointe (Tab : compléter, ↑↓ : choisir, Entrée : confirmer)"
+  path: "Chemin"
+  attachments_hint: "Pièces jointes : (Tab pour sélectionner)"
+  attachments_focused_hint: "Pièces jointes : (Tab pour changer, j/k pour naviguer, Entrée pour voir, S pour enregistrer, d pour supprimer)"
+  attachments_keys_hint: "'a' pour voir, '+' pour ajouter, 'X' pour retirer la sélection"
+  attachment_viewer_hint: "↑/↓ : naviguer │ 1-9 : sélection rapide │ Entrée : voir │ S : enregistrer │ + : ajouter │ d : supprimer │ Esc : fermer"
 
 # Texte d'aide de la barre de statut
 status_bar:
@@ -640,8 +783,65 @@ status_bar:
   quick_select: "Sélection rapide"
   view: "afficher"
   restore_version: "Restaurer la version"
+  save: "enregistrer"
+  add: "ajouter"
 
 # Virtual tags
 tags:
   virtual:
     title: "titre"
+
+calc:
+  line_too_long: "⚠ Ligne trop longue pour être calculée (limite %{max} octets)"
+  numbers_only: "⚠ Calc fonctionne avec des nombres : le texte, les tuples et ; ne sont pas calculés"
+  too_deep: "⚠ Trop de parenthèses imbriquées (limite %{max})"
+  gave_up: "Le calcul de cette note a pris trop de temps : elle est affichée sans résultats."
+
+envelope:
+  unwrap_failed: "Le mot de passe de vos notes ne peut pas ouvrir la clé de ce compte. Elle a peut-être été enregistrée par une ancienne version. Déverrouillez Jottery sur un appareil déjà connecté, ce qui corrigera le problème, puis réessayez."
+  rekey_failed: "Vos notes locales n'ont pas pu passer à la clé de ce compte, rien n'a donc changé : %{error}"
+  diverged: "La clé de cet appareil diffère de celle du compte. Les notes de vos autres appareils risquent de ne pas s'ouvrir ici."
+  password_changed_elsewhere: "Votre mot de passe des notes a été modifié sur un autre appareil, rien n'a donc été écrasé. Cet appareil se déverrouille toujours avec l'ancien mot de passe. Modifiez-le ici pour qu'il corresponde, afin que de nouveaux appareils puissent se connecter."
+  server_update_pending: "Votre mot de passe a été modifié sur cet appareil, mais la copie de votre clé sur le serveur n'a pas pu être mise à jour. Jottery réessaiera. D'ici là, un nouvel appareil ne pourra pas se connecter avec le nouveau mot de passe."
+  key_keeps_changing: "La clé du compte change sans cesse sur le serveur, cet appareil n'y a donc pas touché. Réessayez dans un instant."
+
+saved_search:
+  title: "Recherches enregistrées"
+  empty: "Aucune recherche enregistrée pour l'instant. Cherchez avec /, puis appuyez sur Ctrl+S pour l'enregistrer."
+  name_prompt: "Nommez cette recherche"
+  nothing_to_save: "Saisissez d'abord une recherche"
+  saved: "Recherche enregistrée : %{name}"
+  deleted: "Recherche enregistrée supprimée"
+  delete_confirm: "Supprimer « %{name} » sur tous les appareils ? (y/n)"
+  not_found: "Aucune recherche enregistrée nommée %{name}"
+  failed: "Échec de la recherche enregistrée : %{error}"
+
+export:
+  file_exists: "Ce fichier existe déjà. Choisissez un autre nom, ou utilisez --force pour le remplacer."
+
+account:
+  email: "Compte : %{email}"
+  usage: "Notes : %{notes}, pièces jointes : %{attachments}"
+  storage: "Stockage : %{used} Mo sur %{quota} Mo"
+  last_sync: "Dernière synchronisation : %{time}"
+  confirm_delete_notes: "Ceci supprime toutes les notes du serveur, pour tous les appareils, de façon irréversible. Saisissez votre adresse e-mail pour continuer :"
+  confirm_delete: "Ceci supprime votre compte et tout ce qui se trouve sur le serveur, de façon irréversible. Cet appareil conserve ses notes. Saisissez votre adresse e-mail pour continuer :"
+  cancelled: "Rien n'a été supprimé"
+  notes_deleted: "Toutes les notes du serveur ont été supprimées"
+  deleted: "Le compte a été supprimé"
+
+colours:
+  unknown: "Aucune couleur nommée %{colour}"
+  named: "Couleur mise à jour : %{colour}"
+  tag_set: "Étiquette mise à jour : %{tag}"
+
+doctor:
+  notes: "Notes : %{count}, illisibles : %{unreadable}"
+  versions: "Versions : %{count}, illisibles : %{unreadable}"
+  attachments: "Pièces jointes : %{count}, illisibles : %{unreadable}, manquantes : %{missing}"
+  saved_searches: "Recherches enregistrées : %{count}, illisibles : %{unreadable}"
+  conflicts: "Conflits en attente : %{count}"
+  problems: "Problèmes trouvés : %{count}"
+  repaired: "Pièces jointes récupérées : %{count}"
+  repair_needs_sync: "Ce coffre n'est connecté à aucun serveur, les pièces jointes manquantes ne peuvent donc pas être récupérées"
+  healthy: "Aucun problème trouvé"

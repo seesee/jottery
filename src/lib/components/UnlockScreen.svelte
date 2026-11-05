@@ -2,12 +2,17 @@
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import { isInitialized as isInitializedStore, isLocked, settings } from '../stores/appStore';
-  import { initialize, unlock, isInitialized, deleteDB, passwordStorageService, sessionStorageService, settingsRepository, restoreFromBackup, keyManager, cryptoService, syncRepository, syncService, onboardFromServer } from '../services';
-  import { authService } from '../services/authService';
+  import { initialize, unlock, isInitialized, deleteAllLocalData, passwordStorageService, sessionStorageService, settingsRepository, restoreFromBackup, keyManager, cryptoService, syncRepository, syncService, onboardFromServer } from '../services';
+  import { authService, type RegisterDeviceResponse } from '../services/authService';
   import { validateBackup, getBackupStats } from '../services/backupService';
   import type { BackupData } from '../services/backupService';
   import { getCurrentNotebook } from '../utils/notebookPath';
   import { _ } from 'svelte-i18n';
+  import { isNotesPasswordLongEnough, isSamePassword } from '../utils/passwordRules';
+  import { onboardingErrorKey } from '../utils/onboardingErrors';
+  import { isConnectionRestricted } from '../services/cspService';
+  import { toast } from '../utils/toast.svelte';
+  import { BackupStorageFullError } from '../errors';
   import ConfirmModal from './ConfirmModal.svelte';
   import LandingPage from './LandingPage.svelte';
   import LanguagePicker from './LanguagePicker.svelte';
@@ -36,6 +41,7 @@
   // Connect Existing Account (full-page view) state
   let showConnectExistingAccount = false;
   let connectEndpoint = typeof window !== 'undefined' ? window.location.origin : '';
+  let connectRegistration: { key: string; device: RegisterDeviceResponse } | null = null;
   let connectDeviceName = '';
   let connectEmail = '';
   let connectServerPassword = '';
@@ -173,7 +179,7 @@
     try {
       if (needsInit) {
         // First time setup
-        if (password.length < 8) {
+        if (!isNotesPasswordLongEnough(password)) {
           error = $_('unlock.passwordMinLength');
           return;
         }
@@ -260,11 +266,11 @@
     showDeleteConfirm = false;
     loading = true;
     try {
-      await deleteDB();
+      await deleteAllLocalData();
       // Reload the page to reinitialize
       window.location.reload();
     } catch (err) {
-      error = 'Failed to delete database: ' + (err instanceof Error ? err.message : 'Unknown error');
+      error = $_('settings.deleteDatabaseFailed', { values: { error: err instanceof Error ? err.message : String(err) } });
       loading = false;
     }
   }
@@ -321,31 +327,38 @@
       connectError = $_('unlock.connectExisting.errors.serverPasswordRequired');
       return;
     }
-    if (!connectNotesPassword || connectNotesPassword.length < 8) {
-      connectError = $_('unlock.connectExisting.errors.notesPasswordMinLength');
+    // No minimum here: this is the password the account already uses, and an
+    // existing short password must keep working.
+    if (!connectNotesPassword) {
+      connectError = $_('settings.syncSetup.notesPassword.required');
       return;
     }
 
     connectLoading = true;
 
     try {
-      // Step 1: Initialise local encryption with notes password
-      connectStep = $_('unlock.connectExisting.steps.initialising');
-      await initialize(connectNotesPassword);
-
-      // Step 2: Register device with the server
+      // Step 1: Register device with the server. A retry reuses the registration, or
+      // every mistyped notes password would leave another device on the account.
       connectStep = $_('unlock.connectExisting.steps.registering');
-      const response = await authService.registerDevice(
-        connectEndpoint.trim(),
-        connectEmail.trim(),
-        connectServerPassword,
-        connectDeviceName.trim()
-      );
+      const registrationKey = JSON.stringify([connectEndpoint.trim(), connectEmail.trim(), connectDeviceName.trim()]);
+      if (connectRegistration?.key !== registrationKey) {
+        connectRegistration = {
+          key: registrationKey,
+          device: await authService.registerDevice(
+            connectEndpoint.trim(),
+            connectEmail.trim(),
+            connectServerPassword,
+            connectDeviceName.trim()
+          ),
+        };
+      }
+      const response = connectRegistration.device;
 
-      // Step 3: Onboard from server — download the shared master key, replace local random key
-      // The server blob should be wrapped with the NOTES password, which never
-      // leaves the client. Devices set up by older versions wrapped it with the
-      // server password instead, so that is tried as a fallback.
+      // Step 2: Onboard from server — download the shared master key. Nothing is written
+      // locally unless this works, because a vault left behind by a mistyped password
+      // would refuse the right one on the next try.
+      // Only the NOTES password may open it. It never leaves the client, whereas the
+      // server sees the server password and could wrap a key of its own under that.
       connectStep = $_('unlock.connectExisting.steps.onboarding');
       try {
         await onboardFromServer(
@@ -353,17 +366,25 @@
           connectEndpoint.trim(),
           response.userId,
           response.apiKey,
-          connectNotesPassword,
-          connectServerPassword
+          connectNotesPassword
         );
         console.log('[UnlockScreen] ✓ Onboarded from server via envelope encryption');
       } catch (onboardError) {
         // CRITICAL: Secondary device with wrong master key is useless
         console.error('[UnlockScreen] Onboarding from server failed:', onboardError);
+        const specificError = onboardingErrorKey(onboardError);
         throw new Error(
-          $_('unlock.connectExisting.errors.onboardingFailed') +
-          (onboardError instanceof Error ? ': ' + onboardError.message : '')
+          specificError
+            ? $_(specificError)
+            : $_('unlock.connectExisting.errors.onboardingFailed') +
+              (onboardError instanceof Error ? ': ' + onboardError.message : '')
         );
+      }
+
+      // Step 3: Create what a new vault needs, now that there is one
+      connectStep = $_('unlock.connectExisting.steps.initialising');
+      if (!(await settingsRepository.exists())) {
+        await settingsRepository.reset();
       }
 
       // Step 4: Encrypt API key with the CORRECT (server's) master key
@@ -406,6 +427,12 @@
       // Step 6: Unlock
       isInitializedStore.set(true);
       isLocked.set(false);
+
+      // Neither password is being chosen here, so a match is warned about, not
+      // refused: refusing would stop anyone who already has one adding a device.
+      if (isSamePassword(connectNotesPassword, connectServerPassword)) {
+        toast.error($_('settings.syncSetup.notesPassword.matchesAccountWarning'));
+      }
 
       // Store password for session if applicable
       try {
@@ -524,6 +551,13 @@
         restoreProgress = progress;
       });
 
+      // The backup may name another sync server, and connections are limited to the
+      // old one for this page load
+      if (isConnectionRestricted()) {
+        window.location.reload();
+        return;
+      }
+
       // Restore successful - update UI state
       needsInit = false;
       isInitializedStore.set(true);
@@ -535,7 +569,9 @@
       console.error('[UnlockScreen] Backup restore failed:', err);
       const errorMessage = err instanceof Error ? err.message : String(err);
 
-      if (errorMessage.includes('Incorrect password')) {
+      if (err instanceof BackupStorageFullError) {
+        error = $_('backup.restore.storageFull');
+      } else if (errorMessage.includes('Incorrect password')) {
         error = $_('backup.restore.wrongPassword');
       } else {
         error = errorMessage;

@@ -17,13 +17,15 @@
     "status": "Status",
     "created": "Erstellt",
     "saving": "Speichern...",
-    "deleting": "Löschen..."
+    "deleting": "Löschen...",
+    "passwordRules": "Mindestens 12 Zeichen. Der Server kann zusätzlich eine Mischung aus Groß- und Kleinbuchstaben, Zahlen und Sonderzeichen verlangen."
   },
   "nav": {
     "dashboard": "Dashboard",
     "users": "Benutzer",
     "settings": "Einstellungen",
-    "logout": "Abmelden"
+    "logout": "Abmelden",
+    "audit": "Audit-Protokoll"
   },
   "login": {
     "title": "Jottery Admin",
@@ -45,6 +47,41 @@
   "logout": {
     "confirmTitle": "Abmeldung bestätigen",
     "confirmMessage": "Sind Sie sicher, dass Sie sich abmelden möchten?"
+  },
+  "errors": {
+    "unknown": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+    "network": "Der Server ist nicht erreichbar. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "forbidden": "Sie haben dafür keine Berechtigung.",
+    "wrongPassword": "Aktuelles Passwort ist falsch",
+    "rateLimited": "Zu viele Versuche. Versuchen Sie es in {seconds} Sekunden erneut.",
+    "tooManyAttempts": "Zu viele Versuche. Bitte warten Sie und versuchen Sie es erneut.",
+    "passwordTooShort": "Neues Passwort muss mindestens 12 Zeichen lang sein",
+    "passwordSameAsCurrent": "Das neue Passwort muss sich vom aktuellen unterscheiden",
+    "ownAdminRole": "Sie können sich Ihre eigenen Admin-Rechte nicht entziehen.",
+    "lastAdminDemote": "Der letzte Admin kann nicht herabgestuft werden.",
+    "ownAccountDelete": "Sie können Ihr eigenes Konto hier nicht löschen.",
+    "lastAdminDelete": "Der letzte Admin kann nicht gelöscht werden.",
+    "userNotFound": "Benutzer nicht gefunden.",
+    "deviceNotFound": "Gerät nicht gefunden.",
+    "quotaRange": "Das Speicherkontingent muss zwischen 1 und 100000 MB liegen.",
+    "maxUploadRange": "Die maximale Upload-Größe muss zwischen 1 und 1000 MB liegen.",
+    "inboxItemsRange": "Die maximale Anzahl an Posteingang-Elementen muss zwischen 1 und 10000 liegen.",
+    "inboxSizeRange": "Die maximale Posteingang-Größe muss zwischen 1 und 1000 MB liegen.",
+    "passwordComplexity": "Das Passwort braucht mindestens {required} von 4 Zeichentypen. Es fehlen: {missing}.",
+    "passwordClass": {
+      "uppercase": "Großbuchstabe",
+      "lowercase": "Kleinbuchstabe",
+      "number": "Zahl",
+      "special": "Sonderzeichen"
+    },
+    "passwordTooLong": "Das Passwort ist zu lang."
+  },
+  "session": {
+    "expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an."
+  },
+  "forcedPasswordChange": {
+    "title": "Ändern Sie Ihr Passwort",
+    "description": "Sie müssen ein neues Passwort wählen, bevor Sie fortfahren können. Es muss mindestens 12 Zeichen lang sein."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -129,7 +166,6 @@
       "newPasswordPlaceholder": "Neues Passwort eingeben",
       "confirmPassword": "Passwort bestätigen",
       "confirmPasswordPlaceholder": "Neues Passwort bestätigen",
-      "passwordRequirement": "Mindestens 12 Zeichen",
       "passwordTooShort": "Passwort muss mindestens 12 Zeichen lang sein",
       "passwordMismatch": "Passwörter stimmen nicht überein",
       "passwordResetSuccess": "Passwort für {email} wurde erfolgreich zurückgesetzt",
@@ -139,7 +175,9 @@
       "passwordResetWarning": "Dies ändert nur das Anmeldepasswort. Die Notizen-Verschlüsselung bleibt unberührt. Wenn der Benutzer sein Verschlüsselungspasswort vergessen hat, können seine Notizen nicht wiederhergestellt werden.",
       "inboxMaxItems": "Max. Posteingang-Elemente",
       "inboxMaxSize": "Max. Posteingang-Größe",
-      "items": "Elemente"
+      "items": "Elemente",
+      "passwordResetDevices": "Die Geräte dieses Benutzers synchronisieren nach dem Zurücksetzen weiter, weil ihre Schlüssel nicht an das Passwort gebunden sind.",
+      "revokeDevicesOption": "Auch alle Geräteschlüssel dieses Benutzers widerrufen, falls das Konto kompromittiert sein könnte"
     },
     "filters": {
       "all": "Alle",
@@ -180,11 +218,15 @@
       "promoteToAdmin": "Zum Admin befördern",
       "demoteFromAdmin": "Vom Admin herabstufen",
       "messages": {
-        "delete": "Sind Sie sicher, dass Sie den Benutzer {email} dauerhaft löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "approve": "{email} genehmigen? Der Benutzer kann sich dann anmelden und Geräte registrieren.",
+        "deactivate": "{email} deaktivieren? Der Benutzer kann sich erst wieder anmelden und synchronisieren, wenn er erneut aktiviert wird.",
+        "activate": "{email} aktivieren? Der Benutzer kann sich dann wieder anmelden und synchronisieren.",
+        "delete": "Damit werden {email} und alle Daten, die der Server für diesen Benutzer speichert, endgültig gelöscht: Notizen, Anhänge, Geräte und der Kontoschlüssel. Das kann nicht rückgängig gemacht werden.",
         "promoteToAdmin": "Sind Sie sicher, dass Sie {email} zum Administrator befördern möchten? Sie erhalten vollen Zugriff auf alle Verwaltungsfunktionen.",
-        "demoteFromAdmin": "Sind Sie sicher, dass Sie die Administratorrechte von {email} entfernen möchten?",
-        "genericAction": "Sind Sie sicher, dass Sie {action} für Benutzer {email} ausführen möchten?"
-      }
+        "demoteFromAdmin": "Sind Sie sicher, dass Sie die Administratorrechte von {email} entfernen möchten?"
+      },
+      "deleteCounts": "Notizen: {notes} · Geräte: {devices}",
+      "typeEmail": "Geben Sie zur Bestätigung die E-Mail-Adresse des Benutzers ein:"
     },
     "toast": {
       "approved": "Benutzer {email} erfolgreich genehmigt",
@@ -193,8 +235,14 @@
       "deleted": "Benutzer {email} gelöscht",
       "promotedToAdmin": "Benutzer {email} zum Admin befördert",
       "demotedFromAdmin": "Benutzer {email} vom Admin herabgestuft",
-      "failedToAction": "Fehler beim {action} des Benutzers: {error}",
-      "failedGeneric": "Fehler beim {action} des Benutzers"
+      "failed": {
+        "approve": "Der Benutzer konnte nicht genehmigt werden: {error}",
+        "deactivate": "Der Benutzer konnte nicht deaktiviert werden: {error}",
+        "activate": "Der Benutzer konnte nicht aktiviert werden: {error}",
+        "delete": "Der Benutzer konnte nicht gelöscht werden: {error}",
+        "promote": "Der Benutzer konnte nicht zum Admin befördert werden: {error}",
+        "demote": "Dem Benutzer konnten die Admin-Rechte nicht entzogen werden: {error}"
+      }
     }
   },
   "settings": {
@@ -248,6 +296,7 @@
       "errors": {
         "invalidCredentials": "Ungültige E-Mail oder Passwort",
         "accountInactive": "Ihr Konto ist inaktiv. Bitte kontaktieren Sie den Administrator.",
+        "accountPending": "Ihr Konto wartet auf die Freigabe durch einen Administrator.",
         "unexpected": "Ein unerwarteter Fehler ist aufgetreten",
         "statusCheckFailed": "Failed to check status. Please try again."
       },
@@ -285,8 +334,15 @@
         "revoke": "Token widerrufen",
         "revokeConfirmTitle": "Posteingang-Token widerrufen",
         "revokeConfirmMessage": "Posteingang-Token widerrufen? Alle Integrationen, die ihn verwenden, funktionieren nicht mehr.",
-        "cancel": "Abbrechen"
-      }
+        "cancel": "Abbrechen",
+        "generateSuccess": "Posteingang-Token generiert",
+        "generateFailed": "Das Token konnte nicht generiert werden: {error}",
+        "revokeSuccess": "Posteingang-Token widerrufen",
+        "revokeFailed": "Das Token konnte nicht widerrufen werden und funktioniert weiterhin: {error}",
+        "copySuccess": "Token kopiert",
+        "copyUnavailable": "Kopieren ist hier nicht möglich. Markieren und kopieren Sie das Token selbst."
+      },
+      "storageUsedNote": "Umfasst Notizen, Notizverlauf und Anhänge."
     },
     "devices": {
       "title": "Ihre Geräte",
@@ -316,7 +372,6 @@
       "currentPassword": "Aktuelles Passwort",
       "newPassword": "Neues Passwort",
       "confirmPassword": "Passwort bestätigen",
-      "passwordHint": "Passwort muss mindestens 12 Zeichen lang sein",
       "updatePassword": "Passwort aktualisieren",
       "passwordChanged": "Passwort erfolgreich geändert",
       "dangerZone": "Gefahrenzone",
@@ -348,7 +403,42 @@
       "deleteNotesButton": "Delete Notes",
       "deleteNotesConfirmTitle": "Delete All Notes",
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
-      "notesDeleted": "All notes have been deleted from the server"
+      "notesDeleted": "All notes have been deleted from the server",
+      "passwordToConfirm": "Geben Sie zur Bestätigung Ihr Passwort ein:"
+    }
+  },
+  "audit": {
+    "title": "Audit-Protokoll",
+    "description": "Eine dauerhafte Aufzeichnung dessen, was Admins auf diesem Server getan haben.",
+    "loading": "Audit-Protokoll wird geladen...",
+    "failedToLoad": "Das Audit-Protokoll konnte nicht geladen werden",
+    "empty": "Bisher wurde nichts aufgezeichnet.",
+    "allActions": "Alle Aktionen",
+    "filterLabel": "Anzeigen",
+    "commandLine": "Befehlszeile",
+    "range": "{from}–{to} von {total}",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "table": {
+      "time": "Wann",
+      "action": "Aktion",
+      "admin": "Admin",
+      "target": "Betroffen",
+      "address": "Adresse"
+    },
+    "actions": {
+      "userApprove": "Benutzer genehmigt",
+      "userDeactivate": "Benutzer deaktiviert",
+      "userActivate": "Benutzer aktiviert",
+      "userDelete": "Benutzer gelöscht",
+      "userPasswordReset": "Passwort zurückgesetzt",
+      "userAdminGrant": "Zum Admin befördert",
+      "userAdminRevoke": "Admin-Rechte entzogen",
+      "userSettingsUpdate": "Benutzereinstellungen geändert",
+      "deviceRevoke": "Gerät widerrufen",
+      "deviceDelete": "Gerät gelöscht",
+      "deviceRename": "Gerät umbenannt",
+      "adminPasswordChange": "Eigenes Passwort geändert"
     }
   }
 }

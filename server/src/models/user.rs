@@ -19,6 +19,8 @@ pub struct User {
     pub inbox_token_hash: Option<String>,
     pub inbox_max_items: Option<i64>,
     pub inbox_max_size_mb: Option<i64>,
+    pub must_change_password: i64,   // 0/1
+    pub storage_used_bytes: i64,     // Approximate between housekeeping passes
 }
 
 /// User registration request (email + password)
@@ -88,6 +90,10 @@ pub struct PutWrappedKeyRequest {
     pub kdf_version: i32,
     #[serde(rename = "kdfIterations")]
     pub kdf_iterations: i32,
+    /// `true` overwrites the stored key, and `false` writes only if there is none.
+    /// Released clients don't send it. See docs/sync-protocol.md.
+    #[serde(default)]
+    pub replace: Option<bool>,
 }
 
 /// Wrapped key response (for envelope encryption)
@@ -98,6 +104,9 @@ pub struct WrappedKeyResponse {
     pub kdf_version: i32,
     #[serde(rename = "kdfIterations")]
     pub kdf_iterations: i32,
+    /// What a client sends as `If-Match` to write only over this key.
+    #[serde(rename = "updatedAt")]
+    pub updated_at: String,
 }
 
 /// Admin login request
@@ -105,16 +114,26 @@ pub struct WrappedKeyResponse {
 pub struct LoginRequest {
     pub email: String,
     pub password: String,
+    /// Ask for the session as an HttpOnly cookie. See `api::cookies`.
+    #[serde(rename = "cookieSession", default)]
+    pub cookie_session: bool,
 }
 
 /// Admin login response
 #[derive(Debug, Serialize)]
 pub struct LoginResponse {
-    #[serde(rename = "sessionId")]
-    pub session_id: String,
+    /// Absent when the session is in a cookie.
+    #[serde(rename = "sessionId", skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
+    /// Present, and true, only when the session is in a cookie.
+    #[serde(rename = "cookieSession", skip_serializing_if = "std::ops::Not::not")]
+    pub cookie_session: bool,
     #[serde(rename = "expiresAt")]
     pub expires_at: String,
     pub user: UserInfo,
+    /// The session can only change the password until this is cleared.
+    #[serde(rename = "mustChangePassword")]
+    pub must_change_password: bool,
 }
 
 /// User info (for login response)

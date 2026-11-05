@@ -30,6 +30,11 @@ DEMO_EMAIL="demo@example.com"
 DEMO_PASSWORD="demo-password-2026"
 DEMO_USER_ID="00000000-0000-0000-0000-000000000002"
 
+# The server has no default admin password. The database is rebuilt on each run,
+# so a new one is set at start-up and only this script needs to know it.
+DEMO_ADMIN_EMAIL="admin@localhost"
+DEMO_ADMIN_PASSWORD="$(openssl rand -hex 24)"
+
 # Server port
 PORT=3030
 
@@ -114,7 +119,7 @@ create_demo_user() {
     local admin_login
     admin_login=$(curl -s -X POST "http://localhost:$PORT/api/v1/auth/login" \
         -H "Content-Type: application/json" \
-        -d '{"email": "admin@localhost", "password": "changeme"}')
+        -d "{\"email\": \"$DEMO_ADMIN_EMAIL\", \"password\": \"$DEMO_ADMIN_PASSWORD\"}")
 
     local session_token
     session_token=$(echo "$admin_login" | grep -o '"sessionId":"[^"]*"' | cut -d'"' -f4)
@@ -206,6 +211,8 @@ start_server() {
     export CORS_ALLOWED_ORIGINS="*"
     export RUST_LOG="warn"
     export PASSWORD_COMPLEXITY="none"  # Allow simple demo password
+    export DEFAULT_ADMIN_EMAIL="$DEMO_ADMIN_EMAIL"
+    export DEFAULT_ADMIN_PASSWORD="$DEMO_ADMIN_PASSWORD"
 
     cd "$SERVER_DIR"
 

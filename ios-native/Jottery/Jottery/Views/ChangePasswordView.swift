@@ -22,8 +22,16 @@ struct ChangePasswordView: View {
                     PasswordField(L.changePasswordNew, text: $newPassword, contentType: .newPassword)
                     PasswordField(L.changePasswordConfirm, text: $confirmPassword, contentType: .newPassword)
                 } footer: {
-                    Text(L.changePasswordWarning)
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        if newPasswordIsTooShort {
+                            Text(L.notesPasswordTooShort(PasswordPolicy.minimumNotesPasswordLength))
+                                .foregroundStyle(.red)
+                        }
+                        Text(L.changePasswordWarning)
+                            .foregroundStyle(.secondary)
+                        Text(L.changePasswordOldBackups)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 if let errorMessage {
@@ -64,9 +72,14 @@ struct ChangePasswordView: View {
         }
     }
 
+    private var newPasswordIsTooShort: Bool {
+        !newPassword.isEmpty && PasswordPolicy.violation(newNotesPassword: newPassword) == .tooShort
+    }
+
     private var isValid: Bool {
         !currentPassword.isEmpty &&
         !newPassword.isEmpty &&
+        !newPasswordIsTooShort &&
         newPassword == confirmPassword &&
         newPassword != currentPassword
     }

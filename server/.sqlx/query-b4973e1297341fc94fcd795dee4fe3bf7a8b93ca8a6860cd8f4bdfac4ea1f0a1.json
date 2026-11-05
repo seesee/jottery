@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE users SET storage_used_bytes = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "b4973e1297341fc94fcd795dee4fe3bf7a8b93ca8a6860cd8f4bdfac4ea1f0a1"
+}
