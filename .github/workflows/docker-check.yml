@@ -60,6 +60,9 @@ jobs:
           docker exec --user jottery jottery-check sh -c 'test ! -w /app/dist/index.html'
           # The recovery tool, which the README tells people to run this way
           docker exec --user jottery jottery-check jottery-admin stats
+          # Caddy turns an oversized request away before the server sees it
+          test "$(head --bytes=104857601 /dev/zero | curl --silent --output /dev/null --write-out '%{http_code}' \
+            --request POST --data-binary @- http://localhost:8088/api/v1/sync/push)" = 413
           # The server's own answer, not index.html from the fallback route
           test "$(curl --fail --silent --show-error http://localhost:8088/health)" = OK
           for attempt in $(seq 1 30); do

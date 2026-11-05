@@ -99,7 +99,7 @@ You can configure the server using environment variables:
 | `DEFAULT_STORAGE_QUOTA_MB` | `1000` | Default user storage quota in MB |
 | `DEFAULT_MAX_UPLOAD_SIZE_MB` | `5` | Default user upload limit in MB |
 | `ENFORCE_STORAGE_QUOTA` | `false` | Refuse pushes that would take an account past its quota. Check accounts in the dashboard first: quotas weren't enforced before, so one may already be over, and a refused push stops that device's sync |
-| `MAX_PAYLOAD_SIZE` | `104857600` | Max size of a sync push in bytes (100 MB). Other routes have small fixed limits. Lowering it can stop large syncs with a 413 |
+| `MAX_PAYLOAD_SIZE` | `104857600` | Max size of a sync push in bytes (100 MB), which the Docker image also applies in Caddy. Other routes have small fixed limits. Lowering it can stop large syncs with a 413 |
 | `PASSWORD_COMPLEXITY` | `standard` | Character classes a password needs, on top of the 12-character minimum: `none`, `basic` (2), `standard` (3) or `strong` (4) |
 | `CORS_ALLOWED_ORIGINS` | *(none)* | Comma-separated list of allowed CORS origins. If unset, only the server's own origin can call it from a browser |
 | `ENABLE_HSTS` | `false` | Send `Strict-Transport-Security`, on the web client as well as the server's routes, and keep dashboard sessions in an HttpOnly cookie that script can't read. Set to `true` only when clients reach the site over HTTPS |
