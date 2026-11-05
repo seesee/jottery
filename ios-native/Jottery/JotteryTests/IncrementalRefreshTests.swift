@@ -61,8 +61,7 @@ struct IncrementalRefreshTests {
         #expect(untouchedNote1.version == originalNote1.version)
 
         // filteredNotes stays consistent with notes.
-        let deadline = Date().addingTimeInterval(30)
-        while state.filteredNotes.count != 2 && Date() < deadline {
+        for _ in 0..<1500 where state.filteredNotes.count != 2 {
             try await Task.sleep(for: .milliseconds(20))
         }
         #expect(state.filteredNotes.count == 2)

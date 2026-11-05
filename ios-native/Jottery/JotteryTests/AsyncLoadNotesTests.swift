@@ -40,9 +40,9 @@ struct AsyncLoadNotesTests {
 
         // scheduleSearch() resolves synchronously when searchQuery is empty,
         // but poll to stay robust if that debounce behaviour ever changes.
-        // The bound is long because other tests can hold the main actor.
-        let deadline = Date().addingTimeInterval(30)
-        while state.filteredNotes.count != 2 && Date() < deadline {
+        // Bounded by attempts, not time: other tests can hold the main actor
+        // for longer than any deadline.
+        for _ in 0..<1500 where state.filteredNotes.count != 2 {
             try await Task.sleep(for: .milliseconds(20))
         }
         #expect(state.filteredNotes.count == 2)
