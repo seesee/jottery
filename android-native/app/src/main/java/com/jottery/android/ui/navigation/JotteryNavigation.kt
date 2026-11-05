@@ -20,6 +20,7 @@ import com.jottery.android.ui.screen.SettingsScreen
 import com.jottery.android.ui.screen.SetupScreen
 import com.jottery.android.ui.screen.SyncAccountScreen
 import com.jottery.android.ui.screen.SyncSetupScreen
+import com.jottery.android.ui.screen.TagsScreen
 import com.jottery.android.ui.screen.UnlockScreen
 import com.jottery.android.viewmodel.AppState
 
@@ -35,6 +36,7 @@ object Routes {
     const val BACKUP = "backup"
     const val IMPORT = "import"
     const val SAVED_SEARCHES = "saved_searches"
+    const val TAGS = "tags"
     const val CONFLICT_RESOLUTION = "conflict_resolution"
     const val INBOX = "inbox"
 }
@@ -114,6 +116,7 @@ fun JotteryNavigation(
                 onNavigateToConflicts = { navController.navigate(Routes.CONFLICT_RESOLUTION) },
                 onNavigateToInbox = { navController.navigate(Routes.INBOX) },
                 onNavigateToSavedSearches = { navController.navigate(Routes.SAVED_SEARCHES) },
+                onNavigateToTags = { navController.navigate(Routes.TAGS) },
             )
         }
 
@@ -167,6 +170,13 @@ fun JotteryNavigation(
 
         composable(Routes.IMPORT) {
             ImportScreen(
+                appState = appState,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(Routes.TAGS) {
+            TagsScreen(
                 appState = appState,
                 onBack = { navController.popBackStack() },
             )

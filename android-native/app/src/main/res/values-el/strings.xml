@@ -372,6 +372,10 @@
     <string name="note_list_archived_notes_will_appear_here">Οι αρχειοθετημένες σημειώσεις θα εμφανίζονται εδώ.</string>
     <string name="note_list_try_a_different_search_term">Δοκιμάστε διαφορετικό όρο αναζήτησης.</string>
     <string name="note_list_tap_to_create_your_first">Πατήστε + για να δημιουργήσετε την πρώτη σας σημείωση.</string>
+    <string name="note_row_open">Άνοιγμα αυτής της σημείωσης</string>
+    <string name="note_row_select">Επιλογή σημείωσης</string>
+    <string name="tags_empty">Δεν υπάρχουν ακόμη ετικέτες.</string>
+    <string name="settings_about_notes">Σημειώσεις</string>
     <string name="note_row_has_attachments">Έχει συνημμένα</string>
     <string name="search_bar_search">Αναζήτηση</string>
     <string name="search_bar_search_notes">Αναζήτηση σημειώσεων…</string>

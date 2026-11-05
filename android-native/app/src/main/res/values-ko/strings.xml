@@ -358,6 +358,10 @@
     <string name="note_list_archived_notes_will_appear_here">보관된 노트가 여기에 표시됩니다.</string>
     <string name="note_list_try_a_different_search_term">다른 검색어를 입력해 보세요.</string>
     <string name="note_list_tap_to_create_your_first">+를 탭하여 첫 노트를 만드세요.</string>
+    <string name="note_row_open">이 노트 열기</string>
+    <string name="note_row_select">노트 선택</string>
+    <string name="tags_empty">아직 태그가 없습니다.</string>
+    <string name="settings_about_notes">노트</string>
     <string name="note_row_has_attachments">첨부파일 있음</string>
     <string name="search_bar_search">검색</string>
     <string name="search_bar_search_notes">노트 검색…</string>

@@ -358,6 +358,10 @@
     <string name="note_list_archived_notes_will_appear_here">アーカイブしたノートはここに表示されます。</string>
     <string name="note_list_try_a_different_search_term">別の検索語をお試しください。</string>
     <string name="note_list_tap_to_create_your_first">+ をタップして最初のノートを作成しましょう。</string>
+    <string name="note_row_open">このノートを開く</string>
+    <string name="note_row_select">ノートを選択</string>
+    <string name="tags_empty">タグはまだありません。</string>
+    <string name="settings_about_notes">ノート</string>
     <string name="note_row_has_attachments">添付ファイルあり</string>
     <string name="search_bar_search">検索</string>
     <string name="search_bar_search_notes">ノートを検索…</string>

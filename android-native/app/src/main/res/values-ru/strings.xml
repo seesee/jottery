@@ -400,6 +400,10 @@
     <string name="note_list_archived_notes_will_appear_here">Заметки из архива появятся здесь.</string>
     <string name="note_list_try_a_different_search_term">Попробуйте другой запрос.</string>
     <string name="note_list_tap_to_create_your_first">Нажмите «+», чтобы создать первую заметку.</string>
+    <string name="note_row_open">Открыть эту заметку</string>
+    <string name="note_row_select">Выбрать заметку</string>
+    <string name="tags_empty">Тегов пока нет.</string>
+    <string name="settings_about_notes">Заметки</string>
     <string name="note_row_has_attachments">Есть вложения</string>
     <string name="search_bar_search">Поиск</string>
     <string name="search_bar_search_notes">Поиск заметок…</string>

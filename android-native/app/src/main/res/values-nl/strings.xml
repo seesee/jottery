@@ -359,7 +359,7 @@
     <string name="note_info_modified">Gewijzigd</string>
     <string name="note_info_words">Woorden</string>
     <string name="note_info_characters">Tekens</string>
-    <string name="note_info_tags">Labels</string>
+    <string name="note_info_tags">Tags</string>
     <string name="note_info_attachments">Bijlagen</string>
     <string name="note_info_syntax">Syntaxis</string>
     <string name="note_info_pinned">Vastgemaakt</string>
@@ -372,6 +372,10 @@
     <string name="note_list_archived_notes_will_appear_here">Gearchiveerde notities verschijnen hier.</string>
     <string name="note_list_try_a_different_search_term">Probeer een andere zoekterm.</string>
     <string name="note_list_tap_to_create_your_first">Tik op + om uw eerste notitie te maken.</string>
+    <string name="note_row_open">Deze notitie openen</string>
+    <string name="note_row_select">Notitie selecteren</string>
+    <string name="tags_empty">Nog geen tags.</string>
+    <string name="settings_about_notes">Notities</string>
     <string name="note_row_has_attachments">Heeft bijlagen</string>
     <string name="search_bar_search">Zoeken</string>
     <string name="search_bar_search_notes">Notities zoeken…</string>

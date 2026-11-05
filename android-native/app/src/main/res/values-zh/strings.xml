@@ -358,6 +358,10 @@
     <string name="note_list_archived_notes_will_appear_here">已归档的笔记将显示在此处。</string>
     <string name="note_list_try_a_different_search_term">请尝试其他搜索词。</string>
     <string name="note_list_tap_to_create_your_first">点按 + 创建您的第一条笔记。</string>
+    <string name="note_row_open">打开此笔记</string>
+    <string name="note_row_select">选择笔记</string>
+    <string name="tags_empty">还没有标签。</string>
+    <string name="settings_about_notes">笔记</string>
     <string name="note_row_has_attachments">含有附件</string>
     <string name="search_bar_search">搜索</string>
     <string name="search_bar_search_notes">搜索笔记…</string>

@@ -386,6 +386,10 @@
     <string name="note_list_archived_notes_will_appear_here">Le note archiviate appariranno qui.</string>
     <string name="note_list_try_a_different_search_term">Prova un altro termine di ricerca.</string>
     <string name="note_list_tap_to_create_your_first">Tocca + per creare la tua prima nota.</string>
+    <string name="note_row_open">Apri questa nota</string>
+    <string name="note_row_select">Seleziona nota</string>
+    <string name="tags_empty">Ancora nessun tag.</string>
+    <string name="settings_about_notes">Note</string>
     <string name="note_row_has_attachments">Ha allegati</string>
     <string name="search_bar_search">Cerca</string>
     <string name="search_bar_search_notes">Cerca nelle note…</string>

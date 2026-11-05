@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -89,6 +91,7 @@ fun MainScreen(
     onNavigateToConflicts: () -> Unit,
     onNavigateToInbox: () -> Unit,
     onNavigateToSavedSearches: () -> Unit,
+    onNavigateToTags: () -> Unit,
 ) {
     val conflicts by appState.pendingConflicts.collectAsState()
     val inboxItems by appState.inboxItems.collectAsState()
@@ -229,7 +232,7 @@ fun MainScreen(
                         // Overflow menu (settings, recycle bin, archive toggle, lock)
                         Box {
                             IconButton(onClick = { overflowMenuExpanded = true }) {
-                                Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.action_more))
+                                Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.action_more))
                             }
                             DropdownMenu(
                                 expanded = overflowMenuExpanded,
@@ -259,6 +262,16 @@ fun MainScreen(
                                         },
                                     )
                                 }
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.note_info_tags)) },
+                                    onClick = {
+                                        overflowMenuExpanded = false
+                                        onNavigateToTags()
+                                    },
+                                    leadingIcon = {
+                                        Icon(Icons.AutoMirrored.Filled.Label, contentDescription = null)
+                                    },
+                                )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.recycle_bin_title)) },
                                     onClick = {

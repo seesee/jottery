@@ -372,6 +372,10 @@
     <string name="note_list_archived_notes_will_appear_here">Archivierte Notizen werden hier angezeigt.</string>
     <string name="note_list_try_a_different_search_term">Versuchen Sie einen anderen Suchbegriff.</string>
     <string name="note_list_tap_to_create_your_first">Tippen Sie auf +, um Ihre erste Notiz zu erstellen.</string>
+    <string name="note_row_open">Diese Notiz öffnen</string>
+    <string name="note_row_select">Notiz auswählen</string>
+    <string name="tags_empty">Noch keine Schlagwörter.</string>
+    <string name="settings_about_notes">Notizen</string>
     <string name="note_row_has_attachments">Hat Anhänge</string>
     <string name="search_bar_search">Suchen</string>
     <string name="search_bar_search_notes">Notizen durchsuchen…</string>

@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import com.jottery.android.R
 import com.jottery.android.model.SortOrder
 import com.jottery.android.model.ThemeMode
+import com.jottery.android.model.tagCounts
 import com.jottery.android.ui.component.autoLockLabel
 import com.jottery.android.ui.component.enableBiometricUnlock
 import com.jottery.android.ui.component.relativeTime
@@ -27,6 +28,7 @@ import com.jottery.android.ui.component.themeModeLabel
 import com.jottery.android.util.BiometricHelper
 import com.jottery.android.viewmodel.AppState
 import com.jottery.android.viewmodel.defaultExportName
+import java.text.NumberFormat
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,6 +56,10 @@ fun SettingsScreen(
     var showWipeConfirm by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
+    val notes by appState.notes.collectAsState()
+    val archivedNotes by appState.archivedNotes.collectAsState()
+    var binCount by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) { binCount = appState.loadDeletedNotes().size }
     var exportStatus by remember { mutableStateOf<String?>(null) }
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
@@ -195,6 +201,17 @@ fun SettingsScreen(
                 title = stringResource(R.string.settings_about_app),
                 subtitle = stringResource(R.string.settings_about_version, appVersion(context)),
             )
+            val numbers = remember { NumberFormat.getInstance() }
+            val counts = listOf(
+                R.string.settings_about_notes to notes.size,
+                R.string.note_info_archived to archivedNotes.size,
+                R.string.recycle_bin_title to binCount,
+                R.string.note_info_tags to (notes + archivedNotes).tagCounts().size,
+                R.string.note_info_attachments to (notes + archivedNotes).sumOf { it.attachments.size },
+            )
+            for ((label, count) in counts) {
+                SettingsRow(title = stringResource(label), subtitle = numbers.format(count))
+            }
 
             Spacer(Modifier.height(32.dp))
         }

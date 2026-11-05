@@ -373,7 +373,7 @@
     <string name="note_info_modified">Modificada</string>
     <string name="note_info_words">Palavras</string>
     <string name="note_info_characters">Caracteres</string>
-    <string name="note_info_tags">Etiquetas</string>
+    <string name="note_info_tags">Tags</string>
     <string name="note_info_attachments">Anexos</string>
     <string name="note_info_syntax">Sintaxe</string>
     <string name="note_info_pinned">Fixada</string>
@@ -386,6 +386,10 @@
     <string name="note_list_archived_notes_will_appear_here">As notas arquivadas aparecerão aqui.</string>
     <string name="note_list_try_a_different_search_term">Tente um termo de pesquisa diferente.</string>
     <string name="note_list_tap_to_create_your_first">Toque em + para criar sua primeira nota.</string>
+    <string name="note_row_open">Abrir esta nota</string>
+    <string name="note_row_select">Selecionar nota</string>
+    <string name="tags_empty">Ainda não há tags.</string>
+    <string name="settings_about_notes">Notas</string>
     <string name="note_row_has_attachments">Tem anexos</string>
     <string name="search_bar_search">Pesquisar</string>
     <string name="search_bar_search_notes">Pesquisar notas…</string>

@@ -372,6 +372,10 @@
     <string name="note_list_archived_notes_will_appear_here">Arşivlenmiş notlar burada görünecek.</string>
     <string name="note_list_try_a_different_search_term">Farklı bir arama terimi deneyin.</string>
     <string name="note_list_tap_to_create_your_first">İlk notunuzu oluşturmak için + simgesine dokunun.</string>
+    <string name="note_row_open">Bu notu aç</string>
+    <string name="note_row_select">Notu seç</string>
+    <string name="tags_empty">Henüz etiket yok.</string>
+    <string name="settings_about_notes">Notlar</string>
     <string name="note_row_has_attachments">Eki var</string>
     <string name="search_bar_search">Ara</string>
     <string name="search_bar_search_notes">Notlarda ara…</string>

@@ -2,7 +2,10 @@ package com.jottery.android.ui.component
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,6 +34,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -53,6 +63,9 @@ fun NoteRowView(
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
     hasConflict: Boolean = false,
+    onTagClick: ((String) -> Unit)? = null,
+    /** What a swipe does, for anyone who can't swipe. */
+    accessibilityActions: List<CustomAccessibilityAction> = emptyList(),
 ) {
     val noteColor = NoteColors.fromString(note.color)
     val relativeDate = remember(note.modifiedAt) {
@@ -70,11 +83,24 @@ fun NoteRowView(
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick,
-            ),
+                onClickLabel = stringResource(
+                    if (isMultiSelectMode) R.string.note_row_select else R.string.note_row_open
+                ),
+                onLongClickLabel = if (isMultiSelectMode) null else stringResource(R.string.note_row_select),
+            )
+            .semantics {
+                if (accessibilityActions.isNotEmpty()) customActions = accessibilityActions
+                if (isMultiSelectMode) {
+                    role = Role.Checkbox
+                    toggleableState = ToggleableState(isChecked)
+                }
+            },
     ) {
         Row(
+            // Lets the colour stripe follow the text, however large that's set
             modifier = Modifier
                 .fillMaxWidth()
+                .height(IntrinsicSize.Min)
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.Top,
         ) {
@@ -94,7 +120,7 @@ fun NoteRowView(
                 Box(
                     modifier = Modifier
                         .width(4.dp)
-                        .height(52.dp)
+                        .fillMaxHeight()
                         .clip(RoundedCornerShape(2.dp))
                         .background(noteColor),
                 )
@@ -196,6 +222,11 @@ fun NoteRowView(
                                     color = MaterialTheme.colorScheme.primary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
+                                    modifier = if (onTagClick != null) {
+                                        Modifier.clickable { onTagClick(tag) }
+                                    } else {
+                                        Modifier
+                                    },
                                 )
                             }
                             if (note.regularTags.size > 3) {

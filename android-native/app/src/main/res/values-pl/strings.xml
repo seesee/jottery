@@ -400,6 +400,10 @@
     <string name="note_list_archived_notes_will_appear_here">Zarchiwizowane notatki pojawią się tutaj.</string>
     <string name="note_list_try_a_different_search_term">Spróbuj użyć innej frazy.</string>
     <string name="note_list_tap_to_create_your_first">Dotknij +, aby utworzyć pierwszą notatkę.</string>
+    <string name="note_row_open">Otwórz tę notatkę</string>
+    <string name="note_row_select">Zaznacz notatkę</string>
+    <string name="tags_empty">Nie ma jeszcze tagów.</string>
+    <string name="settings_about_notes">Notatki</string>
     <string name="note_row_has_attachments">Ma załączniki</string>
     <string name="search_bar_search">Szukaj</string>
     <string name="search_bar_search_notes">Szukaj w notatkach…</string>
