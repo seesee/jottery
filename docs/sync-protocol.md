@@ -79,6 +79,7 @@ The size of `attachments[].data` plus note content must fit the account's upload
 | `errors` | string[] | Items skipped without failing the push, such as a blob with invalid base64. For logging: don't parse these |
 | `attachmentWarnings` | `{ noteId, attachmentIds }`[] | Only present when non-empty. Accepted notes referencing attachments the server has no blob for. Re-push any blobs you hold |
 | `rejectedDeletions` | string[] | Always present. Note ids whose deletion was refused (see [Deletions](#deletions)) |
+| `skippedDeleted` | string[] | Always present on a current server. Pushed notes skipped because they were permanently deleted after this edit. Stop sending them and drop the local copy, unless it has changed since. An older server doesn't send it, so treat it as empty |
 
 ### How a note is accepted
 
@@ -88,7 +89,7 @@ Times are stored as they were sent, and compared as instants.
 
 For each note, in order:
 
-1. **A tombstone exists.** If the edit is later than the tombstone's `deletedAt`, the tombstone is cleared and the note is stored, resurrecting it. Otherwise the note is **skipped**: it appears in neither `accepted` nor `rejected`, and the client learns it is gone from `deletions` on a pull.
+1. **A tombstone exists.** If the edit is later than the tombstone's `deletedAt`, the tombstone is cleared and the note is stored, resurrecting it. Otherwise the note is **skipped**: its id is in `skippedDeleted`, it appears in neither `accepted` nor `rejected`, and the client learns it is gone from `deletions` on a pull.
 2. **The note is new to the server.** It is accepted.
 3. **Both sides have hashes** (the push sends `contentHash` and `parentHash`, and the server has `contentHash`). It is accepted if the server's hash equals the pushed `parentHash` (a fast-forward), equals the pushed `contentHash` (no change), or appears in the pushed `hashChain`. Otherwise it is rejected as a conflict.
 4. **Otherwise** it is accepted if `modifiedAt` is not earlier than the server's.
@@ -98,6 +99,8 @@ A note that isn't accepted changes nothing: its versions and attachment referenc
 ### Rejection
 
 A `rejected` entry describes the server's current note, so a client can merge without another request: `id`, `reason`, `serverModifiedAt`, `serverContent`, `serverTags`, `serverVersion`, `serverAttachments`, `serverPinned`, `serverArchived`, `serverArchivedAt`, `serverLocked`, `serverLockedAt`, `serverSyntaxLanguage`, `serverWordWrap`, `serverShowPreview`, `serverColor`, `serverContentHash`, `serverParentHash`, `serverHashChain`.
+
+`serverDeleted` and `serverDeletedAt` say whether the server's copy is in the bin. An older server doesn't send them, so treat them as `false` and `null`.
 
 When a common ancestor is found it also has `ancestorHash`, `ancestorContent` and `ancestorTags`, for a three-way merge.
 

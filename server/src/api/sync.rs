@@ -343,6 +343,7 @@ pub async fn push(
 
     let mut accepted = Vec::new();
     let mut rejected = Vec::new();
+    let mut skipped_deleted = Vec::new();
 
     // The whole push is one transaction. BEGIN IMMEDIATE takes the write lock
     // up front, so reading a note and acting on what was read can't interleave
@@ -414,13 +415,15 @@ pub async fn push(
                 // reports the *current* server note's content/tags/version
                 // for a 3-way merge, which does not exist here), so we keep
                 // this as an explicit skip. The client will re-learn the
-                // note is gone from the `deletions` list on its next pull.
+                // note is gone from the `deletions` list on its next pull, and
+                // `skippedDeleted` tells it now, so it can stop sending the note.
                 tracing::info!(
                     "Ignoring push for note {:?} - was hard-deleted by another device (edit {:?} does not postdate tombstone {:?})",
                     note.id,
                     note.modified_at,
                     tombstone.deleted_at
                 );
+                skipped_deleted.push(note.id);
                 continue;
             }
         }
@@ -598,7 +601,7 @@ pub async fn push(
             // Fetch full server note data for conflict resolution
             let server_note = sqlx::query!(
                 r#"SELECT content, tags, pinned, archived, archived_at, locked, locked_at, server_version, syntax_language, word_wrap, show_preview, color, modified_at,
-                          content_hash, parent_hash, hash_chain
+                          content_hash, parent_hash, hash_chain, deleted, deleted_at
                    FROM notes WHERE id = ? AND user_id = ?"#,
                 note.id,
                 client_info.user_id
@@ -679,6 +682,8 @@ pub async fn push(
                 server_content: server_note.content,
                 server_tags,
                 server_version: server_note.server_version,
+                server_deleted: server_note.deleted != 0,
+                server_deleted_at: server_note.deleted_at,
                 server_attachments,
                 server_pinned: server_note.pinned != 0,
                 server_archived: server_note.archived,
@@ -1042,6 +1047,7 @@ pub async fn push(
         errors,
         attachment_warnings,
         rejected_deletions,
+        skipped_deleted,
     }))
 }
 
