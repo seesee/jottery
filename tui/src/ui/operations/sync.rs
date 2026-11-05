@@ -4788,6 +4788,24 @@ mod tests {
         assert_eq!(bin_count(&app), 2);
     }
 
+    /// Deleting a few here doesn't answer the question about the rest. Nothing has reached
+    /// the bin from elsewhere, so only having been asked keeps these held.
+    #[test]
+    fn a_held_deletion_stays_held_when_the_user_deletes_some_of_it() {
+        let (mut app, _server, notes) = app_with_deletions_from_the_server(MASS_DELETION_THRESHOLD);
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        note_repo.delete(&notes[0].id).unwrap();
+        note_repo.delete(&notes[1].id).unwrap();
+
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(outcome.deletions_held, MASS_DELETION_THRESHOLD - 2);
+        assert_eq!(bin_count(&app), 2);
+    }
+
     /// Once it's been answered, it's over.
     #[test]
     fn an_answered_deletion_does_not_hold_up_the_next_one() {
