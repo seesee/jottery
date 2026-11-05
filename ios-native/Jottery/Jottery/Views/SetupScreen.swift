@@ -418,7 +418,7 @@ private struct ConnectToServerView: View {
                 appState.isSyncing = false
 
                 let count = appState.notes.count
-                appState.syncStatusMessage = "Synced — \(count) note\(count == 1 ? "" : "s")"
+                appState.syncStatusMessage = L.syncStatusNotes(count)
                 isWorking = false
 
                 // Clear the status message after a few seconds

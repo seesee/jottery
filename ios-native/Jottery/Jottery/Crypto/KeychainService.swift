@@ -102,7 +102,7 @@ enum KeychainService {
         return try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let context = LAContext()
-                context.localizedReason = "Unlock Jottery"
+                context.localizedReason = L.unlockBiometricReason
 
                 let query: [String: Any] = [
                     kSecClass as String: kSecClassGenericPassword,
@@ -212,11 +212,11 @@ enum KeychainError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .accessControlCreationFailed:
-            return "Failed to create access control for Keychain"
+            return L.keychainErrorAccessControl
         case .storeFailed(let status):
-            return "Keychain store failed: \(status)"
+            return L.keychainErrorStore(Int(status))
         case .retrieveFailed(let status):
-            return "Keychain retrieve failed: \(status)"
+            return L.keychainErrorRetrieve(Int(status))
         }
     }
 }

@@ -264,8 +264,8 @@ enum ImportService {
 
         var errorDescription: String? {
             switch self {
-            case .unsupportedVersion(let v): return "Unsupported export version: \(v)"
-            case .invalidFormat: return "Invalid export file format"
+            case .unsupportedVersion(let v): return L.importErrorUnsupportedVersion(v)
+            case .invalidFormat: return L.importErrorInvalidFormat
             }
         }
     }

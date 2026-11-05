@@ -986,15 +986,15 @@ enum BackupError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .noVault: return "No vault found"
-        case .invalidFormat: return "Invalid backup file format"
-        case .unsupportedVersion(let v): return "Unsupported backup version: \(v)"
-        case .invalidSalt: return "Invalid encryption salt in backup"
-        case .wrongPassword: return "Incorrect password for this backup"
+        case .noVault: return L.backupErrorNoVault
+        case .invalidFormat: return L.backupErrorInvalidFormat
+        case .unsupportedVersion(let v): return L.backupErrorUnsupportedVersion(v)
+        case .invalidSalt: return L.backupErrorInvalidSalt
+        case .wrongPassword: return L.backupErrorWrongPassword
         case .keyNotInBackup: return L.backupErrorKeyNotInBackup
-        case .invalidJWE: return "Invalid encrypted data in backup"
-        case .compressionFailed: return "Failed to compress backup data"
-        case .decompressionFailed: return "Failed to decompress backup data"
+        case .invalidJWE: return L.backupErrorInvalidData
+        case .compressionFailed: return L.backupErrorCompressionFailed
+        case .decompressionFailed: return L.backupErrorDecompressionFailed
         }
     }
 }

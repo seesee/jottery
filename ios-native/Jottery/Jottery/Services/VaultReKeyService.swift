@@ -53,8 +53,8 @@ enum VaultReKeyService {
 
         var errorDescription: String? {
             switch self {
-            case let .unreadable(table, id):
-                return "Could not re-encrypt \(table) \(id); nothing was changed"
+            case .unreadable:
+                return L.vaultReKeyErrorUnreadable
             }
         }
     }

@@ -79,10 +79,10 @@ private struct ConflictRowView: View {
 
     private func noteTitle(from content: String) -> String {
         let lines = content.split(separator: "\n", omittingEmptySubsequences: true)
-        guard let firstLine = lines.first else { return "Untitled" }
+        guard let firstLine = lines.first else { return L.noteUntitled }
         let trimmed = firstLine.trimmingCharacters(in: .whitespaces)
             .replacingOccurrences(of: "^#+\\s*", with: "", options: .regularExpression)
-        return trimmed.isEmpty ? "Untitled" : String(trimmed.prefix(80))
+        return trimmed.isEmpty ? L.noteUntitled : String(trimmed.prefix(80))
     }
 
     private func formattedDate(_ iso: String) -> String {

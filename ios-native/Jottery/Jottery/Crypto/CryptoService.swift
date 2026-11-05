@@ -304,12 +304,10 @@ enum CryptoError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidBase64: return "Invalid base64 data"
-        case .ciphertextTooShort: return "Ciphertext too short"
-        case .invalidUTF8: return "Invalid UTF-8 data"
-        case .encodingFailed: return "Encoding failed"
-        case .keyDerivationFailed: return "The key couldn't be derived from this password."
-        case .decryptionFailed: return "Decryption failed. Invalid key or corrupted data."
+        case .invalidBase64, .ciphertextTooShort, .invalidUTF8: return L.cryptoErrorInvalidData
+        case .encodingFailed: return L.cryptoErrorEncodingFailed
+        case .keyDerivationFailed: return L.cryptoErrorKeyDerivationFailed
+        case .decryptionFailed: return L.cryptoErrorDecryptionFailed
         }
     }
 }

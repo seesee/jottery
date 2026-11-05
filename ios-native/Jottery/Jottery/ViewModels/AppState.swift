@@ -1594,7 +1594,7 @@ final class AppState {
         let apiKey = providedKey ?? KeychainService.retrieveAPIKey()
         guard let apiKey, !apiKey.isEmpty else {
             Log.debug("[Sync] setupSync: no API key in Keychain")
-            syncError = "No API key found. Please re-register the device."
+            syncError = L.syncErrorNoApiKey
             return
         }
         Log.debug("[Sync] setupSync: OK — endpoint=\(endpoint)")
@@ -1652,7 +1652,7 @@ final class AppState {
         Log.debug("[Sync] triggerSync: starting sync cycle")
         isSyncing = true
         syncError = nil
-        syncStatusMessage = "Syncing…"
+        syncStatusMessage = L.syncStatusSyncing
 
         // Captured before the single sync() call below — see the mapping
         // note there for why this still yields the correct "N new notes"
@@ -1694,9 +1694,9 @@ final class AppState {
 
             let diff = notes.count - previousCount
             if diff > 0 {
-                syncStatusMessage = "Synced — \(diff) new note\(diff == 1 ? "" : "s")"
+                syncStatusMessage = L.syncStatusNewNotes(diff)
             } else {
-                syncStatusMessage = "Synced — up to date"
+                syncStatusMessage = L.syncStatusUpToDate
             }
 
             // Refresh inbox items in the background (don't block sync completion)
@@ -1727,7 +1727,7 @@ final class AppState {
         guard let syncService else { return }
         isSyncing = true
         syncError = nil
-        syncStatusMessage = "Full sync in progress…"
+        syncStatusMessage = L.syncStatusFullSyncRunning
 
         do {
             try await syncService.forceFullSync()
@@ -1745,7 +1745,7 @@ final class AppState {
             isSyncing = false
             lastSyncAt = Date()
             pendingConflicts = await syncService.pendingConflicts
-            syncStatusMessage = "Full sync complete"
+            syncStatusMessage = L.syncStatusFullSyncDone
 
             Task { [weak self] in try? await self?.loadInboxItems() }
 
@@ -2240,11 +2240,11 @@ enum AppStateError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .notInitialised: return "Application not initialised"
-        case .noVault: return "No vault found"
-        case .invalidSalt: return "Invalid encryption salt"
-        case .wrongPassword: return "Incorrect password"
-        case .syncBusy: return "Sync is still running. Try again in a moment."
+        case .notInitialised: return L.appErrorNotInitialised
+        case .noVault: return L.appErrorNoVault
+        case .invalidSalt: return L.appErrorInvalidSalt
+        case .wrongPassword: return L.appErrorWrongPassword
+        case .syncBusy: return L.appErrorSyncBusy
         case .vaultBusy: return L.vaultBusy
         case .passwordTooShort: return L.notesPasswordTooShort(PasswordPolicy.minimumNotesPasswordLength)
         }

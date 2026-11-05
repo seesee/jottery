@@ -368,9 +368,9 @@ enum SyncClientError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidResponse: return "Invalid server response"
+        case .invalidResponse: return L.syncErrorInvalidResponse
         case .httpError(let status, let body): return "HTTP \(status): \(body)"
-        case .unauthorized: return "Unauthorised — check API key"
+        case .unauthorized: return L.syncErrorUnauthorised
         case .deviceRevokeUnsupported: return L.syncDisconnectServerTooOld
         case .accountDisabled: return L.syncErrorAccountDisabled
         case .accountPendingApproval: return L.syncErrorAccountPending

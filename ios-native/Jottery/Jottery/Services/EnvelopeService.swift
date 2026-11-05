@@ -741,13 +741,13 @@ enum EnvelopeError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .noWrappedKeyOnServer:
-            return "No wrapped key found on server — the source device may not have migrated yet"
+            return L.envelopeErrorNoServerKey
         case .cannotUnwrapServerKey:
-            return "The account's encryption key could not be opened with the notes password"
+            return L.envelopeErrorCantOpenServerKey
         case .invalidMasterKeyLength:
-            return "Invalid master key length after unwrapping"
+            return L.envelopeErrorInvalidKeyLength
         case .notInitialised:
-            return "Encryption repository not initialised"
+            return L.envelopeErrorNotInitialised
         }
     }
 }

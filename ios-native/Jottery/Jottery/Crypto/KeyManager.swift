@@ -165,7 +165,7 @@ enum KeyManagerError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .noKeyLoaded: return "No encryption key loaded"
+        case .noKeyLoaded: return L.keyErrorNoKeyLoaded
         }
     }
 }
