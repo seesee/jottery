@@ -258,6 +258,7 @@ register:
   device_failed: Geräteregistrierung fehlgeschlagen
   cleared: Registrierung gelöscht. Sie können neu beginnen.
   pending_status: Ausstehende Genehmigung
+  password_differs: "Es muss sich von deinem Notizenpasswort unterscheiden."
 color_scheme:
   default_dark: Standard Dunkel
   default_light: Standard Hell

@@ -333,36 +333,64 @@ The preview pane renders markdown with full formatting support:
 | Key | Action |
 |-----|--------|
 | `n` | Create new note |
-| `Enter` | Open selected note in external editor |
-| `Space` | Toggle preview pane |
+| `Enter`/`i` | Open selected note in external editor |
 | `p` | Pin/unpin selected note |
+| `L` | Lock/unlock selected note against changes |
+| `t` | Edit tags |
 | `d` | Delete selected note (moves to recycle bin) |
-| `r` | Restore note from recycle bin |
-| `D` | Permanently delete note |
+| `z` | Archive selected note (or bring it back in archive mode) |
+| `A` | Show or leave the archive |
+| `r` | Open the recycle bin |
 | `v` | Open version history for selected note |
+| `I` | Show note info |
+| `x` | Resolve a sync conflict on the selected note |
+| `b` | Open the inbox |
 | `j`/`↓` | Move down |
 | `k`/`↑` | Move up |
-| `g` | Jump to top |
-| `G` | Jump to bottom |
-| `l` | Cycle syntax language forward (Plain → JavaScript → Python → Markdown → ...) |
-| `L` | Cycle syntax language backward |
-| `/` | Focus search input |
-| `t` | Focus tag input |
-| `Esc` | Clear search/tag filters |
+| `]`/`[` | Cycle syntax language forward/backward |
+| `C`/`c` | Cycle note colour forward/backward |
+| `/` | Search |
+| `y` | Sync now |
+| `Y` | Force a full resync |
 | `s` | Open settings |
 | `?` | Show keyboard shortcuts help |
-| `Ctrl+l` | Lock database |
+| `Ctrl+l` | Lock Jottery |
+| `q` | Quit |
 | `Ctrl+q` | Quit application |
 
-### Preview Pane (when open)
+### Multi-Select
 | Key | Action |
 |-----|--------|
-| `j`/`↓` | Scroll down |
-| `k`/`↑` | Scroll up |
-| `Ctrl+d` | Scroll down half page |
-| `Ctrl+u` | Scroll up half page |
-| `g` | Jump to top |
-| `G` | Jump to bottom |
+| `Space` | Toggle selection of the current note |
+| `V` | Select a range |
+| `Ctrl+a` | Select all listed notes |
+| `t` | Add tags to selected notes |
+| `d` | Delete selected notes |
+| `z` | Archive selected notes |
+| `c` | Combine selected notes |
+| `e` | Export selected notes to JSON |
+| `Esc` | Clear selection |
+
+### Attachments
+| Key | Action |
+|-----|--------|
+| `+` | Attach a file to the selected note |
+| `a` | Open the attachment list |
+| `Tab` | Focus the attachments of the selected note |
+| `j`/`k` | Move between attachments |
+| `Enter` | View the selected attachment |
+| `S` | Save the selected attachment to a file |
+| `d` | Delete the selected attachment |
+| `X` | Remove the selected attachment |
+
+Images, PDFs and plain text open in a viewer. Anything else could run code from whoever sent it, so Jottery offers to save it instead.
+
+### Preview
+| Key | Action |
+|-----|--------|
+| `Ctrl+d`/`Ctrl+u` | Scroll down/up half a page |
+| `Ctrl+f`/`Ctrl+b` | Scroll down/up a page |
+| `PageDown`/`PageUp` | Scroll down/up a page |
 
 ### Settings Screen
 | Key | Action |
@@ -386,7 +414,7 @@ The preview pane renders markdown with full formatting support:
 | Key | Action |
 |-----|--------|
 | `r` | Restore selected note |
-| `D` | Permanently delete |
+| `E` | Empty the bin, after asking |
 | `Esc`/`q` | Return to note list |
 
 ## Development Status

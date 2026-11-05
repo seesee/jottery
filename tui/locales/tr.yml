@@ -258,6 +258,7 @@ register:
   device_failed: Cihaz kaydı başarısız
   cleared: Kayıt temizlendi. Yeniden başlayabilirsiniz.
   pending_status: Onay bekleniyor
+  password_differs: "Not parolanızdan farklı olmalıdır."
 color_scheme:
   default_dark: Varsayılan koyu
   default_light: Varsayılan açık

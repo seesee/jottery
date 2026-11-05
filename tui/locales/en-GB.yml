@@ -281,6 +281,7 @@ register:
   device_failed: "Device registration failed"
   cleared: "Registration cleared. You can start fresh."
   pending_status: "Pending approval"
+  password_differs: "This must be different from your notes password."
 
 # Conflict resolution
 conflict:

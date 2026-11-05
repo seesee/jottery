@@ -258,6 +258,7 @@ register:
   device_failed: 设备注册失败
   cleared: 注册已清除。您可以重新开始。
   pending_status: 等待审批
+  password_differs: "必须与笔记密码不同。"
 color_scheme:
   default_dark: 默认深色
   default_light: 默认浅色

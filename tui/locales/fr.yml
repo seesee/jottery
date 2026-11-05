@@ -258,6 +258,7 @@ register:
   device_failed: Échec de l'enregistrement de l'appareil
   cleared: Inscription effacée. Vous pouvez recommencer.
   pending_status: En attente d'approbation
+  password_differs: "Il doit être différent du mot de passe de vos notes."
 color_scheme:
   default_dark: Sombre par défaut
   default_light: Clair par défaut

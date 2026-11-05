@@ -258,6 +258,7 @@ register:
   device_failed: Регистрация устройства не удалась
   cleared: Регистрация очищена. Вы можете начать заново.
   pending_status: Ожидание одобрения
+  password_differs: "Он должен отличаться от пароля заметок."
 color_scheme:
   default_dark: Тёмная по умолчанию
   default_light: Светлая по умолчанию

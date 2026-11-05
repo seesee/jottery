@@ -258,6 +258,7 @@ register:
   device_failed: Registrazione dispositivo non riuscita
   cleared: Registrazione cancellata. Puoi ricominciare.
   pending_status: In attesa di approvazione
+  password_differs: "Deve essere diversa dalla password delle note."
 color_scheme:
   default_dark: Scuro predefinito
   default_light: Chiaro predefinito

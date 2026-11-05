@@ -258,6 +258,7 @@ register:
   device_failed: デバイス登録に失敗しました
   cleared: 登録がクリアされました。最初からやり直せます。
   pending_status: 承認待ち
+  password_differs: "ノートのパスワードとは別のものにしてください。"
 color_scheme:
   default_dark: デフォルトダーク
   default_light: デフォルトライト

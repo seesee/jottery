@@ -258,6 +258,7 @@ register:
   device_failed: Apparaatregistratie mislukt
   cleared: Registratie gewist. U kunt opnieuw beginnen.
   pending_status: In afwachting van goedkeuring
+  password_differs: "Dit moet anders zijn dan je notitiewachtwoord."
 color_scheme:
   default_dark: Standaard donker
   default_light: Standaard licht

@@ -258,6 +258,7 @@ register:
   device_failed: Rejestracja urządzenia nie powiodła się
   cleared: Rejestracja wyczyszczona. Możesz zacząć od nowa.
   pending_status: Oczekuje na zatwierdzenie
+  password_differs: "Musi się różnić od hasła notatek."
 color_scheme:
   default_dark: Domyślny ciemny
   default_light: Domyślny jasny

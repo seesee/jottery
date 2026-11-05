@@ -258,6 +258,7 @@ register:
   device_failed: Η εγγραφή συσκευής απέτυχε
   cleared: Η εγγραφή διαγράφηκε. Μπορείτε να ξεκινήσετε από την αρχή.
   pending_status: Αναμονή έγκρισης
+  password_differs: "Πρέπει να διαφέρει από τον κωδικό των σημειώσεών σας."
 color_scheme:
   default_dark: Προεπιλεγμένο σκούρο
   default_light: Προεπιλεγμένο φωτεινό

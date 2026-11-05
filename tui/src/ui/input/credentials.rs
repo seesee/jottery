@@ -225,6 +225,8 @@ pub fn handle_show_registration_status_key(app: &mut App, key: KeyEvent) -> Resu
 
 /// Handle key events when inputting sync server endpoint for registration
 pub fn handle_register_input_endpoint_key(app: &mut App, key: KeyEvent) -> Result<()> {
+    app.error = None;
+
     match key.code {
         KeyCode::Esc => {
             app.credential_input.zeroize();
@@ -274,6 +276,8 @@ pub fn handle_register_input_endpoint_key(app: &mut App, key: KeyEvent) -> Resul
 
 /// Handle key events when inputting email for registration
 pub fn handle_register_input_email_key(app: &mut App, key: KeyEvent) -> Result<()> {
+    app.error = None;
+
     match key.code {
         KeyCode::Esc => {
             app.credential_input.zeroize();
@@ -312,6 +316,8 @@ pub fn handle_register_input_email_key(app: &mut App, key: KeyEvent) -> Result<(
 
 /// Handle key events when inputting password for registration
 pub fn handle_register_input_password_key(app: &mut App, key: KeyEvent) -> Result<()> {
+    app.error = None;
+
     match key.code {
         KeyCode::Esc => {
             app.credential_input.zeroize();
@@ -425,6 +431,8 @@ pub fn handle_register_pending_approval_key(app: &mut App, key: KeyEvent) -> Res
 
 /// Handle key events when inputting device name for registration
 pub fn handle_register_input_device_name_key(app: &mut App, key: KeyEvent) -> Result<()> {
+    app.error = None;
+
     match key.code {
         KeyCode::Esc => {
             app.credential_input.zeroize();
@@ -474,4 +482,38 @@ pub fn handle_register_input_device_name_key(app: &mut App, key: KeyEvent) -> Re
         _ => {}
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::event::KeyModifiers;
+
+    /// An app waiting for the account password, with `notes_password` as its unlock password.
+    fn app_at_the_password_prompt(notes_password: &str) -> App {
+        let dir = tempfile::tempdir().unwrap();
+        let mut app = App::new(dir.path().join("test.db"), None).unwrap();
+        std::mem::forget(dir);
+        app.unlock_password = Some(Zeroizing::new(notes_password.to_string()));
+        app.state = AppState::RegisterInputPassword {
+            // Nothing listens here, so reaching the network would fail the test
+            endpoint: "http://127.0.0.1:1".to_string(),
+            email: "someone@example.com".to_string(),
+            previous: Box::new(AppState::NoteList),
+        };
+        app
+    }
+
+    #[test]
+    fn the_account_password_cannot_be_the_notes_password() {
+        let password = uuid::Uuid::new_v4().to_string();
+        let mut app = app_at_the_password_prompt(&password);
+        app.credential_input = password;
+
+        handle_register_input_password_key(&mut app, KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)).unwrap();
+
+        assert!(matches!(app.state, AppState::RegisterInputPassword { .. }));
+        assert_eq!(app.error, Some(t!("password.same_as_account").to_string()));
+        assert!(app.credential_input.is_empty());
+    }
 }

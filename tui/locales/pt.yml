@@ -258,6 +258,7 @@ register:
   device_failed: Falha no registo do dispositivo
   cleared: Registo limpo. Pode começar de novo.
   pending_status: Pendente de aprovação
+  password_differs: "Tem de ser diferente da palavra-passe das notas."
 color_scheme:
   default_dark: Escuro padrão
   default_light: Claro padrão
