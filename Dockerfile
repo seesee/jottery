@@ -106,6 +106,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+# Both services run as this user. The id is fixed so that a volume's ownership
+# survives an image rebuild, and scripts/docker-entrypoint.sh has to match it.
+RUN groupadd --gid 10001 jottery \
+    && useradd --uid 10001 --gid 10001 --no-create-home --home-dir /app/data \
+         --shell /usr/sbin/nologin jottery
+
 # -----------------------------
 # Copy server + web client + admin dashboard
 # -----------------------------
@@ -123,7 +129,9 @@ RUN chmod -R +x /app/releases 2>/dev/null || true
 # -----------------------------
 # Persistent data directory
 # -----------------------------
-RUN mkdir -p /app/data
+# Everything else stays owned by root, so the services can't rewrite the web bundle
+# that every client loads. This comes before VOLUME so a new volume inherits it.
+RUN mkdir -p /app/data && chown jottery:jottery /app/data
 VOLUME ["/app/data"]
 
 # -----------------------------
@@ -141,6 +149,10 @@ ENV DATABASE_URL=/app/data/jottery.db
 # The bundled Caddy is the one proxy in front of the server. It replaces any
 # X-Forwarded-For a client sends, and port 3030 is never published.
 ENV TRUSTED_PROXY_HOPS=1
+# Caddy needs somewhere writable. It keeps nothing there worth persisting: this image
+# doesn't terminate TLS, and the Caddyfile is the whole configuration.
+ENV XDG_CONFIG_HOME=/tmp/caddy/config
+ENV XDG_DATA_HOME=/tmp/caddy/data
 
 # Expose only the Caddy HTTP port
 EXPOSE 8088
@@ -148,4 +160,13 @@ EXPOSE 8088
 # -----------------------------
 # Start both jottery-server & Caddy
 # -----------------------------
-CMD ["/bin/sh", "-c", "mkdir -p /app/data && touch /app/data/jottery.db && jottery-server & exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile"]
+COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
+COPY scripts/docker-healthcheck.sh /usr/local/bin/docker-healthcheck
+
+# The start period allows for database migrations after an upgrade
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD ["/usr/local/bin/docker-healthcheck"]
+
+# No USER here: the entrypoint starts as root only to take ownership of volumes
+# written by earlier images, then drops to the jottery user before anything runs.
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint"]

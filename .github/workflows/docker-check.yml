@@ -8,7 +8,10 @@ on:
     branches: [main]
     paths:
       - 'Dockerfile'
+      - '.dockerignore'
       - 'Caddyfile'
+      - 'docker-compose.yml'
+      - 'scripts/docker-*'
       - '.github/workflows/docker-check.yml'
   workflow_call:  # Run by manual release rehearsals, from build-multiarch.yml
   workflow_dispatch:  # Manual trigger
@@ -50,6 +53,51 @@ jobs:
           curl --fail --silent --show-error --output /dev/null http://localhost:8088/admin/
           curl --fail --silent --show-error --head http://localhost:8088/ | grep --ignore-case '^content-security-policy:'
 
+      - name: Check the services run unprivileged and are supervised
+        run: |
+          # /proc/1/status covers the entrypoint after it has dropped to the jottery user
+          docker exec jottery-check grep -E '^Uid:[[:space:]]+10001[[:space:]]' /proc/1/status
+          docker exec --user jottery jottery-check sh -c 'test ! -w /app/dist/index.html'
+          # The server's own answer, not index.html from the fallback route
+          test "$(curl --fail --silent --show-error http://localhost:8088/health)" = OK
+          for attempt in $(seq 1 30); do
+            test "$(docker inspect --format '{{.State.Health.Status}}' jottery-check)" = healthy && break
+            sleep 3
+          done
+          test "$(docker inspect --format '{{.State.Health.Status}}' jottery-check)" = healthy
+
+          # A dead server must take the container down, not leave Caddy serving 502s
+          docker exec jottery-check sh -c '
+            for process in /proc/[0-9]*; do
+              if [ "$(cat "$process/comm" 2>/dev/null)" = jottery-server ]; then
+                kill -KILL "${process#/proc/}"
+              fi
+            done'
+          for attempt in $(seq 1 30); do
+            test "$(docker inspect --format '{{.State.Running}}' jottery-check)" = false && break
+            sleep 1
+          done
+          test "$(docker inspect --format '{{.State.Running}}' jottery-check)" = false
+
+      # Earlier images ran as root, so every existing volume is owned by root
+      - name: Check a volume from an earlier image still works
+        run: |
+          docker volume create jottery-upgrade
+          docker run --rm --user root --entrypoint /bin/sh --volume jottery-upgrade:/app/data jottery:check \
+            -c 'touch /app/data/jottery.db && chown -R root:root /app/data'
+          docker run --detach --name jottery-upgrade --publish 8089:8088 \
+            --cap-drop ALL --cap-add CHOWN --cap-add SETUID --cap-add SETGID \
+            --security-opt no-new-privileges:true \
+            --volume jottery-upgrade:/app/data jottery:check
+          for attempt in $(seq 1 30); do
+            curl --fail --silent --output /dev/null http://localhost:8089/health && break
+            sleep 2
+          done
+          curl --fail --silent --show-error --output /dev/null http://localhost:8089/health
+          test "$(docker exec jottery-upgrade stat --format '%u' /app/data/jottery.db)" = 10001
+
       - name: Show container logs
         if: failure()
-        run: docker logs jottery-check
+        run: |
+          docker logs jottery-check || true
+          docker logs jottery-upgrade || true
