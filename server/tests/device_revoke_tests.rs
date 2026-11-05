@@ -9,8 +9,6 @@
 use axum::{
     body::Body,
     http::{Request, StatusCode},
-    middleware,
-    routing::{delete, get},
     Router,
 };
 use sha2::{Digest, Sha256};
@@ -79,21 +77,7 @@ async fn create_test_app() -> (Router, SqlitePool) {
     });
 
     // Sync routes (device API key auth) — mirrors main.rs
-    let sync_routes = Router::new()
-        .route(
-            "/api/v1/sync/status",
-            get(jottery_server::api::sync::get_status),
-        )
-        .route(
-            "/api/v1/sync/device",
-            delete(jottery_server::api::sync::revoke_self),
-        )
-        .layer(middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ));
-
-    let app = Router::new().merge(sync_routes).with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     (app, pool)
 }

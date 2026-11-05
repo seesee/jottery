@@ -77,12 +77,7 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
     });
 
     // Build router with all routes (similar to main.rs)
-    let app = axum::Router::new()
-        .route("/api/v1/auth/register-user", axum::routing::post(jottery_server::api::auth::register_user))
-        .route("/api/v1/auth/register-device", axum::routing::post(jottery_server::api::auth::register_device))
-        .route("/api/v1/auth/login", axum::routing::post(jottery_server::api::auth::login))
-        .route("/api/v1/user/login", axum::routing::post(jottery_server::api::user::login))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     (app, pool)
 }
@@ -180,9 +175,7 @@ async fn test_user_registration_duplicate_email() {
         config,
     });
 
-    let app2 = axum::Router::new()
-        .route("/api/v1/auth/register-user", axum::routing::post(jottery_server::api::auth::register_user))
-        .with_state(app_state);
+    let app2 = jottery_server::app::build_app(app_state);
 
     // Try to register same email again
     let request2 = Request::builder()

@@ -126,13 +126,7 @@ async fn test_malformed_json_sync_push() {
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
 
@@ -194,9 +188,7 @@ async fn test_malformed_json_user_login() {
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/user/login", axum::routing::post(jottery_server::api::user::login))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let request = Request::builder()
         .uri("/api/v1/user/login")
@@ -256,13 +248,7 @@ async fn test_sync_push_missing_notes_field() {
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
 
@@ -330,13 +316,7 @@ async fn test_sync_push_note_missing_required_fields() {
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
 
@@ -412,9 +392,7 @@ async fn test_register_user_missing_email() {
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/auth/register-user", axum::routing::post(jottery_server::api::auth::register_user))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     // Missing email field
     let request = Request::builder()
@@ -478,9 +456,7 @@ async fn test_login_missing_password() {
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/user/login", axum::routing::post(jottery_server::api::user::login))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     // Missing password field
     let request = Request::builder()
@@ -546,13 +522,7 @@ async fn test_sync_push_wrong_data_type() {
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
 
@@ -621,13 +591,7 @@ async fn test_sync_push_version_wrong_type() {
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
     let now = chrono::Utc::now().to_rfc3339();
@@ -714,9 +678,7 @@ async fn test_register_device_wrong_type() {
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/auth/register-device", axum::routing::post(jottery_server::api::auth::register_device))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     // deviceType should be string but is number
     let request = Request::builder()
@@ -823,13 +785,7 @@ async fn test_get_user_invalid_uuid() {
     .await
     .unwrap();
 
-    let app = axum::Router::new()
-        .route("/api/v1/admin/users/:id", axum::routing::get(jottery_server::api::admin::users::get_user))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::admin::admin_auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     // Use invalid UUID format - the endpoint will accept it but fail to find it
     let request = Request::builder()
@@ -888,9 +844,7 @@ async fn test_empty_string_fields() {
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/auth/register-user", axum::routing::post(jottery_server::api::auth::register_user))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     // Empty email string
     let request = Request::builder()
@@ -957,19 +911,13 @@ async fn test_extremely_large_note_content() {
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
     let now = chrono::Utc::now().to_rfc3339();
 
-    // Create a very large note (2MB of content)
-    let large_content = "A".repeat(2 * 1024 * 1024);
+    // Larger than this config's max_payload_size
+    let large_content = "A".repeat(6 * 1024 * 1024);
 
     let request = Request::builder()
         .uri("/api/v1/sync/push")
@@ -1052,13 +1000,7 @@ async fn test_many_tags() {
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
     let now = chrono::Utc::now().to_rfc3339();
@@ -1150,13 +1092,7 @@ async fn test_special_characters_in_content() {
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
     let now = chrono::Utc::now().to_rfc3339();
@@ -1248,13 +1184,7 @@ async fn test_sync_push_skips_versions_for_rejected_notes() {
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
 
@@ -1405,13 +1335,7 @@ async fn test_sync_push_handles_orphan_attachment_data_gracefully() {
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
     let orphan_attachment_id = uuid::Uuid::new_v4().to_string();

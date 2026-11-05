@@ -75,15 +75,7 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
     });
 
     // Build router with sync routes
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .route("/api/v1/sync/pull", axum::routing::post(jottery_server::api::sync::pull))
-        .route("/api/v1/sync/attachments/:id", axum::routing::get(jottery_server::api::sync::get_attachment))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     (app, pool)
 }

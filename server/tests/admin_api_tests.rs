@@ -78,20 +78,7 @@ async fn create_test_app() -> (axum::Router, SqlitePool) {
     });
 
     // Build router with admin routes
-    let app = axum::Router::new()
-        .route("/api/v1/admin/users", axum::routing::get(jottery_server::api::admin::users::list_users))
-        .route("/api/v1/admin/users/:id", axum::routing::get(jottery_server::api::admin::users::get_user))
-        .route("/api/v1/admin/users/:id/approve", axum::routing::post(jottery_server::api::admin::users::approve_user))
-        .route("/api/v1/admin/users/:id/deactivate", axum::routing::post(jottery_server::api::admin::users::deactivate_user))
-        .route("/api/v1/admin/users/:id/activate", axum::routing::post(jottery_server::api::admin::users::activate_user))
-        .route("/api/v1/admin/users/:id/toggle-admin", axum::routing::post(jottery_server::api::admin::users::toggle_admin))
-        .route("/api/v1/admin/users/:id", axum::routing::delete(jottery_server::api::admin::users::delete_user))
-        .route("/api/v1/admin/change-password", axum::routing::post(jottery_server::api::admin::users::change_password))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::admin::admin_auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     (app, pool)
 }
