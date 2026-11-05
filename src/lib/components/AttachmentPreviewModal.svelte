@@ -4,6 +4,7 @@
   import PdfViewer from './PdfViewer.svelte';
   import type { Attachment } from '../types';
   import { modal, createBackdropHandler } from '../actions';
+  import { imageObjectUrl, isScriptableType } from '../utils/safeObjectUrl';
 
   export let show: boolean = false;
   export let attachment: Attachment | null = null;
@@ -34,6 +35,8 @@
   // Get preview type for attachment
   function getPreviewType(mimeType: string): PreviewType {
     if (mimeType.startsWith('image/')) return 'image';
+    // Whatever else it claims to be, a blob URL for this could be opened as a page
+    if (isScriptableType(mimeType)) return 'text';
     if (mimeType.startsWith('audio/')) return 'audio';
     if (mimeType.startsWith('video/')) return 'video';
     if (mimeType.includes('pdf')) return 'pdf';
@@ -69,7 +72,9 @@
       // Get the decrypted data (returns Blob)
       const blob = await attachmentService.getAttachmentData(att);
 
-      if (previewType === 'image' || previewType === 'audio' || previewType === 'video' || previewType === 'pdf') {
+      if (previewType === 'image') {
+        previewContent = await imageObjectUrl(blob);
+      } else if (previewType === 'audio' || previewType === 'video' || previewType === 'pdf') {
         // Create blob URL for media files
         previewContent = URL.createObjectURL(blob);
       } else if (previewType === 'text') {

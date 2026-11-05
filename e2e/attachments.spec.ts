@@ -390,4 +390,60 @@ test.describe('Attachments', () => {
       cleanupTestFile(testFilePath);
     }
   });
+  test.describe('an SVG, which can hold script', () => {
+    const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="30"><script>window.top.ran = true</script><rect width="40" height="30" fill="red"/></svg>';
+
+    /** What a browser would serve if this image were opened in a tab of its own */
+    const servedType = (page: Page, src: string) => page.evaluate(async url => (await (await fetch(url)).blob()).type, src);
+
+    test('is shown as a picture, so opening it in a tab runs nothing', async ({ page }) => {
+      await openAttachmentsModal(page, jp);
+      const filePath = createTestFile('test-drawing.svg', SVG);
+
+      try {
+        await uploadFileAndWait(page, jp, filePath, 'test-drawing.svg');
+        await jp.dialog.locator('.attachment-item').first().locator('button').nth(1).click();
+
+        const image = page.locator('img[alt="test-drawing.svg"]');
+        await expect(image).toBeVisible();
+        const src = await image.getAttribute('src');
+
+        expect(await servedType(page, src as string)).toBe('image/png');
+        await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(40);
+      } finally {
+        cleanupTestFile(filePath);
+      }
+    });
+
+    test('is drawn the same way wherever a note shows it', async ({ page }) => {
+      const types = await page.evaluate(async svg => {
+        const { imageObjectUrl } = await import('/src/lib/utils/safeObjectUrl.ts' as string);
+        const typeOf = async (blob: Blob) => {
+          const url = await imageObjectUrl(blob);
+          return (await (await fetch(url)).blob()).type;
+        };
+        return {
+          svg: await typeOf(new Blob([svg], { type: 'image/svg+xml' })),
+          withParameter: await typeOf(new Blob([svg], { type: 'image/svg+xml; charset=utf-8' })),
+          png: await typeOf(new Blob([new Uint8Array(8)], { type: 'image/png' })),
+        };
+      }, SVG);
+
+      expect(types).toEqual({ svg: 'image/png', withParameter: 'image/png', png: 'image/png' });
+    });
+
+    test('refuses anything else that would run as a page, whatever an attachment says it is', async ({ page }) => {
+      const refused = await page.evaluate(async () => {
+        const { imageObjectUrl } = await import('/src/lib/utils/safeObjectUrl.ts' as string);
+        try {
+          await imageObjectUrl(new Blob(['<script>window.top.ran = true</script>'], { type: 'text/html' }));
+          return false;
+        } catch {
+          return true;
+        }
+      });
+
+      expect(refused).toBe(true);
+    });
+  });
 });
