@@ -26,6 +26,8 @@ export interface SyncMetadata {
   pullCursor?: string;
   /** The one full pull on moving to the cursor has been done (see docs/sync-protocol.md) */
   cursorFullPullDone?: boolean;
+  /** Inbox items accepted here that the server hasn't confirmed deleting yet */
+  acceptedInboxIds?: string[];
   pendingDeviceName?: string;     // Device name for pending clone-device call (during import)
 }
 

@@ -9,7 +9,7 @@ const METADATA_KEY = 'metadata';
 
 /** Facts about one account on one server, so they can't outlive a change of either. */
 const ACCOUNT_SCOPED_FIELDS: (keyof SyncMetadata)[] = [
-  'lastSyncAt', 'pullCursor', 'cursorFullPullDone', 'serverKeyVerified', 'serverKeyStale',
+  'lastSyncAt', 'pullCursor', 'cursorFullPullDone', 'serverKeyVerified', 'serverKeyStale', 'acceptedInboxIds',
 ];
 
 function isDifferentAccount(current: SyncMetadata, next: Partial<SyncMetadata>): boolean {
@@ -18,6 +18,18 @@ function isDifferentAccount(current: SyncMetadata, next: Partial<SyncMetadata>):
 }
 
 class IndexedDBSyncRepository {
+  /** Remember an inbox item accepted here, until the server confirms deleting it */
+  async addAcceptedInboxId(id: string): Promise<void> {
+    const accepted = (await this.getMetadata())?.acceptedInboxIds ?? [];
+    await this.updateMetadata({ acceptedInboxIds: [...new Set([...accepted, id])] });
+  }
+
+  async removeAcceptedInboxIds(ids: string[]): Promise<void> {
+    const done = new Set(ids);
+    const accepted = (await this.getMetadata())?.acceptedInboxIds ?? [];
+    await this.updateMetadata({ acceptedInboxIds: accepted.filter(id => !done.has(id)) });
+  }
+
   /**
    * Get global sync metadata
    */

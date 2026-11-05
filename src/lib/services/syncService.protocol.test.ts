@@ -6,7 +6,8 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 
 // The message key is what matters here, not its translation
-vi.mock('svelte-i18n', () => ({
+vi.mock('svelte-i18n', async importOriginal => ({
+  ...await importOriginal<object>(),
   _: { subscribe: (run: (format: (key: string) => string) => void) => { run((key: string) => key); return () => undefined; } },
 }));
 
@@ -1492,6 +1493,73 @@ describe('sync protocol', () => {
 
   describe('the inbox', () => {
     const item = { id: ID(50), content: 'x', tags: [], createdAt: NOW, sizeBytes: 1 };
+
+    describe('after a delete that failed', () => {
+      let deletes: number;
+      let deleteStatus: number;
+
+      beforeEach(() => {
+        deletes = 0;
+        deleteStatus = 500;
+      });
+
+      const serveInbox = () => {
+        serve(() => ({ inboxItems: [item] }));
+        server.use(http.delete(`${ENDPOINT}/api/v1/inbox/${item.id}`, () => {
+          deletes++;
+          return new HttpResponse(null, { status: deleteStatus });
+        }));
+      };
+
+      async function acceptWhileDeleteFails() {
+        const { inboxService } = await import('./inboxService');
+        inboxItems.set([item]);
+        await inboxService.acceptItem(item);
+      }
+
+      it('does not offer the item again', async () => {
+        serveInbox();
+        await acceptWhileDeleteFails();
+
+        await syncService.syncNow();
+
+        expect(get(inboxItems)).toEqual([]);
+      });
+
+      it('tries the delete again on each sync, and stops once it works', async () => {
+        serveInbox();
+        await acceptWhileDeleteFails();
+        expect(deletes).toBe(1);
+
+        await syncService.syncNow();
+        expect(deletes).toBe(2);
+
+        deleteStatus = 204;
+        await syncService.syncNow();
+        expect(deletes).toBe(3);
+        expect((await metadata())?.acceptedInboxIds ?? []).toEqual([]);
+
+        await syncService.syncNow();
+        expect(deletes).toBe(3);
+      });
+
+      it('counts an item already gone from the server as done', async () => {
+        serveInbox();
+        await acceptWhileDeleteFails();
+        deleteStatus = 404;
+
+        await syncService.syncNow();
+
+        expect((await metadata())?.acceptedInboxIds ?? []).toEqual([]);
+      });
+
+      it('does not stop a sync', async () => {
+        serveInbox();
+        await acceptWhileDeleteFails();
+
+        expect((await syncService.syncNow()).success).toBe(true);
+      });
+    });
 
     it('goes when the account is disconnected, as it is plaintext from that account', async () => {
       inboxItems.set([item]);

@@ -52,6 +52,7 @@ import {
   pullFromServer,
   getServerStatus,
   revokeDevice,
+  deleteInboxItem,
   SyncApiError,
 } from './syncClient';
 import { get } from 'svelte/store';
@@ -435,6 +436,7 @@ class SyncService {
       }
 
       // 3. Pull remote changes
+      await this.finishAcceptedInboxItems(metadata.syncEndpoint, apiKey);
       const { pulledCount, serverTime } = await this.pull(metadata.syncEndpoint, apiKey);
 
       // 4. Update last sync timestamp. The server filters on its own clock, and on
@@ -1439,6 +1441,28 @@ class SyncService {
     console.log(`[SyncService] Processed ${savedSearches.length} saved searches from server`);
   }
 
+  /**
+   * Finish deleting inbox items accepted while the server couldn't be told. One that
+   * still can't be deleted waits for the next sync, and holds up nothing else.
+   */
+  private async finishAcceptedInboxItems(endpoint: string, apiKey: string): Promise<void> {
+    const accepted = (await syncRepository.getMetadata())?.acceptedInboxIds ?? [];
+    const deleted: string[] = [];
+
+    for (const id of accepted) {
+      try {
+        await deleteInboxItem(normalizeEndpoint(endpoint), apiKey, id);
+        deleted.push(id);
+      } catch (error) {
+        console.warn('[SyncService] Could not delete an accepted inbox item:', error);
+      }
+    }
+
+    if (deleted.length > 0) {
+      await syncRepository.removeAcceptedInboxIds(deleted);
+    }
+  }
+
   /** Inbox items that are safe to show, reporting any that are not */
   private validInboxItems(items: InboxItem[]): InboxItem[] {
     const valid: InboxItem[] = [];
@@ -1555,6 +1579,7 @@ class SyncService {
 
     this.pulledNoteIds = [];
 
+    const alreadyAccepted = new Set(metadata?.acceptedInboxIds);
     let hasMore = true;
     let serverTime: string | undefined;
     let progressStarted = false;
@@ -1627,7 +1652,7 @@ class SyncService {
       }
 
       // The server sends the whole inbox on every page, or nothing if it's empty
-      inboxItems.set(this.validInboxItems(result.inboxItems ?? []));
+      inboxItems.set(this.validInboxItems(result.inboxItems ?? []).filter(item => !alreadyAccepted.has(item.id)));
 
       if (result.nextCursor !== undefined) {
         // Timestamp mode can have silently skipped changes, and nothing can detect
