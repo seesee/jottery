@@ -23,6 +23,20 @@ private let webPassword = "fixture-password-web"
 
 /// A restore onto a device with no vault: the vault is made from the backup, or
 /// not at all (R2-150).
+/// Lets a restore's progress callback cancel the task it's running in.
+private final class RestoreHandle: @unchecked Sendable {
+    private let lock = NSLock()
+    private var task: Task<BackupService.RestoreResult, Error>?
+
+    func hold(_ task: Task<BackupService.RestoreResult, Error>) {
+        lock.withLock { self.task = task }
+    }
+
+    func cancel() {
+        lock.withLock { task }?.cancel()
+    }
+}
+
 @MainActor
 struct FirstRunRestoreTests {
 
@@ -351,19 +365,17 @@ struct FirstRunRestoreTests {
     }
 
     @Test func aCancelledRestoreMakesNoVault() async throws {
-        let gate = ThreadGate()
         let state = try TestVaults.makeState()
         let password = try tuiPassword()
+        let handle = RestoreHandle()
 
         let restore = Task {
             try await state.restoreVault(fromBackup: tuiBackup, password: password) { _ in
-                // Holds the restore mid-way, with notes already in the staged vault.
-                gate.wait()
+                // Mid-way, with notes already in the staged vault.
+                handle.cancel()
             }
         }
-        await waitUntil { gate.hasArrival }
-        restore.cancel()
-        gate.open()
+        handle.hold(restore)
 
         await #expect(throws: CancellationError.self) {
             try await restore.value

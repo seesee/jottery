@@ -4,6 +4,11 @@ import Foundation
 // so a test must never need one thing to finish before a fixed delay runs out.
 // Waiting for something that will happen goes through `waitUntil`. Keeping
 // something from happening until the test has looked goes through a gate.
+//
+// Never hold a thread in a test. With the pool down to its last thread, nothing
+// on the main actor can wake either, because a resumed continuation goes through
+// the pool to get there. A test that needs to act part way through synchronous
+// work has to do it from inside that work.
 
 /// Waits until `condition` is true, and returns whether it ever was.
 ///
@@ -26,35 +31,6 @@ func waitUntil(
 actor PauseLog {
     private(set) var pauses: [Duration] = []
     func record(_ pause: Duration) { pauses.append(pause) }
-}
-
-/// Holds a thread that can't await, such as a progress callback in the middle of
-/// synchronous work, until the test calls `open()`. Nothing here needs a task to run,
-/// so it can't deadlock when the thread it holds is the last one in the pool.
-final class ThreadGate: @unchecked Sendable {
-    private let released = DispatchSemaphore(value: 0)
-    private let lock = NSLock()
-    private var arrived = false
-    private var isOpen = false
-
-    /// Whether anything has reached the gate.
-    var hasArrival: Bool { lock.withLock { arrived } }
-
-    func wait() {
-        let mustWait = lock.withLock {
-            arrived = true
-            return !isOpen
-        }
-        if mustWait {
-            released.wait()
-            released.signal()  // Whoever comes next goes straight through.
-        }
-    }
-
-    func open() {
-        lock.withLock { isOpen = true }
-        released.signal()
-    }
 }
 
 /// Holds whoever calls `wait()` until the test calls `open()`, so that something
