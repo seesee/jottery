@@ -3,7 +3,7 @@
   import { get } from 'svelte/store';
   import { isInitialized as isInitializedStore, isLocked, settings } from '../stores/appStore';
   import { initialize, unlock, isInitialized, deleteAllLocalData, passwordStorageService, sessionStorageService, settingsRepository, restoreFromBackup, keyManager, cryptoService, syncRepository, syncService, onboardFromServer } from '../services';
-  import { authService } from '../services/authService';
+  import { authService, type RegisterDeviceResponse } from '../services/authService';
   import { validateBackup, getBackupStats } from '../services/backupService';
   import type { BackupData } from '../services/backupService';
   import { getCurrentNotebook } from '../utils/notebookPath';
@@ -41,6 +41,7 @@
   // Connect Existing Account (full-page view) state
   let showConnectExistingAccount = false;
   let connectEndpoint = typeof window !== 'undefined' ? window.location.origin : '';
+  let connectRegistration: { key: string; device: RegisterDeviceResponse } | null = null;
   let connectDeviceName = '';
   let connectEmail = '';
   let connectServerPassword = '';
@@ -336,20 +337,26 @@
     connectLoading = true;
 
     try {
-      // Step 1: Initialise local encryption with notes password
-      connectStep = $_('unlock.connectExisting.steps.initialising');
-      await initialize(connectNotesPassword);
-
-      // Step 2: Register device with the server
+      // Step 1: Register device with the server. A retry reuses the registration, or
+      // every mistyped notes password would leave another device on the account.
       connectStep = $_('unlock.connectExisting.steps.registering');
-      const response = await authService.registerDevice(
-        connectEndpoint.trim(),
-        connectEmail.trim(),
-        connectServerPassword,
-        connectDeviceName.trim()
-      );
+      const registrationKey = JSON.stringify([connectEndpoint.trim(), connectEmail.trim(), connectDeviceName.trim()]);
+      if (connectRegistration?.key !== registrationKey) {
+        connectRegistration = {
+          key: registrationKey,
+          device: await authService.registerDevice(
+            connectEndpoint.trim(),
+            connectEmail.trim(),
+            connectServerPassword,
+            connectDeviceName.trim()
+          ),
+        };
+      }
+      const response = connectRegistration.device;
 
-      // Step 3: Onboard from server — download the shared master key, replace local random key
+      // Step 2: Onboard from server — download the shared master key. Nothing is written
+      // locally unless this works, because a vault left behind by a mistyped password
+      // would refuse the right one on the next try.
       // Only the NOTES password may open it. It never leaves the client, whereas the
       // server sees the server password and could wrap a key of its own under that.
       connectStep = $_('unlock.connectExisting.steps.onboarding');
@@ -372,6 +379,12 @@
             : $_('unlock.connectExisting.errors.onboardingFailed') +
               (onboardError instanceof Error ? ': ' + onboardError.message : '')
         );
+      }
+
+      // Step 3: Create what a new vault needs, now that there is one
+      connectStep = $_('unlock.connectExisting.steps.initialising');
+      if (!(await settingsRepository.exists())) {
+        await settingsRepository.reset();
       }
 
       // Step 4: Encrypt API key with the CORRECT (server's) master key
