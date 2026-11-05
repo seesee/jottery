@@ -1,5 +1,7 @@
 // API client for Jottery Admin Dashboard
 
+import { DashboardSession } from './session';
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 
 interface LoginRequest {
@@ -8,7 +10,9 @@ interface LoginRequest {
 }
 
 interface LoginResponse {
-  sessionId: string;
+  // Absent when the server keeps the session in an HttpOnly cookie
+  sessionId?: string;
+  cookieSession?: boolean;
   expiresAt: string;
   user: {
     id: string;
@@ -111,12 +115,7 @@ class ApiError extends Error {
 }
 
 class ApiClient {
-  private sessionToken: string | null = null;
-
-  constructor() {
-    // Try to load session token from localStorage
-    this.sessionToken = localStorage.getItem('admin_session_token');
-  }
+  private session = new DashboardSession('admin_session_token');
 
   private async request<T>(
     method: string,
@@ -125,12 +124,8 @@ class ApiClient {
   ): Promise<T> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      ...this.session.authHeaders(),
     };
-
-    // Add session token to Authorization header if available
-    if (this.sessionToken) {
-      headers['Authorization'] = `Bearer ${this.sessionToken}`;
-    }
 
     const response = await fetch(`${API_BASE}${path}`, {
       method,
@@ -157,22 +152,31 @@ class ApiClient {
     const response = await this.request<LoginResponse>('POST', '/api/v1/auth/login', {
       email,
       password,
+      // Servers without cookie sessions ignore this and return a token
+      cookieSession: true,
     });
 
-    // Store session token
-    this.sessionToken = response.sessionId;
-    localStorage.setItem('admin_session_token', response.sessionId);
+    this.session.start(response);
 
     return response;
   }
 
-  logout(): void {
-    this.sessionToken = null;
-    localStorage.removeItem('admin_session_token');
+  async logout(): Promise<void> {
+    // End the session on the server, or a stolen token would stay valid until it
+    // expires. Admin cookies are scoped to the admin API, so they need the admin
+    // route. A token works on the user route, which every server version has.
+    const path = this.session.usesCookie ? '/api/v1/admin/logout' : '/api/v1/user/logout';
+    try {
+      await this.request('POST', path);
+    } catch (e) {
+      // Clear local state regardless
+      console.warn('Logout request failed:', e);
+    }
+    this.session.clear();
   }
 
   isAuthenticated(): boolean {
-    return this.sessionToken !== null;
+    return this.session.isActive;
   }
 
   // Admin - Users

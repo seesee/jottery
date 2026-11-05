@@ -83,6 +83,7 @@ These parameters follow OWASP recommendations for server-side password storage.
 - User portal sessions use the same mechanism
 - Default session expiry: 7 days (configurable via `SESSION_EXPIRY_DAYS`)
 - Sessions are invalidated on logout
+- The admin dashboard and user portal keep their session in `sessionStorage`, so it belongs to one browser tab and ends when the tab closes. They share an origin with the web client, so a script running in the web client in another tab can't read it, but one running in that same tab could. Don't use a dashboard tab for your notes
 
 ### SSE Token Security
 

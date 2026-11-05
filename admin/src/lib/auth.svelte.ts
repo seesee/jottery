@@ -27,8 +27,8 @@ class AuthStore {
     this.state.user = response.user;
   }
 
-  logout(): void {
-    api.logout();
+  async logout(): Promise<void> {
+    await api.logout();
     this.state.isAuthenticated = false;
     this.state.user = null;
   }
