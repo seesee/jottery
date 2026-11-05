@@ -7,6 +7,7 @@ mod models;
 mod password_storage;
 mod repository;
 mod sse;
+mod terminal_text;
 mod ui;
 
 // Initialize rust-i18n with fallback to en-GB
@@ -29,6 +30,7 @@ use crypto::CryptoService;
 use db::Database;
 use models::{Note, get_note_title, get_regular_tags};
 use repository::{NoteRepository, sync::SyncRepository, EncryptionRepository};
+use terminal_text::{errln, outln};
 use ui::{App, EventHandler, Tui};
 
 /// Detect and set locale from environment
@@ -663,7 +665,16 @@ fn format_note_preview(note: &Note, show_content: bool) -> String {
     )
 }
 
-fn main() -> Result<()> {
+fn main() {
+    // Reported here, not by returning the error, because a failure can quote
+    // whatever a server sent and Rust's default report would print it raw.
+    if let Err(error) = run() {
+        errln!("Error: {:?}", error);
+        std::process::exit(1);
+    }
+}
+
+fn run() -> Result<()> {
     // Detect and set locale from environment BEFORE parsing CLI
     // This ensures --help output is translated
     detect_locale();
@@ -715,10 +726,10 @@ fn main() -> Result<()> {
             let _ = std::fs::remove_file(&wal_path);
             let _ = std::fs::remove_file(&shm_path);
 
-            println!("✓ {}: {}", t!("note.deleted"), db_path.display());
-            println!("{}", t!("password.change_success"));
+            outln!("✓ {}: {}", t!("note.deleted"), db_path.display());
+            outln!("{}", t!("password.change_success"));
         } else {
-            println!("{}: {}", t!("error.file_not_found"), db_path.display());
+            outln!("{}: {}", t!("error.file_not_found"), db_path.display());
         }
         return Ok(());
     }
@@ -748,7 +759,7 @@ fn main() -> Result<()> {
 
             // If content is empty, don't create note
             if content.trim().is_empty() {
-                println!("{}", t!("note.save_failed", error = t!("password.empty_error")));
+                outln!("{}", t!("note.save_failed", error = t!("password.empty_error")));
                 return Ok(());
             }
 
@@ -764,21 +775,21 @@ fn main() -> Result<()> {
             // Save to database
             let note_repo = NoteRepository::new(db.connection());
             note_repo.create(&note, &key)?;
-            println!("✓ {}: {}", t!("cli.new"), &note.id[..8]);
+            outln!("✓ {}: {}", t!("cli.new"), &note.id[..8]);
 
             // Auto-sync if configured
             let sync_repo = SyncRepository::new(db.connection());
             if let Ok(Some(metadata)) = sync_repo.get_metadata() {
                 if metadata.sync_enabled {
-                    println!("{} {}...", t!("sync.pushing"), metadata.sync_endpoint);
+                    outln!("{} {}...", t!("sync.pushing"), metadata.sync_endpoint);
                     match perform_cli_sync(&db, &key, metadata) {
                         Ok(count) => {
                             // codeql[rust/cleartext-logging] count is a note count; CodeQL taints perform_cli_sync's Result via the `?` on the api_key
-                            println!("✓ {}: {}", t!("sync.success"), count);
+                            outln!("✓ {}: {}", t!("sync.success"), count);
                         }
                         Err(e) => {
-                            eprintln!("⚠ {}: {}", t!("sync.failed", error = ""), e);
-                            eprintln!("  {}", t!("sync.request_failed"));
+                            errln!("⚠ {}: {}", t!("sync.failed", error = ""), e);
+                            errln!("  {}", t!("sync.request_failed"));
                         }
                     }
                 }
@@ -808,11 +819,11 @@ fn main() -> Result<()> {
             };
 
             if filtered_notes.is_empty() {
-                println!("{}", t!("note.no_notes"));
+                outln!("{}", t!("note.no_notes"));
             } else {
-                println!("{}\n", t!("note.total", count = filtered_notes.len()));
+                outln!("{}\n", t!("note.total", count = filtered_notes.len()));
                 for note in filtered_notes {
-                    println!("{}", format_note_preview(&note, false));
+                    outln!("{}", format_note_preview(&note, false));
                 }
             }
 
@@ -840,11 +851,11 @@ fn main() -> Result<()> {
                 .collect();
 
             if results.is_empty() {
-                println!("{}: {}", t!("search.no_results"), query);
+                outln!("{}: {}", t!("search.no_results"), query);
             } else {
-                println!("{}: '{}'\n", t!("search.results", count = results.len()), query);
+                outln!("{}: '{}'\n", t!("search.results", count = results.len()), query);
                 for note in results {
-                    println!("{}", format_note_preview(&note, true));
+                    outln!("{}", format_note_preview(&note, true));
                 }
             }
 
@@ -866,13 +877,13 @@ fn main() -> Result<()> {
                 .find(|n| n.id.starts_with(&id))
                 .context(t!("error.file_not_found"))?;
 
-            println!("ID: {}", note.id);
-            println!("{}: {}", t!("editor.created"), note.created_at);
-            println!("{}: {}", t!("editor.modified"), note.modified_at);
+            outln!("ID: {}", note.id);
+            outln!("{}: {}", t!("editor.created"), note.created_at);
+            outln!("{}: {}", t!("editor.modified"), note.modified_at);
             if !note.tags.is_empty() {
-                println!("{}: {}", t!("editor.tags"), note.tags.join(", "));
+                outln!("{}: {}", t!("editor.tags"), note.tags.join(", "));
             }
-            println!("\n{}", note.content);
+            outln!("\n{}", note.content);
 
             return Ok(());
         }
@@ -894,7 +905,7 @@ fn main() -> Result<()> {
                 anyhow::bail!("{}", t!("password.empty_error"));
             }
 
-            println!("{} {} {}...", t!("cli.register"), email, server);
+            outln!("{} {} {}...", t!("cli.register"), email, server);
 
             // Create auth client and register
             let client = AuthClient::new(server.clone());
@@ -907,17 +918,17 @@ fn main() -> Result<()> {
             let response = client.register_user(&email, &password)
                 .context(t!("sync.request_failed"))?;
 
-            println!("\n✓ {}", t!("sync.success"));
+            outln!("\n✓ {}", t!("sync.success"));
             // codeql[rust/cleartext-logging] user_id is a non-sensitive UUID identifier
-            println!("User ID: {}", response.user_id);
-            println!("Email: {}", response.email);
-            println!("{}: {}", t!("status.synced"), response.status);
-            println!("\n{}", response.message);
+            outln!("User ID: {}", response.user_id);
+            outln!("Email: {}", response.email);
+            outln!("{}: {}", t!("status.synced"), response.status);
+            outln!("\n{}", response.message);
 
             if response.status == "pending_approval" {
-                println!("\n{}:", t!("help.general"));
-                println!("1. {}", t!("sync.account_deactivated"));
-                println!("2. {}", t!("cli.register"));
+                outln!("\n{}:", t!("help.general"));
+                outln!("1. {}", t!("sync.account_deactivated"));
+                outln!("2. {}", t!("cli.register"));
             }
 
             return Ok(());
@@ -953,7 +964,7 @@ fn main() -> Result<()> {
                 }
             };
 
-            println!("{} '{}' {}...", t!("cli.register"), device_name, email);
+            outln!("{} '{}' {}...", t!("cli.register"), device_name, email);
 
             // Create auth client and register device
             let client = AuthClient::new(server.clone());
@@ -966,11 +977,11 @@ fn main() -> Result<()> {
             let response = client.register_device(&email, &password, &device_name, "tui")
                 .context(t!("sync.request_failed"))?;
 
-            println!("\n✓ {}", t!("sync.success"));
-            println!("Client ID: {}", response.client_id);
+            outln!("\n✓ {}", t!("sync.success"));
+            outln!("Client ID: {}", response.client_id);
             // codeql[rust/cleartext-logging] user_id is a non-sensitive UUID identifier
-            println!("User ID: {}", response.user_id);
-            println!("{}: {}", t!("settings.device_name"), response.device_name);
+            outln!("User ID: {}", response.user_id);
+            outln!("{}: {}", t!("settings.device_name"), response.device_name);
 
             // Initialize database with encryption password
             let db = Database::open(&db_path, &key_password)
@@ -1003,11 +1014,11 @@ fn main() -> Result<()> {
 
             sync_repo.update_metadata(&sync_metadata)?;
 
-            println!("\n✓ {}", t!("sync.success"));
-            println!("\n{}:", t!("help.general"));
-            println!("1. {}: jottery note", t!("cli.new"));
-            println!("2. {}: jottery sync", t!("cli.sync"));
-            println!("3. {}: jottery", t!("menu.notes"));
+            outln!("\n✓ {}", t!("sync.success"));
+            outln!("\n{}:", t!("help.general"));
+            outln!("1. {}: jottery note", t!("cli.new"));
+            outln!("2. {}: jottery sync", t!("cli.sync"));
+            outln!("3. {}: jottery", t!("menu.notes"));
 
             return Ok(());
         }
@@ -1047,7 +1058,7 @@ fn main() -> Result<()> {
             };
 
             // Login to get session
-            println!("{}", t!("inbox.token.logging_in"));
+            outln!("{}", t!("inbox.token.logging_in"));
             let session = SessionClient::login(&server, &email, &password)
                 .context("Failed to login to server")?;
 
@@ -1055,27 +1066,27 @@ fn main() -> Result<()> {
                 InboxTokenAction::Generate { .. } => {
                     let token = session.generate_inbox_token()
                         .context("Failed to generate inbox token")?;
-                    println!("\n{}", t!("inbox.token.generated_success"));
-                    println!("\n  {}\n", token);
-                    println!("{}", t!("inbox.token.save_warning"));
-                    println!("\n{}:", t!("inbox.token.example_title"));
-                    println!("  curl -X POST {}/api/v1/inbox \\", server);
-                    println!("    -H \"Authorization: Bearer {}\" \\", token);
-                    println!("    -H \"Content-Type: application/json\" \\");
-                    println!("    -d '{{\"content\":\"My note\",\"tags\":[\"inbox\"]}}'");
+                    outln!("\n{}", t!("inbox.token.generated_success"));
+                    outln!("\n  {}\n", token);
+                    outln!("{}", t!("inbox.token.save_warning"));
+                    outln!("\n{}:", t!("inbox.token.example_title"));
+                    outln!("  curl -X POST {}/api/v1/inbox \\", server);
+                    outln!("    -H \"Authorization: Bearer {}\" \\", token);
+                    outln!("    -H \"Content-Type: application/json\" \\");
+                    outln!("    -d '{{\"content\":\"My note\",\"tags\":[\"inbox\"]}}'");
                 }
                 InboxTokenAction::Revoke { .. } => {
                     session.revoke_inbox_token()
                         .context("Failed to revoke inbox token")?;
-                    println!("✓ {}", t!("inbox.token.revoked"));
+                    outln!("✓ {}", t!("inbox.token.revoked"));
                 }
                 InboxTokenAction::Status { .. } => {
                     let has_token = session.get_inbox_token_status()
                         .context("Failed to check inbox token status")?;
                     if has_token {
-                        println!("✓ {}", t!("inbox.token.active"));
+                        outln!("✓ {}", t!("inbox.token.active"));
                     } else {
-                        println!("{}", t!("inbox.token.none"));
+                        outln!("{}", t!("inbox.token.none"));
                     }
                 }
             }
@@ -1093,22 +1104,22 @@ fn main() -> Result<()> {
             let sync_repo = SyncRepository::new(db.connection());
             match sync_repo.get_metadata()? {
                 Some(metadata) if metadata.sync_enabled => {
-                    println!("{} {}...", t!("sync.pushing"), metadata.sync_endpoint);
+                    outln!("{} {}...", t!("sync.pushing"), metadata.sync_endpoint);
 
                     // Perform sync using helper function
                     match perform_cli_sync(&db, &key, metadata) {
                         Ok(count) => {
                             // codeql[rust/cleartext-logging] count is a note count; CodeQL taints perform_cli_sync's Result via the `?` on the api_key
-                            println!("✓ {}: {}", t!("sync.success"), count);
+                            outln!("✓ {}: {}", t!("sync.success"), count);
                         }
                         Err(e) => {
-                            eprintln!("✗ {}: {}", t!("sync.failed", error = ""), e);
+                            errln!("✗ {}: {}", t!("sync.failed", error = ""), e);
                             std::process::exit(1);
                         }
                     }
                 }
                 _ => {
-                    println!("{}", t!("sync.no_api_key"));
+                    outln!("{}", t!("sync.no_api_key"));
                 }
             }
 
@@ -1123,7 +1134,7 @@ fn main() -> Result<()> {
             let key = derive_key_from_db(&db, &password)?;
 
             let count = export::export_notes(&db, &key, &output)?;
-            println!("✓ {}: {} {}", t!("cli.export"), count, output.display());
+            outln!("✓ {}: {} {}", t!("cli.export"), count, output.display());
             return Ok(());
         }
         Some(Commands::Import { input, password }) => {
@@ -1135,7 +1146,7 @@ fn main() -> Result<()> {
             let key = derive_key_from_db(&db, &password)?;
 
             let count = export::import_notes(&db, &key, &input)?;
-            println!("✓ {}: {} {}", t!("cli.import"), count, input.display());
+            outln!("✓ {}: {} {}", t!("cli.import"), count, input.display());
             return Ok(());
         }
         Some(Commands::Backup { output, password }) => {
@@ -1146,7 +1157,7 @@ fn main() -> Result<()> {
             // Derive key using stored salt
             let key = derive_key_from_db(&db, &password)?;
 
-            println!("{}", t!("progress.backup"));
+            outln!("{}", t!("progress.backup"));
 
             // Create backup with progress indicator
             let backup = backup::create_backup(&db, &key, Some(Box::new(|current, total, item| {
@@ -1154,12 +1165,12 @@ fn main() -> Result<()> {
                 let _ = io::stdout().flush();
             })))?;
 
-            println!();
+            outln!();
 
             // Write to file
             backup::write_backup(&backup, &output)?;
 
-            println!("✓ {}: {} ({} {})",
+            outln!("✓ {}: {} ({} {})",
                 t!("backup.created"),
                 output.display(),
                 backup.data.len(),
@@ -1171,10 +1182,10 @@ fn main() -> Result<()> {
             info!("{}: {}", t!("backup.restore"), input.display());
 
             // Validate backup file first
-            println!("{}", t!("backup.validating"));
+            outln!("{}", t!("backup.validating"));
             let backup = backup::validate_backup(&input)?;
 
-            println!("✓ {} v{} ({} {})",
+            outln!("✓ {} v{} ({} {})",
                 t!("backup.valid"),
                 backup.version,
                 backup.data.len(),
@@ -1190,7 +1201,7 @@ fn main() -> Result<()> {
 
             // Verify password. An older backup names no key, so only the vault
             // it came from can open it.
-            println!("{}", t!("backup.verifying_password"));
+            outln!("{}", t!("backup.verifying_password"));
             let key = if backup.encryption.names_its_key() {
                 backup::verify_backup_password(&backup, &password)?
             } else {
@@ -1201,9 +1212,9 @@ fn main() -> Result<()> {
                     None => anyhow::bail!("{}", t!("backup.key_not_in_backup")),
                 }
             };
-            println!("✓ {}", t!("password.correct"));
+            outln!("✓ {}", t!("password.correct"));
 
-            println!("{}", t!("backup.restoring"));
+            outln!("{}", t!("backup.restoring"));
 
             // Restore with progress indicator
             let restored = backup::restore_backup(&db, &backup, &key, Some(Box::new(|current, total, item| {
@@ -1211,8 +1222,8 @@ fn main() -> Result<()> {
                 let _ = io::stdout().flush();
             })))?;
 
-            println!();
-            println!("✓ {}: {} {}", t!("backup.restored"), restored, t!("menu.notes"));
+            outln!();
+            outln!("✓ {}: {} {}", t!("backup.restored"), restored, t!("menu.notes"));
             return Ok(());
         }
         Some(Commands::StorePassword { password }) => {
@@ -1231,9 +1242,9 @@ fn main() -> Result<()> {
             let storage = password_storage::create_file_storage(config_dir);
             storage.store(&password)?;
 
-            println!("✓ Password stored for auto-unlock");
-            println!("  Database: {}", db_path.display());
-            println!("  Storage: {}", config_dir.join(".jottery_remember").display());
+            outln!("✓ Password stored for auto-unlock");
+            outln!("  Database: {}", db_path.display());
+            outln!("  Storage: {}", config_dir.join(".jottery_remember").display());
             return Ok(());
         }
         None => {

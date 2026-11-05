@@ -33,6 +33,10 @@ pub fn view_with_pager(app: &mut App, content: &str, syntax: SyntaxLanguage) -> 
         .tempfile()
         .context("Failed to create temporary file")?;
 
+    // Pagers pass some or all escape sequences straight to the terminal, and this
+    // is a read-only view, so what they're given is cleaned first.
+    let content = crate::terminal_text::sanitise_for_terminal(content);
+
     // Write content to temp file
     temp_file.write_all(content.as_bytes())
         .context("Failed to write to temporary file")?;
