@@ -163,6 +163,7 @@ This is how released clients pull, and it keeps working. It has known weaknesses
 - Omitting it, or sending `null`, selects everything.
 - Notes are paged with `limit` and `offset`, ordered by server time. `limit` counts notes only, and `totalCount` is the number of matching notes across all pages.
 - `deletions`, `versions` and `savedSearches` aren't paged: all of them are sent on every page.
+- `deletions` leaves out tombstones older than 30 days, so a client offline for longer misses them. Cursor mode has no such limit.
 
 Its weaknesses, which is why clients should move off it:
 

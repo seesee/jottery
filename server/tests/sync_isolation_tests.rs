@@ -475,3 +475,53 @@ async fn hard_deleting_one_note_keeps_a_blob_another_note_needs() {
     assert_eq!(ids(&pulled["notes"]), vec![combined.clone()]);
     assert_eq!(decoded_blob(&pulled, &attachment), b"shared");
 }
+
+#[tokio::test]
+async fn deleting_a_user_through_the_admin_api_removes_their_blobs() {
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let (user, other) = (
+        account(&app, &db.pool, "leaving").await,
+        account(&app, &db.pool, "staying").await,
+    );
+    let (note_id, attachment, other_note) = (new_id(), new_id(), new_id());
+
+    for (key, id) in [(&user.key, &note_id), (&other.key, &other_note)] {
+        push(
+            &app,
+            key,
+            json!({
+                "notes": [note_with_attachments(id, "a", EARLIER, &[&attachment])],
+                "attachments": [blob(&attachment, b"data")],
+            }),
+        )
+        .await;
+    }
+
+    let admin = account(&app, &db.pool, "admin").await;
+    sqlx::query("UPDATE users SET is_admin = 1 WHERE id = ?")
+        .bind(&admin.id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+
+    let (status, _) = call(
+        &app,
+        "DELETE",
+        &format!("/api/v1/admin/users/{}", user.id),
+        Some(&admin.session),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+
+    for table in ["attachments_meta", "attachments_data", "note_attachments"] {
+        let rows: i64 = sqlx::query(&format!("SELECT COUNT(*) FROM {table}"))
+            .fetch_one(&db.pool)
+            .await
+            .unwrap()
+            .get(0);
+        assert_eq!(rows, 1, "{table} must keep only the other user's row");
+    }
+    assert_eq!(decoded_blob(&pull_all(&app, &other.key).await, &attachment), b"data");
+}
