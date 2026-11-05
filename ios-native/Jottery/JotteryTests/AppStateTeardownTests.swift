@@ -107,9 +107,10 @@ struct AppStateTeardownTests {
 
         service = nil
 
-        await waitUntil { released == nil }
+        // Read before stopping, because stopping would free it either way.
+        let wentAway = await waitUntil { released == nil }
         await listener.stop()
-        #expect(released == nil)
+        #expect(wentAway)
     }
 
     /// Letting go isn't enough: a service still running would go on listening to

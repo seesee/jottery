@@ -146,6 +146,23 @@ struct AccountAndConflictTests {
         #expect(request.authorization == "Bearer \(sessionId)")
     }
 
+    // MARK: - The inbox
+
+    /// An item's id goes into request paths and onto the note made from it, so
+    /// one that isn't an id stops here.
+    @Test func anInboxItemWhoseIdIsntOneIsDropped() async throws {
+        let client = makeClient()
+        let good = UUID().uuidString.lowercased()
+        let fields = #""content":"x","tags":[],"createdAt":"2026-01-01T00:00:00Z""#
+        AccountServer.reply("GET", "/api/v1/inbox", json: #"[{"id":"\#(good)",\#(fields)},{"id":"../user/account",\#(fields)}]"#)
+        let state = try TestVaults.makeState()
+        state.syncClient = client
+
+        try await state.loadInboxItems()
+
+        #expect(state.inboxItems.map(\.id) == [good])
+    }
+
     // MARK: - Signing in
 
     @Test func signingInShowsTheAccount() async {
