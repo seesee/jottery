@@ -22,6 +22,35 @@ func waitUntil(
     return try await condition()
 }
 
+/// Holds a thread that can't await, such as a progress callback in the middle of
+/// synchronous work, until the test calls `open()`. Nothing here needs a task to run,
+/// so it can't deadlock when the thread it holds is the last one in the pool.
+final class ThreadGate: @unchecked Sendable {
+    private let released = DispatchSemaphore(value: 0)
+    private let lock = NSLock()
+    private var arrived = false
+    private var isOpen = false
+
+    /// Whether anything has reached the gate.
+    var hasArrival: Bool { lock.withLock { arrived } }
+
+    func wait() {
+        let mustWait = lock.withLock {
+            arrived = true
+            return !isOpen
+        }
+        if mustWait {
+            released.wait()
+            released.signal()  // Whoever comes next goes straight through.
+        }
+    }
+
+    func open() {
+        lock.withLock { isOpen = true }
+        released.signal()
+    }
+}
+
 /// Holds whoever calls `wait()` until the test calls `open()`, so that something
 /// slow stays in progress for exactly as long as the test needs, on any machine.
 actor AsyncGate {

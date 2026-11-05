@@ -1941,7 +1941,9 @@ final class AppState {
 
         teardownSync()
         removeTemporaryFiles()
-        backupReminders.cancel()
+        // Nothing here depends on it, so nothing waits for it.
+        let reminders = backupReminders
+        Task.detached { await reminders.cancel() }
         SharedInboxStore.removeAll(in: sharedInboxRoot)
 
         // Delete database file

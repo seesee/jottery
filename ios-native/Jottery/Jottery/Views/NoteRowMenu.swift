@@ -67,7 +67,7 @@ struct NoteRowMenu: View {
                 Button {
                     actions.setColour(name, on: note)
                 } label: {
-                    Label(name.capitalized, systemImage: note.color == name ? "checkmark.circle.fill" : "circle.fill")
+                    Label(appState.noteColours.displayName(for: name), systemImage: note.color == name ? "checkmark.circle.fill" : "circle.fill")
                 }
             }
             Divider()

@@ -29,6 +29,8 @@ struct ChangePasswordView: View {
                         }
                         Text(L.changePasswordWarning)
                             .foregroundStyle(.secondary)
+                        Text(L.changePasswordOldBackups)
+                            .foregroundStyle(.secondary)
                     }
                 }
 

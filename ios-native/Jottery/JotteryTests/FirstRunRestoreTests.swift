@@ -351,24 +351,19 @@ struct FirstRunRestoreTests {
     }
 
     @Test func aCancelledRestoreMakesNoVault() async throws {
-        let gate = AsyncGate()
+        let gate = ThreadGate()
         let state = try TestVaults.makeState()
         let password = try tuiPassword()
 
         let restore = Task {
             try await state.restoreVault(fromBackup: tuiBackup, password: password) { _ in
                 // Holds the restore mid-way, with notes already in the staged vault.
-                let held = DispatchSemaphore(value: 0)
-                Task {
-                    await gate.wait()
-                    held.signal()
-                }
-                held.wait()
+                gate.wait()
             }
         }
-        await waitUntil { await gate.waitingCount > 0 }
+        await waitUntil { gate.hasArrival }
         restore.cancel()
-        await gate.open()
+        gate.open()
 
         await #expect(throws: CancellationError.self) {
             try await restore.value

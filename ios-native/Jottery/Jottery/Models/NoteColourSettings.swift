@@ -16,7 +16,7 @@ struct NoteColourSettings: Equatable, Sendable {
     /// What to call a colour.
     func displayName(for key: String) -> String {
         let name = categoryNames[key]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return name.isEmpty ? key.capitalized : name
+        return name.isEmpty ? L.colourName(key) : name
     }
 
     /// The colour going by `name`. A colour that has been named goes by that

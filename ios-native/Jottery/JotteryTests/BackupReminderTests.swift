@@ -46,7 +46,37 @@ private final class FakeCentre: BackupReminderCentre, @unchecked Sendable {
     }
 }
 
+/// A notification service that doesn't answer until the test says so.
+private struct SilentCentre: BackupReminderCentre {
+    let gate: AsyncGate
+
+    func requestPermission() async -> Bool { false }
+    func isAllowed() async -> Bool { false }
+    func schedule(title: String, body: String, at date: Date) async throws {}
+    func cancel() async { await gate.wait() }
+}
+
 private let day: TimeInterval = 24 * 60 * 60
+
+/// Removing a reminder is a synchronous call to a system service. It once ran on the
+/// main thread, where a busy service froze the app for five minutes.
+@MainActor
+struct BackupReminderBlockingTests {
+
+    @Test func aWipeDoesntWaitForTheNotificationService() async throws {
+        let gate = AsyncGate()
+        let state = try TestVaults.makeState()
+        state.backupReminders = SilentCentre(gate: gate)
+        let inbox = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+
+        state.wipeAllData(sharedInboxRoot: inbox)
+
+        #expect(state.isFirstLaunch, "the wipe finished with the service still silent")
+        await waitUntil { await gate.waitingCount == 1 }
+        #expect(await gate.waitingCount == 1, "the reminder was still asked to go")
+        await gate.open()
+    }
+}
 
 /// The last backup date and the optional reminder (R2-143).
 @MainActor

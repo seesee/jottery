@@ -48,7 +48,7 @@ extension AppState {
     @discardableResult
     func setBackupReminder(_ frequency: BackupReminderFrequency) async -> Bool {
         guard frequency != .off else {
-            backupReminders.cancel()
+            await backupReminders.cancel()
             saveBackupSettings { $0.backupReminderDays = nil; $0.backupReminderSince = nil }
             return true
         }

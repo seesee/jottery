@@ -13,9 +13,9 @@ struct ColoursView: View {
                 ForEach(NoteColourSettings.keys, id: \.self) { key in
                     HStack(spacing: 12) {
                         swatch(key)
-                        TextField(key.capitalized, text: categoryName(key))
+                        TextField(L.colourName(key), text: categoryName(key))
                             .autocorrectionDisabled()
-                            .accessibilityLabel(L.coloursCategoryLabel(key.capitalized))
+                            .accessibilityLabel(L.coloursCategoryLabel(L.colourName(key)))
                     }
                 }
             } header: {

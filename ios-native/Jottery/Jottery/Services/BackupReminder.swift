@@ -28,8 +28,9 @@ protocol BackupReminderCentre: Sendable {
     func isAllowed() async -> Bool
     /// Show this at `date`, in place of any reminder already waiting.
     func schedule(title: String, body: String, at date: Date) async throws
-    /// Remove any reminder waiting.
-    func cancel()
+    /// Remove any reminder waiting. Async, because it can take as long as a system
+    /// service does to answer, and that mustn't be on the main thread.
+    func cancel() async
 }
 
 enum BackupReminder {
@@ -74,9 +75,16 @@ struct SystemBackupReminderCentre: BackupReminderCentre {
         )
     }
 
-    func cancel() {
-        UNUserNotificationCenter.current().removePendingNotificationRequests(
-            withIdentifiers: [BackupReminder.identifier]
-        )
+    /// This call waits on a system service, which can take minutes if that's
+    /// busy, so it runs on a thread of its own, not the caller's.
+    func cancel() async {
+        await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in
+            DispatchQueue.global(qos: .utility).async {
+                UNUserNotificationCenter.current().removePendingNotificationRequests(
+                    withIdentifiers: [BackupReminder.identifier]
+                )
+                done.resume()
+            }
+        }
     }
 }

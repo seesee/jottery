@@ -160,7 +160,7 @@ struct BulkSetColorSheet: View {
                             Circle()
                                 .fill(Color.noteColor(named: name, scheme: colorScheme) ?? .gray)
                                 .frame(width: 24, height: 24)
-                            Text(name.capitalized)
+                            Text(appState.noteColours.displayName(for: name))
                         }
                     }
                     .foregroundStyle(.primary)

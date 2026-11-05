@@ -6,6 +6,13 @@ extension L {
 
     // MARK: - Notes
 
+    /// What a colour is called. `key` is what's stored and what `category:` finds,
+    /// so it doesn't change with the language.
+    static func colourName(_ key: String) -> String {
+        Bundle.main.localizedString(forKey: "colour.\(key)", value: key.capitalized, table: nil)
+    }
+
+    static var changePasswordOldBackups: String { String(localized: "changePassword.oldBackups") }
     static var noteUntitled: String { String(localized: "note.untitled") }
     static var versionHistoryCouldntDecrypt: String { String(localized: "versionHistory.couldntDecrypt") }
 
