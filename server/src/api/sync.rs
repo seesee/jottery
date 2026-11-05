@@ -798,6 +798,7 @@ pub async fn push(
 
     // Store attachment data (binary blobs). A blob is only stored against
     // this user's own metadata, so one user can't reach another's attachment.
+    let mut blobs_stored = false;
     for (attachment_id, data) in &blobs {
         let stored = AttachmentRepository::store_blob(
             &mut tx,
@@ -819,9 +820,11 @@ pub async fn push(
                 );
             }
             BlobStored::Replaced => {
+                blobs_stored = true;
                 tracing::debug!("Replaced attachment: {}", attachment_id);
             }
             BlobStored::Added => {
+                blobs_stored = true;
                 tracing::debug!("Stored attachment: {}", attachment_id);
 
                 // A blob that arrives after its note, as a repair push does,
@@ -970,6 +973,7 @@ pub async fn push(
     // Broadcast sync notification to other connected devices of this user
     // This triggers real-time sync via SSE for any other connected clients
     if !accepted.is_empty()
+        || blobs_stored
         || deletions_applied
         || searches_changed
         || !rejected_deletions.is_empty()
