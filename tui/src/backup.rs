@@ -20,7 +20,7 @@ use std::path::Path;
 use crate::{
     crypto::{CryptoService, EncryptedData},
     db::Database,
-    models::{Attachment, Note, UserSettings},
+    models::{Attachment, Note, SyntaxLanguage, UserSettings},
     repository::{
         attachment::AttachmentRepository, EncryptionRepository, NoteRepository, NoteVersion,
         NoteVersionRepository, SettingsRepository, VersionReason,
@@ -376,7 +376,7 @@ fn note_for_backup(crypto: &CryptoService, note: &Note, key: &[u8; 32]) -> Resul
         sync_hash: note.sync_hash.clone(),
         version: note.version,
         word_wrap: Some(note.word_wrap),
-        syntax_language: Some(note.syntax_language.to_string()),
+        syntax_language: Some(note.syntax_name()),
         show_preview: false,
         archived: note.archived,
         archived_at: note.archived_at.map(|dt| dt.to_rfc3339()),
@@ -854,6 +854,10 @@ fn read_note(crypto: &CryptoService, item: Value, key: &[u8; 32]) -> Result<(Not
     let (tags, lost_tags) = read_tags(crypto, &note.tags, key);
     let (attachments, lost_attachments) = read_attachment_refs(crypto, &note.attachments, key);
 
+    let (syntax_language, syntax_unknown) = note.syntax_language.as_deref()
+        .map(SyntaxLanguage::from_name)
+        .unwrap_or_default();
+
     Ok((Note {
         created_at: note.created_at.parse()?,
         modified_at: note.modified_at.parse()?,
@@ -870,7 +874,8 @@ fn read_note(crypto: &CryptoService, item: Value, key: &[u8; 32]) -> Result<(Not
         sync_hash: note.sync_hash,
         version: note.version,
         word_wrap: note.word_wrap.unwrap_or(true),
-        syntax_language: note.syntax_language.and_then(|s| s.parse().ok()).unwrap_or_default(),
+        syntax_language,
+        syntax_unknown,
         archived: note.archived,
         locked: note.locked,
         color: note.color,

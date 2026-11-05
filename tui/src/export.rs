@@ -98,7 +98,7 @@ pub fn export_note(note: &Note, attachments: &AttachmentRepository<'_>, key: &[u
         deleted: note.deleted,
         deleted_at: note.deleted_at.map(|at| at.to_rfc3339()),
         word_wrap: Some(note.word_wrap),
-        syntax_language: Some(note.syntax_language.to_string()),
+        syntax_language: Some(note.syntax_name()),
         color: note.color.clone(),
     }
 }
@@ -203,8 +203,8 @@ fn update_from_file(local: &mut Note, imported: ExportNote, modified_at: DateTim
     local.archived = imported.archived;
     local.locked = imported.locked;
     local.word_wrap = imported.word_wrap.unwrap_or(local.word_wrap);
-    if let Some(language) = imported.syntax_language.and_then(|name| name.parse().ok()) {
-        local.syntax_language = language;
+    if let Some(name) = imported.syntax_language {
+        local.set_syntax_name(&name);
     }
     local.color = imported.color;
     local.version += 1;
@@ -234,7 +234,9 @@ fn create_from_file(
     note.deleted = imported.deleted;
     note.deleted_at = imported.deleted_at.and_then(|at| at.parse().ok());
     note.word_wrap = imported.word_wrap.unwrap_or(true);
-    note.syntax_language = imported.syntax_language.and_then(|name| name.parse().ok()).unwrap_or_default();
+    if let Some(name) = imported.syntax_language {
+        note.set_syntax_name(&name);
+    }
     note.color = imported.color;
     // The server may know this note, and the file can't speak for its whole list
     note.attachments_complete = false;

@@ -247,7 +247,7 @@ impl CryptoService {
             "pinned": note.pinned,
             "archived": note.archived,
             "locked": note.locked,
-            "syntaxLanguage": note.syntax_language.to_string(),
+            "syntaxLanguage": note.syntax_name(),
             "wordWrap": note.word_wrap,
             "showPreview": note.show_preview.unwrap_or(false),
             "color": note.color,

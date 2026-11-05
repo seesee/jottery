@@ -288,7 +288,7 @@ fn note_for_sync(run: &Run<'_>, note: &Note) -> Result<SyncNote> {
         version: note.version,
         word_wrap: Some(note.word_wrap),
         show_preview: note.show_preview,
-        syntax_language: Some(note.syntax_language.to_string()),
+        syntax_language: Some(note.syntax_name()),
         color: note.color.clone(),
         // Hash chain fields for git-like conflict detection
         content_hash: note.content_hash.clone(),
@@ -793,7 +793,7 @@ fn take_remote_note(
     local_note.word_wrap = remote_note.word_wrap.unwrap_or(true);
     local_note.show_preview = remote_note.show_preview;
     if let Some(lang_str) = &remote_note.syntax_language {
-        local_note.syntax_language = lang_str.parse().unwrap_or_default();
+        local_note.set_syntax_name(lang_str);
     }
     local_note.color = remote_note.color.clone();
     local_note.content_hash = remote_note.content_hash.clone();
@@ -830,7 +830,7 @@ fn create_remote_note(page: &PullPage<'_>, remote_note: &SyncNote, attachments: 
     new_note.word_wrap = remote_note.word_wrap.unwrap_or(true);
     new_note.show_preview = remote_note.show_preview;
     if let Some(lang_str) = &remote_note.syntax_language {
-        new_note.syntax_language = lang_str.parse().unwrap_or_default();
+        new_note.set_syntax_name(lang_str);
     }
     new_note.color = remote_note.color.clone();
     new_note.content_hash = remote_note.content_hash.clone();
@@ -1527,7 +1527,7 @@ pub fn resolve_keep_server(app: &mut App) -> Result<()> {
         updated_note.locked = conflict_data.server_locked;
         updated_note.locked_at = conflict_data.server_locked_at;
         if let Some(ref lang) = conflict_data.server_syntax_language {
-            updated_note.syntax_language = lang.parse().unwrap_or_default();
+            updated_note.set_syntax_name(lang);
         }
         if let Some(wrap) = conflict_data.server_word_wrap {
             updated_note.word_wrap = wrap;
@@ -1588,7 +1588,7 @@ pub fn resolve_keep_both(app: &mut App) -> Result<String> {
     new_note.locked = conflict_data.server_locked;
     new_note.locked_at = conflict_data.server_locked_at;
     if let Some(ref lang) = conflict_data.server_syntax_language {
-        new_note.syntax_language = lang.parse().unwrap_or_default();
+        new_note.set_syntax_name(lang);
     }
     if let Some(wrap) = conflict_data.server_word_wrap {
         new_note.word_wrap = wrap;
@@ -3438,5 +3438,28 @@ mod tests {
         note_repo.update(&note, key()).unwrap();
 
         assert_eq!(note_repo.purge_remote_deletions(Utc::now() + chrono::Duration::days(1)).unwrap(), 0);
+    }
+
+    /// A TypeScript note from the web used to come back from an edit here as Markdown.
+    #[test]
+    fn a_note_type_this_client_does_not_know_survives_an_edit() {
+        let mut notes = remote_notes(1);
+        notes[0]["syntaxLanguage"] = json!("rust");
+        let server = StubServer::start(notes, vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        let mut note = note_repo.get(&note_id(0), key()).unwrap().unwrap();
+        assert_eq!(note.syntax_language, crate::models::SyntaxLanguage::Plain);
+
+        note.content = "Edited here".to_string();
+        note.touch();
+        note_repo.update(&note, key()).unwrap();
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(server.last_push()["notes"][0]["syntaxLanguage"], json!("rust"));
     }
 }

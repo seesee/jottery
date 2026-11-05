@@ -24,6 +24,10 @@ pub struct Note {
     pub version: i32,
     pub word_wrap: bool,
     pub syntax_language: SyntaxLanguage,
+    /// The note's type, if it's one this client has no variant for. Web has dozens. It's
+    /// shown as plain text here and goes back to the server as it came.
+    #[serde(default)]
+    pub syntax_unknown: Option<String>,
     pub color: Option<String>,        // Semantic color name (unencrypted)
     // Hash chain fields for git-like conflict detection
     pub content_hash: Option<String>,      // SHA-256 of content + tags + attachments + change fields
@@ -48,11 +52,13 @@ pub struct Note {
 pub enum SyntaxLanguage {
     Plain,
     Javascript,
+    Typescript,
     Python,
     #[default]
     Markdown,
     Json,
     Html,
+    Xml,
     Css,
     Sql,
     Bash,
@@ -63,15 +69,26 @@ pub enum SyntaxLanguage {
 
 
 impl SyntaxLanguage {
+    /// Read a type's name, which can be one of the many only other clients have. Returns
+    /// how to show it here, and the name to keep if there's no variant for it.
+    pub fn from_name(name: &str) -> (Self, Option<String>) {
+        match name.parse() {
+            Ok(language) => (language, None),
+            Err(_) => (Self::Plain, Some(name.to_string())),
+        }
+    }
+
     /// Get the next syntax language in the cycle
     pub fn next(self) -> Self {
         match self {
             Self::Plain => Self::Javascript,
-            Self::Javascript => Self::Python,
+            Self::Javascript => Self::Typescript,
+            Self::Typescript => Self::Python,
             Self::Python => Self::Markdown,
             Self::Markdown => Self::Json,
             Self::Json => Self::Html,
-            Self::Html => Self::Css,
+            Self::Html => Self::Xml,
+            Self::Xml => Self::Css,
             Self::Css => Self::Sql,
             Self::Sql => Self::Bash,
             Self::Bash => Self::Perl,
@@ -86,11 +103,13 @@ impl SyntaxLanguage {
         match self {
             Self::Plain => Self::Outliner,
             Self::Javascript => Self::Plain,
-            Self::Python => Self::Javascript,
+            Self::Typescript => Self::Javascript,
+            Self::Python => Self::Typescript,
             Self::Markdown => Self::Python,
             Self::Json => Self::Markdown,
             Self::Html => Self::Json,
-            Self::Css => Self::Html,
+            Self::Xml => Self::Html,
+            Self::Css => Self::Xml,
             Self::Sql => Self::Css,
             Self::Bash => Self::Sql,
             Self::Perl => Self::Bash,
@@ -105,10 +124,12 @@ impl std::fmt::Display for SyntaxLanguage {
         match self {
             Self::Plain => write!(f, "plain"),
             Self::Javascript => write!(f, "javascript"),
+            Self::Typescript => write!(f, "typescript"),
             Self::Python => write!(f, "python"),
             Self::Markdown => write!(f, "markdown"),
             Self::Json => write!(f, "json"),
             Self::Html => write!(f, "html"),
+            Self::Xml => write!(f, "xml"),
             Self::Css => write!(f, "css"),
             Self::Sql => write!(f, "sql"),
             Self::Bash => write!(f, "bash"),
@@ -126,10 +147,12 @@ impl std::str::FromStr for SyntaxLanguage {
         match s.to_lowercase().as_str() {
             "plain" => Ok(Self::Plain),
             "javascript" | "js" => Ok(Self::Javascript),
+            "typescript" | "ts" => Ok(Self::Typescript),
             "python" | "py" => Ok(Self::Python),
             "markdown" | "md" => Ok(Self::Markdown),
             "json" => Ok(Self::Json),
             "html" => Ok(Self::Html),
+            "xml" => Ok(Self::Xml),
             "css" => Ok(Self::Css),
             "sql" => Ok(Self::Sql),
             "bash" | "sh" => Ok(Self::Bash),
@@ -176,6 +199,7 @@ impl Note {
             version: 1,
             word_wrap: true,
             syntax_language: SyntaxLanguage::Markdown,
+            syntax_unknown: None,
             color: None,
             // Hash chain fields - computed on save
             content_hash: None,
@@ -185,6 +209,22 @@ impl Note {
             needs_sync: true,
             attachments_complete: true,
         }
+    }
+
+    /// The note's type as other clients know it, whether or not this one does.
+    pub fn syntax_name(&self) -> String {
+        self.syntax_unknown.clone().unwrap_or_else(|| self.syntax_language.to_string())
+    }
+
+    /// Take a type by name, keeping one this client doesn't know.
+    pub fn set_syntax_name(&mut self, name: &str) {
+        (self.syntax_language, self.syntax_unknown) = SyntaxLanguage::from_name(name);
+    }
+
+    /// Choose a type here, which replaces any this client didn't know.
+    pub fn set_syntax(&mut self, language: SyntaxLanguage) {
+        self.syntax_language = language;
+        self.syntax_unknown = None;
     }
 
     /// Update modified timestamp
@@ -278,6 +318,49 @@ mod tests {
         note.restore();
         assert!(!note.deleted);
         assert!(note.deleted_at.is_none());
+    }
+
+    /// Web has over 40 types. One this client doesn't know must survive a round trip.
+    #[test]
+    fn a_type_this_client_does_not_know_is_kept_exactly() {
+        let mut note = Note::new("fn main() {}".to_string());
+
+        note.set_syntax_name("rust");
+
+        assert_eq!(note.syntax_language, SyntaxLanguage::Plain);
+        assert_eq!(note.syntax_name(), "rust");
+    }
+
+    #[test]
+    fn choosing_a_type_here_replaces_one_this_client_did_not_know() {
+        let mut note = Note::new("text".to_string());
+        note.set_syntax_name("rust");
+
+        note.set_syntax(SyntaxLanguage::Python);
+
+        assert_eq!(note.syntax_name(), "python");
+    }
+
+    #[test]
+    fn typescript_and_xml_are_known_here() {
+        for name in ["typescript", "xml"] {
+            let mut note = Note::new("text".to_string());
+            note.set_syntax_name(name);
+            assert_eq!(note.syntax_unknown, None);
+            assert_eq!(note.syntax_name(), name);
+        }
+    }
+
+    #[test]
+    fn the_cycle_visits_every_type_in_both_directions() {
+        let mut seen = vec![SyntaxLanguage::Plain];
+        let mut language = SyntaxLanguage::Plain.next();
+        while language != SyntaxLanguage::Plain {
+            assert_eq!(language.prev().next(), language);
+            seen.push(language);
+            language = language.next();
+        }
+        assert_eq!(seen.len(), 14);
     }
 
     #[test]

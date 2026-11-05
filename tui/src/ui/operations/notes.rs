@@ -172,7 +172,10 @@ pub fn restore_version(app: &mut App, version_number: i32) -> Result<()> {
             attachment.filename = filename;
         }
     }
-    note_in_list.syntax_language = version.syntax_language.unwrap_or_default();
+    // A version of a type this client doesn't know leaves the note's type as it is
+    if let Some(language) = version.syntax_language {
+        note_in_list.set_syntax(language);
+    }
     note_in_list.word_wrap = version.word_wrap.unwrap_or(true);
     note_in_list.modified_at = chrono::Utc::now();
     note_in_list.version += 1;

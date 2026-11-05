@@ -58,6 +58,7 @@ pub fn accept_item(app: &mut App, index: usize) -> Result<()> {
         version: 1,
         word_wrap: true,
         syntax_language: SyntaxLanguage::default(),
+        syntax_unknown: None,
         color: None,
         content_hash: None,
         parent_hash: None,

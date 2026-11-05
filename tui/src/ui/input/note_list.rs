@@ -675,7 +675,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     if !filtered.is_empty() && app.selected_note < filtered.len() {
                     let note_id = filtered[app.selected_note].id.clone();
                     if let Some(note) = app.notes.iter_mut().find(|n| n.id == note_id) {
-                        note.syntax_language = note.syntax_language.next();
+                        note.set_syntax(note.syntax_language.next());
 
                         // Save to database
                         if let (Some(db), Some(key)) = (&app.db, &app.key) {
@@ -695,7 +695,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     if !filtered.is_empty() && app.selected_note < filtered.len() {
                     let note_id = filtered[app.selected_note].id.clone();
                     if let Some(note) = app.notes.iter_mut().find(|n| n.id == note_id) {
-                        note.syntax_language = note.syntax_language.prev();
+                        note.set_syntax(note.syntax_language.prev());
 
                         // Save to database
                         if let (Some(db), Some(key)) = (&app.db, &app.key) {

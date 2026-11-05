@@ -78,11 +78,12 @@ impl SyntaxHighlighter {
         // Map our SyntaxLanguage enum to syntect syntax names
         let syntax_name = match language {
             SyntaxLanguage::Plain => return Text::raw(text),
-            SyntaxLanguage::Javascript => "JavaScript",
+            // syntect has no TypeScript or a useful XML, and these come close
+            SyntaxLanguage::Javascript | SyntaxLanguage::Typescript => "JavaScript",
             SyntaxLanguage::Python => "Python",
             SyntaxLanguage::Markdown => "Markdown", // Won't reach here due to above check
             SyntaxLanguage::Json => "JSON",
-            SyntaxLanguage::Html => "HTML",
+            SyntaxLanguage::Html | SyntaxLanguage::Xml => "HTML",
             SyntaxLanguage::Css => "CSS",
             SyntaxLanguage::Sql => "SQL",
             SyntaxLanguage::Bash => "Bash",

@@ -5,7 +5,7 @@ use tracing::warn;
 use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::crypto::{update_hash_chain, CryptoService, EncryptedData};
-use crate::models::{Attachment, Note};
+use crate::models::{Attachment, Note, SyntaxLanguage};
 
 /// The columns every note query reads, in the order `StoredNote::read` expects.
 const NOTE_COLUMNS: &str = "id, created_at, modified_at, synced_at, content, tags, attachments,
@@ -89,6 +89,7 @@ impl StoredNote {
 
         // A stored timestamp that won't parse loses that timestamp, not the note.
         let optional_time = |text: Option<String>| text.and_then(|t| t.parse().ok());
+        let (syntax_language, syntax_unknown) = SyntaxLanguage::from_name(&self.syntax_language);
 
         Ok(Note {
             content: crypto.decrypt_text(&encrypted_content, key)?,
@@ -101,7 +102,8 @@ impl StoredNote {
             locked_at: optional_time(self.locked_at),
             deleted_at: optional_time(self.deleted_at),
             hash_chain: self.hash_chain.and_then(|json| serde_json::from_str(&json).ok()),
-            syntax_language: self.syntax_language.parse().unwrap_or_default(),
+            syntax_language,
+            syntax_unknown,
             id: self.id,
             pinned: self.pinned,
             archived: self.archived,
@@ -189,7 +191,7 @@ impl<'a> NoteRepository<'a> {
                 &note.sync_hash,
                 note.version,
                 note.word_wrap as i32,
-                note.syntax_language.to_string(),
+                note.syntax_name(),
                 &note.color,
                 &note.content_hash,
                 &note.parent_hash,
@@ -324,7 +326,7 @@ impl<'a> NoteRepository<'a> {
                 &note.sync_hash,
                 note.version,
                 note.word_wrap as i32,
-                note.syntax_language.to_string(),
+                note.syntax_name(),
                 &note.color,
                 &note.content_hash,
                 &note.parent_hash,
@@ -644,7 +646,6 @@ impl<'a> NoteRepository<'a> {
 mod tests {
     use super::*;
     use crate::db::Database;
-    use crate::models::SyntaxLanguage;
 
     /// Get test password from environment variable or use default.
     /// Set JOTTERY_TEST_PASSWORD env var to override.
