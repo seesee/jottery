@@ -14,7 +14,7 @@ struct NoteRowMenu: View {
 
     var body: some View {
         if !isSelecting {
-            // Pinning means nothing in the archive, which isn't sorted by it.
+            // As with the swipe actions, archived notes can't be pinned.
             if !note.archived {
                 Button {
                     actions.togglePin(note)

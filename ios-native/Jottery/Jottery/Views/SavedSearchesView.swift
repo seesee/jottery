@@ -48,10 +48,10 @@ struct SavedSearchesView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(search.name)
                                         .font(.headline)
-                                        .foregroundStyle(.primary)
+                                        .foregroundStyle(Color.primary)
                                     Text(search.query)
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(Color.secondary)
                                 }
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -75,11 +75,19 @@ struct SavedSearchesView: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .environment(\.editMode, $editMode)
             .navigationTitle(L.savedSearchTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // The edit button says Done while editing, so there's only one.
-                if !editMode.isEditing {
+                // Not `EditButton`: a navigation stack keeps the edit mode that
+                // changes to itself, where this view couldn't see it.
+                if editMode.isEditing {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(L.versionHistoryDone) {
+                            withAnimation { editMode = .inactive }
+                        }
+                    }
+                } else {
                     ToolbarItem(placement: .cancellationAction) {
                         Button(L.versionHistoryDone) { dismiss() }
                     }
@@ -88,10 +96,12 @@ struct SavedSearchesView: View {
                             Label(L.savedSearchAddTitle, systemImage: "plus")
                         }
                     }
-                }
-                if appState.savedSearches.count > 1 || editMode.isEditing {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        EditButton()
+                    if appState.savedSearches.count > 1 {
+                        ToolbarItem(placement: .primaryAction) {
+                            Button(L.savedSearchEdit) {
+                                withAnimation { editMode = .active }
+                            }
+                        }
                     }
                 }
             }
@@ -129,8 +139,6 @@ struct SavedSearchesView: View {
                 }
             }
         }
-        // Out here, so the toolbar's edit button shares it with the list.
-        .environment(\.editMode, $editMode)
     }
 
     private func editButton(for search: SavedSearchRepository.SavedSearch) -> some View {

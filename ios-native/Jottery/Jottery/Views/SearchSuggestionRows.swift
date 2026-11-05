@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// The search field's suggestions: with nothing typed, recent searches and
-/// examples of what can be searched for, and after a `#`, matching tags.
+/// examples of what can be searched for, and after a `#`, matching tags. The colours
+/// are named in full, as `.primary` here would be a shade of the tint.
 struct SearchSuggestionRows: View {
     @Environment(AppState.self) private var appState
     let tagCompletions: [SearchSuggestions.TagCompletion]
@@ -13,6 +14,7 @@ struct SearchSuggestionRows: View {
         } else {
             ForEach(tagCompletions) { completion in
                 Label(verbatim(completion.tag), systemImage: "tag")
+                    .foregroundStyle(Color.primary)
                     .searchCompletion(completion.completion)
             }
         }
@@ -30,6 +32,7 @@ struct SearchSuggestionRows: View {
             Section(L.searchRecent) {
                 ForEach(queries, id: \.self) { query in
                     Label(query, systemImage: "clock")
+                        .foregroundStyle(Color.primary)
                         .searchCompletion(query)
                 }
                 Button(L.searchClearRecent) {
@@ -45,9 +48,10 @@ struct SearchSuggestionRows: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(example.query)
                         .font(.body.monospaced())
+                        .foregroundStyle(Color.primary)
                     Text(example.label)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color.secondary)
                 }
                 .accessibilityElement(children: .combine)
                 .searchCompletion(example.query)

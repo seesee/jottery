@@ -10,7 +10,7 @@ private struct TagRow: View {
             onChoose(tag.tag)
         } label: {
             Label(title, systemImage: "tag")
-                .foregroundStyle(.primary)
+                .foregroundStyle(Color.primary)
         }
         .badge(tag.count)
     }
