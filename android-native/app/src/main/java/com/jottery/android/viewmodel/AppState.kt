@@ -53,6 +53,7 @@ import com.jottery.android.service.ImportService
 import com.jottery.android.service.ImportStrategy
 import com.jottery.android.service.NotePurger
 import com.jottery.android.service.SearchService
+import com.jottery.android.service.SyncPhase
 import com.jottery.android.service.SyncRetryPolicy
 import com.jottery.android.service.SyncValidator
 import com.jottery.android.service.SyncService
@@ -771,11 +772,11 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
         // Surface decryption failures so the user knows something is wrong
         if (result.failedCount > 0 && result.notes.isEmpty()) {
-            _syncError.value = "${result.failedCount} notes in database could not be decrypted. " +
-                "This usually means the encryption key differs from the device that created them. " +
-                "Try wiping and re-importing credentials (including the encryption salt) from your other device."
+            _syncError.value = getApplication<Application>().resources.getQuantityString(
+                R.plurals.notes_all_unreadable, result.failedCount, result.failedCount,
+            )
         } else if (result.failedCount > 0) {
-            _syncError.value = "${result.failedCount} of ${result.totalRecords} notes failed to decrypt"
+            _syncError.value = text(R.string.notes_some_unreadable, result.failedCount, result.totalRecords)
         }
 
         scheduleSearch()
@@ -1921,8 +1922,12 @@ class AppState(application: Application) : AndroidViewModel(application) {
             transaction = { block -> db?.withTransaction { block() } },
         )
 
-        service.onSyncStatusChanged = { status ->
-            _syncStatusMessage.value = status
+        service.onSyncPhaseChanged = { phase ->
+            _syncStatusMessage.value = when (phase) {
+                SyncPhase.PUSHING -> text(R.string.sync_pushing)
+                SyncPhase.PULLING -> text(R.string.sync_pulling)
+                null -> null
+            }
         }
         service.onNotesQuarantined = { count ->
             _syncError.value = getApplication<Application>().resources

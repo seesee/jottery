@@ -255,6 +255,7 @@ fun NoteEditorView(
 
     val context = LocalContext.current
     val copiedMessage = stringResource(R.string.note_copied)
+    val noteLinkMissingMessage = stringResource(R.string.note_link_missing)
     val linkCopiedMessage = stringResource(R.string.note_link_copied)
 
     fun copyToClipboard(label: String, text: String, sensitive: Boolean, message: String) {
@@ -429,7 +430,7 @@ fun NoteEditorView(
                     }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.back),
                         )
                     }
                 }
@@ -456,7 +457,7 @@ fun NoteEditorView(
                 // Overflow context menu
                 Box {
                     IconButton(onClick = { menuExpanded = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.note_editor_more_options))
                     }
                     EditorContextMenu(
                         expanded = menuExpanded,
@@ -591,7 +592,7 @@ fun NoteEditorView(
                         }
                         HorizontalDivider()
                         DropdownMenuItem(
-                            text = { Text("None") },
+                            text = { Text(stringResource(R.string.editor_colour_none)) },
                             onClick = {
                                 color = null
                                 scheduleSave()
@@ -735,6 +736,17 @@ fun NoteEditorView(
                                 }
                             }
                         },
+                        noteTitles = remember(currentNotes, archivedNotes) {
+                            (currentNotes + archivedNotes).associate { it.id to it.title }
+                        },
+                        onOpenNote = { id ->
+                            val target = (currentNotes + archivedNotes).firstOrNull { it.id.equals(id, ignoreCase = true) }
+                            if (target != null) {
+                                appState.setSelectedNoteId(target.id)
+                            } else {
+                                appState.showMessage(noteLinkMissingMessage)
+                            }
+                        },
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -742,6 +754,7 @@ fun NoteEditorView(
                     WebCalcEditorView(
                         content = textFieldValue.text,
                         fontSize = 14f * editorFontScale,
+                        readOnly = isReadOnly,
                         onContentChanged = { newContent ->
                             if (!isReadOnly && acceptsText(newContent)) {
                                 textFieldValue = TextFieldValue(newContent)
@@ -755,6 +768,7 @@ fun NoteEditorView(
                     WebOutlinerEditorView(
                         content = textFieldValue.text,
                         fontSize = 14f * editorFontScale,
+                        readOnly = isReadOnly,
                         onContentChanged = { newContent ->
                             if (!isReadOnly && acceptsText(newContent)) {
                                 textFieldValue = TextFieldValue(newContent)
@@ -831,9 +845,9 @@ fun NoteEditorView(
     // Delete confirmation dialog
     if (showDeleteConfirm) {
         ConfirmDialog(
-            title = "Delete Note",
-            message = "Are you sure you want to delete this note? It will be moved to the recycle bin.",
-            confirmText = "Delete",
+            title = stringResource(R.string.note_editor_delete_note),
+            message = stringResource(R.string.note_editor_are_you_sure_you_want),
+            confirmText = stringResource(R.string.editor_delete),
             onConfirm = {
                 scope.launch { appState.deleteNote(note.id) }
                 showDeleteConfirm = false
@@ -949,7 +963,7 @@ private fun EditorContextMenu(
 
         // Pin toggle
         DropdownMenuItem(
-            text = { Text(if (note.pinned) "Unpin" else "Pin") },
+            text = { Text(if (note.pinned) stringResource(R.string.editor_unpin) else stringResource(R.string.editor_pin)) },
             onClick = onTogglePin,
             leadingIcon = {
                 Icon(Icons.Default.PushPin, contentDescription = null)
@@ -958,7 +972,7 @@ private fun EditorContextMenu(
 
         // Word wrap toggle
         DropdownMenuItem(
-            text = { Text(if (wordWrap) "Disable Word Wrap" else "Enable Word Wrap") },
+            text = { Text(if (wordWrap) stringResource(R.string.note_editor_disable_word_wrap) else stringResource(R.string.note_editor_enable_word_wrap)) },
             onClick = onToggleWordWrap,
             leadingIcon = {
                 Icon(Icons.Default.WrapText, contentDescription = null)
@@ -968,7 +982,7 @@ private fun EditorContextMenu(
         // Reset text size
         if (showResetTextSize) {
             DropdownMenuItem(
-                text = { Text("Reset Text Size") },
+                text = { Text(stringResource(R.string.note_editor_reset_text_size)) },
                 onClick = onResetTextSize,
             )
         }
@@ -976,7 +990,7 @@ private fun EditorContextMenu(
         // Preview toggle
         if (canPreview) {
             DropdownMenuItem(
-                text = { Text(if (showPreview) "Hide Preview" else "Show Preview") },
+                text = { Text(if (showPreview) stringResource(R.string.note_editor_hide_preview) else stringResource(R.string.note_editor_show_preview)) },
                 onClick = onTogglePreview,
                 leadingIcon = {
                     Icon(Icons.Default.Preview, contentDescription = null)
@@ -986,13 +1000,20 @@ private fun EditorContextMenu(
 
         // Syntax language
         DropdownMenuItem(
-            text = { Text("Language: ${syntaxLanguage.replaceFirstChar { it.uppercase() }}") },
+            text = { Text(stringResource(R.string.editor_language, syntaxLanguage.replaceFirstChar { it.uppercase() })) },
             onClick = onShowLanguageMenu,
         )
 
         // Colour
         DropdownMenuItem(
-            text = { Text("Colour: ${color?.replaceFirstChar { it.uppercase() } ?: "None"}") },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.editor_colour_value,
+                        color?.let { noteColourLabel(it) } ?: stringResource(R.string.editor_colour_none),
+                    )
+                )
+            },
             onClick = onShowColourMenu,
             leadingIcon = {
                 Icon(Icons.Default.ColorLens, contentDescription = null)
@@ -1003,7 +1024,7 @@ private fun EditorContextMenu(
 
         // Lock toggle
         DropdownMenuItem(
-            text = { Text(if (note.locked) "Unlock" else "Lock") },
+            text = { Text(if (note.locked) stringResource(R.string.unlock_button) else stringResource(R.string.editor_lock)) },
             onClick = onToggleLock,
             leadingIcon = {
                 Icon(
@@ -1015,7 +1036,7 @@ private fun EditorContextMenu(
 
         // Archive toggle
         DropdownMenuItem(
-            text = { Text(if (note.archived) "Unarchive" else "Archive") },
+            text = { Text(if (note.archived) stringResource(R.string.editor_unarchive) else stringResource(R.string.editor_archive)) },
             onClick = onToggleArchive,
             leadingIcon = {
                 Icon(Icons.Default.Archive, contentDescription = null)
@@ -1025,7 +1046,7 @@ private fun EditorContextMenu(
         // Version history
         if (note.version > 0) {
             DropdownMenuItem(
-                text = { Text("Version History") },
+                text = { Text(stringResource(R.string.editor_versions)) },
                 onClick = onShowVersionHistory,
                 leadingIcon = {
                     Icon(Icons.Default.History, contentDescription = null)
@@ -1035,7 +1056,7 @@ private fun EditorContextMenu(
 
         // Note info
         DropdownMenuItem(
-            text = { Text("Note Info") },
+            text = { Text(stringResource(R.string.editor_info)) },
             onClick = onShowNoteInfo,
             leadingIcon = {
                 Icon(Icons.Default.Info, contentDescription = null)
@@ -1062,7 +1083,7 @@ private fun EditorContextMenu(
 
         // Duplicate
         DropdownMenuItem(
-            text = { Text("Duplicate") },
+            text = { Text(stringResource(R.string.editor_duplicate)) },
             onClick = onDuplicate,
             leadingIcon = {
                 Icon(Icons.Default.ContentCopy, contentDescription = null)
@@ -1075,7 +1096,7 @@ private fun EditorContextMenu(
         DropdownMenuItem(
             text = {
                 Text(
-                    "Delete",
+                    stringResource(R.string.editor_delete),
                     color = MaterialTheme.colorScheme.error,
                 )
             },

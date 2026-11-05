@@ -1,24 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Jottery</string>
+    <string name="app_name" translatable="false">Jottery</string>
 
     <!-- Setup -->
     <string name="setup_title">Create Vault</string>
     <string name="setup_subtitle">Create a password to encrypt your notes.\nThis cannot be recovered if lost.</string>
     <string name="setup_password">Password</string>
     <string name="setup_confirm_password">Confirm Password</string>
-    <string name="setup_create_vault">Create Vault</string>
-    <string name="setup_creating">Creating vault\u2026</string>
     <string name="setup_connect_server">Connect to Server</string>
     <string name="setup_register_device">Register Device</string>
-    <string name="setup_back">Back to New Vault</string>
 
     <!-- Unlock -->
     <string name="unlock_title">Enter your password to unlock</string>
-    <string name="unlock_password">Password</string>
     <string name="unlock_button">Unlock</string>
-    <string name="unlock_unlocking">Unlocking\u2026</string>
-    <string name="unlock_biometric">Unlock with Biometrics</string>
     <string name="unlock_incorrect">Incorrect password</string>
     <string name="unlock_failed">Couldn\'t open the vault: %1$s</string>
 
@@ -26,125 +20,65 @@
     <string name="notes_new">New Note</string>
     <string name="notes_search">Search notes\u2026</string>
     <string name="notes_untitled">Untitled</string>
-    <string name="notes_empty">No notes yet. Tap + to create one.</string>
-    <string name="notes_no_results">No matching notes</string>
 
     <!-- Editor -->
-    <string name="editor_save">Save</string>
     <string name="editor_delete">Delete</string>
     <string name="editor_pin">Pin</string>
     <string name="editor_unpin">Unpin</string>
     <string name="editor_lock">Lock</string>
-    <string name="editor_unlock_note">Unlock</string>
     <string name="editor_archive">Archive</string>
     <string name="editor_unarchive">Unarchive</string>
     <string name="editor_duplicate">Duplicate</string>
-    <string name="editor_word_wrap">Word Wrap</string>
-    <string name="editor_syntax">Syntax Language</string>
-    <string name="editor_colour">Colour</string>
     <string name="editor_info">Note Info</string>
-    <string name="editor_preview">Preview</string>
     <string name="editor_versions">Version History</string>
 
     <!-- Tags -->
-    <string name="tags_add">Add tag\u2026</string>
-    <string name="tags_empty">No tags</string>
 
     <!-- Attachments -->
-    <string name="attachments_add">Add Attachment</string>
-    <string name="attachments_empty">No attachments</string>
 
     <!-- Recycle Bin -->
     <string name="recycle_bin_title">Recycle Bin</string>
-    <string name="recycle_bin_empty">No deleted notes</string>
     <string name="recycle_bin_restore">Restore</string>
-    <string name="recycle_bin_delete_permanently">Delete Permanently</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="settings_theme">Theme</string>
-    <string name="settings_theme_light">Light</string>
-    <string name="settings_theme_dark">Dark</string>
-    <string name="settings_theme_auto">System</string>
-    <string name="settings_language">Language</string>
-    <string name="settings_sort_order">Sort Order</string>
-    <string name="settings_auto_lock">Auto-lock Timeout</string>
-    <string name="settings_biometric">Biometric Unlock</string>
     <string name="settings_sync">Sync</string>
-    <string name="settings_sync_enabled">Sync Enabled</string>
     <string name="settings_sync_endpoint">Server URL</string>
     <string name="settings_backup">Backup &amp; Restore</string>
-    <string name="settings_import">Import</string>
-    <string name="settings_export">Export</string>
     <string name="settings_change_password">Change Password</string>
-    <string name="settings_recycle_bin">Recycle Bin</string>
-    <string name="settings_saved_searches">Saved Searches</string>
-    <string name="settings_wipe_data">Wipe All Data</string>
-    <string name="settings_about">About Jottery</string>
     <string name="settings_version">Version</string>
 
     <!-- Sync -->
     <string name="sync_pushing">Pushing\u2026</string>
     <string name="sync_pulling">Pulling\u2026</string>
-    <string name="sync_finishing">Finishing\u2026</string>
     <string name="sync_synced">Synced</string>
-    <string name="sync_error">Sync error</string>
-    <string name="sync_setup_title">Sync Setup</string>
-    <string name="sync_register">Register</string>
-    <string name="sync_clone">Import Credentials</string>
 
     <!-- Bulk Operations -->
-    <string name="bulk_delete">Delete</string>
 
     <!-- Dialogs -->
     <string name="dialog_cancel">Cancel</string>
-    <string name="dialog_confirm">Confirm</string>
-    <string name="dialog_delete">Delete</string>
-    <string name="dialog_ok">OK</string>
-    <string name="dialog_delete_confirm">Are you sure you want to delete this note?</string>
-    <string name="dialog_wipe_confirm">This will permanently delete all data including notes, settings, and encryption keys. This action cannot be undone.</string>
 
     <!-- Conflict Resolution -->
-    <string name="conflict_title">Sync Conflict</string>
     <string name="conflict_keep_local">Keep Local</string>
     <string name="conflict_keep_server">Keep Server</string>
     <string name="conflict_keep_both">Keep Both</string>
 
     <!-- Inbox -->
-    <string name="inbox_title">Inbox</string>
-    <string name="inbox_empty">No items in inbox</string>
     <string name="inbox_accept">Accept</string>
-    <string name="inbox_delete">Delete</string>
     <string name="inbox_delete_all">Delete All</string>
 
     <!-- Backup -->
 
     <!-- Import/Export -->
-    <string name="import_title">Import</string>
-    <string name="export_title">Export</string>
 
     <!-- Password Change -->
-    <string name="change_password_title">Change Password</string>
-    <string name="change_password_current">Current Password</string>
-    <string name="change_password_new">New Password</string>
-    <string name="change_password_confirm">Confirm New Password</string>
-    <string name="change_password_button">Change Password</string>
 
     <!-- Saved Searches -->
 
     <!-- Sort Order -->
-    <string name="sort_recent">Most Recent</string>
-    <string name="sort_oldest">Oldest First</string>
-    <string name="sort_alpha">Alphabetical</string>
-    <string name="sort_created">Date Created</string>
 
     <!-- Auto-lock options -->
-    <string name="auto_lock_1">1 minute</string>
-    <string name="auto_lock_5">5 minutes</string>
-    <string name="auto_lock_15">15 minutes</string>
-    <string name="auto_lock_30">30 minutes</string>
-    <string name="auto_lock_60">1 hour</string>
-    <string name="auto_lock_never">Never</string>
 
     <!-- Backup -->
     <string name="backup_title">Backup &amp; Restore</string>
@@ -405,6 +339,7 @@
     <string name="note_copy_link">Copy link</string>
     <string name="note_share">Share</string>
     <string name="note_print">Print</string>
+    <string name="note_link_missing">That note isn\'t on this device.</string>
     <string name="note_copied">Note copied</string>
     <string name="note_link_copied">Link copied. Paste it into another note.</string>
     <string name="editor_placeholder">Start typing…</string>
@@ -419,6 +354,153 @@
     <string name="editor_replace">Replace with</string>
     <string name="editor_replace_one">Replace</string>
     <string name="editor_replace_all">All</string>
+    <string name="bin_deleted_when">Deleted %1$s</string>
+    <plurals name="bin_empty_message">
+        <item quantity="one">This will permanently delete %1$d note on all your devices. This can\'t be undone.</item>
+        <item quantity="other">This will permanently delete %1$d notes on all your devices. This can\'t be undone.</item>
+    </plurals>
+    <string name="sort_recent">Most recent</string>
+    <string name="sort_oldest">Oldest first</string>
+    <string name="sort_alpha">Alphabetical</string>
+    <string name="sort_created">Date created</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="theme_system">System</string>
+    <string name="auto_lock_never">Never</string>
+    <plurals name="auto_lock_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <plurals name="auto_lock_hours">
+        <item quantity="one">%1$d hour</item>
+        <item quantity="other">%1$d hours</item>
+    </plurals>
+    <string name="settings_about_app">Jottery for Android</string>
+    <string name="settings_about_version">Version %1$s</string>
+    <string name="change_password_detail">Your notes stay as they are. Only the way your key is protected changes, so this is quick, and your other devices keep working.</string>
+    <string name="change_password_done">Password changed.</string>
+    <string name="change_password_failed">The password couldn\'t be changed. Nothing has been altered.</string>
+    <string name="unlock_wrong_password">Incorrect password</string>
+    <string name="import_failed">Import failed: %1$s</string>
+    <plurals name="inbox_delete_all_message">
+        <item quantity="one">This will permanently remove %1$d item from your inbox.</item>
+        <item quantity="other">This will permanently remove all %1$d items from your inbox.</item>
+    </plurals>
+    <string name="version_label">Version %1$d</string>
+    <string name="editor_language">Language: %1$s</string>
+    <string name="editor_colour_value">Colour: %1$s</string>
+    <string name="editor_colour_none">None</string>
+    <string name="info_colour">Colour</string>
+    <string name="info_hash">Hash</string>
+    <plurals name="notes_all_unreadable">
+        <item quantity="one">%1$d note couldn\'t be decrypted. It was probably made with a different key: export from the device that made it, or connect this device to the same account.</item>
+        <item quantity="other">%1$d notes couldn\'t be decrypted. They were probably made with a different key: export from the device that made them, or connect this device to the same account.</item>
+    </plurals>
+    <string name="notes_some_unreadable">%1$d of %2$d notes couldn\'t be decrypted</string>
+    <string name="bulk_operation_sheets_add_tags">Add Tags</string>
+    <string name="bulk_operation_sheets_tags_comma_separated">Tags (comma separated)</string>
+    <string name="bulk_operation_sheets_add">Add</string>
+    <string name="bulk_operation_sheets_remove_tags">Remove Tags</string>
+    <string name="note_editor_more_options">More options</string>
+    <string name="note_editor_delete_note">Delete Note</string>
+    <string name="note_editor_are_you_sure_you_want">Are you sure you want to delete this note? It will be moved to the recycle bin.</string>
+    <string name="note_editor_disable_word_wrap">Disable Word Wrap</string>
+    <string name="note_editor_enable_word_wrap">Enable Word Wrap</string>
+    <string name="note_editor_reset_text_size">Reset Text Size</string>
+    <string name="note_editor_hide_preview">Hide Preview</string>
+    <string name="note_editor_show_preview">Show Preview</string>
+    <string name="note_info_created">Created</string>
+    <string name="note_info_modified">Modified</string>
+    <string name="note_info_words">Words</string>
+    <string name="note_info_characters">Characters</string>
+    <string name="note_info_tags">Tags</string>
+    <string name="note_info_attachments">Attachments</string>
+    <string name="note_info_syntax">Syntax</string>
+    <string name="note_info_pinned">Pinned</string>
+    <string name="note_info_yes">Yes</string>
+    <string name="note_info_archived">Archived</string>
+    <string name="note_info_locked">Locked</string>
+    <string name="note_list_no_archived_notes">No Archived Notes</string>
+    <string name="note_list_no_results">No Results</string>
+    <string name="note_list_no_notes">No Notes</string>
+    <string name="note_list_archived_notes_will_appear_here">Archived notes will appear here.</string>
+    <string name="note_list_try_a_different_search_term">Try a different search term.</string>
+    <string name="note_list_tap_to_create_your_first">Tap + to create your first note.</string>
+    <string name="note_row_has_attachments">Has attachments</string>
+    <string name="search_bar_search">Search</string>
+    <string name="search_bar_search_notes">Search notes…</string>
+    <string name="search_bar_clear_search">Clear search</string>
+    <string name="tag_input_remove_tag">Remove tag</string>
+    <string name="tag_input_add_tag">Add tag…</string>
+    <string name="version_history_no_version_history_available_version">No version history available. Version history will appear after syncing.</string>
+    <string name="version_history_restore_this_version">Restore this version</string>
+    <string name="change_password_current_password">Current password</string>
+    <string name="change_password_new_password">New password</string>
+    <string name="change_password_confirm_new_password">Confirm new password</string>
+    <string name="import_could_not_read_file">Could not read file</string>
+    <string name="import_import_notes">Import Notes</string>
+    <string name="import_import_notes_from_a_json">Import notes from a JSON export file. Notes will be encrypted with your current vault password.</string>
+    <string name="import_select_json_file">Select JSON File</string>
+    <string name="inbox_delete_all2">Delete all</string>
+    <string name="inbox_no_items_in_your_inbox">No items in your inbox.</string>
+    <string name="inbox_delete_all_inbox_items">Delete All Inbox Items</string>
+    <string name="inbox_empty_note">Empty note</string>
+    <string name="main_sort">Sort</string>
+    <string name="main_show_notes">Show Notes</string>
+    <string name="main_show_archive">Show Archive</string>
+    <string name="main_new_note">New note</string>
+    <string name="main_select_a_note_to_edit">Select a note to edit</string>
+    <string name="recycle_bin_empty_bin">Empty Bin</string>
+    <string name="recycle_bin_recycle_bin_is_empty">Recycle Bin is Empty</string>
+    <string name="recycle_bin_deleted_notes_will_appear_here">Deleted notes will appear here for 30 days.</string>
+    <string name="recycle_bin_empty_recycle_bin">Empty Recycle Bin</string>
+    <string name="recycle_bin_permanently_delete">Permanently delete</string>
+    <string name="settings_general">General</string>
+    <string name="settings_sort_order2">Sort order</string>
+    <string name="settings_auto_lock_timeout">Auto-lock timeout</string>
+    <string name="settings_security">Security</string>
+    <string name="settings_lock_now">Lock now</string>
+    <string name="settings_sync_status">Sync status</string>
+    <string name="settings_force_full_sync">Force full sync</string>
+    <string name="settings_sync_settings">Sync settings</string>
+    <string name="settings_set_up_sync">Set up sync</string>
+    <string name="settings_data">Data</string>
+    <string name="settings_import_notes">Import notes</string>
+    <string name="settings_wipe_all_data">Wipe all data</string>
+    <string name="settings_delete_everything_and_start_fresh">Delete everything and start fresh</string>
+    <string name="settings_about2">About</string>
+    <string name="settings_wipe_all_data2">Wipe all data?</string>
+    <string name="settings_this_will_permanently_delete_all">This will permanently delete all notes, settings, and encryption keys. </string>
+    <string name="settings_this_action_cannot_be_undone">This action cannot be undone.</string>
+    <string name="settings_wipe_everything">Wipe Everything</string>
+    <string name="setup_password_is_required">Password is required</string>
+    <string name="setup_password_must_be_at_least">Password must be at least 8 characters</string>
+    <string name="setup_passwords_do_not_match">Passwords do not match</string>
+    <string name="setup_register_as_the_first_device">Register as the first device on a sync server.</string>
+    <string name="setup_import_credentials_from_an_existing">Import credentials from an existing device\nto sync your encrypted notes.</string>
+    <string name="setup_toggle_password_visibility">Toggle password visibility</string>
+    <string name="setup_creating_vault">Creating vault…</string>
+    <string name="setup_import_from_another_device">Import from Another Device</string>
+    <string name="setup_server_url_is_required">Server URL is required</string>
+    <string name="setup_email_is_required">Email is required</string>
+    <string name="setup_registering">Registering…</string>
+    <string name="setup_connected">✅ Connected</string>
+    <string name="setup_encryption_password">Encryption Password</string>
+    <string name="setup_enter_the_same_encryption_password">Enter the same encryption password used on your other devices.</string>
+    <string name="setup_unlocking">Unlocking…</string>
+    <string name="setup_unlock_sync">Unlock &amp; Sync</string>
+    <string name="setup_credential_string">Credential String</string>
+    <string name="setup_jottery_v1_or_base64_json">jottery:v1:… or base64 JSON</string>
+    <string name="setup_same_password_used_on_your">Same password used on your other device</string>
+    <string name="setup_device_name">Device Name</string>
+    <string name="setup_credential_string_is_required">Credential string is required</string>
+    <string name="setup_device_name_is_required">Device name is required</string>
+    <string name="setup_importing">Importing…</string>
+    <string name="setup_import_sync">Import &amp; Sync</string>
+    <string name="unlock_forgotten_your_password">Forgotten your password?</string>
+    <string name="unlock_wipe_all_data_start_fresh">Wipe All Data &amp; Start Fresh</string>
+    <string name="unlock_wipe_all_data">Wipe All Data?</string>
+    <string name="unlock_this_will_permanently_delete_all">This will permanently delete all notes, settings, and encryption keys. This action cannot be undone.</string>
     <string name="bin_delete_title">Delete permanently?</string>
     <string name="bin_delete_message">This note will be deleted on all your devices. This can\'t be undone.</string>
     <string name="bin_delete_confirm">Delete</string>

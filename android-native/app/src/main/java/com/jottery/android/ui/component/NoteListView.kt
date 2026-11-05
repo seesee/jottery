@@ -159,9 +159,9 @@ fun NoteListView(
                     ) {
                         Text(
                             text = when {
-                                showArchive -> "No Archived Notes"
-                                searchQuery.isNotEmpty() -> "No Results"
-                                else -> "No Notes"
+                                showArchive -> stringResource(R.string.note_list_no_archived_notes)
+                                searchQuery.isNotEmpty() -> stringResource(R.string.note_list_no_results)
+                                else -> stringResource(R.string.note_list_no_notes)
                             },
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -169,9 +169,9 @@ fun NoteListView(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = when {
-                                showArchive -> "Archived notes will appear here."
-                                searchQuery.isNotEmpty() -> "Try a different search term."
-                                else -> "Tap + to create your first note."
+                                showArchive -> stringResource(R.string.note_list_archived_notes_will_appear_here)
+                                searchQuery.isNotEmpty() -> stringResource(R.string.note_list_try_a_different_search_term)
+                                else -> stringResource(R.string.note_list_tap_to_create_your_first)
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),

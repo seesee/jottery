@@ -30,8 +30,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import com.jottery.android.R
 import androidx.compose.ui.unit.sp
 import com.jottery.android.model.NoteVersionRecord
 import java.time.ZoneId
@@ -62,7 +64,7 @@ fun VersionHistoryView(
                 .padding(horizontal = 24.dp, vertical = 16.dp),
         ) {
             Text(
-                text = "Version History",
+                text = stringResource(R.string.editor_versions),
                 style = MaterialTheme.typography.titleMedium,
             )
 
@@ -70,7 +72,7 @@ fun VersionHistoryView(
 
             if (versions.isEmpty()) {
                 Text(
-                    text = "No version history available. Version history will appear after syncing.",
+                    text = stringResource(R.string.version_history_no_version_history_available_version),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -91,7 +93,7 @@ fun VersionHistoryView(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Version ${version.version}",
+                                    text = stringResource(R.string.version_label, version.version),
                                     style = MaterialTheme.typography.bodyMedium,
                                 )
                                 Text(
@@ -110,7 +112,7 @@ fun VersionHistoryView(
                             IconButton(onClick = { onRestore(version) }) {
                                 Icon(
                                     Icons.Default.Restore,
-                                    contentDescription = "Restore this version",
+                                    contentDescription = stringResource(R.string.version_history_restore_this_version),
                                 )
                             }
                         }
@@ -133,7 +135,7 @@ fun VersionHistoryView(
                 previewContent = null
             },
             title = {
-                Text("Version ${pVersion.version}")
+                Text(stringResource(R.string.version_label, pVersion.version))
             },
             text = {
                 Column(
@@ -170,7 +172,7 @@ fun VersionHistoryView(
                     previewVersion = null
                     previewContent = null
                 }) {
-                    Text("Restore")
+                    Text(stringResource(R.string.recycle_bin_restore))
                 }
             },
             dismissButton = {
@@ -178,7 +180,7 @@ fun VersionHistoryView(
                     previewVersion = null
                     previewContent = null
                 }) {
-                    Text("Done")
+                    Text(stringResource(R.string.action_done))
                 }
             },
         )

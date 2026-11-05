@@ -19,7 +19,11 @@ import androidx.compose.ui.unit.dp
 import com.jottery.android.R
 import com.jottery.android.model.SortOrder
 import com.jottery.android.model.ThemeMode
+import com.jottery.android.ui.component.autoLockLabel
 import com.jottery.android.ui.component.enableBiometricUnlock
+import com.jottery.android.ui.component.relativeTime
+import com.jottery.android.ui.component.sortOrderLabel
+import com.jottery.android.ui.component.themeModeLabel
 import com.jottery.android.util.BiometricHelper
 import com.jottery.android.viewmodel.AppState
 import com.jottery.android.viewmodel.defaultExportName
@@ -62,10 +66,10 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
             )
@@ -78,42 +82,33 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState()),
         ) {
             // General Section
-            SettingsSectionHeader("General")
+            SettingsSectionHeader(stringResource(R.string.settings_general))
             SettingsRow(
-                title = "Theme",
-                subtitle = when (settings.themeMode) {
-                    ThemeMode.LIGHT -> "Light"
-                    ThemeMode.DARK -> "Dark"
-                    ThemeMode.AUTO -> "System"
-                },
+                title = stringResource(R.string.settings_theme),
+                subtitle = themeModeLabel(settings.themeMode),
                 onClick = { showThemeDialog = true },
             )
             SettingsRow(
-                title = "Sort order",
-                subtitle = when (settings.sort) {
-                    SortOrder.RECENT -> "Most recent"
-                    SortOrder.OLDEST -> "Oldest first"
-                    SortOrder.ALPHA -> "Alphabetical"
-                    SortOrder.CREATED -> "Created date"
-                },
+                title = stringResource(R.string.settings_sort_order2),
+                subtitle = sortOrderLabel(settings.sort),
                 onClick = { showSortDialog = true },
             )
             SettingsRow(
-                title = "Auto-lock timeout",
-                subtitle = if (settings.autoLockTimeout == 0) "Never" else "${settings.autoLockTimeout} minutes",
+                title = stringResource(R.string.settings_auto_lock_timeout),
+                subtitle = autoLockLabel(settings.autoLockTimeout),
                 onClick = { showAutoLockDialog = true },
             )
             SettingsRow(
-                title = "Saved searches",
+                title = stringResource(R.string.saved_searches_title),
                 onClick = onNavigateToSavedSearches,
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             // Security Section
-            SettingsSectionHeader("Security")
+            SettingsSectionHeader(stringResource(R.string.settings_security))
             SettingsRow(
-                title = "Lock now",
+                title = stringResource(R.string.settings_lock_now),
                 onClick = { appState.lock() },
             )
             SettingsRow(
@@ -154,38 +149,40 @@ fun SettingsScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             // Sync Section
-            SettingsSectionHeader("Sync")
+            SettingsSectionHeader(stringResource(R.string.settings_sync))
             if (syncEnabled) {
                 SettingsRow(
-                    title = "Sync status",
-                    subtitle = syncError ?: lastSyncAt?.let { "Last synced: $it" } ?: "Not yet synced",
+                    title = stringResource(R.string.settings_sync_status),
+                    subtitle = syncError
+                        ?: lastSyncAt?.let { stringResource(R.string.sync_account_last_synced, relativeTime(it)) }
+                        ?: stringResource(R.string.sync_account_not_synced),
                 )
                 SettingsRow(
-                    title = "Force full sync",
+                    title = stringResource(R.string.settings_force_full_sync),
                     onClick = {
                         scope.launch { appState.forceFullSync() }
                     },
                 )
             }
             SettingsRow(
-                title = if (syncEnabled) "Sync settings" else "Set up sync",
+                title = if (syncEnabled) stringResource(R.string.settings_sync_settings) else stringResource(R.string.settings_set_up_sync),
                 onClick = onNavigateToSyncSetup,
             )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             // Data Section
-            SettingsSectionHeader("Data")
-            SettingsRow(title = "Backup & Restore", onClick = onNavigateToBackup)
-            SettingsRow(title = "Import notes", onClick = onNavigateToImport)
+            SettingsSectionHeader(stringResource(R.string.settings_data))
+            SettingsRow(title = stringResource(R.string.settings_backup), onClick = onNavigateToBackup)
+            SettingsRow(title = stringResource(R.string.settings_import_notes), onClick = onNavigateToImport)
             SettingsRow(
                 title = stringResource(R.string.export_all),
                 subtitle = exportStatus ?: stringResource(R.string.export_all_detail),
                 onClick = { exportLauncher.launch(defaultExportName()) },
             )
             SettingsRow(
-                title = "Wipe all data",
-                subtitle = "Delete everything and start fresh",
+                title = stringResource(R.string.settings_wipe_all_data),
+                subtitle = stringResource(R.string.settings_delete_everything_and_start_fresh),
                 onClick = { showWipeConfirm = true },
                 isDestructive = true,
             )
@@ -193,8 +190,11 @@ fun SettingsScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
             // About Section
-            SettingsSectionHeader("About")
-            SettingsRow(title = "Jottery for Android", subtitle = "Version 1.0.0")
+            SettingsSectionHeader(stringResource(R.string.settings_about2))
+            SettingsRow(
+                title = stringResource(R.string.settings_about_app),
+                subtitle = stringResource(R.string.settings_about_version, appVersion(context)),
+            )
 
             Spacer(Modifier.height(32.dp))
         }
@@ -203,8 +203,8 @@ fun SettingsScreen(
     // Theme dialog
     if (showThemeDialog) {
         SingleChoiceDialog(
-            title = "Theme",
-            options = listOf("System" to ThemeMode.AUTO, "Light" to ThemeMode.LIGHT, "Dark" to ThemeMode.DARK),
+            title = stringResource(R.string.settings_theme),
+            options = listOf(ThemeMode.AUTO, ThemeMode.LIGHT, ThemeMode.DARK).map { themeModeLabel(it) to it },
             selected = settings.themeMode,
             onSelect = { mode ->
                 showThemeDialog = false
@@ -219,13 +219,8 @@ fun SettingsScreen(
     // Sort dialog
     if (showSortDialog) {
         SingleChoiceDialog(
-            title = "Sort order",
-            options = listOf(
-                "Most recent" to SortOrder.RECENT,
-                "Oldest first" to SortOrder.OLDEST,
-                "Alphabetical" to SortOrder.ALPHA,
-                "Created date" to SortOrder.CREATED,
-            ),
+            title = stringResource(R.string.settings_sort_order2),
+            options = SortOrder.entries.map { sortOrderLabel(it) to it },
             selected = settings.sort,
             onSelect = { order ->
                 showSortDialog = false
@@ -240,15 +235,8 @@ fun SettingsScreen(
     // Auto-lock dialog
     if (showAutoLockDialog) {
         SingleChoiceDialog(
-            title = "Auto-lock timeout",
-            options = listOf(
-                "Never" to 0,
-                "1 minute" to 1,
-                "5 minutes" to 5,
-                "15 minutes" to 15,
-                "30 minutes" to 30,
-                "1 hour" to 60,
-            ),
+            title = stringResource(R.string.settings_auto_lock_timeout),
+            options = listOf(0, 1, 5, 15, 30, 60).map { autoLockLabel(it) to it },
             selected = settings.autoLockTimeout,
             onSelect = { timeout ->
                 showAutoLockDialog = false
@@ -264,11 +252,11 @@ fun SettingsScreen(
     if (showWipeConfirm) {
         AlertDialog(
             onDismissRequest = { showWipeConfirm = false },
-            title = { Text("Wipe all data?") },
+            title = { Text(stringResource(R.string.settings_wipe_all_data2)) },
             text = {
                 Text(
-                    "This will permanently delete all notes, settings, and encryption keys. " +
-                    "This action cannot be undone."
+                    stringResource(R.string.settings_this_will_permanently_delete_all) +
+                    stringResource(R.string.settings_this_action_cannot_be_undone)
                 )
             },
             confirmButton = {
@@ -280,14 +268,17 @@ fun SettingsScreen(
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.error,
                     ),
-                ) { Text("Wipe Everything") }
+                ) { Text(stringResource(R.string.settings_wipe_everything)) }
             },
             dismissButton = {
-                TextButton(onClick = { showWipeConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { showWipeConfirm = false }) { Text(stringResource(R.string.dialog_cancel)) }
             },
         )
     }
 }
+
+private fun appVersion(context: android.content.Context): String =
+    context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
 
 @Composable
 private fun SettingsSectionHeader(title: String) {
@@ -355,7 +346,7 @@ private fun <T> SingleChoiceDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
         },
     )
 }

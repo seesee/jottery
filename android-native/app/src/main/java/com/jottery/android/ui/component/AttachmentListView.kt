@@ -1,6 +1,7 @@
 package com.jottery.android.ui.component
 
 import android.graphics.Bitmap
+import android.text.format.Formatter
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -29,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -77,7 +79,7 @@ fun AttachmentListView(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = formatFileSize(attachment.size),
+                        text = Formatter.formatShortFileSize(LocalContext.current, (attachment.size).toLong()),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -133,8 +135,3 @@ private fun AttachmentIcon(attachment: AttachmentRef, loadThumbnail: suspend (At
     }
 }
 
-private fun formatFileSize(bytes: Int): String = when {
-    bytes < 1024 -> "$bytes B"
-    bytes < 1024 * 1024 -> "${bytes / 1024} KB"
-    else -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
-}

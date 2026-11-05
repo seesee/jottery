@@ -69,7 +69,7 @@ fun UnlockScreen(
 
     fun attemptUnlock() {
         if (password.isEmpty()) {
-            error = "Password is required"
+            error = context.getString(R.string.setup_password_is_required)
             return
         }
         isUnlocking = true
@@ -83,13 +83,13 @@ fun UnlockScreen(
                     onUnlocked()
                 } else {
                     failedAttempts++
-                    error = "Incorrect password"
+                    error = context.getString(R.string.unlock_incorrect)
                     password = ""
                 }
             } catch (_: AppStateError.WrongPassword) {
                 isUnlocking = false
                 failedAttempts++
-                error = "Incorrect password"
+                error = context.getString(R.string.unlock_incorrect)
                 password = ""
             } catch (e: Exception) {
                 // Not a password problem, so it must not count towards the wipe offer
@@ -167,7 +167,7 @@ fun UnlockScreen(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Enter your password to unlock",
+            text = stringResource(R.string.unlock_title),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -178,7 +178,7 @@ fun UnlockScreen(
         OutlinedTextField(
             value = password,
             onValueChange = { password = it; error = null },
-            label = { Text("Password") },
+            label = { Text(stringResource(R.string.setup_password)) },
             singleLine = true,
             visualTransformation = if (passwordVisible) VisualTransformation.None
                 else PasswordVisualTransformation(),
@@ -194,7 +194,7 @@ fun UnlockScreen(
                     Icon(
                         if (passwordVisible) Icons.Default.VisibilityOff
                         else Icons.Default.Visibility,
-                        contentDescription = "Toggle password visibility",
+                        contentDescription = stringResource(R.string.setup_toggle_password_visibility),
                     )
                 }
             },
@@ -217,7 +217,7 @@ fun UnlockScreen(
             enabled = !isUnlocking,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text(if (isUnlocking) "Unlocking\u2026" else "Unlock")
+            Text(if (isUnlocking) stringResource(R.string.setup_unlocking) else stringResource(R.string.unlock_button))
         }
 
         if (biometricEnabled && BiometricHelper.isBiometricAvailable(context)) {
@@ -236,7 +236,7 @@ fun UnlockScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Forgotten your password?",
+                text = stringResource(R.string.unlock_forgotten_your_password),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -250,16 +250,16 @@ fun UnlockScreen(
                     contentColor = MaterialTheme.colorScheme.error,
                 ),
             ) {
-                Text("Wipe All Data & Start Fresh")
+                Text(stringResource(R.string.unlock_wipe_all_data_start_fresh))
             }
         }
     }
 
     if (showWipeConfirm) {
         ConfirmDialog(
-            title = "Wipe All Data?",
-            message = "This will permanently delete all notes, settings, and encryption keys. This action cannot be undone.",
-            confirmText = "Wipe Everything",
+            title = stringResource(R.string.unlock_wipe_all_data),
+            message = stringResource(R.string.unlock_this_will_permanently_delete_all),
+            confirmText = stringResource(R.string.settings_wipe_everything),
             onConfirm = {
                 showWipeConfirm = false
                 appState.wipeAllData()

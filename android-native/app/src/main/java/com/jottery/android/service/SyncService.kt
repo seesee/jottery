@@ -21,6 +21,9 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonPrimitive
 import javax.crypto.SecretKey
 
+/** What a sync is doing, for the UI to word. */
+enum class SyncPhase { PUSHING, PULLING }
+
 /**
  * Sync orchestrator — push local changes, pull remote changes, handle conflicts.
  */
@@ -92,7 +95,7 @@ class SyncService(
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
-    var onSyncStatusChanged: ((String?) -> Unit)? = null
+    var onSyncPhaseChanged: ((SyncPhase?) -> Unit)? = null
     var onConflictDetected: ((ConflictInfo) -> Unit)? = null
     var onSyncComplete: ((Int) -> Unit)? = null
 
@@ -132,7 +135,7 @@ class SyncService(
      * next. A note too large for the server is skipped and the rest still go.
      */
     suspend fun push() {
-        onSyncStatusChanged?.invoke("Pushing…")
+        onSyncPhaseChanged?.invoke(SyncPhase.PUSHING)
         try {
             val key = requireKey()
             // Notes waiting on a conflict decision would only be rejected again
@@ -454,7 +457,7 @@ class SyncService(
      * @param fullPull ignore the cursor and watermark and fetch everything again.
      */
     suspend fun pull(fullPull: Boolean = false): Int {
-        onSyncStatusChanged?.invoke("Pulling…")
+        onSyncPhaseChanged?.invoke(SyncPhase.PULLING)
         try {
             val key = requireKey()
             quarantined = 0
@@ -913,7 +916,7 @@ class SyncService(
         }
         val newCount = pull(fullPull)
 
-        onSyncStatusChanged?.invoke(null)
+        onSyncPhaseChanged?.invoke(null)
         onSyncComplete?.invoke(newCount)
         pushFailure?.let { throw it }
         return newCount

@@ -75,6 +75,7 @@ import com.jottery.android.ui.component.NoteEditorView
 import com.jottery.android.ui.component.NoteListView
 import com.jottery.android.ui.component.SearchBar
 import com.jottery.android.ui.component.enableBiometricUnlock
+import com.jottery.android.ui.component.sortOrderLabel
 import com.jottery.android.viewmodel.AppState
 import com.jottery.android.viewmodel.resolveSelectedNote
 import kotlinx.coroutines.launch
@@ -176,7 +177,7 @@ fun MainScreen(
             if (showListOnNarrow && !(keyboardNeedsTheSpace && selectedNote != null)) {
                 TopAppBar(
                     title = {
-                        Text(if (showArchive) "Archive" else "Jottery")
+                        Text(if (showArchive) stringResource(R.string.editor_archive) else "Jottery")
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.surface,
@@ -184,7 +185,7 @@ fun MainScreen(
                     actions = {
                         // Search toggle
                         IconButton(onClick = { searchVisible = !searchVisible }) {
-                            Icon(Icons.Default.Search, contentDescription = "Search")
+                            Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search_bar_search))
                         }
 
                         IconButton(onClick = onNavigateToSavedSearches) {
@@ -197,7 +198,7 @@ fun MainScreen(
                         // Sort menu
                         Box {
                             IconButton(onClick = { sortMenuExpanded = true }) {
-                                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Sort")
+                                Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(R.string.main_sort))
                             }
                             DropdownMenu(
                                 expanded = sortMenuExpanded,
@@ -205,7 +206,7 @@ fun MainScreen(
                             ) {
                                 SortOrder.entries.forEach { order ->
                                     DropdownMenuItem(
-                                        text = { Text(order.displayName) },
+                                        text = { Text(sortOrderLabel(order)) },
                                         onClick = {
                                             appState.setSortOrder(order)
                                             sortMenuExpanded = false
@@ -224,7 +225,7 @@ fun MainScreen(
                         // Overflow menu (settings, recycle bin, archive toggle, lock)
                         Box {
                             IconButton(onClick = { overflowMenuExpanded = true }) {
-                                Icon(Icons.Default.Settings, contentDescription = "More")
+                                Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.action_more))
                             }
                             DropdownMenu(
                                 expanded = overflowMenuExpanded,
@@ -232,7 +233,7 @@ fun MainScreen(
                             ) {
                                 DropdownMenuItem(
                                     text = {
-                                        Text(if (showArchive) "Show Notes" else "Show Archive")
+                                        Text(if (showArchive) stringResource(R.string.main_show_notes) else stringResource(R.string.main_show_archive))
                                     },
                                     onClick = {
                                         appState.toggleArchiveView()
@@ -255,7 +256,7 @@ fun MainScreen(
                                     )
                                 }
                                 DropdownMenuItem(
-                                    text = { Text("Recycle Bin") },
+                                    text = { Text(stringResource(R.string.recycle_bin_title)) },
                                     onClick = {
                                         overflowMenuExpanded = false
                                         onNavigateToRecycleBin()
@@ -265,7 +266,7 @@ fun MainScreen(
                                     },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Settings") },
+                                    text = { Text(stringResource(R.string.settings_title)) },
                                     onClick = {
                                         overflowMenuExpanded = false
                                         onNavigateToSettings()
@@ -275,7 +276,7 @@ fun MainScreen(
                                     },
                                 )
                                 DropdownMenuItem(
-                                    text = { Text("Lock") },
+                                    text = { Text(stringResource(R.string.editor_lock)) },
                                     onClick = {
                                         overflowMenuExpanded = false
                                         appState.lock()
@@ -300,7 +301,7 @@ fun MainScreen(
                 ) {
                     Icon(
                         Icons.Default.Add,
-                        contentDescription = "New note",
+                        contentDescription = stringResource(R.string.main_new_note),
                         tint = MaterialTheme.colorScheme.onPrimary,
                     )
                 }
@@ -380,7 +381,7 @@ fun MainScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                text = "Select a note to edit",
+                                text = stringResource(R.string.main_select_a_note_to_edit),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

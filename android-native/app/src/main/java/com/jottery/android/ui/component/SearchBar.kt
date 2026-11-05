@@ -60,7 +60,7 @@ fun SearchBar(
             // Search icon
             Icon(
                 imageVector = Icons.Default.Search,
-                contentDescription = "Search",
+                contentDescription = stringResource(R.string.search_bar_search),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .size(20.dp)
@@ -85,7 +85,7 @@ fun SearchBar(
                 decorationBox = { innerTextField ->
                     if (query.isEmpty()) {
                         Text(
-                            text = "Search notes\u2026",
+                            text = stringResource(R.string.search_bar_search_notes),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         )
@@ -124,7 +124,7 @@ fun SearchBar(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Clear,
-                        contentDescription = "Clear search",
+                        contentDescription = stringResource(R.string.search_bar_clear_search),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp),
                     )

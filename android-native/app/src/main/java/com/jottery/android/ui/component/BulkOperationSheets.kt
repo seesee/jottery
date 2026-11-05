@@ -208,12 +208,12 @@ fun AddTagsSheet(
                 .fillMaxWidth()
                 .padding(24.dp),
         ) {
-            Text("Add Tags", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.bulk_operation_sheets_add_tags), style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(12.dp))
             OutlinedTextField(
                 value = tagInput,
                 onValueChange = { tagInput = it },
-                label = { Text("Tags (comma separated)") },
+                label = { Text(stringResource(R.string.bulk_operation_sheets_tags_comma_separated)) },
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -221,13 +221,13 @@ fun AddTagsSheet(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
             ) {
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
                 TextButton(
                     onClick = {
                         val tags = tagInput.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                         onConfirm(tags)
                     }
-                ) { Text("Add") }
+                ) { Text(stringResource(R.string.bulk_operation_sheets_add)) }
             }
             Spacer(modifier = Modifier.height(16.dp))
         }
@@ -256,7 +256,7 @@ fun RemoveTagsSheet(
                 .fillMaxWidth()
                 .padding(24.dp),
         ) {
-            Text("Remove Tags", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.bulk_operation_sheets_remove_tags), style = MaterialTheme.typography.titleMedium)
             Spacer(modifier = Modifier.height(12.dp))
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -278,10 +278,10 @@ fun RemoveTagsSheet(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
             ) {
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
                 TextButton(
                     onClick = { onConfirm(selectedTags.toList()) }
-                ) { Text("Remove") }
+                ) { Text(stringResource(R.string.attachment_remove_confirm)) }
             }
             Spacer(modifier = Modifier.height(16.dp))
         }

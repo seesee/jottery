@@ -37,12 +37,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.jottery.android.R
 import com.jottery.android.model.DecryptedNote
 import com.jottery.android.ui.component.ConfirmDialog
+import com.jottery.android.ui.component.relativeTime
 import com.jottery.android.viewmodel.AppState
 import kotlinx.coroutines.launch
 import java.time.Duration
@@ -69,12 +71,12 @@ fun RecycleBinScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Recycle Bin") },
+                title = { Text(stringResource(R.string.recycle_bin_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = stringResource(R.string.back),
                         )
                     }
                 },
@@ -84,7 +86,7 @@ fun RecycleBinScreen(
                             onClick = { showEmptyBinConfirm = true },
                         ) {
                             Text(
-                                text = "Empty Bin",
+                                text = stringResource(R.string.recycle_bin_empty_bin),
                                 color = MaterialTheme.colorScheme.error,
                             )
                         }
@@ -114,13 +116,13 @@ fun RecycleBinScreen(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
                     )
                     Text(
-                        text = "Recycle Bin is Empty",
+                        text = stringResource(R.string.recycle_bin_recycle_bin_is_empty),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Deleted notes will appear here for 30 days.",
+                        text = stringResource(R.string.recycle_bin_deleted_notes_will_appear_here),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                     )
@@ -179,9 +181,9 @@ fun RecycleBinScreen(
     // Empty bin confirmation dialog
     if (showEmptyBinConfirm) {
         ConfirmDialog(
-            title = "Empty Recycle Bin",
-            message = "This will permanently delete ${deletedNotes.size} note${if (deletedNotes.size == 1) "" else "s"}. This cannot be undone.",
-            confirmText = "Empty Bin",
+            title = stringResource(R.string.recycle_bin_empty_recycle_bin),
+            message = pluralStringResource(R.plurals.bin_empty_message, deletedNotes.size, deletedNotes.size),
+            confirmText = stringResource(R.string.recycle_bin_empty_bin),
             onConfirm = {
                 scope.launch {
                     appState.permanentlyDeleteNotes(deletedNotes.map { it.id })
@@ -245,7 +247,7 @@ private fun DeletedNoteRow(note: DecryptedNote) {
         if (deletedAt != null) {
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Deleted ${formatDeletedDate(deletedAt)}",
+                text = stringResource(R.string.bin_deleted_when, relativeTime(deletedAt)),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
             )
@@ -287,31 +289,11 @@ private fun DeletedNoteSwipeBackground(
         Icon(
             imageVector = icon,
             contentDescription = when (dismissDirection) {
-                SwipeToDismissBoxValue.StartToEnd -> "Restore"
-                SwipeToDismissBoxValue.EndToStart -> "Permanently delete"
+                SwipeToDismissBoxValue.StartToEnd -> stringResource(R.string.recycle_bin_restore)
+                SwipeToDismissBoxValue.EndToStart -> stringResource(R.string.recycle_bin_permanently_delete)
                 SwipeToDismissBoxValue.Settled -> null
             },
             tint = tint,
         )
-    }
-}
-
-/**
- * Format a deleted-at timestamp as a relative description.
- */
-private fun formatDeletedDate(instant: Instant): String {
-    val now = Instant.now()
-    val duration = Duration.between(instant, now)
-
-    return when {
-        duration.isNegative -> "just now"
-        duration.toMinutes() < 60 -> "${duration.toMinutes()}m ago"
-        duration.toHours() < 24 -> "${duration.toHours()}h ago"
-        duration.toDays() < 7 -> "${duration.toDays()}d ago"
-        else -> {
-            val formatter = DateTimeFormatter.ofPattern("d MMM yyyy")
-                .withZone(ZoneId.systemDefault())
-            formatter.format(instant)
-        }
     }
 }
