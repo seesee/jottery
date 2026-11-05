@@ -111,7 +111,10 @@ export async function exportAllNotes(onProgress?: ExportProgressCallback): Promi
 /**
  * Export filtered notes (by IDs)
  */
-export async function exportNotes(noteIds: string[]): Promise<ExportData> {
+export async function exportNotes(
+  noteIds: string[],
+  onProgress?: ExportProgressCallback
+): Promise<ExportData> {
   const masterKey = keyManager.getMasterKey();
   if (!masterKey) {
     throw new Error('Application is locked');
@@ -121,7 +124,7 @@ export async function exportNotes(noteIds: string[]): Promise<ExportData> {
   const exportNotes: ExportNote[] = [];
   const skipped = { notes: 0, attachments: 0 };
 
-  for (const note of notes) {
+  for (const [index, note] of notes.entries()) {
     try {
       const exportNote = await convertNoteToExport(note, masterKey.key);
       skipped.attachments += note.attachments.length - exportNote.attachments.length;
@@ -130,6 +133,7 @@ export async function exportNotes(noteIds: string[]): Promise<ExportData> {
       console.error(`Failed to export note ${note.id}:`, error);
       skipped.notes++;
     }
+    onProgress?.({ phase: 'exporting', current: index + 1, total: notes.length });
   }
 
   // Export color settings

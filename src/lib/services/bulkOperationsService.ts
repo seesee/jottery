@@ -2,9 +2,10 @@
  * Bulk operations service for multi-note actions
  */
 
-import type { DecryptedNote, ExportNote, ExportData } from '../types';
+import type { DecryptedNote } from '../types';
 import { noteRepository } from './noteRepository';
 import { noteService } from './noteService';
+import { exportNotes as exportSelectedNotes } from './exportService';
 import { notes, clearMultiSelection, selectNote } from '../stores/appStore';
 import { searchService } from './searchService';
 import { get } from 'svelte/store';
@@ -226,55 +227,13 @@ export async function exportNotes(
   noteIds: string[],
   onProgress?: ProgressCallback
 ): Promise<string> {
-  const allNotes = get(notes);
   const total = noteIds.length;
 
-  const exportNotes: ExportNote[] = [];
-
-  for (let i = 0; i < noteIds.length; i++) {
-    const noteId = noteIds[i];
-    const note = allNotes.find((n) => n.id === noteId);
-
-    if (note) {
-      exportNotes.push({
-        id: note.id,
-        createdAt: note.createdAt,
-        modifiedAt: note.modifiedAt,
-        content: note.content,
-        tags: note.tags,
-        attachments: note.attachments.map((a) => ({
-          filename: a.filename,
-          mimeType: a.mimeType,
-          data: a.data,
-        })),
-        pinned: note.pinned,
-        archived: note.archived,
-        locked: note.locked,
-        wordWrap: note.wordWrap,
-        syntaxLanguage: note.syntaxLanguage,
-        showPreview: note.showPreview,
-        color: note.color,
-      });
-    }
-
-    onProgress?.({
-      current: i + 1,
-      total,
-      status: 'running',
-    });
-  }
-
-  const exportData: ExportData = {
-    version: '1.0',
-    exportDate: new Date().toISOString(),
-    notes: exportNotes,
-  };
-
-  onProgress?.({
-    current: total,
-    total,
-    status: 'complete',
+  const exportData = await exportSelectedNotes(noteIds, ({ current = 0 }) => {
+    onProgress?.({ current, total, status: 'running' });
   });
+
+  onProgress?.({ current: total, total, status: 'complete' });
 
   return JSON.stringify(exportData, null, 2);
 }
