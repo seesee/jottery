@@ -39,4 +39,15 @@ interface AttachmentDao {
 
     @Query("UPDATE attachments SET uploaded = 0")
     suspend fun markAllNotUploaded()
+
+    /**
+     * Blank up to [limit] of the plaintext filenames earlier builds left here, and say
+     * how many that was. Each row's data is rewritten with it, so this is a few rows at
+     * a time, never one statement over the table.
+     */
+    @Query(
+        "UPDATE attachments SET filename = '' WHERE id IN " +
+            "(SELECT id FROM attachments WHERE filename != '' LIMIT :limit)"
+    )
+    suspend fun clearOldFilenames(limit: Int): Int
 }

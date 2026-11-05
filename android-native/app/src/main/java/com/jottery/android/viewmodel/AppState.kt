@@ -97,6 +97,20 @@ import javax.crypto.SecretKey
  */
 class AppState(application: Application) : AndroidViewModel(application) {
 
+    /**
+     * Blank the plaintext filenames earlier builds stored, a few rows at a time. Each
+     * row's attachment data is rewritten with it, so this keeps out of the way of
+     * everything else, and picks up at the next unlock if it doesn't finish.
+     */
+    private suspend fun clearOldFilenames() {
+        val repository = attachmentRepo ?: return
+        try {
+            while (repository.clearOldFilenames(limit = 5) > 0) delay(100)
+        } catch (e: Exception) {
+            Log.w(TAG, "[Filenames] Failed: ${e.javaClass.simpleName}")
+        }
+    }
+
     // MARK: - Lock State
 
     private val _isInitialised = MutableStateFlow(false)
@@ -515,6 +529,8 @@ class AppState(application: Application) : AndroidViewModel(application) {
         } catch (e: Exception) {
             Log.w(TAG, "[Purge] Failed: ${e.javaClass.simpleName}")
         }
+
+        viewModelScope.launch(Dispatchers.IO) { clearOldFilenames() }
 
         Log.d(TAG, "[Sync] unlock: calling setupSync()")
         try {

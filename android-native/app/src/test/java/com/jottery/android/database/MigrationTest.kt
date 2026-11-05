@@ -129,7 +129,28 @@ class MigrationTest {
         helper.runMigrationsAndValidate(dbName, 3, true, JotteryDatabase.MIGRATION_2_3).close()
     }
 
-    @Test fun `3 to 4 keeps every row, adds the flag and clears plaintext filenames`() {
+    @Test fun `3 to 4 never rewrites an attachment`() {
+        helper.createDatabase(dbName, 3).use { db ->
+            db.execSQL(
+                "INSERT INTO attachments (id, filename, mime_type, size, data) " +
+                    "VALUES ('a', 'divorce-petition.pdf', 'application/pdf', 3, x'010203')"
+            )
+            db.execSQL("CREATE TABLE attachment_writes (id TEXT)")
+            db.execSQL(
+                "CREATE TRIGGER count_attachment_writes AFTER UPDATE ON attachments " +
+                    "BEGIN INSERT INTO attachment_writes VALUES (new.id); END"
+            )
+        }
+
+        helper.runMigrationsAndValidate(dbName, 4, false, JotteryDatabase.MIGRATION_3_4).use { db ->
+            db.query("SELECT COUNT(*) FROM attachment_writes").use {
+                it.moveToFirst()
+                assertEquals(0, it.getInt(0))
+            }
+        }
+    }
+
+    @Test fun `3 to 4 keeps every row and adds the flag`() {
         helper.createDatabase(dbName, 3).use { db ->
             db.execSQL(
                 "INSERT INTO attachments (id, filename, mime_type, size, data) " +
@@ -145,7 +166,7 @@ class MigrationTest {
         helper.runMigrationsAndValidate(dbName, 4, true, JotteryDatabase.MIGRATION_3_4).use { db ->
             db.query("SELECT filename, mime_type, size, data, uploaded FROM attachments WHERE id = 'a'").use {
                 it.moveToFirst()
-                assertEquals("", it.getString(0))
+                assertEquals("divorce-petition.pdf", it.getString(0))
                 assertEquals("application/pdf", it.getString(1))
                 assertEquals(3, it.getInt(2))
                 assertEquals(3, it.getBlob(3).size)
