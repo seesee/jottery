@@ -1,5 +1,8 @@
 <script lang="ts">
   import { userApi, type UserAccountInfo } from '../../lib/userApi';
+  import { describeError } from '../../lib/apiErrors';
+  import { copyText } from '../../lib/clipboard';
+  import { toast } from '../../lib/toast.svelte';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from '../../components/ConfirmModal.svelte';
   import DevicesSection from '../../components/user/DevicesSection.svelte';
@@ -44,8 +47,9 @@
       if (accountInfo) {
         accountInfo.inbox.hasToken = true;
       }
+      toast.success($_('userPortal.account.inbox.generateSuccess'));
     } catch (e) {
-      console.error('Failed to generate inbox token:', e);
+      toast.error($_('userPortal.account.inbox.generateFailed', { values: { error: describeError(e, $_) } }));
     } finally {
       inboxTokenLoading = false;
     }
@@ -61,16 +65,22 @@
       if (accountInfo) {
         accountInfo.inbox.hasToken = false;
       }
+      toast.success($_('userPortal.account.inbox.revokeSuccess'));
     } catch (e) {
-      console.error('Failed to revoke inbox token:', e);
+      toast.error($_('userPortal.account.inbox.revokeFailed', { values: { error: describeError(e, $_) } }));
     } finally {
       inboxTokenLoading = false;
     }
   }
 
   async function handleCopyToken() {
-    if (generatedToken) {
-      await navigator.clipboard.writeText(generatedToken);
+    if (!generatedToken) return;
+
+    // The token is only shown once, so a failed copy has to be noticed
+    if (await copyText(generatedToken)) {
+      toast.success($_('userPortal.account.inbox.copySuccess'));
+    } else {
+      toast.info($_('userPortal.account.inbox.copyUnavailable'));
     }
   }
 

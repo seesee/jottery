@@ -323,7 +323,13 @@
         "revoke": "Token intrekken",
         "revokeConfirmTitle": "Postvak-in token intrekken",
         "revokeConfirmMessage": "Uw postvak-in token intrekken? Alle integraties die het gebruiken zullen stoppen met werken.",
-        "cancel": "Annuleren"
+        "cancel": "Annuleren",
+        "generateSuccess": "Postvak-in token gegenereerd",
+        "generateFailed": "Kon het token niet genereren: {error}",
+        "revokeSuccess": "Postvak-in token ingetrokken",
+        "revokeFailed": "Kon het token niet intrekken, dus het werkt nog steeds: {error}",
+        "copySuccess": "Token gekopieerd",
+        "copyUnavailable": "Kopiëren kan hier niet. Selecteer het token en kopieer het zelf."
       }
     },
     "devices": {
@@ -386,7 +392,8 @@
       "deleteNotesButton": "Delete Notes",
       "deleteNotesConfirmTitle": "Delete All Notes",
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
-      "notesDeleted": "All notes have been deleted from the server"
+      "notesDeleted": "All notes have been deleted from the server",
+      "passwordToConfirm": "Voer uw wachtwoord in om te bevestigen:"
     }
   }
 }

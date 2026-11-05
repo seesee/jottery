@@ -323,7 +323,13 @@
         "revoke": "Revocar token",
         "revokeConfirmTitle": "Revocar token de bandeja de entrada",
         "revokeConfirmMessage": "¿Revocar su token de bandeja de entrada? Las integraciones que lo usen dejarán de funcionar.",
-        "cancel": "Cancelar"
+        "cancel": "Cancelar",
+        "generateSuccess": "Token de bandeja de entrada generado",
+        "generateFailed": "No se pudo generar el token: {error}",
+        "revokeSuccess": "Token de bandeja de entrada revocado",
+        "revokeFailed": "No se pudo revocar el token, así que sigue funcionando: {error}",
+        "copySuccess": "Token copiado",
+        "copyUnavailable": "Aquí no se puede copiar. Selecciona el token y cópialo manualmente."
       }
     },
     "devices": {
@@ -386,7 +392,8 @@
       "deleteNotesButton": "Delete Notes",
       "deleteNotesConfirmTitle": "Delete All Notes",
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
-      "notesDeleted": "All notes have been deleted from the server"
+      "notesDeleted": "All notes have been deleted from the server",
+      "passwordToConfirm": "Introduce tu contraseña para confirmar:"
     }
   }
 }

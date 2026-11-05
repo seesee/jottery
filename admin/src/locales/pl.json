@@ -323,7 +323,13 @@
         "revoke": "Unieważnij token",
         "revokeConfirmTitle": "Unieważnij token skrzynki odbiorczej",
         "revokeConfirmMessage": "Unieważnić token skrzynki odbiorczej? Wszystkie integracje z niego korzystające przestaną działać.",
-        "cancel": "Anuluj"
+        "cancel": "Anuluj",
+        "generateSuccess": "Token skrzynki odbiorczej został wygenerowany",
+        "generateFailed": "Nie udało się wygenerować tokenu: {error}",
+        "revokeSuccess": "Token skrzynki odbiorczej został unieważniony",
+        "revokeFailed": "Nie udało się unieważnić tokenu, więc nadal działa: {error}",
+        "copySuccess": "Token skopiowany",
+        "copyUnavailable": "Tutaj nie można kopiować. Zaznacz token i skopiuj go ręcznie."
       }
     },
     "devices": {
@@ -386,7 +392,8 @@
       "deleteNotesButton": "Delete Notes",
       "deleteNotesConfirmTitle": "Delete All Notes",
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
-      "notesDeleted": "All notes have been deleted from the server"
+      "notesDeleted": "All notes have been deleted from the server",
+      "passwordToConfirm": "Wpisz hasło, aby potwierdzić:"
     }
   }
 }

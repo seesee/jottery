@@ -323,7 +323,13 @@
         "revoke": "Révoquer le jeton",
         "revokeConfirmTitle": "Révoquer le jeton de boîte de réception",
         "revokeConfirmMessage": "Révoquer votre jeton de boîte de réception ? Les intégrations qui l'utilisent cesseront de fonctionner.",
-        "cancel": "Annuler"
+        "cancel": "Annuler",
+        "generateSuccess": "Jeton de boîte de réception généré",
+        "generateFailed": "Impossible de générer le jeton : {error}",
+        "revokeSuccess": "Jeton de boîte de réception révoqué",
+        "revokeFailed": "Impossible de révoquer le jeton, il fonctionne donc toujours : {error}",
+        "copySuccess": "Jeton copié",
+        "copyUnavailable": "Copie impossible ici. Sélectionnez le jeton et copiez-le vous-même."
       }
     },
     "devices": {
@@ -386,7 +392,8 @@
       "deleteNotesButton": "Delete Notes",
       "deleteNotesConfirmTitle": "Delete All Notes",
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
-      "notesDeleted": "All notes have been deleted from the server"
+      "notesDeleted": "All notes have been deleted from the server",
+      "passwordToConfirm": "Saisissez votre mot de passe pour confirmer :"
     }
   }
 }

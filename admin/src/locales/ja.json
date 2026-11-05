@@ -323,7 +323,13 @@
         "revoke": "トークンを取り消す",
         "revokeConfirmTitle": "受信トレイトークンを取り消す",
         "revokeConfirmMessage": "受信トレイトークンを取り消しますか？このトークンを使用するすべての連携が停止します。",
-        "cancel": "キャンセル"
+        "cancel": "キャンセル",
+        "generateSuccess": "受信トレイトークンを生成しました",
+        "generateFailed": "トークンを生成できませんでした: {error}",
+        "revokeSuccess": "受信トレイトークンを取り消しました",
+        "revokeFailed": "トークンを取り消せなかったため、まだ有効です: {error}",
+        "copySuccess": "トークンをコピーしました",
+        "copyUnavailable": "ここではコピーできません。トークンを選択して手動でコピーしてください。"
       }
     },
     "devices": {
@@ -386,7 +392,8 @@
       "deleteNotesButton": "Delete Notes",
       "deleteNotesConfirmTitle": "Delete All Notes",
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
-      "notesDeleted": "All notes have been deleted from the server"
+      "notesDeleted": "All notes have been deleted from the server",
+      "passwordToConfirm": "確認のためパスワードを入力してください："
     }
   }
 }

@@ -323,7 +323,13 @@
         "revoke": "Token widerrufen",
         "revokeConfirmTitle": "Posteingang-Token widerrufen",
         "revokeConfirmMessage": "Posteingang-Token widerrufen? Alle Integrationen, die ihn verwenden, funktionieren nicht mehr.",
-        "cancel": "Abbrechen"
+        "cancel": "Abbrechen",
+        "generateSuccess": "Posteingang-Token generiert",
+        "generateFailed": "Das Token konnte nicht generiert werden: {error}",
+        "revokeSuccess": "Posteingang-Token widerrufen",
+        "revokeFailed": "Das Token konnte nicht widerrufen werden und funktioniert weiterhin: {error}",
+        "copySuccess": "Token kopiert",
+        "copyUnavailable": "Kopieren ist hier nicht möglich. Markieren und kopieren Sie das Token selbst."
       }
     },
     "devices": {
@@ -386,7 +392,8 @@
       "deleteNotesButton": "Delete Notes",
       "deleteNotesConfirmTitle": "Delete All Notes",
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
-      "notesDeleted": "All notes have been deleted from the server"
+      "notesDeleted": "All notes have been deleted from the server",
+      "passwordToConfirm": "Geben Sie zur Bestätigung Ihr Passwort ein:"
     }
   }
 }

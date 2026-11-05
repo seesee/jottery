@@ -323,7 +323,13 @@
         "revoke": "Ανάκληση διακριτικού",
         "revokeConfirmTitle": "Ανάκληση διακριτικού εισερχομένων",
         "revokeConfirmMessage": "Ανάκληση του διακριτικού εισερχομένων; Οι ενσωματώσεις που το χρησιμοποιούν θα σταματήσουν να λειτουργούν.",
-        "cancel": "Ακύρωση"
+        "cancel": "Ακύρωση",
+        "generateSuccess": "Το διακριτικό εισερχομένων δημιουργήθηκε",
+        "generateFailed": "Δεν ήταν δυνατή η δημιουργία του διακριτικού: {error}",
+        "revokeSuccess": "Το διακριτικό εισερχομένων ανακλήθηκε",
+        "revokeFailed": "Δεν ήταν δυνατή η ανάκληση του διακριτικού, οπότε εξακολουθεί να λειτουργεί: {error}",
+        "copySuccess": "Το διακριτικό αντιγράφηκε",
+        "copyUnavailable": "Η αντιγραφή δεν είναι δυνατή εδώ. Επιλέξτε το διακριτικό και αντιγράψτε το χειροκίνητα."
       }
     },
     "devices": {
@@ -386,7 +392,8 @@
       "deleteNotesButton": "Delete Notes",
       "deleteNotesConfirmTitle": "Delete All Notes",
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
-      "notesDeleted": "All notes have been deleted from the server"
+      "notesDeleted": "All notes have been deleted from the server",
+      "passwordToConfirm": "Εισαγάγετε τον κωδικό πρόσβασής σας για επιβεβαίωση:"
     }
   }
 }

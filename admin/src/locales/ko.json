@@ -323,7 +323,13 @@
         "revoke": "토큰 해지",
         "revokeConfirmTitle": "받은편지함 토큰 해지",
         "revokeConfirmMessage": "받은편지함 토큰을 해지하시겠습니까? 이 토큰을 사용하는 모든 연동이 중단됩니다.",
-        "cancel": "취소"
+        "cancel": "취소",
+        "generateSuccess": "받은편지함 토큰을 생성했습니다",
+        "generateFailed": "토큰을 생성할 수 없습니다: {error}",
+        "revokeSuccess": "받은편지함 토큰을 해지했습니다",
+        "revokeFailed": "토큰을 해지하지 못해 아직 유효합니다: {error}",
+        "copySuccess": "토큰을 복사했습니다",
+        "copyUnavailable": "여기서는 복사할 수 없습니다. 토큰을 선택해 직접 복사하세요."
       }
     },
     "devices": {
@@ -386,7 +392,8 @@
       "deleteNotesButton": "Delete Notes",
       "deleteNotesConfirmTitle": "Delete All Notes",
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
-      "notesDeleted": "All notes have been deleted from the server"
+      "notesDeleted": "All notes have been deleted from the server",
+      "passwordToConfirm": "확인하려면 비밀번호를 입력하세요:"
     }
   }
 }

@@ -323,7 +323,13 @@
         "revoke": "撤销令牌",
         "revokeConfirmTitle": "撤销收件箱令牌",
         "revokeConfirmMessage": "撤销您的收件箱令牌？使用该令牌的所有集成将停止工作。",
-        "cancel": "取消"
+        "cancel": "取消",
+        "generateSuccess": "收件箱令牌已生成",
+        "generateFailed": "无法生成令牌：{error}",
+        "revokeSuccess": "收件箱令牌已撤销",
+        "revokeFailed": "无法撤销令牌，它仍然有效：{error}",
+        "copySuccess": "令牌已复制",
+        "copyUnavailable": "此处无法复制。请选中令牌并手动复制。"
       }
     },
     "devices": {
@@ -379,7 +385,8 @@
       "deleteNotesButton": "Delete Notes",
       "deleteNotesConfirmTitle": "Delete All Notes",
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
-      "notesDeleted": "All notes have been deleted from the server"
+      "notesDeleted": "All notes have been deleted from the server",
+      "passwordToConfirm": "输入您的密码以确认："
     }
   }
 }

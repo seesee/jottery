@@ -323,7 +323,13 @@
         "revoke": "Jetonu iptal et",
         "revokeConfirmTitle": "Gelen kutusu jetonunu iptal et",
         "revokeConfirmMessage": "Gelen kutusu jetonunuzu iptal etmek istiyor musunuz? Onu kullanan tüm entegrasyonlar çalışmayı durduracak.",
-        "cancel": "İptal"
+        "cancel": "İptal",
+        "generateSuccess": "Gelen kutusu jetonu oluşturuldu",
+        "generateFailed": "Jeton oluşturulamadı: {error}",
+        "revokeSuccess": "Gelen kutusu jetonu iptal edildi",
+        "revokeFailed": "Jeton iptal edilemedi, bu yüzden hâlâ çalışıyor: {error}",
+        "copySuccess": "Jeton kopyalandı",
+        "copyUnavailable": "Burada kopyalanamıyor. Jetonu seçip kendiniz kopyalayın."
       }
     },
     "devices": {
@@ -379,7 +385,8 @@
       "deleteNotesButton": "Delete Notes",
       "deleteNotesConfirmTitle": "Delete All Notes",
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
-      "notesDeleted": "All notes have been deleted from the server"
+      "notesDeleted": "All notes have been deleted from the server",
+      "passwordToConfirm": "Onaylamak için parolanızı girin:"
     }
   }
 }

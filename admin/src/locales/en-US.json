@@ -323,7 +323,13 @@
         "revoke": "Revoke Token",
         "revokeConfirmTitle": "Revoke Inbox Token",
         "revokeConfirmMessage": "Revoke your inbox token? Any integrations using it will stop working.",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "generateSuccess": "Inbox token generated",
+        "generateFailed": "Couldn't generate the token: {error}",
+        "revokeSuccess": "Inbox token revoked",
+        "revokeFailed": "Couldn't revoke the token, so it still works: {error}",
+        "copySuccess": "Token copied",
+        "copyUnavailable": "Can't copy here. Select the token and copy it yourself."
       }
     },
     "devices": {
@@ -386,7 +392,8 @@
       "deleteNotesButton": "Delete Notes",
       "deleteNotesConfirmTitle": "Delete All Notes",
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
-      "notesDeleted": "All notes have been deleted from the server"
+      "notesDeleted": "All notes have been deleted from the server",
+      "passwordToConfirm": "Enter your password to confirm:"
     }
   }
 }

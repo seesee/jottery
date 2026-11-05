@@ -323,7 +323,13 @@
         "revoke": "Revoca token",
         "revokeConfirmTitle": "Revoca token posta in arrivo",
         "revokeConfirmMessage": "Revocare il token della posta in arrivo? Le integrazioni che lo utilizzano smetteranno di funzionare.",
-        "cancel": "Annulla"
+        "cancel": "Annulla",
+        "generateSuccess": "Token posta in arrivo generato",
+        "generateFailed": "Impossibile generare il token: {error}",
+        "revokeSuccess": "Token posta in arrivo revocato",
+        "revokeFailed": "Impossibile revocare il token, che quindi funziona ancora: {error}",
+        "copySuccess": "Token copiato",
+        "copyUnavailable": "Impossibile copiare qui. Seleziona il token e copialo manualmente."
       }
     },
     "devices": {
@@ -386,7 +392,8 @@
       "deleteNotesButton": "Delete Notes",
       "deleteNotesConfirmTitle": "Delete All Notes",
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
-      "notesDeleted": "All notes have been deleted from the server"
+      "notesDeleted": "All notes have been deleted from the server",
+      "passwordToConfirm": "Inserisci la password per confermare:"
     }
   }
 }

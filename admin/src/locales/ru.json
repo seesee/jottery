@@ -323,7 +323,13 @@
         "revoke": "Отозвать токен",
         "revokeConfirmTitle": "Отозвать токен входящих",
         "revokeConfirmMessage": "Отозвать токен входящих? Все интеграции, использующие его, перестанут работать.",
-        "cancel": "Отмена"
+        "cancel": "Отмена",
+        "generateSuccess": "Токен входящих создан",
+        "generateFailed": "Не удалось создать токен: {error}",
+        "revokeSuccess": "Токен входящих отозван",
+        "revokeFailed": "Не удалось отозвать токен, поэтому он всё ещё действует: {error}",
+        "copySuccess": "Токен скопирован",
+        "copyUnavailable": "Здесь нельзя скопировать. Выделите токен и скопируйте его вручную."
       }
     },
     "devices": {
@@ -386,7 +392,8 @@
       "deleteNotesButton": "Delete Notes",
       "deleteNotesConfirmTitle": "Delete All Notes",
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
-      "notesDeleted": "All notes have been deleted from the server"
+      "notesDeleted": "All notes have been deleted from the server",
+      "passwordToConfirm": "Введите пароль для подтверждения:"
     }
   }
 }
