@@ -86,12 +86,6 @@ private actor EventCounter {
     func record() { count += 1 }
 }
 
-/// The waits a client asked for between attempts.
-private actor PauseLog {
-    private(set) var pauses: [Duration] = []
-    func record(_ pause: Duration) { pauses.append(pause) }
-}
-
 /// A stream can end, and connecting can get 401, for a revoked device. The token
 /// request is what says why (docs/sync-protocol.md).
 struct SSEClientTests {

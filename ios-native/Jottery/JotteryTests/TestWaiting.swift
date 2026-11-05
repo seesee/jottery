@@ -22,6 +22,12 @@ func waitUntil(
     return try await condition()
 }
 
+/// The waits something asked for, for code that takes its pause as a parameter.
+actor PauseLog {
+    private(set) var pauses: [Duration] = []
+    func record(_ pause: Duration) { pauses.append(pause) }
+}
+
 /// Holds a thread that can't await, such as a progress callback in the middle of
 /// synchronous work, until the test calls `open()`. Nothing here needs a task to run,
 /// so it can't deadlock when the thread it holds is the last one in the pool.

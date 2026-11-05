@@ -148,6 +148,8 @@ final class AppState {
     @ObservationIgnored private var networkMonitor: NWPathMonitor?
     @ObservationIgnored private var networkWasSatisfied = true
     @ObservationIgnored private var autoSyncTask: Task<Void, Never>?
+    /// Waits out the delay before a scheduled sync. Only replaced by tests.
+    @ObservationIgnored var autoSyncPause: @Sendable (Duration) async -> Void = { try? await Task.sleep(for: $0) }
     /// Retries in a row after failures worth retrying (see `SyncRetry`).
     @ObservationIgnored private var syncRetryAttempts = 0
     @ObservationIgnored private var userErrorClearTask: Task<Void, Never>?
@@ -1694,8 +1696,9 @@ final class AppState {
     func scheduleAutoSync(after delay: Duration = .seconds(3)) {
         guard syncEnabled else { return }
         autoSyncTask?.cancel()
+        let pause = autoSyncPause
         autoSyncTask = Task { [weak self] in
-            try? await Task.sleep(for: delay)
+            await pause(delay)
             guard !Task.isCancelled else { return }
             await self?.triggerSync()
         }

@@ -992,6 +992,70 @@ struct SyncProtocolTests {
         #expect(!changes.removedByServerIds.contains(note.id))
     }
 
+    /// Every batch after the first would get the same answer.
+    @Test func theQuotaStopsTheBatchesStillToGo() async throws {
+        let fixture = try makeFixture()
+        for index in 0...SyncService.pushChunkSize {
+            _ = try fixture.repo.create(content: "note \(index)", key: key)
+        }
+        ScriptedServerProtocol.pushHandler = { _ in
+            .init(status: 507, body: Data(#"{"error":"x","code":"storage_quota_exceeded"}"#.utf8))
+        }
+
+        await #expect {
+            try await fixture.service.sync()
+        } throws: { error in
+            if case SyncClientError.storageQuotaExceeded = error { return true }
+            return false
+        }
+
+        #expect(ScriptedServerProtocol.pushRequests.count == 1)
+    }
+
+    /// With nothing scheduled, the device would stay quiet until the next edit.
+    @Test @MainActor func aBusyServerIsAskedAgainAfterTheWaitItNamed() async throws {
+        ScriptedServerProtocol.reset()
+        let state = try TestVaults.makeState()
+        state.keyManager.unlockWithKeyData(Data(repeating: 7, count: 32))
+        state.isLocked = false
+        _ = try state.createNote(content: "waiting to go up")
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [ScriptedServerProtocol.self]
+        state.syncService = SyncService(
+            syncClient: SyncClient(endpoint: "https://sync.example.test", apiKey: "device-key", configuration: configuration),
+            noteRepo: try #require(state.noteRepo),
+            syncRepo: try #require(state.syncRepo),
+            versionRepo: try #require(state.versionRepo),
+            attachmentRepo: try #require(state.attachmentRepo),
+            savedSearchRepo: try #require(state.savedSearchRepo),
+            key: try #require(state.keyManager.masterKey)
+        )
+        state.syncEnabled = true
+        let pauses = PauseLog()
+        state.autoSyncPause = { await pauses.record($0) }
+        ScriptedServerProtocol.pushHandler = { _ in .init(status: 503, headers: ["Retry-After": "90"]) }
+
+        await state.triggerSync()
+
+        await waitUntil { await !pauses.pauses.isEmpty }
+        #expect(await pauses.pauses.first == .seconds(90))
+        state.teardownSync()
+    }
+
+    /// A hostile or broken server doesn't get to silence a device for days.
+    @Test func aWaitOverAnHourIsCutToAnHour() async throws {
+        let fixture = try makeFixture()
+        _ = try fixture.repo.create(content: "a note", key: key)
+        ScriptedServerProtocol.pushHandler = { _ in .init(status: 503, headers: ["Retry-After": "999999"]) }
+
+        await #expect {
+            try await fixture.service.sync()
+        } throws: { error in
+            if case SyncClientError.serverBusy(let wait) = error { return wait == 3600 }
+            return false
+        }
+    }
+
     @Test func theServerCantSkipANoteItWasntSent() async throws {
         let fixture = try makeFixture()
         let bystander = try synced(fixture.repo)
