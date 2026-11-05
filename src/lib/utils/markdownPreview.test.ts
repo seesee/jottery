@@ -271,3 +271,60 @@ describe('buildSandboxedPreview', () => {
     expect(policy).not.toContain("'self'");
   });
 });
+
+describe('wiki links', () => {
+  const ID_A = '11111111-1111-4111-8111-111111111111';
+  const ID_B = '22222222-2222-4222-8222-222222222222';
+  const linkTo = (html: string, id: string) => html.includes(`note:${id}`) || html.includes(id);
+
+  it('finds a note by its custom title', () => {
+    const notes = [{ id: ID_A, content: 'Draft', tags: ['t:Project Plan'] }];
+
+    expect(linkTo(render('[[Project Plan]]', [], notes), ID_A)).toBe(true);
+    expect(linkTo(render('[[Draft]]', [], notes), ID_A)).toBe(false);
+  });
+
+  it('also finds one by the longer title: prefix, as the note list does', () => {
+    const notes = [{ id: ID_A, content: 'Draft', tags: ['title:Project Plan'] }];
+
+    expect(linkTo(render('[[Project Plan]]', [], notes), ID_A)).toBe(true);
+  });
+
+  it('still finds a note by its first line, without the markdown', () => {
+    const notes = [{ id: ID_A, content: '\n\n# **Heading** one\nmore', tags: [] }];
+
+    expect(linkTo(render('[[Heading one]]', [], notes), ID_A)).toBe(true);
+  });
+
+  it('goes to the first of two notes with the same title, as before', () => {
+    const notes = [{ id: ID_A, content: 'Same', tags: [] }, { id: ID_B, content: 'same', tags: [] }];
+
+    expect(linkTo(render('[[Same]]', [], notes), ID_A)).toBe(true);
+    expect(linkTo(render('[[Same]]', [], notes), ID_B)).toBe(false);
+  });
+
+  it('reads each note once, however many links there are or renders happen', () => {
+    let reads = 0;
+    const notes = [ID_A, ID_B].map((id, index) => ({
+      id,
+      tags: [],
+      get content() { reads++; return `Note ${index}`; },
+    }));
+    const links = '[[Note 0]] [[Note 1]] [[Note 0]] [[Note 1]] [[Missing]]';
+
+    render(links, [], notes);
+    render(links, [], notes);
+
+    expect(reads).toBe(notes.length);
+  });
+
+  it('sees a change, because a change makes a new list', () => {
+    const before = [{ id: ID_A, content: 'Old', tags: [] }];
+    render('[[Old]]', [], before);
+
+    const after = [{ id: ID_A, content: 'New', tags: [] }];
+
+    expect(linkTo(render('[[New]]', [], after), ID_A)).toBe(true);
+    expect(linkTo(render('[[Old]]', [], after), ID_A)).toBe(false);
+  });
+});

@@ -150,7 +150,7 @@
     openLinksInNewTab: $settings.openLinksInNewTab ?? true,
     hljs,
     loadingText: $_('editor.status.loading'),
-    notes: $notes.map(n => ({ id: n.id, content: n.content })),
+    notes: $notes,
   }) : '';
 
   // Check if preview is available for current language

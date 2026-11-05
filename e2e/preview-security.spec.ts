@@ -242,6 +242,20 @@ test.describe('Note previews', () => {
     });
   }
 
+  test('a wiki link finds a note by its custom title', async ({ page }) => {
+    await app.createNote('See [[Project Plan]]');
+    await patchNote(page, { syntaxLanguage: 'markdown', showPreview: true });
+
+    await reloadAndUnlock(page);
+    await selectNote(page);
+    await page.evaluate(async id => {
+      const { notes } = await import('/src/lib/stores/appStore.ts' as string);
+      notes.update((list: unknown[]) => [...list, { id, content: 'Draft', tags: ['t:Project Plan'], attachments: [] }]);
+    }, ATTACHMENT_ID);
+
+    await expect(page.locator('[data-preview-container] a.note-link')).toContainText('Project Plan', { timeout: 10000 });
+  });
+
   test('raw HTML in a markdown note cannot run', async ({ page }) => {
     await app.createNote(`Visible <img src=x onerror="${SET_FLAG}"> <a href="javascript:${SET_FLAG}">link</a>`);
     await patchNote(page, { syntaxLanguage: 'markdown', showPreview: true });

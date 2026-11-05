@@ -30,9 +30,10 @@ export function getNoteTitle(note: NoteTitleData): string {
     if (title) return title;
   }
 
-  // Fall back to first non-empty line
-  const firstLine = note.content.split('\n').find((line) => line.trim());
-  return firstLine?.trim() || 'Untitled';
+  // Fall back to first non-empty line, without splitting a body that can be megabytes
+  const text = note.content.trimStart();
+  const lineEnd = text.indexOf('\n');
+  return (lineEnd === -1 ? text : text.slice(0, lineEnd)).trim() || 'Untitled';
 }
 
 /**
