@@ -623,7 +623,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<SyncOutcome> {
             anyhow::bail!("Push failed: {}", error_msg);
         }
 
-        let push_response: SyncPushResponse = response.json()
+        let push_response = SyncPushResponse::parse(&response.text().context("Failed to read push response")?)
             .context("Failed to parse push response")?;
 
         outcome.synced += push_response.accepted.len();
@@ -803,8 +803,9 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<SyncOutcome> {
         // Parse the JSON response
         let response_text = response.text()
             .context("Failed to read pull response text")?;
-        let pull_response: SyncPullResponse = serde_json::from_str(&response_text)
+        let pull_response = SyncPullResponse::parse(&response_text)
             .context("Failed to parse pull response")?;
+        outcome.skipped += pull_response.dropped;
 
         let page_note_count = pull_response.notes.len() as i64;
         let is_last_page = !pull_response.has_more || page_note_count == 0;
@@ -1406,11 +1407,19 @@ mod tests {
         serde_json::to_string(&crypto.encrypt_text(text, key()).unwrap()).unwrap()
     }
 
+    /// The id of the `index`th note from `remote_notes`.
+    fn note_id(index: usize) -> String {
+        format!("00000000-0000-4000-8000-{index:012}")
+    }
+
+    /// The id of the attachment these tests use.
+    const ATTACHMENT_ID: &str = "0b9e4d6c-7a21-4f3e-8c55-1d2e3f4a5b6c";
+
     fn remote_notes(count: usize) -> Vec<Value> {
         (0..count)
             .map(|i| {
                 json!({
-                    "id": format!("note-{i}"),
+                    "id": note_id(i),
                     "createdAt": "2020-01-01T00:00:00Z",
                     "modifiedAt": "2020-01-01T00:00:00Z",
                     "content": encrypted(&format!("Note {i}")),
@@ -1500,16 +1509,16 @@ mod tests {
         let db = app.db.as_ref().unwrap();
         let mut note = Note::new("Has an attachment".to_string());
         note.attachments.push(Attachment {
-            id: "attachment-1".to_string(),
+            id: ATTACHMENT_ID.to_string(),
             filename: filename.to_string(),
             mime_type: "text/plain".to_string(),
             size: 3,
-            data: "attachment-1".to_string(),
+            data: ATTACHMENT_ID.to_string(),
             thumbnail_data: None,
         });
         NoteRepository::new(db.connection()).create(&note, key()).unwrap();
         AttachmentRepository::new(db.connection())
-            .store("attachment-1", filename, "text/plain", 3, b"abc", key())
+            .store(ATTACHMENT_ID, filename, "text/plain", 3, b"abc", key())
             .unwrap();
         note
     }
@@ -1574,14 +1583,14 @@ mod tests {
         let blob = serde_json::to_vec(&crypto.encrypt_binary(b"abc", key()).unwrap()).unwrap();
         let mut notes = remote_notes(1);
         notes[0]["attachments"] = json!([{
-            "id": "attachment-1",
+            "id": ATTACHMENT_ID,
             "filename": "an older client's file.txt",
             "mimeType": "text/plain",
             "size": 3,
-            "data": "attachment-1",
+            "data": ATTACHMENT_ID,
         }]);
         let server = StubServer::with_attachments(notes, vec![json!({
-            "id": "attachment-1",
+            "id": ATTACHMENT_ID,
             "data": base64::engine::general_purpose::STANDARD.encode(blob),
         })]);
         let mut app = app_connected_to(&server.endpoint);
@@ -1607,7 +1616,7 @@ mod tests {
     #[test]
     fn one_unreadable_note_does_not_stop_the_pull() {
         let mut notes = remote_notes(3);
-        notes.insert(1, unreadable_note("unreadable"));
+        notes.insert(1, unreadable_note(&note_id(99)));
         let server = StubServer::start(notes, vec![]);
         let mut app = app_connected_to(&server.endpoint);
 
@@ -1618,9 +1627,41 @@ mod tests {
         assert_eq!(stored_note_count(&app), 3);
     }
 
+    /// A note that fails serde used to fail the whole response, so nothing on the page
+    /// arrived, and the same page failed the same way on every sync after it.
+    #[test]
+    fn a_note_that_will_not_parse_does_not_stop_the_pull() {
+        let mut notes = remote_notes(3);
+        notes[1]["modifiedAt"] = json!("not a date");
+        let server = StubServer::start(notes, vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(outcome.skipped, 1);
+        assert_eq!(stored_note_count(&app), 2);
+        assert_eq!(sync_metadata(&app).last_pull_at, Some(server_time(0)));
+    }
+
+    #[test]
+    fn a_note_whose_id_is_not_a_uuid_never_reaches_the_database() {
+        let mut notes = remote_notes(2);
+        notes[0]["id"] = json!("../../not-a-note");
+        let server = StubServer::start(notes, vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(outcome.skipped, 1);
+        let db = app.db.as_ref().unwrap();
+        let stored = NoteRepository::new(db.connection()).list(true, key()).unwrap();
+        assert_eq!(stored.len(), 1);
+        assert_eq!(stored[0].id, note_id(1));
+    }
+
     #[test]
     fn the_cursor_moves_past_a_note_that_cannot_be_read() {
-        let server = StubServer::start(vec![unreadable_note("unreadable")], vec![]);
+        let server = StubServer::start(vec![unreadable_note(&note_id(99))], vec![]);
         let mut app = app_connected_to(&server.endpoint);
 
         perform_sync(&mut app, false).unwrap();
@@ -1630,7 +1671,7 @@ mod tests {
 
     #[test]
     fn notes_that_cannot_be_read_are_reported() {
-        let server = StubServer::start(vec![unreadable_note("unreadable")], vec![]);
+        let server = StubServer::start(vec![unreadable_note(&note_id(99))], vec![]);
         let mut app = app_connected_to(&server.endpoint);
         app.settings.sync_enabled = true;
         app.settings.sync_endpoint = Some(server.endpoint.clone());
@@ -1691,8 +1732,8 @@ mod tests {
     #[test]
     fn a_version_of_a_note_on_a_later_page_is_applied() {
         let version = json!({
-            "versionKey": "note-150:1",
-            "noteId": "note-150",
+            "versionKey": format!("{}:1", note_id(150)),
+            "noteId": note_id(150),
             "version": 1,
             "createdAt": "2020-01-01T00:00:00Z",
             "syncedAt": "2020-01-01T00:00:00Z",
@@ -1708,6 +1749,6 @@ mod tests {
 
         let db = app.db.as_ref().unwrap();
         let versions = NoteVersionRepository::new(db.connection());
-        assert!(versions.get_version_by_key("note-150:1").unwrap().is_some());
+        assert!(versions.get_version_by_key(&format!("{}:1", note_id(150))).unwrap().is_some());
     }
 }

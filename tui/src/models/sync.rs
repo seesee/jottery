@@ -2,6 +2,8 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use super::validation::{self, Lenient};
+
 /// Sync metadata stored in the database
 /// Contains global sync configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -155,16 +157,46 @@ pub struct SyncAttachment {
     pub data: String,                 // Base64 encoded encrypted blob
 }
 
-/// Push response from server
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Push response from server. Read it with [`SyncPushResponse::parse`], which checks
+/// what the server sent.
+#[derive(Debug, Clone, Default)]
 pub struct SyncPushResponse {
     pub accepted: Vec<SyncAccepted>,
     pub rejected: Vec<SyncRejected>,
-    pub errors: Vec<String>,
     /// Accepted notes referencing attachment data the server does not hold.
     /// Absent on older servers; clients re-push blobs they have (self-heal).
-    #[serde(rename = "attachmentWarnings", default)]
     pub attachment_warnings: Vec<AttachmentWarning>,
+}
+
+/// A push response as it arrives, before anything in it is trusted.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WirePushResponse {
+    #[serde(default)]
+    accepted: Lenient<SyncAccepted>,
+    #[serde(default)]
+    rejected: Lenient<SyncRejected>,
+    #[serde(default)]
+    attachment_warnings: Lenient<AttachmentWarning>,
+}
+
+impl SyncPushResponse {
+    /// Read a response, dropping entries that fail the checks at the sync boundary.
+    pub fn parse(json: &str) -> Result<Self, serde_json::Error> {
+        let wire: WirePushResponse = serde_json::from_str(json)?;
+
+        Ok(Self {
+            accepted: wire.accepted.items.into_iter().filter(|a| validation::is_uuid(&a.id)).collect(),
+            rejected: wire.rejected.items.into_iter().filter(|r| validation::is_uuid(&r.id)).collect(),
+            attachment_warnings: wire.attachment_warnings.items.into_iter()
+                .filter(|warning| validation::is_uuid(&warning.note_id))
+                .map(|warning| AttachmentWarning {
+                    attachment_ids: warning.attachment_ids.into_iter().filter(|id| validation::is_uuid(id)).collect(),
+                    ..warning
+                })
+                .collect(),
+        })
+    }
 }
 
 /// One accepted note whose attachment references have no data on the server
@@ -266,9 +298,9 @@ pub struct SyncPullRequest {
     pub offset: Option<i64>,
 }
 
-/// Pull response from server
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+/// Pull response from server. Read it with [`SyncPullResponse::parse`]: everything
+/// here has been through the checks at the sync boundary.
+#[derive(Debug, Clone)]
 pub struct SyncPullResponse {
     pub notes: Vec<SyncNote>,
     pub deletions: Vec<SyncDeletion>,
@@ -276,12 +308,65 @@ pub struct SyncPullResponse {
     pub versions: Vec<SyncNoteVersion>,
     pub synced_at: DateTime<Utc>,
     /// More notes remain: ask again with a larger offset.
-    #[serde(default)]
     pub has_more: bool,
-    #[serde(default)]
     pub inbox_items: Option<Vec<InboxItem>>,
-    #[serde(default)]
     pub inbox_count: Option<i64>,
+    /// Entries that were dropped, because they didn't parse or failed the checks
+    pub dropped: usize,
+}
+
+/// A pull response as it arrives, before anything in it is trusted.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct WirePullResponse {
+    #[serde(default)]
+    notes: Lenient<SyncNote>,
+    #[serde(default)]
+    deletions: Lenient<SyncDeletion>,
+    #[serde(default)]
+    attachments: Lenient<SyncAttachment>,
+    #[serde(default)]
+    versions: Lenient<SyncNoteVersion>,
+    synced_at: DateTime<Utc>,
+    #[serde(default)]
+    has_more: bool,
+    #[serde(default)]
+    inbox_items: Option<Lenient<InboxItem>>,
+    #[serde(default)]
+    inbox_count: Option<i64>,
+}
+
+impl SyncPullResponse {
+    /// Read a response, dropping entries that don't parse or fail the checks, so that
+    /// one bad entry costs that entry and the rest of the sync carries on.
+    pub fn parse(json: &str) -> Result<Self, serde_json::Error> {
+        let wire: WirePullResponse = serde_json::from_str(json)?;
+
+        let mut dropped = wire.notes.dropped + wire.deletions.dropped
+            + wire.attachments.dropped + wire.versions.dropped;
+
+        let notes = validation::keep_valid(wire.notes.items, SyncNote::is_valid, &mut dropped)
+            .into_iter().map(SyncNote::sanitised).collect();
+        let deletions = validation::keep_valid(wire.deletions.items, |d: &SyncDeletion| validation::is_uuid(&d.id), &mut dropped);
+        let attachments = validation::keep_valid(wire.attachments.items, |a: &SyncAttachment| validation::is_uuid(&a.id), &mut dropped);
+        let versions = validation::keep_valid(wire.versions.items, SyncNoteVersion::is_valid, &mut dropped);
+        let inbox_items = wire.inbox_items.map(|list| {
+            dropped += list.dropped;
+            validation::keep_valid(list.items, InboxItem::is_valid, &mut dropped)
+        });
+
+        Ok(Self {
+            notes,
+            deletions,
+            attachments,
+            versions,
+            synced_at: wire.synced_at,
+            has_more: wire.has_more,
+            inbox_items,
+            inbox_count: wire.inbox_count,
+            dropped,
+        })
+    }
 }
 
 /// Inbox item (unencrypted note submitted via Inbox API)
@@ -377,18 +462,17 @@ mod tests {
 
     #[test]
     fn push_response_decodes_with_and_without_attachment_warnings() {
-        let with: SyncPushResponse = serde_json::from_str(
-            r#"{"accepted":[],"rejected":[],"errors":[],"attachmentWarnings":[{"noteId":"n1","attachmentIds":["a1"]}]}"#,
-        )
+        let note_id = "6f1c3a52-0d1e-4b8a-9c3e-2f6a1c0e7a11";
+        let attachment_id = "0b9e4d6c-7a21-4f3e-8c55-1d2e3f4a5b6c";
+        let with = SyncPushResponse::parse(&format!(
+            r#"{{"accepted":[],"rejected":[],"errors":[],"attachmentWarnings":[{{"noteId":"{note_id}","attachmentIds":["{attachment_id}"]}}]}}"#,
+        ))
         .unwrap();
         assert_eq!(with.attachment_warnings.len(), 1);
-        assert_eq!(with.attachment_warnings[0].note_id, "n1");
-        assert_eq!(with.attachment_warnings[0].attachment_ids, vec!["a1"]);
+        assert_eq!(with.attachment_warnings[0].note_id, note_id);
+        assert_eq!(with.attachment_warnings[0].attachment_ids, vec![attachment_id]);
 
-        let without: SyncPushResponse = serde_json::from_str(
-            r#"{"accepted":[],"rejected":[],"errors":[]}"#,
-        )
-        .unwrap();
+        let without = SyncPushResponse::parse(r#"{"accepted":[],"rejected":[],"errors":[]}"#).unwrap();
         assert!(without.attachment_warnings.is_empty());
     }
 
