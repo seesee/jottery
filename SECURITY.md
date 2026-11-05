@@ -77,6 +77,12 @@ These parameters follow OWASP recommendations for server-side password storage.
 - Each device has a unique API key
 - Keys can be individually revoked or deleted from the admin dashboard
 
+### Admin Audit Log
+
+Approving, deactivating, reactivating and deleting users, resetting passwords, changing roles and storage settings, and revoking or renaming devices are recorded permanently in the `admin_audit_log` table, with the admin, the target, the time, the client address and the user agent. Actions taken with `jottery-admin` are recorded with no admin named. Admins can read it at `GET /api/v1/admin/audit`, filtered by `adminId`, `targetId`, `action`, `from` and `to`.
+
+The record outlives the accounts it mentions, so it keeps ids, addresses and user agents after a user is deleted. There is no automatic expiry. It holds no passwords and nothing from notes. Recording happens after the action and is advisory: if a write fails, the action stands and the server logs an error, so alert on `Audit log write failed` if you depend on it.
+
 ### Session Management
 
 - Admin sessions use UUID v4 tokens, SHA-256 hashed before storage

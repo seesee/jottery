@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use crate::{
     api::cookies::{clear_session_cookie, CookieScope},
+    audit::{self, AuditActor, AuditEvent},
     db::{SessionRepository, UserRepository},
     error::{AppError, AppResult},
     models::{Session, User, UserInfo},
@@ -274,11 +275,12 @@ async fn target_user(state: &AppState, user_id: &str) -> AppResult<User> {
         })
 }
 
-/// What a dashboard asks for is already true, which isn't an error to the person
-/// clicking the button.
-fn tolerate_no_change(result: Result<(), AdminError>) -> AppResult<()> {
+/// What a dashboard asks for may already be true, which isn't an error to the
+/// person clicking the button. Returns whether anything changed.
+fn tolerate_no_change(result: Result<(), AdminError>) -> AppResult<bool> {
     match result {
-        Ok(()) | Err(AdminError::AlreadyInState(_)) => Ok(()),
+        Ok(()) => Ok(true),
+        Err(AdminError::AlreadyInState(_)) => Ok(false),
         Err(e) => Err(e.into()),
     }
 }
@@ -289,9 +291,12 @@ pub async fn approve_user(
     State(state): State<Arc<AppState>>,
     Path(user_id): Path<String>,
     axum::Extension(current_user_id): axum::Extension<String>,
+    axum::Extension(actor): axum::Extension<AuditActor>,
 ) -> AppResult<StatusCode> {
     let user = target_user(&state, &user_id).await?;
-    tolerate_no_change(AdminService::approve(&state.pool, &user, Some(&current_user_id)).await)?;
+    if tolerate_no_change(AdminService::approve(&state.pool, &user, Some(&current_user_id)).await)? {
+        audit::record(&state.pool, &actor, AuditEvent::on_user(audit::USER_APPROVE, &user_id)).await;
+    }
 
     tracing::info!("User approved: user_id={}", user_id);
     Ok(StatusCode::NO_CONTENT)
@@ -302,9 +307,12 @@ pub async fn approve_user(
 pub async fn deactivate_user(
     State(state): State<Arc<AppState>>,
     Path(user_id): Path<String>,
+    axum::Extension(actor): axum::Extension<AuditActor>,
 ) -> AppResult<StatusCode> {
     let user = target_user(&state, &user_id).await?;
-    tolerate_no_change(AdminService::deactivate(&state.pool, &user).await)?;
+    if tolerate_no_change(AdminService::deactivate(&state.pool, &user).await)? {
+        audit::record(&state.pool, &actor, AuditEvent::on_user(audit::USER_DEACTIVATE, &user_id)).await;
+    }
 
     tracing::info!("User deactivated: user_id={}", user_id);
     Ok(StatusCode::NO_CONTENT)
@@ -315,9 +323,12 @@ pub async fn deactivate_user(
 pub async fn activate_user(
     State(state): State<Arc<AppState>>,
     Path(user_id): Path<String>,
+    axum::Extension(actor): axum::Extension<AuditActor>,
 ) -> AppResult<StatusCode> {
     let user = target_user(&state, &user_id).await?;
-    tolerate_no_change(AdminService::activate(&state.pool, &user).await)?;
+    if tolerate_no_change(AdminService::activate(&state.pool, &user).await)? {
+        audit::record(&state.pool, &actor, AuditEvent::on_user(audit::USER_ACTIVATE, &user_id)).await;
+    }
 
     tracing::info!("User activated: user_id={}", user_id);
     Ok(StatusCode::NO_CONTENT)
@@ -334,6 +345,7 @@ pub async fn toggle_admin(
     State(state): State<Arc<AppState>>,
     Path(user_id): Path<String>,
     axum::Extension(current_user_id): axum::Extension<String>,
+    axum::Extension(actor): axum::Extension<AuditActor>,
     Json(req): Json<ToggleAdminRequest>,
 ) -> AppResult<StatusCode> {
     // Prevent demoting yourself
@@ -363,11 +375,17 @@ pub async fn toggle_admin(
 
     // A session keeps no record of the role it was issued for, so a token captured
     // before a promotion would otherwise become an admin token
-    if (user.is_admin == 1) != req.is_admin {
+    let role_changed = (user.is_admin == 1) != req.is_admin;
+    if role_changed {
         SessionRepository::delete_all_for_user(&mut tx, &user_id).await?;
     }
 
     tx.commit().await?;
+
+    if role_changed {
+        let action = if req.is_admin { audit::USER_ADMIN_GRANT } else { audit::USER_ADMIN_REVOKE };
+        audit::record(&state.pool, &actor, AuditEvent::on_user(action, &user_id)).await;
+    }
 
     let action = if req.is_admin { "promoted to admin" } else { "demoted from admin" };
     tracing::info!("User {}: user_id={} by admin={}", action, user_id, current_user_id);
@@ -380,6 +398,7 @@ pub async fn delete_user(
     State(state): State<Arc<AppState>>,
     Path(user_id): Path<String>,
     axum::Extension(current_user_id): axum::Extension<String>,
+    axum::Extension(actor): axum::Extension<AuditActor>,
 ) -> AppResult<StatusCode> {
     // Prevent deleting yourself
     if user_id == current_user_id {
@@ -390,6 +409,7 @@ pub async fn delete_user(
 
     let user = target_user(&state, &user_id).await?;
     AdminService::delete(&state.pool, &user).await?;
+    audit::record(&state.pool, &actor, AuditEvent::on_user(audit::USER_DELETE, &user_id)).await;
 
     tracing::info!("User deleted: user_id={} by admin={}", user_id, current_user_id);
     Ok(StatusCode::NO_CONTENT)
@@ -440,10 +460,11 @@ pub async fn list_user_devices(
 pub async fn revoke_device(
     State(state): State<Arc<AppState>>,
     Path(device_id): Path<String>,
+    axum::Extension(actor): axum::Extension<AuditActor>,
 ) -> AppResult<StatusCode> {
     // Check device exists
     let device = sqlx::query!(
-        "SELECT id, is_active FROM clients WHERE id = ?",
+        "SELECT id, user_id, is_active FROM clients WHERE id = ?",
         device_id
     )
     .fetch_optional(&state.pool)
@@ -462,6 +483,11 @@ pub async fn revoke_device(
         .await?;
 
         tracing::info!("Admin revoked device: {}", device_id);
+        let event = AuditEvent {
+            target_user_id: Some(&device.user_id),
+            ..AuditEvent::on_device(audit::DEVICE_REVOKE, &device_id)
+        };
+        audit::record(&state.pool, &actor, event).await;
     } else {
         // Already revoked — hard-delete the device
         sqlx::query!(
@@ -472,6 +498,11 @@ pub async fn revoke_device(
         .await?;
 
         tracing::info!("Admin deleted revoked device: {}", device_id);
+        let event = AuditEvent {
+            target_user_id: Some(&device.user_id),
+            ..AuditEvent::on_device(audit::DEVICE_DELETE, &device_id)
+        };
+        audit::record(&state.pool, &actor, event).await;
     }
 
     Ok(StatusCode::NO_CONTENT)
@@ -488,11 +519,12 @@ pub struct RenameDeviceRequest {
 pub async fn rename_device(
     State(state): State<Arc<AppState>>,
     Path(device_id): Path<String>,
+    axum::Extension(actor): axum::Extension<AuditActor>,
     Json(req): Json<RenameDeviceRequest>,
 ) -> AppResult<StatusCode> {
     // Check device exists
     let device = sqlx::query!(
-        "SELECT id FROM clients WHERE id = ?",
+        "SELECT id, user_id FROM clients WHERE id = ?",
         device_id
     )
     .fetch_optional(&state.pool)
@@ -513,6 +545,12 @@ pub async fn rename_device(
     .execute(&state.pool)
     .await?;
 
+    let event = AuditEvent {
+        target_user_id: Some(&device.user_id),
+        ..AuditEvent::on_device(audit::DEVICE_RENAME, &device_id)
+    };
+    audit::record(&state.pool, &actor, event).await;
+
     tracing::info!("Admin renamed device {}: {}", device_id, req.name);
     Ok(StatusCode::NO_CONTENT)
 }
@@ -528,6 +566,7 @@ pub struct ChangePasswordRequest {
 pub async fn change_password(
     State(state): State<Arc<AppState>>,
     axum::Extension(session): axum::Extension<Session>,
+    axum::Extension(actor): axum::Extension<AuditActor>,
     Json(req): Json<ChangePasswordRequest>,
 ) -> AppResult<StatusCode> {
     use crate::utils::password::{hash_password_with_params, verify_password};
@@ -579,6 +618,8 @@ pub async fn change_password(
     SessionRepository::delete_others_for_user(&mut tx, user_id, &session.id).await?;
     tx.commit().await?;
 
+    audit::record(&state.pool, &actor, AuditEvent::on_user(audit::ADMIN_PASSWORD_CHANGE, user_id)).await;
+
     tracing::info!("Password changed successfully for user: {}", user_id);
     Ok(StatusCode::NO_CONTENT)
 }
@@ -597,6 +638,7 @@ pub struct ResetPasswordRequest {
 pub async fn reset_user_password(
     State(state): State<Arc<AppState>>,
     Path(user_id): Path<String>,
+    axum::Extension(actor): axum::Extension<AuditActor>,
     Json(req): Json<ResetPasswordRequest>,
 ) -> AppResult<StatusCode> {
     use crate::utils::password::hash_password_with_params;
@@ -636,6 +678,10 @@ pub async fn reset_user_password(
     }
     tx.commit().await?;
 
+    let event = AuditEvent::on_user(audit::USER_PASSWORD_RESET, &user_id)
+        .with_metadata(serde_json::json!({ "revokedDevices": req.revoke_devices }));
+    audit::record(&state.pool, &actor, event).await;
+
     tracing::info!("Admin reset password for user: {}", user_id);
     Ok(StatusCode::NO_CONTENT)
 }
@@ -654,6 +700,7 @@ pub struct UpdateUserSettingsRequest {
 pub async fn update_user_settings(
     State(state): State<Arc<AppState>>,
     Path(user_id): Path<String>,
+    axum::Extension(actor): axum::Extension<AuditActor>,
     Json(req): Json<UpdateUserSettingsRequest>,
 ) -> AppResult<StatusCode> {
     // Check user exists
@@ -743,6 +790,14 @@ pub async fn update_user_settings(
         .await?;
         tracing::info!("Updated inbox_max_size_mb to {} for user {}", max_size, user_id);
     }
+
+    let event = AuditEvent::on_user(audit::USER_SETTINGS_UPDATE, &user_id).with_metadata(serde_json::json!({
+        "storageQuotaMb": req.storage_quota_mb,
+        "maxUploadSizeMb": req.max_upload_size_mb,
+        "inboxMaxItems": req.inbox_max_items,
+        "inboxMaxSizeMb": req.inbox_max_size_mb,
+    }));
+    audit::record(&state.pool, &actor, event).await;
 
     Ok(StatusCode::NO_CONTENT)
 }

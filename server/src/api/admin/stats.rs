@@ -1,10 +1,21 @@
 // Admin statistics endpoints
 // To be implemented in Phase 2
 
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{
+    extract::{Query, State},
+    http::StatusCode,
+    Json,
+};
 use std::sync::Arc;
 
-use crate::{error::AppResult, AppState};
+use crate::{
+    audit::{self, AuditFilter},
+    error::{AppError, AppResult},
+    AppState,
+};
+
+const DEFAULT_AUDIT_LIMIT: i64 = 100;
+const MAX_AUDIT_LIMIT: i64 = 500;
 
 /// Get server statistics
 /// GET /api/v1/admin/stats
@@ -92,16 +103,69 @@ pub async fn get_stats(
     ))
 }
 
-/// Get audit log
+/// Filters for the audit log. Every one is optional.
+#[derive(Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuditLogQuery {
+    pub admin_id: Option<String>,
+    pub target_id: Option<String>,
+    pub action: Option<String>,
+    /// RFC 3339, inclusive
+    pub from: Option<String>,
+    /// RFC 3339, inclusive
+    pub to: Option<String>,
+    pub limit: Option<i64>,
+    pub offset: Option<i64>,
+}
+
+/// Times are stored in one UTC format and compared as text, so a filter has to be
+/// in that format too.
+fn stored_time(value: Option<String>, name: &str) -> AppResult<Option<String>> {
+    value
+        .map(|time| {
+            chrono::DateTime::parse_from_rfc3339(&time)
+                .map(|time| time.with_timezone(&chrono::Utc).to_rfc3339())
+                .map_err(|_| AppError::BadRequest(format!("{name} must be an RFC 3339 time")))
+        })
+        .transpose()
+}
+
+/// Get audit log, newest first
 /// GET /api/v1/admin/audit
 pub async fn get_audit_log(
-    State(_state): State<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
+    Query(query): Query<AuditLogQuery>,
 ) -> AppResult<(StatusCode, Json<serde_json::Value>)> {
-    // TODO: Implement audit log retrieval
+    let filter = AuditFilter {
+        admin_user_id: query.admin_id,
+        target_user_id: query.target_id,
+        action: query.action,
+        from: stored_time(query.from, "from")?,
+        to: stored_time(query.to, "to")?,
+    };
+    let limit = query.limit.unwrap_or(DEFAULT_AUDIT_LIMIT).clamp(1, MAX_AUDIT_LIMIT);
+    let offset = query.offset.unwrap_or(0).max(0);
+
+    let (entries, total) = audit::list(&state.pool, &filter, limit, offset).await?;
+
+    let logs: Vec<serde_json::Value> = entries
+        .into_iter()
+        .map(|entry| {
+            let metadata = entry
+                .metadata_json
+                .as_deref()
+                .and_then(|json| serde_json::from_str::<serde_json::Value>(json).ok());
+            let mut value = serde_json::json!(entry);
+            value["metadata"] = metadata.unwrap_or(serde_json::Value::Null);
+            value
+        })
+        .collect();
+
     Ok((
         StatusCode::OK,
         Json(serde_json::json!({
-            "logs": []
+            "logs": logs,
+            "total": total
         })),
     ))
 }

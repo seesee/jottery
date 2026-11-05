@@ -1,6 +1,7 @@
 // Library exports for jottery-server
 pub mod api;
 pub mod app;
+pub mod audit;
 pub mod bootstrap;
 pub mod config;
 pub mod db;

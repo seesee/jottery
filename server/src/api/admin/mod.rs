@@ -2,17 +2,19 @@ pub mod users;
 pub mod stats;
 
 use axum::{
-    extract::{Request, State},
-    http::{HeaderMap, StatusCode},
+    extract::{ConnectInfo, Request, State},
+    http::{header, HeaderMap, StatusCode},
     middleware::Next,
     response::{IntoResponse, Response},
 };
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
 use crate::{
     api::cookies::{is_forgeable, session_credential},
+    audit::AuditActor,
     db::SessionRepository,
     error::AppError,
+    rate_limit::client_ip,
     AppState,
 };
 
@@ -84,6 +86,22 @@ pub async fn admin_auth_middleware(
 
     // Add user_id to request extensions for use in handlers
     request.extensions_mut().insert(session.user_id.clone());
+
+    // Only as far as the trusted proxies allow: anything else is client input
+    let peer = request
+        .extensions()
+        .get::<ConnectInfo<SocketAddr>>()
+        .map(|ConnectInfo(address)| address.ip());
+    let actor = AuditActor {
+        admin_user_id: Some(session.user_id.clone()),
+        ip_address: client_ip(&headers, peer, state.config.rate_limit.trusted_proxy_hops)
+            .map(|address| address.to_string()),
+        user_agent: headers
+            .get(header::USER_AGENT)
+            .and_then(|value| value.to_str().ok())
+            .map(str::to_string),
+    };
+    request.extensions_mut().insert(actor);
 
     // Update last_used_at timestamp (fire and forget)
     let pool = state.pool.clone();

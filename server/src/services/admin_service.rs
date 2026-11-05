@@ -3,6 +3,7 @@
 //! This module provides the core business logic for administrative operations
 //! that can be used by both CLI tools and web APIs.
 
+use crate::audit::{self, AuditActor, AuditEvent};
 use crate::db::{SessionRepository, UserRepository};
 use crate::models::User;
 use crate::utils::password::{hash_password_with_params, validate_password_strength};
@@ -118,6 +119,13 @@ impl AdminService {
         })
     }
 
+    /// Record an action taken with jottery-admin, which has no account or address.
+    /// The methods that find a user by a prefix are its entry points: the dashboard
+    /// uses the ones below them, and records its own actions with who took them.
+    async fn record_for_cli(pool: &SqlitePool, event: AuditEvent<'_>) {
+        audit::record(pool, &AuditActor::default(), event).await;
+    }
+
     /// Refuse if taking `user` out of the admin role, however that happens, would
     /// leave the server without an admin. Nobody could then approve users, and an
     /// image without jottery-admin can't be repaired from inside. Call it inside
@@ -186,6 +194,7 @@ impl AdminService {
     pub async fn approve_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
         let user = Self::find_user(pool, identifier).await?;
         Self::approve(pool, &user, None).await?;
+        Self::record_for_cli(pool, AuditEvent::on_user(audit::USER_APPROVE, &user.id)).await;
         Self::find_user(pool, &user.id).await
     }
 
@@ -193,6 +202,7 @@ impl AdminService {
     pub async fn deactivate_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
         let user = Self::find_user(pool, identifier).await?;
         Self::deactivate(pool, &user).await?;
+        Self::record_for_cli(pool, AuditEvent::on_user(audit::USER_DEACTIVATE, &user.id)).await;
         Self::find_user(pool, &user.id).await
     }
 
@@ -200,6 +210,7 @@ impl AdminService {
     pub async fn activate_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
         let user = Self::find_user(pool, identifier).await?;
         Self::activate(pool, &user).await?;
+        Self::record_for_cli(pool, AuditEvent::on_user(audit::USER_ACTIVATE, &user.id)).await;
         Self::find_user(pool, &user.id).await
     }
 
@@ -207,6 +218,7 @@ impl AdminService {
     pub async fn delete_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
         let user = Self::find_user(pool, identifier).await?;
         Self::delete(pool, &user).await?;
+        Self::record_for_cli(pool, AuditEvent::on_user(audit::USER_DELETE, &user.id)).await;
         Ok(user)
     }
 
@@ -232,6 +244,8 @@ impl AdminService {
         SessionRepository::delete_all_for_user(&mut tx, &user.id).await?;
         tx.commit().await?;
 
+        Self::record_for_cli(pool, AuditEvent::on_user(audit::USER_PASSWORD_RESET, &user.id)).await;
+
         Ok(user)
     }
 
@@ -253,6 +267,12 @@ impl AdminService {
             .execute(pool)
             .await?;
 
+        let event = AuditEvent {
+            target_user_id: Some(&device.user_id),
+            ..AuditEvent::on_device(audit::DEVICE_DELETE, &device.id)
+        };
+        Self::record_for_cli(pool, event).await;
+
         Ok(device)
     }
 
@@ -263,6 +283,12 @@ impl AdminService {
         sqlx::query!("UPDATE clients SET is_active = 0 WHERE id = ?", device.id)
             .execute(pool)
             .await?;
+
+        let event = AuditEvent {
+            target_user_id: Some(&device.user_id),
+            ..AuditEvent::on_device(audit::DEVICE_REVOKE, &device.id)
+        };
+        Self::record_for_cli(pool, event).await;
 
         // Return updated device
         Self::find_device(pool, &device.id).await
