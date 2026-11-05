@@ -14,7 +14,7 @@ import type {
   SyncAccepted,
   SyncDeletion,
 } from '../types';
-import type { AttachmentWarning, InboxItem, SyncPushResponse } from '../types';
+import type { Attachment, AttachmentWarning, InboxItem, SyncPushResponse } from '../types';
 import { syncRepository } from './syncRepository';
 import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
@@ -1338,7 +1338,9 @@ class SyncService {
         const blob = base64ToArrayBuffer(attachment.data);
         await attachmentRepository.storeBlob(attachment.id, blob);
       } catch (error) {
+        // A pull that moves on won't send this again, so vault health has to know
         console.error(`[SyncService] Failed to download attachment ${attachment.id}:`, error);
+        recordRejectedRemoteRecord('attachment', attachment.id, 'could not be stored');
       }
     }
   }
@@ -1359,27 +1361,14 @@ class SyncService {
       );
 
       if (!existingVersion) {
-        await versionRepository.createVersion(
-          {
-            id: serverVersion.noteId,
-            content: serverVersion.content,
-            // Older rows on the server are in either format, depending on the client
-            tags: await syncToStorage(serverVersion.tags, masterKey),
-            attachments: serverVersion.attachments,
-            version: serverVersion.version,
-            syntaxLanguage: serverVersion.syntaxLanguage,
-            wordWrap: serverVersion.wordWrap,
-            createdAt: serverVersion.createdAt,
-            modifiedAt: serverVersion.createdAt,
-            pinned: false,
-            deleted: false,
-            syncedAt: serverVersion.syncedAt,
-          } as Note,
-          {
-            syncedAt: serverVersion.syncedAt,
-            reason: serverVersion.reason as 'sync' | 'manual-sync',
-          }
-        );
+        await versionRepository.storeRemoteVersion({
+          ...serverVersion,
+          // Older rows on the server are in either format, depending on the client
+          tags: await syncToStorage(serverVersion.tags, masterKey),
+          attachments: serverVersion.attachments as Attachment[],
+          // Per device, like a note's. A server mustn't be able to turn a preview on.
+          showPreview: undefined,
+        });
       }
     }
   }

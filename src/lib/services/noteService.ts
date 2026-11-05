@@ -674,17 +674,22 @@ class NoteService {
   }
 
   /**
-   * Purge old deleted notes (older than specified days)
+   * Purge notes that have been in the bin on this device for the given number of days.
+   *
+   * The time is this device's own. deletedAt can come from a server, which could then
+   * have a note purged at the next unlock without it ever sitting in the bin. So a
+   * note's time starts when this first finds it there, and a note already in the bin
+   * gets its full time.
    */
   async purgeOldDeletedNotes(daysOld: number = 30): Promise<number> {
-    const notes = await noteRepository.getDeleted();
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysOld);
-    const cutoffISO = cutoffDate.toISOString();
+    const now = new Date();
+    const cutoff = now.getTime() - daysOld * 24 * 60 * 60 * 1000;
 
     let purgedCount = 0;
-    for (const note of notes) {
-      if (note.deletedAt && note.deletedAt < cutoffISO) {
+    for (const note of await noteRepository.getDeleted()) {
+      if (!note.binnedAt) {
+        await noteRepository.update({ ...note, binnedAt: now.toISOString() }, false, true);
+      } else if (Date.parse(note.binnedAt) < cutoff) {
         await this.permanentlyDeleteNote(note.id);
         purgedCount++;
       }

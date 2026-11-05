@@ -145,6 +145,7 @@ class IndexedDBNoteRepository implements NoteRepository {
     note.deleted = false;
     note.deletedAt = undefined;
     note.deletionHeld = undefined;
+    note.binnedAt = undefined;
     await this.update(note);
   }
 

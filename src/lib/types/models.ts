@@ -36,6 +36,7 @@ export interface Note {
   serverHash?: string; // Local-only: the hash the server held when this note last became unsynced
   needsSync?: boolean; // Local-only flag indicating note needs to be synced (never sent to server)
   deletionHeld?: boolean; // Local-only: in the bin because a server deleted too many at once
+  binnedAt?: string; // Local-only: when this device found it in the bin, which starts its 30 days
 }
 
 /**

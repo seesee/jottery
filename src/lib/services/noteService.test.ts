@@ -461,3 +461,67 @@ describe('duplicateNote', () => {
   });
 });
 
+describe('purgeOldDeletedNotes', () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const daysAgo = (days: number) => new Date(Date.now() - days * DAY).toISOString();
+
+  beforeEach(async () => {
+    const { masterKey } = await initTestDB();
+    keyManager.setMasterKey({ key: masterKey, keyBytes: new Uint8Array(32), derivedAt: Date.now() });
+  });
+
+  afterEach(async () => {
+    keyManager.clearMasterKey();
+    await cleanupTestDB();
+  });
+
+  async function inTheBin(fields: Partial<Note>) {
+    const { id } = await noteService.createNote('text');
+    const note = await noteRepository.getById(id);
+    await noteRepository.update({ ...note!, deleted: true, ...fields }, false, true);
+    return id;
+  }
+
+  it('removes a note that has been in the bin here for 30 days', async () => {
+    const id = await inTheBin({ deletedAt: daysAgo(31), binnedAt: daysAgo(31) });
+
+    expect(await noteService.purgeOldDeletedNotes()).toBe(1);
+
+    expect(await noteRepository.getById(id)).toBeFalsy();
+  });
+
+  it('tells the server, so that it goes from other devices too', async () => {
+    const id = await inTheBin({ deletedAt: daysAgo(31), binnedAt: daysAgo(31), syncedAt: daysAgo(40) });
+
+    await noteService.purgeOldDeletedNotes();
+
+    expect((await noteRepository.getPendingDeletions()).map(deletion => deletion.id)).toContain(id);
+  });
+
+  it('leaves one that has been there less time', async () => {
+    const id = await inTheBin({ deletedAt: daysAgo(29), binnedAt: daysAgo(29) });
+
+    expect(await noteService.purgeOldDeletedNotes()).toBe(0);
+
+    expect(await noteRepository.getById(id)).toBeTruthy();
+  });
+
+  it('does not trust deletedAt, which a server can set, so nothing skips the bin', async () => {
+    const id = await inTheBin({ deletedAt: daysAgo(90) });
+
+    expect(await noteService.purgeOldDeletedNotes()).toBe(0);
+
+    const note = await noteRepository.getById(id);
+    expect(note).toBeTruthy();
+    expect(Date.now() - Date.parse(note!.binnedAt as string)).toBeLessThan(60_000);
+  });
+
+  it('starts the clock again for a note restored and deleted later', async () => {
+    const id = await inTheBin({ deletedAt: daysAgo(31), binnedAt: daysAgo(31) });
+
+    await noteRepository.restore(id);
+
+    expect((await noteRepository.getById(id))?.binnedAt).toBeUndefined();
+  });
+});
+

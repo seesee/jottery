@@ -1491,6 +1491,55 @@ describe('sync protocol', () => {
     });
   });
 
+  describe('a version from the server', () => {
+    async function pulledVersion(overrides: Record<string, unknown> = {}) {
+      const { versionRepository } = await import('./versionRepository');
+      const version = {
+        versionKey: `${ID(1)}:3`, noteId: ID(1), version: 3, createdAt: NOW, syncedAt: NOW,
+        content: await encrypted('old text'), tags: [], attachments: [], reason: 'sync',
+        contentHash: HASH('d'), parentHash: HASH('e'), showPreview: true, color: 'red', ...overrides,
+      };
+      serve(() => ({ versions: [version as never] }));
+
+      await syncService.syncNow();
+
+      return versionRepository.getVersion(ID(1), 3);
+    }
+
+    it('keeps its hashes, or a later push would send it without them', async () => {
+      const stored = await pulledVersion();
+
+      expect(stored?.contentHash).toBe(HASH('d'));
+      expect(stored?.parentHash).toBe(HASH('e'));
+    });
+
+    it('keeps its own date, not the time it arrived', async () => {
+      expect((await pulledVersion())?.createdAt).toBe(NOW);
+    });
+
+    it('keeps its colour', async () => {
+      expect((await pulledVersion())?.color).toBe('red');
+    });
+
+    it('takes no preview setting, which stays per device so that a server cannot turn one on', async () => {
+      expect((await pulledVersion())?.showPreview).toBeUndefined();
+    });
+  });
+
+  describe('an attachment that cannot be stored', () => {
+    it('is reported, as the next pull will not send it again', async () => {
+      const { attachmentRepository } = await import('./attachmentRepository');
+      const { rejectedRemoteRecords } = await import('./vaultHealthService');
+      rejectedRemoteRecords.set([]);
+      vi.spyOn(attachmentRepository, 'storeBlob').mockRejectedValue(new Error('quota'));
+      serve(() => ({ attachments: [{ id: ID(70), data: 'AAAA' }] }));
+
+      await syncService.syncNow();
+
+      expect(get(rejectedRemoteRecords).map(record => record.kind)).toContain('attachment');
+    });
+  });
+
   describe('the inbox', () => {
     const item = { id: ID(50), content: 'x', tags: [], createdAt: NOW, sizeBytes: 1 };
 

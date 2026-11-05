@@ -8,6 +8,7 @@ import type { BackupData } from './backupService';
 import { encryptionRepository } from './encryptionRepository';
 import { settingsRepository } from './settingsRepository';
 import { noteRepository } from './noteRepository';
+import { noteService } from './noteService';
 import { syncRepository } from './syncRepository';
 import { savedSearchRepository } from './savedSearchRepository';
 import { cryptoService } from './crypto';
@@ -211,6 +212,10 @@ export async function unlock(password: string): Promise<void> {
   // Make sure other devices can onboard: the server needs a copy of the key.
   // Runs in the background so a slow or offline server never delays unlock.
   void ensureServerWrappedKey(password);
+
+  noteService.purgeOldDeletedNotes().catch(error => {
+    console.warn('[Unlock] Could not empty old notes from the recycle bin:', error);
+  });
 
   // Setup auto-lock (disabled if rememberPassword is enabled)
   if (settings.rememberPassword) {
