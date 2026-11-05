@@ -92,6 +92,10 @@ pub struct SyncPushResponse {
     /// surface the gap to the user.
     #[serde(rename = "attachmentWarnings", skip_serializing_if = "Option::is_none")]
     pub attachment_warnings: Option<Vec<AttachmentWarning>>,
+    /// Pushed deletions refused because the note has a newer edit. The note
+    /// stays, and comes back to the pushing device on its next pull.
+    #[serde(rename = "rejectedDeletions")]
+    pub rejected_deletions: Vec<String>,
 }
 
 /// One accepted note whose attachment references have no stored data.

@@ -33,6 +33,20 @@ const LAST_SYNC_OVERLAP_MINUTES: i64 = 5;
 
 const CURSOR_PREFIX: &str = "v1.";
 
+/// Whether an edit made at `edit` wins over a deletion made at `deletion`.
+///
+/// The same rule applies whichever arrives first, so devices agree. Clients
+/// format times differently, so these must be compared as instants, not as
+/// text. A time that can't be read can't prove the edit is older, so the edit
+/// wins: keeping a note can be undone, deleting it can't.
+fn edit_wins_over_deletion(edit: &str, deletion: &str) -> bool {
+    let parse = |time: &str| chrono::DateTime::parse_from_rfc3339(time).ok();
+    match (parse(edit), parse(deletion)) {
+        (Some(edit), Some(deletion)) => edit > deletion,
+        _ => true,
+    }
+}
+
 fn encode_cursor(seq: i64) -> String {
     format!("{CURSOR_PREFIX}{seq}")
 }
@@ -205,7 +219,7 @@ pub async fn push(
         .await?;
 
         if let Some(tombstone) = tombstone {
-            if note.modified_at > tombstone.deleted_at {
+            if edit_wins_over_deletion(&note.modified_at, &tombstone.deleted_at) {
                 // Edit postdates the deletion - resurrect the note. Clear
                 // the tombstone first so the upsert below (which finds no
                 // existing row in `notes`) inserts a fresh row, and other
@@ -716,7 +730,33 @@ pub async fn push(
 
     // Process hard deletions (notes permanently removed from client's recycle bin)
     let mut deletions_applied = false;
+    let mut rejected_deletions = Vec::new();
     for deletion in push_req.deletions {
+        let existing = sqlx::query_scalar!(
+            "SELECT modified_at FROM notes WHERE id = ? AND user_id = ?",
+            deletion.id,
+            client_info.user_id
+        )
+        .fetch_optional(&mut *tx)
+        .await?;
+
+        // A deletion older than the note's last edit loses, as it would had the
+        // edit arrived second. Re-announcing the note returns it to the device
+        // that deleted it, on any client version.
+        if let Some(modified_at) = existing {
+            if edit_wins_over_deletion(&modified_at, &deletion.deleted_at) {
+                tracing::info!(
+                    "Refusing deletion of note {} - edit ({}) postdates deletion ({})",
+                    deletion.id,
+                    modified_at,
+                    deletion.deleted_at
+                );
+                announce_note(&mut tx, &client_info.user_id, &deletion.id, &now).await?;
+                rejected_deletions.push(deletion.id);
+                continue;
+            }
+        }
+
         // Delete the note from the notes table
         let delete_result = sqlx::query!(
             "DELETE FROM notes WHERE id = ? AND user_id = ?",
@@ -762,7 +802,11 @@ pub async fn push(
 
     // Broadcast sync notification to other connected devices of this user
     // This triggers real-time sync via SSE for any other connected clients
-    if !accepted.is_empty() || deletions_applied || searches_changed {
+    if !accepted.is_empty()
+        || deletions_applied
+        || searches_changed
+        || !rejected_deletions.is_empty()
+    {
         use crate::api::sse::SyncNotification;
         let _ = state.sync_broadcast.send(SyncNotification {
             user_id: client_info.user_id.clone(),
@@ -835,6 +879,7 @@ pub async fn push(
         rejected,
         errors,
         attachment_warnings,
+        rejected_deletions,
     }))
 }
 
