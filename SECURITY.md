@@ -149,7 +149,7 @@ Before deploying Jottery to production, complete this checklist:
 | `SESSION_EXPIRY_DAYS` | `7` | Lower values reduce session hijacking window |
 | `CORS_ALLOWED_ORIGINS` | *(none)* | Restrict to trusted domains |
 | `TRUSTED_PROXY_HOPS` | `0` (`1` in the Docker image) | Set to the number of proxies in front of the server. Too low and clients share one rate limit; too high and they can forge their address |
-| `MAX_PAYLOAD_SIZE` | `5242880` | Limits upload size (DoS prevention) |
+| `MAX_PAYLOAD_SIZE` | `104857600` | Limits request size (DoS prevention). Each user's upload limit still applies beneath it |
 | `ENABLE_HSTS` | `false` | Set to `true` on HTTPS deployments so browsers refuse to downgrade to plain HTTP |
 | `ADMIN_ALLOWED_IPS` | *(everyone)* | Limits who can reach the admin dashboard and its API |
 
