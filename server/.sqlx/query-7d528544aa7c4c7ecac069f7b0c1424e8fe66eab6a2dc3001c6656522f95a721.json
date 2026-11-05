@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, is_admin, is_active, must_change_password FROM users WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "is_admin",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "is_active",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "must_change_password",
+        "ordinal": 3,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "7d528544aa7c4c7ecac069f7b0c1424e8fe66eab6a2dc3001c6656522f95a721"
+}

@@ -1,0 +1,54 @@
+import { describe, it, expect } from 'vitest';
+import { ApiError } from './dashboardClient';
+import { describeError } from './apiErrors';
+
+// Shows which key was chosen, and with what, instead of a translation
+const t = (key: string, options?: { values?: Record<string, string | number> }) =>
+  options?.values ? `${key}:${JSON.stringify(options.values)}` : key;
+
+describe('describeError', () => {
+  it('translates server messages it knows', () => {
+    const err = new ApiError(400, 'New password must be different from the current one');
+    expect(describeError(err, t)).toBe('errors.passwordSameAsCurrent');
+  });
+
+  it('treats a 401 reaching a page as a wrong password, since expiry never does', () => {
+    expect(describeError(new ApiError(401, 'Unauthorized'), t)).toBe('errors.wrongPassword');
+  });
+
+  it('says how long to wait when the server does', () => {
+    const err = new ApiError(429, 'Too many attempts. Try again in 30 seconds.', 'rate_limited', 30);
+    expect(describeError(err, t)).toBe('errors.rateLimited:{"seconds":30}');
+  });
+
+  it('still explains a 429 with no wait time', () => {
+    expect(describeError(new ApiError(429, ''), t)).toBe('errors.tooManyAttempts');
+  });
+
+  it('keeps a server message it has no translation for', () => {
+    expect(describeError(new ApiError(400, 'Storage quota must be between 1 and 100000 MB'), t)).toBe(
+      'Storage quota must be between 1 and 100000 MB',
+    );
+  });
+
+  it('explains a 403 with no body, which the middleware sends', () => {
+    expect(describeError(new ApiError(403, ''), t)).toBe('errors.forbidden');
+  });
+
+  it('never returns nothing for an empty response', () => {
+    expect(describeError(new ApiError(500, ''), t)).toBe('errors.unknown');
+  });
+
+  it('prefers the page\'s own fallback over the generic one', () => {
+    expect(describeError(new ApiError(500, ''), t, 'users.failedToLoad')).toBe('users.failedToLoad');
+  });
+
+  it('reports a failed fetch as a connection problem', () => {
+    expect(describeError(new TypeError('Failed to fetch'), t)).toBe('errors.network');
+  });
+
+  it('does not show the text of anything else that was thrown', () => {
+    expect(describeError(new Error('internal detail'), t)).toBe('errors.unknown');
+    expect(describeError('a string', t, 'dashboard.failedToLoad')).toBe('dashboard.failedToLoad');
+  });
+});

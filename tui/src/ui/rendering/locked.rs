@@ -3,7 +3,7 @@
 use ratatui::Frame;
 use ratatui::layout::{Alignment, Constraint, Direction, Layout};
 use ratatui::style::Style;
-use ratatui::widgets::{Block, Borders, Paragraph};
+use ratatui::widgets::{Block, Borders, Paragraph, Wrap};
 use rust_i18n::t;
 
 use crate::password_storage::StorageBackendType;
@@ -48,6 +48,15 @@ pub fn render_locked(app: &App, frame: &mut Frame) {
         .split(size);
 
     frame.render_widget(block, size);
+
+    // Everyone with a plain SQLite build should know what the password doesn't cover
+    if !app.database_encrypted {
+        let notice = Paragraph::new(t!("password.no_file_encryption"))
+            .style(Style::default().fg(app.color_scheme.muted))
+            .alignment(Alignment::Center)
+            .wrap(Wrap { trim: true });
+        frame.render_widget(notice, chunks[chunks.len() - 1]);
+    }
 
     // Password field - accent color unless confirming password on new database
     let password_style = if !(app.is_new_database && app.password_confirm_focused) {

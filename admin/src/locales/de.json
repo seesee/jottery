@@ -46,6 +46,23 @@
     "confirmTitle": "Abmeldung bestätigen",
     "confirmMessage": "Sind Sie sicher, dass Sie sich abmelden möchten?"
   },
+  "errors": {
+    "unknown": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+    "network": "Der Server ist nicht erreichbar. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "forbidden": "Sie haben dafür keine Berechtigung.",
+    "wrongPassword": "Aktuelles Passwort ist falsch",
+    "rateLimited": "Zu viele Versuche. Versuchen Sie es in {seconds} Sekunden erneut.",
+    "tooManyAttempts": "Zu viele Versuche. Bitte warten Sie und versuchen Sie es erneut.",
+    "passwordTooShort": "Neues Passwort muss mindestens 12 Zeichen lang sein",
+    "passwordSameAsCurrent": "Das neue Passwort muss sich vom aktuellen unterscheiden"
+  },
+  "session": {
+    "expired": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an."
+  },
+  "forcedPasswordChange": {
+    "title": "Ändern Sie Ihr Passwort",
+    "description": "Sie müssen ein neues Passwort wählen, bevor Sie fortfahren können. Es muss mindestens 12 Zeichen lang sein."
+  },
   "dashboard": {
     "title": "Dashboard",
     "loadingStats": "Statistiken werden geladen...",
@@ -248,6 +265,7 @@
       "errors": {
         "invalidCredentials": "Ungültige E-Mail oder Passwort",
         "accountInactive": "Ihr Konto ist inaktiv. Bitte kontaktieren Sie den Administrator.",
+        "accountPending": "Ihr Konto wartet auf die Freigabe durch einen Administrator.",
         "unexpected": "Ein unerwarteter Fehler ist aufgetreten",
         "statusCheckFailed": "Failed to check status. Please try again."
       },

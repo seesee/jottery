@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 
 use aes_gcm::{
-    aead::{Aead, AeadCore, KeyInit, OsRng, rand_core::RngCore},
+    aead::{Aead, AeadCore, KeyInit, OsRng, Payload, rand_core::RngCore},
     Aes256Gcm, Nonce,
 };
 use anyhow::{Context, Result};
@@ -28,6 +28,15 @@ pub const WRAPPING_KDF_VERSION: u32 = 1;
 pub const MAX_HASH_CHAIN_LENGTH: usize = 50;
 
 type NonceType = [u8; NONCE_LENGTH];
+
+/// A nonce read back from stored or received data. `Nonce::from_slice` panics on
+/// the wrong length, and that length comes from whoever wrote the ciphertext.
+fn nonce_from(bytes: &[u8]) -> Result<&Nonce<<Aes256Gcm as AeadCore>::NonceSize>> {
+    if bytes.len() != NONCE_LENGTH {
+        anyhow::bail!("Invalid nonce length: {} (expected {})", bytes.len(), NONCE_LENGTH);
+    }
+    Ok(Nonce::from_slice(bytes))
+}
 
 /// Cryptography service for encryption/decryption operations
 pub struct CryptoService;
@@ -105,7 +114,7 @@ impl CryptoService {
             .decode(&encrypted.nonce)
             .context("Invalid base64 nonce")?;
 
-        let nonce = Nonce::from_slice(&nonce_bytes);
+        let nonce = nonce_from(&nonce_bytes)?;
 
         let plaintext = cipher
             .decrypt(nonce, ciphertext.as_ref())
@@ -152,13 +161,46 @@ impl CryptoService {
             .decode(&encrypted.nonce)
             .context("Invalid base64 nonce")?;
 
-        let nonce = Nonce::from_slice(&nonce_bytes);
+        let nonce = nonce_from(&nonce_bytes)?;
 
         let plaintext = cipher
             .decrypt(nonce, ciphertext.as_ref())
             .map_err(|_| anyhow::anyhow!("Decryption failed. Invalid key or corrupted data."))?;
 
         Ok(plaintext)
+    }
+
+    /// Encrypt binary data, authenticating `aad` along with it
+    pub fn encrypt_binary_with_aad(&self, data: &[u8], aad: &[u8], key: &[u8; KEY_LENGTH]) -> Result<EncryptedData> {
+        let cipher = Aes256Gcm::new(key.into());
+        let nonce = self.generate_nonce();
+
+        let ciphertext = cipher
+            .encrypt(Nonce::from_slice(&nonce), Payload { msg: data, aad })
+            .map_err(|_| anyhow::anyhow!("Encryption failed"))?;
+
+        Ok(EncryptedData {
+            ciphertext: general_purpose::STANDARD.encode(&ciphertext),
+            nonce: general_purpose::STANDARD.encode(nonce),
+            tag: String::new(),
+        })
+    }
+
+    /// Decrypt binary data that was encrypted with `aad`
+    pub fn decrypt_binary_with_aad(&self, encrypted: &EncryptedData, aad: &[u8], key: &[u8; KEY_LENGTH]) -> Result<Vec<u8>> {
+        let cipher = Aes256Gcm::new(key.into());
+
+        let ciphertext = general_purpose::STANDARD
+            .decode(&encrypted.ciphertext)
+            .context("Invalid base64 ciphertext")?;
+
+        let nonce_bytes = general_purpose::STANDARD
+            .decode(&encrypted.nonce)
+            .context("Invalid base64 nonce")?;
+
+        cipher
+            .decrypt(nonce_from(&nonce_bytes)?, Payload { msg: &ciphertext, aad })
+            .map_err(|_| anyhow::anyhow!("Decryption failed. Invalid key or corrupted data."))
     }
 
     /// Generate random salt for key derivation (32 bytes)
@@ -317,6 +359,22 @@ mod tests {
     fn test_password() -> String {
         std::env::var("JOTTERY_TEST_PASSWORD")
             .unwrap_or_else(|_| "test_password_placeholder".to_string())
+    }
+
+    #[test]
+    fn a_nonce_of_the_wrong_length_is_an_error_not_a_panic() {
+        let service = CryptoService::new();
+        let key = service.generate_master_key();
+
+        for length in [0usize, 1, 11, 13, 32] {
+            let mut text = service.encrypt_text("secret", &key).unwrap();
+            text.nonce = general_purpose::STANDARD.encode(vec![0u8; length]);
+            assert!(service.decrypt_text(&text, &key).is_err());
+
+            let mut binary = service.encrypt_binary(b"secret", &key).unwrap();
+            binary.nonce = general_purpose::STANDARD.encode(vec![0u8; length]);
+            assert!(service.decrypt_binary(&binary, &key).is_err());
+        }
     }
 
     #[test]

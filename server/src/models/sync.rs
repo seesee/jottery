@@ -12,6 +12,11 @@ pub struct SyncPushRequest {
     /// Hard-deleted note IDs from client (when emptying trash)
     #[serde(default)]
     pub deletions: Vec<SyncDeletion>,
+    /// Each pushed note's `attachments` is its complete list, so anything else
+    /// the server has for an accepted note is removed. Off by default because
+    /// some older clients send empty lists by mistake.
+    #[serde(rename = "attachmentsAuthoritative", default)]
+    pub attachments_authoritative: bool,
 }
 
 /// Hard deletion record for sync
@@ -87,6 +92,10 @@ pub struct SyncPushResponse {
     /// surface the gap to the user.
     #[serde(rename = "attachmentWarnings", skip_serializing_if = "Option::is_none")]
     pub attachment_warnings: Option<Vec<AttachmentWarning>>,
+    /// Pushed deletions refused because the note has a newer edit. The note
+    /// stays, and comes back to the pushing device on its next pull.
+    #[serde(rename = "rejectedDeletions")]
+    pub rejected_deletions: Vec<String>,
 }
 
 /// One accepted note whose attachment references have no stored data.
@@ -161,9 +170,14 @@ pub struct SyncRejected {
 pub struct SyncPullRequest {
     #[serde(rename = "lastSyncAt")]
     pub last_sync_at: Option<String>,
-    #[serde(rename = "knownNoteIds")]
+    /// Opaque position from a previous `nextCursor`. Present, even as an empty
+    /// string, it selects cursor mode, which ignores `offset`. See
+    /// docs/sync-protocol.md.
+    #[serde(default)]
+    pub cursor: Option<String>,
+    #[serde(rename = "knownNoteIds", default)]
     pub known_note_ids: Vec<String>,
-    #[serde(rename = "knownAttachmentIds")]
+    #[serde(rename = "knownAttachmentIds", default)]
     pub known_attachment_ids: Vec<String>,
     // Pagination support for large datasets
     #[serde(default)]
@@ -188,6 +202,10 @@ pub struct SyncPullResponse {
     pub total_count: i64,
     #[serde(rename = "hasMore")]
     pub has_more: bool,
+    /// The position to send as `cursor` next. Only present in cursor mode, so
+    /// its absence tells a client that the server doesn't support cursors.
+    #[serde(rename = "nextCursor", skip_serializing_if = "Option::is_none")]
+    pub next_cursor: Option<String>,
     // Inbox items (unencrypted, pending acceptance)
     #[serde(rename = "inboxItems", skip_serializing_if = "Option::is_none")]
     pub inbox_items: Option<Vec<super::inbox::InboxItemResponse>>,

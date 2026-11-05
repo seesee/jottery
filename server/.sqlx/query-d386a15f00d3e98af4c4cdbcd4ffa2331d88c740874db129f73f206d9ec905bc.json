@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT email, password_hash, must_change_password, last_login_at FROM users WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "email",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "password_hash",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "must_change_password",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "last_login_at",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "d386a15f00d3e98af4c4cdbcd4ffa2331d88c740874db129f73f206d9ec905bc"
+}

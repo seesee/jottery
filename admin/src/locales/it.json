@@ -46,6 +46,23 @@
     "confirmTitle": "Conferma uscita",
     "confirmMessage": "Sei sicuro di voler uscire?"
   },
+  "errors": {
+    "unknown": "Si è verificato un errore. Riprova.",
+    "network": "Impossibile raggiungere il server. Controlla la connessione e riprova.",
+    "forbidden": "Non hai l'autorizzazione per farlo.",
+    "wrongPassword": "La password attuale non è corretta",
+    "rateLimited": "Troppi tentativi. Riprova tra {seconds} secondi.",
+    "tooManyAttempts": "Troppi tentativi. Attendi e riprova.",
+    "passwordTooShort": "La nuova password deve essere di almeno 12 caratteri",
+    "passwordSameAsCurrent": "La nuova password deve essere diversa da quella attuale"
+  },
+  "session": {
+    "expired": "La sessione è scaduta. Accedi di nuovo."
+  },
+  "forcedPasswordChange": {
+    "title": "Cambia la password",
+    "description": "Devi scegliere una nuova password per continuare. Deve contenere almeno 12 caratteri."
+  },
   "dashboard": {
     "title": "Dashboard",
     "loadingStats": "Caricamento statistiche...",
@@ -248,6 +265,7 @@
       "errors": {
         "invalidCredentials": "Email o password non validi",
         "accountInactive": "Il tuo account è inattivo. Contatta l'amministratore.",
+        "accountPending": "Il tuo account è in attesa dell'approvazione di un amministratore.",
         "unexpected": "Si è verificato un errore imprevisto",
         "statusCheckFailed": "Failed to check status. Please try again."
       },

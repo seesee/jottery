@@ -18,7 +18,7 @@ GLIBC="${JOTTERY_MIN_GLIBC:-2.31}"
 build() {
   local target="$1" name="$2"
   echo "=== Linux ${name} (bundled SQLite, glibc >= ${GLIBC}) ==="
-  cargo zigbuild --release --target "${target}.${GLIBC}"
+  cargo zigbuild --release --locked --target "${target}.${GLIBC}"
   cp "target/${target}/release/jottery" "${RELEASE_DIR}/jottery-linux-${name}"
 }
 

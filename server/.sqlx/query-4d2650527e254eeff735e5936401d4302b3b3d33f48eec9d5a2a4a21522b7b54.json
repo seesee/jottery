@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT version_key, content, reason FROM note_versions WHERE version_key = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "version_key",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "content",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "reason",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4d2650527e254eeff735e5936401d4302b3b3d33f48eec9d5a2a4a21522b7b54"
+}

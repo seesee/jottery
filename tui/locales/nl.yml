@@ -23,11 +23,11 @@ password:
   change_success: Wachtwoord succesvol gewijzigd
   change_title: "Wachtwoord wijzigen"
   change_enter_current: "Voer uw huidige wachtwoord in:"
-  change_enter_new: "Voer een nieuw wachtwoord in (min. 12 tekens):"
+  change_enter_new: "Voer een nieuw wachtwoord in (min. 8 tekens):"
   change_confirm_new: "Bevestig het nieuwe wachtwoord:"
   change_current_required: "Voer uw huidige wachtwoord in"
   change_wrong_current: "Huidig wachtwoord is onjuist"
-  change_too_short: "Nieuw wachtwoord moet minimaal 12 tekens bevatten"
+  change_too_short: "Nieuw wachtwoord moet minimaal 8 tekens bevatten"
   change_mismatch: "Wachtwoorden komen niet overeen"
   change_failed: "Wachtwoord wijzigen mislukt"
   remember: Wachtwoord onthouden
@@ -46,6 +46,10 @@ password:
   enter_to_enable: "Voer uw wachtwoord in om automatisch ontgrendelen te activeren:"
   create_title: Wachtwoord aanmaken
   unlock_title: Ontgrendelen
+  too_short: "Het wachtwoord moet minstens %{min} tekens bevatten"
+  same_as_account: "Gebruik verschillende wachtwoorden. De server ziet je accountwachtwoord, dus dat mag niet ook je notities openen."
+  same_as_account_warning: "Je accountwachtwoord is hetzelfde als je notitiewachtwoord, dus de server zou je notities kunnen lezen. Wijzig je notitiewachtwoord in Instellingen."
+  no_file_encryption: "Deze build versleutelt het databasebestand niet. Notities en tags blijven versleuteld, maar je e-mailadres, serveradres, bijlagenamen en datums niet."
 menu:
   notes: Notities
   new_note: Nieuwe notitie
@@ -78,6 +82,13 @@ note:
   info: Notitie-info
   info_title: Notitie-informatie
   untitled: "Zonder titel"
+  save_retry_hint: "q: opnieuw opslaan | e: bewerken | Esc: wijzigingen verwerpen"
+  empty_bin_title: "Prullenbak legen"
+  empty_bin_confirm: "%{count} notities in de prullenbak definitief verwijderen?"
+  empty_bin_warning: "Ze worden ook van de server en je andere apparaten verwijderd. Dit kan niet ongedaan worden gemaakt."
+  bin_emptied: "%{count} notities definitief verwijderd"
+  locked_cannot_archive: "Vergrendelde notitie kan niet worden gearchiveerd"
+  unreadable: "%{count} notities in deze kluis kunnen niet worden gelezen"
 archive:
   view: "Archief bekijken"
   title: "Archief"
@@ -115,6 +126,18 @@ attachment:
   delete: Bijlage verwijderen
   no_attachments: Geen bijlagen
   total: "%{count} bijlagen"
+  press_enter: "Druk op Enter om door te gaan..."
+  opened: "Bestand geopend in de standaardtoepassing."
+  no_opener: "Dit systeem heeft geen programma om bestanden te openen. Bewaar de bijlage in plaats daarvan met S."
+  delete_failed: "Bijlage verwijderen mislukt: %{error}"
+  deleted: "Verwijderd: %{name}"
+  exists: "%{path} bestaat al. Kies een andere naam."
+  saved: "Opgeslagen in %{path}"
+  save_failed: "Bijlage opslaan mislukt: %{error}"
+  added: "%{name} bijgevoegd"
+  too_large: "Het bestand is te groot. De limiet is %{max_mb} MB."
+  unsafe_title: "Dit bestand wordt niet geopend"
+  unsafe_body: "Dit type bestand openen kan code van de afzender uitvoeren. In plaats daarvan opslaan?"
 version:
   history: Versiegeschiedenis
   restore: Versie herstellen
@@ -188,6 +211,8 @@ sync:
   reload_failed: "Synchronisatie geslaagd maar notities opnieuw laden mislukt: %{error}"
   note: notitie
   notes: notities
+  skipped_notes: "%{count} items van de server konden niet worden gelezen en zijn overgeslagen"
+  rejected_notes: "%{count} notities conflicteren met de server. Open Jottery om ze op te lossen."
 
 # Postvak IN
 inbox:
@@ -233,6 +258,7 @@ register:
   device_failed: Apparaatregistratie mislukt
   cleared: Registratie gewist. U kunt opnieuw beginnen.
   pending_status: In afwachting van goedkeuring
+  password_differs: "Dit moet anders zijn dan je notitiewachtwoord."
 color_scheme:
   default_dark: Standaard donker
   default_light: Standaard licht
@@ -386,8 +412,8 @@ help:
   s_q_close_desc: Instellingenpaneel sluiten
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: Bijlagenpaneel focussen (j/k om te navigeren, Enter om te bekijken, d om te verwijderen)
-  A_add_attachment_key: A
-  A_add_attachment_desc: Bijlage toevoegen (bestandspad invoeren)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: Bijlage toevoegen (bestandspad invoeren)
   a_view_attachment_key: a + nummer
   a_view_attachment_desc: Bijlage bekijken (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -450,6 +476,14 @@ help:
   click_tags_desc: Labelbewerkmodus activeren
   scroll_key: Scrollwiel
   scroll_desc: Voorbeeld omhoog/omlaag scrollen
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Jottery vergrendelen"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Geselecteerde bijlage in een bestand opslaan"
+  z_archive_key: "z"
+  z_archive_desc: "Geselecteerde notitie archiveren (of terughalen in archiefmodus)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Geselecteerde notities archiveren"
 cli:
   # Basis (op sommige plaatsen gebruikt)
   list: Notities weergeven
@@ -513,6 +547,14 @@ cli:
   # Uitvoerberichten
   notes_count: "%{count} notities"
   results_count: "%{count} resultaten: '%{query}'"
+  attach_about: "Een bestand aan een notitie toevoegen"
+  save_attachment_about: "Een bijlage van een notitie in een bestand opslaan"
+  archive_about: "Een notitie archiveren"
+  unarchive_about: "Een notitie uit het archief terughalen"
+  note_id_help: "Notitie-ID (gedeeltelijke overeenkomst mogelijk)"
+  attach_file_help: "Bestand om toe te voegen"
+  attachment_number_help: "Welke bijlage, genummerd zoals bij show"
+  archived_help: "In plaats daarvan gearchiveerde notities tonen"
 status:
   locked: Vergrendeld
   unlocked: Ontgrendeld
@@ -534,6 +576,7 @@ bulk:
   enter_export_path: "Exportpad:"
   add_tags_to: Labels toevoegen aan
   export_notes_to: Exporteren
+  archived: "%{count} notities gearchiveerd"
 time:
   just_now: zojuist
   minutes_ago: "%{count} minuten geleden"
@@ -568,6 +611,8 @@ backup:
   restoring: "Gegevens herstellen..."
   restored: "Hersteld"
   key_not_in_backup: "Deze back-up is gemaakt met een oudere versie van Jottery en bevat de sleutel niet. Hij kan alleen worden hersteld in de kluis waaruit hij afkomstig is."
+  incomplete: "Deze back-up is onvolledig: %{count} items in de kluis konden niet worden gelezen en zijn weggelaten."
+  records_failed: "%{count} records in deze back-up konden niet worden hersteld. De rest wel."
 
 # Progress indicators
 progress:
@@ -591,6 +636,12 @@ ui:
   type: "Type:"
   modified: "Gewijzigd:"
   version: "Versie:"
+  save_attachment: "Bijlage opslaan (Tab: aanvullen, ↑↓: kiezen, Enter: bevestigen)"
+  path: "Pad"
+  attachments_hint: "Bijlagen: (Tab om te focussen)"
+  attachments_focused_hint: "Bijlagen: (Tab om te wisselen, j/k om te navigeren, Enter om te bekijken, S om op te slaan, d om te verwijderen)"
+  attachments_keys_hint: "'a' om te bekijken, '+' om toe te voegen, 'X' om de selectie te verwijderen"
+  attachment_viewer_hint: "↑/↓: navigeren │ 1-9: snel kiezen │ Enter: bekijken │ S: opslaan │ +: toevoegen │ d: verwijderen │ Esc: sluiten"
 
 # Statusbalk hulptekst
 status_bar:
@@ -640,8 +691,21 @@ status_bar:
   quick_select: "Snelselectie"
   view: "bekijken"
   restore_version: "Versie herstellen"
+  save: "opslaan"
+  add: "toevoegen"
 
 # Virtual tags
 tags:
   virtual:
     title: "titel"
+
+calc:
+  line_too_long: "⚠ Regel te lang om te berekenen (limiet %{max} bytes)"
+  numbers_only: "⚠ Calc werkt met getallen: tekst, tupels en ; worden niet berekend"
+  too_deep: "⚠ Te veel geneste haakjes (limiet %{max})"
+  gave_up: "Het berekenen van deze notitie duurde te lang, dus wordt ze zonder resultaten getoond."
+
+envelope:
+  unwrap_failed: "Je notitiewachtwoord kan de sleutel van dit account niet openen. Die is mogelijk door een oudere versie opgeslagen. Ontgrendel Jottery op een apparaat dat al verbonden is, dat lost het op, en probeer het opnieuw."
+  rekey_failed: "Je lokale notities konden niet naar de sleutel van dit account worden overgezet, dus er is niets gewijzigd: %{error}"
+  diverged: "De sleutel van dit apparaat wijkt af van die van het account. Notities van je andere apparaten worden hier mogelijk niet geopend."

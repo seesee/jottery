@@ -53,6 +53,27 @@ async function getReferencedAttachmentIds(): Promise<Set<string>> {
 }
 
 /**
+ * Delete the blobs for these attachments, unless a note or version still refers to
+ * them. A blob can be shared: combining notes reuses the originals' attachments, and
+ * version snapshots keep theirs. Call this after the reference being dropped has been
+ * saved, or it will count as still in use.
+ */
+export async function deleteUnreferencedAttachments(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+
+  const referenced = await getReferencedAttachmentIds();
+  for (const id of ids) {
+    if (referenced.has(id)) continue;
+
+    try {
+      await attachmentRepository.deleteAll(id);
+    } catch (error) {
+      console.error(`Failed to delete attachment blob ${id}:`, error);
+    }
+  }
+}
+
+/**
  * Get storage statistics including orphaned attachments
  */
 export async function getStorageStats(): Promise<StorageStats> {
@@ -210,5 +231,6 @@ export async function findDuplicateAttachments(): Promise<DuplicateStats> {
 export const storageCleanupService = {
   getStorageStats,
   cleanupOrphanedAttachments,
+  deleteUnreferencedAttachments,
   findDuplicateAttachments,
 };

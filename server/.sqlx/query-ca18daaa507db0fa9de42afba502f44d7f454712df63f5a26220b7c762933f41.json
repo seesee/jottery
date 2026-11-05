@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT\n            (SELECT COUNT(*) FROM users WHERE approved = 1 AND id != ?1) AS \"other_users!: i64\",\n            (SELECT COUNT(*) FROM clients) AS \"devices!: i64\",\n            (SELECT COUNT(*) FROM notes) AS \"notes!: i64\",\n            (SELECT last_login_at FROM users WHERE id = ?1) AS \"last_login: String\"",
+  "describe": {
+    "columns": [
+      {
+        "name": "other_users!: i64",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "devices!: i64",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "notes!: i64",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "last_login: String",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "ca18daaa507db0fa9de42afba502f44d7f454712df63f5a26220b7c762933f41"
+}

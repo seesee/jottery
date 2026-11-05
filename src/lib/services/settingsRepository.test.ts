@@ -8,6 +8,7 @@ import { DEFAULT_SETTINGS, type KeyboardShortcuts, type ColorPalette } from '../
 import { initTestDB, cleanupTestDB } from '../../test/db-utils';
 import { keyManager } from './keyManager';
 import { getDB, STORES } from './db';
+import { cryptoService } from './crypto';
 
 describe('settingsRepository', () => {
   let masterKey: CryptoKey;
@@ -674,5 +675,37 @@ describe('settingsRepository', () => {
       expect(retrieved.colorPalette?.red?.displayName).toBe('Important');
       expect(retrieved.tagColors).toEqual(tagColors);
     });
+  });
+});
+
+describe('colour names that fail to decrypt', () => {
+  beforeEach(async () => {
+    const { masterKey } = await initTestDB();
+    keyManager.setMasterKey({ key: masterKey, keyBytes: new Uint8Array(32), derivedAt: Date.now() });
+  });
+
+  afterEach(async () => {
+    keyManager.clearMasterKey();
+    await cleanupTestDB();
+  });
+
+  async function stored(displayName: string) {
+    const colorPalette = { red: { light: '#f00', dark: '#800', displayName } };
+    await getDB().put(STORES.SETTINGS, { ...DEFAULT_SETTINGS, colorPalette }, 'user-settings');
+    return (await settingsRepository.get()).colorPalette?.red?.displayName;
+  }
+
+  it('never shows ciphertext it could not open', async () => {
+    const other = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+    const ciphertext = JSON.stringify(await cryptoService.encryptText('secret', other));
+    expect(await stored(ciphertext)).toBeUndefined();
+  });
+
+  it('still reads an older plaintext name', async () => {
+    expect(await stored('Project Alpha')).toBe('Project Alpha');
+  });
+
+  it('still reads an older plaintext name that happens to be valid JSON', async () => {
+    expect(await stored('2026')).toBe('2026');
   });
 });

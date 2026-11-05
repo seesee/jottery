@@ -35,6 +35,22 @@ export const inboxCount = derived(inboxItems, $items => $items.length);
 // Sync state - prevents EditorPane from triggering sync during batch refresh
 export const isSyncRefreshing = writable<boolean>(false);
 
+/**
+ * Notes changed by something other than this editor. The open editor holds its own
+ * copy of the text, so without this it keeps stale content and the next autosave
+ * writes it over the newer note. Local changes such as pinning aren't announced:
+ * they don't touch the text, and treating them as remote would raise false conflicts.
+ *
+ * `resolved` means the user has just chosen a version, so the editor takes it even
+ * with an autosave pending.
+ */
+export interface RemoteNoteUpdate {
+  ids: string[];
+  resolved?: boolean;
+}
+
+export const remoteNoteUpdate = writable<RemoteNoteUpdate | null>(null);
+
 // Sync in progress indicator - for UI feedback
 export const isSyncing = writable<boolean>(false);
 

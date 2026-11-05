@@ -9,6 +9,7 @@ import { notes, clearMultiSelection, selectNote } from '../stores/appStore';
 import { searchService } from './searchService';
 import { get } from 'svelte/store';
 import { normaliseForComparison } from '../utils/stringUtils';
+import { compareTimestamps } from '../utils/timestamps';
 
 export interface BulkProgress {
   current: number;
@@ -366,7 +367,7 @@ export async function combineNotes(
   // Exclude locked notes - they cannot be modified/combined
   const selectedNotes = allNotes
     .filter((n) => noteIds.includes(n.id) && !n.locked)
-    .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+    .sort((a, b) => compareTimestamps(a.createdAt, b.createdAt));
 
   if (selectedNotes.length < 2) {
     throw new Error('At least 2 unlocked notes are required to combine');

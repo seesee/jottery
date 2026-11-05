@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM attachments_meta WHERE user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "592d3bd7ae2dd6d9196acf4124d46b05fb6e3282192609e996d7c2362cab8ac0"
+}

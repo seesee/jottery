@@ -7,20 +7,20 @@ mod models;
 mod password_storage;
 mod repository;
 mod sse;
+mod terminal_text;
 mod ui;
+mod vault;
 
 // Initialize rust-i18n with fallback to en-GB
 rust_i18n::i18n!("locales", fallback = "en-GB");
 
 use anyhow::{Context, Result};
-use base64::Engine as _;
 use rust_i18n::t;
 use clap::{Parser, Subcommand, CommandFactory, FromArgMatches};
 use std::path::{Path, PathBuf};
 use std::fs::OpenOptions;
 use std::sync::{Arc, Mutex};
 use std::io::{self, Read, Write};
-use std::process::Command;
 use std::env;
 use tempfile::NamedTempFile;
 use tracing::info;
@@ -28,7 +28,8 @@ use tracing::info;
 use crypto::CryptoService;
 use db::Database;
 use models::{Note, get_note_title, get_regular_tags};
-use repository::{NoteRepository, sync::SyncRepository, EncryptionRepository};
+use repository::{NoteRepository, sync::SyncRepository};
+use terminal_text::{errln, outln};
 use ui::{App, EventHandler, Tui};
 
 /// Detect and set locale from environment
@@ -80,6 +81,7 @@ fn build_translated_cli() -> clap::Command {
             .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
             .mut_arg("tag", |a| a.help(t!("cli.tag_filter_help").to_string()))
             .mut_arg("limit", |a| a.help(t!("cli.limit_help").to_string()))
+            .mut_arg("archived", |a| a.help(t!("cli.archived_help").to_string()))
     });
 
     cmd = cmd.mut_subcommand("search", |sub| {
@@ -90,6 +92,33 @@ fn build_translated_cli() -> clap::Command {
 
     cmd = cmd.mut_subcommand("show", |sub| {
         sub.about(t!("cli.show_about").to_string())
+            .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("attach", |sub| {
+        sub.about(t!("cli.attach_about").to_string())
+            .mut_arg("id", |a| a.help(t!("cli.note_id_help").to_string()))
+            .mut_arg("file", |a| a.help(t!("cli.attach_file_help").to_string()))
+            .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("save-attachment", |sub| {
+        sub.about(t!("cli.save_attachment_about").to_string())
+            .mut_arg("id", |a| a.help(t!("cli.note_id_help").to_string()))
+            .mut_arg("number", |a| a.help(t!("cli.attachment_number_help").to_string()))
+            .mut_arg("output", |a| a.help(t!("cli.output_help").to_string()))
+            .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("archive", |sub| {
+        sub.about(t!("cli.archive_about").to_string())
+            .mut_arg("id", |a| a.help(t!("cli.note_id_help").to_string()))
+            .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("unarchive", |sub| {
+        sub.about(t!("cli.unarchive_about").to_string())
+            .mut_arg("id", |a| a.help(t!("cli.note_id_help").to_string()))
             .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
     });
 
@@ -223,6 +252,10 @@ enum Commands {
         /// Maximum number of notes to show
         #[arg(short = 'n', long, default_value = "20")]
         limit: usize,
+
+        /// List archived notes instead
+        #[arg(long)]
+        archived: bool,
     },
     /// Search notes
     Search {
@@ -239,6 +272,53 @@ enum Commands {
     },
     /// Show a specific note by ID
     Show {
+        /// Note ID (partial match supported)
+        id: String,
+
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+    /// Attach a file to a note
+    Attach {
+        /// Note ID (partial match supported)
+        id: String,
+
+        /// File to attach
+        file: PathBuf,
+
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+    /// Save a note's attachment to a file
+    SaveAttachment {
+        /// Note ID (partial match supported)
+        id: String,
+
+        /// Which attachment, as numbered by show
+        #[arg(short = 'n', long, default_value = "1")]
+        number: usize,
+
+        /// Output file path
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+    /// Archive a note
+    Archive {
+        /// Note ID (partial match supported)
+        id: String,
+
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+    /// Bring a note back from the archive
+    Unarchive {
         /// Note ID (partial match supported)
         id: String,
 
@@ -431,37 +511,9 @@ fn get_password(password_opt: Option<String>, db_path: &Path) -> Result<String> 
     }
 }
 
-/// Derive encryption key from password using stored salt
+/// Get the vault's key from its password, creating the vault if this is the first run
 fn derive_key_from_db(db: &Database, password: &str) -> Result<[u8; 32]> {
-    let encryption_repo = EncryptionRepository::new(db.connection());
-    let crypto = CryptoService::new();
-
-    // Get stored salt and iterations from database
-    if let Some(metadata) = encryption_repo.get()? {
-        if metadata.envelope_version.is_some() {
-            // Envelope path: derive device key, unwrap master key
-            let device_salt_b64 = metadata.device_salt.as_deref()
-                .ok_or_else(|| anyhow::anyhow!("Envelope metadata missing device_salt"))?;
-            let device_salt = base64::engine::general_purpose::STANDARD.decode(device_salt_b64)
-                .context("Invalid device_salt base64")?;
-            let device_key = crypto.derive_key(password, &device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
-            let wrapped_json = metadata.local_wrapped_master.as_deref()
-                .ok_or_else(|| anyhow::anyhow!("Envelope metadata missing local_wrapped_master"))?;
-            let wrapped: crate::models::encryption::EncryptedData = serde_json::from_str(wrapped_json)
-                .context("Invalid local_wrapped_master JSON")?;
-            crypto.unwrap_master_key(&device_key, &wrapped)
-        } else if let (Some(salt), Some(iterations)) = (&metadata.salt, metadata.iterations) {
-            crypto.derive_key(password, salt, iterations)
-        } else {
-            anyhow::bail!("Invalid encryption metadata")
-        }
-    } else {
-        // First-time setup: generate new salt and save it
-        let new_salt = crypto.generate_salt();
-        let iterations = 256_000;
-        encryption_repo.save(&new_salt, iterations)?;
-        crypto.derive_key(password, &new_salt, iterations)
-    }
+    vault::unlock(db.connection(), &CryptoService::new(), password)
 }
 
 /// Open $EDITOR with content and return the edited result
@@ -476,18 +528,7 @@ fn open_editor(initial_content: &str) -> Result<String> {
 
     let temp_path = temp_file.path();
 
-    // Get editor from environment (default to vi)
-    let editor = env::var("EDITOR").unwrap_or_else(|_| t!("editor.default_editor").to_string());
-
-    // Launch editor
-    let status = Command::new(&editor)
-        .arg(temp_path)
-        .status()
-        .context(t!("editor.external_failed", error = &editor))?;
-
-    if !status.success() {
-        anyhow::bail!("{}", t!("editor.external_exit_error"));
-    }
+    ui::operations::external::run_editor(&ui::operations::external::editor_command(), temp_path)?;
 
     // Read the edited content
     let content = std::fs::read_to_string(temp_path)
@@ -496,139 +537,69 @@ fn open_editor(initial_content: &str) -> Result<String> {
     Ok(content)
 }
 
-/// Perform sync from CLI (simplified version of TUI sync)
-fn perform_cli_sync(db: &Database, key: &[u8; 32], mut metadata: models::sync::SyncMetadata) -> Result<usize> {
-    use models::sync::*;
-    use repository::sync::SyncRepository;
-    use chrono::Utc;
-    use sha2::{Sha256, Digest};
+/// Sync from the CLI, the same way the TUI does: a push and a full pull.
+fn perform_cli_sync(db_path: &Path, db: Database, key: [u8; 32]) -> Result<ui::operations::sync::SyncOutcome> {
+    let mut app = App::headless(db_path.to_path_buf(), db, key)?;
+    ui::operations::notes::load_notes(&mut app)?;
+    ui::operations::sync::perform_sync(&mut app, false)
+}
 
-    let crypto = CryptoService::new();
-    let sync_repo = SyncRepository::new(db.connection());
-    let note_repo = NoteRepository::new(db.connection());
+/// Open the vault for a command that changes a note, and find that note.
+fn open_note(db_path: &Path, password: Option<String>, id: &str) -> Result<(App, models::Note)> {
+    let password = get_password(password, db_path)?;
+    let db = Database::open(db_path, &password)
+        .context("Failed to open database. Check your password.")?;
+    let key = derive_key_from_db(&db, &password)?;
 
-    // Get and decrypt API key
-    let encrypted_api_key = metadata.api_key.as_ref()
-        .ok_or_else(|| anyhow::anyhow!("No API key configured"))?;
-    let api_key_encrypted: crypto::EncryptedData = serde_json::from_str(encrypted_api_key)?;
-    let api_key = crypto.decrypt_text(&api_key_encrypted, key)?;
+    let mut app = App::headless(db_path.to_path_buf(), db, key)?;
+    ui::operations::notes::load_notes(&mut app)?;
 
-    let endpoint = metadata.sync_endpoint.clone();
+    let note = app.all_notes().iter()
+        .find(|note| note.id.starts_with(id))
+        .cloned()
+        .context(t!("error.file_not_found"))?;
 
-    // PUSH: Get notes modified since last sync
-    let notes_to_push = if let Some(last_sync) = metadata.last_sync_at {
-        note_repo.get_modified_after(last_sync, key)?
-    } else {
-        note_repo.list(false, key)?
-    };
+    Ok((app, note))
+}
 
-    let sync_count = notes_to_push.len();
-
-    if !notes_to_push.is_empty() {
-        // Convert notes to sync format
-        let sync_notes: Result<Vec<SyncNote>> = notes_to_push.iter().map(|note| {
-            let encrypted_content = crypto.encrypt_text(&note.content, key)?;
-            let content_json = serde_json::to_string(&encrypted_content)?;
-
-            let encrypted_tags: Result<Vec<String>> = note.tags.iter()
-                .map(|tag| {
-                    let tag_json = serde_json::to_string(tag)?;
-                    let encrypted_tag = crypto.encrypt_text(&tag_json, key)?;
-                    Ok(serde_json::to_string(&encrypted_tag)?)
-                })
-                .collect();
-
-            Ok(SyncNote {
-                id: note.id.clone(),
-                created_at: note.created_at,
-                modified_at: note.modified_at,
-                content: content_json,
-                tags: encrypted_tags?,
-                attachments: vec![], // Simplified: skip attachments for CLI
-                pinned: note.pinned,
-                archived: note.archived,
-                archived_at: note.archived_at,
-                locked: note.locked,
-                locked_at: note.locked_at,
-                deleted: note.deleted,
-                deleted_at: note.deleted_at,
-                version: note.version,
-                word_wrap: Some(note.word_wrap),
-                syntax_language: Some(note.syntax_language.to_string()),
-                color: note.color.clone(),
-                // Hash chain fields for git-like conflict detection
-                content_hash: note.content_hash.clone(),
-                parent_hash: note.parent_hash.clone(),
-                hash_chain: note.hash_chain.clone(),
-            })
-        }).collect();
-
-        let push_request = SyncPushRequest {
-            notes: sync_notes?,
-            attachments: vec![],
-            versions: vec![],
-            deletions: vec![],
-        };
-
-        // Send push request
-        let client = reqwest::blocking::Client::new();
-        let push_url = format!("{}/api/v1/sync/push", endpoint);
-        let response = client
-            .post(&push_url)
-            .header("Authorization", format!("Bearer {}", api_key))
-            .json(&push_request)
-            .send()
-            .context("Failed to send push request")?;
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
-
-            // Provide user-friendly error messages
-            let error_msg = if status == 403 {
-                t!("sync.account_deactivated").to_string()
-            } else if status == 401 {
-                t!("sync.invalid_key").to_string()
-            } else if status == 409 {
-                t!("sync.conflict").to_string()
-            } else {
-                error_body
-            };
-
-            anyhow::bail!("{}: {}", t!("sync.failed", error = ""), error_msg);
+/// Push a change made by a command, if this device syncs. The change is safe
+/// locally whatever happens, so a failure here is a warning.
+fn sync_if_connected(app: &mut App) {
+    let syncs = app.sync_metadata().is_some_and(|metadata| metadata.sync_enabled);
+    if syncs {
+        match ui::operations::sync::perform_sync(app, false) {
+            Ok(outcome) => report_sync(&outcome),
+            Err(e) => errln!("⚠ {}: {}", t!("sync.failed", error = ""), e),
         }
+    }
+}
 
-        let push_response: SyncPushResponse = response.json()
-            .context("Failed to parse push response")?;
+/// Move a note in or out of the archive from the CLI.
+fn set_note_archived(db_path: &Path, password: Option<String>, id: &str, archived: bool) -> Result<()> {
+    let (mut app, note) = open_note(db_path, password, id)?;
 
-        // Update sync metadata for accepted notes
-        let now = Utc::now();
-        for accepted in push_response.accepted {
-            // Compute sync hash using SHA-256
-            let mut hasher = Sha256::new();
-            hasher.update(accepted.id.as_bytes());
-            let sync_hash = format!("{:x}", hasher.finalize());
-
-            let note_metadata = NoteSyncMetadata {
-                note_id: accepted.id.clone(),
-                synced_at: accepted.synced_at,
-                sync_hash,
-                server_version: accepted.server_version,
-                last_sync_status: SyncStatus::Synced,
-                error_message: None,
-                conflict_data: None,
-            };
-            sync_repo.update_note_metadata(&note_metadata)?;
-        }
-
-        metadata.last_push_at = Some(now);
-        metadata.last_sync_at = Some(now);
-        sync_repo.update_metadata(&metadata)?;
+    if note.locked {
+        anyhow::bail!("{}", t!("note.locked_cannot_archive"));
     }
 
-    // This only pushes. The pull cursor is left alone, so the next full sync
-    // still fetches what other devices changed in the meantime.
-    Ok(sync_count)
+    ui::operations::notes::set_archived(&mut app, &note.id, archived)?;
+    let done = if archived { t!("archive.archived") } else { t!("archive.unarchived") };
+    outln!("✓ {}: {}", done, models::char_prefix(&note.id, 8));
+
+    sync_if_connected(&mut app);
+    Ok(())
+}
+
+/// Say what a finished sync did, including anything it couldn't do.
+fn report_sync(outcome: &ui::operations::sync::SyncOutcome) {
+    // codeql[rust/cleartext-logging] these are note counts; CodeQL taints the sync result via the `?` on the api_key
+    outln!("✓ {}: {}", t!("sync.success"), outcome.synced);
+    if outcome.rejected > 0 {
+        errln!("⚠ {}", t!("sync.rejected_notes", count = outcome.rejected));
+    }
+    if outcome.skipped > 0 {
+        errln!("⚠ {}", t!("sync.skipped_notes", count = outcome.skipped));
+    }
 }
 
 /// Format a note for display
@@ -656,14 +627,23 @@ fn format_note_preview(note: &Note, show_content: bool) -> String {
     };
 
     format!("{} - {}{}{}",
-        &note.id[..8],
+        models::char_prefix(&note.id, 8),
         title_str,
         tags_str,
         preview
     )
 }
 
-fn main() -> Result<()> {
+fn main() {
+    // Reported here, not by returning the error, because a failure can quote
+    // whatever a server sent and Rust's default report would print it raw.
+    if let Err(error) = run() {
+        errln!("Error: {:?}", error);
+        std::process::exit(1);
+    }
+}
+
+fn run() -> Result<()> {
     // Detect and set locale from environment BEFORE parsing CLI
     // This ensures --help output is translated
     detect_locale();
@@ -698,6 +678,14 @@ fn main() -> Result<()> {
             .unwrap_or_else(|| PathBuf::from("."))
             .join("jottery");
         std::fs::create_dir_all(&config_dir)?;
+
+        // This directory is Jottery's own, unlike one named by a path above
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&config_dir, std::fs::Permissions::from_mode(0o700))?;
+        }
+
         config_dir.join(&cli.database)
     };
 
@@ -715,12 +703,17 @@ fn main() -> Result<()> {
             let _ = std::fs::remove_file(&wal_path);
             let _ = std::fs::remove_file(&shm_path);
 
-            println!("✓ {}: {}", t!("note.deleted"), db_path.display());
-            println!("{}", t!("password.change_success"));
+            outln!("✓ {}: {}", t!("note.deleted"), db_path.display());
+            outln!("{}", t!("password.change_success"));
         } else {
-            println!("{}: {}", t!("error.file_not_found"), db_path.display());
+            outln!("{}: {}", t!("error.file_not_found"), db_path.display());
         }
         return Ok(());
+    }
+
+    // The TUI says this on its unlock screen. A script only needs telling once.
+    if cli.command.is_some() && !db_path.exists() && !Database::encrypts_files() {
+        errln!("⚠ {}", t!("password.no_file_encryption"));
     }
 
     // Handle subcommands
@@ -748,7 +741,7 @@ fn main() -> Result<()> {
 
             // If content is empty, don't create note
             if content.trim().is_empty() {
-                println!("{}", t!("note.save_failed", error = t!("password.empty_error")));
+                outln!("{}", t!("note.save_failed", error = t!("password.empty_error")));
                 return Ok(());
             }
 
@@ -764,21 +757,18 @@ fn main() -> Result<()> {
             // Save to database
             let note_repo = NoteRepository::new(db.connection());
             note_repo.create(&note, &key)?;
-            println!("✓ {}: {}", t!("cli.new"), &note.id[..8]);
+            outln!("✓ {}: {}", t!("cli.new"), models::char_prefix(&note.id, 8));
 
             // Auto-sync if configured
-            let sync_repo = SyncRepository::new(db.connection());
-            if let Ok(Some(metadata)) = sync_repo.get_metadata() {
+            let metadata = SyncRepository::new(db.connection()).get_metadata();
+            if let Ok(Some(metadata)) = metadata {
                 if metadata.sync_enabled {
-                    println!("{} {}...", t!("sync.pushing"), metadata.sync_endpoint);
-                    match perform_cli_sync(&db, &key, metadata) {
-                        Ok(count) => {
-                            // codeql[rust/cleartext-logging] count is a note count; CodeQL taints perform_cli_sync's Result via the `?` on the api_key
-                            println!("✓ {}: {}", t!("sync.success"), count);
-                        }
+                    outln!("{} {}...", t!("sync.pushing"), metadata.sync_endpoint);
+                    match perform_cli_sync(&db_path, db, key) {
+                        Ok(outcome) => report_sync(&outcome),
                         Err(e) => {
-                            eprintln!("⚠ {}: {}", t!("sync.failed", error = ""), e);
-                            eprintln!("  {}", t!("sync.request_failed"));
+                            errln!("⚠ {}: {}", t!("sync.failed", error = ""), e);
+                            errln!("  {}", t!("sync.request_failed"));
                         }
                     }
                 }
@@ -786,7 +776,7 @@ fn main() -> Result<()> {
 
             return Ok(());
         }
-        Some(Commands::List { password, tag, limit }) => {
+        Some(Commands::List { password, tag, limit, archived }) => {
             let password = get_password(password, &db_path)?;
             let db = Database::open(&db_path, &password)
                 .context("Failed to open database. Check your password.")?;
@@ -795,7 +785,11 @@ fn main() -> Result<()> {
             let key = derive_key_from_db(&db, &password)?;
 
             let note_repo = NoteRepository::new(db.connection());
-            let notes = note_repo.list(false, &key)?;
+            let notes = if archived {
+                note_repo.get_archived(&key)?
+            } else {
+                note_repo.list(false, &key)?
+            };
 
             // Filter by tag if specified
             let filtered_notes: Vec<_> = if let Some(tag_filter) = tag {
@@ -808,11 +802,11 @@ fn main() -> Result<()> {
             };
 
             if filtered_notes.is_empty() {
-                println!("{}", t!("note.no_notes"));
+                outln!("{}", t!("note.no_notes"));
             } else {
-                println!("{}\n", t!("note.total", count = filtered_notes.len()));
+                outln!("{}\n", t!("note.total", count = filtered_notes.len()));
                 for note in filtered_notes {
-                    println!("{}", format_note_preview(&note, false));
+                    outln!("{}", format_note_preview(&note, false));
                 }
             }
 
@@ -840,11 +834,11 @@ fn main() -> Result<()> {
                 .collect();
 
             if results.is_empty() {
-                println!("{}: {}", t!("search.no_results"), query);
+                outln!("{}: {}", t!("search.no_results"), query);
             } else {
-                println!("{}: '{}'\n", t!("search.results", count = results.len()), query);
+                outln!("{}: '{}'\n", t!("search.results", count = results.len()), query);
                 for note in results {
-                    println!("{}", format_note_preview(&note, true));
+                    outln!("{}", format_note_preview(&note, true));
                 }
             }
 
@@ -859,21 +853,56 @@ fn main() -> Result<()> {
             let key = derive_key_from_db(&db, &password)?;
 
             let note_repo = NoteRepository::new(db.connection());
-            let notes = note_repo.list(false, &key)?;
+            let notes = note_repo.list_not_deleted(&key)?.notes;
 
             // Find note by partial ID match
             let note = notes.into_iter()
                 .find(|n| n.id.starts_with(&id))
                 .context(t!("error.file_not_found"))?;
 
-            println!("ID: {}", note.id);
-            println!("{}: {}", t!("editor.created"), note.created_at);
-            println!("{}: {}", t!("editor.modified"), note.modified_at);
+            outln!("ID: {}", note.id);
+            outln!("{}: {}", t!("editor.created"), note.created_at);
+            outln!("{}: {}", t!("editor.modified"), note.modified_at);
             if !note.tags.is_empty() {
-                println!("{}: {}", t!("editor.tags"), note.tags.join(", "));
+                outln!("{}: {}", t!("editor.tags"), note.tags.join(", "));
             }
-            println!("\n{}", note.content);
+            for (i, attachment) in note.attachments.iter().enumerate() {
+                outln!("{} {}: {} ({})", t!("ui.attachments"), i + 1, attachment.filename, attachment.mime_type);
+            }
+            outln!("\n{}", note.content);
 
+            return Ok(());
+        }
+        Some(Commands::Attach { id, file, password }) => {
+            let (mut app, note) = open_note(&db_path, password, &id)?;
+
+            if note.locked {
+                anyhow::bail!("{}", t!("note.locked_cannot_edit"));
+            }
+
+            ui::operations::attachments::add_attachment(&mut app, &note.id, &file.to_string_lossy())?;
+            outln!("✓ {}", t!("attachment.added", name = file.display().to_string()));
+
+            sync_if_connected(&mut app);
+            return Ok(());
+        }
+        Some(Commands::SaveAttachment { id, number, output, password }) => {
+            let (mut app, note) = open_note(&db_path, password, &id)?;
+
+            let attachment = number.checked_sub(1)
+                .and_then(|index| note.attachments.get(index))
+                .with_context(|| t!("attachment.no_attachments").to_string())?;
+
+            let saved = ui::operations::attachments::save_attachment(&mut app, attachment, &output.to_string_lossy())?;
+            outln!("✓ {}", t!("attachment.saved", path = saved.display().to_string()));
+            return Ok(());
+        }
+        Some(Commands::Archive { id, password }) => {
+            set_note_archived(&db_path, password, &id, true)?;
+            return Ok(());
+        }
+        Some(Commands::Unarchive { id, password }) => {
+            set_note_archived(&db_path, password, &id, false)?;
             return Ok(());
         }
         Some(Commands::RegisterUser { server, email, password }) => {
@@ -891,10 +920,15 @@ fn main() -> Result<()> {
 
             // Validate password strength
             if password.len() < 12 {
-                anyhow::bail!("{}", t!("password.empty_error"));
+                anyhow::bail!("{}", t!("register.password_too_short"));
             }
 
-            println!("{} {} {}...", t!("cli.register"), email, server);
+            // The server will see this password, so it mustn't be the one for the notes
+            if let Ok(Some(notes_password)) = try_load_stored_password(&db_path) {
+                vault::check_passwords_differ(&notes_password, &password)?;
+            }
+
+            outln!("{} {} {}...", t!("cli.register"), email, server);
 
             // Create auth client and register
             let client = AuthClient::new(server.clone());
@@ -907,17 +941,17 @@ fn main() -> Result<()> {
             let response = client.register_user(&email, &password)
                 .context(t!("sync.request_failed"))?;
 
-            println!("\n✓ {}", t!("sync.success"));
+            outln!("\n✓ {}", t!("sync.success"));
             // codeql[rust/cleartext-logging] user_id is a non-sensitive UUID identifier
-            println!("User ID: {}", response.user_id);
-            println!("Email: {}", response.email);
-            println!("{}: {}", t!("status.synced"), response.status);
-            println!("\n{}", response.message);
+            outln!("User ID: {}", response.user_id);
+            outln!("Email: {}", response.email);
+            outln!("{}: {}", t!("status.synced"), response.status);
+            outln!("\n{}", response.message);
 
             if response.status == "pending_approval" {
-                println!("\n{}:", t!("help.general"));
-                println!("1. {}", t!("sync.account_deactivated"));
-                println!("2. {}", t!("cli.register"));
+                outln!("\n{}:", t!("help.general"));
+                outln!("1. {}", t!("sync.account_deactivated"));
+                outln!("2. {}", t!("cli.register"));
             }
 
             return Ok(());
@@ -953,7 +987,16 @@ fn main() -> Result<()> {
                 }
             };
 
-            println!("{} '{}' {}...", t!("cli.register"), device_name, email);
+            // The server will see the account password, so it mustn't be the one for the notes
+            vault::check_passwords_differ(&key_password, &password)?;
+
+            // Open the vault before involving the server, so a wrong password leaves
+            // no stray device behind
+            let db = Database::open(&db_path, &key_password)
+                .context("Failed to create database")?;
+            let local_key = derive_key_from_db(&db, &key_password)?;
+
+            outln!("{} '{}' {}...", t!("cli.register"), device_name, email);
 
             // Create auth client and register device
             let client = AuthClient::new(server.clone());
@@ -966,21 +1009,23 @@ fn main() -> Result<()> {
             let response = client.register_device(&email, &password, &device_name, "tui")
                 .context(t!("sync.request_failed"))?;
 
-            println!("\n✓ {}", t!("sync.success"));
-            println!("Client ID: {}", response.client_id);
+            outln!("\n✓ {}", t!("sync.success"));
+            outln!("Client ID: {}", response.client_id);
             // codeql[rust/cleartext-logging] user_id is a non-sensitive UUID identifier
-            println!("User ID: {}", response.user_id);
-            println!("{}: {}", t!("settings.device_name"), response.device_name);
+            outln!("User ID: {}", response.user_id);
+            outln!("{}: {}", t!("settings.device_name"), response.device_name);
 
-            // Initialize database with encryption password
-            let db = Database::open(&db_path, &key_password)
-                .context("Failed to create database")?;
-
-            // Derive key using stored salt
-            let key = derive_key_from_db(&db, &key_password)?;
+            // Use the account's key if it has one, or give it this vault's. Notes
+            // written under any other key couldn't be read on the account's devices.
+            let crypto = CryptoService::new();
+            let account = ui::operations::envelope::Account {
+                client: &client,
+                api_key: &response.api_key,
+                user_id: &response.user_id,
+            };
+            let key = ui::operations::envelope::adopt_account_key(&db, &crypto, &account, &key_password, &local_key)?;
 
             // Encrypt and store API key
-            let crypto = CryptoService::new();
             let encrypted_api_key = crypto.encrypt_text(&response.api_key, &key)?;
             let api_key_json = serde_json::to_string(&encrypted_api_key)?;
 
@@ -1003,11 +1048,18 @@ fn main() -> Result<()> {
 
             sync_repo.update_metadata(&sync_metadata)?;
 
-            println!("\n✓ {}", t!("sync.success"));
-            println!("\n{}:", t!("help.general"));
-            println!("1. {}: jottery note", t!("cli.new"));
-            println!("2. {}: jottery sync", t!("cli.sync"));
-            println!("3. {}: jottery", t!("menu.notes"));
+            // The TUI reads these to decide whether to sync
+            let settings_repo = repository::SettingsRepository::new(db.connection());
+            let mut settings = settings_repo.get()?;
+            settings.sync_enabled = true;
+            settings.sync_endpoint = Some(server.clone());
+            settings_repo.update(&settings)?;
+
+            outln!("\n✓ {}", t!("sync.success"));
+            outln!("\n{}:", t!("help.general"));
+            outln!("1. {}: jottery note", t!("cli.new"));
+            outln!("2. {}: jottery sync", t!("cli.sync"));
+            outln!("3. {}: jottery", t!("menu.notes"));
 
             return Ok(());
         }
@@ -1046,8 +1098,16 @@ fn main() -> Result<()> {
                 }
             };
 
+            // Both passwords being in hand is a chance to spot a dangerous reuse. It's
+            // an existing account, so this warns: refusing would help nobody.
+            if let Ok(Some(notes_password)) = try_load_stored_password(&db_path) {
+                if vault::check_passwords_differ(&notes_password, &password).is_err() {
+                    errln!("⚠ {}", t!("password.same_as_account_warning"));
+                }
+            }
+
             // Login to get session
-            println!("{}", t!("inbox.token.logging_in"));
+            outln!("{}", t!("inbox.token.logging_in"));
             let session = SessionClient::login(&server, &email, &password)
                 .context("Failed to login to server")?;
 
@@ -1055,27 +1115,27 @@ fn main() -> Result<()> {
                 InboxTokenAction::Generate { .. } => {
                     let token = session.generate_inbox_token()
                         .context("Failed to generate inbox token")?;
-                    println!("\n{}", t!("inbox.token.generated_success"));
-                    println!("\n  {}\n", token);
-                    println!("{}", t!("inbox.token.save_warning"));
-                    println!("\n{}:", t!("inbox.token.example_title"));
-                    println!("  curl -X POST {}/api/v1/inbox \\", server);
-                    println!("    -H \"Authorization: Bearer {}\" \\", token);
-                    println!("    -H \"Content-Type: application/json\" \\");
-                    println!("    -d '{{\"content\":\"My note\",\"tags\":[\"inbox\"]}}'");
+                    outln!("\n{}", t!("inbox.token.generated_success"));
+                    outln!("\n  {}\n", token);
+                    outln!("{}", t!("inbox.token.save_warning"));
+                    outln!("\n{}:", t!("inbox.token.example_title"));
+                    outln!("  curl -X POST {}/api/v1/inbox \\", server);
+                    outln!("    -H \"Authorization: Bearer {}\" \\", token);
+                    outln!("    -H \"Content-Type: application/json\" \\");
+                    outln!("    -d '{{\"content\":\"My note\",\"tags\":[\"inbox\"]}}'");
                 }
                 InboxTokenAction::Revoke { .. } => {
                     session.revoke_inbox_token()
                         .context("Failed to revoke inbox token")?;
-                    println!("✓ {}", t!("inbox.token.revoked"));
+                    outln!("✓ {}", t!("inbox.token.revoked"));
                 }
                 InboxTokenAction::Status { .. } => {
                     let has_token = session.get_inbox_token_status()
                         .context("Failed to check inbox token status")?;
                     if has_token {
-                        println!("✓ {}", t!("inbox.token.active"));
+                        outln!("✓ {}", t!("inbox.token.active"));
                     } else {
-                        println!("{}", t!("inbox.token.none"));
+                        outln!("{}", t!("inbox.token.none"));
                     }
                 }
             }
@@ -1090,25 +1150,22 @@ fn main() -> Result<()> {
             // Derive key using stored salt
             let key = derive_key_from_db(&db, &password)?;
 
-            let sync_repo = SyncRepository::new(db.connection());
-            match sync_repo.get_metadata()? {
+            let metadata = SyncRepository::new(db.connection()).get_metadata()?;
+            match metadata {
                 Some(metadata) if metadata.sync_enabled => {
-                    println!("{} {}...", t!("sync.pushing"), metadata.sync_endpoint);
+                    outln!("{} {}...", t!("sync.pushing"), metadata.sync_endpoint);
 
                     // Perform sync using helper function
-                    match perform_cli_sync(&db, &key, metadata) {
-                        Ok(count) => {
-                            // codeql[rust/cleartext-logging] count is a note count; CodeQL taints perform_cli_sync's Result via the `?` on the api_key
-                            println!("✓ {}: {}", t!("sync.success"), count);
-                        }
+                    match perform_cli_sync(&db_path, db, key) {
+                        Ok(outcome) => report_sync(&outcome),
                         Err(e) => {
-                            eprintln!("✗ {}: {}", t!("sync.failed", error = ""), e);
+                            errln!("✗ {}: {}", t!("sync.failed", error = ""), e);
                             std::process::exit(1);
                         }
                     }
                 }
                 _ => {
-                    println!("{}", t!("sync.no_api_key"));
+                    outln!("{}", t!("sync.no_api_key"));
                 }
             }
 
@@ -1123,7 +1180,7 @@ fn main() -> Result<()> {
             let key = derive_key_from_db(&db, &password)?;
 
             let count = export::export_notes(&db, &key, &output)?;
-            println!("✓ {}: {} {}", t!("cli.export"), count, output.display());
+            outln!("✓ {}: {} {}", t!("cli.export"), count, output.display());
             return Ok(());
         }
         Some(Commands::Import { input, password }) => {
@@ -1135,7 +1192,7 @@ fn main() -> Result<()> {
             let key = derive_key_from_db(&db, &password)?;
 
             let count = export::import_notes(&db, &key, &input)?;
-            println!("✓ {}: {} {}", t!("cli.import"), count, input.display());
+            outln!("✓ {}: {} {}", t!("cli.import"), count, input.display());
             return Ok(());
         }
         Some(Commands::Backup { output, password }) => {
@@ -1146,7 +1203,7 @@ fn main() -> Result<()> {
             // Derive key using stored salt
             let key = derive_key_from_db(&db, &password)?;
 
-            println!("{}", t!("progress.backup"));
+            outln!("{}", t!("progress.backup"));
 
             // Create backup with progress indicator
             let backup = backup::create_backup(&db, &key, Some(Box::new(|current, total, item| {
@@ -1154,30 +1211,36 @@ fn main() -> Result<()> {
                 let _ = io::stdout().flush();
             })))?;
 
-            println!();
+            outln!();
 
             // Write to file
             backup::write_backup(&backup, &output)?;
 
-            println!("✓ {}: {} ({} {})",
+            outln!("✓ {}: {} ({} {})",
                 t!("backup.created"),
                 output.display(),
-                backup.data.len(),
+                backup.record_count(),
                 t!("backup.records")
             );
+
+            // A backup that's missing something mustn't look like one that isn't
+            if backup.skipped > 0 {
+                errln!("⚠ {}", t!("backup.incomplete", count = backup.skipped));
+                std::process::exit(1);
+            }
             return Ok(());
         }
         Some(Commands::RestoreBackup { input, password, key_password }) => {
             info!("{}: {}", t!("backup.restore"), input.display());
 
             // Validate backup file first
-            println!("{}", t!("backup.validating"));
+            outln!("{}", t!("backup.validating"));
             let backup = backup::validate_backup(&input)?;
 
-            println!("✓ {} v{} ({} {})",
+            outln!("✓ {} v{} ({} {})",
                 t!("backup.valid"),
                 backup.version,
-                backup.data.len(),
+                backup.record_count(),
                 t!("backup.records")
             );
 
@@ -1188,38 +1251,40 @@ fn main() -> Result<()> {
             let db = Database::open(&db_path, local_password)
                 .context(t!("password.unlock_failed", error = ""))?;
 
-            // Verify password. An older backup names no key, so only the vault
-            // it came from can open it.
-            println!("{}", t!("backup.verifying_password"));
-            let key = if backup.encryption.names_its_key() {
-                backup::verify_backup_password(&backup, &password)?
-            } else {
-                let has_vault = EncryptionRepository::new(db.connection()).get()?.is_some();
-                let key = if has_vault { derive_key_from_db(&db, local_password).ok() } else { None };
-                match key.filter(|key| backup::verify_backup_key(&backup, key).is_ok()) {
-                    Some(key) => key,
-                    None => anyhow::bail!("{}", t!("backup.key_not_in_backup")),
-                }
-            };
-            println!("✓ {}", t!("password.correct"));
+            // Check both passwords before touching anything
+            outln!("{}", t!("backup.verifying_password"));
+            let keys = backup::restore_keys(&db, &backup, &password, local_password)?;
+            outln!("✓ {}", t!("password.correct"));
 
-            println!("{}", t!("backup.restoring"));
+            outln!("{}", t!("backup.restoring"));
 
             // Restore with progress indicator
-            let restored = backup::restore_backup(&db, &backup, &key, Some(Box::new(|current, total, item| {
+            let restored = backup::restore_backup(&db, &backup, &keys, Some(Box::new(|current, total, item| {
                 print!("\r{}: {}/{} ({})", t!("progress.processing"), current, total, item);
                 let _ = io::stdout().flush();
             })))?;
 
-            println!();
-            println!("✓ {}: {} {}", t!("backup.restored"), restored, t!("menu.notes"));
+            outln!();
+            outln!("✓ {}: {} {}, {} {}, {} {}",
+                t!("backup.restored"),
+                restored.notes, t!("menu.notes"),
+                restored.attachments, t!("ui.attachments"),
+                restored.versions, t!("ui.version_history"),
+            );
+
+            if restored.failed > 0 {
+                errln!("⚠ {}", t!("backup.records_failed", count = restored.failed));
+                std::process::exit(1);
+            }
             return Ok(());
         }
         Some(Commands::StorePassword { password }) => {
             // Store password for auto-unlock (used for demo/testing automation)
             // First verify the password works with the database
             if db_path.exists() {
-                let _db = Database::open(&db_path, &password)
+                let db = Database::open(&db_path, &password)
+                    .context("Password verification failed - incorrect password")?;
+                derive_key_from_db(&db, &password)
                     .context("Password verification failed - incorrect password")?;
             }
 
@@ -1231,9 +1296,9 @@ fn main() -> Result<()> {
             let storage = password_storage::create_file_storage(config_dir);
             storage.store(&password)?;
 
-            println!("✓ Password stored for auto-unlock");
-            println!("  Database: {}", db_path.display());
-            println!("  Storage: {}", config_dir.join(".jottery_remember").display());
+            outln!("✓ Password stored for auto-unlock");
+            outln!("  Database: {}", db_path.display());
+            outln!("  Storage: {}", config_dir.join(".jottery_remember").display());
             return Ok(());
         }
         None => {
@@ -1254,6 +1319,7 @@ fn main() -> Result<()> {
     };
 
     // Create TUI
+    ui::install_panic_hook();
     let mut tui = Tui::new()?;
     tui.enter()?;
 
@@ -1273,6 +1339,9 @@ fn main() -> Result<()> {
     // Track state variant to force full redraw on major transitions
     let mut last_state = std::mem::discriminant(&app.state);
 
+    // Drawing is the expensive part of this loop, so it waits for a reason
+    let mut needs_draw = true;
+
     // Main loop
     while !app.should_quit() {
         // Force full redraw when the app state variant changes (e.g., Locked→NoteList,
@@ -1291,32 +1360,37 @@ fn main() -> Result<()> {
             // Also force a screen clear and redraw
             use crossterm::{execute, terminal::{Clear, ClearType}};
             execute!(std::io::stdout(), Clear(ClearType::All))?;
+            needs_draw = true;
         }
 
         // Render
-        info!("About to render frame");
-        tui.draw(|frame| {
-            info!("Inside draw closure, calling app.render");
-            app.render(frame);
-            info!("app.render completed");
-        })?;
-        info!("Frame rendered successfully");
+        if needs_draw {
+            tui.draw(|frame| app.render(frame))?;
+        }
 
         // Handle events
         match events.next()? {
             ui::Event::Key(key) => {
-                app.handle_key(key)?;
+                needs_draw = true;
+                app.register_activity();
+                // A failed action is the user's to see, not a reason to quit
+                if let Err(e) = app.handle_key(key) {
+                    app.error = Some(e.to_string());
+                }
             }
             ui::Event::Resize(_, _) => {
-                // Terminal resized, will redraw on next iteration
+                needs_draw = true;
             }
             ui::Event::Tick => {
-                // Check if auto-sync should run
-                app.check_auto_sync();
+                // Auto-lock, auto-sync and anything else that runs on a timer
+                needs_draw = app.on_tick();
             }
             ui::Event::Mouse(mouse) => {
                 use crossterm::event::{MouseEventKind, MouseButton};
                 use ui::state::{AppState, ViewMode, InputMode, FocusedPanel};
+
+                needs_draw = true;
+                app.register_activity();
 
                 match mouse.kind {
                     MouseEventKind::ScrollUp => {
@@ -1348,10 +1422,9 @@ fn main() -> Result<()> {
                             if x >= area.x && x < area.x + area.width
                                 && y >= area.y && y < area.y + area.height
                             {
-                                // Calculate which note was clicked
-                                let clicked_index = (y - area.y) as usize;
-                                let filtered_count = app.filtered_notes().len();
-                                if clicked_index < filtered_count {
+                                // Notes are several rows tall and the list scrolls, so
+                                // the row alone doesn't say which note this is
+                                if let Some(clicked_index) = app.note_at_row(y - area.y) {
                                     if app.is_multi_select_mode {
                                         // In multi-select mode, toggle selection
                                         app.toggle_note_selection(clicked_index);

@@ -32,11 +32,11 @@ password:
   remember_keychain_enabled: "Password stored securely in system keychain."
   change_title: "Change Password"
   change_enter_current: "Enter your current password:"
-  change_enter_new: "Enter new password (min 12 characters):"
+  change_enter_new: "Enter new password (min 8 characters):"
   change_confirm_new: "Confirm new password:"
   change_current_required: "Please enter your current password"
   change_wrong_current: "Current password is incorrect"
-  change_too_short: "New password must be at least 12 characters"
+  change_too_short: "New password must be at least 8 characters"
   change_mismatch: "Passwords do not match"
   change_failed: "Failed to change password"
   remember_disabled: "Password storage disabled. You will be prompted on next start."
@@ -51,6 +51,10 @@ password:
   enter_to_enable: "Enter your password to enable auto-unlock:"
   create_title: "Create Password"
   unlock_title: "Unlock"
+  too_short: "Password must be at least %{min} characters"
+  same_as_account: "Use different passwords. The server sees your account password, so it must not also open your notes."
+  same_as_account_warning: "Your account password is the same as your notes password, so the server could read your notes. Change your notes password in Settings."
+  no_file_encryption: "This build does not encrypt the database file. Notes and tags stay encrypted, but your email, server address, attachment names and dates do not."
 
 # Main menu / Navigation
 menu:
@@ -87,6 +91,13 @@ note:
   info: "Note info"
   info_title: "Note Information"
   untitled: "Untitled"
+  save_retry_hint: "q: try saving again | e: edit | Esc: discard changes"
+  empty_bin_title: "Empty Recycle Bin"
+  empty_bin_confirm: "Permanently delete %{count} notes in the bin?"
+  empty_bin_warning: "This also deletes them from the server and your other devices. It cannot be undone."
+  bin_emptied: "Permanently deleted %{count} notes"
+  locked_cannot_archive: "Cannot archive locked note"
+  unreadable: "%{count} notes in this vault can't be read"
 
 # Archive operations
 archive:
@@ -129,6 +140,18 @@ attachment:
   delete: "Delete attachment"
   no_attachments: "No attachments"
   total: "%{count} attachments"
+  press_enter: "Press Enter to continue..."
+  opened: "File opened in default application."
+  no_opener: "No program to open files with on this system. Save the attachment with S instead."
+  delete_failed: "Failed to delete attachment: %{error}"
+  deleted: "Deleted: %{name}"
+  exists: "%{path} already exists. Choose another name."
+  saved: "Saved to %{path}"
+  save_failed: "Failed to save attachment: %{error}"
+  added: "Attached %{name}"
+  too_large: "File is too large. The limit is %{max_mb} MB."
+  unsafe_title: "This file won't be opened"
+  unsafe_body: "Opening this type of file could run code from whoever sent it. Save it instead?"
 
 # Version history
 version:
@@ -210,6 +233,8 @@ sync:
     approved: "Your account is approved and active. You can sync your notes."
     pending: "Your account is pending approval. Please wait for an administrator to approve your registration."
     inactive: "Your account has been deactivated. Please contact an administrator."
+  skipped_notes: "%{count} items from the server couldn't be read and were skipped"
+  rejected_notes: "%{count} notes conflict with the server. Open Jottery to resolve them."
 
 # Inbox
 inbox:
@@ -256,6 +281,7 @@ register:
   device_failed: "Device registration failed"
   cleared: "Registration cleared. You can start fresh."
   pending_status: "Pending approval"
+  password_differs: "This must be different from your notes password."
 
 # Conflict resolution
 conflict:
@@ -433,8 +459,8 @@ help:
   s_q_close_desc: "Close settings panel"
   tab_focus_attachment_key: "Tab"
   tab_focus_attachment_desc: "Focus attachment panel (j/k to navigate, Enter to view, d to delete)"
-  A_add_attachment_key: "A"
-  A_add_attachment_desc: "Add attachment (enter file path)"
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: "Add attachment (enter file path)"
   a_view_attachment_key: "a + number"
   a_view_attachment_desc: "View attachment (a1, a2, ...)"
   shift_jk_attachment_key: "Shift+j / Shift+k"
@@ -497,6 +523,14 @@ help:
   click_tags_desc: "Enter tag editing mode"
   scroll_key: "Scroll wheel"
   scroll_desc: "Scroll preview up/down"
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Lock Jottery"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Save selected attachment to a file"
+  z_archive_key: "z"
+  z_archive_desc: "Archive selected note (or bring it back in archive mode)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Archive selected notes"
 
 # CLI commands and help text
 cli:
@@ -562,6 +596,14 @@ cli:
   # Output messages
   notes_count: "%{count} notes"
   results_count: "%{count} results: '%{query}'"
+  attach_about: "Attach a file to a note"
+  save_attachment_about: "Save a note's attachment to a file"
+  archive_about: "Archive a note"
+  unarchive_about: "Bring a note back from the archive"
+  note_id_help: "Note ID (partial match supported)"
+  attach_file_help: "File to attach"
+  attachment_number_help: "Which attachment, as numbered by show"
+  archived_help: "List archived notes instead"
 
 # Status messages
 status:
@@ -587,6 +629,7 @@ bulk:
   enter_export_path: "Export path:"
   add_tags_to: "Add tags to"
   export_notes_to: "Export"
+  archived: "%{count} notes archived"
 
 # Date and time formatting
 time:
@@ -609,6 +652,8 @@ backup:
   restoring: "Restoring data..."
   restored: "Restored"
   key_not_in_backup: "This backup was made by an older version of Jottery and doesn't contain its key. It can only be restored into the vault it came from."
+  incomplete: "This backup is incomplete: %{count} items in the vault couldn't be read and were left out."
+  records_failed: "%{count} records in this backup couldn't be restored. Everything else was."
 
 # Progress indicators
 progress:
@@ -632,6 +677,12 @@ ui:
   type: "Type:"
   modified: "Modified:"
   version: "Version:"
+  save_attachment: "Save Attachment (Tab: complete, ↑↓: select, Enter: confirm)"
+  path: "Path"
+  attachments_hint: "Attachments: (Tab to focus)"
+  attachments_focused_hint: "Attachments: (Tab to switch, j/k to navigate, Enter to view, S to save, d to delete)"
+  attachments_keys_hint: "Press 'a' to view, '+' to add, 'X' to remove selected"
+  attachment_viewer_hint: "↑/↓: navigate │ 1-9: quick select │ Enter: view │ S: save │ +: add │ d: delete │ Esc: close"
 
 # Status bar help text
 status_bar:
@@ -681,8 +732,21 @@ status_bar:
   quick_select: "quick select"
   view: "view"
   restore_version: "restore version"
+  save: "save"
+  add: "add"
 
 # Virtual tags
 tags:
   virtual:
     title: "title"
+
+calc:
+  line_too_long: "⚠ Line too long to calculate (limit %{max} bytes)"
+  numbers_only: "⚠ Calc works with numbers: text, tuples and ; are not calculated"
+  too_deep: "⚠ Too many nested brackets (limit %{max})"
+  gave_up: "This note took too long to calculate, so it is shown without results."
+
+envelope:
+  unwrap_failed: "Your notes password can't open this account's key. It may have been saved by an older version. Unlock Jottery on a device that's already connected, which will fix it, then try again."
+  rekey_failed: "Your local notes couldn't be moved to this account's key, so nothing has changed: %{error}"
+  diverged: "This device's key differs from the account's. Notes from your other devices may not open here."

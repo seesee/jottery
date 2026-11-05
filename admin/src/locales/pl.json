@@ -46,6 +46,23 @@
     "confirmTitle": "Potwierdź wylogowanie",
     "confirmMessage": "Czy na pewno chcesz się wylogować?"
   },
+  "errors": {
+    "unknown": "Coś poszło nie tak. Spróbuj ponownie.",
+    "network": "Nie udało się połączyć z serwerem. Sprawdź połączenie i spróbuj ponownie.",
+    "forbidden": "Nie masz uprawnień do wykonania tej czynności.",
+    "wrongPassword": "Obecne hasło jest nieprawidłowe",
+    "rateLimited": "Zbyt wiele prób. Spróbuj ponownie za {seconds} s.",
+    "tooManyAttempts": "Zbyt wiele prób. Poczekaj i spróbuj ponownie.",
+    "passwordTooShort": "Nowe hasło musi mieć co najmniej 12 znaków",
+    "passwordSameAsCurrent": "Nowe hasło musi różnić się od obecnego"
+  },
+  "session": {
+    "expired": "Twoja sesja wygasła. Zaloguj się ponownie."
+  },
+  "forcedPasswordChange": {
+    "title": "Zmień hasło",
+    "description": "Aby kontynuować, musisz wybrać nowe hasło. Musi mieć co najmniej 12 znaków."
+  },
   "dashboard": {
     "title": "Panel",
     "loadingStats": "Ładowanie statystyk...",
@@ -248,6 +265,7 @@
       "errors": {
         "invalidCredentials": "Nieprawidłowy e-mail lub hasło",
         "accountInactive": "Twoje konto jest nieaktywne. Skontaktuj się z administratorem.",
+        "accountPending": "Twoje konto czeka na zatwierdzenie przez administratora.",
         "unexpected": "Wystąpił nieoczekiwany błąd",
         "statusCheckFailed": "Failed to check status. Please try again."
       },

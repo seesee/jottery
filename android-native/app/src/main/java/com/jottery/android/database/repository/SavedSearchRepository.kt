@@ -66,9 +66,11 @@ class SavedSearchRepository(
     /** Soft-delete a saved search. */
     suspend fun delete(id: String) {
         val record = dao.getById(id) ?: return
+        val now = DateUtils.nowISO8601()
         dao.insertOrReplace(record.copy(
             deleted = true,
-            deletedAt = DateUtils.nowISO8601(),
+            deletedAt = now,
+            modifiedAt = now,
             needsSync = true,
         ))
     }
@@ -83,6 +85,12 @@ class SavedSearchRepository(
 
     /** List all raw records (for backup). */
     suspend fun listAllRaw(): List<SavedSearch> = dao.listAll()
+
+    /** Clear the flag, unless the search changed after [modifiedAt] was pushed. */
+    suspend fun markSynced(id: String, syncedAt: String, modifiedAt: String) =
+        dao.markSynced(id, syncedAt, modifiedAt)
+
+    suspend fun getRaw(id: String): SavedSearch? = dao.getById(id)
 
     /** List records needing sync. */
     suspend fun listNeedingSync(): List<SavedSearch> = dao.listNeedingSync()

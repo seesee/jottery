@@ -1,11 +1,73 @@
+{
+	# How long Caddy waits for open connections when it's told to stop. Without a
+	# limit, one stalled download keeps it running after the server has died, which
+	# keeps the container up, and outlasts docker stop's 10 seconds.
+	grace_period 5s
+}
+
 :8088 {
 	root * /app/dist
+
+	# Optional allow-list for the admin dashboard and its API. Set ADMIN_ALLOWED_IPS
+	# to space-separated addresses or CIDR ranges, for example
+	# "203.0.113.7 192.168.0.0/16". Unset, everyone can reach them, as before.
+	# Behind another proxy every request comes from that proxy, so restrict access
+	# there instead. Stock Caddy has no rate limiting, so that has to be in the
+	# server or in an outer proxy.
+	@adminDenied {
+		path /admin* /api/v1/admin* /api/v1/auth/login*
+		not remote_ip {$ADMIN_ALLOWED_IPS:0.0.0.0/0 ::/0}
+	}
+	respond @adminDenied 403
+
+	# Security headers for the web client, the part that holds the decrypted vault.
+	# Proxied routes are left out because the server sets its own, and Caddy would
+	# otherwise send both.
+	#
+	# index.html has a meta CSP too, and browsers enforce both, so what's allowed is
+	# what both allow. Keep this policy as the outer limit: it adds what a meta tag
+	# can't set (frame-ancestors), and tightening index.html needs no change here.
+	# connect-src stays open to any https origin because the sync server is
+	# configured by the user and can be on another host.
+	@webClient {
+		not path /api* /admin* /user* /health
+	}
+	# Proxied routes are left out here too: the server compresses its own responses,
+	# and the sync event stream has to reach clients as it's written.
+	encode @webClient zstd gzip
+
+	header @webClient {
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self' blob: http://localhost:* http://127.0.0.1:* https://*; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		# Revalidate on every load, or a browser's own guess at freshness can hold on
+		# to an old build after a deploy. An unchanged file still costs only a 304.
+		# This covers every path, not just index.html: headers are set before the
+		# fallback below rewrites a deep link to it.
+		Cache-Control no-cache
+		-Server
+	}
+
+	# The server sends HSTS for its own routes when ENABLE_HSTS=true. This covers the
+	# web client. Only enable it when clients reach this site over HTTPS.
+	@webClientHsts {
+		not path /api* /admin* /user* /health
+		expression `{env.ENABLE_HSTS} == "true"`
+	}
+	header @webClientHsts Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
 	file_server
 
 	# Proxy API, admin, and user routes to backend server
 	reverse_proxy /api* localhost:3030
 	reverse_proxy /admin* localhost:3030
 	reverse_proxy /user* localhost:3030
+
+	# The server's own health check. Left to the fallback below, this would return
+	# index.html with a 200 whether or not the server is running.
+	reverse_proxy /health localhost:3030
 
 	# Clean URL for the privacy policy (also linked from the iOS app)
 	rewrite /privacy /privacy.html
@@ -15,6 +77,7 @@
 		not path /api*
 		not path /admin*
 		not path /user*
+		not path /health
 		not file
 	}
 	rewrite @notStatic /index.html

@@ -5,6 +5,8 @@
 
 This document specifies the Jottery sync protocol, enabling third-party clients to synchronise notes with a Jottery server while maintaining end-to-end encryption.
 
+> [sync-protocol.md](sync-protocol.md) is the reference for how the API behaves today, including the pull cursor, authoritative attachment lists and rejected deletions. Where the two disagree, it is correct.
+
 ## Overview
 
 Jottery uses a client-side encrypted sync model where:

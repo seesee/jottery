@@ -206,7 +206,7 @@ impl AdminService {
             .map_err(|e| AdminError::PasswordHash(e.to_string()))?;
 
         sqlx::query!(
-            "UPDATE users SET password_hash = ? WHERE id = ?",
+            "UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?",
             password_hash,
             user.id
         )

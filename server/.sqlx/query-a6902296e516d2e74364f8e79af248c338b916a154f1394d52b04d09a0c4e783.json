@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE notes SET content = ?, modified_at = ?, pinned = ?, tags = ?, server_version = ?, syntax_language = ?, word_wrap = ?\n           WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": []
+  },
+  "hash": "a6902296e516d2e74364f8e79af248c338b916a154f1394d52b04d09a0c4e783"
+}

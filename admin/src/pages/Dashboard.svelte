@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api } from '../lib/api';
+  import { describeError } from '../lib/apiErrors';
   import type { StatsResponse } from '../lib/api';
   import { onMount } from 'svelte';
   import { _ } from 'svelte-i18n';
@@ -14,7 +15,7 @@
       error = null;
       stats = await api.getStats();
     } catch (err) {
-      error = err instanceof Error ? err.message : $_('dashboard.failedToLoad');
+      error = describeError(err, $_, 'dashboard.failedToLoad');
     } finally {
       loading = false;
     }

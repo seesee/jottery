@@ -3,295 +3,193 @@ package com.jottery.android.service
 import android.util.Base64
 import android.util.Log
 import com.jottery.android.crypto.CryptoService
-import com.jottery.android.crypto.EncryptedData
 import com.jottery.android.database.repository.EncryptionRepository
-import com.jottery.android.database.repository.SyncRepository
 import com.jottery.android.model.EncryptionMetadata
 import com.jottery.android.model.PutWrappedKeyRequest
 import com.jottery.android.network.SyncClient
-import com.jottery.android.viewmodel.AppState
-import javax.crypto.SecretKey
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import javax.crypto.spec.SecretKeySpec
 
 /**
- * Envelope encryption operations — migration, onboarding, and password change.
+ * Envelope encryption: a master key encrypts the data, and passwords only wrap
+ * it, so changing a password never touches the notes.
  *
- * Envelope encryption decouples the master key from the password:
- * a random master key encrypts data, and the password only wraps/unwraps
- * the master key. This makes password changes O(1) instead of O(n).
+ * The server stores ciphertext and is not trusted, so two rules hold here (D1):
+ * the blob on the server is only ever opened with the notes password, never the
+ * account password the server itself receives; and a blob that opens is never
+ * overwritten, even if it holds a different key.
  */
 object EnvelopeService {
 
     private const val TAG = "EnvelopeService"
 
-    // MARK: - Migrate Legacy → Envelope
+    /** How the account's server key relates to this device's vault key. */
+    sealed class AccountKeyStatus {
+        /** The server holds no key: this device can publish its own. */
+        data object NoServerKey : AccountKeyStatus()
+        data object MatchesLocalKey : AccountKeyStatus()
+        data class Differs(val accountKey: ByteArray) : AccountKeyStatus()
+    }
+
+    /** The local half of an envelope, ready to store. */
+    data class LocalEnvelope(
+        val deviceSalt: String,
+        val localWrappedMaster: String,
+        val verification: String,
+    )
 
     /**
-     * Attempt to migrate from legacy (direct PBKDF2) to envelope encryption.
-     * Non-fatal: failures are logged and the legacy path continues to work.
+     * Download the account's wrapped key and open it with the notes password,
+     * changing nothing locally. Returns null only when the server says it has no
+     * key (404). A network or server failure throws, so it can never be taken
+     * for "no key" and lead to the account's key being replaced.
+     *
+     * @throws EnvelopeException.CannotUnwrap if [notesPassword] doesn't open it.
      */
-    suspend fun tryMigrateToEnvelope(
-        appState: AppState,
-        syncRepo: SyncRepository,
-        encryptionRepo: EncryptionRepository,
-        syncClient: SyncClient,
-        password: String,
-        masterKey: SecretKey,
-    ) {
-        try {
-            val syncMeta = syncRepo.getSyncMetadata()
-            val userId = syncMeta?.userId
-            if (syncMeta == null || !syncMeta.syncEnabled || userId.isNullOrEmpty()) {
-                Log.d(TAG, "[Envelope] Migration skipped — no userId in sync metadata")
-                return
+    suspend fun fetchServerKey(client: SyncClient, userId: String, notesPassword: String): ByteArray? {
+        val response = withContext(Dispatchers.IO) { client.getWrappedKey() } ?: return null
+        return withContext(Dispatchers.Default) {
+            val master = try {
+                val wrapped = CryptoService.parseEncryptedJSON(response.blob)
+                CryptoService.unwrapMasterKey(wrapped, CryptoService.deriveWrappingKey(notesPassword, userId))
+            } catch (e: Exception) {
+                throw EnvelopeException.CannotUnwrap()
             }
+            if (master.size != CryptoService.KEY_LENGTH) throw EnvelopeException.CannotUnwrap()
+            master
+        }
+    }
 
-            // Check if already migrated
-            val metadata = encryptionRepo.get()
-            if (metadata?.envelopeVersion != null) {
-                Log.d(TAG, "[Envelope] Already migrated — skipping")
-                return
-            }
+    /** Compare the account's key with the vault's own, changing nothing. */
+    suspend fun checkAccountKey(
+        client: SyncClient,
+        userId: String,
+        notesPassword: String,
+        localKey: ByteArray,
+    ): AccountKeyStatus {
+        val serverKey = fetchServerKey(client, userId, notesPassword)
+            ?: return AccountKeyStatus.NoServerKey
+        return if (serverKey.contentEquals(localKey)) {
+            AccountKeyStatus.MatchesLocalKey
+        } else {
+            AccountKeyStatus.Differs(serverKey)
+        }
+    }
 
-            val masterKeyData = masterKey.encoded
+    /** What an unlock should do about the account's wrapped key. */
+    sealed class Reconciliation {
+        /** Nothing to change on the server. [finishMigration] is true for a legacy vault. */
+        data class InStep(val finishMigration: Boolean) : Reconciliation()
 
-            // Derive wrapping key from password + userId (1M iterations)
-            val wrappingKey = CryptoService.deriveWrappingKey(password, userId)
+        /** Upload this vault's key, wrapped with the notes password. */
+        data object Publish : Reconciliation()
 
-            // Wrap master key for server
-            val serverWrapped = CryptoService.wrapMasterKey(masterKeyData, wrappingKey)
-            val serverBlob = CryptoService.serializeEncryptedJSON(serverWrapped)
+        /** A legacy vault on another key: move it onto the account's. */
+        data class MoveToAccountKey(val accountKey: ByteArray) : Reconciliation()
 
-            // Upload to server
-            syncClient.putWrappedKey(
+        /** An envelope vault on another key: tell the user, change nothing. */
+        data object Diverged : Reconciliation()
+
+        /** The blob won't open and this device can't vouch for its own key. */
+        data object CannotHeal : Reconciliation()
+    }
+
+    /**
+     * Decide what to do after an unlock. Nothing is changed here.
+     *
+     * - No key on the server: publish this vault's. Only an explicit 404 counts.
+     * - It opens with the notes password: never overwrite it, even if the key
+     *   differs, because that means this device has diverged.
+     * - It won't open: older clients wrapped it with the account password. A
+     *   device that has synced and can read everything it holds has the account's
+     *   real key, so it may re-wrap with the notes password (D1 self-healing).
+     *
+     * @param canVouchForLocalKey has completed a sync and opens every local note.
+     *   Android's check goes further than D1's "has synced" because older builds
+     *   could sync on a key of their own after a failed onboarding.
+     */
+    suspend fun reconcile(
+        client: SyncClient,
+        userId: String,
+        notesPassword: String,
+        localKey: ByteArray,
+        isLegacyVault: Boolean,
+        canVouchForLocalKey: suspend () -> Boolean,
+    ): Reconciliation {
+        val status = try {
+            checkAccountKey(client, userId, notesPassword, localKey)
+        } catch (_: EnvelopeException.CannotUnwrap) {
+            return if (canVouchForLocalKey()) Reconciliation.Publish else Reconciliation.CannotHeal
+        }
+        return when (status) {
+            AccountKeyStatus.NoServerKey -> Reconciliation.Publish
+            AccountKeyStatus.MatchesLocalKey -> Reconciliation.InStep(finishMigration = isLegacyVault)
+            is AccountKeyStatus.Differs ->
+                if (isLegacyVault) Reconciliation.MoveToAccountKey(status.accountKey)
+                else Reconciliation.Diverged
+        }
+    }
+
+    /** Wrap [masterKey] with the notes password and upload it. */
+    suspend fun publishKey(client: SyncClient, userId: String, notesPassword: String, masterKey: ByteArray) {
+        val blob = withContext(Dispatchers.Default) {
+            val wrappingKey = CryptoService.deriveWrappingKey(notesPassword, userId)
+            CryptoService.serializeEncryptedJSON(CryptoService.wrapMasterKey(masterKey, wrappingKey))
+        }
+        withContext(Dispatchers.IO) {
+            client.putWrappedKey(
                 PutWrappedKeyRequest(
-                    blob = serverBlob,
+                    blob = blob,
                     kdfVersion = CryptoService.WRAPPING_KDF_VERSION,
                     kdfIterations = CryptoService.WRAPPING_ITERATIONS,
                 )
             )
+        }
+    }
 
-            // Generate device salt and derive device key for local wrapping
+    /** A fresh device salt, the master key wrapped under it, and a verification token. */
+    suspend fun localEnvelope(masterKey: ByteArray, password: String): LocalEnvelope =
+        withContext(Dispatchers.Default) {
             val deviceSalt = CryptoService.generateSalt()
             val deviceKey = CryptoService.deriveKey(password, deviceSalt, CryptoService.DEFAULT_ITERATIONS)
-
-            // Wrap master key locally with device key
-            val localWrapped = CryptoService.wrapMasterKey(masterKeyData, deviceKey)
-            val localBlob = CryptoService.serializeEncryptedJSON(localWrapped)
-
-            // Create verification token
-            val verificationEncrypted = CryptoService.encryptText(
-                EncryptionMetadata.VERIFICATION_PLAINTEXT, masterKey
-            )
-            val verificationJSON = CryptoService.serializeEncryptedJSON(verificationEncrypted)
-
-            // Save envelope metadata (clears legacy salt/iterations)
-            encryptionRepo.saveEnvelope(
-                envelopeVersion = 1,
+            LocalEnvelope(
                 deviceSalt = Base64.encodeToString(deviceSalt, Base64.NO_WRAP),
-                localWrappedMaster = localBlob,
-                wrappingKdfVersion = CryptoService.WRAPPING_KDF_VERSION,
+                localWrappedMaster = CryptoService.serializeEncryptedJSON(
+                    CryptoService.wrapMasterKey(masterKey, deviceKey)
+                ),
+                verification = CryptoService.serializeEncryptedJSON(
+                    CryptoService.encryptText(
+                        EncryptionMetadata.VERIFICATION_PLAINTEXT,
+                        SecretKeySpec(masterKey, "AES"),
+                    )
+                ),
             )
-
-            // Update verification token
-            encryptionRepo.get()?.let { meta ->
-                encryptionRepo.store(meta.copy(verification = verificationJSON))
-            }
-
-            Log.i(TAG, "[Envelope] Migration complete")
-        } catch (e: Exception) {
-            Log.w(TAG, "[Envelope] Migration failed (non-fatal): ${e.message}")
         }
-    }
 
-    // MARK: - Onboard From Server
+    /** The vault metadata for [envelope], built on [current]. Nothing is saved. */
+    fun metadataFor(envelope: LocalEnvelope, current: EncryptionMetadata) = current.copy(
+        salt = null,
+        iterations = null,
+        verification = envelope.verification,
+        envelopeVersion = 1,
+        deviceSalt = envelope.deviceSalt,
+        localWrappedMaster = envelope.localWrappedMaster,
+        wrappingKdfVersion = CryptoService.WRAPPING_KDF_VERSION,
+    )
 
     /**
-     * Onboard a new device by downloading the wrapped master key from the server.
-     * Returns the unwrapped master key as a SecretKey.
+     * Put the vault on an envelope around [masterKey] with [password], in one
+     * write. The key doesn't change, so the data and other devices are unaffected.
      */
-    suspend fun onboardFromServer(
-        syncClient: SyncClient,
-        encryptionRepo: EncryptionRepository,
-        password: String,
-        userId: String,
-        localPassword: String? = null,
-    ): SecretKey {
-        val response = syncClient.getWrappedKey()
-            ?: throw EnvelopeException("No wrapped key found on server")
-
-        // Derive wrapping key from password + userId
-        val wrappingKey = CryptoService.deriveWrappingKey(password, userId)
-
-        // Unwrap master key
-        val serverWrapped = CryptoService.parseEncryptedJSON(response.blob)
-        val masterKeyData = CryptoService.unwrapMasterKey(serverWrapped, wrappingKey)
-
-        require(masterKeyData.size == CryptoService.KEY_LENGTH) { "Invalid master key length" }
-
-        val masterKey = SecretKeySpec(masterKeyData, "AES")
-
-        // Generate device salt for local storage
-        val deviceSalt = CryptoService.generateSalt()
-        val deviceKey = CryptoService.deriveKey(localPassword ?: password, deviceSalt, CryptoService.DEFAULT_ITERATIONS)
-
-        // Wrap master key locally
-        val localWrapped = CryptoService.wrapMasterKey(masterKeyData, deviceKey)
-        val localBlob = CryptoService.serializeEncryptedJSON(localWrapped)
-
-        // Create verification token
-        val verificationEncrypted = CryptoService.encryptText(
-            EncryptionMetadata.VERIFICATION_PLAINTEXT, masterKey
-        )
-        val verificationJSON = CryptoService.serializeEncryptedJSON(verificationEncrypted)
-
-        // Save envelope metadata
-        encryptionRepo.saveEnvelope(
-            envelopeVersion = 1,
-            deviceSalt = Base64.encodeToString(deviceSalt, Base64.NO_WRAP),
-            localWrappedMaster = localBlob,
-            wrappingKdfVersion = CryptoService.WRAPPING_KDF_VERSION,
-        )
-
-        // Update verification token
-        encryptionRepo.get()?.let { meta ->
-            encryptionRepo.store(meta.copy(verification = verificationJSON))
-        }
-
-        return masterKey
-    }
-
-    // MARK: - Envelope Setup (Register / Unlock)
-
-    /**
-     * Set up envelope encryption after device registration or on unlock.
-     * Checks the server for an existing wrapped key first (another device may
-     * have already uploaded one). If found, onboards from the server key and
-     * re-encrypts local data if the master key differs.
-     */
-    suspend fun tryEnvelopeSetup(
-        appState: AppState,
-        syncRepo: SyncRepository,
-        encryptionRepo: EncryptionRepository,
-        syncClient: SyncClient,
-        password: String,
-        masterKey: SecretKey,
-    ) {
-        try {
-            val syncMeta = syncRepo.getSyncMetadata()
-            val userId = syncMeta?.userId
-            if (syncMeta == null || !syncMeta.syncEnabled || userId.isNullOrEmpty()) {
-                Log.d(TAG, "[Envelope] Setup skipped — no userId in sync metadata")
-                return
-            }
-
-            // Already migrated — nothing to do
-            if (encryptionRepo.get()?.envelopeVersion != null) {
-                Log.d(TAG, "[Envelope] Already migrated — skipping setup")
-                return
-            }
-
-            // Check server for an existing wrapped key from another device
-            val serverResponse = try { syncClient.getWrappedKey() } catch (_: Exception) { null }
-
-            if (serverResponse != null) {
-                // Another device already uploaded — onboard from server
-                Log.i(TAG, "[Envelope] Server has wrapped key — onboarding from server")
-                val serverKey = onboardFromServer(syncClient, encryptionRepo, password, userId)
-
-                // If the server key differs from our local key, re-encrypt all data
-                val localKeyData = masterKey.encoded
-                val serverKeyData = serverKey.encoded
-                if (!localKeyData.contentEquals(serverKeyData)) {
-                    Log.i(TAG, "[Envelope] Server key differs from local — re-encrypting data")
-                    appState.reEncryptAllData(masterKey, serverKey)
-                    appState.keyManager.unlockWithKeyData(serverKeyData)
-                    appState.loadNotes()
-                }
-            } else {
-                // No server key — we're the first device, upload ours
-                Log.i(TAG, "[Envelope] No server key — migrating local key to envelope")
-                tryMigrateToEnvelope(appState, syncRepo, encryptionRepo, syncClient, password, masterKey)
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "[Envelope] Setup failed (non-fatal): ${e.message}")
-        }
-    }
-
-    // MARK: - Fast Password Change
-
-    /**
-     * Local re-wrap only — new device salt, re-wrap master key, save to DB.
-     * Throws on failure so the caller knows immediately.
-     */
-    suspend fun changePasswordLocal(
-        encryptionRepo: EncryptionRepository,
-        newPassword: String,
-        masterKeyData: ByteArray,
-    ) {
-        val newDeviceSalt = CryptoService.generateSalt()
-        val newDeviceKey = CryptoService.deriveKey(newPassword, newDeviceSalt, CryptoService.DEFAULT_ITERATIONS)
-
-        // Re-wrap master key locally
-        val localWrapped = CryptoService.wrapMasterKey(masterKeyData, newDeviceKey)
-        val localBlob = CryptoService.serializeEncryptedJSON(localWrapped)
-
-        // Update verification token
-        val masterKey = SecretKeySpec(masterKeyData, "AES")
-        val verificationEncrypted = CryptoService.encryptText(
-            EncryptionMetadata.VERIFICATION_PLAINTEXT, masterKey
-        )
-        val verificationJSON = CryptoService.serializeEncryptedJSON(verificationEncrypted)
-
-        // Save updated envelope metadata
-        encryptionRepo.saveEnvelope(
-            envelopeVersion = 1,
-            deviceSalt = Base64.encodeToString(newDeviceSalt, Base64.NO_WRAP),
-            localWrappedMaster = localBlob,
-            wrappingKdfVersion = CryptoService.WRAPPING_KDF_VERSION,
-        )
-
-        // Update verification token
-        encryptionRepo.get()?.let { meta ->
-            encryptionRepo.store(meta.copy(verification = verificationJSON))
-        }
-
-        Log.i(TAG, "[Envelope] Local password re-wrap complete")
-    }
-
-    /**
-     * Server re-wrap — upload new wrapped key. Non-fatal.
-     */
-    suspend fun changePasswordServer(
-        syncRepo: SyncRepository,
-        syncClient: SyncClient,
-        newPassword: String,
-        masterKeyData: ByteArray,
-    ) {
-        try {
-            val syncMeta = syncRepo.getSyncMetadata()
-            val userId = syncMeta?.userId
-            if (syncMeta == null || !syncMeta.syncEnabled || userId.isNullOrEmpty()) {
-                Log.d(TAG, "[Envelope] Server re-wrap skipped — no userId")
-                return
-            }
-
-            val newWrappingKey = CryptoService.deriveWrappingKey(newPassword, userId)
-            val serverWrapped = CryptoService.wrapMasterKey(masterKeyData, newWrappingKey)
-            val serverBlob = CryptoService.serializeEncryptedJSON(serverWrapped)
-
-            syncClient.putWrappedKey(
-                PutWrappedKeyRequest(
-                    blob = serverBlob,
-                    kdfVersion = CryptoService.WRAPPING_KDF_VERSION,
-                    kdfIterations = CryptoService.WRAPPING_ITERATIONS,
-                )
-            )
-            Log.i(TAG, "[Envelope] Server re-wrap complete")
-        } catch (e: Exception) {
-            Log.w(TAG, "[Envelope] Server re-wrap failed (non-fatal): ${e.message}")
-        }
+    suspend fun saveLocalEnvelope(repo: EncryptionRepository, masterKey: ByteArray, password: String) {
+        val current = repo.get() ?: return
+        repo.store(metadataFor(localEnvelope(masterKey, password), current))
+        Log.i(TAG, "[Envelope] Local envelope saved")
     }
 }
 
-class EnvelopeException(message: String) : Exception(message)
+sealed class EnvelopeException(message: String) : Exception(message) {
+    /** The notes password didn't open the account's key. */
+    class CannotUnwrap : EnvelopeException("The notes password can't open the account's key")
+}

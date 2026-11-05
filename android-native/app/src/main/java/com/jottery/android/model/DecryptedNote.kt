@@ -30,7 +30,6 @@ data class DecryptedNote(
     var parentHash: String? = null,
     var hashChain: List<String> = emptyList(),
     var needsSync: Boolean,
-    val decryptedAt: Instant = Instant.now(),
 ) {
     /** Title from virtual tag (t: or title:) or first non-empty line. */
     val title: String
@@ -65,14 +64,6 @@ data class DecryptedNote(
     /** Word count for the note. */
     val wordCount: Int
         get() = content.split(Regex("[\\s\\n]+")).count { it.isNotEmpty() }
-
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is DecryptedNote) return false
-        return id == other.id && modifiedAt == other.modifiedAt && version == other.version
-    }
-
-    override fun hashCode(): Int = id.hashCode()
 
     companion object {
         /** Whether a tag is a virtual title tag (t: or title: prefix). */

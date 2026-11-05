@@ -7,9 +7,10 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
-// Mock localStorage
+// The session lives in sessionStorage. localStorage is shared with the notes app
+// on the same origin, so it's mocked separately to prove nothing goes there.
 let store: Record<string, string> = {};
-const localStorageMock = {
+const sessionStorageMock = {
   getItem: vi.fn((key: string) => store[key] || null),
   setItem: vi.fn((key: string, value: string) => {
     store[key] = value;
@@ -21,6 +22,25 @@ const localStorageMock = {
     store = {};
   }),
 };
+
+let sharedStore: Record<string, string> = {};
+const localStorageMock = {
+  getItem: vi.fn((key: string) => sharedStore[key] || null),
+  setItem: vi.fn((key: string, value: string) => {
+    sharedStore[key] = value;
+  }),
+  removeItem: vi.fn((key: string) => {
+    delete sharedStore[key];
+  }),
+  clear: vi.fn(() => {
+    sharedStore = {};
+  }),
+};
+
+Object.defineProperty(globalThis, 'sessionStorage', {
+  value: sessionStorageMock,
+  writable: true,
+});
 
 Object.defineProperty(globalThis, 'localStorage', {
   value: localStorageMock,
@@ -37,6 +57,7 @@ async function getApi() {
 describe('ApiClient', () => {
   beforeEach(() => {
     store = {};
+    sharedStore = {};
     vi.clearAllMocks();
   });
 
@@ -60,11 +81,61 @@ describe('ApiClient', () => {
       const result = await api.login('admin@test.com', 'password123');
 
       expect(result).toEqual(mockResponse);
-      expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      expect(sessionStorageMock.setItem).toHaveBeenCalledWith(
         'admin_session_token',
         'test-session-123'
       );
       expect(api.isAuthenticated()).toBe(true);
+    });
+
+    it('never writes the session token to localStorage', async () => {
+      const { api } = await getApi();
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            sessionId: 'test-session-123',
+            expiresAt: '2025-01-01T00:00:00Z',
+            user: { id: 'user-1', email: 'admin@test.com', isAdmin: true },
+          }),
+          { status: 200 }
+        )
+      );
+
+      await api.login('admin@test.com', 'password123');
+
+      expect(localStorageMock.setItem).not.toHaveBeenCalled();
+    });
+
+    it('removes a token left in localStorage by an earlier version and ignores it', async () => {
+      sharedStore['admin_session_token'] = 'stale-token';
+
+      const { api } = await getApi();
+
+      expect(sharedStore['admin_session_token']).toBeUndefined();
+      expect(api.isAuthenticated()).toBe(false);
+    });
+
+    it('asks for a cookie session when logging in', async () => {
+      const { api } = await getApi();
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            sessionId: 'test-session-123',
+            expiresAt: '2025-01-01T00:00:00Z',
+            user: { id: 'user-1', email: 'admin@test.com', isAdmin: true },
+          }),
+          { status: 200 }
+        )
+      );
+
+      await api.login('admin@test.com', 'password123');
+
+      const body = JSON.parse(fetchSpy.mock.calls[0][1]?.body as string);
+      expect(body).toEqual({
+        email: 'admin@test.com',
+        password: 'password123',
+        cookieSession: true,
+      });
     });
 
     it('should throw ApiError on login failure', async () => {
@@ -76,13 +147,35 @@ describe('ApiClient', () => {
       await expect(api.login('wrong@test.com', 'wrong')).rejects.toThrow(ApiError);
     });
 
-    it('should clear session on logout', async () => {
+    it('should end the session on the server, then clear it locally', async () => {
       store['admin_session_token'] = 'test-session';
       const { api } = await getApi();
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(new Response(null, { status: 204 }));
 
-      api.logout();
+      await api.logout();
 
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith('admin_session_token');
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/user/logout'),
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({ Authorization: 'Bearer test-session' }),
+        })
+      );
+      expect(sessionStorageMock.removeItem).toHaveBeenCalledWith('admin_session_token');
+      expect(api.isAuthenticated()).toBe(false);
+    });
+
+    it('should clear the session locally even if the server can\'t be reached', async () => {
+      store['admin_session_token'] = 'test-session';
+      const { api } = await getApi();
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      vi.spyOn(globalThis, 'fetch').mockRejectedValueOnce(new Error('offline'));
+
+      await api.logout();
+
+      expect(store['admin_session_token']).toBeUndefined();
       expect(api.isAuthenticated()).toBe(false);
     });
 
@@ -104,6 +197,92 @@ describe('ApiClient', () => {
           }),
         })
       );
+    });
+  });
+
+  describe('Cookie sessions', () => {
+    const cookieLogin = {
+      cookieSession: true,
+      expiresAt: '2025-01-01T00:00:00Z',
+      user: { id: 'user-1', email: 'admin@test.com', isAdmin: true },
+    };
+
+    it('should keep no token, and stay signed in', async () => {
+      const { api } = await getApi();
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(JSON.stringify(cookieLogin), { status: 200 })
+      );
+
+      await api.login('admin@test.com', 'password123');
+
+      expect(api.isAuthenticated()).toBe(true);
+      expect(localStorageMock.setItem).not.toHaveBeenCalled();
+    });
+
+    it('should ignore a token sent alongside a cookie session', async () => {
+      const { api } = await getApi();
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(JSON.stringify({ ...cookieLogin, sessionId: 'also-a-token' }), { status: 200 })
+      );
+
+      await api.login('admin@test.com', 'password123');
+
+      expect(JSON.stringify(store)).not.toContain('also-a-token');
+    });
+
+    it('should send the CSRF header and no Authorization header', async () => {
+      const { api } = await getApi();
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(new Response(JSON.stringify(cookieLogin), { status: 200 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ users: [], total: 0 }), { status: 200 }));
+
+      await api.login('admin@test.com', 'password123');
+      await api.listUsers();
+
+      const headers = fetchSpy.mock.calls[1][1]?.headers as Record<string, string>;
+      expect(headers['Authorization']).toBeUndefined();
+      expect(headers['X-Requested-With']).toBe('JotteryDashboard');
+      expect(fetchSpy.mock.calls[1][1]?.credentials).toBe('include');
+    });
+
+    it('should not send the CSRF header with a bearer token', async () => {
+      store['admin_session_token'] = 'test-token';
+      const { api } = await getApi();
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(new Response(JSON.stringify({ users: [], total: 0 }), { status: 200 }));
+
+      await api.listUsers();
+
+      const headers = fetchSpy.mock.calls[0][1]?.headers as Record<string, string>;
+      expect(headers['X-Requested-With']).toBeUndefined();
+    });
+
+    it('should survive a reload of the same tab', async () => {
+      const first = await getApi();
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(JSON.stringify(cookieLogin), { status: 200 })
+      );
+      await first.api.login('admin@test.com', 'password123');
+
+      const reloaded = await getApi();
+
+      expect(reloaded.api.isAuthenticated()).toBe(true);
+    });
+
+    it('should log out through the admin route, which receives the cookie', async () => {
+      const { api } = await getApi();
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(new Response(JSON.stringify(cookieLogin), { status: 200 }))
+        .mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+      await api.login('admin@test.com', 'password123');
+      await api.logout();
+
+      expect(fetchSpy.mock.calls[1][0]).toContain('/api/v1/admin/logout');
+      expect(api.isAuthenticated()).toBe(false);
     });
   });
 

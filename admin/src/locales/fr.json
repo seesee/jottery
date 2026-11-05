@@ -46,6 +46,23 @@
     "confirmTitle": "Confirmer la déconnexion",
     "confirmMessage": "Êtes-vous sûr de vouloir vous déconnecter ?"
   },
+  "errors": {
+    "unknown": "Une erreur s'est produite. Veuillez réessayer.",
+    "network": "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
+    "forbidden": "Vous n'avez pas l'autorisation de faire cela.",
+    "wrongPassword": "Le mot de passe actuel est incorrect",
+    "rateLimited": "Trop de tentatives. Réessayez dans {seconds} secondes.",
+    "tooManyAttempts": "Trop de tentatives. Veuillez patienter et réessayer.",
+    "passwordTooShort": "Le nouveau mot de passe doit comporter au moins 12 caractères",
+    "passwordSameAsCurrent": "Le nouveau mot de passe doit être différent de l'actuel"
+  },
+  "session": {
+    "expired": "Votre session a expiré. Veuillez vous reconnecter."
+  },
+  "forcedPasswordChange": {
+    "title": "Changez votre mot de passe",
+    "description": "Vous devez choisir un nouveau mot de passe pour continuer. Il doit contenir au moins 12 caractères."
+  },
   "dashboard": {
     "title": "Tableau de bord",
     "loadingStats": "Chargement des statistiques...",
@@ -248,6 +265,7 @@
       "errors": {
         "invalidCredentials": "E-mail ou mot de passe incorrect",
         "accountInactive": "Votre compte est inactif. Veuillez contacter l'administrateur.",
+        "accountPending": "Votre compte est en attente d'approbation par un administrateur.",
         "unexpected": "Une erreur inattendue s'est produite",
         "statusCheckFailed": "Failed to check status. Please try again."
       },
