@@ -121,12 +121,6 @@ COPY --from=web-builder    /app/dist ./dist
 COPY --from=admin-builder  /app/admin/dist ./admin/dist
 
 # -----------------------------
-# Copy TUI binaries (added by GitHub Actions in /releases)
-# -----------------------------
-COPY releases ./releases
-RUN chmod -R +x /app/releases 2>/dev/null || true
-
-# -----------------------------
 # Persistent data directory
 # -----------------------------
 # Everything else stays owned by root, so the services can't rewrite the web bundle
@@ -143,8 +137,6 @@ COPY Caddyfile /etc/caddy/Caddyfile
 # -----------------------------
 # Runtime environment
 # -----------------------------
-ENV ROCKET_ADDRESS=0.0.0.0
-ENV ROCKET_PORT=3030
 ENV DATABASE_URL=/app/data/jottery.db
 # The bundled Caddy is the one proxy in front of the server. It replaces any
 # X-Forwarded-For a client sends, and port 3030 is never published.

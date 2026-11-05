@@ -206,6 +206,8 @@ jobs:
       - name: Build web app
         run: npm run build
 
+      # Leaves out screenshots/, which is 107 MB across 15 languages for a 4.9 MB app.
+      # Only the landing page uses it, by absolute URL, so it never loaded from file://.
       - name: Create offline ZIP bundle
         run: |
           cd dist
@@ -221,7 +223,7 @@ jobs:
             site.webmanifest \
             pdf.worker.min.mjs \
             version.json \
-            screenshots/ \
+            privacy.html \
             -x "*.DS_Store"
           cd ..
           mkdir -p web-release
@@ -279,7 +281,6 @@ jobs:
   docker-build:
     name: Build Multi-Arch Docker Image
     needs:
-      - collect-tui
       - repo-checks
       - web-tests
       - server-tests
@@ -300,18 +301,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Prepare releases directory
-        run: mkdir -p releases
-
-      - name: Download TUI bundle
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: all-tui
-          path: releases
-
-      - name: Debug workspace
-        run: ls -R releases
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
