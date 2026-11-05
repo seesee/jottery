@@ -491,6 +491,9 @@ actor SyncService {
                 serverColor: rejected.serverColor,
                 serverDeleted: rejected.serverDeleted,
                 serverDeletedAt: rejected.serverDeletedAt,
+                ancestor: ConflictAncestor.decrypted(
+                    content: rejected.ancestorContent, tags: rejected.ancestorTags, key: key
+                ),
                 localUnreadable: local == nil,
                 serverUnreadable: server == nil
             ))

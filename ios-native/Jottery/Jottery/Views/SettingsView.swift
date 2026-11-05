@@ -258,6 +258,8 @@ struct SettingsView: View {
                         .truncationMode(.middle)
                 }
 
+                SyncDeviceRows()
+
                 if let lastSync = appState.lastSyncAt {
                     HStack {
                         Text(L.settingsSyncLastSync)
@@ -303,6 +305,12 @@ struct SettingsView: View {
                     Text(disconnectWarning)
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                }
+
+                NavigationLink {
+                    AccountView()
+                } label: {
+                    Text(L.accountTitle)
                 }
 
                 Button(L.deleteAccountTitle, role: .destructive) {

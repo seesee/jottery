@@ -131,4 +131,13 @@ extension AppState {
         // A search on screen may go by what just changed.
         scheduleSearch()
     }
+
+    // MARK: - Sync
+
+    /// Notes and deletions still to go up.
+    func pendingSyncCount() -> Int {
+        let notes = (try? noteRepo?.countNeedingSync()) ?? 0
+        let deletions = (try? syncRepo?.getPendingDeletions().count) ?? 0
+        return notes + deletions
+    }
 }

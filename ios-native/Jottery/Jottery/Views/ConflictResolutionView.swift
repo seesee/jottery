@@ -101,19 +101,26 @@ struct ConflictDetailView: View {
     @Environment(\.dismiss) private var dismiss
     let conflict: ConflictInfo
 
-    @State private var showingLocal = true
+    @State private var version = ConflictVersion.local
     @State private var couldntResolve = false
 
     private var shownSideIsUnreadable: Bool {
-        showingLocal ? conflict.localUnreadable : conflict.serverUnreadable
+        switch version {
+        case .local: conflict.localUnreadable
+        case .server: conflict.serverUnreadable
+        case .ancestor: false  // An ancestor that won't open isn't offered at all.
+        }
     }
 
     var body: some View {
         VStack(spacing: 0) {
-            // Toggle between local and server
-            Picker(L.conflictVersion, selection: $showingLocal) {
-                Text(L.conflictLocal).tag(true)
-                Text(L.conflictServer).tag(false)
+            // Toggle between local, server and where they split, if that's known
+            Picker(L.conflictVersion, selection: $version) {
+                Text(L.conflictLocal).tag(ConflictVersion.local)
+                Text(L.conflictServer).tag(ConflictVersion.server)
+                if conflict.versions.contains(.ancestor) {
+                    Text(L.conflictAncestor).tag(ConflictVersion.ancestor)
+                }
             }
             .pickerStyle(.segmented)
             .padding()
@@ -123,16 +130,15 @@ struct ConflictDetailView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     // Metadata
                     HStack {
-                        Label(
-                            formattedDate(showingLocal ? conflict.localModifiedAt : conflict.serverModifiedAt),
-                            systemImage: "clock"
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        if let modifiedAt = conflict.modifiedAt(of: version) {
+                            Label(formattedDate(modifiedAt), systemImage: "clock")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
 
                         Spacer()
 
-                        let tags = showingLocal ? conflict.localTags : conflict.serverTags
+                        let tags = conflict.tags(of: version)
                         if !tags.isEmpty {
                             HStack(spacing: 4) {
                                 ForEach(tags, id: \.self) { tag in
@@ -152,7 +158,7 @@ struct ConflictDetailView: View {
                             .padding(.horizontal)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
-                        Text(showingLocal ? conflict.localContent : conflict.serverContent)
+                        Text(conflict.content(of: version))
                             .font(.body.monospaced())
                             .padding(.horizontal)
                             .frame(maxWidth: .infinity, alignment: .leading)

@@ -73,4 +73,54 @@ extension L {
     static var coloursTagsFooter: String { String(localized: "colours.tagsFooter") }
     static var coloursNoTags: String { String(localized: "colours.noTags") }
     static var coloursFilterTags: String { String(localized: "colours.filterTags") }
+
+    static var healthServerCheckFailed: String { String(localized: "health.serverCheckFailed") }
+
+    // MARK: - Sync Section
+
+    static var settingsSyncDevice: String { String(localized: "settings.syncDevice") }
+    static var settingsSyncPending: String { String(localized: "settings.syncPending") }
+
+    // MARK: - Account
+
+    static var accountTitle: String { String(localized: "account.title") }
+    static var accountSignIn: String { String(localized: "account.signIn") }
+    static var accountSignInHint: String { String(localized: "account.signInHint") }
+    static var accountSessionEnded: String { String(localized: "account.sessionEnded") }
+    static var accountRequestFailed: String { String(localized: "account.requestFailed") }
+    static var accountUsage: String { String(localized: "account.usage") }
+    static var accountAttachments: String { String(localized: "account.attachments") }
+    static var accountStorage: String { String(localized: "account.storage") }
+    static func accountStorageOfQuota(_ used: String, _ quota: String) -> String {
+        String(localized: "account.storageOfQuota \(used) \(quota)")
+    }
+    static var accountInbox: String { String(localized: "account.inbox") }
+    static var accountInboxHint: String { String(localized: "account.inboxHint") }
+    static var accountInboxItems: String { String(localized: "account.inboxItems") }
+    static var accountInboxToken: String { String(localized: "account.inboxToken") }
+    static var accountInboxTokenSet: String { String(localized: "account.inboxTokenSet") }
+    static var accountInboxTokenNotSet: String { String(localized: "account.inboxTokenNotSet") }
+    static var accountGenerateToken: String { String(localized: "account.generateToken") }
+    static var accountReplaceToken: String { String(localized: "account.replaceToken") }
+    static var accountReplaceTokenTitle: String { String(localized: "account.replaceTokenTitle") }
+    static var accountReplaceTokenMessage: String { String(localized: "account.replaceTokenMessage") }
+    static var accountReplaceTokenAction: String { String(localized: "account.replaceTokenAction") }
+    static var accountRevokeToken: String { String(localized: "account.revokeToken") }
+    static var accountRevokeTokenTitle: String { String(localized: "account.revokeTokenTitle") }
+    static var accountRevokeTokenMessage: String { String(localized: "account.revokeTokenMessage") }
+    static var accountRevokeTokenAction: String { String(localized: "account.revokeTokenAction") }
+    static var accountCopyToken: String { String(localized: "account.copyToken") }
+    static var accountTokenCopied: String { String(localized: "account.tokenCopied") }
+    static var accountTokenShownOnce: String { String(localized: "account.tokenShownOnce") }
+    static var accountDeleteNotesTitle: String { String(localized: "account.deleteNotesTitle") }
+    static func accountDeleteNotesMessage(_ count: Int) -> String {
+        String(localized: "account.deleteNotesMessage \(count)")
+    }
+    static var accountDeleteNotesHint: String { String(localized: "account.deleteNotesHint") }
+    static var accountDeleteNotesAction: String { String(localized: "account.deleteNotesAction") }
+    static var accountDeleteWrongPassword: String { String(localized: "account.deleteWrongPassword") }
+
+    // MARK: - Conflicts
+
+    static var conflictAncestor: String { String(localized: "conflict.ancestor") }
 }

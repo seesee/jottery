@@ -100,6 +100,11 @@ actor SyncClient {
         return try await get(url: url)
     }
 
+    /// What the server calls this device, fit to show. Nil if it can't say.
+    func deviceName() async -> String? {
+        (try? await status()).flatMap { SyncValidation.displayName($0.deviceName) }
+    }
+
     /// Get a short-lived SSE token.
     func getSSEToken() async throws -> SSETokenResponse {
         let url = try apiURL("sync/events/token")
@@ -234,6 +239,50 @@ actor SyncClient {
 
         let (data, response) = try await session.data(for: request)
         try validateResponse(response, data: data)
+    }
+
+    /// What the account holds, and how much of its quota that is.
+    func accountInfo(sessionId: String) async throws -> AccountInfo {
+        let (data, response) = try await session.data(for: sessionRequest("user/account", "GET", sessionId))
+        try validateResponse(response, data: data)
+        return try JSONDecoder().decode(AccountInfo.self, from: data)
+    }
+
+    /// Delete every note the account has on the server. Devices keep their
+    /// copies. The password goes with it, as for deleting the account.
+    func deleteServerNotes(sessionId: String, currentPassword: String) async throws {
+        var request = try sessionRequest("user/notes", "DELETE", sessionId)
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONEncoder().encode(DeleteAccountRequest(currentPassword: currentPassword))
+
+        let (data, response) = try await session.data(for: request)
+        try validateResponse(response, data: data)
+    }
+
+    /// A new inbox token, replacing any there was. The server keeps only its
+    /// hash, so this is the only time it's seen. Callers must not log or store it.
+    func generateInboxToken(sessionId: String) async throws -> String {
+        let (data, response) = try await session.data(for: sessionRequest("user/inbox-token", "POST", sessionId))
+        try validateResponse(response, data: data)
+        return try JSONDecoder().decode(InboxTokenResponse.self, from: data).token
+    }
+
+    func revokeInboxToken(sessionId: String) async throws {
+        let (data, response) = try await session.data(for: sessionRequest("user/inbox-token", "DELETE", sessionId))
+        try validateResponse(response, data: data)
+    }
+
+    /// End a session from `logIn`.
+    func logOut(sessionId: String) async throws {
+        let (data, response) = try await session.data(for: sessionRequest("user/logout", "POST", sessionId))
+        try validateResponse(response, data: data)
+    }
+
+    private func sessionRequest(_ path: String, _ method: String, _ sessionId: String) throws -> URLRequest {
+        var request = URLRequest(url: try apiURL(path))
+        request.httpMethod = method
+        request.setValue("Bearer \(sessionId)", forHTTPHeaderField: "Authorization")
+        return request
     }
 
     // MARK: - Inbox

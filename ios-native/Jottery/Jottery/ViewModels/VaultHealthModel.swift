@@ -92,7 +92,8 @@ final class VaultHealthModel {
         } catch is CancellationError {
             // As for a scan.
         } catch {
-            errorMessage = SyncEndpoint.describeSyncFailure(error)
+            // Not the error's own text, which can be the server's words.
+            errorMessage = L.healthServerCheckFailed
         }
     }
 

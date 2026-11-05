@@ -35,6 +35,8 @@ struct ConflictInfo: Identifiable, Sendable {
     var serverColor: String?
     var serverDeleted: Bool?
     var serverDeletedAt: String?
+    /// The version both sides came from, if the server found one that opens.
+    var ancestor: ConflictAncestor?
 
     // A side that failed to decrypt. Its content above is empty, and is never
     // to be shown, kept or copied as if it were the note.
