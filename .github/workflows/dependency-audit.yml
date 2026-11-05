@@ -1,0 +1,33 @@
+name: Dependency Audit
+
+# Scheduled rather than on PRs: a new advisory shouldn't fail unrelated work.
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Weekly on Mondays
+  workflow_dispatch:  # Manual trigger
+
+permissions:
+  contents: read
+
+jobs:
+  cargo-audit:
+    name: Cargo Audit (${{ matrix.project }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [server, tui]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked --version 0.22.0
+
+      - name: Audit
+        working-directory: ${{ matrix.project }}
+        run: cargo audit
