@@ -61,6 +61,7 @@ describe('sync merge', () => {
 
   async function localNote(overrides: Partial<Note> = {}): Promise<Note> {
     const note = createTestNote({
+      tags: [],
       id: NOTE_ID,
       content: await encrypted('local text'),
       contentHash: HASH_1,
@@ -165,7 +166,7 @@ describe('sync merge', () => {
       const unpushed = 'a0000000-0000-4000-8000-000000000021';
 
       serve({}, async () => {
-        await noteRepository.create(createTestNote({ id: unpushed, needsSync: true }));
+        await noteRepository.create(createTestNote({ tags: [], id: unpushed, needsSync: true }));
         return {
           accepted: [
             { id: NOTE_ID, serverVersion: 2, syncedAt: NOW },
@@ -523,7 +524,7 @@ describe('sync merge', () => {
     }
 
     beforeEach(async () => {
-      const note = createTestNote({ id: NOTE_ID, content: await encrypted('text'), needsSync: false });
+      const note = createTestNote({ tags: [], id: NOTE_ID, content: await encrypted('text'), needsSync: false });
       note.contentHash = await cryptoService.computeContentHash(note);
       note.parentHash = null;
       note.hashChain = [note.contentHash];

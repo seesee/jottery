@@ -2,7 +2,8 @@
   import { get } from 'svelte/store';
   import { onMount, onDestroy } from 'svelte';
   import { _ } from 'svelte-i18n';
-  import { versionRepository, noteRepository, noteService, cryptoService, keyManager, decryptJSON } from '../services';
+  import { versionRepository, noteRepository, noteService, cryptoService, keyManager } from '../services';
+  import { decryptTags } from '../services/tagConversionService';
   import type { DecryptedNoteVersion, NoteVersion } from '../types';
   import { formatDate } from '../utils/dateFormat';
   import ConfirmModal from './ConfirmModal.svelte';
@@ -63,20 +64,7 @@
     const encryptedContent = JSON.parse(version.content);
     const content = await cryptoService.decryptText(encryptedContent, masterKey.key);
 
-    let tags: string[] = [];
-    if (version.tags.length > 0) {
-      if (version.tags.length === 1) {
-        const encryptedTags = JSON.parse(version.tags[0]);
-        tags = await decryptJSON(encryptedTags, masterKey.key);
-      } else {
-        // Old format - individually encrypted tags
-        for (const tagJson of version.tags) {
-          const encryptedTag = JSON.parse(tagJson);
-          const tagText = await cryptoService.decryptText(encryptedTag, masterKey.key);
-          tags.push(JSON.parse(tagText));
-        }
-      }
-    }
+    const tags = await decryptTags(version.tags, masterKey.key);
 
     return {
       ...version,

@@ -12,6 +12,7 @@ import { advanceContentHash, cryptoService, encryptStringArray, decryptStringArr
 import { recordDecryptFailure } from './vaultHealthService';
 import { keyManager } from './keyManager';
 import { ApplicationLockedError, NotFoundError, CryptoError } from '../errors';
+import { syncToStorage } from './tagConversionService';
 import { backupSchedulerService } from './backupSchedulerService';
 import { getNoteTitle } from '../utils/noteTitle';
 import { localeIncludes, localeSort } from '../utils/stringUtils';
@@ -474,8 +475,14 @@ class NoteService {
       throw new NotFoundError('Note', id);
     }
 
+    const masterKey = keyManager.getMasterKey();
+    if (!masterKey) {
+      throw new ApplicationLockedError();
+    }
+
     note.content = version.content;
-    note.tags = version.tags;
+    // Versions pulled by older clients can hold the sync format
+    note.tags = await syncToStorage(version.tags, masterKey.key);
     note.attachments = version.attachments;
     note.syntaxLanguage = version.syntaxLanguage;
     note.wordWrap = version.wordWrap;

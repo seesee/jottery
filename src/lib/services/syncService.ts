@@ -825,19 +825,41 @@ class SyncService {
   ): Promise<PushOutcome> {
     this.noteSyncActivity();
 
+    // A note that can't be converted is set aside. Sending it without its tags would
+    // erase them on the server, and it mustn't hold back the rest of the batch.
+    const converted: SyncPushRequest['notes'] = [];
+    const sendable: Note[] = [];
+    for (const note of batchNotes) {
+      try {
+        converted.push(await this.convertNoteToSyncFormat(note, masterKey));
+        sendable.push(note);
+      } catch (error) {
+        console.error(`[SyncService] Could not prepare note ${note.id} for sync:`, error);
+        await syncRepository.updateNoteSyncMetadata(note.id, {
+          noteId: note.id,
+          lastSyncStatus: 'error',
+          errorMessage: 'Tags could not be read',
+        });
+      }
+    }
+
+    if (sendable.length === 0) {
+      return { accepted: 0, rejected: 0, warnings: [], refused: 0 };
+    }
+
     // Collect attachments and build request
-    const attachmentMap = await this.collectAttachmentsForBatch(batchNotes, forceAll);
+    const attachmentMap = await this.collectAttachmentsForBatch(sendable, forceAll);
 
     const pushRequest: SyncPushRequest = {
-      notes: await Promise.all(batchNotes.map(note => this.convertNoteToSyncFormat(note, masterKey))),
+      notes: converted,
       attachments: Array.from(attachmentMap.entries()).map(([id, data]) => ({ id, data })),
-      versions: await this.collectVersionsForPush(batchNotes),
-      attachmentsAuthoritative: this.canVouchForAttachments(batchNotes) ? true : undefined,
+      versions: await this.collectVersionsForPush(sendable, masterKey),
+      attachmentsAuthoritative: this.canVouchForAttachments(sendable) ? true : undefined,
     };
 
     // Send to server and process results
     const result = validatePushResponse(await pushToServer(endpoint, apiKey, pushRequest));
-    const pushedNotes = new Map(batchNotes.map(note => [note.id, note]));
+    const pushedNotes = new Map(sendable.map(note => [note.id, note]));
     await this.processAcceptedNotes(result.accepted, pushedNotes, new Set(attachmentMap.keys()));
     await this.processRejectedNotes(result.rejected, pushedNotes);
     const warnings = result.attachmentWarnings ?? [];
@@ -1254,7 +1276,7 @@ class SyncService {
   }
 
   /** Merge note versions from server */
-  private async mergeVersionsFromServer(versions: SyncNoteVersion[]): Promise<void> {
+  private async mergeVersionsFromServer(versions: SyncNoteVersion[], masterKey: CryptoKey): Promise<void> {
     for (const candidate of versions) {
       const validated = validateRemoteVersion(candidate);
       if (!validated.ok) {
@@ -1273,7 +1295,8 @@ class SyncService {
           {
             id: serverVersion.noteId,
             content: serverVersion.content,
-            tags: serverVersion.tags,
+            // Older rows on the server are in either format, depending on the client
+            tags: await syncToStorage(serverVersion.tags, masterKey),
             attachments: serverVersion.attachments,
             version: serverVersion.version,
             syntaxLanguage: serverVersion.syntaxLanguage,
@@ -1447,7 +1470,7 @@ class SyncService {
 
       // Process other data
       await this.downloadAttachments(result.attachments);
-      await this.mergeVersionsFromServer(result.versions);
+      await this.mergeVersionsFromServer(result.versions, masterKey.key);
       if (result.savedSearches) {
         await this.processSavedSearchesFromServer(result.savedSearches, syncedAt);
       }
@@ -1776,7 +1799,7 @@ class SyncService {
   /**
    * Collect all versions for notes being pushed
    */
-  private async collectVersionsForPush(notes: Note[]): Promise<SyncNoteVersion[]> {
+  private async collectVersionsForPush(notes: Note[], masterKey: CryptoKey): Promise<SyncNoteVersion[]> {
     const versions: SyncNoteVersion[] = [];
 
     for (const note of notes) {
@@ -1785,6 +1808,16 @@ class SyncService {
 
       // Convert to SyncNoteVersion format (versions are already encrypted in storage)
       for (const version of noteVersions) {
+        // The sync format, as for notes. A version that can't be read stays on this
+        // device: history isn't worth holding back the note it belongs to.
+        let tags: string[];
+        try {
+          tags = await storageToSync(version.tags, masterKey);
+        } catch (error) {
+          console.warn(`[SyncService] Skipping version ${version.versionKey}, its tags can't be read:`, error);
+          continue;
+        }
+
         versions.push({
           versionKey: version.versionKey,
           noteId: version.noteId,
@@ -1792,7 +1825,7 @@ class SyncService {
           createdAt: version.createdAt,
           syncedAt: version.syncedAt,
           content: version.content,
-          tags: version.tags,
+          tags,
           attachments: version.attachments,
           syntaxLanguage: version.syntaxLanguage,
           wordWrap: version.wordWrap,

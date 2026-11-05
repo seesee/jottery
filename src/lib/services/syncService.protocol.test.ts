@@ -18,6 +18,7 @@ import { syncRepository } from './syncRepository';
 import { noteRepository } from './noteRepository';
 import { keyManager } from './keyManager';
 import { cryptoService } from './crypto';
+import { decryptTags } from './tagConversionService';
 import { initTestDB, cleanupTestDB, createTestNote } from '../../test/db-utils';
 import { inboxItems, settings } from '../stores/appStore';
 import { toast } from '../utils/toast.svelte';
@@ -348,6 +349,7 @@ describe('sync protocol', () => {
   describe('attachmentsAuthoritative', () => {
     async function dirtyNote(n: number, overrides: Partial<Note> = {}): Promise<void> {
       await noteRepository.create(createTestNote({
+      tags: [],
         id: ID(n), content: await encrypted('x'), needsSync: true,
         contentHash: HASH('a'), parentHash: null, hashChain: [HASH('a')], ...overrides,
       }));
@@ -394,7 +396,7 @@ describe('sync protocol', () => {
     const pending = () => noteRepository.getPendingDeletions();
 
     async function deleteHere(n: number): Promise<void> {
-      await noteRepository.create(createTestNote({ id: ID(n), content: await encrypted('x'), needsSync: false }));
+      await noteRepository.create(createTestNote({ tags: [], id: ID(n), content: await encrypted('x'), needsSync: false }));
       await noteRepository.permanentDelete(ID(n));
     }
 
@@ -482,6 +484,7 @@ describe('sync protocol', () => {
   describe('locks', () => {
     it('are pushed, so a push here cannot clear one set elsewhere', async () => {
       await noteRepository.create(createTestNote({
+      tags: [],
         id: ID(1), content: await encrypted('x'), needsSync: true,
         locked: true, lockedAt: NOW, contentHash: HASH('a'), parentHash: null, hashChain: [HASH('a')],
       }));
@@ -501,6 +504,7 @@ describe('sync protocol', () => {
       const { attachmentRepository } = await import('./attachmentRepository');
       await attachmentRepository.storeBlob(ID(100 + n), new Uint8Array(bytes).buffer);
       await noteRepository.create(createTestNote({
+      tags: [],
         id: ID(n), content: await encrypted('x'), needsSync: true,
         contentHash: HASH('a'), parentHash: null, hashChain: [HASH('a')],
         attachments: [{ id: ID(100 + n), filename: 'f', mimeType: 'image/png', size: bytes, data: ID(100 + n) }],
@@ -722,6 +726,7 @@ describe('sync protocol', () => {
 
     async function dirtyNote(n: number): Promise<void> {
       await noteRepository.create(createTestNote({
+      tags: [],
         id: ID(n), content: await encrypted('x'), needsSync: true,
         contentHash: HASH('a'), parentHash: null, hashChain: [HASH('a')],
       }));
@@ -843,7 +848,7 @@ describe('sync protocol', () => {
       });
 
       it('still sends deletions, so the user can make room', async () => {
-        await noteRepository.create(createTestNote({ id: ID(1), content: await encrypted('x'), needsSync: false }));
+        await noteRepository.create(createTestNote({ tags: [], id: ID(1), content: await encrypted('x'), needsSync: false }));
         await noteRepository.permanentDelete(ID(1));
         const { create } = await import('./savedSearchRepository');
         await create('a', 'b');
@@ -881,6 +886,89 @@ describe('sync protocol', () => {
       await syncService.syncNow();
 
       expect(overlapping?.error).toBe('Sync already in progress');
+    });
+  });
+
+  describe('version history', () => {
+    const NOTE = ID(70);
+
+    async function noteWithVersion(tags: string[]): Promise<void> {
+      await noteRepository.create(createTestNote({
+      tags: [],
+        id: NOTE, content: await encrypted('x'), needsSync: true,
+        contentHash: HASH('a'), parentHash: null, hashChain: [HASH('a')],
+      }));
+      const { versionRepository } = await import('./versionRepository');
+      await versionRepository.createVersion(
+        { ...(await noteRepository.getById(NOTE) as Note), tags, version: 1 },
+        { syncedAt: NOW, reason: 'manual-sync' },
+      );
+    }
+
+    it('pushes tags in the sync format, as every reader understands', async () => {
+      const { encryptJSON } = await import('./crypto');
+      await noteWithVersion([JSON.stringify(await encryptJSON(['a', 'b'], masterKey))]);
+      serve(() => ({}));
+
+      await syncService.syncNow();
+
+      expect(pushes[0].versions[0].tags).toHaveLength(2);
+      expect(await decryptTags(pushes[0].versions[0].tags, masterKey)).toEqual(['a', 'b']);
+    });
+
+    it('still pushes the note if one version can\'t be read', async () => {
+      await noteWithVersion(['not json']);
+      serve(() => ({}));
+
+      await syncService.syncNow();
+
+      expect(pushes[0].notes).toHaveLength(1);
+      expect(pushes[0].versions).toEqual([]);
+    });
+
+    it.each([
+      ['one ciphertext per tag, from iOS or the TUI', async () => {
+        const one = async (t: string) => JSON.stringify(await cryptoService.encryptText(JSON.stringify(t), masterKey));
+        return [await one('a'), await one('b')];
+      }],
+      ['one blob, from web or Android', async () => {
+        const { encryptJSON } = await import('./crypto');
+        return [JSON.stringify(await encryptJSON(['a', 'b'], masterKey))];
+      }],
+    ])('reads tags stored as %s', async (_name, tags) => {
+      const version = {
+        versionKey: `${NOTE}:1`, noteId: NOTE, version: 1, createdAt: NOW, syncedAt: NOW,
+        content: await encrypted('old'), tags: await tags(), attachments: [], reason: 'sync',
+      };
+      serve(() => ({ versions: [version] as never }));
+
+      await syncService.syncNow();
+
+      const { versionRepository } = await import('./versionRepository');
+      const stored = await versionRepository.getVersion(NOTE, 1);
+      expect(stored?.tags).toHaveLength(1);
+      expect(await decryptTags(stored?.tags, masterKey)).toEqual(['a', 'b']);
+    });
+  });
+
+  describe('a note whose tags cannot be read', () => {
+    it('is set aside, and does not stop the rest of its batch', async () => {
+      await noteRepository.create(createTestNote({
+        id: ID(80), content: await encrypted('x'), tags: ['not json'], needsSync: true,
+        contentHash: HASH('a'), parentHash: null, hashChain: [HASH('a')],
+      }));
+      await noteRepository.create(createTestNote({
+      tags: [],
+        id: ID(81), content: await encrypted('y'), needsSync: true,
+        contentHash: HASH('b'), parentHash: null, hashChain: [HASH('b')],
+      }));
+      serve(() => ({}), body => ({ accepted: body.notes.map(n => ({ id: n.id })) }));
+
+      await syncService.syncNow();
+
+      expect(pushes[0].notes.map(n => n.id)).toEqual([ID(81)]);
+      expect((await noteRepository.getById(ID(80)))?.needsSync).toBe(true);
+      expect((await syncRepository.getNoteSyncMetadata(ID(80)))?.lastSyncStatus).toBe('error');
     });
   });
 

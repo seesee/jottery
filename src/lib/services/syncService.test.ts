@@ -216,7 +216,7 @@ describe('syncService', () => {
 
     it('should push modified notes to server', async () => {
       // Create and save test note
-      const note = createTestNote({ content: 'Test content', tags: ['test'] });
+      const note = createTestNote({ content: 'Test content', tags: [] });
       await noteRepository.create(note);
 
       let capturedRequest: any;

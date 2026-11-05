@@ -8,6 +8,7 @@ import { get } from 'svelte/store';
 import { noteService } from './noteService';
 import { noteRepository } from './noteRepository';
 import { keyManager } from './keyManager';
+import { cryptoService } from './crypto';
 import { undecryptableNotes, resetVaultHealth } from './vaultHealthService';
 import type { Note } from '../types';
 import { initTestDB, cleanupTestDB } from '../../test/db-utils';
@@ -264,6 +265,24 @@ describe('noteService', () => {
       expect(failures).toHaveLength(1);
       expect(failures[0].id).toBe('corrupt-note-id');
       expect(failures[0].error).toBeTruthy();
+    });
+  });
+
+  describe('restoreVersion', () => {
+    const syncTag = async (tag: string) => JSON.stringify(await cryptoService.encryptText(JSON.stringify(tag), masterKey));
+
+    it.each([
+      ['one ciphertext per tag', async () => [await syncTag('a'), await syncTag('b')], ['a', 'b']],
+      ['a single tag in that format, which looks like a stored blob', async () => [await syncTag('a')], ['a']],
+    ])('stores a version\'s tags held as %s the way a note keeps them', async (_name, tags, expected) => {
+      const created = await noteService.createNote('now');
+      const version = await noteRepository.getById(created.id) as Note;
+
+      await noteService.restoreVersion(created.id, { ...version, tags: await tags() });
+
+      const restored = await noteRepository.getById(created.id) as Note;
+      expect(restored.tags).toHaveLength(1);
+      expect((await noteService.getNote(created.id))?.tags).toEqual(expected);
     });
   });
 });
