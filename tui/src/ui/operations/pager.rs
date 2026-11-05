@@ -6,7 +6,9 @@
 use anyhow::{Context, Result};
 
 use crate::models::SyntaxLanguage;
+use super::external;
 use super::super::app::App;
+use super::super::terminal::with_terminal_suspended;
 
 /// View content in read-only mode using best available pager
 ///
@@ -17,12 +19,6 @@ use super::super::app::App;
 /// 4. more (fallback)
 pub fn view_with_pager(app: &mut App, content: &str, syntax: SyntaxLanguage) -> Result<()> {
     use std::io::Write;
-    use crossterm::{
-        execute,
-        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen,
-                   Clear as TerminalClear, ClearType},
-        cursor::MoveTo,
-    };
 
     // Map syntax language to file extension for syntax highlighting
     let extension = syntax_to_extension(syntax);
@@ -44,43 +40,23 @@ pub fn view_with_pager(app: &mut App, content: &str, syntax: SyntaxLanguage) -> 
 
     let temp_path = temp_file.path().to_path_buf();
 
-    // Suspend TUI
-    disable_raw_mode().context("Failed to disable raw mode")?;
-    execute!(std::io::stdout(), LeaveAlternateScreen)
-        .context("Failed to leave alternate screen")?;
-
-    // Determine pager to use
-    let pager_result = if let Ok(pager) = std::env::var("PAGER") {
-        // User-specified pager
-        run_pager(&pager, &temp_path, None)
-    } else if is_command_available("bat") {
-        // bat with syntax highlighting (--paging=always forces pager mode)
-        run_pager("bat", &temp_path, Some(&["--paging=always", "--style=plain"]))
-    } else if is_command_available("less") {
-        // less with raw control chars for any escape sequences
-        run_pager("less", &temp_path, Some(&["-R"]))
-    } else {
-        // Fallback to more
-        run_pager("more", &temp_path, None)
-    };
-
-    // Resume TUI
-    execute!(std::io::stdout(), EnterAlternateScreen)
-        .context("Failed to enter alternate screen")?;
-    enable_raw_mode().context("Failed to enable raw mode")?;
-
-    // Clear screen and force redraw
-    execute!(
-        std::io::stdout(),
-        TerminalClear(ClearType::All),
-        TerminalClear(ClearType::Purge),
-        MoveTo(0, 0)
-    )
-    .context("Failed to clear screen")?;
-    std::io::stdout().flush().context("Failed to flush stdout")?;
-    app.need_redraw = true;
-
-    pager_result
+    with_terminal_suspended(app, || {
+        if let Some(pager) = std::env::var("PAGER").ok().filter(|p| !p.trim().is_empty()) {
+            // User-specified pager, which can carry its own arguments
+            let (program, args) = external::parse_command(&pager)?;
+            let args: Vec<&str> = args.iter().map(String::as_str).collect();
+            run_pager(&program, &temp_path, Some(&args))
+        } else if external::find_on_path("bat").is_some() {
+            // bat with syntax highlighting (--paging=always forces pager mode)
+            run_pager("bat", &temp_path, Some(&["--paging=always", "--style=plain"]))
+        } else if external::find_on_path("less").is_some() {
+            // less with raw control chars for any escape sequences
+            run_pager("less", &temp_path, Some(&["-R"]))
+        } else {
+            // Fallback to more
+            run_pager("more", &temp_path, None)
+        }
+    })
 }
 
 /// Map syntax language to file extension for syntax highlighting
@@ -99,15 +75,6 @@ fn syntax_to_extension(syntax: SyntaxLanguage) -> &'static str {
         SyntaxLanguage::Calc => "txt",
         SyntaxLanguage::Outliner => "md", // Markdown-compatible format
     }
-}
-
-/// Check if a command is available in PATH
-fn is_command_available(cmd: &str) -> bool {
-    std::process::Command::new("which")
-        .arg(cmd)
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
 }
 
 /// Run a pager with optional arguments

@@ -78,6 +78,7 @@ note:
   info: Info nota
   info_title: Informazioni nota
   untitled: "Senza titolo"
+  save_retry_hint: "q: riprova a salvare | e: modifica | Esc: scarta le modifiche"
 archive:
   view: "Visualizza archivio"
   title: "Archivio"
@@ -115,6 +116,9 @@ attachment:
   delete: Elimina allegato
   no_attachments: Nessun allegato
   total: "%{count} allegati"
+  press_enter: "Premi Invio per continuare..."
+  opened: "File aperto nell'applicazione predefinita."
+  no_opener: "Nessun programma per aprire i file su questo sistema. Salva invece l'allegato con S."
 version:
   history: Cronologia versioni
   restore: Ripristina versione

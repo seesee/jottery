@@ -78,6 +78,7 @@ note:
   info: Info de note
   info_title: Informations sur la note
   untitled: "Sans titre"
+  save_retry_hint: "q : réessayer d'enregistrer | e : modifier | Esc : abandonner les modifications"
 archive:
   view: "Voir les archives"
   title: "Archives"
@@ -115,6 +116,9 @@ attachment:
   delete: Supprimer la pièce jointe
   no_attachments: Aucune pièce jointe
   total: "%{count} pièces jointes"
+  press_enter: "Appuyez sur Entrée pour continuer..."
+  opened: "Fichier ouvert dans l'application par défaut."
+  no_opener: "Aucun programme pour ouvrir des fichiers sur ce système. Enregistrez plutôt la pièce jointe avec S."
 version:
   history: Historique des versions
   restore: Restaurer la version

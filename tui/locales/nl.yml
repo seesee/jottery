@@ -78,6 +78,7 @@ note:
   info: Notitie-info
   info_title: Notitie-informatie
   untitled: "Zonder titel"
+  save_retry_hint: "q: opnieuw opslaan | e: bewerken | Esc: wijzigingen verwerpen"
 archive:
   view: "Archief bekijken"
   title: "Archief"
@@ -115,6 +116,9 @@ attachment:
   delete: Bijlage verwijderen
   no_attachments: Geen bijlagen
   total: "%{count} bijlagen"
+  press_enter: "Druk op Enter om door te gaan..."
+  opened: "Bestand geopend in de standaardtoepassing."
+  no_opener: "Dit systeem heeft geen programma om bestanden te openen. Bewaar de bijlage in plaats daarvan met S."
 version:
   history: Versiegeschiedenis
   restore: Versie herstellen

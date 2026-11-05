@@ -78,6 +78,7 @@ note:
   info: Info o notatce
   info_title: Informacje o notatce
   untitled: "Bez tytułu"
+  save_retry_hint: "q: spróbuj zapisać ponownie | e: edytuj | Esc: odrzuć zmiany"
 archive:
   view: "Wyświetl archiwum"
   title: "Archiwum"
@@ -115,6 +116,9 @@ attachment:
   delete: Usuń załącznik
   no_attachments: Brak załączników
   total: "%{count} załączników"
+  press_enter: "Naciśnij Enter, aby kontynuować..."
+  opened: "Plik otwarto w domyślnej aplikacji."
+  no_opener: "W tym systemie nie ma programu do otwierania plików. Zapisz załącznik klawiszem S."
 version:
   history: Historia wersji
   restore: Przywróć wersję

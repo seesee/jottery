@@ -319,17 +319,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     }
 
                     // Open external editor
-                    if let Ok(new_content) = operations::attachments::edit_with_external_editor(app) {
-                        app.note_input = new_content;
-                        // Save the note
-                        if let Err(e) = operations::notes::save_note(app) {
-                            app.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
-                        }
-                        // Reload notes to refresh the list
-                        if let Err(e) = operations::notes::load_notes(app) {
-                            app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
-                        }
-                    }
+                    operations::notes::edit_and_save(app);
                 }
             }
             KeyCode::Char('i') | KeyCode::Enter => {
@@ -396,20 +386,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                             app.editing_note_id = Some(note_id.clone());
 
                             // Open external editor immediately
-                            if let Ok(new_content) = operations::attachments::edit_with_external_editor(app) {
-                                app.note_input = new_content;
-                                // Save the note
-                                if let Err(e) = operations::notes::save_note(app) {
-                                    app.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
-                                }
-                                // Reload notes to refresh the list
-                                if let Err(e) = operations::notes::load_notes(app) {
-                                    app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
-                                }
-                            }
-
-                            // Clear editing state
-                            app.editing_note_id = None;
+                            operations::notes::edit_and_save(app);
                         }
                     }
                 }

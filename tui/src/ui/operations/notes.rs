@@ -1,6 +1,7 @@
 //! Note management operations (CRUD, versions, trash)
 
 use anyhow::{Context, Result};
+use rust_i18n::t;
 
 use crate::{
     models::Note,
@@ -8,6 +9,7 @@ use crate::{
 };
 
 use super::super::app::App;
+use super::super::state::{AppState, InputMode};
 
 /// Load notes from database, preserving current selection via persisted ID
 pub fn load_notes(app: &mut App) -> Result<()> {
@@ -90,6 +92,35 @@ pub fn save_note(app: &mut App) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// Open the note set up in `note_input` in $EDITOR, then save what comes back.
+///
+/// A failure leaves a message in `app.error`. If the editor ran but the save failed,
+/// the edit stays in `note_input` and the note view opens on it, so the text can be
+/// saved again rather than being lost when the list reloads.
+pub fn edit_and_save(app: &mut App) {
+    let new_content = match super::attachments::edit_with_external_editor(app) {
+        Ok(content) => content,
+        Err(e) => {
+            app.error = Some(format!("{e:#}"));
+            app.editing_note_id = None;
+            return;
+        }
+    };
+
+    app.note_input = new_content;
+    if let Err(e) = save_note(app) {
+        app.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
+        app.state = AppState::NoteView;
+        app.input_mode = InputMode::Normal;
+        return;
+    }
+
+    if let Err(e) = load_notes(app) {
+        app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
+    }
+    app.editing_note_id = None;
 }
 
 /// Load version history for a note

@@ -112,6 +112,8 @@ unicode-width = "0.2"
 
 # YAML parsing (for translation scripts)
 serde_yaml = "0.9"
+# Splitting $EDITOR and $PAGER into a program and its arguments
+shell-words = "1"
 
 [dev-dependencies]
 

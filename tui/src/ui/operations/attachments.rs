@@ -1,15 +1,10 @@
 //! Attachment management operations
 
 use anyhow::{Context, Result};
-use crossterm::{
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen, Clear as TerminalClear, ClearType},
-    cursor::MoveTo,
-};
 use rust_i18n::t;
 use std::{
     env,
-    io::{self, Write},
+    io::Write,
     path::PathBuf,
     process::Command,
 };
@@ -20,8 +15,10 @@ use crate::{
     repository::{attachment::AttachmentRepository, NoteRepository},
 };
 
+use super::external;
 use super::super::app::App;
 use super::super::state::ViewMode;
+use super::super::terminal::with_terminal_suspended;
 
 /// Check if chafa is available for image preview (cached result)
 pub fn is_chafa_available(app: &mut App) -> bool {
@@ -207,95 +204,47 @@ pub fn view_attachment(app: &mut App, attachment: &Attachment) -> Result<()> {
     Ok(())
 }
 
+/// Wait for Enter before the TUI takes the screen back
+fn wait_for_enter() -> Result<()> {
+    println!("\n{}", t!("attachment.press_enter"));
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input)?;
+    Ok(())
+}
+
 /// View image with chafa in terminal
 pub fn view_with_chafa(app: &mut App, path: &std::path::Path) -> Result<()> {
-    // Suspend TUI
-    disable_raw_mode().context("Failed to disable raw mode")?;
-    execute!(io::stdout(), LeaveAlternateScreen)
-        .context("Failed to leave alternate screen")?;
+    with_terminal_suspended(app, || {
+        // Let chafa auto-detect the best output format (symbols, sixel, kitty,
+        // etc.) and scale to fit the terminal
+        let status = Command::new("chafa")
+            .arg("--animate=false")
+            .arg(path)
+            .status()
+            .context("Failed to launch chafa")?;
 
-    // Launch chafa — let it auto-detect the best output format (symbols,
-    // sixel, kitty, etc.) and scale to fit the terminal
-    let status = Command::new("chafa")
-        .arg("--animate=false")
-        .arg(path)
-        .status()
-        .context("Failed to launch chafa")?;
-
-    if status.success() {
-        // Wait for user to press key to continue
-        println!("\nPress Enter to continue...");
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input)?;
-    }
-
-    // Resume TUI (same pattern as edit_with_external_editor)
-    execute!(io::stdout(), EnterAlternateScreen)
-        .context("Failed to enter alternate screen")?;
-    enable_raw_mode().context("Failed to enable raw mode")?;
-    execute!(
-        io::stdout(),
-        TerminalClear(ClearType::All),
-        TerminalClear(ClearType::Purge),
-        MoveTo(0, 0)
-    )
-    .context("Failed to clear screen")?;
-    io::stdout().flush().context("Failed to flush stdout")?;
-    app.need_redraw = true;
-
-    if !status.success() {
-        anyhow::bail!("Chafa exited with non-zero status");
-    }
-
-    Ok(())
+        if !status.success() {
+            anyhow::bail!("Chafa exited with non-zero status");
+        }
+        wait_for_enter()
+    })
 }
 
 /// View file with system default application
 pub fn view_with_system_default(app: &mut App, path: &std::path::Path) -> Result<()> {
-    // Suspend TUI
-    disable_raw_mode().context("Failed to disable raw mode")?;
-    execute!(io::stdout(), LeaveAlternateScreen)
-        .context("Failed to leave alternate screen")?;
+    // Checked first, so a machine with no opener doesn't flash the screen
+    let mut opener = external::system_opener(path)
+        .ok_or_else(|| anyhow::anyhow!("{}", t!("attachment.no_opener")))?;
 
-    // Determine command based on OS
-    #[cfg(target_os = "macos")]
-    let open_cmd = "open";
-    #[cfg(target_os = "linux")]
-    let open_cmd = "xdg-open";
-    #[cfg(target_os = "windows")]
-    let open_cmd = "start";
-    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-    let open_cmd = "xdg-open"; // Fallback
+    with_terminal_suspended(app, || {
+        let status = opener.status().context("Failed to launch viewer")?;
 
-    // Launch viewer (detached process)
-    let status = Command::new(open_cmd)
-        .arg(path)
-        .status()
-        .context(format!("Failed to launch viewer: {}", open_cmd))?;
-
-    if status.success() {
-        // Wait for user acknowledgment (file opened in background)
-        println!("File opened in default application.");
-        println!("Press Enter to continue...");
-        let mut input = String::new();
-        std::io::stdin().read_line(&mut input)?;
-    }
-
-    // Resume TUI
-    execute!(io::stdout(), EnterAlternateScreen)
-        .context("Failed to enter alternate screen")?;
-    enable_raw_mode().context("Failed to enable raw mode")?;
-    execute!(
-        io::stdout(),
-        TerminalClear(ClearType::All),
-        TerminalClear(ClearType::Purge),
-        MoveTo(0, 0)
-    )
-    .context("Failed to clear screen")?;
-    io::stdout().flush().context("Failed to flush stdout")?;
-    app.need_redraw = true;
-
-    Ok(())
+        if status.success() {
+            println!("{}", t!("attachment.opened"));
+            wait_for_enter()?;
+        }
+        Ok(())
+    })
 }
 
 /// Delete the currently selected attachment
@@ -523,41 +472,9 @@ pub fn edit_with_external_editor(app: &mut App) -> Result<String> {
     temp_file.flush()?;
 
     let temp_path = temp_file.path();
+    let editor = external::editor_command();
 
-    // Suspend TUI
-    disable_raw_mode().context("Failed to disable raw mode")?;
-    execute!(io::stdout(), LeaveAlternateScreen)
-        .context("Failed to leave alternate screen")?;
-
-    // Get editor from environment (default to vi)
-    let editor = env::var("EDITOR").unwrap_or_else(|_| "vi".to_string());
-
-    // Launch editor
-    let status = Command::new(&editor)
-        .arg(temp_path)
-        .status()
-        .context(format!("Failed to launch editor: {}", editor))?;
-
-    // Resume TUI
-    execute!(io::stdout(), EnterAlternateScreen)
-        .context("Failed to enter alternate screen")?;
-    enable_raw_mode().context("Failed to enable raw mode")?;
-
-    // Clear screen with crossterm (this clears the visible screen)
-    execute!(
-        io::stdout(),
-        TerminalClear(ClearType::All),
-        TerminalClear(ClearType::Purge),
-        MoveTo(0, 0)
-    ).context("Failed to clear screen")?;
-    io::stdout().flush().context("Failed to flush stdout")?;
-
-    // Set flag to force ratatui buffer clear on next render
-    app.need_redraw = true;
-
-    if !status.success() {
-        anyhow::bail!("Editor exited with non-zero status");
-    }
+    with_terminal_suspended(app, || external::run_editor(&editor, temp_path))?;
 
     // Read modified content
     let content = std::fs::read_to_string(temp_path)

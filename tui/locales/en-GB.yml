@@ -87,6 +87,7 @@ note:
   info: "Note info"
   info_title: "Note Information"
   untitled: "Untitled"
+  save_retry_hint: "q: try saving again | e: edit | Esc: discard changes"
 
 # Archive operations
 archive:
@@ -129,6 +130,9 @@ attachment:
   delete: "Delete attachment"
   no_attachments: "No attachments"
   total: "%{count} attachments"
+  press_enter: "Press Enter to continue..."
+  opened: "File opened in default application."
+  no_opener: "No program to open files with on this system. Save the attachment with S instead."
 
 # Version history
 version:

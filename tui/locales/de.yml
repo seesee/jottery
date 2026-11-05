@@ -78,6 +78,7 @@ note:
   info: Notiz-Info
   info_title: Notizinformationen
   untitled: "Ohne Titel"
+  save_retry_hint: "q: erneut speichern | e: bearbeiten | Esc: Änderungen verwerfen"
 archive:
   view: "Archiv anzeigen"
   title: "Archiv"
@@ -115,6 +116,9 @@ attachment:
   delete: Anhang löschen
   no_attachments: Keine Anhänge
   total: "%{count} Anhänge"
+  press_enter: "Zum Fortfahren die Eingabetaste drücken..."
+  opened: "Datei in der Standardanwendung geöffnet."
+  no_opener: "Auf diesem System gibt es kein Programm zum Öffnen von Dateien. Speichere den Anhang stattdessen mit S."
 version:
   history: Versionshistorie
   restore: Version wiederherstellen

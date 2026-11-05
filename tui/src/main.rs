@@ -21,7 +21,6 @@ use std::path::{Path, PathBuf};
 use std::fs::OpenOptions;
 use std::sync::{Arc, Mutex};
 use std::io::{self, Read, Write};
-use std::process::Command;
 use std::env;
 use tempfile::NamedTempFile;
 use tracing::info;
@@ -478,18 +477,7 @@ fn open_editor(initial_content: &str) -> Result<String> {
 
     let temp_path = temp_file.path();
 
-    // Get editor from environment (default to vi)
-    let editor = env::var("EDITOR").unwrap_or_else(|_| t!("editor.default_editor").to_string());
-
-    // Launch editor
-    let status = Command::new(&editor)
-        .arg(temp_path)
-        .status()
-        .context(t!("editor.external_failed", error = &editor))?;
-
-    if !status.success() {
-        anyhow::bail!("{}", t!("editor.external_exit_error"));
-    }
+    ui::operations::external::run_editor(&ui::operations::external::editor_command(), temp_path)?;
 
     // Read the edited content
     let content = std::fs::read_to_string(temp_path)
@@ -1317,7 +1305,10 @@ fn run() -> Result<()> {
         // Handle events
         match events.next()? {
             ui::Event::Key(key) => {
-                app.handle_key(key)?;
+                // A failed action is the user's to see, not a reason to quit
+                if let Err(e) = app.handle_key(key) {
+                    app.error = Some(e.to_string());
+                }
             }
             ui::Event::Resize(_, _) => {
                 // Terminal resized, will redraw on next iteration

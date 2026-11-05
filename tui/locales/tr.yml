@@ -78,6 +78,7 @@ note:
   info: Not bilgisi
   info_title: Not Bilgileri
   untitled: "Başlıksız"
+  save_retry_hint: "q: yeniden kaydetmeyi dene | e: düzenle | Esc: değişiklikleri at"
 archive:
   view: "Arşivi görüntüle"
   title: "Arşiv"
@@ -115,6 +116,9 @@ attachment:
   delete: Ek sil
   no_attachments: Ek yok
   total: "%{count} ek"
+  press_enter: "Devam etmek için Enter tuşuna basın..."
+  opened: "Dosya varsayılan uygulamada açıldı."
+  no_opener: "Bu sistemde dosya açacak bir program yok. Bunun yerine eki S ile kaydedin."
 version:
   history: Sürüm geçmişi
   restore: Sürümü geri yükle

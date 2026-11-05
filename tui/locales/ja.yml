@@ -78,6 +78,7 @@ note:
   info: ノート情報
   info_title: ノート情報
   untitled: "無題"
+  save_retry_hint: "q: 再度保存 | e: 編集 | Esc: 変更を破棄"
 archive:
   view: "アーカイブを表示"
   title: "アーカイブ"
@@ -115,6 +116,9 @@ attachment:
   delete: 添付ファイルを削除
   no_attachments: 添付ファイルなし
   total: "%{count} 件の添付ファイル"
+  press_enter: "続行するには Enter を押してください..."
+  opened: "既定のアプリケーションでファイルを開きました。"
+  no_opener: "このシステムにはファイルを開くプログラムがありません。代わりに S で添付ファイルを保存してください。"
 version:
   history: バージョン履歴
   restore: バージョンを復元

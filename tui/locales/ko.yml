@@ -78,6 +78,7 @@ note:
   info: "노트 정보"
   info_title: "노트 정보"
   untitled: "제목 없음"
+  save_retry_hint: "q: 다시 저장 | e: 편집 | Esc: 변경 사항 버리기"
 archive:
   view: "보관함 보기"
   title: "보관함"
@@ -115,6 +116,9 @@ attachment:
   delete: "첨부 파일 삭제"
   no_attachments: "첨부 파일 없음"
   total: "%{count}개의 첨부 파일"
+  press_enter: "계속하려면 Enter를 누르세요..."
+  opened: "기본 응용 프로그램에서 파일을 열었습니다."
+  no_opener: "이 시스템에는 파일을 열 프로그램이 없습니다. 대신 S로 첨부 파일을 저장하세요."
 version:
   history: "버전 히스토리"
   restore: "버전 복원"

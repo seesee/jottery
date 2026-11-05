@@ -78,6 +78,7 @@ note:
   info: Info de nota
   info_title: Información de nota
   untitled: "Sin título"
+  save_retry_hint: "q: volver a guardar | e: editar | Esc: descartar cambios"
 archive:
   view: "Ver archivo"
   title: "Archivo"
@@ -115,6 +116,9 @@ attachment:
   delete: Eliminar adjunto
   no_attachments: Sin adjuntos
   total: "%{count} adjuntos"
+  press_enter: "Pulsa Intro para continuar..."
+  opened: "Archivo abierto en la aplicación predeterminada."
+  no_opener: "Este sistema no tiene un programa para abrir archivos. Guarda el adjunto con S."
 version:
   history: Historial de versiones
   restore: Restaurar versión
