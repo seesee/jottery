@@ -167,7 +167,7 @@ pub fn handle_note_view_key(app: &mut App, key: KeyEvent) -> Result<()> {
             }
             _ => {}
         },
-        InputMode::AttachmentPath | InputMode::BulkAddTags | InputMode::BulkRemoveTags
+        InputMode::SaveSearchName | InputMode::AttachmentPath | InputMode::BulkAddTags | InputMode::BulkRemoveTags
         | InputMode::BulkSetColour | InputMode::BulkExportPath => {
             // These modes are handled in note list view, not note view
             // Reset to normal if somehow we end up here

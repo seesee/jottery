@@ -528,6 +528,10 @@ help:
   multi_remove_tags_desc: "Remover etiquetas das notas selecionadas"
   multi_colour_key: "C"
   multi_colour_desc: "Definir a cor das notas selecionadas"
+  g_saved_key: "g"
+  g_saved_desc: "Pesquisas guardadas"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "Guardar esta pesquisa"
 cli:
   # Alternativo (usado em alguns lugares)
   list: Listar notas
@@ -769,3 +773,14 @@ envelope:
   password_changed_elsewhere: "A sua palavra-passe das notas foi alterada noutro dispositivo, por isso nada foi substituído. Este dispositivo ainda desbloqueia com a palavra-passe antiga. Altere-a aqui para que novos dispositivos possam ligar-se."
   server_update_pending: "A sua palavra-passe foi alterada neste dispositivo, mas não foi possível atualizar a cópia da chave no servidor. O Jottery tentará novamente. Até lá, um novo dispositivo não poderá ligar-se com a nova palavra-passe."
   key_keeps_changing: "A chave da conta continua a mudar no servidor, por isso este dispositivo não lhe tocou. Tente novamente daqui a pouco."
+
+saved_search:
+  title: "Pesquisas guardadas"
+  empty: "Ainda não há pesquisas guardadas. Pesquise com / e prima Ctrl+S para guardar."
+  name_prompt: "Dê um nome a esta pesquisa"
+  nothing_to_save: "Escreva primeiro uma pesquisa"
+  saved: "Pesquisa guardada: %{name}"
+  deleted: "Pesquisa guardada eliminada"
+  delete_confirm: "Eliminar '%{name}' em todos os dispositivos? (y/n)"
+  not_found: "Não há nenhuma pesquisa guardada chamada %{name}"
+  failed: "Falha na pesquisa guardada: %{error}"

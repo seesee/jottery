@@ -89,6 +89,25 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
     // An error stays on screen until the next key
     app.error = None;
 
+    // Naming a search, whichever list is underneath
+    if matches!(app.input_mode, InputMode::SaveSearchName) {
+        match handle_text_input(&key, &mut app.saved_search_name_input) {
+            TextInputResult::Submit => {
+                if let Err(e) = operations::saved_searches::save_current(app) {
+                    app.error = Some(t!("saved_search.failed", error = e.to_string()).to_string());
+                }
+            }
+            TextInputResult::Cancel => app.input_mode = InputMode::Normal,
+            TextInputResult::Continue | TextInputResult::Unhandled => {}
+        }
+        return Ok(());
+    }
+
+    if matches!(app.view_mode, ViewMode::SavedSearches) {
+        super::saved_searches::handle_saved_searches_key(app, key);
+        return Ok(());
+    }
+
     // Handle inbox view mode
     if matches!(app.view_mode, ViewMode::Inbox) {
         super::inbox::handle_inbox_key(app, key);
@@ -312,7 +331,8 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                                 app.error = Some(format!("Failed to reload notes: {}", e));
                             }
                         }
-                        ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution | ViewMode::Inbox => {
+                        ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution
+                        | ViewMode::Inbox | ViewMode::SavedSearches => {
                             app.view_mode = ViewMode::NoteList;
                         }
                     }
@@ -776,7 +796,8 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                             app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
                         }
                     }
-                    ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution | ViewMode::Inbox => {
+                    ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution
+                    | ViewMode::Inbox | ViewMode::SavedSearches => {
                         // 'r' does nothing in these views
                     }
                 }
@@ -878,6 +899,11 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     } else if !app.filtered_notes().is_empty() {
                         app.show_note_info = true;
                     }
+                }
+            }
+            KeyCode::Char('g') if matches!(app.view_mode, ViewMode::NoteList) => {
+                if let Err(e) = operations::saved_searches::open_picker(app) {
+                    app.error = Some(t!("saved_search.failed", error = e.to_string()).to_string());
                 }
             }
             KeyCode::Char('b') if !key.modifiers.contains(KeyModifiers::CONTROL) => {

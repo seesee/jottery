@@ -528,6 +528,10 @@ help:
   multi_remove_tags_desc: "Seçili notlardan etiket kaldır"
   multi_colour_key: "C"
   multi_colour_desc: "Seçili notların rengini ayarla"
+  g_saved_key: "g"
+  g_saved_desc: "Kayıtlı aramalar"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "Bu aramayı kaydet"
 cli:
   # Eski (bazı yerlerde kullanılıyor)
   list: Notları listele
@@ -769,3 +773,14 @@ envelope:
   password_changed_elsewhere: "Not parolanız başka bir cihazda değiştirildi, bu yüzden hiçbir şeyin üzerine yazılmadı. Bu cihazın kilidi hâlâ eski parolayla açılıyor. Yeni cihazların bağlanabilmesi için parolayı burada da değiştirin."
   server_update_pending: "Parolanız bu cihazda değişti, ancak anahtarınızın sunucudaki kopyası güncellenemedi. Jottery yeniden deneyecek. O zamana kadar yeni bir cihaz yeni parolayla bağlanamaz."
   key_keeps_changing: "Hesabın anahtarı sunucuda sürekli değişiyor, bu yüzden bu cihaz ona dokunmadı. Birazdan yeniden deneyin."
+
+saved_search:
+  title: "Kayıtlı aramalar"
+  empty: "Henüz kayıtlı arama yok. / ile arayın, ardından kaydetmek için Ctrl+S tuşuna basın."
+  name_prompt: "Bu aramaya bir ad verin"
+  nothing_to_save: "Önce bir arama yazın"
+  saved: "Arama kaydedildi: %{name}"
+  deleted: "Kayıtlı arama silindi"
+  delete_confirm: "'%{name}' tüm cihazlarda silinsin mi? (y/n)"
+  not_found: "%{name} adında kayıtlı arama yok"
+  failed: "Kayıtlı arama başarısız: %{error}"

@@ -528,6 +528,10 @@ help:
   multi_remove_tags_desc: "从所选笔记中移除标签"
   multi_colour_key: "C"
   multi_colour_desc: "设置所选笔记的颜色"
+  g_saved_key: "g"
+  g_saved_desc: "已保存的搜索"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "保存此搜索"
 cli:
   # 简短命令描述（用于旧版/备用）
   list: 列出笔记
@@ -769,3 +773,14 @@ envelope:
   password_changed_elsewhere: "您的笔记密码已在另一台设备上更改，因此没有覆盖任何内容。此设备仍使用旧密码解锁。请在此处改为相同的密码，以便新设备可以加入。"
   server_update_pending: "此设备上的密码已更改，但无法更新服务器上的密钥副本。Jottery 将重试。在此之前，新设备无法使用新密码加入。"
   key_keeps_changing: "服务器上的账户密钥一直在变化，因此此设备未作更改。请稍后重试。"
+
+saved_search:
+  title: "已保存的搜索"
+  empty: "还没有已保存的搜索。用 / 搜索,然后按 Ctrl+S 保存。"
+  name_prompt: "为此搜索命名"
+  nothing_to_save: "请先输入搜索内容"
+  saved: "已保存搜索:%{name}"
+  deleted: "已删除保存的搜索"
+  delete_confirm: "要在所有设备上删除“%{name}”吗?(y/n)"
+  not_found: "没有名为 %{name} 的已保存搜索"
+  failed: "保存的搜索失败:%{error}"

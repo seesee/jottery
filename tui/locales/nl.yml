@@ -528,6 +528,10 @@ help:
   multi_remove_tags_desc: "Tags verwijderen van geselecteerde notities"
   multi_colour_key: "C"
   multi_colour_desc: "Kleur van geselecteerde notities instellen"
+  g_saved_key: "g"
+  g_saved_desc: "Opgeslagen zoekopdrachten"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "Deze zoekopdracht opslaan"
 cli:
   # Basis (op sommige plaatsen gebruikt)
   list: Notities weergeven
@@ -769,3 +773,14 @@ envelope:
   password_changed_elsewhere: "Je notitiewachtwoord is op een ander apparaat gewijzigd, dus er is niets overschreven. Dit apparaat ontgrendelt nog met het oude wachtwoord. Wijzig het ook hier, zodat nieuwe apparaten kunnen koppelen."
   server_update_pending: "Je wachtwoord is op dit apparaat gewijzigd, maar de kopie van je sleutel op de server kon niet worden bijgewerkt. Jottery probeert het opnieuw. Tot die tijd kan een nieuw apparaat niet koppelen met het nieuwe wachtwoord."
   key_keeps_changing: "De sleutel van het account verandert steeds op de server, dus dit apparaat heeft hem met rust gelaten. Probeer het zo opnieuw."
+
+saved_search:
+  title: "Opgeslagen zoekopdrachten"
+  empty: "Nog geen opgeslagen zoekopdrachten. Zoek met / en druk op Ctrl+S om op te slaan."
+  name_prompt: "Geef deze zoekopdracht een naam"
+  nothing_to_save: "Typ eerst een zoekopdracht"
+  saved: "Zoekopdracht opgeslagen: %{name}"
+  deleted: "Opgeslagen zoekopdracht verwijderd"
+  delete_confirm: "'%{name}' op alle apparaten verwijderen? (y/n)"
+  not_found: "Geen opgeslagen zoekopdracht met de naam %{name}"
+  failed: "Opgeslagen zoekopdracht mislukt: %{error}"

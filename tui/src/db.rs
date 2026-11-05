@@ -148,6 +148,7 @@ impl Database {
             (19, include_str!("../migrations/019_add_sync_state.sql")),
             (20, include_str!("../migrations/020_add_held_deletions.sql")),
             (21, include_str!("../migrations/021_language_follows_system.sql")),
+            (22, include_str!("../migrations/022_add_saved_searches.sql")),
         ];
 
         // Run pending migrations

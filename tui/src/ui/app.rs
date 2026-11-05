@@ -280,6 +280,14 @@ pub struct App {
     pub show_inbox_delete_confirm: bool,
     /// Show inbox delete-all confirmation
     pub show_inbox_delete_all_confirm: bool,
+    /// The list of saved searches, when it's showing
+    pub saved_searches: Vec<crate::repository::SavedSearch>,
+    /// Selected index in the list of saved searches
+    pub selected_saved_search: usize,
+    /// Show the confirmation for deleting a saved search
+    pub show_saved_search_delete_confirm: bool,
+    /// What the query in the search bar is to be saved as
+    pub saved_search_name_input: String,
 }
 
 
@@ -433,6 +441,10 @@ impl App {
             selected_inbox_item: 0,
             show_inbox_delete_confirm: false,
             show_inbox_delete_all_confirm: false,
+            saved_searches: Vec::new(),
+            selected_saved_search: 0,
+            show_saved_search_delete_confirm: false,
+            saved_search_name_input: String::new(),
         }
     }
 
@@ -511,6 +523,7 @@ impl App {
             &mut self.note_input,
             &mut self.tag_input,
             &mut self.search_input,
+            &mut self.saved_search_name_input,
             &mut self.bulk_tags_input,
             &mut self.bulk_export_path_input,
             &mut self.attachment_path_input,
@@ -543,6 +556,13 @@ impl App {
         self.loaded_versions.clear();
         self.versions_note_id = None;
         self.inbox_items.clear();
+        for search in &mut self.saved_searches {
+            search.name.zeroize();
+            search.query.zeroize();
+        }
+        self.saved_searches.clear();
+        self.selected_saved_search = 0;
+        self.show_saved_search_delete_confirm = false;
         self.selected_note_ids.clear();
         self.conflict_note_ids.clear();
         self.all_tags_cache.clear();

@@ -528,6 +528,10 @@ help:
   multi_remove_tags_desc: "Retirer des tags des notes sélectionnées"
   multi_colour_key: "C"
   multi_colour_desc: "Définir la couleur des notes sélectionnées"
+  g_saved_key: "g"
+  g_saved_desc: "Recherches enregistrées"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "Enregistrer cette recherche"
 cli:
   # Alt (utilisé à certains endroits)
   list: Lister les notes
@@ -769,3 +773,14 @@ envelope:
   password_changed_elsewhere: "Votre mot de passe des notes a été modifié sur un autre appareil, rien n'a donc été écrasé. Cet appareil se déverrouille toujours avec l'ancien mot de passe. Modifiez-le ici pour qu'il corresponde, afin que de nouveaux appareils puissent se connecter."
   server_update_pending: "Votre mot de passe a été modifié sur cet appareil, mais la copie de votre clé sur le serveur n'a pas pu être mise à jour. Jottery réessaiera. D'ici là, un nouvel appareil ne pourra pas se connecter avec le nouveau mot de passe."
   key_keeps_changing: "La clé du compte change sans cesse sur le serveur, cet appareil n'y a donc pas touché. Réessayez dans un instant."
+
+saved_search:
+  title: "Recherches enregistrées"
+  empty: "Aucune recherche enregistrée pour l'instant. Cherchez avec /, puis appuyez sur Ctrl+S pour l'enregistrer."
+  name_prompt: "Nommez cette recherche"
+  nothing_to_save: "Saisissez d'abord une recherche"
+  saved: "Recherche enregistrée : %{name}"
+  deleted: "Recherche enregistrée supprimée"
+  delete_confirm: "Supprimer « %{name} » sur tous les appareils ? (y/n)"
+  not_found: "Aucune recherche enregistrée nommée %{name}"
+  failed: "Échec de la recherche enregistrée : %{error}"

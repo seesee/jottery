@@ -528,6 +528,10 @@ help:
   multi_remove_tags_desc: "選択したノートからタグを削除"
   multi_colour_key: "C"
   multi_colour_desc: "選択したノートの色を設定"
+  g_saved_key: "g"
+  g_saved_desc: "保存した検索"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "この検索を保存"
 cli:
   # 代替 (一部で使用)
   list: ノートを一覧表示
@@ -769,3 +773,14 @@ envelope:
   password_changed_elsewhere: "ノートのパスワードが別のデバイスで変更されたため、何も上書きしていません。このデバイスは今も古いパスワードでロック解除されます。新しいデバイスを接続できるよう、ここでも同じパスワードに変更してください。"
   server_update_pending: "このデバイスのパスワードは変更されましたが、サーバー上のキーのコピーを更新できませんでした。Jottery が再試行します。それまで新しいデバイスは新しいパスワードで接続できません。"
   key_keeps_changing: "サーバー上のアカウントのキーが変更され続けているため、このデバイスは変更を行いませんでした。しばらくしてからもう一度お試しください。"
+
+saved_search:
+  title: "保存した検索"
+  empty: "保存した検索はまだありません。/ で検索し、Ctrl+S で保存します。"
+  name_prompt: "この検索に名前を付ける"
+  nothing_to_save: "先に検索を入力してください"
+  saved: "検索を保存しました: %{name}"
+  deleted: "保存した検索を削除しました"
+  delete_confirm: "すべてのデバイスで「%{name}」を削除しますか? (y/n)"
+  not_found: "%{name} という保存した検索はありません"
+  failed: "保存した検索に失敗しました: %{error}"

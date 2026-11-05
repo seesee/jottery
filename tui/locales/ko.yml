@@ -528,6 +528,10 @@ help:
   multi_remove_tags_desc: "선택한 노트에서 태그 제거"
   multi_colour_key: "C"
   multi_colour_desc: "선택한 노트의 색상 설정"
+  g_saved_key: "g"
+  g_saved_desc: "저장된 검색"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "이 검색 저장"
 cli:
   # 기존 (일부 위치에서 사용됨)
   list: "노트 목록"
@@ -769,3 +773,14 @@ envelope:
   password_changed_elsewhere: "다른 기기에서 노트 비밀번호가 변경되어 아무것도 덮어쓰지 않았습니다. 이 기기는 여전히 이전 비밀번호로 잠금 해제됩니다. 새 기기를 연결할 수 있도록 여기서도 같은 비밀번호로 변경하세요."
   server_update_pending: "이 기기의 비밀번호는 변경되었지만 서버의 키 사본을 업데이트하지 못했습니다. Jottery가 다시 시도합니다. 그때까지 새 기기는 새 비밀번호로 연결할 수 없습니다."
   key_keeps_changing: "서버의 계정 키가 계속 변경되고 있어 이 기기는 키를 건드리지 않았습니다. 잠시 후 다시 시도하세요."
+
+saved_search:
+  title: "저장된 검색"
+  empty: "저장된 검색이 없습니다. /로 검색한 다음 Ctrl+S를 눌러 저장하세요."
+  name_prompt: "이 검색의 이름 지정"
+  nothing_to_save: "먼저 검색어를 입력하세요"
+  saved: "검색을 저장했습니다: %{name}"
+  deleted: "저장된 검색을 삭제했습니다"
+  delete_confirm: "모든 기기에서 '%{name}'을(를) 삭제할까요? (y/n)"
+  not_found: "%{name}(이)라는 저장된 검색이 없습니다"
+  failed: "저장된 검색 실패: %{error}"

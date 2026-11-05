@@ -9,5 +9,6 @@ pub mod modal;
 pub mod note_info;
 pub mod note_list;
 pub mod note_view;
+pub mod saved_searches;
 pub mod settings;
 pub mod version_history;

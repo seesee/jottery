@@ -528,6 +528,10 @@ help:
   multi_remove_tags_desc: "Usuń tagi z wybranych notatek"
   multi_colour_key: "C"
   multi_colour_desc: "Ustaw kolor wybranych notatek"
+  g_saved_key: "g"
+  g_saved_desc: "Zapisane wyszukiwania"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "Zapisz to wyszukiwanie"
 cli:
   # Alternatywne (używane w niektórych miejscach)
   list: Wyświetl notatki
@@ -769,3 +773,14 @@ envelope:
   password_changed_elsewhere: "Hasło do notatek zmieniono na innym urządzeniu, więc niczego nie nadpisano. To urządzenie nadal odblokowuje się starym hasłem. Zmień je tutaj, aby mogły dołączać nowe urządzenia."
   server_update_pending: "Hasło zmieniono na tym urządzeniu, ale nie udało się zaktualizować kopii klucza na serwerze. Jottery spróbuje ponownie. Do tego czasu nowe urządzenie nie dołączy z nowym hasłem."
   key_keeps_changing: "Klucz konta ciągle zmienia się na serwerze, więc to urządzenie go nie ruszyło. Spróbuj ponownie za chwilę."
+
+saved_search:
+  title: "Zapisane wyszukiwania"
+  empty: "Brak zapisanych wyszukiwań. Wyszukaj za pomocą /, a następnie naciśnij Ctrl+S, aby zapisać."
+  name_prompt: "Nazwij to wyszukiwanie"
+  nothing_to_save: "Najpierw wpisz wyszukiwanie"
+  saved: "Zapisano wyszukiwanie: %{name}"
+  deleted: "Usunięto zapisane wyszukiwanie"
+  delete_confirm: "Usunąć '%{name}' na wszystkich urządzeniach? (y/n)"
+  not_found: "Brak zapisanego wyszukiwania o nazwie %{name}"
+  failed: "Błąd zapisanego wyszukiwania: %{error}"

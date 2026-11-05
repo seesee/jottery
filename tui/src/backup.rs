@@ -36,6 +36,7 @@ const BACKUP_TYPE: &str = "jottery-encrypted-backup";
 const NOTE_BATCH_SIZE: usize = 250;
 const ATTACHMENT_BATCH_SIZE: usize = 50;
 const VERSION_BATCH_SIZE: usize = 250;
+const SAVED_SEARCH_BATCH_SIZE: usize = 250;
 
 /// Most a batch may inflate to. Far above any real batch, and it stops a damaged or
 /// hostile file from filling memory.
@@ -515,6 +516,12 @@ pub fn create_backup(
     add_batches(&mut batches, "attachments", &attachment_items, ATTACHMENT_BATCH_SIZE, key)?;
     add_batches(&mut batches, "versions", &version_items, VERSION_BATCH_SIZE, key)?;
 
+    let saved_search_items = crate::repository::SavedSearchRepository::new(db.connection()).list_stored()?
+        .iter()
+        .map(serde_json::to_value)
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    add_batches(&mut batches, "saved_searches", &saved_search_items, SAVED_SEARCH_BATCH_SIZE, key)?;
+
     let settings = settings_for_backup(&settings_repo.get()?);
     add_batches(&mut batches, "settings", &[settings], 1, key)?;
     report(1, 1, "settings");
@@ -551,7 +558,7 @@ pub fn create_backup(
             notes: note_items.len(),
             attachments: attachment_items.len(),
             versions: version_items.len(),
-            saved_searches: 0,
+            saved_searches: saved_search_items.len(),
         }),
         skipped,
     })
@@ -704,6 +711,7 @@ pub struct RestoreSummary {
     pub notes: usize,
     pub versions: usize,
     pub attachments: usize,
+    pub saved_searches: usize,
     /// Records that were in the backup but couldn't be restored
     pub failed: usize,
 }
@@ -714,18 +722,20 @@ struct BackupContents {
     notes: Vec<Value>,
     versions: Vec<Value>,
     attachments: Vec<Value>,
+    saved_searches: Vec<Value>,
     settings: Option<Value>,
     failed: usize,
 }
 
 impl BackupContents {
-    /// Sort one item in. Saved searches and sync metadata have nowhere to go here,
-    /// and a restored device registers for itself.
+    /// Sort one item in. Sync metadata has nowhere to go here: a restored device
+    /// registers for itself.
     fn add(&mut self, item_type: &str, item: Value) {
         match item_type {
             "note" | "notes" => self.notes.push(item),
             "version" | "versions" => self.versions.push(item),
             "attachment" | "attachments" => self.attachments.push(item),
+            "saved_search" | "saved_searches" => self.saved_searches.push(item),
             "settings" => self.settings = Some(item),
             _ => {}
         }
@@ -847,6 +857,35 @@ fn optional_time(text: Option<String>) -> Option<DateTime<Utc>> {
 }
 
 /// Turn a note from a backup into a Note, returning how many of its parts were lost.
+/// A saved search from a backup, in this vault's key. A backup from an older web client
+/// can hold plaintext, so text that isn't ciphertext is taken as that, and ciphertext that
+/// won't open is an error. A deleted row is never shown, so it stays as it is.
+fn read_saved_search(crypto: &CryptoService, item: Value, keys: &RestoreKeys) -> Result<crate::models::sync::SyncSavedSearch> {
+    let mut search: crate::models::sync::SyncSavedSearch = serde_json::from_value(item)?;
+    if !crate::models::validation::is_uuid(&search.id) {
+        anyhow::bail!("Saved search has no usable id");
+    }
+
+    let moved = |stored: &str| -> Result<String> {
+        let plain = match serde_json::from_str::<EncryptedData>(stored) {
+            Ok(encrypted) => crypto.decrypt_text(&encrypted, &keys.backup_key)?,
+            Err(_) => stored.to_string(),
+        };
+        Ok(serde_json::to_string(&crypto.encrypt_text(&plain, &keys.vault_key)?)?)
+    };
+
+    match (moved(&search.name), moved(&search.query)) {
+        (Ok(name), Ok(query)) => {
+            search.name = name;
+            search.query = query;
+        }
+        _ if search.deleted => {}
+        (Err(e), _) | (_, Err(e)) => return Err(e),
+    }
+
+    Ok(search)
+}
+
 fn read_note(crypto: &CryptoService, item: Value, key: &[u8; 32]) -> Result<(Note, usize)> {
     let note: BackupNote = serde_json::from_value(item)?;
 
@@ -1073,6 +1112,25 @@ pub fn restore_backup(
         }
     }
 
+    let saved_search_repo = crate::repository::SavedSearchRepository::new(&transaction);
+    for item in contents.saved_searches {
+        match read_saved_search(&crypto, item, keys) {
+            // Pending, so that it reaches an account, and on a later time than a copy
+            // already here it wins, as any restored change does
+            Ok(search) => match saved_search_repo.apply(&search, true, None) {
+                Ok(stored) => summary.saved_searches += stored as usize,
+                Err(e) => {
+                    warn!("[Backup] Could not store a saved search: {e}");
+                    summary.failed += 1;
+                }
+            },
+            Err(e) => {
+                warn!("[Backup] Skipping unreadable saved search: {e}");
+                summary.failed += 1;
+            }
+        }
+    }
+
     if let Some(settings) = &contents.settings {
         if let Err(e) = restore_settings(&settings_repo, settings) {
             warn!("[Backup] Could not restore settings: {e}");
@@ -1281,7 +1339,7 @@ mod tests {
 
         let restored = empty_database();
         let result = restore_with(&restored, &backup, &password);
-        assert_eq!(result, RestoreSummary { notes: 2, versions: 1, attachments: 1, failed: 0 });
+        assert_eq!(result, RestoreSummary { notes: 2, versions: 1, attachments: 1, saved_searches: 0, failed: 0 });
 
         let conn = restored.connection();
         let read = NoteRepository::new(conn).get(&note.id, &key).unwrap().unwrap();
@@ -1293,6 +1351,76 @@ mod tests {
 
         let versions = NoteVersionRepository::new(conn).get_versions_for_note(&note.id, &key).unwrap();
         assert_eq!(versions[0].content, "Full note");
+    }
+
+    #[test]
+    fn saved_searches_come_back_under_the_vaults_key() {
+        use crate::repository::SavedSearchRepository;
+
+        let (db, key, password) = envelope_vault();
+        let repo = SavedSearchRepository::new(db.connection());
+        repo.create("Work", "#work -done", &key).unwrap();
+        let gone = repo.create("Gone", "old", &key).unwrap();
+        repo.delete(&gone.id).unwrap();
+
+        let backup = create_backup(&db, &key, None).unwrap();
+        assert_eq!(backup.summary.as_ref().unwrap().saved_searches, 2);
+
+        let restored = empty_database();
+        let result = restore_with(&restored, &backup, &password);
+        assert_eq!(result.saved_searches, 2);
+
+        let repo = SavedSearchRepository::new(restored.connection());
+        let listed = repo.list(&key).unwrap();
+        assert_eq!(listed.len(), 1);
+        assert_eq!((listed[0].name.as_str(), listed[0].query.as_str()), ("Work", "#work -done"));
+
+        // Pending, so that an account gets it from a restored device
+        assert_eq!(repo.pending().unwrap().len(), 2);
+    }
+
+    /// Older web clients kept these in plaintext, and a backup holds what they kept.
+    #[test]
+    fn a_plaintext_saved_search_from_an_older_web_backup_is_encrypted() {
+        let crypto = CryptoService::new();
+        let key = crypto.generate_master_key();
+        let keys = RestoreKeys { backup_key: key, vault_key: key, new_vault_password: None };
+
+        let search = read_saved_search(&crypto, serde_json::json!({
+            "id": "0b9e4d6c-7a21-4f3e-8c55-1d2e3f4a5b6c",
+            "name": "Plain",
+            "query": "#plain",
+            "order": 1,
+            "createdAt": "2026-01-01T00:00:00Z",
+            "modifiedAt": "2026-01-01T00:00:00Z",
+            "deleted": false,
+            "version": 1,
+        }), &keys).unwrap();
+
+        let name: EncryptedData = serde_json::from_str(&search.name).unwrap();
+        assert_eq!(crypto.decrypt_text(&name, &key).unwrap(), "Plain");
+    }
+
+    /// Ciphertext that won't open isn't a name. It's an error, like any other.
+    #[test]
+    fn a_saved_search_that_will_not_open_is_counted_as_lost() {
+        let crypto = CryptoService::new();
+        let (key, other_key) = (crypto.generate_master_key(), crypto.generate_master_key());
+        let keys = RestoreKeys { backup_key: key, vault_key: key, new_vault_password: None };
+        let foreign = serde_json::to_string(&crypto.encrypt_text("Elsewhere", &other_key).unwrap()).unwrap();
+
+        let result = read_saved_search(&crypto, serde_json::json!({
+            "id": "0b9e4d6c-7a21-4f3e-8c55-1d2e3f4a5b6c",
+            "name": foreign,
+            "query": foreign,
+            "order": 1,
+            "createdAt": "2026-01-01T00:00:00Z",
+            "modifiedAt": "2026-01-01T00:00:00Z",
+            "deleted": false,
+            "version": 1,
+        }), &keys);
+
+        assert!(result.is_err());
     }
 
     #[test]

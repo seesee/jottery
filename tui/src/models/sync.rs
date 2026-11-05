@@ -125,6 +125,25 @@ pub struct SyncPushRequest {
     /// Older servers ignore this.
     #[serde(rename = "attachmentsAuthoritative", default, skip_serializing_if = "std::ops::Not::not")]
     pub attachments_authoritative: bool,
+    /// Saved searches to create or update
+    #[serde(rename = "savedSearches", default, skip_serializing_if = "Vec::is_empty")]
+    pub saved_searches: Vec<SyncSavedSearch>,
+}
+
+/// A saved search as it goes over the wire. `name` and `query` are ciphertext.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncSavedSearch {
+    pub id: String,
+    pub name: String,
+    pub query: String,
+    pub order: i64,
+    pub created_at: DateTime<Utc>,
+    pub modified_at: DateTime<Utc>,
+    pub deleted: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub version: i32,
 }
 
 /// Note structure for sync (matches server expectations)
@@ -341,6 +360,7 @@ pub struct SyncPullResponse {
     pub deletions: Vec<SyncDeletion>,
     pub attachments: Vec<SyncAttachment>,
     pub versions: Vec<SyncNoteVersion>,
+    pub saved_searches: Vec<SyncSavedSearch>,
     pub synced_at: DateTime<Utc>,
     /// More remains. In cursor mode ask again from `next_cursor`, or with a larger
     /// offset otherwise.
@@ -365,6 +385,8 @@ struct WirePullResponse {
     attachments: Lenient<SyncAttachment>,
     #[serde(default)]
     versions: Lenient<SyncNoteVersion>,
+    #[serde(default)]
+    saved_searches: Lenient<SyncSavedSearch>,
     synced_at: DateTime<Utc>,
     #[serde(default)]
     has_more: bool,
@@ -383,13 +405,14 @@ impl SyncPullResponse {
         let wire: WirePullResponse = serde_json::from_str(json)?;
 
         let mut dropped = wire.notes.dropped + wire.deletions.dropped
-            + wire.attachments.dropped + wire.versions.dropped;
+            + wire.attachments.dropped + wire.versions.dropped + wire.saved_searches.dropped;
 
         let notes = validation::keep_valid(wire.notes.items, SyncNote::is_valid, &mut dropped)
             .into_iter().map(SyncNote::sanitised).collect();
         let deletions = validation::keep_valid(wire.deletions.items, |d: &SyncDeletion| validation::is_uuid(&d.id), &mut dropped);
         let attachments = validation::keep_valid(wire.attachments.items, |a: &SyncAttachment| validation::is_uuid(&a.id), &mut dropped);
         let versions = validation::keep_valid(wire.versions.items, SyncNoteVersion::is_valid, &mut dropped);
+        let saved_searches = validation::keep_valid(wire.saved_searches.items, |s: &SyncSavedSearch| validation::is_uuid(&s.id), &mut dropped);
         let inbox_items = wire.inbox_items.map(|list| {
             dropped += list.dropped;
             validation::keep_valid(list.items, InboxItem::is_valid, &mut dropped)
@@ -400,6 +423,7 @@ impl SyncPullResponse {
             deletions,
             attachments,
             versions,
+            saved_searches,
             synced_at: wire.synced_at,
             has_more: wire.has_more,
             next_cursor: wire.next_cursor,

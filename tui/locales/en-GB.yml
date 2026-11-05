@@ -577,6 +577,10 @@ help:
   multi_colour_desc: "Set the colour of selected notes"
 
 # CLI commands and help text
+  g_saved_key: "g"
+  g_saved_desc: "Saved searches"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "Save this search"
 cli:
   # Legacy (used in some places)
   list: "List notes"
@@ -810,3 +814,14 @@ envelope:
   password_changed_elsewhere: "Your notes password was changed on another device, so nothing was overwritten. This device still unlocks with its old password. Change it here to match, so that new devices can join."
   server_update_pending: "Your password changed on this device, but the server's copy of your key couldn't be updated. Jottery will try again. Until then, a new device can't join with the new password."
   key_keeps_changing: "The account's key keeps changing on the server, so this device has left it alone. Try again in a moment."
+
+saved_search:
+  title: "Saved searches"
+  empty: "No saved searches yet. Search with /, then press Ctrl+S to save it."
+  name_prompt: "Name this search"
+  nothing_to_save: "Type a search first"
+  saved: "Saved search: %{name}"
+  deleted: "Saved search deleted"
+  delete_confirm: "Delete '%{name}' on every device? (y/n)"
+  not_found: "No saved search called %{name}"
+  failed: "Saved search failed: %{error}"

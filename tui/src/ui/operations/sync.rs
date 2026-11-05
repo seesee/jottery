@@ -26,10 +26,13 @@ use crate::{
         sync::{
             AttachmentRef, AttachmentWarning, ConflictData, InboxItem, SyncAttachment, SyncDeletion, SyncMetadata,
             SyncNote, SyncNoteVersion, SyncPullRequest, SyncPullResponse, SyncPushRequest,
-            SyncPushResponse,
+            SyncPushResponse, SyncSavedSearch,
         },
     },
-    repository::{attachment::AttachmentRepository, NoteRepository, NoteVersionRepository, VersionReason, sync::SyncRepository},
+    repository::{
+        attachment::AttachmentRepository, sync::SyncRepository, NoteRepository, NoteVersionRepository,
+        SavedSearchRepository, VersionReason,
+    },
 };
 
 use super::super::app::App;
@@ -287,6 +290,10 @@ impl Run<'_> {
 
     fn sync_repo(&self) -> SyncRepository<'_> {
         SyncRepository::new(self.conn)
+    }
+
+    fn saved_search_repo(&self) -> SavedSearchRepository<'_> {
+        SavedSearchRepository::new(self.conn)
     }
 
     /// POST to a device endpoint and return the body, turning a refusal into an error
@@ -657,7 +664,10 @@ fn push_changes(run: &Run<'_>, metadata: &mut SyncMetadata, outcome: &mut SyncOu
 
     // The first sync with an account pushes the whole vault
     if metadata.last_sync_at.is_none() {
-        run.link.write(|| note_repo.mark_all_pending())?;
+        run.link.write(|| {
+            note_repo.mark_all_pending()?;
+            run.saved_search_repo().mark_all_pending()
+        })?;
     }
 
     let (vouched, unproven): (Vec<Note>, Vec<Note>) = note_repo.get_pending(run.key)?.notes
@@ -1111,6 +1121,56 @@ fn settle_remote_deletions(run: &Run<'_>, outcome: &mut SyncOutcome) -> Result<(
     Ok(())
 }
 
+/// Store the saved searches of a pull. A live row has to open with this vault's key, as
+/// one that doesn't came from something without it. A deleted row is never shown, and
+/// older clients pushed some as plaintext, so a deletion applies whatever the row holds.
+fn apply_remote_saved_searches(
+    run: &Run<'_>,
+    searches: Vec<SyncSavedSearch>,
+    synced_at: DateTime<Utc>,
+    outcome: &mut SyncOutcome,
+) -> Result<()> {
+    let repo = run.saved_search_repo();
+
+    for search in searches {
+        if !search.deleted && !repo.is_readable(&search, run.key) {
+            (run.log)(&format!("Pull - Skipping saved search {}: it won't open", search.id));
+            outcome.skipped += 1;
+            continue;
+        }
+
+        repo.apply(&search, false, Some(synced_at))?;
+    }
+
+    Ok(())
+}
+
+/// Send the saved searches the server hasn't got. These go after the pull, so a newer
+/// copy from another device has already won, and the server's clock is known.
+fn push_saved_searches(run: &Run<'_>, outcome: &mut SyncOutcome) -> Result<()> {
+    let searches = run.saved_search_repo().pending()?;
+    if searches.is_empty() {
+        return Ok(());
+    }
+
+    let request = SyncPushRequest { saved_searches: searches, ..Default::default() };
+
+    match run.post("/api/v1/sync/push", &request) {
+        Ok(_) => {}
+        Err(e) if matches!(e.downcast_ref::<SyncRefused>(), Some(SyncRefused::QuotaExceeded(_))) => {
+            outcome.quota_exceeded = true;
+            return Ok(());
+        }
+        Err(e) => return Err(e),
+    }
+
+    let now = Utc::now();
+    run.link.write(|| {
+        let repo = run.saved_search_repo();
+        request.saved_searches.iter().try_for_each(|search| repo.mark_pushed(search, now))
+    })
+}
+
 /// Decrypt the blobs of a pull. One that fails is left out.
 fn read_blobs(run: &Run<'_>, attachments: &[SyncAttachment]) -> HashMap<String, Vec<u8>> {
     attachments.iter()
@@ -1251,6 +1311,7 @@ fn pull_changes(run: &Run<'_>, metadata: &mut SyncMetadata, force: bool, outcome
                 versions_waiting.extend(response.versions);
                 versions_waiting = apply_remote_versions(run, std::mem::take(&mut versions_waiting))?;
                 hold_remote_deletions(run, response.deletions)?;
+                apply_remote_saved_searches(run, response.saved_searches, response.synced_at, outcome)?;
             }
 
             if is_last_page {
@@ -1327,6 +1388,7 @@ fn sync_vault(
     push_changes(&run, &mut metadata, &mut outcome)?;
     let pulled = pull_changes(&run, &mut metadata, force, &mut outcome)?;
     link.write(|| settle_remote_deletions(&run, &mut outcome))?;
+    push_saved_searches(&run, &mut outcome)?;
     fetch_missing_blobs(&run);
 
     // last_sync_at stays on this device's clock. The pull position in last_pull_at
@@ -3018,6 +3080,123 @@ mod tests {
         let db = app.db.as_ref().unwrap();
         let (_, _, _, data) = AttachmentRepository::new(db.connection()).get(ATTACHMENT_ID, key()).unwrap().unwrap();
         assert_eq!(data, b"abc");
+    }
+
+    fn wire_saved_search(id: usize, name: &str, query: &str) -> Value {
+        json!({
+            "id": note_id(id),
+            "name": encrypted(name),
+            "query": encrypted(query),
+            "order": id,
+            "createdAt": "2026-01-01T00:00:00Z",
+            "modifiedAt": "2026-01-01T00:00:00Z",
+            "deleted": false,
+            "version": 1,
+        })
+    }
+
+    fn saved_search_names(app: &App) -> Vec<String> {
+        let db = app.db.as_ref().unwrap();
+        SavedSearchRepository::new(db.connection()).list(key()).unwrap()
+            .into_iter().map(|search| search.name).collect()
+    }
+
+    #[test]
+    fn saved_searches_arrive_from_the_server() {
+        let mut page = cursor_page(vec![], "c1", false);
+        page["savedSearches"] = json!([wire_saved_search(1, "Work", "#work -done")]);
+        let server = StubServer::start(vec![], vec![]);
+        server.script(vec![page]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(saved_search_names(&app), ["Work"]);
+    }
+
+    #[test]
+    fn a_saved_search_this_vault_cannot_open_is_left_out_and_counted() {
+        let crypto = CryptoService::new();
+        let foreign = serde_json::to_string(&crypto.encrypt_text("Planted", &crypto.generate_master_key()).unwrap()).unwrap();
+        let mut planted = wire_saved_search(2, "x", "y");
+        planted["name"] = json!(foreign);
+        planted["query"] = json!("not even ciphertext");
+
+        let mut page = cursor_page(vec![], "c1", false);
+        page["savedSearches"] = json!([planted, wire_saved_search(1, "Work", "#work")]);
+        let server = StubServer::start(vec![], vec![]);
+        server.script(vec![page]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(outcome.skipped, 1);
+        assert_eq!(saved_search_names(&app), ["Work"]);
+    }
+
+    #[test]
+    fn a_saved_search_deleted_elsewhere_goes_here_whatever_the_row_holds() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        let repo = SavedSearchRepository::new(db.connection());
+        repo.apply(
+            &serde_json::from_value(wire_saved_search(1, "Going", "x")).unwrap(),
+            false,
+            None,
+        ).unwrap();
+
+        let mut gone = wire_saved_search(1, "", "");
+        gone["name"] = json!("plaintext from an older client");
+        gone["modifiedAt"] = json!("2026-06-01T00:00:00Z");
+        gone["deleted"] = json!(true);
+        let mut page = cursor_page(vec![], "c1", false);
+        page["savedSearches"] = json!([gone]);
+        server.script(vec![page]);
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert!(saved_search_names(&app).is_empty());
+    }
+
+    #[test]
+    fn a_saved_search_goes_up_encrypted_and_then_stops_going() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        SavedSearchRepository::new(db.connection()).create("Private name", "#private", key()).unwrap();
+
+        perform_sync(&mut app, false).unwrap();
+
+        let pushed = server.all_pushes().into_iter().find(|push| push.get("savedSearches").is_some()).unwrap();
+        let sent = pushed["savedSearches"][0].clone();
+        assert!(!sent["name"].as_str().unwrap().contains("Private"));
+        assert!(!sent["query"].as_str().unwrap().contains("private"));
+
+        let pushes = server.all_pushes().len();
+        perform_sync(&mut app, false).unwrap();
+        assert_eq!(server.all_pushes().len(), pushes);
+    }
+
+    /// An older server sends them whole on every page, so they're read once.
+    #[test]
+    fn saved_searches_from_an_older_server_are_read_from_the_last_page() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut first = json!({
+            "notes": remote_notes(1), "deletions": [], "attachments": [], "versions": [],
+            "savedSearches": [wire_saved_search(1, "Work", "#work")],
+            "syncedAt": server_time(0), "hasMore": true,
+        });
+        let mut last = first.clone();
+        last["notes"] = json!([]);
+        last["hasMore"] = json!(false);
+        first["savedSearches"] = json!([]);
+        server.script(vec![first, last]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(saved_search_names(&app), ["Work"]);
     }
 
     /// Without this, a server that always says there's more would keep a sync running.

@@ -259,7 +259,12 @@ enum Commands {
     /// Search notes
     Search {
         /// Search query
-        query: String,
+        #[arg(required_unless_present = "saved")]
+        query: Option<String>,
+
+        /// Run the saved search with this name instead
+        #[arg(long, conflicts_with = "query", value_name = "NAME")]
+        saved: Option<String>,
 
         /// Password for decryption (will prompt if not provided)
         #[arg(short, long)]
@@ -957,7 +962,7 @@ fn run() -> Result<()> {
 
             return Ok(());
         }
-        Some(Commands::Search { query, password, limit }) => {
+        Some(Commands::Search { query, saved, password, limit }) => {
             let password = get_password(password, &db_path)?;
             let db = Database::open(&db_path, &password)
                 .context("Failed to open database. Check your password.")?;
@@ -968,6 +973,15 @@ fn run() -> Result<()> {
             let note_repo = NoteRepository::new(db.connection());
             let notes = note_repo.list_not_deleted(&key)?.notes;
             let settings = repository::SettingsRepository::new(db.connection()).get()?;
+
+            let query = match saved {
+                Some(name) => repository::SavedSearchRepository::new(db.connection()).list(&key)?
+                    .into_iter()
+                    .find(|search| search.name.eq_ignore_ascii_case(&name))
+                    .map(|search| search.query)
+                    .with_context(|| t!("saved_search.not_found", name = name).to_string())?,
+                None => query.unwrap_or_default(),
+            };
 
             // The same query language as the TUI, with the same answer about the archive
             let parsed = search::SearchQuery::parse(&query, &settings);

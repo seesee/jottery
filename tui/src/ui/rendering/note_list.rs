@@ -276,6 +276,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         ViewMode::VersionHistory => t!("ui.version_history").to_string(),
         ViewMode::ConflictResolution => t!("ui.conflict_resolution").to_string(),
         ViewMode::Inbox => format!("{} ({})", t!("inbox.title"), app.inbox_items.len()),
+        ViewMode::SavedSearches => t!("saved_search.title").to_string(),
         ViewMode::NoteList => {
             if app.archive_mode {
                 if app.search_active && !app.search_input.is_empty() {
@@ -405,6 +406,10 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 format!("Enter: {} | d: {} | A: {} | D: {} | ↑/↓: {} | Esc: {}",
                     t!("status_bar.accept"), t!("status_bar.delete"), t!("status_bar.accept_all"),
                     t!("status_bar.delete_all"), t!("status_bar.navigate"), t!("status_bar.close"))
+            }
+            ViewMode::SavedSearches => {
+                format!("Enter: {} | d: {} | ↑/↓: {} | Esc: {}",
+                    t!("status_bar.search"), t!("status_bar.delete"), t!("status_bar.navigate"), t!("status_bar.close"))
             }
             ViewMode::NoteList => {
                 if app.archive_mode {
@@ -1101,6 +1106,20 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         );
     }
 
+    if matches!(app.input_mode, InputMode::SaveSearchName) {
+        render_input_modal(
+            frame,
+            size,
+            &t!("saved_search.name_prompt"),
+            &app.search_input,
+            &app.saved_search_name_input,
+            "Enter: confirm | Esc: cancel",
+            &app.color_scheme,
+            60,
+            6,
+        );
+    }
+
     // Render bulk export path input modal if showing
     if matches!(app.input_mode, InputMode::BulkExportPath) {
         let count = app.selected_note_ids.len();
@@ -1130,6 +1149,10 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
     // Render note info modal if showing
     super::note_info::render_note_info(app, frame, size);
+
+    if matches!(app.view_mode, ViewMode::SavedSearches) {
+        super::saved_searches::render_saved_searches(app, frame, size);
+    }
 
     // Render inbox modal if showing
     if matches!(app.view_mode, ViewMode::Inbox) {

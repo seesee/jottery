@@ -53,6 +53,9 @@ pub fn handle_search_key(app: &mut App, key: KeyEvent) -> Result<bool> {
             handle_search_enter(app)?;
         }
         // Preview scrolling controls (must come before generic Char(c) pattern)
+        KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            operations::saved_searches::begin_saving(app);
+        }
         KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             // Ctrl-d: scroll preview down half page (10 lines)
             app.preview_scroll_offset = app.preview_scroll_offset.saturating_add(10);

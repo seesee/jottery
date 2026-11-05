@@ -9,6 +9,7 @@ pub mod locked;
 pub mod mouse;
 pub mod note_list;
 pub mod note_view;
+pub mod saved_searches;
 pub mod search;
 pub mod settings;
 pub mod text_input;

@@ -128,6 +128,8 @@ pub enum InputMode {
     BulkSetColour,
     /// Bulk export path input mode
     BulkExportPath,
+    /// Naming the query in the search bar, to save it
+    SaveSearchName,
 }
 
 /// Current view mode
@@ -144,6 +146,8 @@ pub enum ViewMode {
     ConflictResolution,
     /// Inbox view (unencrypted notes from Inbox API)
     Inbox,
+    /// The list of saved searches
+    SavedSearches,
 }
 
 /// Which panel is focused in the preview pane

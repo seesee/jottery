@@ -528,6 +528,10 @@ help:
   multi_remove_tags_desc: "Rimuovi tag dalle note selezionate"
   multi_colour_key: "C"
   multi_colour_desc: "Imposta il colore delle note selezionate"
+  g_saved_key: "g"
+  g_saved_desc: "Ricerche salvate"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "Salva questa ricerca"
 cli:
   # Alt (usato in alcuni contesti)
   list: Elenca note
@@ -769,3 +773,14 @@ envelope:
   password_changed_elsewhere: "La password delle note è stata cambiata su un altro dispositivo, quindi non è stato sovrascritto nulla. Questo dispositivo si sblocca ancora con la vecchia password. Cambiala anche qui perché nuovi dispositivi possano collegarsi."
   server_update_pending: "La password è stata cambiata su questo dispositivo, ma non è stato possibile aggiornare la copia della chiave sul server. Jottery riproverà. Fino ad allora, un nuovo dispositivo non potrà collegarsi con la nuova password."
   key_keeps_changing: "La chiave dell'account continua a cambiare sul server, quindi questo dispositivo non l'ha toccata. Riprova tra poco."
+
+saved_search:
+  title: "Ricerche salvate"
+  empty: "Nessuna ricerca salvata. Cerca con /, poi premi Ctrl+S per salvarla."
+  name_prompt: "Assegna un nome a questa ricerca"
+  nothing_to_save: "Digita prima una ricerca"
+  saved: "Ricerca salvata: %{name}"
+  deleted: "Ricerca salvata eliminata"
+  delete_confirm: "Eliminare '%{name}' su tutti i dispositivi? (y/n)"
+  not_found: "Nessuna ricerca salvata chiamata %{name}"
+  failed: "Ricerca salvata non riuscita: %{error}"

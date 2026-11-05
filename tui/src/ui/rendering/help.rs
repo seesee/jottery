@@ -71,6 +71,7 @@ pub fn render_help(app: &App, frame: &mut Frame) {
                 HelpEntry::new("help.I_info_key", "help.I_info_desc"),
                 HelpEntry::new("help.v_versions_key", "help.v_versions_desc"),
                 HelpEntry::new("help.b_inbox_key", "help.b_inbox_desc"),
+                HelpEntry::new("help.g_saved_key", "help.g_saved_desc"),
                 HelpEntry::new("help.bracket_cycle_key", "help.bracket_cycle_desc"),
                 HelpEntry::new("help.color_cycle_key", "help.color_cycle_desc"),
                 HelpEntry::new("help.j_down_key", "help.j_down_desc"),
@@ -106,6 +107,7 @@ pub fn render_help(app: &App, frame: &mut Frame) {
                 HelpEntry::new("help.esc_exit_search_key", "help.esc_exit_search_desc"),
                 HelpEntry::new("help.arrows_navigate_key", "help.arrows_navigate_desc"),
                 HelpEntry::new("help.tab_search_key", "help.tab_search_desc"),
+                HelpEntry::new("help.ctrl_s_save_search_key", "help.ctrl_s_save_search_desc"),
             ],
         ),
         (

@@ -528,6 +528,10 @@ help:
   multi_remove_tags_desc: "Tags von ausgewählten Notizen entfernen"
   multi_colour_key: "C"
   multi_colour_desc: "Farbe der ausgewählten Notizen festlegen"
+  g_saved_key: "g"
+  g_saved_desc: "Gespeicherte Suchen"
+  ctrl_s_save_search_key: "Strg+S"
+  ctrl_s_save_search_desc: "Diese Suche speichern"
 cli:
   # Alt (an einigen Stellen verwendet)
   list: Notizen auflisten
@@ -769,3 +773,14 @@ envelope:
   password_changed_elsewhere: "Ihr Notizen-Passwort wurde auf einem anderen Gerät geändert, daher wurde nichts überschrieben. Dieses Gerät lässt sich weiterhin mit dem alten Passwort entsperren. Ändern Sie es hier entsprechend, damit neue Geräte beitreten können."
   server_update_pending: "Ihr Passwort wurde auf diesem Gerät geändert, aber die Kopie Ihres Schlüssels auf dem Server konnte nicht aktualisiert werden. Jottery versucht es erneut. Bis dahin kann kein neues Gerät mit dem neuen Passwort beitreten."
   key_keeps_changing: "Der Kontoschlüssel ändert sich auf dem Server ständig, daher hat dieses Gerät ihn nicht angerührt. Versuchen Sie es gleich noch einmal."
+
+saved_search:
+  title: "Gespeicherte Suchen"
+  empty: "Noch keine gespeicherten Suchen. Suchen Sie mit / und drücken Sie dann Strg+S zum Speichern."
+  name_prompt: "Diese Suche benennen"
+  nothing_to_save: "Geben Sie zuerst eine Suche ein"
+  saved: "Suche gespeichert: %{name}"
+  deleted: "Gespeicherte Suche gelöscht"
+  delete_confirm: "'%{name}' auf allen Geräten löschen? (y/n)"
+  not_found: "Keine gespeicherte Suche namens %{name}"
+  failed: "Fehler bei der gespeicherten Suche: %{error}"
