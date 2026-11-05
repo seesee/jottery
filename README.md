@@ -341,7 +341,7 @@ For detailed information about Jottery's security architecture, deployment best 
 *   **Styling**: Tailwind CSS
 *   **Editor**: CodeMirror
 *   **Database**: IndexedDB
-*   **Search**: FlexSearch
+*   **Search**: Built-in query parser
 
 ### TUI Client (Rust)
 
