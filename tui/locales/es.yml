@@ -547,6 +547,14 @@ cli:
   # Mensajes de salida
   notes_count: "%{count} notas"
   results_count: "%{count} resultados: '%{query}'"
+  attach_about: "Adjuntar un archivo a una nota"
+  save_attachment_about: "Guardar un adjunto de una nota en un archivo"
+  archive_about: "Archivar una nota"
+  unarchive_about: "Recuperar una nota del archivo"
+  note_id_help: "ID de la nota (admite coincidencia parcial)"
+  attach_file_help: "Archivo que adjuntar"
+  attachment_number_help: "Qué adjunto, según la numeración de show"
+  archived_help: "Mostrar las notas archivadas"
 status:
   locked: Bloqueado
   unlocked: Desbloqueado

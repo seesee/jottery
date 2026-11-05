@@ -81,6 +81,7 @@ fn build_translated_cli() -> clap::Command {
             .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
             .mut_arg("tag", |a| a.help(t!("cli.tag_filter_help").to_string()))
             .mut_arg("limit", |a| a.help(t!("cli.limit_help").to_string()))
+            .mut_arg("archived", |a| a.help(t!("cli.archived_help").to_string()))
     });
 
     cmd = cmd.mut_subcommand("search", |sub| {
@@ -91,6 +92,33 @@ fn build_translated_cli() -> clap::Command {
 
     cmd = cmd.mut_subcommand("show", |sub| {
         sub.about(t!("cli.show_about").to_string())
+            .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("attach", |sub| {
+        sub.about(t!("cli.attach_about").to_string())
+            .mut_arg("id", |a| a.help(t!("cli.note_id_help").to_string()))
+            .mut_arg("file", |a| a.help(t!("cli.attach_file_help").to_string()))
+            .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("save-attachment", |sub| {
+        sub.about(t!("cli.save_attachment_about").to_string())
+            .mut_arg("id", |a| a.help(t!("cli.note_id_help").to_string()))
+            .mut_arg("number", |a| a.help(t!("cli.attachment_number_help").to_string()))
+            .mut_arg("output", |a| a.help(t!("cli.output_help").to_string()))
+            .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("archive", |sub| {
+        sub.about(t!("cli.archive_about").to_string())
+            .mut_arg("id", |a| a.help(t!("cli.note_id_help").to_string()))
+            .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("unarchive", |sub| {
+        sub.about(t!("cli.unarchive_about").to_string())
+            .mut_arg("id", |a| a.help(t!("cli.note_id_help").to_string()))
             .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
     });
 
@@ -224,6 +252,10 @@ enum Commands {
         /// Maximum number of notes to show
         #[arg(short = 'n', long, default_value = "20")]
         limit: usize,
+
+        /// List archived notes instead
+        #[arg(long)]
+        archived: bool,
     },
     /// Search notes
     Search {
@@ -240,6 +272,53 @@ enum Commands {
     },
     /// Show a specific note by ID
     Show {
+        /// Note ID (partial match supported)
+        id: String,
+
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+    /// Attach a file to a note
+    Attach {
+        /// Note ID (partial match supported)
+        id: String,
+
+        /// File to attach
+        file: PathBuf,
+
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+    /// Save a note's attachment to a file
+    SaveAttachment {
+        /// Note ID (partial match supported)
+        id: String,
+
+        /// Which attachment, as numbered by show
+        #[arg(short = 'n', long, default_value = "1")]
+        number: usize,
+
+        /// Output file path
+        #[arg(short, long)]
+        output: PathBuf,
+
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+    /// Archive a note
+    Archive {
+        /// Note ID (partial match supported)
+        id: String,
+
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+    /// Bring a note back from the archive
+    Unarchive {
         /// Note ID (partial match supported)
         id: String,
 
@@ -465,6 +544,52 @@ fn perform_cli_sync(db_path: &Path, db: Database, key: [u8; 32]) -> Result<ui::o
     ui::operations::sync::perform_sync(&mut app, false)
 }
 
+/// Open the vault for a command that changes a note, and find that note.
+fn open_note(db_path: &Path, password: Option<String>, id: &str) -> Result<(App, models::Note)> {
+    let password = get_password(password, db_path)?;
+    let db = Database::open(db_path, &password)
+        .context("Failed to open database. Check your password.")?;
+    let key = derive_key_from_db(&db, &password)?;
+
+    let mut app = App::headless(db_path.to_path_buf(), db, key)?;
+    ui::operations::notes::load_notes(&mut app)?;
+
+    let note = app.all_notes().iter()
+        .find(|note| note.id.starts_with(id))
+        .cloned()
+        .context(t!("error.file_not_found"))?;
+
+    Ok((app, note))
+}
+
+/// Push a change made by a command, if this device syncs. The change is safe
+/// locally whatever happens, so a failure here is a warning.
+fn sync_if_connected(app: &mut App) {
+    let syncs = app.sync_metadata().is_some_and(|metadata| metadata.sync_enabled);
+    if syncs {
+        match ui::operations::sync::perform_sync(app, false) {
+            Ok(outcome) => report_sync(&outcome),
+            Err(e) => errln!("⚠ {}: {}", t!("sync.failed", error = ""), e),
+        }
+    }
+}
+
+/// Move a note in or out of the archive from the CLI.
+fn set_note_archived(db_path: &Path, password: Option<String>, id: &str, archived: bool) -> Result<()> {
+    let (mut app, note) = open_note(db_path, password, id)?;
+
+    if note.locked {
+        anyhow::bail!("{}", t!("note.locked_cannot_archive"));
+    }
+
+    ui::operations::notes::set_archived(&mut app, &note.id, archived)?;
+    let done = if archived { t!("archive.archived") } else { t!("archive.unarchived") };
+    outln!("✓ {}: {}", done, models::char_prefix(&note.id, 8));
+
+    sync_if_connected(&mut app);
+    Ok(())
+}
+
 /// Say what a finished sync did, including anything it couldn't do.
 fn report_sync(outcome: &ui::operations::sync::SyncOutcome) {
     // codeql[rust/cleartext-logging] these are note counts; CodeQL taints the sync result via the `?` on the api_key
@@ -651,7 +776,7 @@ fn run() -> Result<()> {
 
             return Ok(());
         }
-        Some(Commands::List { password, tag, limit }) => {
+        Some(Commands::List { password, tag, limit, archived }) => {
             let password = get_password(password, &db_path)?;
             let db = Database::open(&db_path, &password)
                 .context("Failed to open database. Check your password.")?;
@@ -660,7 +785,11 @@ fn run() -> Result<()> {
             let key = derive_key_from_db(&db, &password)?;
 
             let note_repo = NoteRepository::new(db.connection());
-            let notes = note_repo.list(false, &key)?;
+            let notes = if archived {
+                note_repo.get_archived(&key)?
+            } else {
+                note_repo.list(false, &key)?
+            };
 
             // Filter by tag if specified
             let filtered_notes: Vec<_> = if let Some(tag_filter) = tag {
@@ -724,7 +853,7 @@ fn run() -> Result<()> {
             let key = derive_key_from_db(&db, &password)?;
 
             let note_repo = NoteRepository::new(db.connection());
-            let notes = note_repo.list(false, &key)?;
+            let notes = note_repo.list_not_deleted(&key)?.notes;
 
             // Find note by partial ID match
             let note = notes.into_iter()
@@ -737,8 +866,43 @@ fn run() -> Result<()> {
             if !note.tags.is_empty() {
                 outln!("{}: {}", t!("editor.tags"), note.tags.join(", "));
             }
+            for (i, attachment) in note.attachments.iter().enumerate() {
+                outln!("{} {}: {} ({})", t!("ui.attachments"), i + 1, attachment.filename, attachment.mime_type);
+            }
             outln!("\n{}", note.content);
 
+            return Ok(());
+        }
+        Some(Commands::Attach { id, file, password }) => {
+            let (mut app, note) = open_note(&db_path, password, &id)?;
+
+            if note.locked {
+                anyhow::bail!("{}", t!("note.locked_cannot_edit"));
+            }
+
+            ui::operations::attachments::add_attachment(&mut app, &note.id, &file.to_string_lossy())?;
+            outln!("✓ {}", t!("attachment.added", name = file.display().to_string()));
+
+            sync_if_connected(&mut app);
+            return Ok(());
+        }
+        Some(Commands::SaveAttachment { id, number, output, password }) => {
+            let (mut app, note) = open_note(&db_path, password, &id)?;
+
+            let attachment = number.checked_sub(1)
+                .and_then(|index| note.attachments.get(index))
+                .with_context(|| t!("attachment.no_attachments").to_string())?;
+
+            let saved = ui::operations::attachments::save_attachment(&mut app, attachment, &output.to_string_lossy())?;
+            outln!("✓ {}", t!("attachment.saved", path = saved.display().to_string()));
+            return Ok(());
+        }
+        Some(Commands::Archive { id, password }) => {
+            set_note_archived(&db_path, password, &id, true)?;
+            return Ok(());
+        }
+        Some(Commands::Unarchive { id, password }) => {
+            set_note_archived(&db_path, password, &id, false)?;
             return Ok(());
         }
         Some(Commands::RegisterUser { server, email, password }) => {

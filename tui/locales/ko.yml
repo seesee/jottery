@@ -547,6 +547,14 @@ cli:
   # 출력 메시지
   notes_count: "%{count}개의 노트"
   results_count: "'%{query}'에 대한 %{count}개의 결과"
+  attach_about: "노트에 파일 첨부"
+  save_attachment_about: "노트의 첨부 파일을 파일로 저장"
+  archive_about: "노트 보관"
+  unarchive_about: "보관된 노트 되돌리기"
+  note_id_help: "노트 ID (부분 일치 지원)"
+  attach_file_help: "첨부할 파일"
+  attachment_number_help: "첨부 파일 번호 (show 기준)"
+  archived_help: "대신 보관된 노트 표시"
 status:
   locked: "잠김"
   unlocked: "잠금 해제됨"

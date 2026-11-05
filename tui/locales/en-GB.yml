@@ -596,6 +596,14 @@ cli:
   # Output messages
   notes_count: "%{count} notes"
   results_count: "%{count} results: '%{query}'"
+  attach_about: "Attach a file to a note"
+  save_attachment_about: "Save a note's attachment to a file"
+  archive_about: "Archive a note"
+  unarchive_about: "Bring a note back from the archive"
+  note_id_help: "Note ID (partial match supported)"
+  attach_file_help: "File to attach"
+  attachment_number_help: "Which attachment, as numbered by show"
+  archived_help: "List archived notes instead"
 
 # Status messages
 status:

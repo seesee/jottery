@@ -547,6 +547,14 @@ cli:
   # 出力メッセージ
   notes_count: "%{count} 件のノート"
   results_count: "%{count} 件の結果: '%{query}'"
+  attach_about: "ノートにファイルを添付"
+  save_attachment_about: "ノートの添付ファイルをファイルに保存"
+  archive_about: "ノートをアーカイブ"
+  unarchive_about: "ノートをアーカイブから戻す"
+  note_id_help: "ノート ID（部分一致可）"
+  attach_file_help: "添付するファイル"
+  attachment_number_help: "どの添付ファイルか（show の番号）"
+  archived_help: "代わりにアーカイブ済みのノートを一覧表示"
 status:
   locked: ロック中
   unlocked: ロック解除

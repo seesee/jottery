@@ -547,6 +547,14 @@ cli:
   # Çıktı mesajları
   notes_count: "%{count} not"
   results_count: "%{count} sonuç: '%{query}'"
+  attach_about: "Nota dosya ekle"
+  save_attachment_about: "Bir notun ekini dosyaya kaydet"
+  archive_about: "Bir notu arşivle"
+  unarchive_about: "Bir notu arşivden geri getir"
+  note_id_help: "Not kimliği (kısmi eşleşme desteklenir)"
+  attach_file_help: "Eklenecek dosya"
+  attachment_number_help: "Hangi ek (show numaralandırmasına göre)"
+  archived_help: "Bunun yerine arşivlenmiş notları listele"
 status:
   locked: Kilitli
   unlocked: Kilitsiz

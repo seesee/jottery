@@ -547,6 +547,14 @@ cli:
   # Μηνύματα εξόδου
   notes_count: "%{count} σημειώσεις"
   results_count: "%{count} αποτελέσματα: '%{query}'"
+  attach_about: "Επισύναψη αρχείου σε σημείωση"
+  save_attachment_about: "Αποθήκευση συνημμένου σημείωσης σε αρχείο"
+  archive_about: "Αρχειοθέτηση σημείωσης"
+  unarchive_about: "Επαναφορά σημείωσης από το αρχείο"
+  note_id_help: "Αναγνωριστικό σημείωσης (υποστηρίζεται μερική αντιστοίχιση)"
+  attach_file_help: "Αρχείο για επισύναψη"
+  attachment_number_help: "Ποιο συνημμένο, με την αρίθμηση του show"
+  archived_help: "Εμφάνιση αρχειοθετημένων σημειώσεων"
 status:
   locked: Κλειδωμένο
   unlocked: Ξεκλείδωτο

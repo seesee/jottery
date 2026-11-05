@@ -547,6 +547,14 @@ cli:
   # Uitvoerberichten
   notes_count: "%{count} notities"
   results_count: "%{count} resultaten: '%{query}'"
+  attach_about: "Een bestand aan een notitie toevoegen"
+  save_attachment_about: "Een bijlage van een notitie in een bestand opslaan"
+  archive_about: "Een notitie archiveren"
+  unarchive_about: "Een notitie uit het archief terughalen"
+  note_id_help: "Notitie-ID (gedeeltelijke overeenkomst mogelijk)"
+  attach_file_help: "Bestand om toe te voegen"
+  attachment_number_help: "Welke bijlage, genummerd zoals bij show"
+  archived_help: "In plaats daarvan gearchiveerde notities tonen"
 status:
   locked: Vergrendeld
   unlocked: Ontgrendeld

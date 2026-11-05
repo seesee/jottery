@@ -547,6 +547,14 @@ cli:
   # Выходные сообщения
   notes_count: "%{count} заметок"
   results_count: "%{count} результатов: '%{query}'"
+  attach_about: "Прикрепить файл к заметке"
+  save_attachment_about: "Сохранить вложение заметки в файл"
+  archive_about: "Архивировать заметку"
+  unarchive_about: "Вернуть заметку из архива"
+  note_id_help: "ID заметки (допускается частичное совпадение)"
+  attach_file_help: "Файл для прикрепления"
+  attachment_number_help: "Какое вложение, по нумерации show"
+  archived_help: "Показать вместо этого архивные заметки"
 status:
   locked: Заблокировано
   unlocked: Разблокировано

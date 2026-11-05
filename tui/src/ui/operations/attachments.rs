@@ -433,6 +433,16 @@ pub fn delete_current_attachment(app: &mut App) -> Result<()> {
 
 /// Add attachment to the current note
 pub fn add_attachment_to_current_note(app: &mut App, file_path: &str) -> Result<()> {
+    let filtered = app.filtered_notes();
+    let note_id = filtered.get(app.selected_note)
+        .map(|note| note.id.clone())
+        .ok_or_else(|| anyhow::anyhow!("{}", t!("note.no_notes")))?;
+
+    add_attachment(app, &note_id, file_path)
+}
+
+/// Attach the file at `file_path` to a note
+pub fn add_attachment(app: &mut App, note_id: &str, file_path: &str) -> Result<()> {
     // Clone debug_log so we can use it in the closure without borrowing app
     let debug_log = app.debug_log.clone();
     // Helper to write debug messages
@@ -483,18 +493,6 @@ pub fn add_attachment_to_current_note(app: &mut App, file_path: &str) -> Result<
         .unwrap_or("unnamed")
         .to_string();
 
-    // Get current note
-    let filtered = app.filtered_notes();
-    log_debug(&format!("add_attachment: filtered_notes count: {}", filtered.len()));
-    let note_id = if !filtered.is_empty() && app.selected_note < filtered.len() {
-        let id = filtered[app.selected_note].id.clone();
-        log_debug(&format!("add_attachment: Selected note ID: {}", id));
-        id
-    } else {
-        log_debug("add_attachment: No note selected");
-        anyhow::bail!("{}", t!("note.no_notes"));
-    };
-
     // Store encrypted attachment
     let db = app.db.as_ref().context("Database not available")?;
     let key = app.key.as_ref().context("Key not available")?;
@@ -520,7 +518,7 @@ pub fn add_attachment_to_current_note(app: &mut App, file_path: &str) -> Result<
     // Load the note, add attachment, and save
     let note_repo = NoteRepository::new(db.connection());
     let mut note = note_repo
-        .get(&note_id, key)?
+        .get(note_id, key)?
         .context("Note not found")?;
 
     log_debug(&format!("add_attachment: Note has {} attachments before adding", note.attachments.len()));

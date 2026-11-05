@@ -516,6 +516,17 @@ impl App {
         self.sync_status_set_at = Some(Instant::now());
     }
 
+    /// Every loaded note, archived or not, in no particular order
+    pub fn all_notes(&self) -> &[Note] {
+        &self.notes
+    }
+
+    /// The stored sync settings, if the vault is open and has any
+    pub fn sync_metadata(&self) -> Option<crate::models::sync::SyncMetadata> {
+        let db = self.db.as_ref()?;
+        SyncRepository::new(db.connection()).get_metadata().ok().flatten()
+    }
+
     /// Whether the vault is open
     pub fn is_unlocked(&self) -> bool {
         self.key.is_some()

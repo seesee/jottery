@@ -547,6 +547,14 @@ cli:
   # Komunikaty wyjściowe
   notes_count: "%{count} notatek"
   results_count: "%{count} wyników: '%{query}'"
+  attach_about: "Dołącz plik do notatki"
+  save_attachment_about: "Zapisz załącznik notatki do pliku"
+  archive_about: "Zarchiwizuj notatkę"
+  unarchive_about: "Przywróć notatkę z archiwum"
+  note_id_help: "ID notatki (obsługiwane częściowe dopasowanie)"
+  attach_file_help: "Plik do dołączenia"
+  attachment_number_help: "Który załącznik, według numeracji z show"
+  archived_help: "Pokaż zamiast tego zarchiwizowane notatki"
 status:
   locked: Zablokowane
   unlocked: Odblokowane

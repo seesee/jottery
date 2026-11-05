@@ -547,6 +547,14 @@ cli:
   # Ausgabemeldungen
   notes_count: "%{count} Notizen"
   results_count: "%{count} Ergebnisse: '%{query}'"
+  attach_about: "Eine Datei an eine Notiz anhängen"
+  save_attachment_about: "Einen Notizanhang in einer Datei speichern"
+  archive_about: "Eine Notiz archivieren"
+  unarchive_about: "Eine Notiz aus dem Archiv zurückholen"
+  note_id_help: "Notiz-ID (Teilübereinstimmung möglich)"
+  attach_file_help: "Anzuhängende Datei"
+  attachment_number_help: "Welcher Anhang, nummeriert wie bei show"
+  archived_help: "Stattdessen archivierte Notizen auflisten"
 status:
   locked: Gesperrt
   unlocked: Entsperrt

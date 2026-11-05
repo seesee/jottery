@@ -547,6 +547,14 @@ cli:
   # Messages de sortie
   notes_count: "%{count} notes"
   results_count: "%{count} résultats : '%{query}'"
+  attach_about: "Joindre un fichier à une note"
+  save_attachment_about: "Enregistrer la pièce jointe d'une note dans un fichier"
+  archive_about: "Archiver une note"
+  unarchive_about: "Restaurer une note depuis l'archive"
+  note_id_help: "ID de la note (correspondance partielle possible)"
+  attach_file_help: "Fichier à joindre"
+  attachment_number_help: "Quelle pièce jointe, selon la numérotation de show"
+  archived_help: "Lister plutôt les notes archivées"
 status:
   locked: Verrouillé
   unlocked: Déverrouillé

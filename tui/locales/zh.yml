@@ -547,6 +547,14 @@ cli:
   # 输出消息
   notes_count: "%{count} 条笔记"
   results_count: "%{count} 个结果：'%{query}'"
+  attach_about: "将文件附加到笔记"
+  save_attachment_about: "将笔记的附件保存到文件"
+  archive_about: "归档笔记"
+  unarchive_about: "从归档中恢复笔记"
+  note_id_help: "笔记 ID（支持部分匹配）"
+  attach_file_help: "要附加的文件"
+  attachment_number_help: "哪个附件（按 show 的编号）"
+  archived_help: "改为列出已归档的笔记"
 status:
   locked: 已锁定
   unlocked: 已解锁
