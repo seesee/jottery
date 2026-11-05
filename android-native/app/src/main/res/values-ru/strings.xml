@@ -67,7 +67,7 @@
     <string name="health_repair_not_on_server">Отсутствует и на сервере — откройте заметку и удалите вложение</string>
     <string name="health_unknown_note">(заметку невозможно расшифровать)</string>
     <string name="backup_create">Создать резервную копию</string>
-    <string name="backup_restore">Восстановить из Резервной Копии</string>
+    <string name="backup_restore">Восстановить из резервной копии</string>
     <string name="backup_created">Резервная копия создана. Заметок: %1$d, вложений: %2$d.</string>
     <string name="backup_failed">Не удалось создать резервную копию: %1$s</string>
     <string name="backup_password_title">Пароль резервной копии</string>
@@ -254,7 +254,7 @@
     <string name="colour_blue">Синий</string>
     <string name="colour_purple">Фиолетовый</string>
     <string name="colour_pink">Розовый</string>
-    <string name="saved_searches_title">Сохраненные Поиски</string>
+    <string name="saved_searches_title">Сохранённые поиски</string>
     <string name="saved_searches_empty">Нет сохранённых поисков.</string>
     <string name="saved_searches_empty_hint">Выполните поиск и нажмите на закладку, чтобы сохранить его здесь.</string>
     <string name="saved_search_save_title">Сохранить поиск</string>
@@ -438,9 +438,9 @@
     <string name="tags_empty">Тегов пока нет.</string>
     <string name="settings_about_notes">Заметки</string>
     <string name="settings_default_note_type">Тип заметки по умолчанию</string>
-    <string name="settings_colours">Цвета Категорий</string>
+    <string name="settings_colours">Цвета категорий</string>
     <string name="settings_colours_detail">Назовите цвет, а затем находите его с помощью category:имя. Названия хранятся только на этом устройстве.</string>
-    <string name="settings_tag_categories">Категории Тегов</string>
+    <string name="settings_tag_categories">Категории тегов</string>
     <string name="settings_tag_categories_detail">Назначить категории тегам глобально (красный, оранжевый, жёлтый, зелёный, синий, фиолетовый, розовый, серый)</string>
     <string name="change_password_old_backups">Резервные копии, созданные до этого изменения, по-прежнему открываются старым паролем.</string>
     <string name="note_row_has_attachments">Есть вложения</string>
@@ -551,7 +551,7 @@
         <item quantity="other">%1$d заметки с сервера не удалось прочитать, и они были пропущены. Возможно, они были зашифрованы другим ключом.</item>
     </plurals>
     <string name="version_restore_failed">Эту версию не удаётся прочитать, поэтому она не была восстановлена.</string>
-    <string name="setup_restore_button">Восстановить из Резервной Копии</string>
+    <string name="setup_restore_button">Восстановить из резервной копии</string>
     <string name="setup_restore_subtitle">Начните с резервной копии Jottery. Введите пароль заметок, с которым она была создана.</string>
     <string name="setup_restore_choose">Выбрать файл резервной копии</string>
     <string name="setup_restore_chosen">Файл резервной копии выбран</string>
