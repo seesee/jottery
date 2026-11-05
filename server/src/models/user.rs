@@ -106,13 +106,20 @@ pub struct WrappedKeyResponse {
 pub struct LoginRequest {
     pub email: String,
     pub password: String,
+    /// Ask for the session as an HttpOnly cookie. See `api::cookies`.
+    #[serde(rename = "cookieSession", default)]
+    pub cookie_session: bool,
 }
 
 /// Admin login response
 #[derive(Debug, Serialize)]
 pub struct LoginResponse {
-    #[serde(rename = "sessionId")]
-    pub session_id: String,
+    /// Absent when the session is in a cookie.
+    #[serde(rename = "sessionId", skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
+    /// Present, and true, only when the session is in a cookie.
+    #[serde(rename = "cookieSession", skip_serializing_if = "std::ops::Not::not")]
+    pub cookie_session: bool,
     #[serde(rename = "expiresAt")]
     pub expires_at: String,
     pub user: UserInfo,

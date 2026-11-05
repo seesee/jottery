@@ -8,6 +8,7 @@ use std::{net::SocketAddr, sync::Arc};
 use uuid::Uuid;
 
 use crate::{
+    api::cookies::{grant_session, CookieScope},
     db::{SessionRepository, UserRepository},
     error::AppResult,
     models::{
@@ -319,7 +320,7 @@ pub async fn login(
     peer: Option<ConnectInfo<SocketAddr>>,
     headers: axum::http::HeaderMap,
     Json(req): Json<LoginRequest>,
-) -> AppResult<(StatusCode, Json<LoginResponse>)> {
+) -> AppResult<(StatusCode, axum::http::HeaderMap, Json<LoginResponse>)> {
     tracing::info!("Admin login request: email={}", req.email);
 
     // Extract client info for audit trail
@@ -414,8 +415,11 @@ pub async fn login(
         user.email
     );
 
+    let grant = grant_session(&state.config, CookieScope::Admin, req.cookie_session, session_token);
+
     let response = LoginResponse {
-        session_id: session_token, // Return the token, not the session.id
+        session_id: grant.session_id, // The token, not the session.id
+        cookie_session: grant.cookie_session,
         expires_at: expires_at_str,
         user: UserInfo {
             id: user.id,
@@ -425,23 +429,7 @@ pub async fn login(
         must_change_password: user.must_change_password != 0,
     };
 
-    Ok((StatusCode::OK, Json(response)))
-}
-
-/// Logout endpoint
-/// Invalidates the current session
-#[allow(dead_code)]
-pub async fn logout(
-    State(state): State<Arc<AppState>>,
-    session_id: String, // TODO: Extract from auth middleware
-) -> AppResult<StatusCode> {
-    tracing::info!("Logout request: session_id={}", session_id);
-
-    SessionRepository::delete(&state.pool, &session_id).await?;
-
-    tracing::info!("Logout successful: session_id={}", session_id);
-
-    Ok(StatusCode::NO_CONTENT)
+    Ok((StatusCode::OK, grant.headers, Json(response)))
 }
 
 // =============================================================================

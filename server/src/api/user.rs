@@ -1,12 +1,13 @@
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     Json,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::{
+    api::cookies::{clear_session_cookie, grant_session, CookieScope},
     db::{SessionRepository, UserRepository},
     error::{AppError, AppResult},
     models::{CreateSessionParams, Session},
@@ -45,12 +46,20 @@ pub struct InboxAccountInfo {
 pub struct LoginRequest {
     pub email: String,
     pub password: String,
+    /// Ask for the session as an HttpOnly cookie. See `api::cookies`.
+    #[serde(default)]
+    pub cookie_session: bool,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginResponse {
-    pub session_id: String,
+    /// Absent when the session is in a cookie.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
+    /// Present, and true, only when the session is in a cookie.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub cookie_session: bool,
     pub expires_at: String,
     pub user: UserInfo,
     /// The session can only change the password until this is cleared.
@@ -69,7 +78,7 @@ pub struct UserInfo {
 pub async fn login(
     State(state): State<Arc<AppState>>,
     Json(req): Json<LoginRequest>,
-) -> AppResult<(StatusCode, Json<LoginResponse>)> {
+) -> AppResult<(StatusCode, HeaderMap, Json<LoginResponse>)> {
     tracing::info!("User login request: email={}", req.email);
 
     state.login_throttle.check(&req.email)?;
@@ -155,10 +164,14 @@ pub async fn login(
 
     tracing::info!("User logged in successfully: {}", req.email);
 
+    let grant = grant_session(&state.config, CookieScope::User, req.cookie_session, session_token);
+
     Ok((
         StatusCode::OK,
+        grant.headers,
         Json(LoginResponse {
-            session_id: session_token.clone(),  // Return the actual token, not the session ID
+            session_id: grant.session_id, // The actual token, not the session ID
+            cookie_session: grant.cookie_session,
             expires_at: expires_at_str,
             user: UserInfo {
                 id: user.id,
@@ -543,17 +556,11 @@ pub async fn check_status(
 pub async fn logout(
     State(state): State<Arc<AppState>>,
     axum::Extension(session): axum::Extension<Session>,
-) -> AppResult<StatusCode> {
-    // Delete the current session
-    sqlx::query!(
-        r#"DELETE FROM sessions WHERE id = ?"#,
-        session.id
-    )
-    .execute(&state.pool)
-    .await?;
+) -> AppResult<(StatusCode, HeaderMap)> {
+    SessionRepository::delete(&state.pool, &session.id).await?;
 
     tracing::info!("User logged out: session_id={}", session.id);
-    Ok(StatusCode::NO_CONTENT)
+    Ok((StatusCode::NO_CONTENT, clear_session_cookie(CookieScope::User)))
 }
 
 // ============================================================================

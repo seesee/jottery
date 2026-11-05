@@ -327,7 +327,24 @@ Show the message and don't retry until the wait is over.
 These affect clients that sign in, not device sync.
 
 - `POST /user/login` and `POST /auth/login` return 403 for an account that isn't approved (`Account pending admin approval`) or is deactivated (`Account deactivated`), after checking the password. Show the `error` text. Poll `GET /user/status` for approval rather than retrying sign-in.
-- Both login responses include `mustChangePassword`. When it is true the account has to change its password first: every other account or admin route, and `POST /auth/register-device`, returns 403 with `code: "password_change_required"`. The routes that stay open are `POST /admin/change-password`, `POST /user/change-password` and `POST /user/logout`. Existing device keys keep syncing.
+- Both login responses include `mustChangePassword`. When it is true the account has to change its password first: every other account or admin route, and `POST /auth/register-device`, returns 403 with `code: "password_change_required"`. The routes that stay open are `POST /admin/change-password`, `POST /user/change-password`, `POST /user/logout` and `POST /admin/logout`. Existing device keys keep syncing.
+
+## Dashboard sessions
+
+This applies to the admin dashboard and user portal, not to device clients. Anything that doesn't ask for a cookie is unaffected.
+
+`POST /auth/login` and `POST /user/login` accept an optional `cookieSession: true`. On a server with `ENABLE_HSTS=true`, the session then comes back as a cookie, and the response has `cookieSession: true` and no `sessionId`:
+
+```
+Set-Cookie: session_token=<token>; HttpOnly; Secure; SameSite=Strict; Max-Age=<session expiry>; Path=/api/v1/admin
+```
+
+The path is `/api/v1/admin` from `/auth/login` and `/api/v1/user` from `/user/login`. Any other server ignores the field and returns `sessionId` as usual, because a `Secure` cookie wouldn't come back over plain HTTP.
+
+A `POST`, `PUT`, `PATCH` or `DELETE` that authenticates with the cookie gets 403 unless it has the header `X-Requested-With: JotteryDashboard`. A request with `Authorization: Bearer <token>` doesn't need it.
+
+- `GET /admin/me` returns `{ id, email, isAdmin }` for the signed-in admin. It's the check that a cookie session still works, because that cookie isn't sent to `/user/account`. During a forced password change it returns 403 with `code: "password_change_required"`.
+- `POST /admin/logout` and `POST /user/logout` end the session and clear that route's cookie. Both work with a token too. `/admin/logout` is new, so a dashboard holding a token should keep using `/user/logout`, which every server has.
 
 ## Data shapes
 

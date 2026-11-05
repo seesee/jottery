@@ -1,10 +1,48 @@
 // Admin user management endpoints
 
-use axum::{extract::{Path, State}, http::StatusCode, Json};
+use axum::{
+    extract::{Path, State},
+    http::{HeaderMap, StatusCode},
+    Json,
+};
 use serde::Serialize;
 use std::sync::Arc;
 
-use crate::{error::AppResult, AppState};
+use crate::{
+    api::cookies::{clear_session_cookie, CookieScope},
+    db::{SessionRepository, UserRepository},
+    error::AppResult,
+    models::{Session, UserInfo},
+    AppState,
+};
+
+/// Who is signed in. A cookie session can't reach the user routes, so this is how
+/// the dashboard learns that, and that its session still works.
+/// GET /api/v1/admin/me
+pub async fn me(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(session): axum::Extension<Session>,
+) -> AppResult<Json<UserInfo>> {
+    let user = UserRepository::get_by_id(&state.pool, &session.user_id).await?;
+
+    Ok(Json(UserInfo {
+        id: user.id,
+        email: user.email,
+        is_admin: user.is_admin == 1,
+    }))
+}
+
+/// End the current session.
+/// POST /api/v1/admin/logout
+pub async fn logout(
+    State(state): State<Arc<AppState>>,
+    axum::Extension(session): axum::Extension<Session>,
+) -> AppResult<(StatusCode, HeaderMap)> {
+    SessionRepository::delete(&state.pool, &session.id).await?;
+
+    tracing::info!("Admin logged out: session_id={}", session.id);
+    Ok((StatusCode::NO_CONTENT, clear_session_cookie(CookieScope::Admin)))
+}
 
 #[derive(Debug, Serialize)]
 pub struct UserListItem {

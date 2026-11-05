@@ -26,6 +26,9 @@ const SMALL_BODY_LIMIT: usize = 64 * 1024;
 ///
 /// If CORS_ALLOWED_ORIGINS is set, only allow those origins.
 /// Otherwise, allow any origin (useful for development/simple deployments).
+///
+/// Never allow credentials here: it's what stops another origin's script sending a
+/// session cookie, with the header that `api::cookies` asks for.
 fn build_cors_layer(config: &Config) -> CorsLayer {
     let mut cors = CorsLayer::new()
         .allow_methods(Any)
@@ -33,6 +36,7 @@ fn build_cors_layer(config: &Config) -> CorsLayer {
             AUTHORIZATION,
             CONTENT_TYPE,
             HeaderName::from_static("x-api-key"),
+            HeaderName::from_static(api::cookies::CSRF_HEADER),
         ]);
 
     if let Some(ref origins) = config.cors_allowed_origins {
@@ -110,6 +114,8 @@ pub fn build_app(state: Arc<AppState>) -> Router {
 
     // Build protected admin routes with session auth middleware
     let admin_routes = Router::new()
+        .route("/api/v1/admin/me", get(api::admin::users::me))
+        .route("/api/v1/admin/logout", post(api::admin::users::logout))
         .route("/api/v1/admin/users", get(api::admin::users::list_users))
         .route("/api/v1/admin/users/:id", get(api::admin::users::get_user))
         .route("/api/v1/admin/users/:id/approve", post(api::admin::users::approve_user))

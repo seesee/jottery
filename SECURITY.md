@@ -83,7 +83,8 @@ These parameters follow OWASP recommendations for server-side password storage.
 - User portal sessions use the same mechanism
 - Default session expiry: 7 days (configurable via `SESSION_EXPIRY_DAYS`)
 - Sessions are invalidated on logout
-- The admin dashboard and user portal keep their session in `sessionStorage`, so it belongs to one browser tab and ends when the tab closes. They share an origin with the web client, so a script running in the web client in another tab can't read it, but one running in that same tab could. Don't use a dashboard tab for your notes
+- With `ENABLE_HSTS=true`, the admin dashboard and user portal keep their session in an HttpOnly, Secure, SameSite=Strict cookie, scoped to their own API, which script can't read. A request that changes anything must also carry a custom header, so another site can't forge one. HttpOnly stops a token being stolen, not a script in the same origin using the session while it lasts, so serving the dashboards from their own origin is stronger still
+- Without it, on an install reached over plain HTTP, the dashboards keep their session in `sessionStorage`, so it belongs to one browser tab and ends when the tab closes. They share an origin with the web client, so a script running in the web client in another tab can't read it, but one running in that same tab could. Don't use a dashboard tab for your notes
 
 ### SSE Token Security
 
