@@ -49,53 +49,64 @@ pub fn load_current_view(app: &mut App) -> Result<()> {
 }
 
 /// Save current note
+///
+/// An existing note saves whatever the buffer holds, empty included: clearing a note is
+/// an edit like any other, and leaves a version behind. A new note with nothing in it
+/// isn't a note.
 pub fn save_note(app: &mut App) -> Result<()> {
     if let (Some(db), Some(key)) = (&app.db, &app.key) {
         let repo = NoteRepository::new(db.connection());
 
-        if !app.note_input.is_empty() {
-            if let Some(note_id) = &app.editing_note_id {
-                // Update existing note
-                if let Some(note) = app.notes.iter_mut().find(|n| &n.id == note_id) {
-                    // Opening a note and closing it again isn't an edit. Saving it anyway
-                    // would date it now, and let it beat a newer edit from elsewhere.
-                    if note.content == app.note_input && note.tags == app.current_tags {
-                        return Ok(());
-                    }
+        if let Some(note_id) = &app.editing_note_id {
+            // Update existing note
+            let Some(note) = app.notes.iter_mut().find(|n| &n.id == note_id) else {
+                return Ok(());
+            };
 
-                    // Before editing, create a version snapshot if one doesn't exist
-                    // This ensures we can revert to the pre-edit state
-                    let version_repo = NoteVersionRepository::new(db.connection());
-                    let version_key = format!("{}:{}", note.id, note.version);
-                    if version_repo.get_version_by_key(&version_key)?.is_none() {
-                        // No snapshot exists for current version, create one
-                        version_repo.create_version(
-                            note,
-                            note.synced_at.unwrap_or_else(chrono::Utc::now),
-                            VersionReason::ManualSync,
-                            key,
-                        )?;
-                    }
-
-                    note.content = app.note_input.clone();
-                    note.tags = app.current_tags.clone();
-                    note.touch();
-                    repo.update(note, key)?;
-                }
-            } else {
-                // Create new note
-                let mut note = Note::new(app.note_input.clone());
-                note.tags = app.current_tags.clone();
-                repo.create(&note, key)?;
-                app.notes.insert(0, note);
+            // Opening a note and closing it again isn't an edit. Saving it anyway
+            // would date it now, and let it beat a newer edit from elsewhere.
+            if note.content == app.note_input && note.tags == app.current_tags {
+                return Ok(());
             }
-            // Invalidate filter cache since notes changed
-            app.invalidate_filter_cache();
 
-            // Trigger sync to push changes to server
-            if app.settings.sync_enabled {
-                app.trigger_sync();
+            if note.locked {
+                anyhow::bail!("{}", t!("note.locked_cannot_edit"));
             }
+
+            // Before editing, create a version snapshot if one doesn't exist
+            // This ensures we can revert to the pre-edit state
+            let version_repo = NoteVersionRepository::new(db.connection());
+            let version_key = format!("{}:{}", note.id, note.version);
+            if version_repo.get_version_by_key(&version_key)?.is_none() {
+                // No snapshot exists for current version, create one
+                version_repo.create_version(
+                    note,
+                    note.synced_at.unwrap_or_else(chrono::Utc::now),
+                    VersionReason::ManualSync,
+                    key,
+                )?;
+            }
+
+            note.content = app.note_input.clone();
+            note.tags = app.current_tags.clone();
+            note.touch();
+            repo.update(note, key)?;
+        } else if !app.note_input.is_empty() {
+            // Create new note
+            let mut note = Note::new(app.note_input.clone());
+            note.tags = app.current_tags.clone();
+            repo.create(&note, key)?;
+            app.notes.insert(0, note);
+        } else {
+            return Ok(());
+        }
+
+        // Invalidate filter cache since notes changed
+        app.invalidate_filter_cache();
+
+        // Trigger sync to push changes to server
+        if app.settings.sync_enabled {
+            app.trigger_sync();
         }
     }
     Ok(())
@@ -405,6 +416,53 @@ mod tests {
         let stored = stored_note(&app, &id);
         assert!(!stored.archived);
         assert!(stored.archived_at.is_none());
+    }
+
+    /// Clearing a note used to look like success while the old text stayed and synced.
+    #[test]
+    fn clearing_a_note_saves_it_empty_and_keeps_a_version() {
+        let mut app = unlocked_app();
+        let id = app.notes[0].id.clone();
+        let before = app.notes[0].content.clone();
+        app.editing_note_id = Some(id.clone());
+        app.current_tags = app.notes[0].tags.clone();
+        app.note_input.clear();
+
+        save_note(&mut app).unwrap();
+
+        assert_eq!(stored_note(&app, &id).content, "");
+        let db = app.db.as_ref().unwrap();
+        let versions = NoteVersionRepository::new(db.connection())
+            .get_versions_for_note(&id, app.key.as_ref().unwrap())
+            .unwrap();
+        assert!(versions.iter().any(|version| version.content == before));
+    }
+
+    #[test]
+    fn a_new_note_with_nothing_in_it_is_not_a_note() {
+        let mut app = unlocked_app();
+        let count = app.notes.len();
+        app.editing_note_id = None;
+        app.note_input.clear();
+
+        save_note(&mut app).unwrap();
+
+        assert_eq!(app.notes.len(), count);
+    }
+
+    #[test]
+    fn a_locked_note_refuses_a_save_and_keeps_its_text() {
+        let mut app = unlocked_app();
+        let id = app.notes[0].id.clone();
+        let before = app.notes[0].content.clone();
+        app.notes[0].locked = true;
+        app.editing_note_id = Some(id.clone());
+        app.current_tags = app.notes[0].tags.clone();
+        app.note_input = "Changed through a side door".to_string();
+
+        assert!(save_note(&mut app).is_err());
+
+        assert_eq!(stored_note(&app, &id).content, before);
     }
 
     #[test]

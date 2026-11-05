@@ -388,6 +388,9 @@ pub fn delete_current_attachment(app: &mut App) -> Result<()> {
         }
 
         let note = filtered[app.selected_note];
+        if note.locked {
+            anyhow::bail!("{}", t!("note.locked_cannot_edit"));
+        }
         if app.selected_attachment >= note.attachments.len() {
             anyhow::bail!("No attachment selected");
         }
@@ -439,6 +442,10 @@ pub fn add_attachment_to_current_note(app: &mut App, file_path: &str) -> Result<
 
 /// Attach the file at `file_path` to a note
 pub fn add_attachment(app: &mut App, note_id: &str, file_path: &str) -> Result<()> {
+    if app.notes.iter().any(|note| note.id == note_id && note.locked) {
+        anyhow::bail!("{}", t!("note.locked_cannot_edit"));
+    }
+
     // Clone debug_log so we can use it in the closure without borrowing app
     let debug_log = app.debug_log.clone();
     // Helper to write debug messages
@@ -556,6 +563,10 @@ pub fn remove_attachment_from_current_note(app: &mut App) -> Result<()> {
     let mut note = note_repo
         .get(&note_id, key)?
         .context("Note not found")?;
+
+    if note.locked {
+        anyhow::bail!("{}", t!("note.locked_cannot_edit"));
+    }
 
     // Check if there are attachments
     if note.attachments.is_empty() {
@@ -796,6 +807,29 @@ mod tests {
 
         assert!(begin_add_attachment(&mut app).is_err());
         assert!(!matches!(app.input_mode, InputMode::AttachmentPath));
+    }
+
+    /// The check is here rather than at each key, because there's more than one way in.
+    #[test]
+    fn a_locked_note_keeps_its_attachments() {
+        let (mut app, attachment) = app_with_attachment("text/plain", "first.txt", b"one");
+        let note_id = app.notes[0].id.clone();
+        app.notes[0].locked = true;
+        let db = app.db.as_ref().unwrap();
+        NoteRepository::new(db.connection()).update(&app.notes[0], app.key.as_ref().unwrap()).unwrap();
+
+        assert!(delete_current_attachment(&mut app).is_err());
+        assert!(remove_attachment_from_current_note(&mut app).is_err());
+
+        let path = std::env::temp_dir().join(format!("jottery-locked-{}.txt", uuid::Uuid::new_v4()));
+        std::fs::write(&path, "more").unwrap();
+        assert!(add_attachment_to_current_note(&mut app, path.to_str().unwrap()).is_err());
+        std::fs::remove_file(&path).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let stored = NoteRepository::new(db.connection()).get(&note_id, app.key.as_ref().unwrap()).unwrap().unwrap();
+        assert_eq!(stored.attachments.len(), 1);
+        assert_eq!(stored.attachments[0].id, attachment.id);
     }
 
     #[test]

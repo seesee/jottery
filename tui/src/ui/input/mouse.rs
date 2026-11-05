@@ -1,6 +1,7 @@
 //! Input handling for the mouse
 
 use crossterm::event::{MouseButton, MouseEvent, MouseEventKind};
+use rust_i18n::t;
 
 use crate::ui::app::App;
 use crate::ui::state::{AppState, FocusedPanel, InputMode, ViewMode};
@@ -78,6 +79,14 @@ pub fn handle_mouse(app: &mut App, mouse: MouseEvent) {
                         let filtered = app.filtered_notes();
                         if !filtered.is_empty() && app.selected_note < filtered.len() {
                             let note = &filtered[app.selected_note];
+
+                            // The note view can edit the text too, so a locked note
+                            // goes no further than the 't' key lets it
+                            if note.locked {
+                                app.notify(t!("note.locked_cannot_tag").to_string());
+                                return;
+                            }
+
                             let note_id = note.id.clone();
                             let content = note.content.clone();
                             let syntax_lang = note.syntax_language;
@@ -132,5 +141,63 @@ pub fn handle_mouse(app: &mut App, mouse: MouseEvent) {
             }
         }
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::Database;
+    use crate::models::Note;
+    use crate::repository::NoteRepository;
+    use crossterm::event::KeyModifiers;
+    use ratatui::layout::Rect;
+
+    fn app_with_a_note(locked: bool) -> App {
+        let dir = tempfile::tempdir().unwrap();
+        let mut app = App::new(dir.path().join("test.db"), None).unwrap();
+        std::mem::forget(dir);
+        let db = Database::in_memory(&uuid::Uuid::new_v4().to_string()).unwrap();
+        let key = app.crypto.generate_master_key();
+
+        let mut note = Note::new("Hold still".to_string());
+        note.locked = locked;
+        NoteRepository::new(db.connection()).create(&note, &key).unwrap();
+
+        app.db = Some(db);
+        app.key = Some(key);
+        app.state = AppState::NoteList;
+        crate::ui::operations::notes::load_notes(&mut app).unwrap();
+        app.tags_line_area = Some(Rect::new(10, 5, 40, 1));
+        app
+    }
+
+    fn click_on_the_tags_line(app: &mut App) {
+        handle_mouse(app, MouseEvent {
+            kind: MouseEventKind::Down(MouseButton::Left),
+            column: 12,
+            row: 5,
+            modifiers: KeyModifiers::NONE,
+        });
+    }
+
+    #[test]
+    fn a_click_on_the_tags_line_opens_the_tag_editor() {
+        let mut app = app_with_a_note(false);
+
+        click_on_the_tags_line(&mut app);
+
+        assert!(matches!(app.state, AppState::NoteView));
+        assert!(matches!(app.input_mode, InputMode::Tag));
+    }
+
+    #[test]
+    fn a_click_on_the_tags_line_of_a_locked_note_goes_nowhere() {
+        let mut app = app_with_a_note(true);
+
+        click_on_the_tags_line(&mut app);
+
+        assert!(matches!(app.state, AppState::NoteList));
+        assert!(app.editing_note_id.is_none());
     }
 }
