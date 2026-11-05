@@ -272,10 +272,7 @@ private struct ConnectToServerView: View {
                 try appState.settingsRepo?.updateSync(enabled: true, endpoint: normalised)
 
                 // Store userId for envelope encryption
-                if var syncMeta = try? appState.syncRepo?.getMetadata() {
-                    syncMeta.userId = response.userId
-                    try? appState.syncRepo?.saveMetadata(syncMeta)
-                }
+                try appState.syncRepo?.beginAccount(userId: response.userId)
 
                 appState.settings.syncEnabled = true
                 appState.settings.syncEndpoint = normalised
@@ -358,6 +355,10 @@ private struct ConnectToServerView: View {
                                 localPassword: encryptionPassword
                             )
                             appState.keyManager.unlockWithKeyData(serverKeyData)
+                            try appState.syncRepo?.markServerKeyOpened()
+                            if PasswordPolicy.matchesAccountPassword(encryptionPassword, accountPassword: password) {
+                                appState.accountKeyNotice = .passwordMatchesAccount
+                            }
                         } catch {
                             // Never sync with a key of our own: stop here.
                             Log.debug("[Envelope] Adopting server key failed: \(error)")
@@ -380,6 +381,7 @@ private struct ConnectToServerView: View {
                                 password: encryptionPassword,
                                 masterKeyData: masterKey.withUnsafeBytes { Data($0) }
                             )
+                            try appState.syncRepo?.markServerKeyOpened()
                         } catch {
                             Log.debug("[Envelope] Publishing key failed (will retry on unlock): \(error)")
                         }

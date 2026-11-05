@@ -44,6 +44,10 @@ final class AppState {
     /// re-encrypts everything and uploads it (see `mergeOntoAccountKey(_:)`).
     var pendingAccountKeyMerge: PendingAccountKeyMerge?
 
+    /// Something about the account's key the user needs to know, shown by
+    /// `MainView`. Nothing here stops the app working.
+    var accountKeyNotice: AccountKeyNotice?
+
     // MARK: - User-Facing Errors
 
     /// A transient, localised error message surfaced to the user via a
@@ -768,6 +772,7 @@ final class AppState {
         removeTemporaryFiles()
         needsNotesPasswordForAccountKey = false
         pendingAccountKeyMerge = nil
+        accountKeyNotice = nil
         notes = []
         archivedNotes = []
         pendingConflicts = []
@@ -1654,6 +1659,7 @@ final class AppState {
         savedSearches = []
         pendingConflicts = []
         pendingAccountKeyMerge = nil
+        accountKeyNotice = nil
         inboxItems = []
         showArchive = false
         selectedNoteId = nil
@@ -1729,16 +1735,19 @@ final class AppState {
                 try? keyManager.enableBiometricUnlock()
             }
 
-            // Background: server re-wrap (non-fatal, will retry on next unlock/sync)
-            if let syncRepo, let syncClient {
+            // Background: server re-wrap. A failure is kept and retried at the
+            // next unlock or sync, so the user only needs telling.
+            if settings.syncEnabled, let syncRepo {
                 let dataForServer = masterKeyData
+                let syncClient = self.syncClient
                 Task {
-                    await EnvelopeService.changePasswordServer(
+                    let uploaded = await EnvelopeService.changePasswordServer(
                         syncRepo: syncRepo,
                         syncClient: syncClient,
                         newPassword: newPassword,
                         masterKeyData: dataForServer
                     )
+                    if !uploaded { reportError(L.changePasswordServerKeyPending, duration: .seconds(8)) }
                 }
             }
         } else {
@@ -1894,6 +1903,16 @@ final class AppState {
         sortOrder = newSettings.sort
         keyManager.autoLockTimeout = TimeInterval(newSettings.autoLockTimeout * 60)
     }
+}
+
+/// What `MainView` tells the user about the account's key.
+enum AccountKeyNotice: Equatable {
+    /// The server's copy of the key is wrapped with a password this device
+    /// doesn't have, so the notes password was changed on another device.
+    case passwordChangedElsewhere
+    /// This vault's existing password matches the account password, so the
+    /// server could open the account's key.
+    case passwordMatchesAccount
 }
 
 /// The account's key, opened with the notes password, and that password,

@@ -288,6 +288,14 @@ final class DatabaseManager: Sendable {
             try db.execute(sql: "ALTER TABLE sync_metadata ADD COLUMN user_id TEXT")
         }
 
+        // Per-account sync state: the pull cursor, and what this device knows
+        // about the wrapped key on the server.
+        migrator.registerMigration("ios_008_account_sync_state") { db in
+            try db.execute(sql: "ALTER TABLE sync_metadata ADD COLUMN pull_cursor TEXT")
+            try db.execute(sql: "ALTER TABLE sync_metadata ADD COLUMN server_key_opened INTEGER NOT NULL DEFAULT 0")
+            try db.execute(sql: "ALTER TABLE sync_metadata ADD COLUMN pending_wrapped_key TEXT")
+        }
+
         try migrator.migrate(dbPool)
     }
 }

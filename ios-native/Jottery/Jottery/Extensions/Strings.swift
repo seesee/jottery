@@ -98,6 +98,7 @@ enum L {
     // MARK: - Common
 
     static var commonCancel: String { String(localized: "common.cancel") }
+    static var commonOK: String { String(localized: "common.ok") }
     static var commonShowPassword: String { String(localized: "common.showPassword") }
     static var commonHidePassword: String { String(localized: "common.hidePassword") }
 
@@ -236,6 +237,12 @@ enum L {
     static var syncSetupNotesPassword: String { String(localized: "syncSetup.notesPassword") }
     static var syncSetupNotesPasswordHint: String { String(localized: "syncSetup.notesPasswordHint") }
     static var syncSetupEnvelopeUploadFailed: String { String(localized: "syncSetup.envelopeUploadFailed") }
+    static var syncSetupPasswordsMatchWarning: String { String(localized: "syncSetup.passwordsMatchWarning") }
+    static var accountKeyPasswordChangedElsewhereTitle: String { String(localized: "accountKey.passwordChangedElsewhereTitle") }
+    static var accountKeyPasswordChangedElsewhereMessage: String { String(localized: "accountKey.passwordChangedElsewhereMessage") }
+    static var accountKeyPasswordMatchesAccountTitle: String { String(localized: "accountKey.passwordMatchesAccountTitle") }
+    static var accountKeyPasswordMatchesAccountMessage: String { String(localized: "accountKey.passwordMatchesAccountMessage") }
+    static var changePasswordServerKeyPending: String { String(localized: "changePassword.serverKeyPending") }
     static var syncSetupRegisterAction: String { String(localized: "syncSetup.registerAction") }
     static var syncSetupSuccess: String { String(localized: "syncSetup.success") }
     static var syncSetupDone: String { String(localized: "syncSetup.done") }

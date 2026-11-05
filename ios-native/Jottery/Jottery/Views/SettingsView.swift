@@ -345,6 +345,7 @@ struct SettingsView: View {
         KeychainService.deleteAPIKey()
         KeychainService.deleteClientId()
         try? appState.settingsRepo?.updateSync(enabled: false, endpoint: nil)
+        try? appState.syncRepo?.clearAccount()
 
         settings.syncEnabled = false
         settings.syncEndpoint = nil
@@ -381,6 +382,7 @@ struct SettingsView: View {
         KeychainService.deleteAPIKey()
         KeychainService.deleteClientId()
         try? appState.settingsRepo?.updateSync(enabled: false, endpoint: nil)
+        try? appState.syncRepo?.clearAccount()
 
         settings.syncEnabled = false
         settings.syncEndpoint = nil

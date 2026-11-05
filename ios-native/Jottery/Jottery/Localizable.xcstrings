@@ -29,6 +29,50 @@
         }
       }
     },
+    "accountKey.passwordChangedElsewhereMessage": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your notes password was changed on another device. This device still unlocks with its old password, and your notes keep syncing. To use the new password here, change it in Settings. Enter the same password you chose on the other device."
+          }
+        }
+      }
+    },
+    "accountKey.passwordChangedElsewhereTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes Password Changed Elsewhere"
+          }
+        }
+      }
+    },
+    "accountKey.passwordMatchesAccountMessage": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your notes password matches your server password. The server receives your server password, so it could use it to open your notes. Change your notes password in Settings."
+          }
+        }
+      }
+    },
+    "accountKey.passwordMatchesAccountTitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Your Notes Password"
+          }
+        }
+      }
+    },
     "accountKey.promptMessage": {
       "extractionState": "manual",
       "localizations": {
@@ -535,6 +579,17 @@
         }
       }
     },
+    "changePassword.serverKeyPending": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your password has changed on this device, but the server couldn't be updated. Jottery will keep trying. Until then, a new device needs your old password."
+          }
+        }
+      }
+    },
     "changePassword.successMessage": {
       "extractionState": "manual",
       "localizations": {
@@ -597,6 +652,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hide password"
+          }
+        }
+      }
+    },
+    "common.ok": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
           }
         }
       }
@@ -3171,6 +3237,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "The password that unlocks your notes, used to protect your encryption key on the server. It must be different from your server password."
+          }
+        }
+      }
+    },
+    "syncSetup.passwordsMatchWarning": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your notes password matches your server password. The server receives your server password, so it could use it to open your notes. You can still connect, but change your notes password in Settings afterwards."
           }
         }
       }

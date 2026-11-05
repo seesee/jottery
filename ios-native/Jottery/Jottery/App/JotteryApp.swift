@@ -275,6 +275,24 @@ struct MainView: View {
                 noteCount: appState.notes.count + appState.archivedNotes.count
             ))
         }
+        .alert(accountKeyNoticeTitle, isPresented: Binding(
+            get: { appState.accountKeyNotice != nil },
+            set: { if !$0 { appState.accountKeyNotice = nil } }
+        ), presenting: appState.accountKeyNotice) { _ in
+            Button(L.commonOK, role: .cancel) {}
+        } message: { notice in
+            switch notice {
+            case .passwordChangedElsewhere: Text(L.accountKeyPasswordChangedElsewhereMessage)
+            case .passwordMatchesAccount: Text(L.accountKeyPasswordMatchesAccountMessage)
+            }
+        }
+    }
+
+    private var accountKeyNoticeTitle: String {
+        switch appState.accountKeyNotice {
+        case .passwordMatchesAccount: L.accountKeyPasswordMatchesAccountTitle
+        default: L.accountKeyPasswordChangedElsewhereTitle
+        }
     }
 
     private func publishAccountKey() {

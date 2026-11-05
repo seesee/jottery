@@ -101,6 +101,14 @@ struct SyncSetupView: View {
 
             PasswordField(L.syncSetupNotesPassword, text: $notesPassword)
 
+            // A warning and no more: this is the vault's existing password, and
+            // refusing it would stop these users adding a device.
+            if PasswordPolicy.matchesAccountPassword(notesPassword, accountPassword: password) {
+                Label(L.syncSetupPasswordsMatchWarning, systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+
             Button(action: registerDevice) {
                 if isWorking {
                     ProgressView()
@@ -114,14 +122,6 @@ struct SyncSetupView: View {
 
     private func registerDevice() {
         error = nil
-
-        // Checked here, before the account password is sent anywhere: if the
-        // two match, the server is about to learn the notes password as well.
-        if PasswordPolicy.matchesAccountPassword(notesPassword, accountPassword: password) {
-            error = SyncSetupError.notesPasswordMatchesAccountPassword.localizedDescription
-            return
-        }
-
         isWorking = true
 
         Task {
@@ -180,10 +180,7 @@ struct SyncSetupView: View {
         try appState.settingsRepo?.updateSync(enabled: true, endpoint: device.endpoint)
 
         // Store userId for envelope encryption
-        if var syncMeta = try? appState.syncRepo?.getMetadata() {
-            syncMeta.userId = device.userId
-            try? appState.syncRepo?.saveMetadata(syncMeta)
-        }
+        try appState.syncRepo?.beginAccount(userId: device.userId)
 
         appState.settings.syncEnabled = true
         appState.settings.syncEndpoint = device.endpoint
