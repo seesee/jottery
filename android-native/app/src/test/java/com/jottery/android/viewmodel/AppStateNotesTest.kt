@@ -314,4 +314,59 @@ class AppStateNotesTest {
         withTimeout(5_000) { while (appState.savedSearches.value.size != 2) delay(5) }
         assertEquals(listOf("Second", "One"), appState.savedSearches.value.map { it.name })
     }
+
+    // MARK: - Sharing in
+
+    @Test fun `something shared while locked becomes a note on unlock, and not before`() = runBlocking {
+        appState.lock()
+
+        appState.receiveShare("Shared text", listOf(
+            com.jottery.android.util.AttachmentFiles.Picked("photo.png", "image/png", byteArrayOf(1, 2)),
+        ))
+        delay(50)
+        assertTrue(appState.notes.value.isEmpty())
+
+        appState.unlock(password)
+
+        withTimeout(5_000) { while (appState.notes.value.none { it.content == "Shared text" }) delay(5) }
+        withTimeout(5_000) { while (appState.notes.value.first().attachments.isEmpty()) delay(5) }
+        assertEquals("photo.png", appState.notes.value.first().attachments.single().filename)
+    }
+
+    @Test fun `something shared while unlocked is saved at once, and only once`() = runBlocking {
+        appState.receiveShare("Now", emptyList())
+
+        withTimeout(5_000) { while (appState.notes.value.size != 1) delay(5) }
+        appState.lock()
+        appState.unlock(password)
+        withTimeout(5_000) { while (appState.notes.value.isEmpty()) delay(5) }
+        assertEquals(1, appState.notes.value.size)
+    }
+
+    // MARK: - Leaving an account
+
+    @Test fun `disconnecting keeps the notes and forgets the connection`() = runBlocking {
+        val note = appState.createNote("mine")!!
+        val db = JotteryDatabase.getInstance(ApplicationProvider.getApplicationContext())
+        db.syncMetadataDao().insertOrReplace(
+            com.jottery.android.model.SyncMetadata(
+                userId = "user", lastSyncAt = "2026-01-01T00:00:00.000Z", pullCursor = "c1",
+                cursorAdopted = true, wrappedKeyOpened = true, pendingWrappedKey = "blob",
+            )
+        )
+        appState.updateSettings(appState.settings.value.copy(syncEnabled = true, syncEndpoint = "http://localhost:1"))
+
+        appState.disconnectSync()
+
+        val meta = db.syncMetadataDao().get()!!
+        assertEquals(null, meta.userId)
+        assertEquals(null, meta.lastSyncAt)
+        assertEquals(null, meta.pullCursor)
+        assertEquals(null, meta.pendingWrappedKey)
+        assertFalse(meta.cursorAdopted)
+        assertFalse(meta.wrappedKeyOpened)
+        assertFalse(appState.settings.value.syncEnabled)
+        assertEquals(null, appState.settings.value.syncEndpoint)
+        assertEquals("mine", appState.notes.value.single { it.id == note.id }.content)
+    }
 }

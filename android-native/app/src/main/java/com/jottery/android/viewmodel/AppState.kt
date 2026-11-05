@@ -18,6 +18,7 @@ import com.jottery.android.database.repository.SavedSearchRepository
 import com.jottery.android.database.repository.SettingsRepository
 import com.jottery.android.database.repository.SyncRepository
 import com.jottery.android.database.repository.VersionRepository
+import com.jottery.android.model.AccountCredentials
 import com.jottery.android.model.AttachmentRecord
 import com.jottery.android.model.AttachmentRef
 import com.jottery.android.model.ConflictInfo
@@ -32,6 +33,7 @@ import com.jottery.android.model.CredentialPayload
 import com.jottery.android.model.LegacyCredentialPayload
 import com.jottery.android.model.RegisterDeviceRequest
 import com.jottery.android.model.SortOrder
+import com.jottery.android.model.UserAccountInfo
 import com.jottery.android.model.UserSettings
 import com.jottery.android.network.SSEClient
 import com.jottery.android.network.SyncClient
@@ -56,8 +58,10 @@ import com.jottery.android.service.SyncValidator
 import com.jottery.android.service.SyncService
 import javax.crypto.spec.SecretKeySpec
 import com.jottery.android.util.AttachmentFiles
+import com.jottery.android.util.BiometricHelper
 import com.jottery.android.util.ConnectivityMonitor
 import com.jottery.android.util.DateUtils
+import com.jottery.android.util.NotePrinter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Job
@@ -269,6 +273,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
     init {
         initialise()
+        viewModelScope.launch {
+            _isLocked.collect { locked -> if (!locked) applyPendingShare() }
+        }
     }
 
     /**
@@ -442,6 +449,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         }
 
         finishUnlock(key, metadata, password)
+        offerBiometricIfUseful()
         return true
     }
 
@@ -510,6 +518,79 @@ class AppState(application: Application) : AndroidViewModel(application) {
 
         // Last: this leaves the unlock screen, which cancels the caller's scope
         _isLocked.value = false
+    }
+
+    // MARK: - Biometric Unlock
+
+    private val _biometricEnabled = MutableStateFlow(KeystoreService.hasBiometricKey(application))
+    val biometricEnabled: StateFlow<Boolean> = _biometricEnabled.asStateFlow()
+
+    /** Asked once, after a password unlock on a device that could use it. */
+    private val _offerBiometric = MutableStateFlow(false)
+    val offerBiometric: StateFlow<Boolean> = _offerBiometric.asStateFlow()
+
+    fun dismissBiometricOffer() {
+        _offerBiometric.value = false
+        getApplication<Application>().getSharedPreferences(PREFS_NAME, 0)
+            .edit().putBoolean(KEY_BIOMETRIC_OFFERED, true).apply()
+    }
+
+    private fun offerBiometricIfUseful() {
+        val app = getApplication<Application>()
+        val offered = app.getSharedPreferences(PREFS_NAME, 0).getBoolean(KEY_BIOMETRIC_OFFERED, false)
+        if (!offered && !_biometricEnabled.value && BiometricHelper.isBiometricAvailable(app)) {
+            _offerBiometric.value = true
+        }
+    }
+
+    /** Store the open vault's key behind a biometric. [cipher] came through BiometricPrompt. */
+    fun enableBiometric(cipher: javax.crypto.Cipher) {
+        val key = keyManager.masterKey ?: return
+        val bytes = key.encoded
+        try {
+            KeystoreService.storeBiometricKey(getApplication(), cipher, bytes)
+            _biometricEnabled.value = true
+        } finally {
+            bytes.fill(0)
+        }
+    }
+
+    fun disableBiometric() {
+        KeystoreService.deleteBiometricKey(getApplication())
+        _biometricEnabled.value = false
+    }
+
+    /**
+     * The cipher to unlock with, or null if there's no usable key. Null after
+     * enrolments changed, in which case the stored key has gone with the Keystore's.
+     */
+    fun biometricUnlockCipher(): javax.crypto.Cipher? {
+        val cipher = try {
+            KeystoreService.getBiometricDecryptCipher(getApplication())
+        } catch (e: Exception) {
+            Log.w(TAG, "[Biometric] Key unavailable: ${e.javaClass.simpleName}")
+            null
+        }
+        _biometricEnabled.value = KeystoreService.hasBiometricKey(getApplication())
+        return cipher
+    }
+
+    /** Unlock with a cipher BiometricPrompt has authorised. */
+    suspend fun unlockWithBiometric(cipher: javax.crypto.Cipher) {
+        val repo = encryptionRepo ?: throw AppStateError.NotInitialised
+        val metadata = repo.get() ?: throw AppStateError.NoVault
+        val bytes = KeystoreService.decryptBiometricKey(getApplication(), cipher)
+            ?: throw AppStateError.BiometricUnavailable
+        val key = keyManager.unlockWithKeyData(bytes)
+        bytes.fill(0)
+
+        // A key from before the vault moved to another can't be used
+        if (metadata.verification != null && !verifyWithToken(metadata.verification, key)) {
+            keyManager.lock()
+            disableBiometric()
+            throw AppStateError.BiometricUnavailable
+        }
+        finishUnlock(key, metadata, notesPassword = null)
     }
 
     /**
@@ -586,6 +667,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         syncDebounceJob?.cancel()
 
         AttachmentFiles.clear(getApplication())
+        NotePrinter.release()
         _isLocked.value = true
         _notes.value = emptyList()
         _archivedNotes.value = emptyList()
@@ -1321,6 +1403,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         _showArchive.value = false
         _selectedNoteId.value = null
         _searchQuery.value = ""
+        _biometricEnabled.value = false
         _syncEnabled.value = false
         _isSyncing.value = false
         _lastSyncAt.value = null
@@ -1365,12 +1448,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             if (rewrapped != null) syncRepo?.setPendingWrappedKey(rewrapped)
         }
 
-        // Update biometric key if enabled (master key unchanged)
-        if (KeystoreService.hasBiometricKey(getApplication())) {
-            try {
-                KeystoreService.storeBiometricKey(getApplication(), masterKeyData)
-            } catch (_: Exception) { /* ignore */ }
-        }
+        // Biometric unlock is unaffected: it holds the master key, which hasn't changed
 
         if (rewrapped != null) uploadPendingRewrap()
     }
@@ -1748,6 +1826,8 @@ class AppState(application: Application) : AndroidViewModel(application) {
             }
             keyManager.unlockWithKeyData(masterKey)
         }
+        // The stored key is the old one now
+        disableBiometric()
         loadNotes()
     }
 
@@ -2089,6 +2169,161 @@ class AppState(application: Application) : AndroidViewModel(application) {
         val connection = _pendingConnection.value ?: return
         _pendingConnection.value = null
         viewModelScope.launch { revokeQuietly(connection) }
+    }
+
+    // MARK: - Sharing In
+
+    private class PendingShare(val text: String?, val files: List<AttachmentFiles.Picked>)
+
+    /** Held in memory only, until the vault is open. */
+    private var pendingShare: PendingShare? = null
+
+    /** Something arrived through the share sheet: it becomes a note once unlocked. */
+    fun receiveShare(text: String?, files: List<AttachmentFiles.Picked>) {
+        if (text == null && files.isEmpty()) return
+        pendingShare = PendingShare(text, files)
+        if (!_isLocked.value) viewModelScope.launch { applyPendingShare() }
+    }
+
+    private suspend fun applyPendingShare() {
+        val shared = pendingShare ?: return
+        pendingShare = null
+        val note = createNote(shared.text.orEmpty()) ?: return
+        var failed = 0
+        for (file in shared.files) {
+            if (addAttachment(note.id, file.data, file.name, file.mimeType) == null) failed++
+        }
+        showMessage(text(if (failed == 0) R.string.share_saved else R.string.share_file_failed))
+    }
+
+    // MARK: - Leaving and Managing an Account
+
+    /**
+     * Unlink this device and keep its notes. The server is told first, while the
+     * key still works, but going ahead regardless: a user who is offline, or whose
+     * server predates the call, must still be able to disconnect. Returns false if
+     * the device is still listed on the server, so they can be told to remove it.
+     */
+    suspend fun disconnectSync(): Boolean {
+        val client = syncClientInstance
+        val revoked = client == null || try {
+            withContext(Dispatchers.IO) { client.revokeThisDevice() }
+            true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "[Sync] Couldn't revoke this device: ${e.javaClass.simpleName}")
+            false
+        }
+        forgetConnection()
+        return revoked
+    }
+
+    /** Clear what belongs to the connection. The notes stay. */
+    private suspend fun forgetConnection() {
+        stopSync()
+        val context = getApplication<Application>()
+        try {
+            KeystoreService.deleteAPIKey(context)
+            KeystoreService.deleteClientId(context)
+        } catch (e: Exception) {
+            Log.w(TAG, "[Sync] Secure preferences: ${e.javaClass.simpleName}")
+        }
+        syncRepo?.let { repo ->
+            val meta = repo.getSyncMetadata() ?: com.jottery.android.model.SyncMetadata()
+            repo.saveSyncMetadata(
+                meta.copy(
+                    userId = null,
+                    lastSyncAt = null,
+                    pullCursor = null,
+                    cursorAdopted = false,
+                    wrappedKeyOpened = false,
+                    pendingWrappedKey = null,
+                )
+            )
+        }
+        updateSettings(_settings.value.copy(syncEnabled = false, syncEndpoint = null))
+        _syncError.value = null
+        _syncStatusMessage.value = null
+        _lastSyncAt.value = null
+        _inboxItems.value = emptyList()
+        _pendingConflicts.value = emptyList()
+    }
+
+    /** The name the server has for this device. */
+    suspend fun syncDeviceName(): String? {
+        val client = syncClientInstance ?: return null
+        return try {
+            withContext(Dispatchers.IO) { client.status() }.deviceName.take(MAX_DEVICE_NAME)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /** Create an account. It can't be used until an administrator approves it. */
+    suspend fun createAccount(serverUrl: String, email: String, password: String) {
+        withContext(Dispatchers.IO) {
+            SyncClient(serverUrl, "", "").registerUser(AccountCredentials(email, password))
+        }
+    }
+
+    suspend fun isAccountApproved(serverUrl: String, email: String, password: String): Boolean {
+        val status = withContext(Dispatchers.IO) {
+            SyncClient(serverUrl, "", "").userStatus(AccountCredentials(email, password))
+        }
+        return status.isApproved && status.isActive
+    }
+
+    /** Sign in for account actions, returning the session. Kept by the caller only. */
+    suspend fun signInToAccount(email: String, password: String): String {
+        val client = syncClientInstance ?: throw AppStateError.NotInitialised
+        val response = withContext(Dispatchers.IO) { client.logIn(AccountCredentials(email, password)) }
+        return response.sessionId ?: throw SyncClientException("No session")
+    }
+
+    suspend fun accountInfo(sessionId: String): UserAccountInfo {
+        val client = syncClientInstance ?: throw AppStateError.NotInitialised
+        return withContext(Dispatchers.IO) { client.accountInfo(sessionId) }
+    }
+
+    /** A token for sending things to the inbox. Shown once: the server keeps a hash. */
+    suspend fun generateInboxToken(sessionId: String): String {
+        val client = syncClientInstance ?: throw AppStateError.NotInitialised
+        return withContext(Dispatchers.IO) { client.generateInboxToken(sessionId) }.token
+    }
+
+    suspend fun revokeInboxToken(sessionId: String) {
+        val client = syncClientInstance ?: throw AppStateError.NotInitialised
+        withContext(Dispatchers.IO) { client.revokeInboxToken(sessionId) }
+    }
+
+    suspend fun deleteServerNotes(sessionId: String) {
+        val client = syncClientInstance ?: throw AppStateError.NotInitialised
+        withContext(Dispatchers.IO) { client.deleteServerNotes(sessionId) }
+    }
+
+    /**
+     * Deactivate or delete the account this device syncs with. The notes on this
+     * device stay: closing a sync account isn't deleting notes. No revoke is sent,
+     * because the account's devices are already gone.
+     */
+    suspend fun closeAccount(sessionId: String, mode: AccountDeletionMode) {
+        val client = syncClientInstance ?: throw AppStateError.NotInitialised
+        withContext(Dispatchers.IO) { client.deleteAccount(sessionId, mode.wireValue) }
+        forgetConnection()
+    }
+
+    /** Why an account action failed, as something the user can act on. */
+    fun describeAccountFailure(e: Throwable): String = when {
+        e is SyncClientException && e.statusCode == 401 -> text(R.string.account_error_credentials)
+        e is SyncClientException && e.statusCode == 409 -> text(R.string.account_error_exists)
+        // 403 and 429 carry the server's reason: not approved, deactivated, or how long to wait
+        e is SyncClientException && e.serverMessage != null && (e.statusCode == 403 || e.statusCode == 429) ->
+            e.serverMessage
+        e is SyncClientException -> text(R.string.account_error_server)
+        else -> text(R.string.connect_error_network)
     }
 
     // MARK: - Credential Import (multi-device setup)
@@ -2543,9 +2778,11 @@ class AppState(application: Application) : AndroidViewModel(application) {
         private const val PREFS_NAME = "jottery_prefs"
         private const val KEY_EDITOR_FONT_SCALE = "editorFontScale"
         private const val KEY_SCREEN_SECURITY = "screenSecurity"
+        private const val KEY_BIOMETRIC_OFFERED = "biometricOffered"
         private const val MAX_LOAD_ATTEMPTS = 3
         private const val DEFAULT_SYNC_MINUTES = 5
         private const val HTTP_CONFLICT = 409
+        private const val MAX_DEVICE_NAME = 100
 
         /** What web puts between notes it combines. */
         private const val COMBINED_NOTE_SEPARATOR = "\n\n---\n\n"
@@ -2561,6 +2798,12 @@ fun resolveSelectedNote(
     notes.firstOrNull { it.id == wanted } ?: archived.firstOrNull { it.id == wanted }
 }
 
+/** What closing an account does, with the value the server expects. */
+enum class AccountDeletionMode(val wireValue: String) {
+    DEACTIVATE("deactivate"),
+    DELETE("delete"),
+}
+
 /** A default name for an export file. */
 fun defaultExportName(): String = "jottery-export-${java.time.LocalDate.now()}.json"
 
@@ -2571,4 +2814,5 @@ sealed class AppStateError(message: String) : Exception(message) {
     data object NoVault : AppStateError("No vault found")
     data object InvalidSalt : AppStateError("Invalid encryption salt")
     data object WrongPassword : AppStateError("Incorrect password")
+    data object BiometricUnavailable : AppStateError("Biometric unlock isn't available")
 }

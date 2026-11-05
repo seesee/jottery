@@ -27,6 +27,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -43,6 +46,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.jottery.android.ui.component.ConfirmDialog
+import com.jottery.android.ui.component.fragmentActivity
+import com.jottery.android.util.BiometricHelper
 import com.jottery.android.R
 import com.jottery.android.viewmodel.AppState
 import com.jottery.android.viewmodel.AppStateError
@@ -92,6 +97,47 @@ fun UnlockScreen(
                 error = context.getString(R.string.unlock_failed, e.message ?: e.javaClass.simpleName)
             }
         }
+    }
+
+    val biometricEnabled by appState.biometricEnabled.collectAsState()
+    val keyChangedMessage = stringResource(R.string.biometric_key_changed)
+
+    fun attemptBiometric() {
+        val activity = context.fragmentActivity() ?: return
+        val cipher = appState.biometricUnlockCipher()
+        if (cipher == null) {
+            // Enrolments changed, so the key is gone. The password still works.
+            error = keyChangedMessage
+            return
+        }
+        BiometricHelper.authenticate(
+            activity = activity,
+            cipher = cipher,
+            title = context.getString(R.string.biometric_unlock_title),
+            subtitle = context.getString(R.string.biometric_unlock_subtitle),
+            negativeButton = context.getString(R.string.biometric_use_password),
+            onSuccess = { authorised ->
+                isUnlocking = true
+                scope.launch {
+                    try {
+                        appState.unlockWithBiometric(authorised)
+                        onUnlocked()
+                    } catch (_: AppStateError.BiometricUnavailable) {
+                        error = keyChangedMessage
+                    } catch (e: Exception) {
+                        error = context.getString(R.string.unlock_failed, e.message ?: e.javaClass.simpleName)
+                    } finally {
+                        isUnlocking = false
+                    }
+                }
+            },
+            onError = { message -> error = message },
+        )
+    }
+
+    // Offered straight away, as on iOS. Cancelling leaves the password field.
+    LaunchedEffect(Unit) {
+        if (biometricEnabled && BiometricHelper.isBiometricAvailable(context)) attemptBiometric()
     }
 
     Column(
@@ -172,6 +218,17 @@ fun UnlockScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(if (isUnlocking) "Unlocking\u2026" else "Unlock")
+        }
+
+        if (biometricEnabled && BiometricHelper.isBiometricAvailable(context)) {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { attemptBiometric() },
+                enabled = !isUnlocking,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.biometric_unlock_button))
+            }
         }
 
         // Wipe button after 3 failed attempts

@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromStream
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -105,12 +106,65 @@ class SyncClient(
         delete("/api/v1/inbox")
     }
 
-    suspend fun getInboxToken(): InboxTokenResponse {
-        return get("/api/v1/user/inbox-token")
+    // MARK: - Accounts (session, not API key)
+
+    suspend fun registerUser(credentials: AccountCredentials): RegisterUserResponse {
+        return postUnauthenticated("/api/v1/auth/register-user", credentials)
     }
 
-    suspend fun getInboxTokenStatus(): InboxTokenStatusResponse {
-        return get("/api/v1/user/inbox-token/status")
+    /**
+     * Whether an account is approved. The POST proves the password and tells a
+     * stranger nothing, so it's preferred. Older servers only have the GET.
+     */
+    suspend fun userStatus(credentials: AccountCredentials): UserStatusResponse {
+        return try {
+            postUnauthenticated("/api/v1/user/status", credentials)
+        } catch (e: SyncClientException) {
+            if (e.statusCode != 404 && e.statusCode != 405) throw e
+            val url = "$baseUrl/api/v1/user/status".toHttpUrl().newBuilder()
+                .addQueryParameter("email", credentials.email)
+                .build()
+            decoded(client.newCall(Request.Builder().url(url).get().build()).execute())
+        }
+    }
+
+    suspend fun logIn(credentials: AccountCredentials): UserLoginResponse {
+        return postUnauthenticated("/api/v1/user/login", credentials)
+    }
+
+    suspend fun logOut(sessionId: String) {
+        send(sessionRequest("/api/v1/user/logout", sessionId).post(EMPTY_BODY))
+    }
+
+    suspend fun accountInfo(sessionId: String): UserAccountInfo {
+        return decoded(client.newCall(sessionRequest("/api/v1/user/account", sessionId).get().build()).execute())
+    }
+
+    /** [mode] is `deactivate` or `delete`. */
+    suspend fun deleteAccount(sessionId: String, mode: String) {
+        send(sessionRequest("/api/v1/user/account?mode=$mode", sessionId).delete())
+    }
+
+    suspend fun deleteServerNotes(sessionId: String) {
+        send(sessionRequest("/api/v1/user/notes", sessionId).delete())
+    }
+
+    suspend fun generateInboxToken(sessionId: String): InboxTokenResponse {
+        val request = sessionRequest("/api/v1/user/inbox-token", sessionId).post(EMPTY_BODY).build()
+        return decoded(client.newCall(request).execute())
+    }
+
+    suspend fun revokeInboxToken(sessionId: String) {
+        send(sessionRequest("/api/v1/user/inbox-token", sessionId).delete())
+    }
+
+    private fun sessionRequest(path: String, sessionId: String): Request.Builder =
+        Request.Builder().url("$baseUrl$path").header("Authorization", "Bearer $sessionId")
+
+    private fun send(request: Request.Builder) {
+        client.newCall(request.build()).execute().use { response ->
+            if (!response.isSuccessful) throw failure(response)
+        }
     }
 
     // MARK: - Wrapped Key (Envelope Encryption)
@@ -219,6 +273,7 @@ class SyncClient(
     )
 
     private companion object {
+        val EMPTY_BODY = ByteArray(0).toRequestBody()
         const val MAX_RETRY_AFTER_SECONDS = 3600L
         const val MAX_MESSAGE_LENGTH = 300
         const val MAX_CODE_LENGTH = 64

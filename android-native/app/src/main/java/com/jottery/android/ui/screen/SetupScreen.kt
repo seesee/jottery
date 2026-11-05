@@ -29,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -78,6 +79,7 @@ fun SetupScreen(
     val connectState by appState.connectState.collectAsState()
     val isRegistered = pendingConnection != null
     val isConnecting = connectState is AppState.ConnectState.Working
+    var showCreateAccount by remember { mutableStateOf(false) }
     val connectError = (connectState as? AppState.ConnectState.Failed)?.message
     var confirmationPassword by remember { mutableStateOf("") }
     var askForConfirmation by remember { mutableStateOf(false) }
@@ -333,9 +335,13 @@ fun SetupScreen(
                         label = { Text("Password") },
                         singleLine = true,
                         visualTransformation = PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
                         modifier = Modifier.fillMaxWidth(),
                     )
+
+                    TextButton(onClick = { showCreateAccount = true }) {
+                        Text(stringResource(R.string.create_account_title))
+                    }
 
                     ErrorText(error)
 
@@ -363,11 +369,11 @@ fun SetupScreen(
                                                 isCreating = false
                                                 error = null
                                             }.onFailure { e ->
-                                                error = e.message ?: "Registration failed"
+                                                error = appState.describeAccountFailure(e)
                                                 isCreating = false
                                             }
                                         } catch (e: Exception) {
-                                            error = e.message ?: "Registration failed"
+                                            error = appState.describeAccountFailure(e)
                                             isCreating = false
                                         }
                                     }
@@ -529,6 +535,20 @@ fun SetupScreen(
                 }
             }
         }
+    }
+
+    if (showCreateAccount) {
+        CreateAccountDialog(
+            appState = appState,
+            initialServer = serverUrl,
+            onApproved = { server, newEmail, password ->
+                showCreateAccount = false
+                serverUrl = server
+                email = newEmail
+                serverPassword = password
+            },
+            onDismiss = { showCreateAccount = false },
+        )
     }
 }
 

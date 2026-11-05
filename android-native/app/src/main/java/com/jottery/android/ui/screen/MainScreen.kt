@@ -63,6 +63,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -73,6 +74,7 @@ import com.jottery.android.model.SortOrder
 import com.jottery.android.ui.component.NoteEditorView
 import com.jottery.android.ui.component.NoteListView
 import com.jottery.android.ui.component.SearchBar
+import com.jottery.android.ui.component.enableBiometricUnlock
 import com.jottery.android.viewmodel.AppState
 import com.jottery.android.viewmodel.resolveSelectedNote
 import kotlinx.coroutines.launch
@@ -432,6 +434,27 @@ fun MainScreen(
                 syncError = syncError,
             )
         }
+    }
+
+    val offerBiometric by appState.offerBiometric.collectAsState()
+    if (offerBiometric) {
+        val context = LocalContext.current
+        AlertDialog(
+            onDismissRequest = { appState.dismissBiometricOffer() },
+            title = { Text(stringResource(R.string.biometric_offer_title)) },
+            text = { Text(stringResource(R.string.biometric_offer_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    appState.dismissBiometricOffer()
+                    enableBiometricUnlock(context, appState) { appState.showMessage(it) }
+                }) { Text(stringResource(R.string.biometric_offer_accept)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { appState.dismissBiometricOffer() }) {
+                    Text(stringResource(R.string.biometric_offer_decline))
+                }
+            },
+        )
     }
 
     if (showSaveSearch) {

@@ -47,6 +47,47 @@ data class CloneDeviceRequest(
     val deviceType: String = "android",
 )
 
+// MARK: - Accounts
+
+@Serializable
+data class AccountCredentials(
+    val email: String,
+    val password: String,
+)
+
+@Serializable
+data class RegisterUserResponse(
+    val userId: String? = null,
+)
+
+@Serializable
+data class UserStatusResponse(
+    val exists: Boolean = false,
+    val isApproved: Boolean = false,
+    val isActive: Boolean = false,
+)
+
+@Serializable
+data class UserLoginResponse(
+    val sessionId: String? = null,
+    val mustChangePassword: Boolean = false,
+)
+
+@Serializable
+data class UserAccountInfo(
+    val email: String = "",
+    val noteCount: Int = 0,
+    val attachmentCount: Int = 0,
+    val storageUsedBytes: Long = 0,
+    val storageQuotaMb: Long = 0,
+    val inbox: InboxAccountInfo = InboxAccountInfo(),
+)
+
+@Serializable
+data class InboxAccountInfo(
+    val hasToken: Boolean = false,
+)
+
 // MARK: - Sync Push
 
 @Serializable
@@ -225,11 +266,6 @@ data class InboxStatusResponse(
 @Serializable
 data class InboxTokenResponse(
     val token: String,
-)
-
-@Serializable
-data class InboxTokenStatusResponse(
-    val hasToken: Boolean,
 )
 
 // MARK: - Sync Status
