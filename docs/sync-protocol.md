@@ -29,7 +29,7 @@ An error response has the shape `{ "error": "message" }`. Some carry a stable `c
 | 403 | The key is valid but the account is deactivated or not approved. Stop syncing and tell the user. Don't discard the credentials: reactivating the account restores the key |
 | 404 | The attachment doesn't exist for this user |
 | 413 | The body is over the limit, or over the account's upload limit. A push over the limit writes nothing |
-| 408 | The request took too long. Nothing was written. Try again |
+| 408 | The request took too long. Try again: sending the same push twice is safe |
 | 429 | Rate limited. See [Rate limits](#rate-limits) |
 | 500 | Server error. A push that fails writes nothing, so it is safe to retry |
 | 503 | The server is busy. Try again after `Retry-After` |
