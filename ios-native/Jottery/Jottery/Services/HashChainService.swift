@@ -33,8 +33,18 @@ enum HashChainService {
     }
 
     /// Update hash chain by prepending new hash.
-    static func updateHashChain(currentHash: String, parentChain: [String]) -> [String] {
-        CryptoService.updateHashChain(currentHash: currentHash, parentChain: parentChain)
+    ///
+    /// The server accepts a push when its hash appears in the chain. The chain
+    /// is trimmed to a fixed length, so a note edited that many times between
+    /// syncs would lose the server's hash and come back as a conflict with its
+    /// own older text. `serverHash` is kept in place of the oldest entry. Only
+    /// membership matters, so the chain needn't be contiguous.
+    static func updateHashChain(currentHash: String, parentChain: [String], keeping serverHash: String? = nil) -> [String] {
+        var chain = CryptoService.updateHashChain(currentHash: currentHash, parentChain: parentChain)
+        if let serverHash, !chain.contains(serverHash), !chain.isEmpty {
+            chain[chain.count - 1] = serverHash
+        }
+        return chain
     }
 
     /// Find common ancestor between two chains.

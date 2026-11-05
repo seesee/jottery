@@ -4,13 +4,14 @@ use chrono::{DateTime, Utc};
 use tracing::warn;
 use rusqlite::{params, Connection, OptionalExtension};
 
-use crate::crypto::{CryptoService, EncryptedData};
-use crate::models::{Attachment, Note};
+use crate::crypto::{update_hash_chain, CryptoService, EncryptedData};
+use crate::models::{Attachment, Note, SyntaxLanguage};
 
 /// The columns every note query reads, in the order `StoredNote::read` expects.
 const NOTE_COLUMNS: &str = "id, created_at, modified_at, synced_at, content, tags, attachments,
     pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version,
-    word_wrap, syntax_language, color, content_hash, parent_hash, hash_chain";
+    word_wrap, syntax_language, color, content_hash, parent_hash, hash_chain,
+    show_preview, needs_sync, attachments_complete";
 
 /// Notes that were read, and how many rows couldn't be.
 ///
@@ -46,6 +47,9 @@ struct StoredNote {
     content_hash: Option<String>,
     parent_hash: Option<String>,
     hash_chain: Option<String>,
+    show_preview: Option<bool>,
+    needs_sync: bool,
+    attachments_complete: bool,
 }
 
 impl StoredNote {
@@ -73,6 +77,9 @@ impl StoredNote {
             content_hash: row.get(19)?,
             parent_hash: row.get(20)?,
             hash_chain: row.get(21)?,
+            show_preview: row.get::<_, Option<i32>>(22)?.map(|value| value != 0),
+            needs_sync: row.get::<_, i32>(23)? != 0,
+            attachments_complete: row.get::<_, i32>(24)? != 0,
         })
     }
 
@@ -82,6 +89,7 @@ impl StoredNote {
 
         // A stored timestamp that won't parse loses that timestamp, not the note.
         let optional_time = |text: Option<String>| text.and_then(|t| t.parse().ok());
+        let (syntax_language, syntax_unknown) = SyntaxLanguage::from_name(&self.syntax_language);
 
         Ok(Note {
             content: crypto.decrypt_text(&encrypted_content, key)?,
@@ -94,7 +102,8 @@ impl StoredNote {
             locked_at: optional_time(self.locked_at),
             deleted_at: optional_time(self.deleted_at),
             hash_chain: self.hash_chain.and_then(|json| serde_json::from_str(&json).ok()),
-            syntax_language: self.syntax_language.parse().unwrap_or_default(),
+            syntax_language,
+            syntax_unknown,
             id: self.id,
             pinned: self.pinned,
             archived: self.archived,
@@ -106,6 +115,9 @@ impl StoredNote {
             color: self.color,
             content_hash: self.content_hash,
             parent_hash: self.parent_hash,
+            show_preview: self.show_preview,
+            needs_sync: self.needs_sync,
+            attachments_complete: self.attachments_complete,
         })
     }
 }
@@ -125,8 +137,22 @@ impl<'a> NoteRepository<'a> {
         }
     }
 
-    /// Create a new note (encrypted)
+    /// Create a new note (encrypted).
+    ///
+    /// A note written here starts its hash chain, so the server can tell later copies
+    /// apart. One that already has a hash came from somewhere that gave it one.
     pub fn create(&self, note: &Note, key: &[u8; 32]) -> Result<()> {
+        let mut hashed;
+        let note = if note.needs_sync && note.content_hash.is_none() {
+            hashed = note.clone();
+            let hash = self.crypto.compute_content_hash(&hashed, key);
+            hashed.hash_chain = Some(update_hash_chain(&hash, None));
+            hashed.content_hash = Some(hash);
+            &hashed
+        } else {
+            note
+        };
+
         // Encrypt content and tags
         let encrypted_content = self.crypto.encrypt_text(&note.content, key)?;
         let encrypted_tags = self.crypto.encrypt_json(&note.tags, key)?;
@@ -145,8 +171,8 @@ impl<'a> NoteRepository<'a> {
             "INSERT INTO notes (
                 id, created_at, modified_at, synced_at, content, tags, attachments,
                 pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color,
-                content_hash, parent_hash, hash_chain
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)",
+                content_hash, parent_hash, hash_chain, show_preview, needs_sync, attachments_complete
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25)",
             params![
                 &note.id,
                 note.created_at.to_rfc3339(),
@@ -165,11 +191,14 @@ impl<'a> NoteRepository<'a> {
                 &note.sync_hash,
                 note.version,
                 note.word_wrap as i32,
-                note.syntax_language.to_string(),
+                note.syntax_name(),
                 &note.color,
                 &note.content_hash,
                 &note.parent_hash,
                 hash_chain_json,
+                note.show_preview.map(|value| value as i32),
+                note.needs_sync as i32,
+                note.attachments_complete as i32,
             ],
         )?;
 
@@ -219,8 +248,46 @@ impl<'a> NoteRepository<'a> {
         Ok(list)
     }
 
-    /// Update a note
+    /// The stored hash fields, with this version of the note added on top if it differs.
+    ///
+    /// These come from the row, not from `note`, which may be an older copy from memory.
+    fn advance_hash_chain(&self, note: &Note, key: &[u8; 32]) -> Result<(Option<String>, Option<String>, Option<Vec<String>>)> {
+        let stored: Option<(Option<String>, Option<String>, Option<String>)> = self.conn
+            .query_row(
+                "SELECT content_hash, parent_hash, hash_chain FROM notes WHERE id = ?1",
+                params![&note.id],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            )
+            .optional()?;
+
+        let (stored_hash, stored_parent, stored_chain) = stored.unwrap_or_default();
+        let stored_chain: Option<Vec<String>> = stored_chain.and_then(|json| serde_json::from_str(&json).ok());
+
+        let hash = self.crypto.compute_content_hash(note, key);
+        if stored_hash.as_deref() == Some(hash.as_str()) {
+            return Ok((stored_hash, stored_parent, stored_chain));
+        }
+
+        let chain = update_hash_chain(&hash, stored_chain.as_deref());
+        Ok((Some(hash), stored_hash, Some(chain)))
+    }
+
+    /// Save a change made on this device, which the server still has to hear about.
     pub fn update(&self, note: &Note, key: &[u8; 32]) -> Result<()> {
+        let (content_hash, parent_hash, hash_chain) = self.advance_hash_chain(note, key)?;
+
+        let mut changed = note.clone();
+        changed.content_hash = content_hash;
+        changed.parent_hash = parent_hash;
+        changed.hash_chain = hash_chain;
+        changed.needs_sync = true;
+
+        self.store(&changed, key)
+    }
+
+    /// Write a note exactly as given, hash fields and sync state included. This is for
+    /// what arrives from elsewhere. A change made here goes through `update`.
+    pub fn store(&self, note: &Note, key: &[u8; 32]) -> Result<()> {
         // Encrypt content and tags
         let encrypted_content = self.crypto.encrypt_text(&note.content, key)?;
         let encrypted_tags = self.crypto.encrypt_json(&note.tags, key)?;
@@ -239,8 +306,10 @@ impl<'a> NoteRepository<'a> {
                 pinned = ?6, archived = ?7, archived_at = ?8, locked = ?9, locked_at = ?10,
                 deleted = ?11, deleted_at = ?12, sync_hash = ?13, version = ?14,
                 word_wrap = ?15, syntax_language = ?16, color = ?17,
-                content_hash = ?18, parent_hash = ?19, hash_chain = ?20
-             WHERE id = ?21",
+                content_hash = ?18, parent_hash = ?19, hash_chain = ?20,
+                show_preview = ?21, needs_sync = ?22, attachments_complete = ?23,
+                remote_deleted_at = CASE WHEN ?11 = 0 THEN NULL ELSE remote_deleted_at END
+             WHERE id = ?24",
             params![
                 note.modified_at.to_rfc3339(),
                 note.synced_at.map(|dt| dt.to_rfc3339()),
@@ -257,11 +326,14 @@ impl<'a> NoteRepository<'a> {
                 &note.sync_hash,
                 note.version,
                 note.word_wrap as i32,
-                note.syntax_language.to_string(),
+                note.syntax_name(),
                 &note.color,
                 &note.content_hash,
                 &note.parent_hash,
                 hash_chain_json,
+                note.show_preview.map(|value| value as i32),
+                note.needs_sync as i32,
+                note.attachments_complete as i32,
                 &note.id,
             ],
         )?;
@@ -273,7 +345,7 @@ impl<'a> NoteRepository<'a> {
     pub fn delete(&self, id: &str) -> Result<()> {
         let now = Utc::now();
         self.conn.execute(
-            "UPDATE notes SET deleted = 1, deleted_at = ?1, modified_at = ?2 WHERE id = ?3",
+            "UPDATE notes SET deleted = 1, deleted_at = ?1, modified_at = ?2, needs_sync = 1 WHERE id = ?3",
             params![now.to_rfc3339(), now.to_rfc3339(), id],
         )?;
         Ok(())
@@ -330,6 +402,65 @@ impl<'a> NoteRepository<'a> {
         Ok(list.notes)
     }
 
+    /// Notes with a change for the server. A note waiting for its conflict to be
+    /// resolved stays here, because pushing it again would only be refused again.
+    pub fn get_pending(&self, key: &[u8; 32]) -> Result<NoteList> {
+        self.query_notes(
+            "WHERE needs_sync = 1 AND id NOT IN (
+                SELECT note_id FROM note_sync_metadata WHERE last_sync_status = 'conflict'
+             ) ORDER BY modified_at ASC",
+            [],
+            key,
+        )
+    }
+
+    /// The server has this note. If it changed again since being read for the push,
+    /// that later change still counts as pending.
+    pub fn mark_pushed(&self, id: &str, modified_at: DateTime<Utc>, synced_at: DateTime<Utc>) -> Result<()> {
+        self.conn.execute(
+            "UPDATE notes SET needs_sync = 0, synced_at = ?1 WHERE id = ?2 AND modified_at = ?3",
+            params![synced_at.to_rfc3339(), id, modified_at.to_rfc3339()],
+        )?;
+        Ok(())
+    }
+
+    /// Whether this vault has a row for this note, readable or not
+    pub fn exists(&self, id: &str) -> Result<bool> {
+        Ok(self.conn
+            .query_row("SELECT 1 FROM notes WHERE id = ?1", params![id], |_| Ok(()))
+            .optional()?
+            .is_some())
+    }
+
+    /// Put every note up for pushing, as the first sync with an account does.
+    pub fn mark_all_pending(&self) -> Result<()> {
+        self.conn.execute("UPDATE notes SET needs_sync = 1", [])?;
+        Ok(())
+    }
+
+    /// Whether this note has a change for the server made after `time`.
+    pub fn has_edit_after(&self, id: &str, time: DateTime<Utc>) -> Result<bool> {
+        let modified_at: Option<String> = self.conn
+            .query_row(
+                "SELECT modified_at FROM notes WHERE id = ?1 AND needs_sync = 1",
+                params![id],
+                |row| row.get(0),
+            )
+            .optional()?;
+
+        Ok(modified_at.and_then(|text| text.parse::<DateTime<Utc>>().ok()).is_some_and(|at| at > time))
+    }
+
+    /// Mark as pending every note changed since the last sync, which is how a restore
+    /// decides what the server hasn't seen.
+    pub fn mark_changed_since_last_sync(&self) -> Result<usize> {
+        Ok(self.conn.execute(
+            "UPDATE notes SET needs_sync = 1
+             WHERE modified_at > COALESCE((SELECT last_sync_at FROM sync_metadata WHERE id = 1), '')",
+            [],
+        )?)
+    }
+
     /// Count notes (excluding deleted and archived by default)
     pub fn count(&self, include_deleted: bool) -> Result<i64> {
         let query = if include_deleted {
@@ -356,7 +487,7 @@ impl<'a> NoteRepository<'a> {
     pub fn archive(&self, id: &str) -> Result<()> {
         let now = Utc::now();
         self.conn.execute(
-            "UPDATE notes SET archived = 1, archived_at = ?1, modified_at = ?2 WHERE id = ?3",
+            "UPDATE notes SET archived = 1, archived_at = ?1, modified_at = ?2, needs_sync = 1 WHERE id = ?3",
             params![now.to_rfc3339(), now.to_rfc3339(), id],
         )?;
         Ok(())
@@ -366,7 +497,7 @@ impl<'a> NoteRepository<'a> {
     pub fn unarchive(&self, id: &str) -> Result<()> {
         let now = Utc::now();
         self.conn.execute(
-            "UPDATE notes SET archived = 0, archived_at = NULL, modified_at = ?1 WHERE id = ?2",
+            "UPDATE notes SET archived = 0, archived_at = NULL, modified_at = ?1, needs_sync = 1 WHERE id = ?2",
             params![now.to_rfc3339(), id],
         )?;
         Ok(())
@@ -422,26 +553,82 @@ impl<'a> NoteRepository<'a> {
         Ok(())
     }
 
-    /// Apply a remote deletion (from server pull)
-    /// This hard-deletes the note locally without recording it for sync
-    /// (since we received it from the server, it's already synced)
-    pub fn apply_remote_deletion(&self, id: &str) -> Result<bool> {
-        // Check if note exists
-        let exists: bool = self.conn.query_row(
-            "SELECT 1 FROM notes WHERE id = ?1",
-            params![id],
-            |_| Ok(true),
-        ).unwrap_or(false);
-
-        if exists {
-            // Delete the note without recording in note_deletions
-            // (the deletion came from server, no need to sync back)
-            self.conn.execute("DELETE FROM notes WHERE id = ?1", params![id])?;
-            Ok(true)
-        } else {
-            // Note doesn't exist locally - might have been already deleted
-            Ok(false)
+    /// Stop sending deletions the server has refused. The note comes back through a
+    /// pull, so there's nothing else to do.
+    pub fn forget_deletions(&self, ids: &[String]) -> Result<()> {
+        for id in ids {
+            self.conn.execute("DELETE FROM note_deletions WHERE id = ?1", params![id])?;
         }
+        Ok(())
+    }
+
+    /// Note that the server says this note was permanently deleted. Nothing happens to
+    /// it yet: `apply_held_deletions` or `refuse_held_deletions` settles that.
+    pub fn hold_deletion(&self, id: &str) -> Result<()> {
+        self.conn.execute("INSERT OR IGNORE INTO held_deletions (id) VALUES (?1)", params![id])?;
+        Ok(())
+    }
+
+    /// How many notes still visible here the held deletions would take away.
+    pub fn count_held_deletions(&self) -> Result<usize> {
+        let count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM held_deletions
+             JOIN notes ON notes.id = held_deletions.id
+             WHERE notes.deleted = 0",
+            [],
+            |row| row.get(0),
+        )?;
+        Ok(count as usize)
+    }
+
+    /// Move held deletions into the bin, returning how many notes went there.
+    ///
+    /// The server's word isn't proof that one of this user's devices asked for this, so
+    /// these stay restorable. The time is this device's, so the server can't say the
+    /// note has been there for months. No deletion is recorded: it came from the server.
+    pub fn apply_held_deletions(&self) -> Result<usize> {
+        let now = Utc::now().to_rfc3339();
+
+        let moved = self.conn.execute(
+            "UPDATE notes SET deleted = 1, deleted_at = COALESCE(deleted_at, ?1), needs_sync = 0
+             WHERE deleted = 0 AND id IN (SELECT id FROM held_deletions)",
+            params![now],
+        )?;
+        self.conn.execute(
+            "UPDATE notes SET remote_deleted_at = ?1
+             WHERE remote_deleted_at IS NULL AND id IN (SELECT id FROM held_deletions)",
+            params![now],
+        )?;
+        self.conn.execute("DELETE FROM held_deletions", [])?;
+
+        Ok(moved)
+    }
+
+    /// Keep what the held deletions named, and push those notes back to the server. An
+    /// edit later than a deletion beats it, so they return to every device.
+    pub fn refuse_held_deletions(&self) -> Result<usize> {
+        let kept = self.conn.execute(
+            "UPDATE notes SET modified_at = ?1, needs_sync = 1
+             WHERE id IN (SELECT id FROM held_deletions)",
+            params![Utc::now().to_rfc3339()],
+        )?;
+        self.conn.execute("DELETE FROM held_deletions", [])?;
+
+        Ok(kept)
+    }
+
+    /// Permanently remove notes deleted elsewhere that have been in the bin long enough.
+    /// Their versions go too, as a database without foreign keys wouldn't take them.
+    pub fn purge_remote_deletions(&self, older_than: DateTime<Utc>) -> Result<usize> {
+        let cutoff = older_than.to_rfc3339();
+
+        self.conn.execute(
+            "DELETE FROM note_versions WHERE note_id IN (
+                SELECT id FROM notes WHERE remote_deleted_at < ?1
+             )",
+            params![&cutoff],
+        )?;
+        Ok(self.conn.execute("DELETE FROM notes WHERE remote_deleted_at < ?1", params![&cutoff])?)
     }
 
     /// Clean up old synced deletions (older than 30 days)
@@ -459,7 +646,6 @@ impl<'a> NoteRepository<'a> {
 mod tests {
     use super::*;
     use crate::db::Database;
-    use crate::models::SyntaxLanguage;
 
     /// Get test password from environment variable or use default.
     /// Set JOTTERY_TEST_PASSWORD env var to override.
@@ -521,6 +707,90 @@ mod tests {
         let read = repo.get_deleted(&key).unwrap().remove(0);
         assert_eq!(read.content_hash.as_deref(), Some("abc"));
         assert_eq!(read.hash_chain, Some(vec!["abc".to_string()]));
+    }
+
+    #[test]
+    fn a_new_note_starts_its_hash_chain() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+        let note = Note::new("First".to_string());
+
+        repo.create(&note, &key).unwrap();
+
+        let stored = repo.get(&note.id, &key).unwrap().unwrap();
+        let hash = stored.content_hash.clone().unwrap();
+        assert_eq!(stored.hash_chain, Some(vec![hash]));
+        assert_eq!(stored.parent_hash, None);
+    }
+
+    #[test]
+    fn saving_a_change_adds_to_the_hash_chain() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+        let mut note = Note::new("First".to_string());
+        repo.create(&note, &key).unwrap();
+        let first = repo.get(&note.id, &key).unwrap().unwrap().content_hash.unwrap();
+
+        note.content = "Second".to_string();
+        repo.update(&note, &key).unwrap();
+
+        let stored = repo.get(&note.id, &key).unwrap().unwrap();
+        let second = stored.content_hash.clone().unwrap();
+        assert_ne!(second, first);
+        assert_eq!(stored.parent_hash, Some(first.clone()));
+        assert_eq!(stored.hash_chain, Some(vec![second, first]));
+    }
+
+    #[test]
+    fn saving_with_nothing_changed_leaves_the_hash_chain_alone() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+        let note = Note::new("Same".to_string());
+        repo.create(&note, &key).unwrap();
+        let before = repo.get(&note.id, &key).unwrap().unwrap();
+
+        repo.update(&note, &key).unwrap();
+
+        let after = repo.get(&note.id, &key).unwrap().unwrap();
+        assert_eq!(after.content_hash, before.content_hash);
+        assert_eq!(after.hash_chain, before.hash_chain);
+    }
+
+    /// A list in memory can hold a copy from before the last save. The chain comes from
+    /// the row, or an older copy would drop the hashes in between.
+    #[test]
+    fn a_stale_copy_in_memory_does_not_cut_the_hash_chain() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+        let mut stale = Note::new("First".to_string());
+        repo.create(&stale, &key).unwrap();
+
+        let mut other = repo.get(&stale.id, &key).unwrap().unwrap();
+        other.content = "Second".to_string();
+        repo.update(&other, &key).unwrap();
+
+        stale.content = "Third".to_string();
+        repo.update(&stale, &key).unwrap();
+
+        let stored = repo.get(&stale.id, &key).unwrap().unwrap();
+        assert_eq!(stored.hash_chain.unwrap().len(), 3);
+    }
+
+    #[test]
+    fn a_change_made_while_pushing_stays_pending() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+        let note = Note::new("Sent".to_string());
+        repo.create(&note, &key).unwrap();
+
+        let mut later = repo.get(&note.id, &key).unwrap().unwrap();
+        later.content = "Changed while the push was out".to_string();
+        later.touch();
+        repo.update(&later, &key).unwrap();
+
+        repo.mark_pushed(&note.id, note.modified_at, Utc::now()).unwrap();
+
+        assert!(repo.get(&note.id, &key).unwrap().unwrap().needs_sync);
     }
 
     #[test]
@@ -918,29 +1188,54 @@ mod tests {
     // ===== Sync Operations =====
 
     #[test]
-    fn test_apply_remote_deletion() {
+    fn a_held_deletion_moves_a_note_to_the_bin_with_this_devices_time() {
         let (db, key) = setup_test_db();
         let repo = NoteRepository::new(db.connection());
 
         let note = Note::new("Test".to_string());
         repo.create(&note, &key).unwrap();
 
-        // Apply remote deletion
-        let deleted = repo.apply_remote_deletion(&note.id).unwrap();
-        assert!(deleted);
+        repo.hold_deletion(&note.id).unwrap();
+        assert_eq!(repo.count_held_deletions().unwrap(), 1);
+        assert_eq!(repo.apply_held_deletions().unwrap(), 1);
 
-        // Note should be completely gone
-        assert!(repo.get(&note.id, &key).unwrap().is_none());
+        let binned = repo.get(&note.id, &key).unwrap().unwrap();
+        assert!(binned.deleted);
+        assert!(!binned.needs_sync);
+        assert_eq!(repo.count_held_deletions().unwrap(), 0);
     }
 
     #[test]
-    fn test_apply_remote_deletion_nonexistent() {
-        let (db, _key) = setup_test_db();
+    fn a_note_already_in_the_bin_is_not_counted_as_a_loss() {
+        let (db, key) = setup_test_db();
         let repo = NoteRepository::new(db.connection());
 
-        // Should return false for nonexistent note
-        let deleted = repo.apply_remote_deletion("nonexistent").unwrap();
-        assert!(!deleted);
+        let note = Note::new("Test".to_string());
+        repo.create(&note, &key).unwrap();
+        repo.delete(&note.id).unwrap();
+        repo.hold_deletion(&note.id).unwrap();
+
+        assert_eq!(repo.count_held_deletions().unwrap(), 0);
+        assert_eq!(repo.apply_held_deletions().unwrap(), 0);
+
+        // It still leaves in time, because the server says it's gone
+        assert_eq!(repo.purge_remote_deletions(Utc::now() + chrono::Duration::days(1)).unwrap(), 1);
+    }
+
+    #[test]
+    fn a_purge_takes_the_versions_with_the_note() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+        let note = Note::new("Test".to_string());
+        repo.create(&note, &key).unwrap();
+        let versions = crate::repository::NoteVersionRepository::new(db.connection());
+        versions.create_version(&note, Utc::now(), crate::repository::VersionReason::Sync, &key).unwrap();
+
+        repo.hold_deletion(&note.id).unwrap();
+        repo.apply_held_deletions().unwrap();
+        repo.purge_remote_deletions(Utc::now() + chrono::Duration::days(1)).unwrap();
+
+        assert_eq!(versions.count_versions_for_note(&note.id).unwrap(), 0);
     }
 
     // ===== Locked Notes (via update) =====

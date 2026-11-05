@@ -1,6 +1,43 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+/// The language setting that means "whatever the system uses".
+pub const AUTO_LANGUAGE: &str = "auto";
+
+/// What the language setting cycles through: one for each file in `locales/`.
+pub const LANGUAGES: &[&str] = &[
+    AUTO_LANGUAGE, "de", "el", "en-GB", "es", "fr", "it", "ja", "ko", "nl", "pl", "pt", "ru", "tr", "zh",
+];
+
+/// The language after or before this one in the setting's cycle.
+pub fn cycle_language(current: &str, forward: bool) -> &'static str {
+    let position = LANGUAGES.iter().position(|language| *language == current).unwrap_or(0);
+    let next = if forward { position + 1 } else { position + LANGUAGES.len() - 1 };
+    LANGUAGES[next % LANGUAGES.len()]
+}
+
+/// The locale `LANG` asks for, if it's set. It's usually like en_GB.UTF-8 or fr_FR.UTF-8.
+/// Most languages have one file, under the language alone. English is en-GB.
+pub fn system_locale() -> Option<String> {
+    let lang = std::env::var("LANG").ok()?;
+    let locale_part = lang.split('.').next().unwrap_or("en-GB");
+
+    Some(if locale_part.starts_with("en_GB") || locale_part.starts_with("en-GB") {
+        "en-GB".to_string()
+    } else {
+        locale_part.split(['_', '-']).next().unwrap_or("en-GB").to_string()
+    })
+}
+
+/// The locale a language setting comes to.
+pub fn effective_locale(language: &str) -> String {
+    if language == AUTO_LANGUAGE {
+        system_locale().unwrap_or_else(|| "en-GB".to_string())
+    } else {
+        language.to_string()
+    }
+}
+
 /// Color definition for light and dark modes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ColorDefinition {
@@ -176,7 +213,7 @@ impl UserSettings {
     /// Create default settings
     pub fn default() -> Self {
         Self {
-            language: "en-GB".to_string(),
+            language: AUTO_LANGUAGE.to_string(),
             theme: Theme::default(),
             sort_order: SortOrder::Recent,
             auto_lock_timeout: 15, // 15 minutes
@@ -277,10 +314,10 @@ impl UserSettings {
             return Err("Sync endpoint is required when sync is enabled".to_string());
         }
 
+        // Whether plain HTTP is acceptable was settled when this was set, so only
+        // whether it's an address at all is checked here
         if let Some(endpoint) = &self.sync_endpoint {
-            if !endpoint.starts_with("http://") && !endpoint.starts_with("https://") {
-                return Err("Sync endpoint must start with http:// or https://".to_string());
-            }
+            crate::api::is_safe_endpoint(endpoint).map_err(|e| e.to_string())?;
         }
 
         Ok(())
@@ -292,9 +329,40 @@ mod tests {
     use super::*;
 
     #[test]
+    fn the_language_cycle_has_every_locale_file() {
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("locales");
+        let mut files: Vec<String> = std::fs::read_dir(dir).unwrap()
+            .map(|entry| entry.unwrap().path().file_stem().unwrap().to_string_lossy().into_owned())
+            .collect();
+        files.sort();
+
+        let mut languages: Vec<String> = LANGUAGES.iter()
+            .filter(|language| **language != AUTO_LANGUAGE)
+            .map(|language| language.to_string())
+            .collect();
+        languages.sort();
+
+        assert_eq!(languages, files);
+    }
+
+    #[test]
+    fn the_language_cycle_goes_round_both_ways() {
+        assert_eq!(cycle_language("auto", true), "de");
+        assert_eq!(cycle_language("zh", true), "auto");
+        assert_eq!(cycle_language("auto", false), "zh");
+        assert_eq!(cycle_language("de", false), "auto");
+        assert_eq!(cycle_language("something typed long ago", true), "de");
+    }
+
+    #[test]
+    fn a_chosen_language_beats_the_system() {
+        assert_eq!(effective_locale("fr"), "fr");
+    }
+
+    #[test]
     fn test_default_settings() {
         let settings = UserSettings::default();
-        assert_eq!(settings.language, "en-GB");
+        assert_eq!(settings.language, AUTO_LANGUAGE);
         assert_eq!(settings.theme.scheme_name(), "default-dark");
         assert_eq!(settings.sort_order, SortOrder::Recent);
         assert_eq!(settings.auto_lock_timeout, 15);

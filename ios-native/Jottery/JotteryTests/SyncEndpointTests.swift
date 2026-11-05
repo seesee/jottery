@@ -87,14 +87,14 @@ struct SyncEndpointTests {
     }
 
     @Test func classifiesAtsExemptHosts() {
-        #expect(SyncEndpoint.isATSExempt(host: "192.168.1.10"))
-        #expect(SyncEndpoint.isATSExempt(host: "10.0.0.5"))
-        #expect(SyncEndpoint.isATSExempt(host: "fe80::1"))
-        #expect(SyncEndpoint.isATSExempt(host: "nas"))
-        #expect(SyncEndpoint.isATSExempt(host: "jottery.local"))
-        #expect(SyncEndpoint.isATSExempt(host: "JOTTERY.LOCAL"))
-        #expect(!SyncEndpoint.isATSExempt(host: "notes.example.org"))
-        #expect(!SyncEndpoint.isATSExempt(host: "example.com"))
+        #expect(SyncEndpoint.allowsPlainHTTP(host: "192.168.1.10"))
+        #expect(SyncEndpoint.allowsPlainHTTP(host: "10.0.0.5"))
+        #expect(SyncEndpoint.allowsPlainHTTP(host: "fe80::1"))
+        #expect(SyncEndpoint.allowsPlainHTTP(host: "nas"))
+        #expect(SyncEndpoint.allowsPlainHTTP(host: "jottery.local"))
+        #expect(SyncEndpoint.allowsPlainHTTP(host: "JOTTERY.LOCAL"))
+        #expect(!SyncEndpoint.allowsPlainHTTP(host: "notes.example.org"))
+        #expect(!SyncEndpoint.allowsPlainHTTP(host: "example.com"))
     }
 
     // MARK: - API URL construction
@@ -136,5 +136,31 @@ struct SyncEndpointTests {
             path: "inbox/\(encoded)"
         )
         #expect(url.absoluteString.hasPrefix("https://notes.example.org/api/v1/inbox/"))
+    }
+
+    // MARK: - Plain HTTP stays on the user's own network (R2-095)
+
+    @Test(arguments: [
+        "http://127.0.0.1:3000", "http://10.1.2.3", "http://172.16.0.1", "http://172.31.255.255",
+        "http://192.168.0.1", "http://169.254.1.1", "http://100.100.1.1",
+        "http://[::1]:3000", "http://[fe80::1]", "http://[fd12:3456::1]", "http://[::ffff:192.168.0.1]",
+        "http://localhost:3000", "http://nas", "http://jottery.local",
+    ])
+    func plainHTTPIsAllowedOnAPrivateNetwork(_ address: String) throws {
+        #expect(try SyncEndpoint.normalise(address) == address)
+    }
+
+    /// The password and API key would cross the internet in the clear.
+    @Test(arguments: [
+        "http://203.0.113.10:3000", "http://8.8.8.8", "http://172.32.0.1", "http://192.169.0.1",
+        "http://100.128.0.1", "http://[2001:db8::1]", "http://[::ffff:8.8.8.8]",
+        "http://134744072", "http://0x08080808",
+    ])
+    func plainHTTPToAPublicAddressIsRefused(_ address: String) {
+        #expect(throws: (any Error).self) { try SyncEndpoint.normalise(address) }
+    }
+
+    @Test func aPublicAddressIsFineOverHTTPS() throws {
+        #expect(try SyncEndpoint.normalise("https://203.0.113.10:3000") == "https://203.0.113.10:3000")
     }
 }

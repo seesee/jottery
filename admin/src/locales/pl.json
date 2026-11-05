@@ -17,13 +17,15 @@
     "status": "Status",
     "created": "Utworzono",
     "saving": "Zapisywanie...",
-    "deleting": "Usuwanie..."
+    "deleting": "Usuwanie...",
+    "passwordRules": "Co najmniej 12 znaków. Serwer może też wymagać połączenia wielkich i małych liter, cyfr oraz symboli."
   },
   "nav": {
     "dashboard": "Panel",
     "users": "Użytkownicy",
     "settings": "Ustawienia",
-    "logout": "Wyloguj"
+    "logout": "Wyloguj",
+    "audit": "Dziennik audytu"
   },
   "login": {
     "title": "Jottery Admin",
@@ -54,7 +56,25 @@
     "rateLimited": "Zbyt wiele prób. Spróbuj ponownie za {seconds} s.",
     "tooManyAttempts": "Zbyt wiele prób. Poczekaj i spróbuj ponownie.",
     "passwordTooShort": "Nowe hasło musi mieć co najmniej 12 znaków",
-    "passwordSameAsCurrent": "Nowe hasło musi różnić się od obecnego"
+    "passwordSameAsCurrent": "Nowe hasło musi różnić się od obecnego",
+    "ownAdminRole": "Nie możesz odebrać sobie uprawnień administratora.",
+    "lastAdminDemote": "Ostatniego administratora nie można zdegradować.",
+    "ownAccountDelete": "Nie możesz tutaj usunąć własnego konta.",
+    "lastAdminDelete": "Ostatniego administratora nie można usunąć.",
+    "userNotFound": "Nie znaleziono użytkownika.",
+    "deviceNotFound": "Nie znaleziono urządzenia.",
+    "quotaRange": "Limit pamięci musi wynosić od 1 do 100000 MB.",
+    "maxUploadRange": "Maksymalny rozmiar przesyłania musi wynosić od 1 do 1000 MB.",
+    "inboxItemsRange": "Maksymalna liczba elementów w skrzynce musi wynosić od 1 do 10000.",
+    "inboxSizeRange": "Maksymalny rozmiar skrzynki musi wynosić od 1 do 1000 MB.",
+    "passwordComplexity": "Hasło wymaga co najmniej {required} z 4 rodzajów znaków. Brakuje: {missing}.",
+    "passwordClass": {
+      "uppercase": "wielka litera",
+      "lowercase": "mała litera",
+      "number": "cyfra",
+      "special": "symbol"
+    },
+    "passwordTooLong": "Hasło jest za długie."
   },
   "session": {
     "expired": "Twoja sesja wygasła. Zaloguj się ponownie."
@@ -146,7 +166,6 @@
       "newPasswordPlaceholder": "Wprowadź nowe hasło",
       "confirmPassword": "Potwierdź hasło",
       "confirmPasswordPlaceholder": "Potwierdź nowe hasło",
-      "passwordRequirement": "Minimum 12 znaków",
       "passwordTooShort": "Hasło musi mieć co najmniej 12 znaków",
       "passwordMismatch": "Hasła nie są zgodne",
       "passwordResetSuccess": "Hasło dla {email} zostało pomyślnie zresetowane",
@@ -156,7 +175,9 @@
       "passwordResetWarning": "To zmienia tylko hasło do logowania. Nie wpływa na szyfrowanie notatek. Jeśli użytkownik zapomniał hasła szyfrowania, jego notatki nie mogą być odzyskane.",
       "inboxMaxItems": "Maks. elementów w skrzynce",
       "inboxMaxSize": "Maks. rozmiar skrzynki",
-      "items": "elementów"
+      "items": "elementów",
+      "passwordResetDevices": "Urządzenia tego użytkownika będą nadal synchronizować po resecie, ponieważ ich klucze nie są powiązane z hasłem.",
+      "revokeDevicesOption": "Unieważnij też wszystkie klucze urządzeń tego użytkownika, jeśli konto mogło zostać przejęte"
     },
     "filters": {
       "all": "Wszyscy",
@@ -197,11 +218,15 @@
       "promoteToAdmin": "Awansuj na administratora",
       "demoteFromAdmin": "Zdegraduj z administratora",
       "messages": {
-        "delete": "Czy na pewno chcesz trwale usunąć użytkownika {email}? Ta akcja jest nieodwracalna.",
+        "approve": "Zatwierdzić {email}? Ta osoba będzie mogła się logować i rejestrować urządzenia.",
+        "deactivate": "Dezaktywować {email}? Ta osoba nie będzie mogła się logować ani synchronizować, dopóki konto nie zostanie ponownie aktywowane.",
+        "activate": "Aktywować {email}? Ta osoba znów będzie mogła się logować i synchronizować.",
+        "delete": "Ta operacja trwale usuwa {email} i wszystko, co serwer przechowuje dla tego użytkownika: notatki, załączniki, urządzenia i klucz konta. Nie można jej cofnąć.",
         "promoteToAdmin": "Czy na pewno chcesz awansować {email} na administratora? Otrzyma pełny dostęp do wszystkich funkcji administracyjnych.",
-        "demoteFromAdmin": "Czy na pewno chcesz odebrać uprawnienia administratora użytkownikowi {email}?",
-        "genericAction": "Czy na pewno chcesz {action} użytkownika {email}?"
-      }
+        "demoteFromAdmin": "Czy na pewno chcesz odebrać uprawnienia administratora użytkownikowi {email}?"
+      },
+      "deleteCounts": "Notatki: {notes} · Urządzenia: {devices}",
+      "typeEmail": "Wpisz adres e-mail użytkownika, aby potwierdzić:"
     },
     "toast": {
       "approved": "Użytkownik {email} został pomyślnie zatwierdzony",
@@ -210,8 +235,14 @@
       "deleted": "Użytkownik {email} został usunięty",
       "promotedToAdmin": "Użytkownik {email} został awansowany na administratora",
       "demotedFromAdmin": "Użytkownik {email} został zdegradowany z administratora",
-      "failedToAction": "Nie udało się {action} użytkownika: {error}",
-      "failedGeneric": "Nie udało się {action} użytkownika"
+      "failed": {
+        "approve": "Nie udało się zatwierdzić użytkownika: {error}",
+        "deactivate": "Nie udało się dezaktywować użytkownika: {error}",
+        "activate": "Nie udało się aktywować użytkownika: {error}",
+        "delete": "Nie udało się usunąć użytkownika: {error}",
+        "promote": "Nie udało się awansować użytkownika na administratora: {error}",
+        "demote": "Nie udało się odebrać użytkownikowi uprawnień administratora: {error}"
+      }
     }
   },
   "settings": {
@@ -303,8 +334,15 @@
         "revoke": "Unieważnij token",
         "revokeConfirmTitle": "Unieważnij token skrzynki odbiorczej",
         "revokeConfirmMessage": "Unieważnić token skrzynki odbiorczej? Wszystkie integracje z niego korzystające przestaną działać.",
-        "cancel": "Anuluj"
-      }
+        "cancel": "Anuluj",
+        "generateSuccess": "Token skrzynki odbiorczej został wygenerowany",
+        "generateFailed": "Nie udało się wygenerować tokenu: {error}",
+        "revokeSuccess": "Token skrzynki odbiorczej został unieważniony",
+        "revokeFailed": "Nie udało się unieważnić tokenu, więc nadal działa: {error}",
+        "copySuccess": "Token skopiowany",
+        "copyUnavailable": "Tutaj nie można kopiować. Zaznacz token i skopiuj go ręcznie."
+      },
+      "storageUsedNote": "Obejmuje notatki, historię notatek i załączniki."
     },
     "devices": {
       "title": "Twoje urządzenia",
@@ -334,7 +372,6 @@
       "currentPassword": "Obecne hasło",
       "newPassword": "Nowe hasło",
       "confirmPassword": "Potwierdź hasło",
-      "passwordHint": "Hasło musi mieć co najmniej 12 znaków",
       "updatePassword": "Zaktualizuj hasło",
       "passwordChanged": "Hasło zostało pomyślnie zmienione",
       "dangerZone": "Strefa niebezpieczna",
@@ -366,7 +403,42 @@
       "deleteNotesButton": "Delete Notes",
       "deleteNotesConfirmTitle": "Delete All Notes",
       "deleteNotesConfirmMessage": "Are you sure you want to delete all your notes from the server? This is useful if you forgot your encryption password and need to start fresh. Your account will remain active.",
-      "notesDeleted": "All notes have been deleted from the server"
+      "notesDeleted": "All notes have been deleted from the server",
+      "passwordToConfirm": "Wpisz hasło, aby potwierdzić:"
+    }
+  },
+  "audit": {
+    "title": "Dziennik audytu",
+    "description": "Trwały zapis działań administratorów na tym serwerze.",
+    "loading": "Wczytywanie dziennika audytu...",
+    "failedToLoad": "Nie udało się wczytać dziennika audytu",
+    "empty": "Nic jeszcze nie zapisano.",
+    "allActions": "Wszystkie działania",
+    "filterLabel": "Pokaż",
+    "commandLine": "Wiersz poleceń",
+    "range": "{from}–{to} z {total}",
+    "previous": "Poprzednie",
+    "next": "Następne",
+    "table": {
+      "time": "Kiedy",
+      "action": "Działanie",
+      "admin": "Administrator",
+      "target": "Dotyczy",
+      "address": "Adres"
+    },
+    "actions": {
+      "userApprove": "Zatwierdzono użytkownika",
+      "userDeactivate": "Dezaktywowano użytkownika",
+      "userActivate": "Aktywowano użytkownika",
+      "userDelete": "Usunięto użytkownika",
+      "userPasswordReset": "Zresetowano hasło",
+      "userAdminGrant": "Awansowano na administratora",
+      "userAdminRevoke": "Odebrano uprawnienia administratora",
+      "userSettingsUpdate": "Zmieniono ustawienia użytkownika",
+      "deviceRevoke": "Unieważniono urządzenie",
+      "deviceDelete": "Usunięto urządzenie",
+      "deviceRename": "Zmieniono nazwę urządzenia",
+      "adminPasswordChange": "Zmieniono własne hasło"
     }
   }
 }

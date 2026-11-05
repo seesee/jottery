@@ -34,6 +34,10 @@ pub async fn create_item(
         validation::validate_tags(tags, &state.config)?;
     }
 
+    if let Some(source) = &req.source {
+        validation::validate_inbox_source(source)?;
+    }
+
     // Get user quota limits and current usage in a single query
     let quota_and_usage = sqlx::query!(
         r#"
@@ -64,7 +68,8 @@ pub async fn create_item(
     // Calculate size of new item
     let tags_json = serde_json::to_string(&req.tags.as_deref().unwrap_or(&[]))
         .map_err(|e| AppError::InternalError(format!("Failed to serialise tags: {}", e)))?;
-    let new_size = (req.content.len() + tags_json.len()) as i64;
+    let source_size = req.source.as_ref().map_or(0, String::len);
+    let new_size = (req.content.len() + tags_json.len() + source_size) as i64;
 
     // Enforce count quota
     if current_count >= max_items {

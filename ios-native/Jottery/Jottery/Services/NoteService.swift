@@ -29,7 +29,7 @@ struct NoteService {
 
     /// Permanently delete a note.
     func permanentlyDelete(id: String) throws {
-        try noteRepo.hardDelete(id: id)
+        try noteRepo.permanentlyDelete(id: id)
     }
 
     /// Toggle pin status.

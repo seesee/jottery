@@ -11,12 +11,11 @@ import java.time.Instant
 
 /**
  * The search cases every client runs, so a saved search means the same thing
- * everywhere. A copy of docs/search-query-fixture.json.
+ * everywhere. Read from docs/, not copied, so a new case reaches this test by itself.
  */
 class SearchFixtureTest {
     @Test fun `the shared query fixture passes`() {
-        val text = javaClass.classLoader!!.getResourceAsStream("search-query-fixture.json")!!
-            .use { it.readBytes().decodeToString() }
+        val text = RepoFile.at("docs/search-query-fixture.json").readText()
         val fixture = Json.parseToJsonElement(text).jsonObject
 
         val notes = fixture.getValue("notes").jsonArray.map { element ->

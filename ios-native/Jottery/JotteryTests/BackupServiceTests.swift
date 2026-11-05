@@ -134,9 +134,7 @@ struct BackupServiceTests {
         let note = try #require(try source.createNote(content: "original"))
         let data = try withOldHeader(backup(of: source))
 
-        var edited = note
-        edited.content = "changed since the backup"
-        try source.saveNote(edited)
+        try #require(source.noteRepo).permanentlyDelete(id: note.id)
 
         #expect(try restore(data, password: password, into: source) == 1)
         #expect(try content(ofNote: note.id, in: source) == "original")

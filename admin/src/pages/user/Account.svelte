@@ -1,6 +1,10 @@
 <script lang="ts">
   import { userApi, type UserAccountInfo } from '../../lib/userApi';
-  import { _ } from 'svelte-i18n';
+  import { describeError } from '../../lib/apiErrors';
+  import { copyText } from '../../lib/clipboard';
+  import { toast } from '../../lib/toast.svelte';
+  import { _, locale } from 'svelte-i18n';
+  import ConfirmModal from '../../components/ConfirmModal.svelte';
   import DevicesSection from '../../components/user/DevicesSection.svelte';
 
   let accountInfo = $state<UserAccountInfo | null>(null);
@@ -43,8 +47,9 @@
       if (accountInfo) {
         accountInfo.inbox.hasToken = true;
       }
+      toast.success($_('userPortal.account.inbox.generateSuccess'));
     } catch (e) {
-      console.error('Failed to generate inbox token:', e);
+      toast.error($_('userPortal.account.inbox.generateFailed', { values: { error: describeError(e, $_) } }));
     } finally {
       inboxTokenLoading = false;
     }
@@ -60,16 +65,22 @@
       if (accountInfo) {
         accountInfo.inbox.hasToken = false;
       }
+      toast.success($_('userPortal.account.inbox.revokeSuccess'));
     } catch (e) {
-      console.error('Failed to revoke inbox token:', e);
+      toast.error($_('userPortal.account.inbox.revokeFailed', { values: { error: describeError(e, $_) } }));
     } finally {
       inboxTokenLoading = false;
     }
   }
 
   async function handleCopyToken() {
-    if (generatedToken) {
-      await navigator.clipboard.writeText(generatedToken);
+    if (!generatedToken) return;
+
+    // The token is only shown once, so a failed copy has to be noticed
+    if (await copyText(generatedToken)) {
+      toast.success($_('userPortal.account.inbox.copySuccess'));
+    } else {
+      toast.info($_('userPortal.account.inbox.copyUnavailable'));
     }
   }
 
@@ -82,7 +93,7 @@
   }
 
   function formatDate(dateStr: string): string {
-    return new Date(dateStr).toLocaleDateString(undefined, {
+    return new Date(dateStr).toLocaleDateString($locale ?? undefined, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -91,7 +102,7 @@
 
   function formatDateTime(dateStr: string | null): string {
     if (!dateStr) return $_('userPortal.account.never');
-    return new Date(dateStr).toLocaleString();
+    return new Date(dateStr).toLocaleString($locale ?? undefined);
   }
 
   const serverBase = import.meta.env.VITE_API_BASE_URL || window.location.origin;
@@ -112,7 +123,7 @@
       <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
     </div>
   {:else if error}
-    <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+    <div role="alert" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
       {error}
     </div>
   {:else if accountInfo}
@@ -178,6 +189,7 @@
             style="width: {Math.min(100, (accountInfo.storageUsedBytes / (accountInfo.storageQuotaMb * 1024 * 1024)) * 100)}%"
           ></div>
         </div>
+        <p class="text-xs text-gray-500 mt-2">{$_('userPortal.account.storageUsedNote')}</p>
       </div>
 
       <!-- Last Sync -->
@@ -329,28 +341,16 @@
         </div>
       {/if}
 
-      <!-- Revoke Confirmation Modal -->
       {#if showRevokeConfirm}
-        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div class="bg-white rounded-lg shadow-xl p-6 max-w-sm mx-4">
-            <h4 class="text-lg font-semibold text-gray-900 mb-2">{$_('userPortal.account.inbox.revokeConfirmTitle')}</h4>
-            <p class="text-sm text-gray-600 mb-4">{$_('userPortal.account.inbox.revokeConfirmMessage')}</p>
-            <div class="flex justify-end gap-3">
-              <button
-                onclick={() => showRevokeConfirm = false}
-                class="px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-              >
-                {$_('userPortal.account.inbox.cancel')}
-              </button>
-              <button
-                onclick={handleRevokeToken}
-                class="px-4 py-2 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700"
-              >
-                {$_('userPortal.account.inbox.revoke')}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmModal
+          title={$_('userPortal.account.inbox.revokeConfirmTitle')}
+          message={$_('userPortal.account.inbox.revokeConfirmMessage')}
+          confirmText={$_('userPortal.account.inbox.revoke')}
+          cancelText={$_('userPortal.account.inbox.cancel')}
+          onConfirm={handleRevokeToken}
+          onCancel={() => showRevokeConfirm = false}
+          danger={true}
+        />
       {/if}
     </div>
   {/if}

@@ -6,6 +6,7 @@ struct InboxView: View {
 
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var showDeleteAllConfirm = false
 
     var body: some View {
         NavigationStack {
@@ -37,7 +38,7 @@ struct InboxView: View {
                         }
 
                         Button(role: .destructive) {
-                            deleteAll()
+                            showDeleteAllConfirm = true
                         } label: {
                             Label(L.inboxDeleteAll, systemImage: "trash")
                         }
@@ -59,6 +60,12 @@ struct InboxView: View {
             }
             .task {
                 await loadItems()
+            }
+            .alert(L.inboxDeleteAllTitle, isPresented: $showDeleteAllConfirm) {
+                Button(L.inboxDeleteAll, role: .destructive) { deleteAll() }
+                Button(L.commonCancel, role: .cancel) {}
+            } message: {
+                Text(L.inboxDeleteAllMessage(appState.inboxCount))
             }
         }
     }

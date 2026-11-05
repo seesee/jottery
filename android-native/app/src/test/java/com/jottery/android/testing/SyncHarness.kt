@@ -10,6 +10,7 @@ import com.jottery.android.database.repository.SavedSearchRepository
 import com.jottery.android.database.repository.SyncRepository
 import com.jottery.android.database.repository.VersionRepository
 import com.jottery.android.model.NoteRecord
+import com.jottery.android.model.SyncAttachment
 import com.jottery.android.model.SyncNote
 import com.jottery.android.model.SyncPullResponse
 import com.jottery.android.model.SyncPushResponse
@@ -31,7 +32,12 @@ import javax.crypto.spec.SecretKeySpec
  * Real SyncService, real Room (in memory), real OkHttp, stub HTTP server.
  * Each test sets [onPush] and [onPull] to script the server.
  */
-class SyncHarness {
+class SyncHarness(
+    /** Talk to a real server rather than the stub: its address and this device's key. */
+    private val realServer: RealServer? = null,
+) {
+    class RealServer(val endpoint: String, val apiKey: String, val clientId: String)
+
     val key = SecretKeySpec(ByteArray(32) { it.toByte() }, "AES")
     val db: JotteryDatabase = JotteryDatabase.buildInMemory(ApplicationProvider.getApplicationContext())
     val noteRepo = NoteRepository(db.noteDao(), db.noteVersionDao()) { block -> db.withTransaction { block() } }
@@ -44,6 +50,10 @@ class SyncHarness {
 
     var onPush: (String) -> SyncPushResponse = { SyncPushResponse(emptyList(), emptyList()) }
     var onPull: (String) -> SyncPullResponse = { emptyPull() }
+
+    /** Blobs the server will hand over one at a time, by id. */
+    val serverBlobs = mutableMapOf<String, String>()
+    val blobRequests = mutableListOf<String>()
     val pushBodies = mutableListOf<String>()
     val pullBodies = mutableListOf<String>()
 
@@ -54,23 +64,40 @@ class SyncHarness {
                 return when (request.path) {
                     "/api/v1/sync/push" -> {
                         pushBodies += body
-                        MockResponse().setBody(json.encodeToString(onPush(body)))
+                        try {
+                            MockResponse().setBody(json.encodeToString(onPush(body)))
+                        } catch (refusal: HttpRefusal) {
+                            MockResponse().setResponseCode(refusal.status).setBody(refusal.body)
+                        }
                     }
                     "/api/v1/sync/pull" -> {
                         pullBodies += body
                         MockResponse().setBody(json.encodeToString(onPull(body)))
                     }
-                    else -> MockResponse().setResponseCode(404).setBody("{}")
+                    else -> {
+                        val id = request.path.orEmpty().substringAfter("/api/v1/sync/attachments/", "")
+                        blobRequests += id
+                        serverBlobs[id]?.let { data ->
+                            MockResponse().setBody(json.encodeToString(SyncAttachment(id, data)))
+                        } ?: MockResponse().setResponseCode(404).setBody("{}")
+                    }
                 }
             }
         }
         start()
     }
 
-    val endpoint: String get() = server.url("/").toString().trimEnd('/')
-    val client = SyncClient(endpoint, "test-api-key", "test-client")
+    /** Thrown by [onPush] to answer with an error status. */
+    class HttpRefusal(val status: Int, val body: String) : Exception()
 
-    fun service(): SyncService = SyncService(
+    fun storageFull() = HttpRefusal(507, """{"error":"Your account is full","code":"storage_quota_exceeded"}""")
+
+    val endpoint: String get() = realServer?.endpoint ?: server.url("/").toString().trimEnd('/')
+    val client = SyncClient(endpoint, realServer?.apiKey ?: "test-api-key", realServer?.clientId ?: "test-client")
+
+    fun service(
+        transaction: suspend (suspend () -> Unit) -> Unit = { block -> db.withTransaction { block() } },
+    ): SyncService = SyncService(
         syncClient = client,
         sseClient = SSEClient(endpoint, CoroutineScope(Dispatchers.Unconfined)),
         noteRepo = noteRepo,
@@ -80,7 +107,7 @@ class SyncHarness {
         savedSearchRepo = savedSearchRepo,
         keyProvider = { key },
         scope = CoroutineScope(Dispatchers.Unconfined),
-        transaction = { block -> db.withTransaction { block() } },
+        transaction = transaction,
     )
 
     fun close() {

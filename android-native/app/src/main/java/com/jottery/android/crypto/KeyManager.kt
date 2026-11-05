@@ -6,7 +6,38 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.crypto.SecretKey
-import javax.crypto.spec.SecretKeySpec
+
+/**
+ * A key whose one copy of its bytes can be wiped, which SecretKeySpec's can't.
+ * Reading it afterwards throws rather than hand out zeros, because anything
+ * encrypted with those would be lost.
+ *
+ * The JVM can still have made copies while using it, inside a Cipher for instance,
+ * so this shortens how long the key sits in memory rather than guaranteeing it's
+ * gone. Android gives no way to do better.
+ */
+class WipeableKey(bytes: ByteArray) : SecretKey {
+    private val bytes = bytes.clone()
+
+    @Volatile private var wiped = false
+
+    override fun getAlgorithm() = "AES"
+    override fun getFormat() = "RAW"
+    override fun getEncoded(): ByteArray {
+        if (wiped) throw KeyWipedException()
+        return bytes.clone()
+    }
+
+    override fun destroy() {
+        wiped = true
+        bytes.fill(0)
+    }
+
+    override fun isDestroyed() = wiped
+}
+
+/** Something outlived the lock that wiped its key. */
+class KeyWipedException : IllegalStateException("The vault has been locked")
 
 /**
  * Manages the in-memory master key, auto-lock timer, and biometric unlock.
@@ -41,28 +72,38 @@ class KeyManager(
     // MARK: - Unlock
 
     /** Derive the master key from a password and store it in memory. */
-    fun unlock(password: String, salt: ByteArray, iterations: Int): SecretKey {
-        val key = CryptoService.deriveKey(password, salt, iterations)
+    fun unlock(password: String, salt: ByteArray, iterations: Int): SecretKey =
+        adopt(CryptoService.deriveKey(password, salt, iterations).encoded)
+
+    /** Restore the master key from raw bytes. The caller keeps its own copy. */
+    fun unlockWithKeyData(keyData: ByteArray): SecretKey = adopt(keyData)
+
+    private fun adopt(keyData: ByteArray): SecretKey {
+        val previous = masterKey
+        val key = WipeableKey(keyData)
         masterKey = key
+        (previous as? WipeableKey)?.destroy()
         isUnlocked = true
         lastActivityTime = clock()
         startAutoLockTimer()
         return key
     }
 
-    /** Restore the master key from raw bytes (biometric unlock path). */
-    fun unlockWithKeyData(keyData: ByteArray) {
-        masterKey = SecretKeySpec(keyData, "AES")
-        isUnlocked = true
-        lastActivityTime = clock()
-        startAutoLockTimer()
-    }
-
     /** Lock the application — wipe the in-memory key. */
     fun lock() {
+        release()?.destroy()
+    }
+
+    /**
+     * Lock, but hand the key to the caller, who must [SecretKey.destroy] it. For a
+     * final write that has to finish first.
+     */
+    fun release(): SecretKey? {
+        val key = masterKey
         masterKey = null
         isUnlocked = false
         stopAutoLockTimer()
+        return key
     }
 
     /** Record user activity to reset the auto-lock countdown. */

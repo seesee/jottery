@@ -26,6 +26,7 @@ fun WebEditorView(
     content: String,
     isDark: Boolean = LocalIsDarkTheme.current,
     fontSize: Float = 16f,
+    readOnly: Boolean = false,
     onContentChanged: (String) -> Unit,
     onReady: () -> Unit = {},
     onOpenLink: (String) -> Unit = {},
@@ -45,6 +46,8 @@ fun WebEditorView(
     val currentContent by rememberUpdatedState(content)
     val currentIsDark by rememberUpdatedState(isDark)
     val currentFontSize by rememberUpdatedState(fontSize)
+    val currentReadOnly by rememberUpdatedState(readOnly)
+    val sentReadOnly = remember { booleanArrayOf(false) }
 
     // Tells the page's own edits coming back from anything else that changed the
     // note, such as a sync, a restored version or a resolved conflict. The page
@@ -93,6 +96,9 @@ fun WebEditorView(
                             "window.bridge.setFontSize($size)",
                             null,
                         )
+                        // Otherwise a locked note takes typing that's never saved
+                        sentReadOnly[0] = currentReadOnly
+                        view?.evaluateJavascript("window.bridge.setReadOnly(${sentReadOnly[0]})", null)
                         pageState.loaded(text, dark, size)
                     },
                 )
@@ -114,6 +120,10 @@ fun WebEditorView(
             if (pageState.isExternalChange(content)) {
                 val jsonContent = org.json.JSONObject.quote(content)
                 webView.evaluateJavascript("window.bridge.setContent($jsonContent, $isDark)", null)
+            }
+            if (sentReadOnly[0] != readOnly) {
+                sentReadOnly[0] = readOnly
+                webView.evaluateJavascript("window.bridge.setReadOnly($readOnly)", null)
             }
         },
         modifier = modifier,
@@ -187,6 +197,7 @@ class WebBridge(
     private val onReady: () -> Unit,
     private val onOpenLink: (String) -> Unit,
     private val onRequestAttachment: (String) -> Unit,
+    private val onOpenNote: (String) -> Unit = {},
 ) {
     private val mainHandler = Handler(Looper.getMainLooper())
 
@@ -208,6 +219,10 @@ class WebBridge(
                 "openLink" -> {
                     val url = obj["url"]?.jsonPrimitive?.content ?: return
                     mainHandler.post { onOpenLink(url) }
+                }
+                "openNote" -> {
+                    val id = obj["id"]?.jsonPrimitive?.content ?: return
+                    mainHandler.post { onOpenNote(id) }
                 }
             }
         } catch (e: Exception) {

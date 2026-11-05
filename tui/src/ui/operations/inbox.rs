@@ -58,10 +58,16 @@ pub fn accept_item(app: &mut App, index: usize) -> Result<()> {
         version: 1,
         word_wrap: true,
         syntax_language: SyntaxLanguage::default(),
+        syntax_unknown: None,
         color: None,
         content_hash: None,
         parent_hash: None,
         hash_chain: None,
+        // Text from the inbox is written by whoever holds the token, so it's never
+        // rendered as a preview unless someone asks
+        show_preview: Some(false),
+        needs_sync: true,
+        attachments_complete: true,
     };
 
     note_repo.create(&note, key)?;

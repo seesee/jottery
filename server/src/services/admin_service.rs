@@ -65,6 +65,9 @@ pub enum AdminError {
     #[error("This is the last admin, and a server needs one")]
     LastAdmin,
 
+    #[error("{0} matches more than one id: use more of it")]
+    AmbiguousId(String),
+
     #[error("User is already {0}")]
     AlreadyInState(String),
 
@@ -79,6 +82,24 @@ pub enum AdminError {
 }
 
 pub type Result<T> = std::result::Result<T, AdminError>;
+
+/// Shortest id prefix accepted. Some commands act at once with no confirmation, so a
+/// prefix has to be long enough to mean something.
+const MIN_ID_PREFIX: usize = 8;
+
+/// A LIKE pattern for ids that start with `prefix`, with its wildcards made literal.
+/// `None` if it's too short to use.
+fn id_prefix_pattern(prefix: &str) -> Option<String> {
+    if prefix.len() < MIN_ID_PREFIX {
+        return None;
+    }
+
+    let escaped = prefix
+        .replace('\\', "\\\\")
+        .replace('%', "\\%")
+        .replace('_', "\\_");
+    Some(format!("{escaped}%"))
+}
 
 /// Admin service for server management operations
 pub struct AdminService;
@@ -379,19 +400,31 @@ impl AdminService {
             }
         }
 
-        // Try ID match (exact or prefix)
-        let id_prefix = format!("{}%", identifier);
-        let user = sqlx::query_as!(
-            User,
-            "SELECT * FROM users WHERE id = ? OR id LIKE ?",
-            identifier,
-            id_prefix
-        )
-        .fetch_optional(pool)
-        .await?
-        .ok_or_else(|| AdminError::UserNotFound(identifier.to_string()))?;
+        // An exact id wins, even if it's also the start of another one
+        if let Some(user) = sqlx::query_as!(User, "SELECT * FROM users WHERE id = ?", identifier)
+            .fetch_optional(pool)
+            .await?
+        {
+            return Ok(user);
+        }
 
-        Ok(user)
+        let not_found = || AdminError::UserNotFound(identifier.to_string());
+        let pattern = id_prefix_pattern(identifier).ok_or_else(not_found)?;
+
+        // Two rows are enough to know it's ambiguous
+        let mut matches = sqlx::query_as!(
+            User,
+            r#"SELECT * FROM users WHERE id LIKE ? ESCAPE '\' LIMIT 2"#,
+            pattern
+        )
+        .fetch_all(pool)
+        .await?;
+
+        match matches.len() {
+            0 => Err(not_found()),
+            1 => Ok(matches.remove(0)),
+            _ => Err(AdminError::AmbiguousId(identifier.to_string())),
+        }
     }
 
     /// Find device by ID (exact or prefix match)
@@ -407,16 +440,36 @@ impl AdminService {
             is_active: Option<i64>,
         }
 
-        let id_prefix = format!("{}%", device_id);
-        let row = sqlx::query_as!(
+        let exact = sqlx::query_as!(
             DeviceRow,
-            "SELECT id, user_id, device_name, device_type, created_at, last_seen_at, is_active FROM clients WHERE id = ? OR id LIKE ?",
-            device_id,
-            id_prefix
+            "SELECT id, user_id, device_name, device_type, created_at, last_seen_at, is_active FROM clients WHERE id = ?",
+            device_id
         )
         .fetch_optional(pool)
-        .await?
-        .ok_or_else(|| AdminError::DeviceNotFound(device_id.to_string()))?;
+        .await?;
+
+        let row = match exact {
+            Some(row) => row,
+            None => {
+                let not_found = || AdminError::DeviceNotFound(device_id.to_string());
+                let pattern = id_prefix_pattern(device_id).ok_or_else(not_found)?;
+
+                let mut matches = sqlx::query_as!(
+                    DeviceRow,
+                    r#"SELECT id, user_id, device_name, device_type, created_at, last_seen_at, is_active
+                       FROM clients WHERE id LIKE ? ESCAPE '\' LIMIT 2"#,
+                    pattern
+                )
+                .fetch_all(pool)
+                .await?;
+
+                match matches.len() {
+                    0 => return Err(not_found()),
+                    1 => matches.remove(0),
+                    _ => return Err(AdminError::AmbiguousId(device_id.to_string())),
+                }
+            }
+        };
 
         Ok(DeviceInfo {
             id: row.id,

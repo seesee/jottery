@@ -5,7 +5,11 @@ import Foundation
 /// The extension never holds the master key, so items are staged
 /// unencrypted in the app-group container (guarded by iOS file
 /// protection) and converted into encrypted notes when the main app
-/// next runs unlocked.
+/// next runs unlocked. File protection doesn't reach device backups, so the
+/// directory is kept out of them.
+///
+/// The manifest is written last, and is what makes an item real: a directory
+/// without one is an item that was abandoned partway, and gets swept.
 enum SharedInboxStore {
 
     static let appGroupIdentifier = "group.com.jottery.ios"
@@ -38,35 +42,116 @@ enum SharedInboxStore {
             .appendingPathComponent("SharedInbox", isDirectory: true)
     }
 
-    /// Stage one shared item. `root` is injectable for tests.
+    /// One item being staged. Files go in one at a time, straight from disk,
+    /// because an extension has very little memory to work with.
+    struct Staging: Sendable {
+        let directory: URL
+
+        /// Copy a file in. Throws if it can't be copied, and the caller decides
+        /// what to do with the rest.
+        func add(copying source: URL, index: Int, filename: String, mimeType: String) throws -> Manifest.File {
+            let name = storedName(index: index, filename: filename)
+            let destination = directory.appendingPathComponent(name)
+            try FileManager.default.copyItem(at: source, to: destination)
+            try FileManager.default.setAttributes([.protectionKey: FileProtectionType.complete], ofItemAtPath: destination.path)
+            return Manifest.File(storedName: name, filename: filename, mimeType: mimeType)
+        }
+
+        func add(data: Data, index: Int, filename: String, mimeType: String) throws -> Manifest.File {
+            let name = storedName(index: index, filename: filename)
+            try data.write(to: directory.appendingPathComponent(name), options: [.atomic, .completeFileProtection])
+            return Manifest.File(storedName: name, filename: filename, mimeType: mimeType)
+        }
+
+        /// Finish the item, which makes it visible to the main app.
+        func commit(text: String?, urls: [String], files: [Manifest.File]) throws {
+            let manifest = Manifest(createdAt: Date(), text: text, urls: urls, files: files)
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            try (try encoder.encode(manifest)).write(
+                to: directory.appendingPathComponent("manifest.json"),
+                options: [.atomic, .completeFileProtection]
+            )
+        }
+
+        /// Remove what's been staged. Nothing shared stays behind unencrypted.
+        func discard() {
+            try? FileManager.default.removeItem(at: directory)
+        }
+
+        private func storedName(index: Int, filename: String) -> String {
+            let ext = (filename as NSString).pathExtension
+            return ext.isEmpty ? "file-\(index)" : "file-\(index).\(ext)"
+        }
+    }
+
+    enum StagingError: Error {
+        /// The app group's container isn't available.
+        case noContainer
+    }
+
+    /// Start staging an item. `root` is injectable for tests.
+    static func begin(in root: URL? = nil) throws -> Staging {
+        guard let root = root ?? defaultRoot() else { throw StagingError.noContainer }
+        try prepare(root)
+        let directory = root.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return Staging(directory: directory)
+    }
+
+    /// Stage one shared item whole. `root` is injectable for tests.
     static func write(
         text: String?,
         urls: [String],
         files: [(data: Data, filename: String, mimeType: String)],
         in root: URL? = nil
     ) throws {
-        guard let root = root ?? defaultRoot() else { return }
-        let directory = root.appendingPathComponent(UUID().uuidString, isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-
-        var manifestFiles: [Manifest.File] = []
-        for (index, file) in files.enumerated() {
-            let ext = (file.filename as NSString).pathExtension
-            let storedName = ext.isEmpty ? "file-\(index)" : "file-\(index).\(ext)"
-            try file.data.write(
-                to: directory.appendingPathComponent(storedName),
-                options: [.atomic, .completeFileProtection]
-            )
-            manifestFiles.append(Manifest.File(storedName: storedName, filename: file.filename, mimeType: file.mimeType))
+        let staging = try begin(in: root)
+        do {
+            let staged = try files.enumerated().map { index, file in
+                try staging.add(data: file.data, index: index, filename: file.filename, mimeType: file.mimeType)
+            }
+            try staging.commit(text: text, urls: urls, files: staged)
+        } catch {
+            staging.discard()
+            throw error
         }
+    }
 
-        let manifest = Manifest(createdAt: Date(), text: text, urls: urls, files: manifestFiles)
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        try (try encoder.encode(manifest)).write(
-            to: directory.appendingPathComponent("manifest.json"),
-            options: [.atomic, .completeFileProtection]
-        )
+    /// Create the staging directory, and keep it out of device backups.
+    private static func prepare(_ root: URL) throws {
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        var url = root
+        try url.setResourceValues(values)
+    }
+
+    /// Remove items an extension abandoned partway: the system can kill one at
+    /// any moment, and what it staged is plaintext. Runs from the main app. One
+    /// younger than `age` may still be in progress. Also marks staging as
+    /// excluded from backups for items staged before that was done.
+    static func removeAbandoned(olderThan age: TimeInterval = 60 * 60, in root: URL? = nil) {
+        guard let root = root ?? defaultRoot(),
+              let entries = try? FileManager.default.contentsOfDirectory(
+                  at: root, includingPropertiesForKeys: [.creationDateKey]
+              ) else { return }
+        try? prepare(root)
+        let cutoff = Date().addingTimeInterval(-age)
+        for directory in entries {
+            let manifest = directory.appendingPathComponent("manifest.json")
+            guard !FileManager.default.fileExists(atPath: manifest.path) else { continue }
+            let created = (try? directory.resourceValues(forKeys: [.creationDateKey]))?.creationDate
+            if created.map({ $0 < cutoff }) ?? true {
+                remove(directory)
+            }
+        }
+    }
+
+    /// Remove everything staged, when the vault is wiped.
+    static func removeAll(in root: URL? = nil) {
+        guard let root = root ?? defaultRoot() else { return }
+        try? FileManager.default.removeItem(at: root)
     }
 
     /// All staged items, oldest first. Entries without a readable manifest are skipped.

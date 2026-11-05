@@ -44,12 +44,32 @@ final class AppState {
     /// re-encrypts everything and uploads it (see `mergeOntoAccountKey(_:)`).
     var pendingAccountKeyMerge: PendingAccountKeyMerge?
 
+    /// Something about the account's key the user needs to know, shown by
+    /// `MainView`. Nothing here stops the app working.
+    var accountKeyNotice: AccountKeyNotice?
+
+    /// Notes in use that the server listed as permanently deleted, when there
+    /// are enough of them to be suspicious. They're in the bin, and `MainView`
+    /// offers to put them back (see `restoreNotesRemovedByServer()`).
+    var notesRemovedByServer: [String] = []
+
+    /// Set while the whole vault is being re-encrypted, which can take a while.
+    /// `ContentView` covers the app, and nothing may be encrypted until it's
+    /// done: under the old key it would be unreadable once the switch is made.
+    var isReKeying = false
+
     // MARK: - User-Facing Errors
 
     /// A transient, localised error message surfaced to the user via a
     /// toast (see `ToastView`), e.g. "Couldn't delete note." Set by
     /// `reportError(_:duration:)`, which also schedules it to auto-clear.
     var userErrorMessage: String?
+
+    /// How a message waits out its `duration`. Tests replace this, to decide
+    /// when a timer fires rather than race it.
+    @ObservationIgnored var waitOutErrorMessage: @Sendable (Duration) async -> Void = { duration in
+        try? await Task.sleep(for: duration)
+    }
 
     #if DEBUG
     /// Demo screenshot mode: presents the settings sheet (see DemoSeedService).
@@ -101,6 +121,8 @@ final class AppState {
     @ObservationIgnored private var networkMonitor: NWPathMonitor?
     @ObservationIgnored private var networkWasSatisfied = true
     @ObservationIgnored private var autoSyncTask: Task<Void, Never>?
+    /// Retries in a row after failures worth retrying (see `SyncRetry`).
+    @ObservationIgnored private var syncRetryAttempts = 0
     @ObservationIgnored private var userErrorClearTask: Task<Void, Never>?
 
     /// Re-entrancy guard for `unlock(password:)` — checked-and-set at entry,
@@ -191,14 +213,17 @@ final class AppState {
     func scheduleSearch() {
         searchTask?.cancel()
         let query = searchQuery
-        let source = displayedNotes
         let order = sortOrder
 
         // No debounce needed when query is empty — just sort (cheap).
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
-            filteredNotes = SearchService.sort(notes: source, order: order)
+            filteredNotes = SearchService.sort(notes: displayedNotes, order: order)
             return
         }
+
+        // Both lists, because `archived` reaches whichever one isn't showing.
+        let source = notes + archivedNotes
+        let archiveMode = showArchive
 
         searchTask = Task {
             // Debounce while typing
@@ -207,7 +232,7 @@ final class AppState {
 
             // Run expensive filter + sort off the main thread
             let results = await Task.detached(priority: .userInitiated) {
-                let filtered = SearchService.filter(notes: source, query: query)
+                let filtered = SearchService.filter(notes: source, query: query, archiveMode: archiveMode)
                 return SearchService.sort(notes: filtered, order: order)
             }.value
 
@@ -437,7 +462,7 @@ final class AppState {
         let unlockStart = CFAbsoluteTimeGetCurrent()
         #endif
 
-        let masterKeyData: Data
+        var masterKeyData: Data
 
         if metadata.envelopeVersion != nil {
             // Envelope unlock path — derive device key, unwrap master key, and
@@ -541,6 +566,7 @@ final class AppState {
         }
 
         let key = SymmetricKey(data: masterKeyData)
+        masterKeyData.wipe()
 
         if biometricKeyNeedsRefresh {
             biometricKeyNeedsRefresh = false
@@ -735,7 +761,7 @@ final class AppState {
     @discardableResult
     internal func flushPendingEditorNote() -> Bool {
         guard let pending = pendingEditorNote else { return true }
-        guard let noteRepo, let key = keyManager.masterKey else { return false }
+        guard !isReKeying, let noteRepo, let key = keyManager.masterKey else { return false }
         do {
             try noteRepo.update(pending, key: key)
             pendingEditorNote = nil
@@ -754,25 +780,42 @@ final class AppState {
         // the next successful unlock (see flushPendingEditorNote).
         flushPendingEditorNote()
 
-        // Stop SSE, network monitor, and release sync objects
-        stopNetworkMonitor()
-        if let service = syncService {
-            Task { await service.stopSSE() }
-        }
-        syncClient = nil
-        syncService = nil
-        syncEnabled = false
+        teardownSync()
 
         keyManager.lock()
         isLocked = true
         removeTemporaryFiles()
         needsNotesPasswordForAccountKey = false
         pendingAccountKeyMerge = nil
+        accountKeyNotice = nil
+        notesRemovedByServer = []
+        // A refresh decrypting right now holds an older ticket, so it can't put
+        // what it decrypted back in memory behind the lock screen.
+        lastPublishedTicket = nextLoadTicket()
+        searchTask?.cancel()
         notes = []
         archivedNotes = []
+        filteredNotes = []
+        savedSearches = []
         pendingConflicts = []
         inboxItems = []
         selectedNoteId = nil
+    }
+
+    /// Stop everything that talks to the server and let go of the sync objects,
+    /// so a revoked key stops being used and the master key they hold is
+    /// released. Used whenever sync ends: lock, disconnect, deleting the
+    /// account, and wiping the vault.
+    func teardownSync() {
+        stopNetworkMonitor()
+        autoSyncTask?.cancel()
+        autoSyncTask = nil
+        if let service = syncService {
+            Task { await service.stop() }
+        }
+        syncClient = nil
+        syncService = nil
+        syncEnabled = false
     }
 
     // MARK: - Account Key (Face ID Unlock)
@@ -851,8 +894,8 @@ final class AppState {
     func reportError(_ message: String, duration: Duration = .seconds(4)) {
         userErrorMessage = message
         userErrorClearTask?.cancel()
-        userErrorClearTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: duration)
+        userErrorClearTask = Task { @MainActor [weak self, waitOutErrorMessage] in
+            await waitOutErrorMessage(duration)
             guard !Task.isCancelled else { return }
             if self?.userErrorMessage == message {
                 self?.userErrorMessage = nil
@@ -1005,7 +1048,24 @@ final class AppState {
         notes.first(where: { $0.id == id }) ?? archivedNotes.first(where: { $0.id == id })
     }
 
+    /// Ids and titles for the note links in `content`. Only a note that looks
+    /// like it has links pays for this, or hands the titles to a web view.
+    func noteTitles(linkedFrom content: String) -> [String: String] {
+        guard content.contains("[[") || content.contains("(link:") || content.contains("(note:") else { return [:] }
+        return Dictionary((notes + archivedNotes).map { ($0.id, $0.title) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    /// Follow a note link, wherever the note is. It may have been deleted.
+    func openLinkedNote(id: String) {
+        if displayedNote(id: id) != nil {
+            selectedNoteId = id
+        } else {
+            reportError(L.previewNoteNotFound)
+        }
+    }
+
     func createNote(content: String = "", tags: [String] = []) throws -> DecryptedNote? {
+        guard !isReKeying else { throw AppStateError.vaultBusy }
         guard let noteRepo, let key = keyManager.masterKey else { return nil }
         let note = try noteRepo.create(content: content, tags: tags, key: key)
         notes.insert(note, at: 0)
@@ -1015,6 +1075,7 @@ final class AppState {
     }
 
     func saveNote(_ note: DecryptedNote) throws {
+        guard !isReKeying else { throw AppStateError.vaultBusy }
         guard let noteRepo, let key = keyManager.masterKey else { return }
         try noteRepo.update(note, key: key)
 
@@ -1035,6 +1096,26 @@ final class AppState {
     func saveEditorFields(_ fields: NoteEditorFields) throws {
         guard let latest = displayedNote(id: fields.noteId) else { return }
         try saveNote(fields.applied(to: latest))
+    }
+
+    /// Save what the editor holds, for the editor's own saves, which have no
+    /// one to throw to. If it can't be saved, the edit stays staged and is
+    /// retried at the next lock or unlock, and the user is told. Returns whether
+    /// it was saved.
+    @discardableResult
+    func saveEditorEdit(_ fields: NoteEditorFields) -> Bool {
+        do {
+            try saveEditorFields(fields)
+            if pendingEditorNote?.id == fields.noteId { pendingEditorNote = nil }
+            return true
+        } catch {
+            Log.debug("[Editor] save failed: \(error)")
+            if let latest = displayedNote(id: fields.noteId) {
+                pendingEditorNote = fields.applied(to: latest)
+            }
+            reportError(L.errorCouldntSaveNote)
+            return false
+        }
     }
 
     /// Put the note as stored into version history, before an edit overwrites it.
@@ -1060,6 +1141,72 @@ final class AppState {
             selectedNoteId = nil
         }
         scheduleAutoSync()
+    }
+
+    /// Delete a note from the bin for good, on every device.
+    func permanentlyDeleteNote(id: String) throws {
+        guard let noteRepo else { return }
+        try noteRepo.permanentlyDelete(id: id)
+        scheduleAutoSync()
+    }
+
+    /// Put back what a sync moved to the bin (`notesRemovedByServer`). Pushing
+    /// the notes again brings them back on the server too.
+    func restoreNotesRemovedByServer() async {
+        let ids = notesRemovedByServer
+        notesRemovedByServer = []
+        guard let noteRepo else { return }
+        do {
+            for id in ids { try noteRepo.restore(id: id) }
+            try await loadNotes()
+            scheduleAutoSync()
+        } catch {
+            reportError(L.errorCouldntRestoreNote)
+        }
+    }
+
+    // MARK: - Many Notes at Once
+
+    /// Move notes to the bin: one transaction and one reload, however many.
+    func deleteNotes(ids: Set<String>) async throws {
+        guard let noteRepo else { return }
+        try await Task.detached(priority: .userInitiated) { try noteRepo.softDelete(ids: Array(ids)) }.value
+        if let selected = selectedNoteId, ids.contains(selected) { selectedNoteId = nil }
+        try await loadNotes()
+        scheduleAutoSync()
+    }
+
+    func archiveNotes(ids: Set<String>) async throws {
+        guard let noteRepo else { return }
+        try await Task.detached(priority: .userInitiated) { try noteRepo.archive(ids: Array(ids)) }.value
+        if let selected = selectedNoteId, ids.contains(selected) { selectedNoteId = nil }
+        try await loadNotes()
+        scheduleAutoSync()
+    }
+
+    /// Apply `change` to each of these notes, off the main thread, and reload
+    /// once. `change` says whether it did anything. Returns how many failed.
+    func updateNotes(
+        ids: Set<String>,
+        change: @escaping @Sendable (inout DecryptedNote) -> Bool
+    ) async throws -> Int {
+        guard !isReKeying else { throw AppStateError.vaultBusy }
+        guard let noteRepo, let key = keyManager.masterKey else { return 0 }
+        let selected = (notes + archivedNotes).filter { ids.contains($0.id) }
+        let failures = await Task.detached(priority: .userInitiated) {
+            var failures = 0
+            for var note in selected where change(&note) {
+                do {
+                    try noteRepo.update(note, key: key)
+                } catch {
+                    failures += 1
+                }
+            }
+            return failures
+        }.value
+        try await loadNotes()
+        scheduleAutoSync()
+        return failures
     }
 
     func restoreNote(id: String) async throws {
@@ -1155,6 +1302,7 @@ final class AppState {
     }
 
     func addAttachment(to noteId: String, data fileData: Data, filename rawFilename: String, mimeType: String) throws {
+        guard !isReKeying else { throw AppStateError.vaultBusy }
         guard let noteRepo, let attachmentRepo, let key = keyManager.masterKey else { return }
         guard try noteRepo.get(id: noteId, key: key) != nil else { return }
         let filename = AttachmentFilename.safe(rawFilename)
@@ -1169,7 +1317,7 @@ final class AppState {
         let attachmentId = CryptoService.generateUUID()
 
         // Store encrypted blob with the same ID used for the attachment ref
-        try attachmentRepo.storeBlob(id: attachmentId, filename: filename, mimeType: mimeType, size: fileData.count, data: blobData)
+        try attachmentRepo.storeBlob(id: attachmentId, mimeType: mimeType, size: fileData.count, data: blobData)
 
         // Encrypt the filename for storage
         let encFilenameJSON = try AttachmentFilename.encrypted(filename, key: key)
@@ -1227,7 +1375,8 @@ final class AppState {
     /// Convert items staged by the share extension into encrypted notes.
     /// Safe to call on every unlock/foreground — consumed items are removed.
     func importSharedInboxItems(from root: URL? = nil) {
-        guard !isLocked, let key = keyManager.masterKey, let noteRepo else { return }
+        guard !isLocked, !isReKeying, let key = keyManager.masterKey, let noteRepo else { return }
+        SharedInboxStore.removeAbandoned(in: root)
 
         // createNote selects the new note — imports must not steal selection.
         let previousSelection = selectedNoteId
@@ -1276,16 +1425,20 @@ final class AppState {
 
     func loadInboxItems() async throws {
         guard let syncClient else { return }
-        inboxItems = try await syncClient.listInboxItems()
+        inboxItems = try await syncClient.listInboxItems().filter { SyncValidation.isId($0.id) }
     }
 
+    /// Turn an inbox item into a note, then remove it from the server. The note
+    /// takes the item's id, so if removing it fails, the item stays and a second
+    /// try finishes the job without making another note.
     func acceptInboxItem(_ item: InboxItem) async throws {
         guard let noteRepo, let key = keyManager.masterKey, let syncClient else { return }
-        // Create a new encrypted note from the inbox item (showPreview forced false for safety)
-        let note = try noteRepo.create(content: item.content, tags: item.tags, key: key)
-        notes.insert(note, at: 0)
-        // Delete from server
-        try? await syncClient.deleteInboxItem(id: item.id)
+        if try noteRepo.getRaw(id: item.id) == nil {
+            let note = try noteRepo.create(id: item.id, content: item.content, tags: item.tags, fromInbox: true, key: key)
+            notes.insert(note, at: 0)
+            scheduleAutoSync()
+        }
+        try await syncClient.deleteInboxItem(id: item.id)
         inboxItems.removeAll { $0.id == item.id }
     }
 
@@ -1350,7 +1503,15 @@ final class AppState {
     private func handlePostSyncCompletion(_ changes: SyncChanges) async {
         await applySyncChanges(changes)
         lastSyncAt = Date()
+        if changes.removedByServerIds.count >= Self.suspiciousRemovalCount {
+            notesRemovedByServer = Array(Set(notesRemovedByServer).union(changes.removedByServerIds))
+        }
     }
+
+    /// How many notes in use one sync can remove before the user is asked. A
+    /// note normally reaches the bin first, so even a big clear-out on another
+    /// device doesn't get here.
+    private static let suspiciousRemovalCount = 10
 
     /// Set up the sync client. Pass `apiKey` directly after registration
     /// to avoid Keychain retrieval timing issues; otherwise reads from Keychain.
@@ -1461,6 +1622,7 @@ final class AppState {
             _ = try await syncService.sync()
             isSyncing = false
             lastSyncAt = Date()
+            syncRetryAttempts = 0
 
             // Pull any conflicts detected during push
             pendingConflicts = await syncService.pendingConflicts
@@ -1488,6 +1650,10 @@ final class AppState {
             syncError = SyncEndpoint.describeSyncFailure(error)
             syncStatusMessage = nil
             isSyncing = false
+            if let delay = SyncRetry.delay(after: error, attempt: syncRetryAttempts) {
+                syncRetryAttempts += 1
+                scheduleAutoSync(after: .seconds(delay))
+            }
         }
     }
 
@@ -1596,6 +1762,9 @@ final class AppState {
             // SSE restart and full sync when the app returns to .active.
             break
         case .active:
+            // The database can't open while the device is locked (see
+            // `DatabaseManager`), which a launch in the background can run into.
+            if db == nil { initialise() }
             guard !isLocked, !lockIfAwayTooLong() else { return }
             let wasBackgrounded = backgroundedAt != nil
             backgroundedAt = nil
@@ -1615,15 +1784,36 @@ final class AppState {
 
     // MARK: - Wipe & Re-onboard
 
+    /// Notes wiping would lose for good: every note if sync is off, or those
+    /// that haven't reached the server. Needs no key, so it works while locked.
+    func notesOnlyOnThisDevice() -> Int {
+        guard let noteRepo else { return 0 }
+        return (try? settings.syncEnabled ? noteRepo.countUnsynced() : noteRepo.countActive()) ?? 0
+    }
+
+    /// Wipe from the lock screen. Anyone holding the phone can reach that, and
+    /// wrong passwords are free, so they first have to show they own the device.
+    /// Returns false if they couldn't, and nothing has changed.
+    @discardableResult
+    func wipeAfterProvingOwnership(
+        authenticate: (String) async -> Bool = DeviceOwner.authenticate
+    ) async -> Bool {
+        guard await authenticate(L.unlockDeleteAuthReason) else { return false }
+        wipeAllData()
+        return true
+    }
+
     /// Delete everything — database, Keychain, in-memory state — so the user
     /// can start fresh as if the app was just installed.
-    func wipeAllData() {
+    func wipeAllData(sharedInboxRoot: URL? = nil) {
         // Clear Keychain
         KeychainService.deleteAPIKey()
         KeychainService.deleteClientId()
         KeychainService.deleteBiometricKey()
 
+        teardownSync()
         removeTemporaryFiles()
+        SharedInboxStore.removeAll(in: sharedInboxRoot)
 
         // Delete database file
         let fm = FileManager.default
@@ -1646,19 +1836,21 @@ final class AppState {
         versionRepo = nil
         attachmentRepo = nil
         savedSearchRepo = nil
-        syncClient = nil
-        syncService = nil
+        pendingEditorNote = nil
+        lastPublishedTicket = nextLoadTicket()
+        searchTask?.cancel()
         notes = []
         archivedNotes = []
         filteredNotes = []
         savedSearches = []
         pendingConflicts = []
         pendingAccountKeyMerge = nil
+        accountKeyNotice = nil
+        notesRemovedByServer = []
         inboxItems = []
         showArchive = false
         selectedNoteId = nil
         searchQuery = ""
-        syncEnabled = false
         isSyncing = false
         lastSyncAt = nil
         syncError = nil
@@ -1729,16 +1921,19 @@ final class AppState {
                 try? keyManager.enableBiometricUnlock()
             }
 
-            // Background: server re-wrap (non-fatal, will retry on next unlock/sync)
-            if let syncRepo, let syncClient {
+            // Background: server re-wrap. A failure is kept and retried at the
+            // next unlock or sync, so the user only needs telling.
+            if settings.syncEnabled, let syncRepo {
                 let dataForServer = masterKeyData
+                let syncClient = self.syncClient
                 Task {
-                    await EnvelopeService.changePasswordServer(
+                    let uploaded = await EnvelopeService.changePasswordServer(
                         syncRepo: syncRepo,
                         syncClient: syncClient,
                         newPassword: newPassword,
                         masterKeyData: dataForServer
                     )
+                    if !uploaded { reportError(L.changePasswordServerKeyPending, duration: .seconds(8)) }
                 }
             }
         } else {
@@ -1748,11 +1943,10 @@ final class AppState {
             }
 
             // Verify current password
-            let currentKey = CryptoService.deriveKey(
-                password: currentPassword,
-                salt: saltData,
-                iterations: UInt32(metadata.iterations)
-            )
+            let currentIterations = UInt32(metadata.iterations)
+            let currentKey = await Task.detached(priority: .userInitiated) {
+                CryptoService.deriveKey(password: currentPassword, salt: saltData, iterations: currentIterations)
+            }.value
             if let verificationJSON = metadata.verification {
                 guard AppState.verifyWithToken(verificationJSON, key: currentKey) else {
                     throw AppStateError.wrongPassword
@@ -1766,11 +1960,9 @@ final class AppState {
             // Generate new salt and derive new key
             let newSalt = CryptoService.generateSalt()
             let iterations = UInt32(metadata.iterations)
-            let newKey = CryptoService.deriveKey(
-                password: newPassword,
-                salt: newSalt,
-                iterations: iterations
-            )
+            let newKey = await Task.detached(priority: .userInitiated) {
+                CryptoService.deriveKey(password: newPassword, salt: newSalt, iterations: iterations)
+            }.value
 
             // Re-encrypt everything under the new key and store the new salt
             // and verification token in one transaction. If anything cannot
@@ -1782,7 +1974,7 @@ final class AppState {
             var newMetadata = metadata
             newMetadata.salt = newSalt.base64EncodedString()
             newMetadata.verification = verificationJSON
-            try await performReKey(to: newKey) {
+            try await performReKey(to: newKey) { [newMetadata] in
                 try VaultReKeyService.reKey(
                     database: db, from: currentKey, to: newKey, newMetadata: newMetadata
                 )
@@ -1820,9 +2012,9 @@ final class AppState {
             throw AppStateError.notInitialised
         }
         let newKey = SymmetricKey(data: newKeyData)
-        let newMetadata = try EnvelopeService.envelopeMetadata(
-            for: newKeyData, localPassword: notesPassword, current: current
-        )
+        let newMetadata = try await Task.detached(priority: .userInitiated) {
+            try EnvelopeService.envelopeMetadata(for: newKeyData, localPassword: notesPassword, current: current)
+        }.value
         let summary = try await performReKey(to: newKey) {
             try VaultReKeyService.reKey(database: db, from: oldKey, to: newKey, newMetadata: newMetadata)
         }
@@ -1838,30 +2030,45 @@ final class AppState {
     @discardableResult
     private func performReKey(
         to newKey: SymmetricKey,
-        _ reKey: () throws -> VaultReKeyService.Summary
+        _ reKey: @escaping @Sendable () throws -> VaultReKeyService.Summary
     ) async throws -> VaultReKeyService.Summary {
         let syncWasRunning = syncService != nil
         guard await stopSyncForKeyChange() else {
             if syncWasRunning { setupSync() }
             throw AppStateError.syncBusy
         }
+        isReKeying = true
         let summary: VaultReKeyService.Summary
         do {
-            summary = try reKey()
+            // Every note and blob, so never on the main thread.
+            summary = try await Task.detached(priority: .userInitiated) { [willReKey] in
+                await willReKey?()
+                return try reKey()
+            }.value
         } catch {
+            isReKeying = false
             if syncWasRunning { setupSync() }
             throw error
         }
+        // Nothing can run between these two: saving reopens with the key in place.
+        isReKeying = false
         await didChangeMasterKey(to: newKey, restartSync: syncWasRunning)
         return summary
     }
+
+    /// How long a key change waits for a sync in progress.
+    @ObservationIgnored var syncShutdownTimeout: Duration = .seconds(30)
+
+    /// Runs just before re-encrypting. Tests hold a re-key here, as on a small
+    /// vault it's over too quickly to do anything during it.
+    @ObservationIgnored var willReKey: (@Sendable () async -> Void)?
 
     /// Detach the sync service so nothing new can start, and wait for a sync
     /// in progress to finish. False if one was still running at the deadline.
     private func stopSyncForKeyChange() async -> Bool {
         guard let service = syncService else { return true }
         syncService = nil
-        return await service.shutDown()
+        return await service.shutDown(timeout: syncShutdownTimeout)
     }
 
     /// After the vault has been re-encrypted under `newKey`: use it from now
@@ -1870,10 +2077,19 @@ final class AppState {
     /// Face ID stores the master key itself, so without the refresh the next
     /// Face ID unlock would load the old key and no note would decrypt.
     private func didChangeMasterKey(to newKey: SymmetricKey, restartSync: Bool) async {
+        // It may have locked while the vault was being re-encrypted. Unlocking
+        // finds the new key, so there's nothing to load, and Face ID's copy is
+        // refreshed by the next password unlock.
+        guard !isLocked else {
+            biometricKeyNeedsRefresh = keyManager.isBiometricEnabled
+            return
+        }
         keyManager.masterKey = newKey
         if keyManager.isBiometricEnabled {
             try? keyManager.enableBiometricUnlock()
         }
+        // An edit that was held back while this ran.
+        flushPendingEditorNote()
         if restartSync {
             setupSync()
         }
@@ -1887,6 +2103,18 @@ final class AppState {
 
     // MARK: - Settings
 
+    /// The list's sort order, kept for next time.
+    func setSortOrder(_ order: SortOrder) {
+        var updated = settings
+        updated.sort = order
+        do {
+            try updateSettings(updated)
+        } catch {
+            Log.debug("[Settings] couldn't save the sort order: \(error)")
+            sortOrder = order
+        }
+    }
+
     func updateSettings(_ newSettings: UserSettings) throws {
         guard let settingsRepo else { return }
         settings = newSettings
@@ -1894,6 +2122,16 @@ final class AppState {
         sortOrder = newSettings.sort
         keyManager.autoLockTimeout = TimeInterval(newSettings.autoLockTimeout * 60)
     }
+}
+
+/// What `MainView` tells the user about the account's key.
+enum AccountKeyNotice: Equatable {
+    /// The server's copy of the key is wrapped with a password this device
+    /// doesn't have, so the notes password was changed on another device.
+    case passwordChangedElsewhere
+    /// This vault's existing password matches the account password, so the
+    /// server could open the account's key.
+    case passwordMatchesAccount
 }
 
 /// The account's key, opened with the notes password, and that password,
@@ -1910,6 +2148,8 @@ enum AppStateError: LocalizedError {
     case wrongPassword
     /// A sync was still running when the vault's key was about to change.
     case syncBusy
+    /// The vault is being re-encrypted, so nothing can be saved for the moment.
+    case vaultBusy
     /// A new notes password is shorter than `PasswordPolicy` allows.
     case passwordTooShort
 
@@ -1920,6 +2160,7 @@ enum AppStateError: LocalizedError {
         case .invalidSalt: return "Invalid encryption salt"
         case .wrongPassword: return "Incorrect password"
         case .syncBusy: return "Sync is still running. Try again in a moment."
+        case .vaultBusy: return L.vaultBusy
         case .passwordTooShort: return L.notesPasswordTooShort(PasswordPolicy.minimumNotesPasswordLength)
         }
     }

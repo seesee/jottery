@@ -93,7 +93,7 @@ The record outlives the accounts it mentions, so it keeps ids, addresses and use
 
 - Admin sessions use UUID v4 tokens, SHA-256 hashed before storage
 - User portal sessions use the same mechanism
-- Default session expiry: 7 days (configurable via `SESSION_EXPIRY_DAYS`)
+- Default session expiry: 1 day (configurable via `SESSION_EXPIRY_DAYS`). A session is a way into the account, its settings and its wrapped key, so it's kept short. The cost is signing in to the dashboards daily. Device keys don't expire, so sync isn't affected
 - Sessions are invalidated on logout
 - Changing a password ends the account's other sessions, and an admin reset ends all of them. Device keys aren't tied to the password, so they keep working unless the admin also asks to revoke them
 - With `ENABLE_HSTS=true`, the admin dashboard and user portal keep their session in an HttpOnly, Secure, SameSite=Strict cookie, scoped to their own API, which script can't read. A request that changes anything must also carry a custom header, so another site can't forge one. HttpOnly stops a token being stolen, not a script in the same origin using the session while it lasts, so serving the dashboards from their own origin is stronger still
@@ -133,7 +133,7 @@ Before deploying Jottery to production, complete this checklist:
 
 - [ ] **Configure session expiry**
   ```bash
-  -e SESSION_EXPIRY_DAYS=1  # Shorter for sensitive environments
+  -e SESSION_EXPIRY_DAYS=1  # The default. Raise it only if daily sign-in is a real cost
   ```
 
 - [ ] **Set up database backups**
@@ -160,10 +160,10 @@ Before deploying Jottery to production, complete this checklist:
 | Variable | Default | Security Impact |
 |----------|---------|-----------------|
 | `DEFAULT_ADMIN_PASSWORD` | *(none)* | **Critical** — If unset, a random password is generated and logged once |
-| `SESSION_EXPIRY_DAYS` | `7` | Lower values reduce session hijacking window |
+| `SESSION_EXPIRY_DAYS` | `1` | Lower values reduce session hijacking window |
 | `CORS_ALLOWED_ORIGINS` | *(none)* | Restrict to trusted domains |
 | `TRUSTED_PROXY_HOPS` | `0` (`1` in the Docker image) | Set to the number of proxies in front of the server. Too low and clients share one rate limit; too high and they can forge their address |
-| `MAX_PAYLOAD_SIZE` | `5242880` | Limits upload size (DoS prevention) |
+| `MAX_PAYLOAD_SIZE` | `104857600` | Limits request size (DoS prevention). Each user's upload limit still applies beneath it |
 | `ENABLE_HSTS` | `false` | Set to `true` on HTTPS deployments so browsers refuse to downgrade to plain HTTP |
 | `ADMIN_ALLOWED_IPS` | *(everyone)* | Limits who can reach the admin dashboard and its API |
 
@@ -177,7 +177,9 @@ The server-side SQLite database is **not encrypted at rest**. While all sensitiv
 
 ### TUI Local Database
 
-The TUI client uses SQLCipher for its local database, which provides transparent AES-256 encryption at rest. The database password is derived from the user's vault password.
+The macOS release of the TUI uses SQLCipher for its local database, which provides transparent AES-256 encryption at rest. The database password is derived from the user's vault password.
+
+The Linux and Windows releases use plain SQLite, so the database file itself isn't encrypted. Notes and tags inside it still are, but your email, server address, attachment names and dates are not. The TUI says so on its unlock screen. On Linux and macOS the file can only be read by your own user. For anything stronger, use full-disk encryption.
 
 ### Remember Password Feature (TUI)
 
@@ -196,7 +198,14 @@ The TUI "Remember Password" feature has two backends:
 
 ### Browser Session Storage
 
-The web client can optionally store an encrypted session token in localStorage for convenience. This is **not** synced to the server.
+The web client can keep your notes password in the browser, so you don't have to type it each time:
+
+- **Remember Password** keeps it in `localStorage`, until you turn the option off.
+- **Persist Session** keeps it in `sessionStorage`, until the tab closes.
+
+Either way it's the password itself, base64 encoded. That isn't encryption: anyone who can read your browser profile, and any script running on the same origin, can recover the actual password. It is **not** synced to the server.
+
+**Recommendation**: Don't use either option on a shared or untrusted machine.
 
 ### Password Recovery
 
@@ -215,6 +224,8 @@ With envelope encryption, the server stores a wrapped copy of the master key, bu
 The server-stored wrapped master key is encrypted with a key derived from `password + userId` using PBKDF2 with 1,000,000 iterations. An attacker who compromises the server database would need to brute-force the user's password to unwrap the master key. The high iteration count makes this computationally expensive.
 
 The wrapped key blob contains no information about the password — it is indistinguishable from random data without the correct wrapping key.
+
+**This depends on your notes password being different from your account password.** The server receives your account password in plaintext when you sign in, so if the two match, whoever controls the server has what it takes to unwrap your master key, with no brute force needed. Clients refuse a match when you choose a new password, and warn about an existing one when they can tell.
 
 ## Security Best Practices
 
@@ -239,7 +250,7 @@ The wrapped key blob contains no information about the password — it is indist
 
 ### What Jottery Protects Against
 
-- **Server compromise** — Attacker gains encrypted blobs, not plaintext. The wrapped master key requires the user's password to unwrap.
+- **Server compromise** — Attacker gains encrypted blobs, not plaintext. The wrapped master key requires the user's notes password to unwrap, which is why it must differ from the account password (see [Wrapped Key Security](#wrapped-key-security)).
 - **Network eavesdropping** — TLS + client-side encryption. Even without TLS, note content is encrypted.
 - **Unauthorised access** — Authentication required for all operations.
 - **Accidental data exposure** — All sensitive data is encrypted before leaving the client.

@@ -341,6 +341,54 @@ class BackupServiceTest {
         ).joinToString(".")
     }
 
+    /** A real file from another client, restored onto nothing but its password. */
+    private fun restoreFile(file: java.io.File, password: String) = runBlocking {
+        val vault = Vault()
+        val source = BackupSource { file.inputStream() }
+        val plan = vault.backup.inspect(source, password, null)
+        assertEquals("every note opens", 0, plan.unreadable)
+        vault.backup.restoreAsNewVault(source, plan)
+        vault to SecretKeySpec(plan.keyBytes(), "AES")
+    }
+
+    @Test fun `the real file written by the iOS app restores completely`() = runBlocking {
+        val (vault, key) = restoreFile(
+            RepoFile.at("src/test/fixtures/ios-v3.jottery-backup"),
+            "notes-password-correct-horse",
+        )
+
+        val notes = vault.notes.listAllRaw().map { vault.notes.get(it.id, key)!! }
+        assertEquals(2, notes.size)
+        val fromIos = notes.single { it.content.contains("From iOS") }
+        assertTrue(notes.single { it.content.contains("no tags at all") }.tags.isEmpty())
+        assertEquals(1, fromIos.attachments.size)
+        val blob = vault.attachments.getBlob(fromIos.attachments[0].data)!!
+        val bytes = CryptoService.decrypt(CryptoService.parseEncryptedJSON(String(blob)), key)
+        assertTrue(bytes.isNotEmpty())
+        assertTrue(fromIos.attachments[0].filename.isNotEmpty())
+        assertEquals(1, vault.versions.getVersions(fromIos.id).size)
+        val search = vault.searches.listActive(key).single()
+        assertEquals("iOS search", search.name)
+        assertEquals("#ios", search.query)
+    }
+
+    @Test fun `the files written by this app on a device read back`() = runBlocking {
+        val cases = listOf(
+            "android-v3-legacy.jottery-backup" to "notes-password-correct-horse",
+            "android-v3-envelope.jottery-backup" to "notes-password-battery-staple",
+        )
+        for ((name, password) in cases) {
+            val (vault, key) = restoreFile(
+                RepoFile.at("android-native/app/src/test/resources/backup/$name"),
+                password,
+            )
+            val notes = vault.notes.listAllRaw().map { vault.notes.get(it.id, key)!! }
+            val main = notes.single { it.content.startsWith("From Android") }
+            assertEquals(setOf("android", "fixture"), main.tags.toSet())
+            assertEquals("hello.txt", main.attachments.single().filename)
+        }
+    }
+
     @Test fun `a backup written by iOS restores`() = runBlocking {
         val salt = CryptoService.generateSalt()
         val key = CryptoService.deriveKey(password, salt, CryptoService.MIN_ITERATIONS)

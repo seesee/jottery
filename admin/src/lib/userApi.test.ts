@@ -298,12 +298,13 @@ describe('UserApiClient', () => {
         status: 204,
       });
 
-      await userApi.deactivateAccount();
+      await userApi.deactivateAccount('the-password');
 
       expect(mockFetch).toHaveBeenCalledWith(
         '/api/v1/user/account?mode=deactivate',
         expect.objectContaining({
           method: 'DELETE',
+          body: JSON.stringify({ currentPassword: 'the-password' }),
         }),
       );
 
@@ -321,15 +322,125 @@ describe('UserApiClient', () => {
         status: 204,
       });
 
-      await userApi.deleteAccount();
+      await userApi.deleteAccount('the-password');
 
       expect(mockFetch).toHaveBeenCalledWith(
         '/api/v1/user/account?mode=delete',
         expect.objectContaining({
           method: 'DELETE',
+          body: JSON.stringify({ currentPassword: 'the-password' }),
         }),
       );
 
+      expect(sessionStore['user_session_token']).toBeUndefined();
+    });
+
+    it('keeps the session when the password is refused', async () => {
+      sessionStore['user_session_token'] = 'auth-token';
+      const userApi = await createFreshApiClient();
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: () => Promise.resolve({ error: 'Unauthorized' }),
+      });
+
+      await expect(userApi.deleteAccount('wrong')).rejects.toMatchObject({ status: 401 });
+      expect(sessionStore['user_session_token']).toBe('auth-token');
+    });
+  });
+
+  describe('checkStatus', () => {
+    const body = { exists: true, isApproved: false, isActive: true };
+
+    it('proves who is asking with the password', async () => {
+      const userApi = await createFreshApiClient();
+      mockFetch.mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve(body) });
+
+      await expect(userApi.checkStatus('me@example.com', 'the-password')).resolves.toEqual(body);
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/v1/user/status',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ email: 'me@example.com', password: 'the-password' }),
+        }),
+      );
+    });
+
+    for (const status of [404, 405]) {
+      it(`asks the old way on a server that answers ${status}, without sending the password`, async () => {
+        const userApi = await createFreshApiClient();
+        mockFetch
+          .mockResolvedValueOnce({ ok: false, status, json: () => Promise.reject(new Error('no body')) })
+          .mockResolvedValueOnce({ ok: true, status: 200, json: () => Promise.resolve(body) });
+
+        await expect(userApi.checkStatus('me+x@example.com', 'the-password')).resolves.toEqual(body);
+
+        const [url, options] = mockFetch.mock.calls[1];
+        expect(url).toBe('/api/v1/user/status?email=me%2Bx%40example.com');
+        expect(options.method).toBe('GET');
+        expect(url + JSON.stringify(options)).not.toContain('the-password');
+      });
+    }
+
+    it('reports a wrong password, and doesn\'t fall back to asking without one', async () => {
+      const userApi = await createFreshApiClient();
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: () => Promise.resolve({ error: 'Unauthorized' }),
+      });
+
+      await expect(userApi.checkStatus('me@example.com', 'wrong')).rejects.toMatchObject({ status: 401 });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('deleteAllNotes', () => {
+    it('sends the password in the body', async () => {
+      sessionStore['user_session_token'] = 'auth-token';
+      const userApi = await createFreshApiClient();
+
+      mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
+
+      await userApi.deleteAllNotes('the-password');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/v1/user/notes',
+        expect.objectContaining({
+          method: 'DELETE',
+          body: JSON.stringify({ currentPassword: 'the-password' }),
+        }),
+      );
+    });
+
+    it('keeps the session when the password is refused', async () => {
+      sessionStore['user_session_token'] = 'auth-token';
+      const userApi = await createFreshApiClient();
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: () => Promise.resolve({ error: 'Unauthorized' }),
+      });
+
+      await expect(userApi.deleteAllNotes('wrong')).rejects.toMatchObject({ status: 401 });
+      expect(sessionStore['user_session_token']).toBe('auth-token');
+    });
+
+    it('still treats a 401 with no body as an expired session', async () => {
+      sessionStore['user_session_token'] = 'auth-token';
+      const userApi = await createFreshApiClient();
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: () => Promise.reject(new Error('no body')),
+      });
+
+      await expect(userApi.deleteAllNotes('whatever')).rejects.toMatchObject({ status: 401 });
       expect(sessionStore['user_session_token']).toBeUndefined();
     });
   });

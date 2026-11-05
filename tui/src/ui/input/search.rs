@@ -44,7 +44,7 @@ pub fn handle_search_key(app: &mut App, key: KeyEvent) -> Result<bool> {
             app.search_active = false;
             app.search_input.clear();
             app.invalidate_filter_cache();
-            app.selected_note = 0;
+            app.select_note_at(0);
             // Clear tag completions
             app.search_tag_completions.clear();
             app.search_tag_completion_index = 0;
@@ -72,7 +72,7 @@ pub fn handle_search_key(app: &mut App, key: KeyEvent) -> Result<bool> {
         KeyCode::Char(c) => {
             app.search_input.push(c);
             app.invalidate_filter_cache();
-            app.selected_note = 0; // Reset selection when search changes
+            app.select_note_at(0); // Reset selection when search changes
             let filtered = app.filtered_notes();
             app.selected_note_id = filtered.first().map(|n| n.id.clone());
             // Clear tag completions when input changes
@@ -82,7 +82,7 @@ pub fn handle_search_key(app: &mut App, key: KeyEvent) -> Result<bool> {
         KeyCode::Backspace => {
             app.search_input.pop();
             app.invalidate_filter_cache();
-            app.selected_note = 0;
+            app.select_note_at(0);
             let filtered = app.filtered_notes();
             app.selected_note_id = filtered.first().map(|n| n.id.clone());
             // Clear tag completions when input changes
@@ -191,7 +191,7 @@ fn handle_search_tab(app: &mut App) {
             // Replace the partial with the full tag
             app.search_input = format!("{}#{}", &app.search_input[..hash_index], completion);
             app.invalidate_filter_cache();
-            app.selected_note = 0;
+            app.select_note_at(0);
             let filtered = app.filtered_notes();
             app.selected_note_id = filtered.first().map(|n| n.id.clone());
         }
@@ -224,7 +224,7 @@ fn handle_search_backtab(app: &mut App) {
         let completion = &app.search_tag_completions[app.search_tag_completion_index];
         app.search_input = format!("{}#{}", &app.search_input[..hash_index], completion);
         app.invalidate_filter_cache();
-        app.selected_note = 0;
+        app.select_note_at(0);
         let filtered = app.filtered_notes();
         app.selected_note_id = filtered.first().map(|n| n.id.clone());
     }

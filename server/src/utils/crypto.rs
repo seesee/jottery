@@ -12,9 +12,28 @@ pub fn hash_sha256(data: &str) -> String {
     format!("{:x}", hasher.finalize())
 }
 
+/// A short stand-in for an email address in logs. It lets someone reading them see
+/// that attempts share an address without the logs saying whose it is, or holding a
+/// password that was typed into the wrong field.
+pub fn log_id(email: &str) -> String {
+    let mut id = hash_sha256(&email.trim().to_lowercase());
+    id.truncate(12);
+    id
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_log_id_says_nothing_but_stays_the_same() {
+        let id = log_id("Someone@Example.com ");
+
+        assert_eq!(id, log_id("someone@example.com"));
+        assert_ne!(id, log_id("someone.else@example.com"));
+        assert_eq!(id.len(), 12);
+        assert!(!id.contains("someone"));
+    }
 
     #[test]
     fn test_hash_sha256() {

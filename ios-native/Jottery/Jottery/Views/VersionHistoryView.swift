@@ -61,8 +61,13 @@ struct VersionHistoryView: View {
                     version: version,
                     content: previewContent ?? "",
                     onRestore: {
-                        try? appState.restoreVersion(noteId: note.id, version: version)
-                        dismiss()
+                        do {
+                            try appState.restoreVersion(noteId: note.id, version: version)
+                            dismiss()
+                        } catch {
+                            selectedVersion = nil
+                            appState.reportError(L.errorCouldntRestoreVersion)
+                        }
                     }
                 )
             }

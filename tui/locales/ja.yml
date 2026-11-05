@@ -118,6 +118,7 @@ editor:
   temp_write_error: 一時ファイルへの書き込みに失敗
   temp_read_error: 一時ファイルの読み込みに失敗
   default_editor: vi
+  temp_on_disk: "このマシンにはメモリ上の一時フォルダーがないため、開いているノートは閉じるまでディスク上にあります。"
 attachment:
   add: 添付ファイルを追加
   add_failed: "添付ファイルの追加に失敗: %{error}"
@@ -176,6 +177,8 @@ settings:
   press_enter_cycle: Enterを押して切り替え
   press_enter_toggle: Enterを押してトグル
   disabled: 無効
+  sort_order: "並び順"
+  language_auto: "システムと同じ"
 sync:
   push: サーバーにプッシュ
   pull: サーバーからプル
@@ -213,6 +216,23 @@ sync:
   notes: 件のノート
   skipped_notes: "サーバーの %{count} 件の項目を読み取れなかったためスキップしました"
   rejected_notes: "%{count} 件のノートがサーバーと競合しています。Jottery を開いて解決してください。"
+  rate_limited: "サーバーから、再度同期するまで %{seconds} 秒待つよう指示されました。"
+  key_refused: "サーバーがこのデバイスの API キーを受け付けませんでした。デバイスを登録し直してください。"
+  server_busy: "サーバーが混み合っています。Jottery は %{seconds} 秒後に再試行します。"
+  quota_exceeded: "アカウントの保存容量が上限に達したため、変更をアップロードできませんでした。変更はこのデバイスに安全に保存されています。ごみ箱を空にするか添付ファイルを削除して空きを作ってください。"
+  deletions_held_title: "多数のノートが削除されました"
+  deletions_held: "サーバーによると、%{count} 件のノートが別の場所で完全に削除されました。心当たりはありますか?"
+  deletions_held_warning: "y: ここでごみ箱に移動。n: 保持してサーバーに戻す。"
+  deletions_held_cli: "サーバーによると、%{count} 件のノートが別の場所で削除されました。ここにはまだあります。Jottery を開いて判断してください。"
+  deletions_applied: "%{count} 件のノートをごみ箱に移動しました"
+  force_title: "完全再同期を強制"
+  force_confirm: "すべてのノートと添付ファイルをサーバーから取得しますか?"
+  force_note: "送信していないローカルの変更は保持されます。"
+  disconnect_title: "同期を切断"
+  disconnect_confirm: "このデバイスをサーバーから切断しますか?"
+  disconnect_warning: "ノートはここに残ります。デバイスはサーバーで失効します。"
+  disconnect_conflicts: "%{count} 件のノートに未解決の競合があります。サーバー側のコピーはここから失われます。"
+  device_still_registered: "ここでは切断しましたが、サーバーに通知できなかったため、このデバイスのキーはまだ有効です。ユーザーポータルで失効させてください。"
 
 # 受信トレイ
 inbox:
@@ -259,6 +279,7 @@ register:
   cleared: 登録がクリアされました。最初からやり直せます。
   pending_status: 承認待ち
   password_differs: "ノートのパスワードとは別のものにしてください。"
+  insecure_endpoint: "このアドレスは暗号化されていない HTTP を使うため、アカウントのパスワードとデバイスキーが途中で読み取られる可能性があります。https:// を使うか、承知のうえでこのアドレスをもう一度入力してください。"
 color_scheme:
   default_dark: デフォルトダーク
   default_light: デフォルトライト
@@ -484,6 +505,28 @@ help:
   z_archive_desc: "選択したノートをアーカイブ（アーカイブモードでは元に戻す）"
   multi_z_archive_key: "z"
   multi_z_archive_desc: "選択したノートをアーカイブ"
+  search_or_key: "a | b"
+  search_or_desc: "いずれかに一致 (OR)"
+  search_phrase_key: "\"a phrase\""
+  search_phrase_desc: "この語句をこの順序で検索"
+  search_wildcard_key: "word* / *word"
+  search_wildcard_desc: "語の先頭または末尾に一致"
+  search_exclude_tag_key: "-#tag"
+  search_exclude_tag_desc: "このタグのノートを除外"
+  search_attachment_key: "has:attachment"
+  search_attachment_desc: "添付ファイルのあるノート"
+  search_archived_key: "archived"
+  search_archived_desc: "アーカイブを検索"
+  search_created_key: "created:>2024-01-01"
+  search_created_desc: "指定日より後に作成 (< と a..b も可)"
+  search_modified_key: "modified:>2024-01-01"
+  search_modified_desc: "指定日より後に更新 (< と a..b も可)"
+  search_words_key: "words:>100"
+  search_words_desc: "語数 (< と a..b も可)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "選択したノートからタグを削除"
+  multi_colour_key: "C"
+  multi_colour_desc: "選択したノートの色を設定"
 cli:
   # 代替 (一部で使用)
   list: ノートを一覧表示
@@ -555,6 +598,13 @@ cli:
   attach_file_help: "添付するファイル"
   attachment_number_help: "どの添付ファイルか（show の番号）"
   archived_help: "代わりにアーカイブ済みのノートを一覧表示"
+  import_summary: "%{created} 件追加、%{updated} 件更新、%{skipped} 件は最新です"
+  import_failed: "ファイル内の %{count} 件をインポートできませんでした"
+  password_change_required: "このアカウントは先にパスワードを変更する必要があります。Web アプリにサインインして変更してから、もう一度お試しください。"
+  insecure_endpoint: "%{endpoint} は暗号化されていない HTTP を使うため、パスワードが途中で読み取られる可能性があります。https:// を使うか、承知のうえで --allow-insecure-http を指定してください。"
+  allow_insecure_http_help: "パスワードを暗号化されていない HTTP で公開ホストに送信することを許可"
+  password_flag_deprecated: "コマンドラインのパスワードは ps やシェル履歴に表示されます。代わりに --password-stdin か JOTTERY_PASSWORD を使ってください。"
+  password_stdin_help: "パスワードを尋ねずに stdin から 1 行ずつ読み取る"
 status:
   locked: ロック中
   unlocked: ロック解除
@@ -577,6 +627,12 @@ bulk:
   add_tags_to: タグを追加
   export_notes_to: エクスポート
   archived: "%{count} 件のノートをアーカイブしました"
+  tags_removed: "%{count} 件のノートからタグを削除しました: %{tags}"
+  remove_tags_from: "%{count} 件のノートからタグを削除"
+  enter_colour: "色の名前を入力 (空欄で解除):"
+  colour_of: "%{count} 件のノートの色を設定"
+  colour_set: "%{count} 件のノートの色を変更しました"
+  unknown_colour: "%{colour} という色はありません"
 time:
   just_now: たった今
   minutes_ago: "%{count} 分前"
@@ -709,3 +765,6 @@ envelope:
   unwrap_failed: "ノートのパスワードではこのアカウントのキーを開けません。古いバージョンで保存された可能性があります。すでに接続済みのデバイスで Jottery のロックを解除すると修復されるので、その後もう一度お試しください。"
   rekey_failed: "ローカルのノートをこのアカウントのキーに移行できなかったため、何も変更されていません: %{error}"
   diverged: "このデバイスのキーはアカウントのキーと異なります。他のデバイスのノートをここで開けない場合があります。"
+  password_changed_elsewhere: "ノートのパスワードが別のデバイスで変更されたため、何も上書きしていません。このデバイスは今も古いパスワードでロック解除されます。新しいデバイスを接続できるよう、ここでも同じパスワードに変更してください。"
+  server_update_pending: "このデバイスのパスワードは変更されましたが、サーバー上のキーのコピーを更新できませんでした。Jottery が再試行します。それまで新しいデバイスは新しいパスワードで接続できません。"
+  key_keeps_changing: "サーバー上のアカウントのキーが変更され続けているため、このデバイスは変更を行いませんでした。しばらくしてからもう一度お試しください。"

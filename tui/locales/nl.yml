@@ -118,6 +118,7 @@ editor:
   temp_write_error: Schrijven naar tijdelijk bestand mislukt
   temp_read_error: Lezen tijdelijk bestand mislukt
   default_editor: vi
+  temp_on_disk: "Deze computer heeft geen tijdelijke map in het geheugen, dus een geopende notitie staat op schijf tot je hem sluit."
 attachment:
   add: Bijlage toevoegen
   add_failed: "Toevoegen bijlage mislukt: %{error}"
@@ -176,6 +177,8 @@ settings:
   press_enter_cycle: druk op Enter om door te bladeren
   press_enter_toggle: druk op Enter om te schakelen
   disabled: uitgeschakeld
+  sort_order: "Sortering"
+  language_auto: "Zelfde als systeem"
 sync:
   push: Naar server pushen
   pull: Van server pullen
@@ -213,6 +216,23 @@ sync:
   notes: notities
   skipped_notes: "%{count} items van de server konden niet worden gelezen en zijn overgeslagen"
   rejected_notes: "%{count} notities conflicteren met de server. Open Jottery om ze op te lossen."
+  rate_limited: "De server heeft Jottery gevraagd %{seconds} seconden te wachten voordat er opnieuw wordt gesynchroniseerd."
+  key_refused: "De server heeft de API-sleutel van dit apparaat niet geaccepteerd. Registreer het apparaat opnieuw."
+  server_busy: "De server is bezet. Jottery probeert het over %{seconds} seconden opnieuw."
+  quota_exceeded: "Je account heeft de opslaglimiet bereikt, dus wijzigingen konden niet worden geüpload. Ze staan veilig op dit apparaat. Leeg de prullenbak of verwijder bijlagen om ruimte te maken."
+  deletions_held_title: "Veel notities verwijderd"
+  deletions_held: "Volgens de server zijn %{count} notities elders definitief verwijderd. Heb jij dit gedaan?"
+  deletions_held_warning: "y: hier naar de prullenbak verplaatsen. n: bewaren en terugzetten op de server."
+  deletions_held_cli: "Volgens de server zijn %{count} notities elders verwijderd. Ze staan hier nog: open Jottery om te beslissen."
+  deletions_applied: "%{count} notities naar de prullenbak verplaatst"
+  force_title: "Volledige hersynchronisatie forceren"
+  force_confirm: "ALLE notities en bijlagen van de server ophalen?"
+  force_note: "Lokale wijzigingen die nog niet zijn verzonden, blijven behouden."
+  disconnect_title: "Sync loskoppelen"
+  disconnect_confirm: "Dit apparaat loskoppelen van de server?"
+  disconnect_warning: "Je notities blijven hier. Het apparaat wordt op de server ingetrokken."
+  disconnect_conflicts: "%{count} notities hebben onopgeloste conflicten. De serverkopieën daarvan worden hier vergeten."
+  device_still_registered: "Hier losgekoppeld, maar de server kon niet worden bereikt, dus de sleutel van dit apparaat werkt nog. Trek hem in via het gebruikersportaal."
 
 # Postvak IN
 inbox:
@@ -259,6 +279,7 @@ register:
   cleared: Registratie gewist. U kunt opnieuw beginnen.
   pending_status: In afwachting van goedkeuring
   password_differs: "Dit moet anders zijn dan je notitiewachtwoord."
+  insecure_endpoint: "Dit adres gebruikt onversleuteld HTTP, dus je accountwachtwoord en apparaatsleutel kunnen onderweg worden gelezen. Gebruik https:// of voer dit adres nogmaals in om dit te accepteren."
 color_scheme:
   default_dark: Standaard donker
   default_light: Standaard licht
@@ -484,6 +505,28 @@ help:
   z_archive_desc: "Geselecteerde notitie archiveren (of terughalen in archiefmodus)"
   multi_z_archive_key: "z"
   multi_z_archive_desc: "Geselecteerde notities archiveren"
+  search_or_key: "a | b"
+  search_or_desc: "Een van beide (OF)"
+  search_phrase_key: "\"a phrase\""
+  search_phrase_desc: "Deze woorden in deze volgorde"
+  search_wildcard_key: "word* / *word"
+  search_wildcard_desc: "Een woord begint of eindigt hiermee"
+  search_exclude_tag_key: "-#tag"
+  search_exclude_tag_desc: "Notities met deze tag uitsluiten"
+  search_attachment_key: "has:attachment"
+  search_attachment_desc: "Notities met bijlagen"
+  search_archived_key: "archived"
+  search_archived_desc: "In het archief zoeken"
+  search_created_key: "created:>2024-01-01"
+  search_created_desc: "Gemaakt na een datum (ook < en a..b)"
+  search_modified_key: "modified:>2024-01-01"
+  search_modified_desc: "Gewijzigd na een datum (ook < en a..b)"
+  search_words_key: "words:>100"
+  search_words_desc: "Aantal woorden (ook < en a..b)"
+  multi_remove_tags_key: "T"
+  multi_remove_tags_desc: "Tags verwijderen van geselecteerde notities"
+  multi_colour_key: "C"
+  multi_colour_desc: "Kleur van geselecteerde notities instellen"
 cli:
   # Basis (op sommige plaatsen gebruikt)
   list: Notities weergeven
@@ -555,6 +598,13 @@ cli:
   attach_file_help: "Bestand om toe te voegen"
   attachment_number_help: "Welke bijlage, genummerd zoals bij show"
   archived_help: "In plaats daarvan gearchiveerde notities tonen"
+  import_summary: "%{created} toegevoegd, %{updated} bijgewerkt, %{skipped} al up-to-date"
+  import_failed: "%{count} items in het bestand konden niet worden geïmporteerd"
+  password_change_required: "Dit account moet eerst zijn wachtwoord wijzigen. Meld je daarvoor aan bij de webapp en probeer het opnieuw."
+  insecure_endpoint: "%{endpoint} gebruikt onversleuteld HTTP, dus het wachtwoord kan onderweg worden gelezen. Gebruik https:// of geef --allow-insecure-http op om dit te accepteren."
+  allow_insecure_http_help: "Sta toe dat een wachtwoord via onversleuteld HTTP naar een openbare host gaat"
+  password_flag_deprecated: "Een wachtwoord op de opdrachtregel is zichtbaar in ps en de shellgeschiedenis. Gebruik in plaats daarvan --password-stdin of JOTTERY_PASSWORD."
+  password_stdin_help: "Lees wachtwoorden van stdin, één per regel, in plaats van te vragen"
 status:
   locked: Vergrendeld
   unlocked: Ontgrendeld
@@ -577,6 +627,12 @@ bulk:
   add_tags_to: Labels toevoegen aan
   export_notes_to: Exporteren
   archived: "%{count} notities gearchiveerd"
+  tags_removed: "Tags verwijderd van %{count} notities: %{tags}"
+  remove_tags_from: "Tags verwijderen van %{count} notities"
+  enter_colour: "Voer een kleurnaam in (leeg om te wissen):"
+  colour_of: "Kleur van %{count} notities instellen"
+  colour_set: "Kleur gewijzigd op %{count} notities"
+  unknown_colour: "Er is geen kleur met de naam %{colour}"
 time:
   just_now: zojuist
   minutes_ago: "%{count} minuten geleden"
@@ -709,3 +765,6 @@ envelope:
   unwrap_failed: "Je notitiewachtwoord kan de sleutel van dit account niet openen. Die is mogelijk door een oudere versie opgeslagen. Ontgrendel Jottery op een apparaat dat al verbonden is, dat lost het op, en probeer het opnieuw."
   rekey_failed: "Je lokale notities konden niet naar de sleutel van dit account worden overgezet, dus er is niets gewijzigd: %{error}"
   diverged: "De sleutel van dit apparaat wijkt af van die van het account. Notities van je andere apparaten worden hier mogelijk niet geopend."
+  password_changed_elsewhere: "Je notitiewachtwoord is op een ander apparaat gewijzigd, dus er is niets overschreven. Dit apparaat ontgrendelt nog met het oude wachtwoord. Wijzig het ook hier, zodat nieuwe apparaten kunnen koppelen."
+  server_update_pending: "Je wachtwoord is op dit apparaat gewijzigd, maar de kopie van je sleutel op de server kon niet worden bijgewerkt. Jottery probeert het opnieuw. Tot die tijd kan een nieuw apparaat niet koppelen met het nieuwe wachtwoord."
+  key_keeps_changing: "De sleutel van het account verandert steeds op de server, dus dit apparaat heeft hem met rust gelaten. Probeer het zo opnieuw."

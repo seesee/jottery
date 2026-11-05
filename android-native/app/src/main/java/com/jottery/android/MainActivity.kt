@@ -1,11 +1,11 @@
 package com.jottery.android
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.WindowManager
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
@@ -14,20 +14,27 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.jottery.android.model.DecryptedNote
 import com.jottery.android.ui.navigation.JotteryNavigation
 import com.jottery.android.ui.theme.JotteryTheme
+import com.jottery.android.util.AttachmentFiles
+import com.jottery.android.util.ShareIntake
 import com.jottery.android.viewmodel.AppState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity() {
+// BiometricPrompt needs a FragmentActivity
+class MainActivity : FragmentActivity() {
 
     private val appState: AppState by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        DecryptedNote.untitled = getString(R.string.note_untitled)
         // Set before the first frame, so a decrypted note is never captured
         applyScreenSecurity(appState.screenSecurity.value)
         enableEdgeToEdge()
@@ -46,6 +53,36 @@ class MainActivity : ComponentActivity() {
             repeatOnLifecycle(Lifecycle.State.CREATED) {
                 appState.screenSecurity.collect(::applyScreenSecurity)
             }
+        }
+
+        // Not after a rotation, which would deliver the same share twice
+        if (savedInstanceState == null) receiveShare(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        receiveShare(intent)
+    }
+
+    /**
+     * Files are read now, because permission to read them ends with this activity,
+     * and held in memory until the vault opens. Nothing shared reaches the disk
+     * unencrypted.
+     */
+    private fun receiveShare(intent: Intent) {
+        val shared = ShareIntake.parse(intent, "$packageName.attachments") ?: return
+        lifecycleScope.launch {
+            val files = shared.files.mapNotNull { uri ->
+                try {
+                    AttachmentFiles.read(contentResolver, uri)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    appState.showMessage(getString(R.string.share_file_failed))
+                    null
+                }
+            }
+            appState.receiveShare(shared.text, files)
         }
     }
 

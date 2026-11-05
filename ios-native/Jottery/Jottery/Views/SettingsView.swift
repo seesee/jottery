@@ -3,7 +3,6 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
-    @State private var settings: UserSettings = .defaults
     @State private var showSyncSetup = false
     @State private var showWipeConfirmation = false
     @State private var showImport = false
@@ -29,19 +28,19 @@ struct SettingsView: View {
             Form {
                 // General
                 Section(L.settingsGeneral) {
-                    Picker(L.settingsTheme, selection: $settings.theme) {
+                    Picker(L.settingsTheme, selection: setting(\.theme)) {
                         Text(L.settingsThemeSystem).tag("auto")
                         Text(L.settingsThemeLight).tag("light")
                         Text(L.settingsThemeDark).tag("dark")
                     }
 
-                    Picker(L.settingsSortOrder, selection: $settings.sortOrder) {
+                    Picker(L.settingsSortOrder, selection: setting(\.sortOrder)) {
                         ForEach(SortOrder.allCases, id: \.rawValue) { order in
                             Text(order.displayName).tag(order.rawValue)
                         }
                     }
 
-                    Picker(L.settingsAutoLock, selection: $settings.autoLockTimeout) {
+                    Picker(L.settingsAutoLock, selection: setting(\.autoLockTimeout)) {
                         Text(L.settingsAutoLock1Min).tag(1)
                         Text(L.settingsAutoLock5Min).tag(5)
                         Text(L.settingsAutoLock15Min).tag(15)
@@ -50,14 +49,18 @@ struct SettingsView: View {
                         Text(L.settingsAutoLockNever).tag(0)
                     }
 
-                    // Only en-GB is translated. Offering en-US changed date and
-                    // number formatting but left the copy in British English,
-                    // which reads as a bug; "System" already covers users who
-                    // want their own regional formats.
-                    Picker(L.settingsLanguage, selection: $settings.language) {
-                        Text(L.settingsLanguageSystem).tag("system")
-                        Text(L.settingsLanguageEnGB).tag("en-GB")
+                    // The system's per-app language, not a picker of our own.
+                    Button {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        LabeledContent(L.settingsLanguage, value: Locale.current.localizedString(
+                            forLanguageCode: Locale.current.language.languageCode?.identifier ?? "en"
+                        ) ?? "")
                     }
+                    .foregroundStyle(.primary)
+                    .accessibilityHint(L.settingsLanguageHint)
                 }
 
                 // Security
@@ -166,14 +169,8 @@ struct SettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(L.settingsDone) {
-                        try? appState.updateSettings(settings)
-                        dismiss()
-                    }
+                    Button(L.settingsDone) { dismiss() }
                 }
-            }
-            .onAppear {
-                settings = appState.settings
             }
             .alert(L.settingsWipeConfirmTitle, isPresented: $showWipeConfirmation) {
                 Button(L.settingsWipeConfirmAction, role: .destructive) {
@@ -215,7 +212,6 @@ struct SettingsView: View {
                 SyncSetupView(onComplete: { apiKey in
                     // Reload settings from DB after registration
                     if let loaded = try? appState.settingsRepo?.get() {
-                        settings = loaded
                         appState.settings = loaded
                     }
                     appState.setupSync(apiKey: apiKey)
@@ -309,6 +305,24 @@ struct SettingsView: View {
         appState.wipeAllData()
     }
 
+    /// One setting, saved as soon as it changes. Nothing here holds its own copy
+    /// of the settings: one taken when the sheet opened went stale once sync was
+    /// set up, and saving it turned sync off again.
+    private func setting<Value>(_ keyPath: WritableKeyPath<UserSettings, Value>) -> Binding<Value> {
+        Binding(
+            get: { appState.settings[keyPath: keyPath] },
+            set: { value in
+                var updated = appState.settings
+                updated[keyPath: keyPath] = value
+                do {
+                    try appState.updateSettings(updated)
+                } catch {
+                    appState.reportError(L.errorCouldntSaveSettings)
+                }
+            }
+        )
+    }
+
     private func exportAllNotes() {
         guard let key = appState.keyManager.masterKey else { return }
         let allNotes = appState.notes + appState.archivedNotes
@@ -345,14 +359,11 @@ struct SettingsView: View {
         KeychainService.deleteAPIKey()
         KeychainService.deleteClientId()
         try? appState.settingsRepo?.updateSync(enabled: false, endpoint: nil)
+        try? appState.syncRepo?.clearAccount()
 
-        settings.syncEnabled = false
-        settings.syncEndpoint = nil
         appState.settings.syncEnabled = false
         appState.settings.syncEndpoint = nil
-        appState.syncEnabled = false
-        appState.syncClient = nil
-        appState.syncService = nil
+        appState.teardownSync()
     }
 
     /// Unlink this device, server-side first and then locally.
@@ -381,14 +392,11 @@ struct SettingsView: View {
         KeychainService.deleteAPIKey()
         KeychainService.deleteClientId()
         try? appState.settingsRepo?.updateSync(enabled: false, endpoint: nil)
+        try? appState.syncRepo?.clearAccount()
 
-        settings.syncEnabled = false
-        settings.syncEndpoint = nil
         appState.settings.syncEnabled = false
         appState.settings.syncEndpoint = nil
-        appState.syncEnabled = false
-        appState.syncClient = nil
-        appState.syncService = nil
+        appState.teardownSync()
     }
 }
 

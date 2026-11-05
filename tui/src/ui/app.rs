@@ -38,126 +38,16 @@ use std::{
 use crate::{
     crypto::{CryptoService, KeyManager},
     db::Database,
-    models::{Note, UserSettings, sync::ConflictData},
+    models::{get_note_title, Note, SortOrder, UserSettings, sync::ConflictData},
     password_storage::{self, PasswordStorage, RetrieveResult, StorageBackendType},
     repository::{SettingsRepository, sync::SyncRepository},
+    search::SearchQuery,
 };
 
 
-use super::regex;
 use super::state::{AppState, InputMode, ViewMode};
 use super::rendering;
 use super::input;
-
-/// Search modifiers parsed from query string
-#[derive(Debug, Default)]
-struct SearchModifiers {
-    has_attachment: bool,
-    created_after: Option<String>,
-    created_before: Option<String>,
-    modified_after: Option<String>,
-    modified_before: Option<String>,
-    word_count_min: Option<usize>,
-    word_count_max: Option<usize>,
-    colors: Vec<String>,           // Color keys to match
-    color_target: ColorTarget,      // Where to look for colors
-}
-
-#[derive(Debug, Clone, PartialEq, Default)]
-enum ColorTarget {
-    #[default]
-    Both,   // Match colors on notes or tags (default)
-    Note,   // Match only note colors
-    Tag,    // Match only tag colors
-}
-
-/// Check if a note matches search criteria (excluding archive mode)
-///
-/// This is the shared search logic used by both filtered_notes() and count_opposite_mode_matches()
-fn note_matches_search(
-    note: &Note,
-    modifiers: &SearchModifiers,
-    query_parts: &[&str],
-) -> bool {
-    // has:attachment
-    if modifiers.has_attachment && note.attachments.is_empty() {
-        return false;
-    }
-
-    // created:>DATE (created after)
-    if let Some(ref date) = modifiers.created_after {
-        let note_date = note.created_at.format("%Y-%m-%d").to_string();
-        if note_date.as_str() < date.as_str() {
-            return false;
-        }
-    }
-
-    // created:<DATE (created before)
-    if let Some(ref date) = modifiers.created_before {
-        let note_date = note.created_at.format("%Y-%m-%d").to_string();
-        if note_date.as_str() > date.as_str() {
-            return false;
-        }
-    }
-
-    // modified:>DATE (modified after)
-    if let Some(ref date) = modifiers.modified_after {
-        let note_date = note.modified_at.format("%Y-%m-%d").to_string();
-        if note_date.as_str() < date.as_str() {
-            return false;
-        }
-    }
-
-    // modified:<DATE (modified before)
-    if let Some(ref date) = modifiers.modified_before {
-        let note_date = note.modified_at.format("%Y-%m-%d").to_string();
-        if note_date.as_str() > date.as_str() {
-            return false;
-        }
-    }
-
-    // words:>N (minimum word count)
-    if let Some(min) = modifiers.word_count_min {
-        let word_count = note.content.split_whitespace().count();
-        if word_count < min {
-            return false;
-        }
-    }
-
-    // words:<N (maximum word count)
-    if let Some(max) = modifiers.word_count_max {
-        let word_count = note.content.split_whitespace().count();
-        if word_count > max {
-            return false;
-        }
-    }
-
-    // Check each remaining query part (text/tag search)
-    let content_lower = note.content.to_lowercase();
-    for part in query_parts {
-        if part.is_empty() {
-            continue;
-        }
-        if let Some(tag) = part.strip_prefix('#') {
-            // Tag search
-            if !note.tags.iter().any(|t| t.to_lowercase().contains(tag)) {
-                return false;
-            }
-        } else if let Some(neg_word) = part.strip_prefix('-') {
-            // Negation
-            if content_lower.contains(neg_word) {
-                return false;
-            }
-        } else {
-            // Regular text search
-            if !content_lower.contains(part) {
-                return false;
-            }
-        }
-    }
-
-    true
-}
 
 /// Write a line to the debug log, if there is one.
 pub(crate) fn write_debug_log(debug_log: &Option<Arc<Mutex<File>>>, message: &str) {
@@ -256,6 +146,8 @@ pub struct App {
     pub(crate) last_auto_sync: Option<Instant>,
     /// When sync status was set (for auto-clearing)
     pub(crate) sync_status_set_at: Option<Instant>,
+    /// Automatic syncs wait until then, because the server asked or refused
+    pub(crate) sync_paused_until: Option<Instant>,
     /// Current color scheme (cached from settings)
     pub color_scheme: crate::ui::ColorScheme,
     /// Cached color palette names (for color cycling without allocation)
@@ -330,6 +222,12 @@ pub struct App {
     pub show_bulk_combine_confirm: bool,
     /// Show the confirmation for permanently emptying the recycle bin
     pub show_empty_bin_confirm: bool,
+    /// Notes the server says to delete, waiting for an answer. Above zero, it asks.
+    pub held_deletions: usize,
+    /// Show the confirmation for disconnecting from the sync server
+    pub show_disconnect_confirm: bool,
+    /// The plain HTTP address the user has been warned about. Entering it again accepts that.
+    pub insecure_endpoint_warned: Option<String>,
     /// Show note info modal
     pub show_note_info: bool,
     /// Rendered area for note list (for mouse click detection)
@@ -371,6 +269,16 @@ pub struct App {
     pub show_inbox_delete_all_confirm: bool,
 }
 
+
+/// The key is wiped on the way out as well as on lock. `key_manager` looks after its own
+/// copy, but this one is a plain array.
+impl Drop for App {
+    fn drop(&mut self) {
+        if let Some(key) = self.key.as_mut() {
+            key.zeroize();
+        }
+    }
+}
 
 impl App {
     /// Create a new app
@@ -447,6 +355,7 @@ impl App {
             syntax_highlighter: crate::ui::syntax::SyntaxHighlighter::new(),
             last_auto_sync: None,
             sync_status_set_at: None,
+            sync_paused_until: None,
             color_scheme: crate::ui::ColorScheme::default(),
             color_palette_cache: Vec::new(), // Populated when settings are loaded
             all_tags_cache: Vec::new(), // Populated when notes are loaded
@@ -483,6 +392,9 @@ impl App {
             show_bulk_delete_confirm: false,
             show_bulk_combine_confirm: false,
             show_empty_bin_confirm: false,
+            held_deletions: 0,
+            show_disconnect_confirm: false,
+            insecure_endpoint_warned: None,
             show_note_info: false,
             note_list_area: None,
             note_list_offset: 0,
@@ -646,6 +558,8 @@ impl App {
         self.attachment_to_confirm = None;
         self.show_force_sync_confirm = false;
         self.show_empty_bin_confirm = false;
+        self.held_deletions = 0;
+        self.show_disconnect_confirm = false;
         self.show_bulk_delete_confirm = false;
         self.show_bulk_combine_confirm = false;
         self.show_note_info = false;
@@ -665,6 +579,19 @@ impl App {
             && self.is_unlocked()
         {
             self.lock();
+            return Ok(());
+        }
+
+        // The terminal is in raw mode, so this arrives as a key rather than a signal.
+        // It means the same in every screen, and it isn't text for a prompt.
+        if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+            if matches!(self.state, AppState::NoteView) {
+                if let Err(e) = crate::ui::operations::notes::save_note(self) {
+                    self.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
+                    return Ok(());
+                }
+            }
+            self.state = AppState::Quit;
             return Ok(());
         }
 
@@ -736,7 +663,7 @@ impl App {
         self.debug_log("Auto-unlock: attempting to retrieve stored password");
         let password = match self.password_storage.retrieve() {
             RetrieveResult::Found(pwd) => {
-                self.debug_log(&format!("Auto-unlock: found password ({} chars)", pwd.len()));
+                self.debug_log("Auto-unlock: found a stored password");
                 pwd
             }
             RetrieveResult::NotFound => {
@@ -760,8 +687,11 @@ impl App {
             }
             Err(e) => {
                 self.password_input.zeroize();
-                // Delete invalid stored password
-                let _ = self.password_storage.delete();
+                // Only a wrong password makes the stored one useless. A locked file or a
+                // server that's down will pass, and the user would have to set it again.
+                if crate::vault::is_wrong_password(&e) {
+                    let _ = self.password_storage.delete();
+                }
                 Err(e).context("Auto-unlock failed")
             }
         }
@@ -822,6 +752,29 @@ impl App {
         }
 
         Ok(())
+    }
+
+    /// Move the highlight to a position in the visible list.
+    pub(crate) fn select_note_at(&mut self, index: usize) {
+        self.selected_note = index;
+        self.selected_note_id = self.filtered_notes().get(index).map(|note| note.id.clone());
+    }
+
+    /// The selected notes that are still in the list. The selection outlives a change of
+    /// search or mode, and nothing should act on notes that can't be seen.
+    pub(crate) fn visible_selection(&self) -> Vec<&Note> {
+        self.filtered_notes().into_iter()
+            .filter(|note| self.selected_note_ids.contains(&note.id))
+            .collect()
+    }
+
+    /// The ids of the selected notes a bulk action may change, which leaves out what a
+    /// single-note action would refuse.
+    pub(crate) fn editable_selection(&self) -> Vec<String> {
+        self.visible_selection().into_iter()
+            .filter(|note| !note.locked)
+            .map(|note| note.id.clone())
+            .collect()
     }
 
     /// Point `selected_note`, an index into the visible list, at the note that was
@@ -987,19 +940,34 @@ impl App {
             || inbox_items != self.inbox_items.len()
     }
 
-    /// Display order: pinned notes first, then most recently modified
-    fn display_order(a: &Note, b: &Note) -> std::cmp::Ordering {
-        match (a.pinned, b.pinned) {
-            (true, false) => std::cmp::Ordering::Less,
-            (false, true) => std::cmp::Ordering::Greater,
-            _ => b.modified_at.cmp(&a.modified_at),
+    /// Display order for two notes: pinned notes first, then as the settings say. Alpha
+    /// sorts by title, and is handled by `sort_for_display`, which works each out once.
+    fn display_order(order: SortOrder, a: &Note, b: &Note) -> std::cmp::Ordering {
+        b.pinned.cmp(&a.pinned).then_with(|| match order {
+            SortOrder::Recent | SortOrder::Alpha => b.modified_at.cmp(&a.modified_at),
+            SortOrder::Oldest => a.modified_at.cmp(&b.modified_at),
+            SortOrder::Created => b.created_at.cmp(&a.created_at),
+        })
+    }
+
+    /// Put indices into `notes` in display order.
+    fn sort_for_display(&self, indices: &mut [usize]) {
+        let order = self.settings.sort_order;
+
+        if order == SortOrder::Alpha {
+            indices.sort_by_cached_key(|&index| {
+                let note = &self.notes[index];
+                (!note.pinned, get_note_title(&note.content, &note.tags).to_lowercase())
+            });
+        } else {
+            indices.sort_by(|&a, &b| Self::display_order(order, &self.notes[a], &self.notes[b]));
         }
     }
 
     /// Sort notes by pinned status first (pinned at top), then by modified_at descending
     #[cfg(test)]
     pub fn sort_notes_by_pinned_and_date(notes: &mut [&Note]) {
-        notes.sort_by(|a, b| Self::display_order(a, b));
+        notes.sort_by(|a, b| Self::display_order(SortOrder::Recent, a, b));
     }
 
     /// Filter notes based on search query and sort (pinned first, then by modified date)
@@ -1020,66 +988,18 @@ impl App {
                 .filter(|&index| self.notes[index].archived == self.archive_mode)
                 .collect()
         } else {
-            let query = self.search_input.to_lowercase();
-
-            // Parse advanced modifiers from query
-            let modifiers = Self::parse_search_modifiers(&query, &self.settings);
-            let remaining_query = Self::remove_modifiers_from_query(&query);
-            let query_parts: Vec<&str> = remaining_query.split_whitespace().collect();
+            let query = SearchQuery::parse(&self.search_input, &self.settings);
+            let archived = query.archived().unwrap_or(self.archive_mode);
 
             (0..self.notes.len())
                 .filter(|&index| {
                     let note = &self.notes[index];
-
-                    // Filter by archive mode first
-                    if note.archived != self.archive_mode {
-                        return false;
-                    }
-
-                    // Apply shared search logic
-                    if !note_matches_search(note, &modifiers, &query_parts) {
-                        return false;
-                    }
-
-                    // Color filtering (only in filtered_notes, not count_opposite_mode_matches)
-                    if !modifiers.colors.is_empty() {
-                        let note_has_color = modifiers.colors.iter().any(|color_key| {
-                            note.color.as_ref().is_some_and(|c| c.to_lowercase() == color_key.to_lowercase())
-                        });
-
-                        let tag_has_color = note.tags.iter().any(|tag| {
-                            let tag_color = self.settings.get_tag_color(tag);
-                            tag_color.is_some_and(|tc| {
-                                modifiers.colors.iter().any(|color_key| tc.to_lowercase() == color_key.to_lowercase())
-                            })
-                        });
-
-                        match modifiers.color_target {
-                            ColorTarget::Note => {
-                                if !note_has_color {
-                                    return false;
-                                }
-                            }
-                            ColorTarget::Tag => {
-                                if !tag_has_color {
-                                    return false;
-                                }
-                            }
-                            ColorTarget::Both => {
-                                if !note_has_color && !tag_has_color {
-                                    return false;
-                                }
-                            }
-                        }
-                    }
-
-                    true
+                    note.archived == archived && query.matches(note, &self.settings)
                 })
                 .collect()
         };
 
-        // Sort: pinned first, then by modified_at descending
-        indices.sort_by(|&a, &b| Self::display_order(&self.notes[a], &self.notes[b]));
+        self.sort_for_display(&mut indices);
 
         let notes = indices.iter().map(|&index| &self.notes[index]).collect();
         *self.filtered_notes_cache.borrow_mut() = Some((self.notes.len(), indices));
@@ -1098,182 +1018,19 @@ impl App {
             return count;
         }
 
-        let query = self.search_input.to_lowercase();
-        let modifiers = Self::parse_search_modifiers(&query, &self.settings);
-        let remaining_query = Self::remove_modifiers_from_query(&query);
-        let query_parts: Vec<&str> = remaining_query.split_whitespace().collect();
-
-        let count = self.notes
-            .iter()
-            .filter(|note| {
-                // Filter by OPPOSITE archive mode
-                if note.archived == self.archive_mode {
-                    return false;
-                }
-
-                // Apply shared search logic (no color filtering for opposite mode count)
-                note_matches_search(note, &modifiers, &query_parts)
-            })
-            .count();
+        // A query that names the archive isn't asking about the other mode
+        let query = SearchQuery::parse(&self.search_input, &self.settings);
+        let count = if query.archived().is_some() {
+            0
+        } else {
+            self.notes
+                .iter()
+                .filter(|note| note.archived != self.archive_mode && query.matches(note, &self.settings))
+                .count()
+        };
 
         self.opposite_count_cache.set(Some(count));
         count
-    }
-
-    /// Parse search modifiers from query string
-    fn parse_search_modifiers(query: &str, settings: &crate::models::UserSettings) -> SearchModifiers {
-        let mut modifiers = SearchModifiers::default();
-
-        // has:attachment
-        if query.contains("has:attachment") {
-            modifiers.has_attachment = true;
-        }
-
-        // created:>DATE
-        if let Some(caps) = regex!(r"created:>(\d{4}-\d{2}-\d{2})").captures(query)
-        {
-            modifiers.created_after = Some(caps[1].to_string());
-        }
-
-        // created:<DATE
-        if let Some(caps) = regex!(r"created:<(\d{4}-\d{2}-\d{2})").captures(query)
-        {
-            modifiers.created_before = Some(caps[1].to_string());
-        }
-
-        // created:DATE..DATE (range)
-        if let Some(caps) = regex!(r"created:(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})").captures(query)
-        {
-            modifiers.created_after = Some(caps[1].to_string());
-            modifiers.created_before = Some(caps[2].to_string());
-        }
-
-        // modified:>DATE
-        if let Some(caps) = regex!(r"modified:>(\d{4}-\d{2}-\d{2})").captures(query)
-        {
-            modifiers.modified_after = Some(caps[1].to_string());
-        }
-
-        // modified:<DATE
-        if let Some(caps) = regex!(r"modified:<(\d{4}-\d{2}-\d{2})").captures(query)
-        {
-            modifiers.modified_before = Some(caps[1].to_string());
-        }
-
-        // modified:DATE..DATE (range)
-        if let Some(caps) = regex!(r"modified:(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})").captures(query)
-        {
-            modifiers.modified_after = Some(caps[1].to_string());
-            modifiers.modified_before = Some(caps[2].to_string());
-        }
-
-        // words:>N
-        if let Some(caps) = regex!(r"words:>(\d+)").captures(query)
-        {
-            modifiers.word_count_min = caps[1].parse().ok();
-        }
-
-        // words:<N
-        if let Some(caps) = regex!(r"words:<(\d+)").captures(query)
-        {
-            modifiers.word_count_max = caps[1].parse().ok();
-        }
-
-        // words:N..N (range)
-        if let Some(caps) = regex!(r"words:(\d+)\.\.(\d+)").captures(query)
-        {
-            modifiers.word_count_min = caps[1].parse().ok();
-            modifiers.word_count_max = caps[2].parse().ok();
-        }
-
-        // color:red note (notes with red color)
-        if let Some(caps) = regex!(r"(?i)\bcolou?r:([a-z0-9#]+)\s+note\b").captures(query)
-        {
-            modifiers.colors.push(caps[1].to_lowercase());
-            modifiers.color_target = ColorTarget::Note;
-        }
-
-        // color:red tag (notes with red-colored tags)
-        if let Some(caps) = regex!(r"(?i)\bcolou?r:([a-z0-9#]+)\s+tag\b").captures(query)
-        {
-            modifiers.colors.push(caps[1].to_lowercase());
-            modifiers.color_target = ColorTarget::Tag;
-        }
-
-        // color:red (both notes and tags)
-        if modifiers.colors.is_empty() {
-            if let Some(caps) = regex!(r"(?i)\bcolou?r:([a-z0-9#]+)\b").captures(query)
-            {
-                modifiers.colors.push(caps[1].to_lowercase());
-                modifiers.color_target = ColorTarget::Both;
-            }
-        }
-
-        // category:important note (notes with category named "important")
-        if let Some(caps) = regex!(r"(?i)\bcategory:([\w-]+)\s+note\b").captures(query)
-        {
-            let category_name = caps[1].trim();
-            // Look up color key by display name
-            if let Some(color_key) = settings.get_color_key_by_display_name(category_name) {
-                modifiers.colors.push(color_key);
-                modifiers.color_target = ColorTarget::Note;
-            }
-        }
-
-        // category:important tag (notes with tags in category named "important")
-        if let Some(caps) = regex!(r"(?i)\bcategory:([\w-]+)\s+tag\b").captures(query)
-        {
-            let category_name = caps[1].trim();
-            if let Some(color_key) = settings.get_color_key_by_display_name(category_name) {
-                modifiers.colors.push(color_key);
-                modifiers.color_target = ColorTarget::Tag;
-            }
-        }
-
-        // category:important (both notes and tags)
-        if modifiers.colors.is_empty() {
-            if let Some(caps) = regex!(r"(?i)\bcategory:([\w-]+)\b").captures(query)
-            {
-                let category_name = caps[1].trim();
-                if let Some(color_key) = settings.get_color_key_by_display_name(category_name) {
-                    modifiers.colors.push(color_key);
-                    modifiers.color_target = ColorTarget::Both;
-                }
-            }
-        }
-
-        modifiers
-    }
-
-    /// Remove search modifiers from query string, leaving only text/tag search terms
-    fn remove_modifiers_from_query(query: &str) -> String {
-        // Remove all modifier patterns
-        let patterns = [
-            regex!(r"has:attachment"),
-            regex!(r"created:>\d{4}-\d{2}-\d{2}"),
-            regex!(r"created:<\d{4}-\d{2}-\d{2}"),
-            regex!(r"created:\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}"),
-            regex!(r"modified:>\d{4}-\d{2}-\d{2}"),
-            regex!(r"modified:<\d{4}-\d{2}-\d{2}"),
-            regex!(r"modified:\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}"),
-            regex!(r"words:>\d+"),
-            regex!(r"words:<\d+"),
-            regex!(r"words:\d+\.\.\d+"),
-            regex!(r"(?i)\bcolou?r:[a-z0-9#]+\s+note\b"),
-            regex!(r"(?i)\bcolou?r:[a-z0-9#]+\s+tag\b"),
-            regex!(r"(?i)\bcolou?r:[a-z0-9#]+\b"),
-            regex!(r"(?i)\bcategory:[\w-]+\s+note\b"),
-            regex!(r"(?i)\bcategory:[\w-]+\s+tag\b"),
-            regex!(r"(?i)\bcategory:[\w-]+\b"),
-        ];
-
-        let mut result = query.to_string();
-        for pattern in patterns {
-            result = pattern.replace_all(&result, "").to_string();
-        }
-
-        // Clean up extra whitespace
-        result.split_whitespace().collect::<Vec<_>>().join(" ")
     }
 
     /// Trigger manual sync (delegates to operations module)
@@ -1315,8 +1072,13 @@ impl App {
             return; // Not unlocked, can't sync
         }
 
-        // Check time since last auto-sync
+        // The server said to wait, or that this account can't sync at the moment
         let now = Instant::now();
+        if self.sync_paused_until.is_some_and(|until| now < until) {
+            return;
+        }
+
+        // Check time since last auto-sync
         let should_sync = match self.last_auto_sync {
             None => true, // Never synced, do it now
             Some(last) => {
@@ -1708,117 +1470,64 @@ mod lock_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{UserSettings, ColorPalette};
-    use std::collections::HashMap;
 
-    fn create_test_settings_with_colors() -> UserSettings {
-        let mut settings = UserSettings::default();
+    /// Holds one password in memory, and says whether it has been asked to forget it.
+    struct RememberedPassword {
+        password: String,
+        deleted: Arc<Mutex<bool>>,
+    }
 
-        // Add tag colors
-        let mut tag_colors = HashMap::new();
-        tag_colors.insert("work".to_string(), "blue".to_string());
-        tag_colors.insert("urgent".to_string(), "red".to_string());
-        settings.tag_colors = Some(tag_colors);
-
-        // Customize color palette with display names
-        let mut palette: ColorPalette = settings.get_color_palette().clone();
-        if let Some(red_def) = palette.get_mut("red") {
-            red_def.display_name = Some("important".to_string());
+    impl PasswordStorage for RememberedPassword {
+        fn store(&self, _password: &str) -> Result<()> {
+            Ok(())
         }
-        settings.color_palette = Some(palette);
 
-        settings
+        fn retrieve(&self) -> RetrieveResult {
+            RetrieveResult::Found(self.password.clone())
+        }
+
+        fn delete(&self) -> Result<()> {
+            *self.deleted.lock().unwrap() = true;
+            Ok(())
+        }
+
+        fn backend_type(&self) -> StorageBackendType {
+            StorageBackendType::File
+        }
+    }
+
+    fn app_remembering(path: PathBuf, password: &str) -> (App, Arc<Mutex<bool>>) {
+        let deleted = Arc::new(Mutex::new(false));
+        let storage = RememberedPassword { password: password.to_string(), deleted: deleted.clone() };
+        (App::with_storage(path, None, Box::new(storage)), deleted)
     }
 
     #[test]
-    fn test_parse_color_search_simple() {
-        let settings = create_test_settings_with_colors();
-        let modifiers = App::parse_search_modifiers("color:red", &settings);
+    fn a_wrong_stored_password_is_forgotten() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.db");
+        let password = uuid::Uuid::new_v4().to_string();
+        let db = Database::open(&path, &password).unwrap();
+        crate::vault::unlock(db.connection(), &CryptoService::new(), &password).unwrap();
+        drop(db);
 
-        assert_eq!(modifiers.colors, vec!["red"]);
-        assert_eq!(modifiers.color_target, ColorTarget::Both);
+        let (mut app, deleted) = app_remembering(path, &uuid::Uuid::new_v4().to_string());
+
+        assert!(app.try_auto_unlock().is_err());
+        assert!(*deleted.lock().unwrap());
     }
 
+    /// The vault can't be opened just now, which says nothing about the password.
     #[test]
-    fn test_parse_color_search_note_qualifier() {
-        let settings = create_test_settings_with_colors();
-        let modifiers = App::parse_search_modifiers("color:blue note", &settings);
+    fn a_stored_password_survives_a_vault_it_cannot_reach() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("not-a-file");
+        std::fs::create_dir(&path).unwrap();
 
-        assert_eq!(modifiers.colors, vec!["blue"]);
-        assert_eq!(modifiers.color_target, ColorTarget::Note);
-    }
+        let (mut app, deleted) = app_remembering(path, &uuid::Uuid::new_v4().to_string());
 
-    #[test]
-    fn test_parse_color_search_tag_qualifier() {
-        let settings = create_test_settings_with_colors();
-        let modifiers = App::parse_search_modifiers("color:green tag", &settings);
-
-        assert_eq!(modifiers.colors, vec!["green"]);
-        assert_eq!(modifiers.color_target, ColorTarget::Tag);
-    }
-
-    #[test]
-    fn test_parse_category_search_simple() {
-        let settings = create_test_settings_with_colors();
-        let modifiers = App::parse_search_modifiers("category:important", &settings);
-
-        // "important" should map to "red" via display name
-        assert_eq!(modifiers.colors, vec!["red"]);
-        assert_eq!(modifiers.color_target, ColorTarget::Both);
-    }
-
-    #[test]
-    fn test_parse_category_search_note_qualifier() {
-        let settings = create_test_settings_with_colors();
-        let modifiers = App::parse_search_modifiers("category:important note", &settings);
-
-        assert_eq!(modifiers.colors, vec!["red"]);
-        assert_eq!(modifiers.color_target, ColorTarget::Note);
-    }
-
-    #[test]
-    fn test_parse_category_search_tag_qualifier() {
-        let settings = create_test_settings_with_colors();
-        let modifiers = App::parse_search_modifiers("category:important tag", &settings);
-
-        assert_eq!(modifiers.colors, vec!["red"]);
-        assert_eq!(modifiers.color_target, ColorTarget::Tag);
-    }
-
-    #[test]
-    fn test_parse_category_search_invalid() {
-        let settings = create_test_settings_with_colors();
-        let modifiers = App::parse_search_modifiers("category:nonexistent", &settings);
-
-        // Should not find any colors for nonexistent category
-        assert!(modifiers.colors.is_empty());
-    }
-
-    #[test]
-    fn test_parse_single_color_modifier() {
-        let settings = create_test_settings_with_colors();
-        let modifiers = App::parse_search_modifiers("color:red some text", &settings);
-
-        // Should capture the color
-        assert_eq!(modifiers.colors.len(), 1);
-        assert_eq!(modifiers.colors[0], "red");
-        assert_eq!(modifiers.color_target, ColorTarget::Both);
-    }
-
-    #[test]
-    fn test_remove_modifiers_from_query() {
-        let cleaned = App::remove_modifiers_from_query("color:red important meeting");
-        assert!(!cleaned.contains("color:red"));
-        assert!(cleaned.contains("important"));
-        assert!(cleaned.contains("meeting"));
-    }
-
-    #[test]
-    fn test_remove_category_modifiers_from_query() {
-        let cleaned = App::remove_modifiers_from_query("category:important urgent task");
-        assert!(!cleaned.contains("category:important"));
-        assert!(cleaned.contains("urgent"));
-        assert!(cleaned.contains("task"));
+        assert!(app.try_auto_unlock().is_err());
+        assert!(!*deleted.lock().unwrap());
     }
 
     #[test]

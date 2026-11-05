@@ -5,6 +5,7 @@ pub mod note;
 pub mod settings;
 pub mod encryption;
 pub mod sync;
+pub mod validation;
 pub mod virtual_tags;
 
 pub use note::*;

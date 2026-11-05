@@ -68,6 +68,10 @@ import 'highlight.js/styles/github.css';
 let isDark = false;
 const pendingAttachments = new Map<string, HTMLElement[]>();
 
+/** The notes a link can reach, by lower-case id and by lower-case title. */
+let notesById = new Map<string, { id: string; title: string }>();
+let notesByTitle = new Map<string, { id: string; title: string }>();
+
 // ---- Theme ----
 
 function applyTheme(dark: boolean): void {
@@ -82,6 +86,43 @@ function onRequestAttachment(id: string, element: HTMLElement): void {
   list.push(element);
   pendingAttachments.set(id, list);
   postToSwift({ type: 'requestAttachment', id });
+}
+
+// ---- Note links ----
+
+const NOTE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function setNoteTitles(titles: Record<string, string>): void {
+  const notes = Object.entries(titles).map(([id, title]) => ({ id, title }));
+  notesById = new Map(notes.map((note) => [note.id.toLowerCase(), note]));
+  notesByTitle = new Map(notes.map((note) => [note.title.toLowerCase(), note]));
+}
+
+function escapeLinkText(text: string): string {
+  return text.replace(/([\\[\]])/g, '\\$1');
+}
+
+/**
+ * [[Note Title]], [[uuid]] and [[either|Display Text]] become markdown links
+ * with the note: protocol, as on the web. Code is left as it was written.
+ */
+function parseWikiLinks(content: string): string {
+  return content.replace(/(```[\s\S]*?```|`[^`\n]*`)|\[\[([^\]]+)\]\]/g, (match, code, inner: string) => {
+    if (code) return match;
+
+    const pipe = inner.indexOf('|');
+    const reference = (pipe === -1 ? inner : inner.slice(0, pipe)).trim();
+    const display = (pipe === -1 ? reference : inner.slice(pipe + 1)).trim();
+    const note = NOTE_ID.test(reference)
+      ? notesById.get(reference.toLowerCase())
+      : notesByTitle.get(reference.toLowerCase());
+
+    if (note) {
+      const text = pipe === -1 ? note.title : display;
+      return `[${escapeLinkText(text)}](note:${note.id})`;
+    }
+    return `[${escapeLinkText(display)}](note:not-found)`;
+  });
 }
 
 // ---- Markdown rendering ----
@@ -172,9 +213,14 @@ function renderMarkdown(content: string): string {
       return `<span class="attachment-link" data-attachment-id="${attachmentId}">${text || attachmentId}</span>`;
     }
 
-    // Note link (from [[wiki-style]] conversion)
+    // Note link: [[wiki-style]], or [](link:id) from the web's Copy Link. A note
+    // that isn't here says so natively when tapped, so its link stays tappable.
     if (href.startsWith('note:') || href.startsWith('link:')) {
-      return `<span class="note-link">${text}</span>`;
+      const id = href.substring(5);
+      if (!NOTE_ID.test(id)) return `<span class="note-link missing">${text}</span>`;
+      const note = notesById.get(id.toLowerCase());
+      const label = text || escapeAttribute(note?.title ?? id.substring(0, 8));
+      return `<span class="note-link" role="link" data-note-id="${note?.id ?? id}">${label}</span>`;
     }
 
     // In-page anchor
@@ -191,13 +237,13 @@ function renderMarkdown(content: string): string {
   };
 
   marked.setOptions({ breaks: true, gfm: true });
-  const html = marked.parse(content, { renderer }) as string;
+  const html = marked.parse(parseWikiLinks(content), { renderer }) as string;
 
   // A note is untrusted input: it may have been pasted or imported, or come from
   // the server. The result goes into innerHTML next to a bridge that can open
   // links and read attachments, so nothing active may survive this.
   return DOMPurify.sanitize(html, {
-    ADD_ATTR: ['data-attachment-id'],
+    ADD_ATTR: ['data-attachment-id', 'data-note-id'],
     FORBID_TAGS: ['style', 'form', 'input', 'button', 'textarea', 'select', 'iframe', 'object', 'embed', 'base', 'meta', 'link'],
     FORBID_ATTR: ['srcset', 'ping', 'formaction', 'action'],
     // `src=""` on an unresolved attachment placeholder must survive too
@@ -237,12 +283,6 @@ function setContent(content: string, dark: boolean): void {
     onRequestAttachment(id, img);
   });
 
-  // Request resolution for attachment links
-  container.querySelectorAll<HTMLElement>('.attachment-link[data-attachment-id]').forEach((el) => {
-    const id = el.dataset.attachmentId!;
-    onRequestAttachment(id, el);
-  });
-
   // Set up click handlers for external links
   container.querySelectorAll<HTMLAnchorElement>('a.external-link').forEach((a) => {
     a.addEventListener('click', (e) => {
@@ -251,6 +291,14 @@ function setContent(content: string, dark: boolean): void {
       if (url) {
         postToSwift({ type: 'openLink', url });
       }
+    });
+  });
+
+  // Note links go to the native side, which opens the note, or says it's gone.
+  // A message of their own, kept apart from openLink, which leaves the app.
+  container.querySelectorAll<HTMLElement>('.note-link[data-note-id]').forEach((el) => {
+    el.addEventListener('click', () => {
+      postToSwift({ type: 'openNote', id: el.dataset.noteId! });
     });
   });
 
@@ -271,6 +319,7 @@ function setContent(content: string, dark: boolean): void {
 
 window.bridge = {
   setContent,
+  setNoteTitles,
   setTheme: applyTheme,
   setFontSize(px: number): void {
     document.body.style.fontSize = `${px}px`;
@@ -423,8 +472,10 @@ style.textContent = `
     border-radius: 4px;
     font-size: 0.9em;
     color: var(--link);
+    cursor: pointer;
   }
   .note-link::before { content: '📄 '; }
+  .note-link.missing { opacity: 0.6; cursor: default; }
 
   /* Override highlight.js background to match our theme */
   .hljs { background: transparent !important; }
