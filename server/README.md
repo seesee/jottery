@@ -37,9 +37,9 @@ DATABASE_URL=sqlite:jottery.db
 # Server port
 PORT=3030
 
-# Maximum request payload size (bytes)
-# Default: 10MB (10485760 bytes)
-MAX_PAYLOAD_SIZE=10485760
+# Largest request body in bytes. Each user's upload limit still applies beneath it.
+# Default: 100 MB (104857600 bytes)
+MAX_PAYLOAD_SIZE=104857600
 
 # Logging level (trace, debug, info, warn, error)
 RUST_LOG=info
@@ -849,7 +849,7 @@ Key environment variables:
 # Basic configuration
 DATABASE_URL=sqlite:jottery.db
 PORT=3030
-MAX_PAYLOAD_SIZE=5242880
+MAX_PAYLOAD_SIZE=104857600
 
 # CORS security
 CORS_ALLOWED_ORIGINS=https://example.com

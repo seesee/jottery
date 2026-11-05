@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from 'svelte-i18n';
   import { toast } from '../lib/toast.svelte';
   import type { Toast } from '../lib/toast.svelte';
 
@@ -25,19 +26,24 @@
   }
 </script>
 
-<div class="fixed top-4 right-4 z-50 space-y-2">
+<!-- The live region is always on the page: screen readers can miss one added with its content -->
+<div class="fixed top-4 right-4 z-50 space-y-2" aria-live="polite">
   {#each toast.items as item (item.id)}
-    <div class="animate-slide-in border rounded-lg shadow-lg p-4 max-w-sm {getToastClasses(item.type)}">
+    <div
+      role={item.type === 'error' ? 'alert' : 'status'}
+      class="animate-slide-in border rounded-lg shadow-lg p-4 max-w-sm {getToastClasses(item.type)}"
+    >
       <div class="flex items-start justify-between gap-3">
         <div class="flex items-start gap-2">
-          <span class="text-lg font-bold">{getIcon(item.type)}</span>
+          <span class="text-lg font-bold" aria-hidden="true">{getIcon(item.type)}</span>
           <p class="text-sm">{item.message}</p>
         </div>
         <button
           onclick={() => toast.remove(item.id)}
+          aria-label={$_('common.close')}
           class="text-gray-500 hover:text-gray-700"
         >
-          ✕
+          <span aria-hidden="true">✕</span>
         </button>
       </div>
     </div>

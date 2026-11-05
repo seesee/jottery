@@ -43,6 +43,21 @@ describe('ForcedPasswordChange', () => {
 
   afterEach(cleanup);
 
+  it('says the rules go beyond length, and explains a refusal', async () => {
+    const auth = fakeAuth({
+      changePassword: vi.fn(async () => {
+        throw new ApiError(400, 'Password requires at least 3 of 4 character types. Missing: number');
+      }),
+    });
+    const form = showScreen(auth);
+    expect(screen.getByText(en.common.passwordRules)).toBeTruthy();
+
+    await fill(form, CURRENT, NEXT, NEXT);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toContain(en.errors.passwordClass.number);
+  });
+
   it('explains itself and says whose account it is', () => {
     showScreen(fakeAuth());
 

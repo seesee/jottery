@@ -76,6 +76,24 @@ describe('Admin Translation Coverage', () => {
       expect(missingKeys).toHaveLength(0);
     });
 
+    it('should use the same placeholders as the primary locale', () => {
+      const flatten = (obj: Record<string, unknown>, prefix = ''): [string, string][] =>
+        Object.entries(obj).flatMap(([key, value]) => {
+          const fullKey = prefix ? `${prefix}.${key}` : key;
+          return typeof value === 'string'
+            ? [[fullKey, value] as [string, string]]
+            : flatten(value as Record<string, unknown>, fullKey);
+        });
+      const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort();
+
+      const translated = new Map(flatten(locale));
+      const mismatched = flatten(primaryLocale).filter(
+        ([key, text]) => placeholders(text).join() !== placeholders(translated.get(key) ?? text).join(),
+      );
+
+      expect(mismatched.map(([key]) => key)).toEqual([]);
+    });
+
     it('should not have extra keys not in primary locale', () => {
       const extraKeys = localeKeys.filter((key) => !primaryKeys.includes(key));
 
