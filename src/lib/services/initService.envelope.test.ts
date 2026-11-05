@@ -360,6 +360,16 @@ describe('server-wrapped master key', () => {
   });
 
   describe('changePassword', () => {
+    it('refuses a wrong current password while unlocked, and changes nothing', async () => {
+      await setUpFirstDevice();
+      const before = await encryptionRepository.getMetadata();
+
+      await expect(changePassword('not-the-password', 'a-brand-new-password')).rejects.toThrow('Incorrect password');
+
+      expect(await encryptionRepository.getMetadata()).toEqual(before);
+      expect(putSpy).not.toHaveBeenCalled();
+    }, 60_000);
+
     it('refuses a new password that is too short', async () => {
       await initialize(NOTES_PASSWORD);
       const before = await encryptionRepository.getMetadata();

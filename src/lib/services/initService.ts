@@ -380,6 +380,11 @@ export async function changePassword(
     throw new Error('No encryption metadata found');
   }
 
+  // Being unlocked proves nothing about whoever is at the keyboard
+  if (!(await passwordUnlocksVault(currentPassword, metadata, currentMasterKey.keyBytes))) {
+    throw new Error('Incorrect password');
+  }
+
   // If still on legacy, migrate first
   if (!metadata.envelopeVersion) {
     await tryMigrateToEnvelope(currentPassword, currentMasterKey.keyBytes);
