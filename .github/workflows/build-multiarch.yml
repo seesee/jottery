@@ -87,22 +87,36 @@ jobs:
     runs-on: macos-latest
     env:
       VERSION: ${{ github.ref_type == 'tag' && github.ref_name || format('dev-{0}', github.run_number) }}
+      # The oldest macOS Rust supports on Apple silicon. Without this, the C code in
+      # SQLCipher and OpenSSL targets whatever the runner's SDK defaults to.
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: tui
 
-      - name: Install SQLCipher
-        run: brew install sqlcipher
+      - name: Install Rust targets
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
 
+      # SQLCipher and OpenSSL are compiled in, so the binary runs on a Mac without
+      # Homebrew, and one file covers Apple silicon and Intel.
       - name: Build macOS TUI
         run: |
           cd tui
-          cargo build --release --features sqlcipher
+          for target in aarch64-apple-darwin x86_64-apple-darwin; do
+            cargo build --release --locked --bin jottery --features sqlcipher-vendored --target "$target"
+          done
           mkdir -p ../releases-versioned
-          cp target/release/jottery ../releases-versioned/jottery-macos-${VERSION}
+          lipo -create -output ../releases-versioned/jottery-macos-${VERSION} \
+            target/aarch64-apple-darwin/release/jottery \
+            target/x86_64-apple-darwin/release/jottery
+
+      - name: Check the binary is self-contained
+        run: scripts/check-macos-binary.sh releases-versioned/jottery-macos-${VERSION}
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
