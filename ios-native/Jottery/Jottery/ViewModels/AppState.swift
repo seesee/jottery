@@ -1563,13 +1563,32 @@ final class AppState {
 
     // MARK: - Lifecycle
 
+    /// Start the auto-lock clock, if it isn't already running.
+    func noteEnteredBackground() {
+        if backgroundedAt == nil {
+            backgroundedAt = Date()
+        }
+    }
+
+    /// Lock if the app has been away longer than the auto-lock timeout
+    /// (timeout 0 means "never"). Returns true if it did. Safe to call from
+    /// more than one place on the way back: the first call decides.
+    @discardableResult
+    func lockIfAwayTooLong() -> Bool {
+        guard !isLocked, let away = backgroundedAt, keyManager.autoLockTimeout > 0,
+              Date().timeIntervalSince(away) >= keyManager.autoLockTimeout else {
+            return false
+        }
+        lock()
+        backgroundedAt = nil
+        return true
+    }
+
     func handleScenePhaseChange(_ phase: ScenePhase) {
         switch phase {
         case .background:
             // Genuinely backgrounded — stop SSE and record timestamp for auto-lock.
-            if backgroundedAt == nil {
-                backgroundedAt = Date()
-            }
+            noteEnteredBackground()
             Task { await syncService?.stopSSE() }
         case .inactive:
             // Transient inactivity (Face ID prompt, notification centre, share sheet).
@@ -1577,16 +1596,7 @@ final class AppState {
             // SSE restart and full sync when the app returns to .active.
             break
         case .active:
-            guard !isLocked else { return }
-            // Check auto-lock (timeout 0 means "never")
-            if let bg = backgroundedAt, keyManager.autoLockTimeout > 0 {
-                let elapsed = Date().timeIntervalSince(bg)
-                if elapsed >= keyManager.autoLockTimeout {
-                    lock()
-                    backgroundedAt = nil
-                    return
-                }
-            }
+            guard !isLocked, !lockIfAwayTooLong() else { return }
             let wasBackgrounded = backgroundedAt != nil
             backgroundedAt = nil
             keyManager.recordActivity()
