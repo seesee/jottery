@@ -29,6 +29,13 @@
   let showDeleteNotesModal = $state(false);
   let showDeleteModal = $state(false);
   let actionLoading = $state(false);
+  let actionError = $state<string | null>(null);
+
+  function closeDangerDialogs() {
+    showDeleteNotesModal = false;
+    showDeleteModal = false;
+    actionError = null;
+  }
 
   async function handlePasswordChange(e: Event) {
     e.preventDefault();
@@ -69,32 +76,32 @@
     }
   }
 
-  async function handleDeleteNotes() {
+  async function handleDeleteNotes(password: string) {
     actionLoading = true;
+    actionError = null;
     try {
-      await userApi.deleteAllNotes();
+      await userApi.deleteAllNotes(password);
+      closeDangerDialogs();
       toast.success($_('userPortal.settings.notesDeleted'));
     } catch (err) {
-      toast.error($_('userPortal.settings.errors.deleteNotesFailed'));
-      console.error('Failed to delete notes:', err);
+      actionError = describeError(err, $_, 'userPortal.settings.errors.deleteNotesFailed');
     } finally {
       actionLoading = false;
-      showDeleteNotesModal = false;
     }
   }
 
-  async function handleDelete() {
+  async function handleDelete(password: string) {
     actionLoading = true;
+    actionError = null;
     try {
-      await userApi.deleteAccount();
+      await userApi.deleteAccount(password);
+      closeDangerDialogs();
       userAuth.clearAuth();
       toast.success($_('userPortal.settings.accountDeleted'));
     } catch (err) {
-      toast.error($_('userPortal.settings.errors.deleteFailed'));
-      console.error('Failed to delete account:', err);
+      actionError = describeError(err, $_, 'userPortal.settings.errors.deleteFailed');
     } finally {
       actionLoading = false;
-      showDeleteModal = false;
     }
   }
 </script>
@@ -238,8 +245,11 @@
     message={$_('userPortal.settings.deleteNotesConfirmMessage')}
     confirmText={$_('userPortal.settings.deleteNotesButton')}
     cancelText={$_('common.cancel')}
+    passwordLabel={$_('userPortal.settings.passwordToConfirm')}
     onConfirm={handleDeleteNotes}
-    onCancel={() => showDeleteNotesModal = false}
+    onCancel={closeDangerDialogs}
+    busy={actionLoading}
+    error={actionError}
     danger={true}
   />
 {/if}
@@ -252,9 +262,11 @@
     confirmText={actionLoading ? $_('common.deleting') : $_('userPortal.settings.deleteForever')}
     cancelText={$_('common.cancel')}
     typeToConfirm={{ value: 'DELETE', label: $_('userPortal.settings.deleteConfirmLabel') }}
+    passwordLabel={$_('userPortal.settings.passwordToConfirm')}
     onConfirm={handleDelete}
-    onCancel={() => showDeleteModal = false}
+    onCancel={closeDangerDialogs}
     busy={actionLoading}
+    error={actionError}
     danger={true}
   />
 {/if}

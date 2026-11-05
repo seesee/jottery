@@ -321,15 +321,77 @@ describe('UserApiClient', () => {
         status: 204,
       });
 
-      await userApi.deleteAccount();
+      await userApi.deleteAccount('the-password');
 
       expect(mockFetch).toHaveBeenCalledWith(
         '/api/v1/user/account?mode=delete',
         expect.objectContaining({
           method: 'DELETE',
+          body: JSON.stringify({ currentPassword: 'the-password' }),
         }),
       );
 
+      expect(sessionStore['user_session_token']).toBeUndefined();
+    });
+
+    it('keeps the session when the password is refused', async () => {
+      sessionStore['user_session_token'] = 'auth-token';
+      const userApi = await createFreshApiClient();
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: () => Promise.resolve({ error: 'Unauthorized' }),
+      });
+
+      await expect(userApi.deleteAccount('wrong')).rejects.toMatchObject({ status: 401 });
+      expect(sessionStore['user_session_token']).toBe('auth-token');
+    });
+  });
+
+  describe('deleteAllNotes', () => {
+    it('sends the password in the body', async () => {
+      sessionStore['user_session_token'] = 'auth-token';
+      const userApi = await createFreshApiClient();
+
+      mockFetch.mockResolvedValueOnce({ ok: true, status: 204 });
+
+      await userApi.deleteAllNotes('the-password');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/v1/user/notes',
+        expect.objectContaining({
+          method: 'DELETE',
+          body: JSON.stringify({ currentPassword: 'the-password' }),
+        }),
+      );
+    });
+
+    it('keeps the session when the password is refused', async () => {
+      sessionStore['user_session_token'] = 'auth-token';
+      const userApi = await createFreshApiClient();
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: () => Promise.resolve({ error: 'Unauthorized' }),
+      });
+
+      await expect(userApi.deleteAllNotes('wrong')).rejects.toMatchObject({ status: 401 });
+      expect(sessionStore['user_session_token']).toBe('auth-token');
+    });
+
+    it('still treats a 401 with no body as an expired session', async () => {
+      sessionStore['user_session_token'] = 'auth-token';
+      const userApi = await createFreshApiClient();
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: () => Promise.reject(new Error('no body')),
+      });
+
+      await expect(userApi.deleteAllNotes('whatever')).rejects.toMatchObject({ status: 401 });
       expect(sessionStore['user_session_token']).toBeUndefined();
     });
   });

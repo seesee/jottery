@@ -128,9 +128,9 @@ class UserApiClient {
     }, { checksPassword: true });
   }
 
-  // Delete all notes (keep account)
-  async deleteAllNotes(): Promise<void> {
-    return this.request('DELETE', '/api/v1/user/notes');
+  // Delete all notes (keep account). Servers that don't check the password yet ignore it.
+  async deleteAllNotes(currentPassword: string): Promise<void> {
+    return this.request('DELETE', '/api/v1/user/notes', { currentPassword }, { checksPassword: true });
   }
 
   // Deactivate account (can re-register with admin approval)
@@ -140,9 +140,9 @@ class UserApiClient {
     this.session.clear();
   }
 
-  // Permanently delete account and all data
-  async deleteAccount(): Promise<void> {
-    await this.request('DELETE', '/api/v1/user/account?mode=delete');
+  // Permanently delete account and all data. Servers that don't check the password yet ignore it.
+  async deleteAccount(currentPassword: string): Promise<void> {
+    await this.request('DELETE', '/api/v1/user/account?mode=delete', { currentPassword }, { checksPassword: true });
     // Clear local session since account no longer exists
     this.session.clear();
   }
