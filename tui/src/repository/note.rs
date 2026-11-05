@@ -553,9 +553,13 @@ impl<'a> NoteRepository<'a> {
     }
 
     /// Get pending deletions that need to be synced to server
+    /// Deletions to send. A hard delete removes the note, so one whose note exists
+    /// again is stale: the note came back from a backup or an import, and sending
+    /// it would delete the note again, on every device.
     pub fn get_pending_deletions(&self) -> Result<Vec<(String, String)>> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, deleted_at FROM note_deletions WHERE synced = 0"
+            "SELECT id, deleted_at FROM note_deletions
+             WHERE synced = 0 AND id NOT IN (SELECT id FROM notes)"
         )?;
 
         let rows = stmt.query_map([], |row| {
@@ -966,6 +970,23 @@ mod tests {
         assert!(repo.get(&recent.id, &key).unwrap().is_some());
         let pending: Vec<String> = repo.get_pending_deletions().unwrap().into_iter().map(|(id, _)| id).collect();
         assert_eq!(pending, [old.id]);
+    }
+
+    /// If the note comes back before the next push, from a backup or an import,
+    /// sending the deletion would delete it again, on every device.
+    #[test]
+    fn a_deletion_is_not_sent_for_a_note_that_came_back() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+        let note = Note::new("worth keeping".to_string());
+        repo.create(&note, &key).unwrap();
+
+        repo.hard_delete(&note.id).unwrap();
+        assert_eq!(repo.get_pending_deletions().unwrap().len(), 1);
+
+        repo.create(&note, &key).unwrap();
+
+        assert!(repo.get_pending_deletions().unwrap().is_empty());
     }
 
     /// A compromised server could date a note decades ago. That must not empty the bin.
