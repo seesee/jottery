@@ -13,6 +13,8 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -113,6 +115,39 @@ class AppStateNotesTest {
 
         val copy = appState.notes.value.first { it.id == appState.selectedNoteId.value }
         assertEquals("Still being typed", copy.content)
+    }
+
+    private fun server(vararg responses: MockResponse) = MockWebServer().apply {
+        responses.forEach(::enqueue)
+        start()
+    }
+
+    private suspend fun connectStateSettles() =
+        withTimeout(5_000) { while (appState.connectState.value is AppState.ConnectState.Working) delay(5) }
+
+    @Test fun `registering carries on in the view model, and hands over the connection`() = runBlocking {
+        val server = server(MockResponse().setBody("""{"clientId":"c","apiKey":"k","userId":"u","deviceName":"Phone"}"""))
+        var handedOver: AppState.PendingConnection? = null
+
+        appState.beginRegistration(server.url("/").toString().trimEnd('/'), "a@example.test", "p", "Phone") { handedOver = it }
+        connectStateSettles()
+        withTimeout(5_000) { while (handedOver == null) delay(5) }
+
+        assertEquals("k", handedOver!!.apiKey)
+        assertEquals(handedOver, appState.pendingConnection.value)
+        assertEquals(AppState.ConnectState.Idle, appState.connectState.value)
+        server.shutdown()
+    }
+
+    @Test fun `a refused registration says why, with no connection left behind`() = runBlocking {
+        val server = server(MockResponse().setResponseCode(401).setBody("""{"error":"no"}"""))
+
+        appState.beginRegistration(server.url("/").toString().trimEnd('/'), "a@example.test", "p", "Phone")
+        connectStateSettles()
+
+        assertTrue(appState.connectState.value is AppState.ConnectState.Failed)
+        assertNull(appState.pendingConnection.value)
+        server.shutdown()
     }
 
     @Test fun `restoring a version updates the list the editor reads`() = runBlocking {

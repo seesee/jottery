@@ -27,6 +27,7 @@ import com.jottery.android.model.DecryptedNote
 import com.jottery.android.model.DecryptedSavedSearch
 import com.jottery.android.model.EncryptionMetadata
 import com.jottery.android.model.InboxItem
+import com.jottery.android.model.NoteRecord
 import com.jottery.android.model.NoteVersionRecord
 import com.jottery.android.model.CloneDeviceRequest
 import com.jottery.android.model.CredentialPayload
@@ -501,10 +502,13 @@ class AppState(application: Application) : AndroidViewModel(application) {
             _syncError.value = text(R.string.sync_error_setup)
         }
 
-        // Upgrade old vaults: store a verification token if missing
+        // Upgrade old vaults: store a verification token if missing. Only a key that
+        // has proved itself may be written down as the right one, or a mistyped
+        // password on an empty vault would lock out the real one for good.
         if (metadata.verification == null) {
             try {
-                upgradeVaultVerification(key)
+                val proved = metadata.envelopeVersion != null || opensANote(noteRepo?.listAllRaw().orEmpty(), key)
+                if (proved) upgradeVaultVerification(key)
             } catch (_: Exception) { /* ignore */ }
         }
 
@@ -621,30 +625,24 @@ class AppState(application: Application) : AndroidViewModel(application) {
      * Returns true if decryption succeeds, or if there are no notes to test against.
      */
     private suspend fun verifyByDecryptingNote(key: SecretKey): Boolean {
-        val repo = noteRepo ?: return false
-        return try {
-            val record = repo.getRaw(
-                // Try to get any non-deleted note to verify against
-                id = "" // We need a different approach -- check if any active notes exist
-            )
-            // If getRaw returns null for empty id, try listing active notes
-            val activeNotes = repo.listActive(key)
-            // If listing succeeded without exception, the key is valid
-            true
-        } catch (_: Exception) {
-            // Try counting active notes -- if there are none, empty vault is safe
-            try {
-                val count = repo.countActive()
-                count == 0 // If no notes, can't verify but safe to enter
-            } catch (_: Exception) {
-                false
-            }
-        }
+        val records = noteRepo?.listAllRaw() ?: return false
+        return records.isEmpty() || opensANote(records, key)
     }
 
     /**
-     * Store a verification token on an old vault that doesn't have one.
+     * AES-GCM can't decrypt under the wrong key, so one note opening proves the key.
+     * It takes only one: a damaged note mustn't lock out the right password. This reads
+     * rows directly, because listActive skips what it can't read, and so proves nothing.
      */
+    private fun opensANote(records: List<NoteRecord>, key: SecretKey): Boolean = records.any { record ->
+        try {
+            CryptoService.decryptText(CryptoService.parseEncryptedJSON(record.content), key)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     private suspend fun upgradeVaultVerification(key: SecretKey) {
         val repo = encryptionRepo ?: return
         val metadata = repo.get() ?: return
@@ -2191,6 +2189,29 @@ class AppState(application: Application) : AndroidViewModel(application) {
         } catch (e: Exception) {
             Log.e(TAG, "[Sync] registerDevice failed: ${e.javaClass.simpleName}")
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Register this device, in the view model's scope. A rotation mustn't cancel a
+     * request the server may already have acted on, or the user would register again
+     * and leave a second device on their account.
+     */
+    fun beginRegistration(
+        serverUrl: String,
+        email: String,
+        password: String,
+        deviceName: String,
+        onRegistered: (PendingConnection) -> Unit = {},
+    ) {
+        _connectState.value = ConnectState.Working
+        viewModelScope.launch {
+            registerDevice(serverUrl, email, password, deviceName)
+                .onSuccess {
+                    _connectState.value = ConnectState.Idle
+                    onRegistered(it)
+                }
+                .onFailure { _connectState.value = ConnectState.Failed(describeAccountFailure(it)) }
         }
     }
 
