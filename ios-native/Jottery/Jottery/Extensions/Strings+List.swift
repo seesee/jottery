@@ -17,4 +17,12 @@ extension L {
     }
     static var errorCouldntCombineNotes: String { String(localized: "error.couldntCombineNotes") }
     static var errorCombineAttachmentNotOnDevice: String { String(localized: "error.combineAttachmentNotOnDevice") }
+
+    // MARK: - Saved Searches
+
+    static var savedSearchEdit: String { String(localized: "savedSearch.edit") }
+    static var savedSearchName: String { String(localized: "savedSearch.name") }
+    static var savedSearchQuery: String { String(localized: "savedSearch.query") }
+    static var errorCouldntSaveSavedSearch: String { String(localized: "error.couldntSaveSavedSearch") }
+    static var errorCouldntMoveSavedSearch: String { String(localized: "error.couldntMoveSavedSearch") }
 }

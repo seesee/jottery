@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 
 /// What the note list needs beyond the plain note operations in `AppState`.
 extension AppState {
@@ -43,5 +43,27 @@ extension AppState {
         selectedNoteId = combinedId
         scheduleAutoSync()
         return combinedId
+    }
+
+    // MARK: - Saved Searches
+
+    func updateSavedSearch(id: String, name: String, query: String) throws {
+        guard !isReKeying else { throw AppStateError.vaultBusy }
+        guard let savedSearchRepo, let key = keyManager.masterKey else { return }
+        try savedSearchRepo.update(id: id, name: name, query: query, key: key)
+        if let index = savedSearches.firstIndex(where: { $0.id == id }) {
+            savedSearches[index].name = name
+            savedSearches[index].query = query
+        }
+        scheduleAutoSync()
+    }
+
+    /// What a list's `onMove` hands over.
+    func moveSavedSearches(fromOffsets source: IndexSet, toOffset destination: Int) throws {
+        guard let savedSearchRepo else { return }
+        var moved = savedSearches
+        moved.move(fromOffsets: source, toOffset: destination)
+        savedSearches = try savedSearchRepo.reorder(moved)
+        scheduleAutoSync()
     }
 }
