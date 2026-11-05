@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT content, tags, pinned, archived, archived_at, locked, locked_at, server_version, syntax_language, word_wrap, show_preview, color, modified_at,\n                          content_hash, parent_hash, hash_chain\n                   FROM notes WHERE id = ? AND user_id = ?",
+  "query": "SELECT content, tags, pinned, archived, archived_at, locked, locked_at, server_version, syntax_language, word_wrap, show_preview, color, modified_at,\n                          content_hash, parent_hash, hash_chain, deleted, deleted_at\n                   FROM notes WHERE id = ? AND user_id = ?",
   "describe": {
     "columns": [
       {
@@ -82,6 +82,16 @@
         "name": "hash_chain",
         "ordinal": 15,
         "type_info": "Text"
+      },
+      {
+        "name": "deleted",
+        "ordinal": 16,
+        "type_info": "Integer"
+      },
+      {
+        "name": "deleted_at",
+        "ordinal": 17,
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -103,8 +113,10 @@
       false,
       true,
       true,
+      true,
+      false,
       true
     ]
   },
-  "hash": "1ee9644916edc6fc5772e35def4de33afebbf80726a1f5949de6d265e657ac60"
+  "hash": "226110de9d0beb368c99bc216d53100d947fe8b2d57ee7a14e21dec2fb380862"
 }

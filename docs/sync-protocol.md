@@ -420,3 +420,4 @@ To adopt these additions, a client needs to:
 5. Treat 403 from a device endpoint as "account disabled", not "device removed".
 6. Honour `Retry-After` on 429.
 7. Say what it wants on every `PUT /auth/wrapped-key`, as described under [Wrapped master key](#wrapped-master-key), and treat 409 as "read it again".
+8. Read `skippedDeleted`, treating its absence as an empty list, and stop sending those notes.
