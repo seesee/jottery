@@ -330,7 +330,13 @@ final class DatabaseManager: Sendable {
         migrator.registerMigration("ios_009_local_sync_tracking") { db in
             try db.execute(sql: "ALTER TABLE notes ADD COLUMN local_deleted_at TEXT")
             try db.execute(sql: "ALTER TABLE notes ADD COLUMN from_inbox INTEGER NOT NULL DEFAULT 0")
-            try db.execute(sql: "UPDATE notes SET local_deleted_at = deleted_at WHERE deleted = 1")
+            // Not `deleted_at`, which a server chooses: a date it put a long way
+            // back would have the note purged at the next unlock. What's in the
+            // bin now gets its 30 days from here.
+            try db.execute(
+                sql: "UPDATE notes SET local_deleted_at = ? WHERE deleted = 1",
+                arguments: [Date().iso8601]
+            )
             try db.execute(sql: "ALTER TABLE attachments ADD COLUMN uploaded INTEGER NOT NULL DEFAULT 0")
             try db.execute(sql: "UPDATE attachments SET filename = ''")
         }

@@ -599,7 +599,7 @@ enum BackupService {
 
     private static func reEncrypted(_ note: BackupNote, from backupKey: SymmetricKey, to currentKey: SymmetricKey) throws -> NoteRecord {
         let hashChain = try note.hashChain.map { String(decoding: try JSONEncoder().encode($0), as: UTF8.self) }
-        return NoteRecord(
+        var record = NoteRecord(
             id: note.id,
             createdAt: note.createdAt,
             modifiedAt: note.modifiedAt,
@@ -624,6 +624,10 @@ enum BackupService {
             hashChain: hashChain,
             needsSync: true
         )
+        // Its time in the bin starts here. Without one the purge never sees it,
+        // and the date in the file isn't this device's to go by.
+        record.localDeletedAt = note.deleted ? Date().iso8601 : nil
+        return record
     }
 
     private static func reEncrypted(_ version: BackupVersion, from backupKey: SymmetricKey, to currentKey: SymmetricKey) throws -> NoteVersionRecord {

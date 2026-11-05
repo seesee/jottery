@@ -134,6 +134,27 @@ struct BackupFormatTests {
     }
 
     /// One bad write used to leave an unknown part of the batch behind.
+    /// A note restored into the bin has to leave it like any other. With no time of
+    /// its own here the purge can't see it, and it would stay there for ever.
+    @Test func aNoteRestoredIntoTheBinStartsItsThirtyDaysNow() async throws {
+        let state = try await makeVault()
+        let repo = try #require(state.noteRepo)
+        let note = try #require(try state.createNote(content: "binned before the backup"))
+        try repo.softDelete(id: note.id)
+        try TestVaults.execute(
+            state, "UPDATE notes SET local_deleted_at = NULL, deleted_at = '2000-01-01T00:00:00Z' WHERE id = ?", [note.id]
+        )
+        let file = try backup(of: state)
+        try repo.permanentlyDelete(id: note.id)
+
+        _ = try restore(file, into: state)
+        try TestVaults.execute(state, "UPDATE notes SET needs_sync = 0 WHERE id = ?", [note.id])
+
+        #expect(try repo.getRaw(id: note.id)?.localDeletedAt != nil, "or the purge never sees it")
+        #expect(try repo.purgeOldDeletedNotes() == 0, "the backup's date isn't this device's")
+        #expect(try repo.purgeOldDeletedNotes(olderThan: -3600) == 1)
+    }
+
     @Test func aBatchThatCantBeWrittenLeavesNothingBehind() async throws {
         let source = try await makeVault()
         for index in 0..<3 { _ = try source.createNote(content: "note \(index)") }

@@ -1015,6 +1015,68 @@ struct SyncProtocolTests {
         #expect(!changes.removedByServerIds.contains(note.id), "it wasn't in use")
     }
 
+    // MARK: - A server that keeps deleting (R2-069, R2-168)
+
+    /// The web's hold had this hole: a note held in the bin counted as not live, so
+    /// the same deletions sent again deleted it from there. Nothing a server says
+    /// may take a note out of the bin, however often it says it.
+    @Test func aRepeatedDeletionCantTakeANoteOutOfTheBin() async throws {
+        let fixture = try makeFixture()
+        let records = try (0..<12).map { _ in try synced(fixture.repo) }
+        let deletions = records.map { SyncDeletion(id: $0.id, deletedAt: "2000-01-01T00:00:00Z") }
+        ScriptedServerProtocol.pullReplies = (0..<4).map { _ in page(deletions: deletions) }
+
+        let first = try await fixture.service.pull()
+        #expect(first.removedByServerIds.count == 12)
+        let binnedAt = try records.map { try fixture.repo.getRaw(id: $0.id)?.localDeletedAt }
+
+        for _ in 0..<3 {
+            let again = try await fixture.service.pull()
+            #expect(again.removedByServerIds.isEmpty, "already in the bin, so not removed again")
+        }
+
+        for (record, time) in zip(records, binnedAt) {
+            let stored = try #require(try fixture.repo.getRaw(id: record.id))
+            #expect(stored.deleted)
+            #expect(stored.localDeletedAt == time, "repeating it can't move the purge")
+        }
+        #expect(try fixture.repo.purgeOldDeletedNotes() == 0)
+        #expect(try records.allSatisfy { try fixture.repo.getRaw(id: $0.id) != nil })
+    }
+
+    /// Every way a server can put a note in the bin, with the oldest date it can.
+    @Test func aDeletionDatedLongAgoNeverPurgesSooner() async throws {
+        let fixture = try makeFixture()
+        let tombstoned = try synced(fixture.repo)
+        let pulled = try synced(fixture.repo)
+        let skipped = try fixture.repo.create(content: "edited, then deleted elsewhere", key: key)
+        let longAgo = "2000-01-01T00:00:00Z"
+        ScriptedServerProtocol.pushHandler = { self.answer(skippedDeleted: $0.notes.map(\.id)) }
+        ScriptedServerProtocol.pullReplies = [page(
+            notes: [try remoteNote(id: pulled.id, ciphertext: pulled.content, deleted: true, deletedAt: longAgo)],
+            deletions: [SyncDeletion(id: tombstoned.id, deletedAt: longAgo)]
+        )]
+
+        try await fixture.service.sync()
+
+        #expect(try fixture.repo.purgeOldDeletedNotes() == 0)
+        for id in [tombstoned.id, pulled.id, skipped.id] {
+            #expect(try fixture.repo.getRaw(id: id)?.deleted == true)
+        }
+    }
+
+    @Test func keepServerWithADateLongAgoDoesntPurgeSooner() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "kept in the bin, for now", key: key)
+        refuse(deleted: true, deletedAt: "2000-01-01T00:00:00Z")
+        try await fixture.service.sync()
+
+        try await fixture.service.resolveConflict(noteId: note.id, strategy: .keepServer)
+
+        #expect(try fixture.repo.purgeOldDeletedNotes() == 0)
+        #expect(try fixture.repo.getRaw(id: note.id) != nil)
+    }
+
     // MARK: - A server copy that's in the bin
 
     private func rejection(of note: SyncNote, deleted: Bool? = nil, deletedAt: String? = nil) -> SyncRejected {

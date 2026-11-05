@@ -127,6 +127,43 @@ struct LocalSafetyTests {
         #expect(names == [""])
     }
 
+    /// A note binned before this device kept its own time only has `deleted_at`,
+    /// which a server chooses. Taking that as the time would let a note it dated
+    /// long ago be purged at the first unlock after the upgrade (R2-168).
+    @Test func aNoteAlreadyInTheBinGetsItsThirtyDaysFromTheUpgrade() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("jottery-migration-tests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let path = dir.appendingPathComponent("test.db").path
+        let key = SymmetricKey(data: Data(repeating: 7, count: 32))
+        let id: String
+        do {
+            let db = try DatabaseManager(path: path)
+            let versionRepo = VersionRepository(db: db)
+            let repo = NoteRepository(db: db, versionRepo: versionRepo)
+            let note = try repo.create(content: "binned by an older version", key: key)
+            id = note.id
+            try db.dbPool.write { db in
+                try db.execute(
+                    sql: "UPDATE notes SET deleted = 1, deleted_at = '2000-01-01T00:00:00Z', needs_sync = 0 WHERE id = ?",
+                    arguments: [note.id]
+                )
+                try db.execute(sql: "ALTER TABLE attachments DROP COLUMN uploaded")
+                try db.execute(sql: "ALTER TABLE notes DROP COLUMN local_deleted_at")
+                try db.execute(sql: "ALTER TABLE notes DROP COLUMN from_inbox")
+                try db.execute(sql: "DELETE FROM grdb_migrations WHERE identifier = 'ios_009_local_sync_tracking'")
+            }
+            try db.dbPool.close()
+        }
+
+        let upgraded = try DatabaseManager(path: path)
+        let repo = NoteRepository(db: upgraded, versionRepo: VersionRepository(db: upgraded))
+
+        #expect(try repo.purgeOldDeletedNotes() == 0, "purged at the first unlock, on the server's word")
+        #expect(try repo.getRaw(id: id)?.deleted == true)
+        #expect(try repo.purgeOldDeletedNotes(olderThan: -3600) == 1, "it does still get purged in the end")
+    }
+
     // MARK: - The inbox (jottery-0szd)
 
     private func makeInboxState() throws -> (AppState, InboxItem) {
