@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT content, modified_at, server_version FROM notes WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "content",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "modified_at",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "server_version",
+        "ordinal": 2,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "699f8ff2558252beb9692435e930ffbe1bd0c224f84d2460e6efae2413fad1b8"
+}

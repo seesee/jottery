@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO note_deletions (id, user_id, deleted_at, synced_from_client_id, expires_at)\n           VALUES (?, ?, ?, NULL, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "2788e503bf49420ade2e2c677f48dd6c341dfa03366ec6bc1c5bc04962340cf5"
+}

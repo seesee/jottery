@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM notes WHERE deleted = 1 AND deleted_at IS NOT NULL AND deleted_at < ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "9646a2128a780e25d7436b0f7cb4bc41388746fdc6e9e1dd75b166b2b6a2f4fc"
+}
