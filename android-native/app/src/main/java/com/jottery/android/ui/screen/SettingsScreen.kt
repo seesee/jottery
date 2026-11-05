@@ -253,12 +253,7 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { showWipeConfirm = false },
             title = { Text(stringResource(R.string.settings_wipe_all_data2)) },
-            text = {
-                Text(
-                    stringResource(R.string.settings_this_will_permanently_delete_all) +
-                    stringResource(R.string.settings_this_action_cannot_be_undone)
-                )
-            },
+            text = { Text(stringResource(R.string.unlock_this_will_permanently_delete_all)) },
             confirmButton = {
                 TextButton(
                     onClick = {

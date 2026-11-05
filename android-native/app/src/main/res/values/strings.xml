@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:locale="en-GB">
     <string name="app_name" translatable="false">Jottery</string>
 
     <!-- Setup -->
@@ -470,8 +470,6 @@
     <string name="settings_delete_everything_and_start_fresh">Delete everything and start fresh</string>
     <string name="settings_about2">About</string>
     <string name="settings_wipe_all_data2">Wipe all data?</string>
-    <string name="settings_this_will_permanently_delete_all">This will permanently delete all notes, settings, and encryption keys. </string>
-    <string name="settings_this_action_cannot_be_undone">This action cannot be undone.</string>
     <string name="settings_wipe_everything">Wipe Everything</string>
     <string name="setup_password_is_required">Password is required</string>
     <string name="setup_password_must_be_at_least">Password must be at least 8 characters</string>
