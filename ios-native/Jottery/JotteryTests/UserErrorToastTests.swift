@@ -12,12 +12,12 @@ import Testing
 @MainActor
 struct UserErrorToastTests {
 
-    /// Waits for the message to clear. A fixed sleep can't do this, however
-    /// long: `reportError` starts its timer from a main-actor task, so while
-    /// another test holds the main actor, that timer hasn't begun.
+    /// Waits for the message to clear. `reportError` starts its timer from a
+    /// main-actor task, so while another test holds the main actor that timer
+    /// hasn't begun, and no fixed sleep or deadline is long enough. Counting
+    /// attempts works however long the stall: it costs only one of them.
     private func waitForMessageToClear(in state: AppState) async {
-        let deadline = ContinuousClock.now + .seconds(30)
-        while state.userErrorMessage != nil, ContinuousClock.now < deadline {
+        for _ in 0..<1500 where state.userErrorMessage != nil {
             try? await Task.sleep(for: .milliseconds(20))
         }
     }

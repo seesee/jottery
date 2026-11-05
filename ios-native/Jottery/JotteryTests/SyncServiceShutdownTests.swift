@@ -62,9 +62,10 @@ struct SyncServiceShutdownTests {
     /// Start a sync and wait until it is in progress.
     private func startSync(_ service: SyncService) async throws -> Task<Void, Never> {
         let task = Task { _ = try? await service.sync() }
-        let deadline = ContinuousClock.now + .seconds(30)
+        var attempts = 0
         while !(await service.isSyncing) {
-            try #require(ContinuousClock.now < deadline, "sync never started")
+            attempts += 1
+            try #require(attempts < 3000, "sync never started")
             try await Task.sleep(for: .milliseconds(10))
         }
         return task
