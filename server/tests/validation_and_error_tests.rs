@@ -112,6 +112,7 @@ async fn test_malformed_json_sync_push() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -121,16 +122,11 @@ async fn test_malformed_json_sync_push() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
 
@@ -178,6 +174,7 @@ async fn test_malformed_json_user_login() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -187,12 +184,11 @@ async fn test_malformed_json_user_login() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/user/login", axum::routing::post(jottery_server::api::user::login))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let request = Request::builder()
         .uri("/api/v1/user/login")
@@ -238,6 +234,7 @@ async fn test_sync_push_missing_notes_field() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -247,16 +244,11 @@ async fn test_sync_push_missing_notes_field() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
 
@@ -310,6 +302,7 @@ async fn test_sync_push_note_missing_required_fields() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -319,16 +312,11 @@ async fn test_sync_push_note_missing_required_fields() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
 
@@ -390,6 +378,7 @@ async fn test_register_user_missing_email() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -399,12 +388,11 @@ async fn test_register_user_missing_email() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/auth/register-user", axum::routing::post(jottery_server::api::auth::register_user))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     // Missing email field
     let request = Request::builder()
@@ -454,6 +442,7 @@ async fn test_login_missing_password() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -463,12 +452,11 @@ async fn test_login_missing_password() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/user/login", axum::routing::post(jottery_server::api::user::login))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     // Missing password field
     let request = Request::builder()
@@ -520,6 +508,7 @@ async fn test_sync_push_wrong_data_type() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -529,16 +518,11 @@ async fn test_sync_push_wrong_data_type() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
 
@@ -593,6 +577,7 @@ async fn test_sync_push_version_wrong_type() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -602,16 +587,11 @@ async fn test_sync_push_version_wrong_type() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
     let now = chrono::Utc::now().to_rfc3339();
@@ -684,6 +664,7 @@ async fn test_register_device_wrong_type() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -693,12 +674,11 @@ async fn test_register_device_wrong_type() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/auth/register-device", axum::routing::post(jottery_server::api::auth::register_device))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     // deviceType should be string but is number
     let request = Request::builder()
@@ -753,6 +733,7 @@ async fn test_get_user_invalid_uuid() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -762,6 +743,7 @@ async fn test_get_user_invalid_uuid() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
@@ -803,13 +785,7 @@ async fn test_get_user_invalid_uuid() {
     .await
     .unwrap();
 
-    let app = axum::Router::new()
-        .route("/api/v1/admin/users/:id", axum::routing::get(jottery_server::api::admin::users::get_user))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::admin::admin_auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     // Use invalid UUID format - the endpoint will accept it but fail to find it
     let request = Request::builder()
@@ -854,6 +830,7 @@ async fn test_empty_string_fields() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -863,12 +840,11 @@ async fn test_empty_string_fields() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/auth/register-user", axum::routing::post(jottery_server::api::auth::register_user))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     // Empty email string
     let request = Request::builder()
@@ -921,6 +897,7 @@ async fn test_extremely_large_note_content() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -930,22 +907,17 @@ async fn test_extremely_large_note_content() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
     let now = chrono::Utc::now().to_rfc3339();
 
-    // Create a very large note (2MB of content)
-    let large_content = "A".repeat(2 * 1024 * 1024);
+    // Larger than this config's max_payload_size
+    let large_content = "A".repeat(6 * 1024 * 1024);
 
     let request = Request::builder()
         .uri("/api/v1/sync/push")
@@ -1014,6 +986,7 @@ async fn test_many_tags() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -1023,16 +996,11 @@ async fn test_many_tags() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
     let now = chrono::Utc::now().to_rfc3339();
@@ -1110,6 +1078,7 @@ async fn test_special_characters_in_content() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -1119,16 +1088,11 @@ async fn test_special_characters_in_content() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
     let now = chrono::Utc::now().to_rfc3339();
@@ -1206,6 +1170,7 @@ async fn test_sync_push_skips_versions_for_rejected_notes() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -1215,16 +1180,11 @@ async fn test_sync_push_skips_versions_for_rejected_notes() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
 
@@ -1361,6 +1321,7 @@ async fn test_sync_push_handles_orphan_attachment_data_gracefully() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -1370,16 +1331,11 @@ async fn test_sync_push_handles_orphan_attachment_data_gracefully() {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config,
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/sync/push", axum::routing::post(jottery_server::api::sync::push))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let api_key = create_test_user_and_device(&pool).await;
     let orphan_attachment_id = uuid::Uuid::new_v4().to_string();

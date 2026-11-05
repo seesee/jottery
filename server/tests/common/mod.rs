@@ -80,6 +80,7 @@ pub fn test_config() -> Config {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     }
 }
 
@@ -91,6 +92,7 @@ pub fn app_with(pool: &SqlitePool, config: Config) -> Router {
         sync_broadcast,
         sse_tokens: api::sse::create_token_store(),
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     }))
 }
 

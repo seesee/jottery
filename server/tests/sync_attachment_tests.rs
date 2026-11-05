@@ -346,3 +346,39 @@ async fn housekeeping_does_not_touch_another_users_copy_of_an_id() {
     assert_eq!(attachment_ids(&pulled, &other_note), vec![attachment.clone()]);
     assert_eq!(ids(&pulled["attachments"]), vec![attachment]);
 }
+
+/// Combining notes reuses the originals' attachment ids and bins the originals, so
+/// the combined note has to hold its own claim on each attachment.
+#[tokio::test]
+async fn a_combined_note_keeps_attachments_it_shares_with_an_original() {
+    let (db, app, key) = setup().await;
+    let (original, combined, attachment) = (new_id(), new_id(), new_id());
+    push_with_blob(&app, &key, &original, &attachment).await;
+
+    // The client sends no blob here: the server already has it
+    push(
+        &app,
+        &key,
+        json!({ "notes": [note_with_attachments(&combined, "both", LATER, &[&attachment])] }),
+    )
+    .await;
+
+    let pulled = pull_all(&app, &key).await;
+    assert_eq!(attachment_ids(&pulled, &combined), vec![attachment.clone()]);
+    assert_eq!(ids(&pulled["attachments"]), vec![attachment.clone()]);
+
+    // Emptying the bin afterwards takes the original and leaves the blob
+    let deleted = push(
+        &app,
+        &key,
+        json!({ "deletions": [{ "id": original, "deletedAt": "2099-01-01T00:00:00Z" }] }),
+    )
+    .await;
+    assert_eq!(deleted["rejectedDeletions"], json!([]));
+    run_purge(&db.pool).await;
+
+    assert_eq!(stored_blobs(&db.pool).await, 1);
+    let pulled = pull_all(&app, &key).await;
+    assert_eq!(attachment_ids(&pulled, &combined), vec![attachment.clone()]);
+    assert_eq!(ids(&pulled["attachments"]), vec![attachment]);
+}

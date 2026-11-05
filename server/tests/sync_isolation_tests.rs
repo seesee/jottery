@@ -310,18 +310,22 @@ async fn account_statistics_only_count_the_callers_attachments() {
     push(
         &app,
         &rich.key,
-        json!({ "notes": [note_with_attachments(&note_id, "a", EARLIER, &[&attachment])] }),
+        json!({
+            "notes": [note_with_attachments(&note_id, "a", EARLIER, &[&attachment])],
+            "attachments": [blob(&attachment, b"data")],
+        }),
     )
     .await;
     push(&app, &other.key, json!({ "notes": [note(&note_id, "b", LATER)] })).await;
 
+    // One byte of content and "[]" for tags each. Only one of them has the blob.
     let (_, info) = call(&app, "GET", "/api/v1/user/account", Some(&other.session), None).await;
     assert_eq!(info["attachmentCount"], 0);
-    assert_eq!(info["storageUsedBytes"], 0);
+    assert_eq!(info["storageUsedBytes"], 3);
 
     let (_, info) = call(&app, "GET", "/api/v1/user/account", Some(&rich.session), None).await;
     assert_eq!(info["attachmentCount"], 1);
-    assert_eq!(info["storageUsedBytes"], 4);
+    assert_eq!(info["storageUsedBytes"], 3 + 4);
 }
 
 #[tokio::test]

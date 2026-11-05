@@ -217,6 +217,12 @@ async fn purging_old_deleted_notes_happens_in_housekeeping_not_in_a_request() {
     };
     assert_eq!(exists(db.pool.clone(), id.clone()).await, 1);
 
+    sqlx::query("UPDATE notes SET server_modified_at = '2020-01-01T00:00:00+00:00' WHERE id = ?")
+        .bind(&id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+
     maintenance::run_once(&db.pool).await.unwrap();
     assert_eq!(exists(db.pool.clone(), id).await, 0);
 }

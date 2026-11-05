@@ -144,6 +144,41 @@ impl AttachmentRepository {
             .collect())
     }
 
+    /// The size of each stored blob of the given notes, as
+    /// `(note_id, attachment_id, bytes)`. Reads no blob data.
+    pub async fn blob_sizes(
+        conn: &mut SqliteConnection,
+        user_id: &str,
+        note_ids: &[&str],
+    ) -> Result<Vec<(String, String, usize)>, sqlx::Error> {
+        if note_ids.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let mut query: sqlx::QueryBuilder<'_, Sqlite> = sqlx::QueryBuilder::new(
+            "SELECT na.note_id, m.attachment_id, LENGTH(d.data)
+             FROM note_attachments na
+             JOIN attachments_meta m
+               ON m.user_id = na.user_id AND m.attachment_id = na.attachment_id
+             JOIN attachments_data d ON d.id = m.id
+             WHERE na.user_id = ",
+        );
+        query.push_bind(user_id);
+        query.push(" AND na.note_id IN (");
+        let mut ids = query.separated(", ");
+        for note_id in note_ids {
+            ids.push_bind(*note_id);
+        }
+        ids.push_unseparated(")");
+
+        let rows: Vec<(String, String, i64)> = query.build_query_as().fetch_all(&mut *conn).await?;
+
+        Ok(rows
+            .into_iter()
+            .map(|(note_id, attachment_id, size)| (note_id, attachment_id, size as usize))
+            .collect())
+    }
+
     /// Store a blob for an attachment this user has metadata for. Without
     /// metadata nothing is stored, which keeps other users' attachments out of
     /// reach.

@@ -200,8 +200,14 @@ pub async fn sync_events(
     // Subscribe to broadcast channel
     let rx = state.sync_broadcast.subscribe();
 
+    // A stream never ends by itself, and the server waits for it on shutdown
+    let stopping = {
+        let shutdown = state.shutdown.clone();
+        async move { shutdown.triggered().await }
+    };
+
     // Filter notifications: only for this user, not from this client
-    let stream = BroadcastStream::new(rx)
+    let stream = futures::StreamExt::take_until(BroadcastStream::new(rx), stopping)
         .filter_map(move |result| {
             match result {
                 Ok(notification) => {
