@@ -298,12 +298,13 @@ describe('UserApiClient', () => {
         status: 204,
       });
 
-      await userApi.deactivateAccount();
+      await userApi.deactivateAccount('the-password');
 
       expect(mockFetch).toHaveBeenCalledWith(
         '/api/v1/user/account?mode=deactivate',
         expect.objectContaining({
           method: 'DELETE',
+          body: JSON.stringify({ currentPassword: 'the-password' }),
         }),
       );
 

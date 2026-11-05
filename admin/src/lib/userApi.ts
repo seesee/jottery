@@ -128,19 +128,20 @@ class UserApiClient {
     }, { checksPassword: true });
   }
 
-  // Delete all notes (keep account). Servers that don't check the password yet ignore it.
+  // Delete all notes (keep account). Older servers ignore the password. Current ones
+  // refuse these three requests without it, unless the session is minutes old.
   async deleteAllNotes(currentPassword: string): Promise<void> {
     return this.request('DELETE', '/api/v1/user/notes', { currentPassword }, { checksPassword: true });
   }
 
   // Deactivate account (can re-register with admin approval)
-  async deactivateAccount(): Promise<void> {
-    await this.request('DELETE', '/api/v1/user/account?mode=deactivate');
+  async deactivateAccount(currentPassword: string): Promise<void> {
+    await this.request('DELETE', '/api/v1/user/account?mode=deactivate', { currentPassword }, { checksPassword: true });
     // Clear local session since account is now inactive
     this.session.clear();
   }
 
-  // Permanently delete account and all data. Servers that don't check the password yet ignore it.
+  // Permanently delete account and all data
   async deleteAccount(currentPassword: string): Promise<void> {
     await this.request('DELETE', '/api/v1/user/account?mode=delete', { currentPassword }, { checksPassword: true });
     // Clear local session since account no longer exists
