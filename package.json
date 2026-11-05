@@ -64,7 +64,7 @@
     "@tiptap/starter-kit": "^3.31.3",
     "@tsconfig/svelte": "^5.0.8",
     "@types/node": "^25.6.0",
-    "@types/pako": "^2.0.4",
+    "@types/pako": "^3.0.0",
     "@types/uuid": "^10.0.0",
     "@uiw/codemirror-theme-github": "^4.25.9",
     "@vitejs/plugin-basic-ssl": "^2.3.0",
@@ -102,6 +102,6 @@
   },
   "dependencies": {
     "dompurify": "^3.4.17",
-    "pako": "^2.1.0"
+    "pako": "^3.0.3"
   }
 }
