@@ -26,7 +26,9 @@ actor SyncService {
     /// The server's clock, from the last pull.
     private var lastServerTime: Date?
 
-    init(syncClient: SyncClient, noteRepo: NoteRepository, syncRepo: SyncRepository, versionRepo: VersionRepository, attachmentRepo: AttachmentRepository, savedSearchRepo: SavedSearchRepository, key: SymmetricKey) {
+    /// - Parameter sseClient: replaces the live-updates listener. Only used by
+    ///   tests, which need to reach it once the service has gone.
+    init(syncClient: SyncClient, noteRepo: NoteRepository, syncRepo: SyncRepository, versionRepo: VersionRepository, attachmentRepo: AttachmentRepository, savedSearchRepo: SavedSearchRepository, key: SymmetricKey, sseClient: SSEClient? = nil) {
         self.syncClient = syncClient
         self.noteRepo = noteRepo
         self.syncRepo = syncRepo
@@ -34,7 +36,7 @@ actor SyncService {
         self.attachmentRepo = attachmentRepo
         self.savedSearchRepo = savedSearchRepo
         self.key = key
-        self.sseClient = SSEClient(syncClient: syncClient)
+        self.sseClient = sseClient ?? SSEClient(syncClient: syncClient)
     }
 
     /// Set a handler called after SSE-triggered syncs complete.

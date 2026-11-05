@@ -19,7 +19,7 @@ struct AppStateTeardownTests {
         return state
     }
 
-    private func makeService(for state: AppState) throws -> SyncService {
+    private func makeService(for state: AppState, listener: SSEClient? = nil) throws -> SyncService {
         SyncService(
             syncClient: SyncClient(endpoint: "http://localhost:9"),
             noteRepo: try #require(state.noteRepo),
@@ -27,7 +27,8 @@ struct AppStateTeardownTests {
             versionRepo: try #require(state.versionRepo),
             attachmentRepo: try #require(state.attachmentRepo),
             savedSearchRepo: try #require(state.savedSearchRepo),
-            key: try #require(state.keyManager.masterKey)
+            key: try #require(state.keyManager.masterKey),
+            sseClient: listener
         )
     }
 
@@ -93,5 +94,34 @@ struct AppStateTeardownTests {
 
         await waitUntil { released == nil }
         #expect(released == nil)
+    }
+
+    /// Stopping isn't all that stands between the listener and the key. If the
+    /// listener held the service, anything that skipped the stop would keep it.
+    @Test func theListenerAloneDoesntKeepAServiceAlive() async throws {
+        let state = try makeUnlockedState()
+        let listener = SSEClient(syncClient: SyncClient(endpoint: "http://localhost:9"))
+        var service: SyncService? = try makeService(for: state, listener: listener)
+        weak let released = service
+        await service?.startSSE()
+
+        service = nil
+
+        await waitUntil { released == nil }
+        await listener.stop()
+        #expect(released == nil)
+    }
+
+    /// Letting go isn't enough: a service still running would go on listening to
+    /// the server after the lock, and nothing would be left to stop it.
+    @Test func endingSyncStopsTheService() async throws {
+        let state = try makeUnlockedState()
+        let service = try makeService(for: state)
+        state.syncService = service
+
+        state.teardownSync()
+
+        await waitUntil { await service.isShutDown }
+        #expect(await service.isShutDown)
     }
 }
