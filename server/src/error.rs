@@ -66,7 +66,7 @@ impl From<crate::services::AdminError> for AppError {
         match err {
             AdminError::UserNotFound(_) => AppError::NotFound("User not found".to_string()),
             AdminError::DeviceNotFound(_) => AppError::NotFound("Device not found".to_string()),
-            AdminError::LastAdmin | AdminError::WeakPassword(_) => {
+            AdminError::LastAdmin | AdminError::WeakPassword(_) | AdminError::AmbiguousId(_) => {
                 AppError::BadRequest(err.to_string())
             }
             AdminError::AlreadyInState(_) => AppError::Conflict(err.to_string()),
