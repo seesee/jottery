@@ -262,8 +262,8 @@ async fn handle_users(
                 Err(jottery_server::services::AdminError::AlreadyInState(_)) => {
                     println!("User is already inactive.");
                 }
-                Err(jottery_server::services::AdminError::CannotModifyAdmin) => {
-                    eprintln!("Error: Cannot deactivate admin user via CLI.");
+                Err(jottery_server::services::AdminError::LastAdmin) => {
+                    eprintln!("Error: This is the last admin, and a server needs one.");
                     std::process::exit(1);
                 }
                 Err(e) => return Err(e.into()),
@@ -282,11 +282,6 @@ async fn handle_users(
 
         UserCommands::Delete { user, yes } => {
             let info = AdminService::get_user_info(pool, &user).await?;
-
-            if info.user.is_admin == 1 {
-                eprintln!("Error: Cannot delete admin user via CLI.");
-                std::process::exit(1);
-            }
 
             if !yes {
                 println!(
@@ -307,8 +302,14 @@ async fn handle_users(
                 }
             }
 
-            let deleted = AdminService::delete_user(pool, &info.user.id).await?;
-            println!("✓ Deleted user: {}", deleted.email);
+            match AdminService::delete_user(pool, &info.user.id).await {
+                Ok(deleted) => println!("✓ Deleted user: {}", deleted.email),
+                Err(jottery_server::services::AdminError::LastAdmin) => {
+                    eprintln!("Error: This is the last admin, and a server needs one.");
+                    std::process::exit(1);
+                }
+                Err(e) => return Err(e.into()),
+            }
         }
 
         UserCommands::ResetPassword { user, password } => {
@@ -336,12 +337,18 @@ async fn handle_users(
 
             let argon2_params = (config.argon2_m_cost, config.argon2_t_cost, config.argon2_p_cost);
 
-            match AdminService::reset_password(pool, &info.user.id, &new_password, argon2_params)
-                .await
+            match AdminService::reset_password(
+                pool,
+                &info.user.id,
+                &new_password,
+                argon2_params,
+                &config.password_complexity,
+            )
+            .await
             {
                 Ok(_) => println!("✓ Password reset for user: {}", info.user.email),
-                Err(jottery_server::services::AdminError::PasswordTooShort) => {
-                    eprintln!("Error: Password must be at least 12 characters.");
+                Err(jottery_server::services::AdminError::WeakPassword(reason)) => {
+                    eprintln!("Error: {reason}.");
                     std::process::exit(1);
                 }
                 Err(e) => return Err(e.into()),

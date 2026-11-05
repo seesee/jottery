@@ -1,5 +1,6 @@
 pub mod admin;
 pub mod auth;
+pub mod cookies;
 pub mod extractors;
 pub mod inbox;
 pub mod sse;
@@ -16,7 +17,13 @@ pub mod middleware {
     };
     use std::sync::Arc;
 
-    use crate::{error::AppError, utils::crypto::hash_sha256, AppState, db::SessionRepository};
+    use crate::{
+        api::cookies::{is_forgeable, session_credential},
+        db::{activity_is_stale, SessionRepository},
+        error::AppError,
+        utils::crypto::hash_sha256,
+        AppState,
+    };
 
     /// The only account routes open to a user who must change their password.
     const PASSWORD_CHANGE_ALLOWED_PATHS: [&str; 2] =
@@ -28,6 +35,7 @@ pub mod middleware {
     pub struct ClientInfo {
         pub client_id: String,
         pub user_id: String,
+        pub last_seen_at: Option<String>,
     }
 
     /// Find the device an API key belongs to, if it may still be used.
@@ -42,7 +50,7 @@ pub mod middleware {
         let hashed_key = hash_sha256(api_key);
 
         let client = sqlx::query!(
-            r#"SELECT c.id, c.user_id, c.is_active, u.is_active AS user_is_active, u.approved AS user_approved
+            r#"SELECT c.id, c.user_id, c.is_active, c.last_seen_at, u.is_active AS user_is_active, u.approved AS user_approved
                FROM clients c
                JOIN users u ON u.id = c.user_id
                WHERE c.api_key = ?"#,
@@ -72,6 +80,7 @@ pub mod middleware {
         Ok(ClientInfo {
             client_id: client.id,
             user_id: client.user_id,
+            last_seen_at: client.last_seen_at,
         })
     }
 
@@ -95,21 +104,21 @@ pub mod middleware {
         let api_key = &auth_header[7..]; // Remove "Bearer " prefix
 
         let client = authenticate_device(&state.pool, api_key).await?;
-        let client_id = client.client_id.clone();
+
+        if activity_is_stale(client.last_seen_at.as_deref()) {
+            let now = chrono::Utc::now().to_rfc3339();
+            let _ = sqlx::query!(
+                "UPDATE clients SET last_seen_at = ? WHERE id = ?",
+                now,
+                client.client_id
+            )
+            .execute(&state.pool)
+            .await;
+        }
 
         // Add both client_id and user_id to request extensions
         // client_id for audit trail, user_id for access control
         request.extensions_mut().insert(client);
-
-        // Update last_seen_at
-        let now = chrono::Utc::now().to_rfc3339();
-        let _ = sqlx::query!(
-            "UPDATE clients SET last_seen_at = ? WHERE id = ?",
-            now,
-            client_id
-        )
-        .execute(&state.pool)
-        .await;
 
         Ok(next.run(request).await)
     }
@@ -123,10 +132,14 @@ pub mod middleware {
         next: Next,
     ) -> Result<Response, StatusCode> {
         // Extract session token from cookie or Authorization header
-        let session_token = extract_session_token(&headers).ok_or(StatusCode::UNAUTHORIZED)?;
+        let credential = session_credential(&headers).ok_or(StatusCode::UNAUTHORIZED)?;
+
+        if is_forgeable(&credential, request.method(), &headers) {
+            return Err(StatusCode::FORBIDDEN);
+        }
 
         // Validate session and get user info
-        let session = SessionRepository::validate_and_get(&state.pool, &session_token)
+        let session = SessionRepository::validate_and_get(&state.pool, &credential.token)
             .await
             .map_err(|e| {
                 tracing::error!("Session validation failed: {}", e);
@@ -228,33 +241,5 @@ pub mod middleware {
             }
             _ => Err(StatusCode::UNAUTHORIZED),
         }
-    }
-
-    /// Extract session token from headers
-    /// Checks both Cookie header and Authorization header (Bearer token)
-    pub fn extract_session_token(headers: &HeaderMap) -> Option<String> {
-        // Try Authorization header first (Bearer token)
-        if let Some(auth_header) = headers.get("Authorization") {
-            if let Ok(auth_str) = auth_header.to_str() {
-                if auth_str.starts_with("Bearer ") {
-                    return Some(auth_str[7..].to_string());
-                }
-            }
-        }
-
-        // Try Cookie header (session_token=xxx)
-        if let Some(cookie_header) = headers.get("Cookie") {
-            if let Ok(cookie_str) = cookie_header.to_str() {
-                // Parse cookies (simple implementation)
-                for cookie in cookie_str.split(';') {
-                    let parts: Vec<&str> = cookie.trim().splitn(2, '=').collect();
-                    if parts.len() == 2 && parts[0] == "session_token" {
-                        return Some(parts[1].to_string());
-                    }
-                }
-            }
-        }
-
-        None
     }
 }

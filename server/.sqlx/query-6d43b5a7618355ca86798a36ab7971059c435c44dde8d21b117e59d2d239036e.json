@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        INSERT INTO note_deletions (id, user_id, deleted_at, synced_from_client_id, expires_at, received_at, change_seq)\n        VALUES (?, ?, ?, ?, ?, ?, ?)\n        ON CONFLICT(id, user_id) DO UPDATE SET\n            deleted_at = excluded.deleted_at,\n            synced_from_client_id = excluded.synced_from_client_id,\n            received_at = excluded.received_at,\n            change_seq = excluded.change_seq\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "6d43b5a7618355ca86798a36ab7971059c435c44dde8d21b117e59d2d239036e"
+}
