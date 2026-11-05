@@ -378,6 +378,18 @@ export function renderHtml(content: string): string {
 }
 
 /**
+ * Wrap an HTML or XML note for the preview iframe.
+ *
+ * The iframe's sandbox stops script, and this policy stops the note reaching the
+ * network with anything else. Neither depends on the app's own policy, which a
+ * srcdoc frame inherits but which allows same-origin requests.
+ */
+export function buildSandboxedPreview(content: string): string {
+  const policy = "default-src 'none'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:";
+  return `<!doctype html><meta http-equiv="Content-Security-Policy" content="${policy}">${content}`;
+}
+
+/**
  * Get preview HTML for content based on language
  */
 export function getPreviewHtml(

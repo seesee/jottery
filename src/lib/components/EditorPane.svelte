@@ -161,7 +161,7 @@
       ? $_('editor.readOnly.lockedBanner')
       : undefined;
 
-  // Check if preview should use iframe (for HTML/XML with potential scripts)
+  // HTML/XML previews render in a sandboxed iframe, never in the app's document
   $: useIframePreview = language === 'html' || language === 'xml';
 
   // Compute note statistics

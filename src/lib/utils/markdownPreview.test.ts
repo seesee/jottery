@@ -5,7 +5,7 @@
  * look at the resulting DOM, because that is what an attacker needs to reach.
  */
 import { describe, it, expect } from 'vitest';
-import { renderMarkdown, renderHtml, getPreviewHtml } from './markdownPreview';
+import { renderMarkdown, renderHtml, getPreviewHtml, buildSandboxedPreview } from './markdownPreview';
 import type { Attachment } from '../types';
 
 const ID = '3f2b8c1e-7d4a-4e9b-8a6f-1c2d3e4f5a6b';
@@ -248,5 +248,26 @@ describe('renderHtml and getPreviewHtml', () => {
     for (const language of ['markdown', 'html']) {
       expect(live(getPreviewHtml('<img src=x onerror=1>', language, options))).toEqual([]);
     }
+  });
+});
+
+describe('buildSandboxedPreview', () => {
+  function policyOf(html: string): string {
+    const meta = new DOMParser().parseFromString(html, 'text/html').querySelector('meta');
+    expect(meta?.getAttribute('http-equiv')).toBe('Content-Security-Policy');
+    return meta?.getAttribute('content') as string;
+  }
+
+  it('starts with a policy, ahead of anything in the note', () => {
+    const html = buildSandboxedPreview('<meta http-equiv="refresh" content="0"><p>x</p>');
+    expect(html.indexOf('Content-Security-Policy')).toBeLessThan(html.indexOf('refresh'));
+    expect(policyOf(html)).toContain("default-src 'none'");
+  });
+
+  it('allows no script and no remote requests', () => {
+    const policy = policyOf(buildSandboxedPreview(''));
+    expect(policy).not.toContain('script-src');
+    expect(policy).not.toMatch(/https?:/);
+    expect(policy).not.toContain("'self'");
   });
 });
