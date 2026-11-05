@@ -60,11 +60,7 @@ fn build_info_lines<'a>(note: &Note, app: &App) -> Vec<Line<'a>> {
     let mut info_lines = vec![Line::from("")];
 
     // Note ID (truncated)
-    let id_display = if note.id.len() > 36 {
-        note.id[..36].to_string()
-    } else {
-        note.id.clone()
-    };
+    let id_display = crate::models::char_prefix(&note.id, 36).to_string();
     info_lines.push(Line::from(vec![
         Span::styled("ID:          ", Style::default().fg(app.color_scheme.muted)),
         Span::styled(id_display, Style::default().fg(app.color_scheme.foreground)),

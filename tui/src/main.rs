@@ -658,7 +658,7 @@ fn format_note_preview(note: &Note, show_content: bool) -> String {
     };
 
     format!("{} - {}{}{}",
-        &note.id[..8],
+        models::char_prefix(&note.id, 8),
         title_str,
         tags_str,
         preview
@@ -775,7 +775,7 @@ fn run() -> Result<()> {
             // Save to database
             let note_repo = NoteRepository::new(db.connection());
             note_repo.create(&note, &key)?;
-            outln!("✓ {}: {}", t!("cli.new"), &note.id[..8]);
+            outln!("✓ {}: {}", t!("cli.new"), models::char_prefix(&note.id, 8));
 
             // Auto-sync if configured
             let sync_repo = SyncRepository::new(db.connection());

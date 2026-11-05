@@ -625,7 +625,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<usize> {
                     let encrypted_filename: crate::crypto::EncryptedData = match serde_json::from_str(&attachment_ref.filename) {
                         Ok(data) => data,
                         Err(e) => {
-                            app.debug_log(&format!("Pull - Failed to parse filename as JSON for {}: {}, raw: {:?}", attachment_ref.id, e, &attachment_ref.filename[..100.min(attachment_ref.filename.len())]));
+                            app.debug_log(&format!("Pull - Failed to parse filename as JSON for {}: {}, raw: {:?}", attachment_ref.id, e, crate::models::char_prefix(&attachment_ref.filename, 100)));
                             continue;
                         }
                     };

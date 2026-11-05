@@ -233,7 +233,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             // Get palette info for debugging
             let palette = app.settings.get_color_palette();
             app.debug_log(&format!("Note {} - id={}, theme_name={}, is_dark={}, color={:?}, palette_size={}",
-                i, &note.id[..8], theme_name, is_dark, note.color, palette.len()));
+                i, crate::models::char_prefix(&note.id, 8), theme_name, is_dark, note.color, palette.len()));
 
             // Log detailed color resolution
             if let Some(ref color_key) = note.color {

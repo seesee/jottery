@@ -29,6 +29,15 @@ pub const MAX_HASH_CHAIN_LENGTH: usize = 50;
 
 type NonceType = [u8; NONCE_LENGTH];
 
+/// A nonce read back from stored or received data. `Nonce::from_slice` panics on
+/// the wrong length, and that length comes from whoever wrote the ciphertext.
+fn nonce_from(bytes: &[u8]) -> Result<&Nonce<<Aes256Gcm as AeadCore>::NonceSize>> {
+    if bytes.len() != NONCE_LENGTH {
+        anyhow::bail!("Invalid nonce length: {} (expected {})", bytes.len(), NONCE_LENGTH);
+    }
+    Ok(Nonce::from_slice(bytes))
+}
+
 /// Cryptography service for encryption/decryption operations
 pub struct CryptoService;
 
@@ -105,7 +114,7 @@ impl CryptoService {
             .decode(&encrypted.nonce)
             .context("Invalid base64 nonce")?;
 
-        let nonce = Nonce::from_slice(&nonce_bytes);
+        let nonce = nonce_from(&nonce_bytes)?;
 
         let plaintext = cipher
             .decrypt(nonce, ciphertext.as_ref())
@@ -152,7 +161,7 @@ impl CryptoService {
             .decode(&encrypted.nonce)
             .context("Invalid base64 nonce")?;
 
-        let nonce = Nonce::from_slice(&nonce_bytes);
+        let nonce = nonce_from(&nonce_bytes)?;
 
         let plaintext = cipher
             .decrypt(nonce, ciphertext.as_ref())
@@ -317,6 +326,22 @@ mod tests {
     fn test_password() -> String {
         std::env::var("JOTTERY_TEST_PASSWORD")
             .unwrap_or_else(|_| "test_password_placeholder".to_string())
+    }
+
+    #[test]
+    fn a_nonce_of_the_wrong_length_is_an_error_not_a_panic() {
+        let service = CryptoService::new();
+        let key = service.generate_master_key();
+
+        for length in [0usize, 1, 11, 13, 32] {
+            let mut text = service.encrypt_text("secret", &key).unwrap();
+            text.nonce = general_purpose::STANDARD.encode(vec![0u8; length]);
+            assert!(service.decrypt_text(&text, &key).is_err());
+
+            let mut binary = service.encrypt_binary(b"secret", &key).unwrap();
+            binary.nonce = general_purpose::STANDARD.encode(vec![0u8; length]);
+            assert!(service.decrypt_binary(&binary, &key).is_err());
+        }
     }
 
     #[test]

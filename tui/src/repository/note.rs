@@ -7,6 +7,109 @@ use rusqlite::{params, Connection, OptionalExtension};
 use crate::crypto::{CryptoService, EncryptedData};
 use crate::models::{Attachment, Note};
 
+/// The columns every note query reads, in the order `StoredNote::read` expects.
+const NOTE_COLUMNS: &str = "id, created_at, modified_at, synced_at, content, tags, attachments,
+    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version,
+    word_wrap, syntax_language, color, content_hash, parent_hash, hash_chain";
+
+/// Notes that were read, and how many rows couldn't be.
+///
+/// A row is unreadable when it's stored under another key or it's damaged. Callers
+/// that show the list should say so, because the vault otherwise just looks short.
+#[derive(Debug, Default)]
+pub struct NoteList {
+    pub notes: Vec<Note>,
+    pub unreadable: usize,
+}
+
+/// A notes row as stored, before any decryption.
+struct StoredNote {
+    id: String,
+    created_at: String,
+    modified_at: String,
+    synced_at: Option<String>,
+    content: String,
+    tags: String,
+    attachments: String,
+    pinned: bool,
+    archived: bool,
+    archived_at: Option<String>,
+    locked: bool,
+    locked_at: Option<String>,
+    deleted: bool,
+    deleted_at: Option<String>,
+    sync_hash: Option<String>,
+    version: i32,
+    word_wrap: bool,
+    syntax_language: String,
+    color: Option<String>,
+    content_hash: Option<String>,
+    parent_hash: Option<String>,
+    hash_chain: Option<String>,
+}
+
+impl StoredNote {
+    fn read(row: &rusqlite::Row<'_>) -> rusqlite::Result<Self> {
+        Ok(Self {
+            id: row.get(0)?,
+            created_at: row.get(1)?,
+            modified_at: row.get(2)?,
+            synced_at: row.get(3)?,
+            content: row.get(4)?,
+            tags: row.get(5)?,
+            attachments: row.get(6)?,
+            pinned: row.get::<_, i32>(7)? != 0,
+            archived: row.get::<_, i32>(8)? != 0,
+            archived_at: row.get(9)?,
+            locked: row.get::<_, i32>(10)? != 0,
+            locked_at: row.get(11)?,
+            deleted: row.get::<_, i32>(12)? != 0,
+            deleted_at: row.get(13)?,
+            sync_hash: row.get(14)?,
+            version: row.get(15)?,
+            word_wrap: row.get::<_, i32>(16)? != 0,
+            syntax_language: row.get(17)?,
+            color: row.get(18)?,
+            content_hash: row.get(19)?,
+            parent_hash: row.get(20)?,
+            hash_chain: row.get(21)?,
+        })
+    }
+
+    fn decrypt(self, crypto: &CryptoService, key: &[u8; 32]) -> Result<Note> {
+        let encrypted_content: EncryptedData = serde_json::from_str(&self.content)?;
+        let encrypted_tags: EncryptedData = serde_json::from_str(&self.tags)?;
+
+        // A stored timestamp that won't parse loses that timestamp, not the note.
+        let optional_time = |text: Option<String>| text.and_then(|t| t.parse().ok());
+
+        Ok(Note {
+            content: crypto.decrypt_text(&encrypted_content, key)?,
+            tags: crypto.decrypt_json(&encrypted_tags, key)?,
+            attachments: serde_json::from_str::<Vec<Attachment>>(&self.attachments)?,
+            created_at: self.created_at.parse()?,
+            modified_at: self.modified_at.parse()?,
+            synced_at: optional_time(self.synced_at),
+            archived_at: optional_time(self.archived_at),
+            locked_at: optional_time(self.locked_at),
+            deleted_at: optional_time(self.deleted_at),
+            hash_chain: self.hash_chain.and_then(|json| serde_json::from_str(&json).ok()),
+            syntax_language: self.syntax_language.parse().unwrap_or_default(),
+            id: self.id,
+            pinned: self.pinned,
+            archived: self.archived,
+            locked: self.locked,
+            deleted: self.deleted,
+            sync_hash: self.sync_hash,
+            version: self.version,
+            word_wrap: self.word_wrap,
+            color: self.color,
+            content_hash: self.content_hash,
+            parent_hash: self.parent_hash,
+        })
+    }
+}
+
 /// Repository for note operations
 pub struct NoteRepository<'a> {
     conn: &'a Connection,
@@ -75,110 +178,45 @@ impl<'a> NoteRepository<'a> {
 
     /// Get a note by ID (decrypted)
     pub fn get(&self, id: &str, key: &[u8; 32]) -> Result<Option<Note>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color,
-                    content_hash, parent_hash, hash_chain
-             FROM notes WHERE id = ?1"
-        )?;
-
-        let note = stmt
-            .query_row(params![id], |row| {
-                Ok((
-                    row.get::<_, String>(0)?,      // id
-                    row.get::<_, String>(1)?,      // created_at
-                    row.get::<_, String>(2)?,      // modified_at
-                    row.get::<_, Option<String>>(3)?, // synced_at
-                    row.get::<_, String>(4)?,      // content (encrypted)
-                    row.get::<_, String>(5)?,      // tags (encrypted)
-                    row.get::<_, String>(6)?,      // attachments
-                    row.get::<_, i32>(7)?,         // pinned
-                    row.get::<_, i32>(8)?,         // archived
-                    row.get::<_, Option<String>>(9)?, // archived_at
-                    row.get::<_, i32>(10)?,        // locked
-                    row.get::<_, Option<String>>(11)?, // locked_at
-                    row.get::<_, i32>(12)?,        // deleted
-                    row.get::<_, Option<String>>(13)?, // deleted_at
-                    row.get::<_, Option<String>>(14)?, // sync_hash
-                    row.get::<_, i32>(15)?,        // version
-                    row.get::<_, i32>(16)?,        // word_wrap
-                    row.get::<_, String>(17)?,     // syntax_language
-                    row.get::<_, Option<String>>(18)?, // color
-                    row.get::<_, Option<String>>(19)?, // content_hash
-                    row.get::<_, Option<String>>(20)?, // parent_hash
-                    row.get::<_, Option<String>>(21)?, // hash_chain (JSON)
-                ))
-            })
+        let sql = format!("SELECT {NOTE_COLUMNS} FROM notes WHERE id = ?1");
+        let stored = self.conn
+            .query_row(&sql, params![id], StoredNote::read)
             .optional()?;
 
-        match note {
-            Some((
-                id,
-                created_at,
-                modified_at,
-                synced_at,
-                content_json,
-                tags_json,
-                attachments_json,
-                pinned,
-                archived,
-                archived_at,
-                locked,
-                locked_at,
-                deleted,
-                deleted_at,
-                sync_hash,
-                version,
-                word_wrap,
-                syntax_language,
-                color,
-                content_hash,
-                parent_hash,
-                hash_chain_json,
-            )) => {
-                // Decrypt content and tags
-                let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
-                let encrypted_tags: EncryptedData = serde_json::from_str(&tags_json)?;
+        stored.map(|note| note.decrypt(&self.crypto, key)).transpose()
+    }
 
-                let content = self.crypto.decrypt_text(&encrypted_content, key)?;
-                let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
+    /// Run a note query, keeping every row that can be read and counting the rest.
+    fn query_notes(&self, filter: &str, params: impl rusqlite::Params, key: &[u8; 32]) -> Result<NoteList> {
+        let sql = format!("SELECT {NOTE_COLUMNS} FROM notes {filter}");
+        let mut stmt = self.conn.prepare(&sql)?;
+        let rows = stmt.query_map(params, StoredNote::read)?;
 
-                // Deserialize attachments
-                let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
+        let mut list = NoteList::default();
+        for row in rows {
+            let stored = match row {
+                Ok(stored) => stored,
+                Err(e) => {
+                    warn!("[NoteRepository] Skipping row with read error: {e}");
+                    list.unreadable += 1;
+                    continue;
+                }
+            };
 
-                // Deserialize hash chain
-                let hash_chain: Option<Vec<String>> = hash_chain_json
-                    .map(|j| serde_json::from_str(&j))
-                    .transpose()
-                    .context("Failed to deserialize hash chain")?;
-
-                Ok(Some(Note {
-                    id,
-                    created_at: created_at.parse()?,
-                    modified_at: modified_at.parse()?,
-                    synced_at: synced_at.map(|s| s.parse()).transpose()?,
-                    content,
-                    tags,
-                    attachments,
-                    pinned: pinned != 0,
-                    archived: archived != 0,
-                    archived_at: archived_at.map(|s| s.parse()).transpose()?,
-                    locked: locked != 0,
-                    locked_at: locked_at.map(|s| s.parse()).transpose()?,
-                    deleted: deleted != 0,
-                    deleted_at: deleted_at.map(|s| s.parse()).transpose()?,
-                    sync_hash,
-                    version,
-                    word_wrap: word_wrap != 0,
-                    syntax_language: syntax_language.parse().unwrap_or_default(),
-                    color,
-                    content_hash,
-                    parent_hash,
-                    hash_chain,
-                }))
+            let note_id = stored.id.clone();
+            match stored.decrypt(&self.crypto, key) {
+                Ok(note) => list.notes.push(note),
+                Err(e) => {
+                    warn!("[NoteRepository] Skipping undecryptable note {note_id}: {e}");
+                    list.unreadable += 1;
+                }
             }
-            None => Ok(None),
         }
+        if list.unreadable > 0 {
+            warn!("[NoteRepository] {} notes could not be read", list.unreadable);
+        }
+
+        Ok(list)
     }
 
     /// Update a note
@@ -258,131 +296,18 @@ impl<'a> NoteRepository<'a> {
 
     /// List all notes (excluding deleted and archived by default)
     pub fn list(&self, include_deleted: bool, key: &[u8; 32]) -> Result<Vec<Note>> {
-        let query = if include_deleted {
-            "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color,
-                    content_hash, parent_hash, hash_chain
-             FROM notes ORDER BY modified_at DESC"
+        let filter = if include_deleted {
+            "ORDER BY modified_at DESC"
         } else {
-            "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color,
-                    content_hash, parent_hash, hash_chain
-             FROM notes WHERE deleted = 0 AND archived = 0 ORDER BY modified_at DESC"
+            "WHERE deleted = 0 AND archived = 0 ORDER BY modified_at DESC"
         };
+        Ok(self.query_notes(filter, [], key)?.notes)
+    }
 
-        let mut stmt = self.conn.prepare(query)?;
-        let rows = stmt.query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, Option<String>>(3)?,
-                row.get::<_, String>(4)?,
-                row.get::<_, String>(5)?,
-                row.get::<_, String>(6)?,
-                row.get::<_, i32>(7)?,
-                row.get::<_, i32>(8)?,
-                row.get::<_, Option<String>>(9)?,
-                row.get::<_, i32>(10)?,
-                row.get::<_, Option<String>>(11)?,
-                row.get::<_, i32>(12)?,
-                row.get::<_, Option<String>>(13)?,
-                row.get::<_, Option<String>>(14)?,
-                row.get::<_, i32>(15)?,
-                row.get::<_, i32>(16)?,
-                row.get::<_, String>(17)?,
-                row.get::<_, Option<String>>(18)?,
-                row.get::<_, Option<String>>(19)?,
-                row.get::<_, Option<String>>(20)?,
-                row.get::<_, Option<String>>(21)?,
-            ))
-        })?;
-
-        let mut notes = Vec::new();
-        let mut fail_count = 0usize;
-        for row in rows {
-            let (
-                id,
-                created_at,
-                modified_at,
-                synced_at,
-                content_json,
-                tags_json,
-                attachments_json,
-                pinned,
-                archived,
-                archived_at,
-                locked,
-                locked_at,
-                deleted,
-                deleted_at,
-                sync_hash,
-                version,
-                word_wrap,
-                syntax_language,
-                color,
-                content_hash,
-                parent_hash,
-                hash_chain_json,
-            ) = match row {
-                Ok(data) => data,
-                Err(e) => {
-                    warn!("[NoteRepository] Skipping row with read error: {e}");
-                    fail_count += 1;
-                    continue;
-                }
-            };
-
-            let note_id = id.clone();
-            match (|| -> Result<Note> {
-                let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
-                let encrypted_tags: EncryptedData = serde_json::from_str(&tags_json)?;
-
-                let content = self.crypto.decrypt_text(&encrypted_content, key)?;
-                let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
-                let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
-                let hash_chain: Option<Vec<String>> = hash_chain_json
-                    .map(|j| serde_json::from_str(&j))
-                    .transpose()
-                    .unwrap_or(None);
-
-                Ok(Note {
-                    id,
-                    created_at: created_at.parse()?,
-                    modified_at: modified_at.parse()?,
-                    synced_at: synced_at.map(|s| s.parse()).transpose()?,
-                    content,
-                    tags,
-                    attachments,
-                    pinned: pinned != 0,
-                    archived: archived != 0,
-                    archived_at: archived_at.map(|s| s.parse()).transpose()?,
-                    locked: locked != 0,
-                    locked_at: locked_at.map(|s| s.parse()).transpose()?,
-                    deleted: deleted != 0,
-                    deleted_at: deleted_at.map(|s| s.parse()).transpose()?,
-                    sync_hash,
-                    version,
-                    word_wrap: word_wrap != 0,
-                    syntax_language: syntax_language.parse().unwrap_or_default(),
-                    color,
-                    content_hash,
-                    parent_hash,
-                    hash_chain,
-                })
-            })() {
-                Ok(note) => notes.push(note),
-                Err(e) => {
-                    warn!("[NoteRepository] Skipping undecryptable note {note_id}: {e}");
-                    fail_count += 1;
-                }
-            }
-        }
-        if fail_count > 0 {
-            warn!("[NoteRepository] {fail_count} notes failed to decrypt in list()");
-        }
-
-        Ok(notes)
+    /// Every note in the vault, deleted or not, and a count of rows that couldn't
+    /// be read. Whatever copies the whole vault needs that count.
+    pub fn list_everything(&self, key: &[u8; 32]) -> Result<NoteList> {
+        self.query_notes("ORDER BY modified_at DESC", [], key)
     }
 
     /// Get notes modified after a specific timestamp (for sync)
@@ -391,125 +316,12 @@ impl<'a> NoteRepository<'a> {
         timestamp: DateTime<Utc>,
         key: &[u8; 32],
     ) -> Result<Vec<Note>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color,
-                    content_hash, parent_hash, hash_chain
-             FROM notes WHERE modified_at > ?1 ORDER BY modified_at DESC"
+        let list = self.query_notes(
+            "WHERE modified_at > ?1 ORDER BY modified_at DESC",
+            params![timestamp.to_rfc3339()],
+            key,
         )?;
-
-        let rows = stmt.query_map(params![timestamp.to_rfc3339()], |row| {
-            Ok((
-                row.get::<_, String>(0)?,
-                row.get::<_, String>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, Option<String>>(3)?,
-                row.get::<_, String>(4)?,
-                row.get::<_, String>(5)?,
-                row.get::<_, String>(6)?,
-                row.get::<_, i32>(7)?,
-                row.get::<_, i32>(8)?,
-                row.get::<_, Option<String>>(9)?,
-                row.get::<_, i32>(10)?,
-                row.get::<_, Option<String>>(11)?,
-                row.get::<_, i32>(12)?,
-                row.get::<_, Option<String>>(13)?,
-                row.get::<_, Option<String>>(14)?,
-                row.get::<_, i32>(15)?,
-                row.get::<_, i32>(16)?,
-                row.get::<_, String>(17)?,
-                row.get::<_, Option<String>>(18)?,
-                row.get::<_, Option<String>>(19)?,
-                row.get::<_, Option<String>>(20)?,
-                row.get::<_, Option<String>>(21)?,
-            ))
-        })?;
-
-        let mut notes = Vec::new();
-        let mut fail_count = 0usize;
-        for row in rows {
-            let (
-                id,
-                created_at,
-                modified_at,
-                synced_at,
-                content_json,
-                tags_json,
-                attachments_json,
-                pinned,
-                archived,
-                archived_at,
-                locked,
-                locked_at,
-                deleted,
-                deleted_at,
-                sync_hash,
-                version,
-                word_wrap,
-                syntax_language,
-                color,
-                content_hash,
-                parent_hash,
-                hash_chain_json,
-            ) = match row {
-                Ok(data) => data,
-                Err(e) => {
-                    warn!("[NoteRepository] Skipping row with read error: {e}");
-                    fail_count += 1;
-                    continue;
-                }
-            };
-
-            let note_id = id.clone();
-            match (|| -> Result<Note> {
-                let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
-                let encrypted_tags: EncryptedData = serde_json::from_str(&tags_json)?;
-
-                let content = self.crypto.decrypt_text(&encrypted_content, key)?;
-                let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
-                let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
-                let hash_chain: Option<Vec<String>> = hash_chain_json
-                    .map(|j| serde_json::from_str(&j))
-                    .transpose()
-                    .unwrap_or(None);
-
-                Ok(Note {
-                    id,
-                    created_at: created_at.parse()?,
-                    modified_at: modified_at.parse()?,
-                    synced_at: synced_at.map(|s| s.parse()).transpose()?,
-                    content,
-                    tags,
-                    attachments,
-                    pinned: pinned != 0,
-                    archived: archived != 0,
-                    archived_at: archived_at.map(|s| s.parse()).transpose()?,
-                    locked: locked != 0,
-                    locked_at: locked_at.map(|s| s.parse()).transpose()?,
-                    deleted: deleted != 0,
-                    deleted_at: deleted_at.map(|s| s.parse()).transpose()?,
-                    sync_hash,
-                    version,
-                    word_wrap: word_wrap != 0,
-                    syntax_language: syntax_language.parse().unwrap_or_default(),
-                    color,
-                    content_hash,
-                    parent_hash,
-                    hash_chain,
-                })
-            })() {
-                Ok(note) => notes.push(note),
-                Err(e) => {
-                    warn!("[NoteRepository] Skipping undecryptable note {note_id}: {e}");
-                    fail_count += 1;
-                }
-            }
-        }
-        if fail_count > 0 {
-            warn!("[NoteRepository] {fail_count} notes failed to decrypt in get_modified_after()");
-        }
-
-        Ok(notes)
+        Ok(list.notes)
     }
 
     /// Count notes (excluding deleted and archived by default)
@@ -526,212 +338,12 @@ impl<'a> NoteRepository<'a> {
 
     /// Get only deleted notes (for recycle bin)
     pub fn get_deleted(&self, key: &[u8; 32]) -> Result<Vec<Note>> {
-        let query = "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
-             FROM notes WHERE deleted = 1 ORDER BY deleted_at DESC";
-
-        let mut stmt = self.conn.prepare(query)?;
-        let mut notes = Vec::new();
-
-        let rows = stmt.query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?,   // id
-                row.get::<_, String>(1)?,   // created_at
-                row.get::<_, String>(2)?,   // modified_at
-                row.get::<_, Option<String>>(3)?,   // synced_at
-                row.get::<_, String>(4)?,   // content
-                row.get::<_, String>(5)?,   // tags
-                row.get::<_, String>(6)?,   // attachments
-                row.get::<_, bool>(7)?,     // pinned
-                row.get::<_, bool>(8)?,     // archived
-                row.get::<_, Option<String>>(9)?,   // archived_at
-                row.get::<_, bool>(10)?,    // locked
-                row.get::<_, Option<String>>(11)?,  // locked_at
-                row.get::<_, bool>(12)?,    // deleted
-                row.get::<_, Option<String>>(13)?,  // deleted_at
-                row.get::<_, Option<String>>(14)?,  // sync_hash
-                row.get::<_, i32>(15)?,     // version
-                row.get::<_, bool>(16)?,    // word_wrap
-                row.get::<_, String>(17)?,  // syntax_language
-                row.get::<_, Option<String>>(18)?,  // color
-            ))
-        })?;
-
-        let mut fail_count = 0usize;
-        for row_result in rows {
-            let (id, created_at, modified_at, synced_at, content_json, tags_json, attachments_json,
-                 pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color) = match row_result {
-                Ok(data) => data,
-                Err(e) => {
-                    warn!("[NoteRepository] Skipping deleted row with read error: {e}");
-                    fail_count += 1;
-                    continue;
-                }
-            };
-
-            let note_id = id.clone();
-            match (|| -> Result<Note> {
-                let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
-                let encrypted_tags: EncryptedData = serde_json::from_str(&tags_json)?;
-
-                let content = self.crypto.decrypt_text(&encrypted_content, key)?;
-                let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
-                let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
-
-                Ok(Note {
-                    id,
-                    created_at: DateTime::parse_from_rfc3339(&created_at)
-                        .unwrap()
-                        .with_timezone(&Utc),
-                    modified_at: DateTime::parse_from_rfc3339(&modified_at)
-                        .unwrap()
-                        .with_timezone(&Utc),
-                    synced_at: synced_at
-                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                        .map(|dt| dt.with_timezone(&Utc)),
-                    content,
-                    tags,
-                    attachments,
-                    pinned,
-                    archived,
-                    archived_at: archived_at
-                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                        .map(|dt| dt.with_timezone(&Utc)),
-                    locked,
-                    locked_at: locked_at
-                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                        .map(|dt| dt.with_timezone(&Utc)),
-                    deleted,
-                    deleted_at: deleted_at
-                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                        .map(|dt| dt.with_timezone(&Utc)),
-                    sync_hash,
-                    version,
-                    word_wrap,
-                    syntax_language: syntax_language.parse().unwrap_or_default(),
-                    color,
-                    content_hash: None,
-                    parent_hash: None,
-                    hash_chain: None,
-                })
-            })() {
-                Ok(note) => notes.push(note),
-                Err(e) => {
-                    warn!("[NoteRepository] Skipping undecryptable deleted note {note_id}: {e}");
-                    fail_count += 1;
-                }
-            }
-        }
-        if fail_count > 0 {
-            warn!("[NoteRepository] {fail_count} notes failed to decrypt in get_deleted()");
-        }
-
-        Ok(notes)
+        Ok(self.query_notes("WHERE deleted = 1 ORDER BY deleted_at DESC", [], key)?.notes)
     }
 
     /// Get only archived notes
     pub fn get_archived(&self, key: &[u8; 32]) -> Result<Vec<Note>> {
-        let query = "SELECT id, created_at, modified_at, synced_at, content, tags, attachments,
-                    pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color
-             FROM notes WHERE archived = 1 AND deleted = 0 ORDER BY archived_at DESC";
-
-        let mut stmt = self.conn.prepare(query)?;
-        let mut notes = Vec::new();
-
-        let rows = stmt.query_map([], |row| {
-            Ok((
-                row.get::<_, String>(0)?,   // id
-                row.get::<_, String>(1)?,   // created_at
-                row.get::<_, String>(2)?,   // modified_at
-                row.get::<_, Option<String>>(3)?,   // synced_at
-                row.get::<_, String>(4)?,   // content
-                row.get::<_, String>(5)?,   // tags
-                row.get::<_, String>(6)?,   // attachments
-                row.get::<_, bool>(7)?,     // pinned
-                row.get::<_, bool>(8)?,     // archived
-                row.get::<_, Option<String>>(9)?,   // archived_at
-                row.get::<_, bool>(10)?,    // locked
-                row.get::<_, Option<String>>(11)?,  // locked_at
-                row.get::<_, bool>(12)?,    // deleted
-                row.get::<_, Option<String>>(13)?,  // deleted_at
-                row.get::<_, Option<String>>(14)?,  // sync_hash
-                row.get::<_, i32>(15)?,     // version
-                row.get::<_, bool>(16)?,    // word_wrap
-                row.get::<_, String>(17)?,  // syntax_language
-                row.get::<_, Option<String>>(18)?,  // color
-            ))
-        })?;
-
-        let mut fail_count = 0usize;
-        for row_result in rows {
-            let (id, created_at, modified_at, synced_at, content_json, tags_json, attachments_json,
-                 pinned, archived, archived_at, locked, locked_at, deleted, deleted_at, sync_hash, version, word_wrap, syntax_language, color) = match row_result {
-                Ok(data) => data,
-                Err(e) => {
-                    warn!("[NoteRepository] Skipping archived row with read error: {e}");
-                    fail_count += 1;
-                    continue;
-                }
-            };
-
-            let note_id = id.clone();
-            match (|| -> Result<Note> {
-                let encrypted_content: EncryptedData = serde_json::from_str(&content_json)?;
-                let encrypted_tags: EncryptedData = serde_json::from_str(&tags_json)?;
-
-                let content = self.crypto.decrypt_text(&encrypted_content, key)?;
-                let tags: Vec<String> = self.crypto.decrypt_json(&encrypted_tags, key)?;
-                let attachments: Vec<Attachment> = serde_json::from_str(&attachments_json)?;
-
-                Ok(Note {
-                    id,
-                    created_at: DateTime::parse_from_rfc3339(&created_at)
-                        .unwrap()
-                        .with_timezone(&Utc),
-                    modified_at: DateTime::parse_from_rfc3339(&modified_at)
-                        .unwrap()
-                        .with_timezone(&Utc),
-                    synced_at: synced_at
-                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                        .map(|dt| dt.with_timezone(&Utc)),
-                    content,
-                    tags,
-                    attachments,
-                    pinned,
-                    archived,
-                    archived_at: archived_at
-                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                        .map(|dt| dt.with_timezone(&Utc)),
-                    locked,
-                    locked_at: locked_at
-                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                        .map(|dt| dt.with_timezone(&Utc)),
-                    deleted,
-                    deleted_at: deleted_at
-                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                        .map(|dt| dt.with_timezone(&Utc)),
-                    sync_hash,
-                    version,
-                    word_wrap,
-                    syntax_language: syntax_language.parse().unwrap_or_default(),
-                    color,
-                    content_hash: None,
-                    parent_hash: None,
-                    hash_chain: None,
-                })
-            })() {
-                Ok(note) => notes.push(note),
-                Err(e) => {
-                    warn!("[NoteRepository] Skipping undecryptable archived note {note_id}: {e}");
-                    fail_count += 1;
-                }
-            }
-        }
-        if fail_count > 0 {
-            warn!("[NoteRepository] {fail_count} notes failed to decrypt in get_archived()");
-        }
-
-        Ok(notes)
+        Ok(self.query_notes("WHERE archived = 1 AND deleted = 0 ORDER BY archived_at DESC", [], key)?.notes)
     }
 
     /// Archive a note
@@ -848,6 +460,75 @@ mod tests {
     fn test_password() -> String {
         std::env::var("JOTTERY_TEST_PASSWORD")
             .unwrap_or_else(|_| "test_password_placeholder".to_string())
+    }
+
+    /// A row whose timestamps can't be parsed, as a damaged database could hold.
+    fn damage_timestamps(db: &Database, id: &str) {
+        db.connection()
+            .execute("UPDATE notes SET created_at = 'not a date', modified_at = 'nor this' WHERE id = ?1", params![id])
+            .unwrap();
+    }
+
+    #[test]
+    fn a_stored_date_that_will_not_parse_costs_that_row_and_nothing_else() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let mut bad = Note::new("Bad row".to_string());
+        bad.deleted = true;
+        let mut good = Note::new("Good row".to_string());
+        good.deleted = true;
+        repo.create(&bad, &key).unwrap();
+        repo.create(&good, &key).unwrap();
+        damage_timestamps(&db, &bad.id);
+
+        let deleted = repo.get_deleted(&key).unwrap();
+        assert_eq!(deleted.len(), 1);
+        assert_eq!(deleted[0].content, "Good row");
+    }
+
+    #[test]
+    fn archived_notes_survive_a_damaged_neighbour_too() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let mut bad = Note::new("Bad row".to_string());
+        bad.archived = true;
+        repo.create(&bad, &key).unwrap();
+        damage_timestamps(&db, &bad.id);
+
+        assert!(repo.get_archived(&key).unwrap().is_empty());
+    }
+
+    #[test]
+    fn the_bin_keeps_a_notes_hash_chain() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+
+        let mut note = Note::new("Hashed".to_string());
+        note.deleted = true;
+        note.content_hash = Some("abc".to_string());
+        note.hash_chain = Some(vec!["abc".to_string()]);
+        repo.create(&note, &key).unwrap();
+
+        // Restoring from the bin writes back what was read here.
+        let read = repo.get_deleted(&key).unwrap().remove(0);
+        assert_eq!(read.content_hash.as_deref(), Some("abc"));
+        assert_eq!(read.hash_chain, Some(vec!["abc".to_string()]));
+    }
+
+    #[test]
+    fn rows_under_another_key_are_counted() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+        let other_key = CryptoService::new().generate_master_key();
+
+        repo.create(&Note::new("Mine".to_string()), &key).unwrap();
+        repo.create(&Note::new("Not mine".to_string()), &other_key).unwrap();
+
+        let list = repo.list_everything(&key).unwrap();
+        assert_eq!(list.notes.len(), 1);
+        assert_eq!(list.unreadable, 1);
     }
 
     fn setup_test_db() -> (Database, [u8; 32]) {
