@@ -1268,10 +1268,8 @@ mod tests {
     fn restoring_from_the_bin_takes_the_note_highlighted() {
         let mut app = app_with_notes(&[]);
         bin_with(&mut app, &["binned first", "binned second", "binned third"]);
-        app.notes.reverse();
-        app.invalidate_filter_cache();
-        app.select_note_at(0);
         let chosen = highlighted(&app);
+        assert_ne!(chosen, app.notes[0].content, "the two orders have to differ for this to mean anything");
 
         operations::notes::restore_note(&mut app).unwrap();
 
