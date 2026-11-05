@@ -1066,6 +1066,26 @@ final class AppState {
         try saveNote(fields.applied(to: latest))
     }
 
+    /// Save what the editor holds, for the editor's own saves, which have no
+    /// one to throw to. If it can't be saved, the edit stays staged and is
+    /// retried at the next lock or unlock, and the user is told. Returns whether
+    /// it was saved.
+    @discardableResult
+    func saveEditorEdit(_ fields: NoteEditorFields) -> Bool {
+        do {
+            try saveEditorFields(fields)
+            if pendingEditorNote?.id == fields.noteId { pendingEditorNote = nil }
+            return true
+        } catch {
+            Log.debug("[Editor] save failed: \(error)")
+            if let latest = displayedNote(id: fields.noteId) {
+                pendingEditorNote = fields.applied(to: latest)
+            }
+            reportError(L.errorCouldntSaveNote)
+            return false
+        }
+    }
+
     /// Put the note as stored into version history, before an edit overwrites it.
     func keepCurrentVersion(ofNote id: String) throws {
         guard let noteRepo, let versionRepo, let record = try noteRepo.getRaw(id: id) else { return }
@@ -1279,6 +1299,7 @@ final class AppState {
     /// Safe to call on every unlock/foreground — consumed items are removed.
     func importSharedInboxItems(from root: URL? = nil) {
         guard !isLocked, let key = keyManager.masterKey, let noteRepo else { return }
+        SharedInboxStore.removeAbandoned(in: root)
 
         // createNote selects the new note — imports must not steal selection.
         let previousSelection = selectedNoteId
@@ -1327,16 +1348,20 @@ final class AppState {
 
     func loadInboxItems() async throws {
         guard let syncClient else { return }
-        inboxItems = try await syncClient.listInboxItems()
+        inboxItems = try await syncClient.listInboxItems().filter { SyncValidation.isId($0.id) }
     }
 
+    /// Turn an inbox item into a note, then remove it from the server. The note
+    /// takes the item's id, so if removing it fails, the item stays and a second
+    /// try finishes the job without making another note.
     func acceptInboxItem(_ item: InboxItem) async throws {
         guard let noteRepo, let key = keyManager.masterKey, let syncClient else { return }
-        // Create a new encrypted note from the inbox item (showPreview forced false for safety)
-        let note = try noteRepo.create(content: item.content, tags: item.tags, key: key)
-        notes.insert(note, at: 0)
-        // Delete from server
-        try? await syncClient.deleteInboxItem(id: item.id)
+        if try noteRepo.getRaw(id: item.id) == nil {
+            let note = try noteRepo.create(id: item.id, content: item.content, tags: item.tags, fromInbox: true, key: key)
+            notes.insert(note, at: 0)
+            scheduleAutoSync()
+        }
+        try await syncClient.deleteInboxItem(id: item.id)
         inboxItems.removeAll { $0.id == item.id }
     }
 
@@ -1655,6 +1680,9 @@ final class AppState {
             // SSE restart and full sync when the app returns to .active.
             break
         case .active:
+            // The database can't open while the device is locked (see
+            // `DatabaseManager`), which a launch in the background can run into.
+            if db == nil { initialise() }
             guard !isLocked, !lockIfAwayTooLong() else { return }
             let wasBackgrounded = backgroundedAt != nil
             backgroundedAt = nil
@@ -1674,9 +1702,28 @@ final class AppState {
 
     // MARK: - Wipe & Re-onboard
 
+    /// Notes wiping would lose for good: every note if sync is off, or those
+    /// that haven't reached the server. Needs no key, so it works while locked.
+    func notesOnlyOnThisDevice() -> Int {
+        guard let noteRepo else { return 0 }
+        return (try? settings.syncEnabled ? noteRepo.countUnsynced() : noteRepo.countActive()) ?? 0
+    }
+
+    /// Wipe from the lock screen. Anyone holding the phone can reach that, and
+    /// wrong passwords are free, so they first have to show they own the device.
+    /// Returns false if they couldn't, and nothing has changed.
+    @discardableResult
+    func wipeAfterProvingOwnership(
+        authenticate: (String) async -> Bool = DeviceOwner.authenticate
+    ) async -> Bool {
+        guard await authenticate(L.unlockDeleteAuthReason) else { return false }
+        wipeAllData()
+        return true
+    }
+
     /// Delete everything — database, Keychain, in-memory state — so the user
     /// can start fresh as if the app was just installed.
-    func wipeAllData() {
+    func wipeAllData(sharedInboxRoot: URL? = nil) {
         // Clear Keychain
         KeychainService.deleteAPIKey()
         KeychainService.deleteClientId()
@@ -1684,6 +1731,7 @@ final class AppState {
 
         teardownSync()
         removeTemporaryFiles()
+        SharedInboxStore.removeAll(in: sharedInboxRoot)
 
         // Delete database file
         let fm = FileManager.default
@@ -1951,6 +1999,18 @@ final class AppState {
     }
 
     // MARK: - Settings
+
+    /// The list's sort order, kept for next time.
+    func setSortOrder(_ order: SortOrder) {
+        var updated = settings
+        updated.sort = order
+        do {
+            try updateSettings(updated)
+        } catch {
+            Log.debug("[Settings] couldn't save the sort order: \(error)")
+            sortOrder = order
+        }
+    }
 
     func updateSettings(_ newSettings: UserSettings) throws {
         guard let settingsRepo else { return }

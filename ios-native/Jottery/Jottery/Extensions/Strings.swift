@@ -196,6 +196,12 @@ enum L {
     static var unlockDeleteAndStartOver: String { String(localized: "unlock.deleteAndStartOver") }
     static var unlockDeleteConfirmTitle: String { String(localized: "unlock.deleteConfirmTitle") }
     static var unlockDeleteConfirmMessage: String { String(localized: "unlock.deleteConfirmMessage") }
+    /// The warning, with how many notes wiping would lose for good.
+    static func unlockDeleteConfirmMessage(unsyncedNotes: Int) -> String {
+        guard unsyncedNotes > 0 else { return unlockDeleteConfirmMessage }
+        return unlockDeleteConfirmMessage + "\n\n"
+            + String(format: String(localized: "unlock.deleteUnsyncedNotes"), unsyncedNotes)
+    }
     static var unlockDeleteConfirmAction: String { String(localized: "unlock.deleteConfirmAction") }
     static var unlockDeleteConfirmCancel: String { String(localized: "unlock.deleteConfirmCancel") }
     static var unlockFaceId: String { String(localized: "unlock.faceId") }
@@ -448,6 +454,20 @@ enum L {
     // MARK: - Errors (Toasts)
 
     static var errorCouldntAddAttachment: String { String(localized: "error.couldntAddAttachment") }
+    static var errorCouldntSaveNote: String { String(localized: "error.couldntSaveNote") }
+    static var errorCouldntSaveSettings: String { String(localized: "error.couldntSaveSettings") }
+    static var errorCouldntRestoreVersion: String { String(localized: "error.couldntRestoreVersion") }
+    static var unlockDeleteAuthReason: String { String(localized: "unlock.deleteAuthReason") }
+    static func attachmentsDeleteTitle(_ filename: String) -> String {
+        String(format: String(localized: "attachments.deleteTitle"), filename)
+    }
+    static var attachmentsDeleteMessage: String { String(localized: "attachments.deleteMessage") }
+    static var attachmentsDeleteAction: String { String(localized: "attachments.deleteAction") }
+    static var attachmentsShare: String { String(localized: "attachments.share") }
+    static var inboxDeleteAllTitle: String { String(localized: "inbox.deleteAllTitle") }
+    static func inboxDeleteAllMessage(_ count: Int) -> String {
+        String(format: String(localized: "inbox.deleteAllMessage"), count)
+    }
     static var errorCouldntExport: String { String(localized: "error.couldntExport") }
     static func errorCouldntAddTags(_ count: Int) -> String {
         String(format: String(localized: "error.couldntAddTags"), count)

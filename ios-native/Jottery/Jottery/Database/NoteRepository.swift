@@ -64,6 +64,13 @@ struct NoteRepository: Sendable {
         }
     }
 
+    /// Count of notes in use that the server hasn't got.
+    func countUnsynced() throws -> Int {
+        try db.dbPool.read { db in
+            try NoteRecord.filter(Column("deleted") == false && Column("needs_sync") == true).fetchCount(db)
+        }
+    }
+
     /// Count of active notes.
     func countActive() throws -> Int {
         try db.dbPool.read { db in
@@ -73,8 +80,15 @@ struct NoteRepository: Sendable {
 
     // MARK: - Create
 
-    /// Create a new note with the given content.
-    func create(content: String, tags: [String] = [], key: SymmetricKey) throws -> DecryptedNote {
+    /// Create a new note with the given content. `id` is for a note that has to
+    /// keep one it already has, and `fromInbox` marks an inbox item's note.
+    func create(
+        id: String? = nil,
+        content: String,
+        tags: [String] = [],
+        fromInbox: Bool = false,
+        key: SymmetricKey
+    ) throws -> DecryptedNote {
         let encContent = try CryptoService.encryptText(content, key: key)
         let encTags = try CryptoService.encryptStringArray(tags, key: key)
 
@@ -82,6 +96,8 @@ struct NoteRepository: Sendable {
         let tagsJSON = try CryptoService.serializeEncryptedJSON(encTags)
 
         var record = NoteRecord.new(encryptedContent: contentJSON, encryptedTags: tagsJSON)
+        if let id { record.id = id }
+        record.fromInbox = fromInbox
 
         // Compute content hash using sync-format tags
         let syncTags = try encryptTagsToSyncFormat(tags, key: key)

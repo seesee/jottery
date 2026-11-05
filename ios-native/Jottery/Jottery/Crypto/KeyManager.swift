@@ -16,8 +16,13 @@ final class KeyManager {
     var masterKey: SymmetricKey?
     private(set) var isUnlocked: Bool = false
 
-    /// Seconds since last user interaction before auto-locking.
-    var autoLockTimeout: TimeInterval = 15 * 60  // 15 minutes default
+    /// Seconds since last user interaction before auto-locking. Zero or less
+    /// means never. Takes effect at once, whether or not a timer is running.
+    var autoLockTimeout: TimeInterval = 15 * 60 {  // 15 minutes default
+        didSet {
+            if isUnlocked { startAutoLockTimer() }
+        }
+    }
 
     /// Called when the auto-lock timer fires. AppState should wire this
     /// to its own `lock()` so the UI transitions to the unlock screen.
@@ -117,8 +122,11 @@ final class KeyManager {
         autoLockTimer = nil
     }
 
-    private func checkAutoLock() {
-        guard isUnlocked else { return }
+    /// Whether the clock is running: there's something to lock, and a timeout.
+    var isAutoLockTimerRunning: Bool { autoLockTimer != nil }
+
+    func checkAutoLock() {
+        guard isUnlocked, autoLockTimeout > 0 else { return }
         let elapsed = Date().timeIntervalSince(lastActivityDate)
         if elapsed >= autoLockTimeout {
             // Use the callback so AppState can lock the full app (show unlock screen,

@@ -1,5 +1,6 @@
 import Foundation
 import GRDB
+import SwiftUI
 
 /// User application settings — stored in the `settings` table.
 struct UserSettings: Codable, FetchableRecord, PersistableRecord {
@@ -45,6 +46,15 @@ struct UserSettings: Codable, FetchableRecord, PersistableRecord {
 
 enum ThemeMode: String, CaseIterable {
     case light, dark, auto
+
+    /// What to force on the app. Nil follows the system.
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .light: return .light
+        case .dark: return .dark
+        case .auto: return nil
+        }
+    }
 }
 
 enum SortOrder: String, CaseIterable {

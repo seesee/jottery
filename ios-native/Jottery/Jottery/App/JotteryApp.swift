@@ -97,6 +97,7 @@ struct ContentView: View {
         }
         .animation(.default, value: appState.isLocked)
         .animation(.default, value: appState.isFirstLaunch)
+        .preferredColorScheme(appState.settings.themeMode.colorScheme)
         .onAppear {
             appState.initialise()
             pickUpPendingShortcut()

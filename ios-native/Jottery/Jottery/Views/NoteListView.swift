@@ -56,7 +56,10 @@ struct NoteListView: View {
                     }
 
                     Menu {
-                        Picker(L.noteListSort, selection: $state.sortOrder) {
+                        Picker(L.noteListSort, selection: Binding(
+                            get: { appState.sortOrder },
+                            set: { appState.setSortOrder($0) }
+                        )) {
                             ForEach(SortOrder.allCases, id: \.self) { order in
                                 Text(order.displayName).tag(order)
                             }

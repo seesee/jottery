@@ -426,9 +426,9 @@ private struct ConnectToServerView: View {
                 appState.isSyncing = false
                 syncProgress = nil
                 isWorking = false
-                // A password the rules refuse isn't a wrong guess at the real one.
-                if case SyncSetupError.notesPasswordMatchesAccountPassword = error { return }
-                if case SyncSetupError.notesPasswordTooShort = error { return }
+                // Only a wrong guess at the real password counts towards offering
+                // to start over, not a password the rules refuse or a failed request.
+                guard case SyncSetupError.encryptionPasswordMismatch = error else { return }
                 failedAttempts += 1
                 if failedAttempts >= 5 {
                     self.error = L.unlockFailedAttempts

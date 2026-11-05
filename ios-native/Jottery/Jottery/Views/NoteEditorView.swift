@@ -372,7 +372,8 @@ struct NoteEditorView: View {
         }
         .onDisappear {
             saveImmediately()
-            appState.pendingEditorNote = nil
+            // A failed save stays staged, to be retried.
+            if !hasChanges { clearStalePendingNote(id: baseline.noteId) }
             // Trigger a background sync if any save happened during this editing session
             if didSaveDuringSession && appState.syncEnabled {
                 Task { await appState.triggerSync() }
@@ -462,9 +463,9 @@ struct NoteEditorView: View {
     /// `AppState.flushPendingEditorNote()` on the next `lock()` —
     /// `noteRepo.update` there doesn't check `locked`/`archived`, so a stale
     /// pending note would silently overwrite a note that has since become
-    /// read-only (or is gone, or was already unchanged). Only the successful
-    /// save path at the bottom needs no extra clearing — it already nils
-    /// `pendingEditorNote` unconditionally.
+    /// read-only (or is gone, or was already unchanged). The save path at the
+    /// bottom needs no extra clearing: `saveEditorEdit` keeps the pending note
+    /// exactly when the save failed.
     private func flushOutgoingNote(id: String) {
         saveTask?.cancel()
         saveTask = nil
@@ -482,8 +483,7 @@ struct NoteEditorView: View {
             return
         }
 
-        try? appState.saveEditorFields(fields)
-        appState.pendingEditorNote = nil
+        appState.saveEditorEdit(fields)
         // Note: `didSaveDuringSession` is deliberately not set here — the
         // caller resets it to false for the
         // incoming note immediately after this call returns, so any
@@ -511,9 +511,8 @@ struct NoteEditorView: View {
         }
         guard hasChanges else { return }
         let saving = fields
-        try? appState.saveEditorFields(saving)
+        guard appState.saveEditorEdit(saving) else { return }
         baseline = saving
-        appState.pendingEditorNote = nil
         didSaveDuringSession = true
     }
 

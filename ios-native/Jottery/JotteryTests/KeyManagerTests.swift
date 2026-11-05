@@ -47,3 +47,39 @@ private actor PromptCounter {
     var count = 0
     func increment() { count += 1 }
 }
+
+/// "Never" used to lock within 30 seconds (jottery-7wi1).
+@MainActor
+struct KeyManagerAutoLockTests {
+
+    @Test func neverMeansNever() {
+        let manager = KeyManager()
+        manager.unlockWithKeyData(Data(repeating: 7, count: 32))
+
+        manager.autoLockTimeout = 0
+        manager.checkAutoLock()
+
+        #expect(manager.isUnlocked)
+    }
+
+    @Test func choosingNeverStopsTheTimer() {
+        let manager = KeyManager()
+        manager.unlockWithKeyData(Data(repeating: 7, count: 32))
+        #expect(manager.isAutoLockTimerRunning)
+
+        manager.autoLockTimeout = 0
+
+        #expect(!manager.isAutoLockTimerRunning)
+    }
+
+    @Test func choosingATimeoutAfterNeverStartsTheTimer() {
+        let manager = KeyManager()
+        manager.autoLockTimeout = 0
+        manager.unlockWithKeyData(Data(repeating: 7, count: 32))
+        #expect(!manager.isAutoLockTimerRunning)
+
+        manager.autoLockTimeout = 60
+
+        #expect(manager.isAutoLockTimerRunning)
+    }
+}
