@@ -50,6 +50,7 @@ password:
   same_as_account: "Usa password diverse. Il server vede la password dell'account, quindi non deve aprire anche le note."
   same_as_account_warning: "La password dell'account è uguale a quella delle note, quindi il server potrebbe leggerle. Cambia la password delle note nelle Impostazioni."
   no_file_encryption: "Questa build non cifra il file del database. Note e tag restano cifrati, ma non l'email, l'indirizzo del server, i nomi degli allegati e le date."
+  change_keeps_key: "La chiave di cifratura non cambia: i vecchi backup si aprono ancora con la vecchia password."
 menu:
   notes: Note
   new_note: Nuova nota
@@ -350,7 +351,6 @@ help:
   attachments: ALLEGATI
   global: GLOBALE
   press_esc_or_enter: Premi Esc o Invio per chiudere
-  press_enter_paste: Premi Invio per incollare | Esc per annullare
   tab_switch: "Tab: cambia campi | Invio: crea"
   enter_unlock: "Invio: sblocca | Ctrl+Q: esci"
   type_password_key: Digita
@@ -533,6 +533,7 @@ help:
   g_saved_desc: "Ricerche salvate"
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "Salva questa ricerca"
+  enter_confirm_esc_cancel: "Invio: conferma | Esc: annulla"
 cli:
   # Alt (usato in alcuni contesti)
   list: Elenca note
@@ -611,6 +612,11 @@ cli:
   allow_insecure_http_help: "Consenti l'invio di una password via HTTP non cifrato a un host pubblico"
   password_flag_deprecated: "Una password sulla riga di comando è visibile in ps e nella cronologia della shell. Usa invece --password-stdin o JOTTERY_PASSWORD."
   password_stdin_help: "Leggi le password da stdin, una per riga, invece di chiederle"
+  reset_yes_help: "Non chiedere conferma prima che --reset elimini qualcosa"
+  reset_confirm: "Questo elimina definitivamente %{path} e l'eventuale password memorizzata. Digita %{word} per procedere:"
+  reset_cancelled: "Non è stato eliminato nulla"
+  reset_done: "Archivio e password memorizzata eliminati"
+  reset_keychain_failed: "Impossibile rimuovere la password dal portachiavi"
 status:
   locked: Bloccato
   unlocked: Sbloccato

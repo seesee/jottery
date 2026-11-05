@@ -57,6 +57,7 @@ password:
   no_file_encryption: "This build does not encrypt the database file. Notes and tags stay encrypted, but your email, server address, attachment names and dates do not."
 
 # Main menu / Navigation
+  change_keeps_key: "This doesn't change your encryption key: old backups still open with the old password."
 menu:
   notes: "Notes"
   new_note: "New Note"
@@ -397,7 +398,6 @@ help:
   attachments: "ATTACHMENTS"
   global: "GLOBAL"
   press_esc_or_enter: "Press Esc or Enter to close"
-  press_enter_paste: "Press Enter to paste | Esc to cancel"
   tab_switch: "Tab: switch fields | Enter: create"
   enter_unlock: "Enter: unlock | Ctrl+Q: quit"
   type_password_key: "Type"
@@ -582,6 +582,7 @@ help:
   g_saved_desc: "Saved searches"
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "Save this search"
+  enter_confirm_esc_cancel: "Enter: confirm | Esc: cancel"
 cli:
   # Legacy (used in some places)
   list: "List notes"
@@ -662,6 +663,11 @@ cli:
   password_stdin_help: "Read passwords from stdin, one per line, instead of prompting"
 
 # Status messages
+  reset_yes_help: "Don't ask before --reset deletes anything"
+  reset_confirm: "This permanently deletes %{path} and any remembered password. Type %{word} to go ahead:"
+  reset_cancelled: "Nothing was deleted"
+  reset_done: "Deleted the vault and any remembered password"
+  reset_keychain_failed: "Could not remove the password from the keychain"
 status:
   locked: "Locked"
   unlocked: "Unlocked"

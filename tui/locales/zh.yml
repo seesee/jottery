@@ -50,6 +50,7 @@ password:
   same_as_account: "请使用不同的密码。服务器能看到您的账户密码，因此它不能同时用于打开笔记。"
   same_as_account_warning: "您的账户密码与笔记密码相同，服务器可能读取您的笔记。请在设置中更改笔记密码。"
   no_file_encryption: "此版本不加密数据库文件。笔记和标签仍保持加密，但您的邮箱、服务器地址、附件名称和日期不会加密。"
+  change_keeps_key: "这不会更改您的加密密钥:旧备份仍可用旧密码打开。"
 menu:
   notes: 笔记
   new_note: 新建笔记
@@ -350,7 +351,6 @@ help:
   attachments: 附件
   global: 全局
   press_esc_or_enter: 按 Esc 或 Enter 关闭
-  press_enter_paste: 按 Enter 粘贴 | Esc 取消
   tab_switch: "Tab: 切换字段 | Enter: 创建"
   enter_unlock: "Enter: 解锁 | Ctrl+Q: 退出"
   type_password_key: 输入
@@ -533,6 +533,7 @@ help:
   g_saved_desc: "已保存的搜索"
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "保存此搜索"
+  enter_confirm_esc_cancel: "Enter:确认 | Esc:取消"
 cli:
   # 简短命令描述（用于旧版/备用）
   list: 列出笔记
@@ -611,6 +612,11 @@ cli:
   allow_insecure_http_help: "允许通过未加密的 HTTP 将密码发送到公共主机"
   password_flag_deprecated: "命令行上的密码会显示在 ps 和 shell 历史记录中。请改用 --password-stdin 或 JOTTERY_PASSWORD。"
   password_stdin_help: "从 stdin 逐行读取密码，而不是提示输入"
+  reset_yes_help: "--reset 删除内容前不询问"
+  reset_confirm: "这将永久删除 %{path} 和所有已记住的密码。输入 %{word} 以继续:"
+  reset_cancelled: "未删除任何内容"
+  reset_done: "已删除保险库和已记住的密码"
+  reset_keychain_failed: "无法从钥匙串中移除密码"
 status:
   locked: 已锁定
   unlocked: 已解锁

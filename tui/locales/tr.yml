@@ -50,6 +50,7 @@ password:
   same_as_account: "Farklı parolalar kullanın. Sunucu hesap parolanızı görür, bu yüzden aynı parola notlarınızı da açmamalıdır."
   same_as_account_warning: "Hesap parolanız not parolanızla aynı, bu yüzden sunucu notlarınızı okuyabilir. Ayarlar bölümünden not parolanızı değiştirin."
   no_file_encryption: "Bu derleme veritabanı dosyasını şifrelemez. Notlar ve etiketler şifreli kalır, ancak e-posta adresiniz, sunucu adresi, ek adları ve tarihler şifrelenmez."
+  change_keeps_key: "Şifreleme anahtarınız değişmez: eski yedekler eski parolayla açılmaya devam eder."
 menu:
   notes: Notlar
   new_note: Yeni not
@@ -350,7 +351,6 @@ help:
   attachments: EKLER
   global: GENEL
   press_esc_or_enter: Kapatmak için Esc veya Enter tuşuna basın
-  press_enter_paste: Yapıştırmak için Enter | İptal etmek için Esc
   tab_switch: "Tab: alanları değiştir | Enter: oluştur"
   enter_unlock: "Enter: kilidi aç | Ctrl+Q: çık"
   type_password_key: Yaz
@@ -533,6 +533,7 @@ help:
   g_saved_desc: "Kayıtlı aramalar"
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "Bu aramayı kaydet"
+  enter_confirm_esc_cancel: "Enter: onayla | Esc: iptal"
 cli:
   # Eski (bazı yerlerde kullanılıyor)
   list: Notları listele
@@ -611,6 +612,11 @@ cli:
   allow_insecure_http_help: "Parolanın şifresiz HTTP ile herkese açık bir sunucuya gönderilmesine izin ver"
   password_flag_deprecated: "Komut satırındaki parola ps ve kabuk geçmişinde görünür. Bunun yerine --password-stdin veya JOTTERY_PASSWORD kullanın."
   password_stdin_help: "Sormak yerine parolaları stdin'den satır satır oku"
+  reset_yes_help: "--reset bir şey silmeden önce sorma"
+  reset_confirm: "Bu işlem %{path} dosyasını ve hatırlanan parolayı kalıcı olarak siler. Devam etmek için %{word} yazın:"
+  reset_cancelled: "Hiçbir şey silinmedi"
+  reset_done: "Kasa ve hatırlanan parola silindi"
+  reset_keychain_failed: "Parola anahtar zincirinden kaldırılamadı"
 status:
   locked: Kilitli
   unlocked: Kilitsiz

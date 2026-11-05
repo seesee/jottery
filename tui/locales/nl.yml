@@ -50,6 +50,7 @@ password:
   same_as_account: "Gebruik verschillende wachtwoorden. De server ziet je accountwachtwoord, dus dat mag niet ook je notities openen."
   same_as_account_warning: "Je accountwachtwoord is hetzelfde als je notitiewachtwoord, dus de server zou je notities kunnen lezen. Wijzig je notitiewachtwoord in Instellingen."
   no_file_encryption: "Deze build versleutelt het databasebestand niet. Notities en tags blijven versleuteld, maar je e-mailadres, serveradres, bijlagenamen en datums niet."
+  change_keeps_key: "Uw versleutelingssleutel verandert niet: oude back-ups blijven openen met het oude wachtwoord."
 menu:
   notes: Notities
   new_note: Nieuwe notitie
@@ -350,7 +351,6 @@ help:
   attachments: BIJLAGEN
   global: GLOBAAL
   press_esc_or_enter: Druk op Esc of Enter om te sluiten
-  press_enter_paste: Druk op Enter om te plakken | Esc om te annuleren
   tab_switch: "Tab: velden wisselen | Enter: aanmaken"
   enter_unlock: "Enter: ontgrendelen | Ctrl+Q: afsluiten"
   type_password_key: Typen
@@ -533,6 +533,7 @@ help:
   g_saved_desc: "Opgeslagen zoekopdrachten"
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "Deze zoekopdracht opslaan"
+  enter_confirm_esc_cancel: "Enter: bevestigen | Esc: annuleren"
 cli:
   # Basis (op sommige plaatsen gebruikt)
   list: Notities weergeven
@@ -611,6 +612,11 @@ cli:
   allow_insecure_http_help: "Sta toe dat een wachtwoord via onversleuteld HTTP naar een openbare host gaat"
   password_flag_deprecated: "Een wachtwoord op de opdrachtregel is zichtbaar in ps en de shellgeschiedenis. Gebruik in plaats daarvan --password-stdin of JOTTERY_PASSWORD."
   password_stdin_help: "Lees wachtwoorden van stdin, één per regel, in plaats van te vragen"
+  reset_yes_help: "Niet vragen voordat --reset iets verwijdert"
+  reset_confirm: "Dit verwijdert %{path} en elk onthouden wachtwoord definitief. Typ %{word} om door te gaan:"
+  reset_cancelled: "Er is niets verwijderd"
+  reset_done: "De kluis en elk onthouden wachtwoord zijn verwijderd"
+  reset_keychain_failed: "Het wachtwoord kon niet uit de sleutelhanger worden verwijderd"
 status:
   locked: Vergrendeld
   unlocked: Ontgrendeld

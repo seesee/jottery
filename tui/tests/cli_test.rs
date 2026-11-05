@@ -421,6 +421,62 @@ fn a_backup_this_client_wrote_restores() {
     assert!(stderr.contains("no such search"), "{stderr}");
 }
 
+/// A vault in a folder of its own, with a remembered password and sidecar files.
+fn vault_to_reset(name: &str) -> (TempDir, PathBuf, Vec<PathBuf>) {
+    let dir = tempfile::tempdir().unwrap();
+    let db = dir.path().join(name);
+    let password = uuid::Uuid::new_v4().to_string();
+    vault_with_note(&db, &password, "To be erased");
+
+    let (ok, _, stderr) = run_with_input(&db, &["--password-stdin", "store-password"], &format!("{password}\n"));
+    assert!(ok, "{stderr}");
+
+    let mut wal = db.as_os_str().to_owned();
+    wal.push("-wal");
+    let mut shm = db.as_os_str().to_owned();
+    shm.push("-shm");
+    let sidecars = vec![PathBuf::from(wal), PathBuf::from(shm)];
+    for sidecar in &sidecars {
+        fs::write(sidecar, "left behind").unwrap();
+    }
+
+    (dir, db, sidecars)
+}
+
+#[test]
+fn reset_takes_the_remembered_password_with_it() {
+    // Not named *.db, which is what the sidecars used to depend on
+    let (dir, db, sidecars) = vault_to_reset("vault.sqlite");
+    assert!(dir.path().join(".jottery_remember").exists());
+
+    let (ok, _, stderr) = run_on(&db, &["--reset", "--yes"]);
+
+    assert!(ok, "{stderr}");
+    assert!(!db.exists());
+    assert!(sidecars.iter().all(|sidecar| !sidecar.exists()));
+    assert!(!dir.path().join(".jottery_remember").exists());
+    assert!(!dir.path().join(".jottery_remember.key").exists());
+}
+
+#[test]
+fn reset_asks_first() {
+    let (_dir, db, _) = vault_to_reset("jottery.db");
+
+    let (ok, _, stderr) = run_with_input(&db, &["--reset"], "no\n");
+    assert!(!ok);
+    assert!(stderr.contains("DELETE"), "{stderr}");
+    assert!(db.exists());
+
+    // A script with no answer to give changes nothing either
+    let (ok, _, _) = run_on(&db, &["--reset"]);
+    assert!(!ok);
+    assert!(db.exists());
+
+    let (ok, _, stderr) = run_with_input(&db, &["--reset"], "DELETE\n");
+    assert!(ok, "{stderr}");
+    assert!(!db.exists());
+}
+
 #[test]
 fn debug_goes_to_stderr_and_leaves_the_output_alone() {
     let (_temp_dir, db) = create_test_env();

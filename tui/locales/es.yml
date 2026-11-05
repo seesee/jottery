@@ -50,6 +50,7 @@ password:
   same_as_account: "Usa contraseñas distintas. El servidor ve la contraseña de tu cuenta, así que no debe abrir también tus notas."
   same_as_account_warning: "La contraseña de tu cuenta es la misma que la de tus notas, así que el servidor podría leerlas. Cambia la contraseña de las notas en Ajustes."
   no_file_encryption: "Esta compilación no cifra el archivo de la base de datos. Las notas y etiquetas siguen cifradas, pero tu correo, la dirección del servidor, los nombres de los adjuntos y las fechas no."
+  change_keeps_key: "Esto no cambia tu clave de cifrado: las copias de seguridad antiguas se siguen abriendo con la contraseña antigua."
 menu:
   notes: Notas
   new_note: Nueva nota
@@ -350,7 +351,6 @@ help:
   attachments: ADJUNTOS
   global: GLOBAL
   press_esc_or_enter: Presione Esc o Enter para cerrar
-  press_enter_paste: Presione Enter para pegar | Esc para cancelar
   tab_switch: "Tab: cambiar campos | Enter: crear"
   enter_unlock: "Enter: desbloquear | Ctrl+Q: salir"
   type_password_key: Escribir
@@ -533,6 +533,7 @@ help:
   g_saved_desc: "Búsquedas guardadas"
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "Guardar esta búsqueda"
+  enter_confirm_esc_cancel: "Intro: confirmar | Esc: cancelar"
 cli:
   # Alt (usado en algunos lugares)
   list: Listar notas
@@ -611,6 +612,11 @@ cli:
   allow_insecure_http_help: "Permitir enviar una contraseña por HTTP sin cifrar a un host público"
   password_flag_deprecated: "Una contraseña en la línea de comandos se ve en ps y en el historial del shell. Usa --password-stdin o JOTTERY_PASSWORD."
   password_stdin_help: "Leer las contraseñas de stdin, una por línea, en lugar de preguntar"
+  reset_yes_help: "No preguntar antes de que --reset elimine nada"
+  reset_confirm: "Esto elimina para siempre %{path} y cualquier contraseña recordada. Escribe %{word} para continuar:"
+  reset_cancelled: "No se ha eliminado nada"
+  reset_done: "Se han eliminado la bóveda y cualquier contraseña recordada"
+  reset_keychain_failed: "No se ha podido quitar la contraseña del llavero"
 status:
   locked: Bloqueado
   unlocked: Desbloqueado

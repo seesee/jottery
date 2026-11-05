@@ -50,6 +50,7 @@ password:
   same_as_account: "Użyj różnych haseł. Serwer widzi hasło konta, więc nie może ono również otwierać notatek."
   same_as_account_warning: "Hasło konta jest takie samo jak hasło notatek, więc serwer mógłby je odczytać. Zmień hasło notatek w Ustawieniach."
   no_file_encryption: "Ta kompilacja nie szyfruje pliku bazy danych. Notatki i tagi pozostają zaszyfrowane, ale adres e-mail, adres serwera, nazwy załączników i daty już nie."
+  change_keeps_key: "Klucz szyfrowania się nie zmienia: stare kopie zapasowe nadal otworzysz starym hasłem."
 menu:
   notes: Notatki
   new_note: Nowa notatka
@@ -350,7 +351,6 @@ help:
   attachments: ZAŁĄCZNIKI
   global: GLOBALNE
   press_esc_or_enter: Naciśnij Esc lub Enter, aby zamknąć
-  press_enter_paste: Naciśnij Enter, aby wkleić | Esc, aby anulować
   tab_switch: "Tab: przełącz pola | Enter: utwórz"
   enter_unlock: "Enter: odblokuj | Ctrl+Q: wyjdź"
   type_password_key: Wpisz
@@ -533,6 +533,7 @@ help:
   g_saved_desc: "Zapisane wyszukiwania"
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "Zapisz to wyszukiwanie"
+  enter_confirm_esc_cancel: "Enter: potwierdź | Esc: anuluj"
 cli:
   # Alternatywne (używane w niektórych miejscach)
   list: Wyświetl notatki
@@ -611,6 +612,11 @@ cli:
   allow_insecure_http_help: "Zezwól na wysłanie hasła przez niezaszyfrowane HTTP do publicznego hosta"
   password_flag_deprecated: "Hasło w wierszu poleceń jest widoczne w ps i historii powłoki. Użyj zamiast tego --password-stdin lub JOTTERY_PASSWORD."
   password_stdin_help: "Czytaj hasła ze stdin, po jednym w wierszu, zamiast pytać"
+  reset_yes_help: "Nie pytaj, zanim --reset cokolwiek usunie"
+  reset_confirm: "Spowoduje to trwałe usunięcie %{path} i zapamiętanego hasła. Wpisz %{word}, aby kontynuować:"
+  reset_cancelled: "Nic nie zostało usunięte"
+  reset_done: "Usunięto sejf i zapamiętane hasło"
+  reset_keychain_failed: "Nie udało się usunąć hasła z pęku kluczy"
 status:
   locked: Zablokowane
   unlocked: Odblokowane

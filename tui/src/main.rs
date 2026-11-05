@@ -57,6 +57,7 @@ fn build_translated_cli() -> clap::Command {
     cmd = cmd.mut_arg("debug", |a| a.help(t!("cli.debug_help").to_string()));
     cmd = cmd.mut_arg("debug_log", |a| a.help(t!("cli.debug_log_help").to_string()));
     cmd = cmd.mut_arg("reset", |a| a.help(t!("cli.reset_help").to_string()));
+    cmd = cmd.mut_arg("yes", |a| a.help(t!("cli.reset_yes_help").to_string()));
     cmd = cmd.mut_arg("allow_insecure_http", |a| a.help(t!("cli.allow_insecure_http_help").to_string()));
     cmd = cmd.mut_arg("password_stdin", |a| a.help(t!("cli.password_stdin_help").to_string()));
 
@@ -213,6 +214,10 @@ struct Cli {
     /// Reset: delete the database and start fresh
     #[arg(long)]
     reset: bool,
+
+    /// Don't ask before --reset deletes anything
+    #[arg(long, requires = "reset")]
+    yes: bool,
 
     /// Allow sending a password over plain HTTP to a public host
     #[arg(long, global = true)]
@@ -659,6 +664,59 @@ fn open_editor(initial_content: &str) -> Result<String> {
     Ok(content)
 }
 
+/// What has to be typed before --reset goes ahead. It isn't translated, so a script or
+/// a set of instructions works in every language.
+const RESET_CONFIRMATION: &str = "DELETE";
+
+/// Delete the vault and everything that could open it.
+///
+/// People run this to erase their data, so the remembered password goes too. Left behind,
+/// it could be decrypted with the key file beside it, and the next run would try it on a
+/// new vault.
+fn reset_vault(db_path: &Path, confirmed: bool) -> Result<()> {
+    if !confirmed {
+        errln!("{}", t!("cli.reset_confirm", path = db_path.display().to_string(), word = RESET_CONFIRMATION));
+        let mut answer = String::new();
+        std::io::stdin().read_line(&mut answer).context("Failed to read the answer")?;
+        if answer.trim() != RESET_CONFIRMATION {
+            anyhow::bail!("{}", t!("cli.reset_cancelled"));
+        }
+    }
+
+    let existed = db_path.exists();
+
+    // Sidecars are named by adding to the whole path, whatever the file is called
+    let mut paths = vec![db_path.to_path_buf()];
+    for suffix in ["-wal", "-shm", "-journal"] {
+        let mut sidecar = db_path.as_os_str().to_owned();
+        sidecar.push(suffix);
+        paths.push(PathBuf::from(sidecar));
+    }
+    for path in &paths {
+        match std::fs::remove_file(path) {
+            Ok(()) => info!("Deleted {}", path.display()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e).with_context(|| format!("Failed to delete {}", path.display())),
+        }
+    }
+
+    let config_dir = db_path.parent().ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
+    password_storage::create_file_storage(config_dir).delete()?;
+
+    // With the file gone this is the keychain, where there is one. It may be out of reach
+    // from here, and that's no reason to stop: the vault itself has gone.
+    if let Err(e) = password_storage::create_storage(config_dir, false).delete() {
+        errln!("⚠ {}: {e}", t!("cli.reset_keychain_failed"));
+    }
+
+    if existed {
+        outln!("✓ {}: {}", t!("cli.reset_done"), db_path.display());
+    } else {
+        outln!("{}: {}", t!("error.file_not_found"), db_path.display());
+    }
+    Ok(())
+}
+
 /// Sync from the CLI, the same way the TUI does: a push and a full pull.
 fn perform_cli_sync(db_path: &Path, db: Database, key: [u8; 32]) -> Result<ui::operations::sync::SyncOutcome> {
     let mut app = App::headless(db_path.to_path_buf(), db, key)?;
@@ -838,22 +896,7 @@ fn run() -> Result<()> {
 
     // Handle reset flag
     if cli.reset {
-        if db_path.exists() {
-            info!("Deleting database: {}", db_path.display());
-            std::fs::remove_file(&db_path)?;
-
-            // Also remove SQLite WAL and SHM files if they exist
-            let wal_path = db_path.with_extension("db-wal");
-            let shm_path = db_path.with_extension("db-shm");
-            let _ = std::fs::remove_file(&wal_path);
-            let _ = std::fs::remove_file(&shm_path);
-
-            outln!("✓ {}: {}", t!("note.deleted"), db_path.display());
-            outln!("{}", t!("password.change_success"));
-        } else {
-            outln!("{}: {}", t!("error.file_not_found"), db_path.display());
-        }
-        return Ok(());
+        return reset_vault(&db_path, cli.yes);
     }
 
     // Whatever a killed run left behind goes first. A command only needs the handler

@@ -50,6 +50,7 @@ password:
   same_as_account: "Utilize palavras-passe diferentes. O servidor vê a palavra-passe da conta, por isso esta não pode também abrir as suas notas."
   same_as_account_warning: "A palavra-passe da conta é igual à das notas, por isso o servidor poderia lê-las. Altere a palavra-passe das notas nas Definições."
   no_file_encryption: "Esta compilação não encripta o ficheiro da base de dados. As notas e etiquetas continuam encriptadas, mas o seu e-mail, o endereço do servidor, os nomes dos anexos e as datas não."
+  change_keeps_key: "A sua chave de cifra não muda: as cópias de segurança antigas continuam a abrir com a palavra-passe antiga."
 menu:
   notes: Notas
   new_note: Nova nota
@@ -350,7 +351,6 @@ help:
   attachments: ANEXOS
   global: GLOBAL
   press_esc_or_enter: Pressione Esc ou Enter para fechar
-  press_enter_paste: Pressione Enter para colar | Esc para cancelar
   tab_switch: "Tab: alternar campos | Enter: criar"
   enter_unlock: "Enter: desbloquear | Ctrl+Q: sair"
   type_password_key: Digite
@@ -533,6 +533,7 @@ help:
   g_saved_desc: "Pesquisas guardadas"
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "Guardar esta pesquisa"
+  enter_confirm_esc_cancel: "Enter: confirmar | Esc: cancelar"
 cli:
   # Alternativo (usado em alguns lugares)
   list: Listar notas
@@ -611,6 +612,11 @@ cli:
   allow_insecure_http_help: "Permitir enviar uma palavra-passe por HTTP sem cifra para um anfitrião público"
   password_flag_deprecated: "Uma palavra-passe na linha de comandos é visível no ps e no histórico da shell. Use --password-stdin ou JOTTERY_PASSWORD."
   password_stdin_help: "Ler palavras-passe do stdin, uma por linha, em vez de perguntar"
+  reset_yes_help: "Não perguntar antes de --reset eliminar alguma coisa"
+  reset_confirm: "Isto elimina definitivamente %{path} e qualquer palavra-passe memorizada. Escreva %{word} para continuar:"
+  reset_cancelled: "Nada foi eliminado"
+  reset_done: "O cofre e qualquer palavra-passe memorizada foram eliminados"
+  reset_keychain_failed: "Não foi possível remover a palavra-passe do porta-chaves"
 status:
   locked: Bloqueado
   unlocked: Desbloqueado

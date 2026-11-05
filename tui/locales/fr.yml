@@ -50,6 +50,7 @@ password:
   same_as_account: "Utilisez des mots de passe différents. Le serveur voit le mot de passe de votre compte : il ne doit pas aussi ouvrir vos notes."
   same_as_account_warning: "Le mot de passe de votre compte est identique à celui de vos notes : le serveur pourrait les lire. Changez le mot de passe des notes dans les paramètres."
   no_file_encryption: "Cette version ne chiffre pas le fichier de base de données. Les notes et les tags restent chiffrés, mais pas votre e-mail, l'adresse du serveur, les noms des pièces jointes ni les dates."
+  change_keeps_key: "Votre clé de chiffrement ne change pas : les anciennes sauvegardes s'ouvrent toujours avec l'ancien mot de passe."
 menu:
   notes: Notes
   new_note: Nouvelle note
@@ -350,7 +351,6 @@ help:
   attachments: PIÈCES JOINTES
   global: GLOBAL
   press_esc_or_enter: Appuyez sur Échap ou Entrée pour fermer
-  press_enter_paste: Appuyez sur Entrée pour coller | Échap pour annuler
   tab_switch: "Tab : changer de champs | Entrée : créer"
   enter_unlock: "Entrée : déverrouiller | Ctrl+Q : quitter"
   type_password_key: Taper
@@ -533,6 +533,7 @@ help:
   g_saved_desc: "Recherches enregistrées"
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "Enregistrer cette recherche"
+  enter_confirm_esc_cancel: "Entrée : confirmer | Échap : annuler"
 cli:
   # Alt (utilisé à certains endroits)
   list: Lister les notes
@@ -611,6 +612,11 @@ cli:
   allow_insecure_http_help: "Autoriser l'envoi d'un mot de passe en HTTP clair vers un hôte public"
   password_flag_deprecated: "Un mot de passe en ligne de commande est visible dans ps et l'historique du shell. Utilisez plutôt --password-stdin ou JOTTERY_PASSWORD."
   password_stdin_help: "Lire les mots de passe sur stdin, un par ligne, au lieu de les demander"
+  reset_yes_help: "Ne pas demander avant que --reset supprime quoi que ce soit"
+  reset_confirm: "Ceci supprime définitivement %{path} et tout mot de passe mémorisé. Saisissez %{word} pour continuer :"
+  reset_cancelled: "Rien n'a été supprimé"
+  reset_done: "Coffre et mot de passe mémorisé supprimés"
+  reset_keychain_failed: "Impossible de retirer le mot de passe du trousseau"
 status:
   locked: Verrouillé
   unlocked: Déverrouillé

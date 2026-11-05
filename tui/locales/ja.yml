@@ -50,6 +50,7 @@ password:
   same_as_account: "別のパスワードを使用してください。サーバーはアカウントのパスワードを見ることができるため、ノートを開くパスワードと同じにしてはいけません。"
   same_as_account_warning: "アカウントのパスワードがノートのパスワードと同じため、サーバーがノートを読める状態です。設定でノートのパスワードを変更してください。"
   no_file_encryption: "このビルドはデータベースファイルを暗号化しません。ノートとタグは暗号化されたままですが、メールアドレス、サーバーアドレス、添付ファイル名、日付は暗号化されません。"
+  change_keeps_key: "暗号化キーは変わりません。古いバックアップは古いパスワードで開くことができます。"
 menu:
   notes: ノート
   new_note: 新しいノート
@@ -350,7 +351,6 @@ help:
   attachments: 添付ファイル
   global: グローバル
   press_esc_or_enter: EscまたはEnterで閉じる
-  press_enter_paste: Enterで貼り付け | Escでキャンセル
   tab_switch: "Tab: フィールド切替 | Enter: 作成"
   enter_unlock: "Enter: ロック解除 | Ctrl+Q: 終了"
   type_password_key: 入力
@@ -533,6 +533,7 @@ help:
   g_saved_desc: "保存した検索"
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "この検索を保存"
+  enter_confirm_esc_cancel: "Enter: 確定 | Esc: キャンセル"
 cli:
   # 代替 (一部で使用)
   list: ノートを一覧表示
@@ -611,6 +612,11 @@ cli:
   allow_insecure_http_help: "パスワードを暗号化されていない HTTP で公開ホストに送信することを許可"
   password_flag_deprecated: "コマンドラインのパスワードは ps やシェル履歴に表示されます。代わりに --password-stdin か JOTTERY_PASSWORD を使ってください。"
   password_stdin_help: "パスワードを尋ねずに stdin から 1 行ずつ読み取る"
+  reset_yes_help: "--reset で削除する前に確認しない"
+  reset_confirm: "%{path} と記憶されたパスワードを完全に削除します。続行するには %{word} と入力してください:"
+  reset_cancelled: "何も削除されませんでした"
+  reset_done: "保管庫と記憶されたパスワードを削除しました"
+  reset_keychain_failed: "キーチェーンからパスワードを削除できませんでした"
 status:
   locked: ロック中
   unlocked: ロック解除

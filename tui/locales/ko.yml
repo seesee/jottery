@@ -50,6 +50,7 @@ password:
   same_as_account: "서로 다른 비밀번호를 사용하세요. 서버는 계정 비밀번호를 볼 수 있으므로 노트를 여는 비밀번호와 같으면 안 됩니다."
   same_as_account_warning: "계정 비밀번호가 노트 비밀번호와 같아서 서버가 노트를 읽을 수 있습니다. 설정에서 노트 비밀번호를 변경하세요."
   no_file_encryption: "이 빌드는 데이터베이스 파일을 암호화하지 않습니다. 노트와 태그는 암호화된 상태로 유지되지만 이메일, 서버 주소, 첨부 파일 이름, 날짜는 암호화되지 않습니다."
+  change_keeps_key: "암호화 키는 바뀌지 않습니다. 이전 백업은 이전 비밀번호로 계속 열 수 있습니다."
 menu:
   notes: "노트"
   new_note: "새 노트"
@@ -350,7 +351,6 @@ help:
   attachments: "첨부 파일"
   global: "전역"
   press_esc_or_enter: Esc 또는 Enter를 눌러 닫기
-  press_enter_paste: Enter를 눌러 붙여넣기 | Esc로 취소
   tab_switch: "Tab: 필드 전환 | Enter: 생성"
   enter_unlock: "Enter: 잠금 해제 | Ctrl+Q: 종료"
   type_password_key: "입력"
@@ -533,6 +533,7 @@ help:
   g_saved_desc: "저장된 검색"
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "이 검색 저장"
+  enter_confirm_esc_cancel: "Enter: 확인 | Esc: 취소"
 cli:
   # 기존 (일부 위치에서 사용됨)
   list: "노트 목록"
@@ -611,6 +612,11 @@ cli:
   allow_insecure_http_help: "공개 호스트로 암호화되지 않은 HTTP를 통해 비밀번호 전송 허용"
   password_flag_deprecated: "명령줄의 비밀번호는 ps와 셸 기록에 표시됩니다. 대신 --password-stdin 또는 JOTTERY_PASSWORD를 사용하세요."
   password_stdin_help: "묻는 대신 stdin에서 한 줄에 하나씩 비밀번호 읽기"
+  reset_yes_help: "--reset이 삭제하기 전에 묻지 않음"
+  reset_confirm: "%{path} 및 기억된 비밀번호가 영구적으로 삭제됩니다. 계속하려면 %{word}을(를) 입력하세요:"
+  reset_cancelled: "아무것도 삭제되지 않았습니다"
+  reset_done: "보관함과 기억된 비밀번호를 삭제했습니다"
+  reset_keychain_failed: "키체인에서 비밀번호를 제거할 수 없습니다"
 status:
   locked: "잠김"
   unlocked: "잠금 해제됨"
