@@ -478,6 +478,33 @@ fn reset_asks_first() {
 }
 
 #[test]
+fn an_export_is_private_and_does_not_replace_a_file_unasked() {
+    let (dir, db) = create_test_env();
+    let password = uuid::Uuid::new_v4().to_string();
+    vault_with_note(&db, &password, "Decrypted in the export");
+    let output = dir.path().join("notes.json");
+    let path = output.to_str().unwrap();
+
+    let (ok, _, stderr) = run_on(&db, &["export", "-o", path, "-p", &password]);
+    assert!(ok, "{stderr}");
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(fs::metadata(&output).unwrap().permissions().mode() & 0o777, 0o600);
+    }
+
+    fs::write(&output, "kept").unwrap();
+    let (ok, _, _) = run_on(&db, &["export", "-o", path, "-p", &password]);
+    assert!(!ok);
+    assert_eq!(fs::read_to_string(&output).unwrap(), "kept");
+
+    let (ok, _, stderr) = run_on(&db, &["export", "-o", path, "-p", &password, "--force"]);
+    assert!(ok, "{stderr}");
+    assert!(fs::read_to_string(&output).unwrap().contains("Decrypted in the export"));
+}
+
+#[test]
 fn debug_goes_to_stderr_and_leaves_the_output_alone() {
     let (_temp_dir, db) = create_test_env();
     let password = uuid::Uuid::new_v4().to_string();

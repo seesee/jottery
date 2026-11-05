@@ -139,6 +139,7 @@ fn build_translated_cli() -> clap::Command {
         sub.about(t!("cli.export_about").to_string())
             .mut_arg("output", |a| a.help(t!("cli.output_help").to_string()))
             .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
+            .mut_arg("force", |a| a.help(t!("cli.export_force_help").to_string()))
     });
 
     cmd = cmd.mut_subcommand("import", |sub| {
@@ -386,6 +387,10 @@ enum Commands {
         /// Password for decryption (will prompt if not provided)
         #[arg(short, long)]
         password: Option<String>,
+
+        /// Replace the file if it's already there
+        #[arg(long)]
+        force: bool,
     },
     /// Import notes from JSON file
     Import {
@@ -1369,7 +1374,7 @@ fn run() -> Result<()> {
 
             return Ok(());
         }
-        Some(Commands::Export { output, password }) => {
+        Some(Commands::Export { output, password, force }) => {
             info!("{}: {}", t!("cli.export"), output.display());
             let password = get_password(password, &db_path)?;
             let db = Database::open(&db_path, &password)
@@ -1378,7 +1383,7 @@ fn run() -> Result<()> {
             // Derive key using stored salt
             let key = derive_key_from_db(&db, &password)?;
 
-            let count = export::export_notes(&db, &key, &output)?;
+            let count = export::export_notes(&db, &key, &output, force)?;
             outln!("✓ {}: {} {}", t!("cli.export"), count, output.display());
             return Ok(());
         }

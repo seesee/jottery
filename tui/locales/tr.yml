@@ -617,6 +617,7 @@ cli:
   reset_cancelled: "Hiçbir şey silinmedi"
   reset_done: "Kasa ve hatırlanan parola silindi"
   reset_keychain_failed: "Parola anahtar zincirinden kaldırılamadı"
+  export_force_help: "Dosya zaten varsa değiştir"
 status:
   locked: Kilitli
   unlocked: Kilitsiz
@@ -645,6 +646,8 @@ bulk:
   colour_of: "%{count} notun rengini ayarla"
   colour_set: "%{count} notun rengi değişti"
   unknown_colour: "%{colour} adında bir renk yok"
+  overwrite_title: "Bu dosya değiştirilsin mi?"
+  overwrite_message: "%{path} zaten var. Değiştirme işlemi geri alınamaz."
 time:
   just_now: az önce
   minutes_ago: "%{count} dakika önce"
@@ -791,3 +794,6 @@ saved_search:
   delete_confirm: "'%{name}' tüm cihazlarda silinsin mi? (y/n)"
   not_found: "%{name} adında kayıtlı arama yok"
   failed: "Kayıtlı arama başarısız: %{error}"
+
+export:
+  file_exists: "Bu dosya zaten var. Başka bir ad seçin ya da değiştirmek için --force kullanın."

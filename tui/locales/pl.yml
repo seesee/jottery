@@ -617,6 +617,7 @@ cli:
   reset_cancelled: "Nic nie zostało usunięte"
   reset_done: "Usunięto sejf i zapamiętane hasło"
   reset_keychain_failed: "Nie udało się usunąć hasła z pęku kluczy"
+  export_force_help: "Zastąp plik, jeśli już istnieje"
 status:
   locked: Zablokowane
   unlocked: Odblokowane
@@ -645,6 +646,8 @@ bulk:
   colour_of: "Ustaw kolor notatek (%{count})"
   colour_set: "Zmieniono kolor notatek: %{count}"
   unknown_colour: "Nie ma koloru o nazwie %{colour}"
+  overwrite_title: "Zastąpić ten plik?"
+  overwrite_message: "%{path} już istnieje. Zastąpienia nie można cofnąć."
 time:
   just_now: przed chwilą
   minutes_ago: "%{count} minut temu"
@@ -791,3 +794,6 @@ saved_search:
   delete_confirm: "Usunąć '%{name}' na wszystkich urządzeniach? (y/n)"
   not_found: "Brak zapisanego wyszukiwania o nazwie %{name}"
   failed: "Błąd zapisanego wyszukiwania: %{error}"
+
+export:
+  file_exists: "Ten plik już istnieje. Wybierz inną nazwę lub użyj --force, aby go zastąpić."

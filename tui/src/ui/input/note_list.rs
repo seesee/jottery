@@ -79,6 +79,18 @@ fn cycle_color_backward(current_color: Option<&String>, app: &App) -> Option<Str
     cycle_color(current_color, app, false)
 }
 
+/// Export the selection, stopping to ask if that would replace a file.
+fn export_selection(app: &mut App, path: std::path::PathBuf, overwrite: bool) {
+    match operations::bulk::export_selected(app, &path, overwrite) {
+        Ok(count) => {
+            app.sync_status = Some(t!("bulk.exported", count = count, path = path.display().to_string()).to_string());
+            app.clear_multi_selection();
+        }
+        Err(e) if e.is::<crate::export::ExportFileExists>() => app.export_overwrite_path = Some(path),
+        Err(e) => app.error = Some(t!("bulk.operation_failed", error = e.to_string()).to_string()),
+    }
+}
+
 /// Handle key events in note list state
 pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
     // Clear sync status on any key (except 'y' which sets it)
@@ -251,6 +263,14 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
         return Ok(());
     }
 
+    // An export would replace a file, which can't be undone
+    if let Some(path) = app.export_overwrite_path.take() {
+        if matches!(key.code, KeyCode::Char('y') | KeyCode::Char('Y')) {
+            export_selection(app, path, true);
+        }
+        return Ok(());
+    }
+
     // Handle bulk export path input mode
     if matches!(app.input_mode, InputMode::BulkExportPath) {
         match handle_text_input(&key, &mut app.bulk_export_path_input) {
@@ -258,15 +278,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 // Export selected notes to file
                 if !app.bulk_export_path_input.is_empty() {
                     let path = std::path::PathBuf::from(&app.bulk_export_path_input);
-                    match operations::bulk::export_selected(app, &path) {
-                        Ok(count) => {
-                            app.sync_status = Some(t!("bulk.exported", count = count, path = app.bulk_export_path_input.clone()).to_string());
-                            app.clear_multi_selection();
-                        }
-                        Err(e) => {
-                            app.error = Some(t!("bulk.operation_failed", error = e.to_string()).to_string());
-                        }
-                    }
+                    export_selection(app, path, false);
                 }
                 app.bulk_export_path_input.clear();
                 app.input_mode = InputMode::Normal;

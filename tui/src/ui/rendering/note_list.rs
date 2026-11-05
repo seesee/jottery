@@ -479,6 +479,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     let mut tags_line_area_local: Option<Rect> = None;
     let mut tag_positions_local: Vec<(String, u16, u16)> = Vec::new();
     let mut note_link_positions_local: Vec<(String, u16, u16, u16)> = Vec::new();
+    let mut preview_scroll = None;
     let mut preview_area_local: Option<Rect> = None;
 
     if !filtered.is_empty() && app.selected_note < filtered.len() {
@@ -578,6 +579,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         // Calculate the starting line index for content (after metadata + blank line)
         let content_start_line_index = lines.len();
 
+        // The terminal cell a tab lands on depends on where it is, and a paragraph drops them
+        let content = crate::ui::helpers::expand_tabs(&note.content);
+
         // For markdown, render it cleanly; for other types, use syntax highlighting
         if note.syntax_language == SyntaxLanguage::Markdown {
             // Create a lookup function for note titles (used for empty link text)
@@ -594,7 +598,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             };
 
             // Render markdown with inline formatting and code block highlighting
-            let render_result = render_markdown_for_terminal(&note.content, &app.syntax_highlighter, &app.debug_log, Some(note_title_lookup));
+            let render_result = render_markdown_for_terminal(&content, &app.syntax_highlighter, &app.debug_log, Some(note_title_lookup));
 
             // Convert link positions from render result to screen coordinates
             // The y coordinate is: preview_inner_y + content_start_line_index + link_line_index - scroll_offset
@@ -617,7 +621,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             lines.extend(render_result.lines);
         } else {
             // Apply syntax highlighting to code
-            let highlighted_content = app.syntax_highlighter.highlight(&note.content, note.syntax_language);
+            let highlighted_content = app.syntax_highlighter.highlight(&content, note.syntax_language);
             lines.extend(highlighted_content.lines);
         }
 
@@ -696,9 +700,10 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
         let preview = Paragraph::new(Text::from(lines))
             .block(preview_block)
-            .wrap(Wrap { trim: false })
-            .scroll((app.preview_scroll_offset as u16, 0));
-        frame.render_widget(preview, preview_area);
+            .wrap(Wrap { trim: false });
+        let scroll = app.preview_scroll_offset.min(super::furthest_scroll(&preview, preview_area));
+        preview_scroll = Some(scroll);
+        frame.render_widget(preview.scroll((super::scroll_rows(scroll), 0)), preview_area);
 
         // Render footer with left-aligned Version + sync indicator and right-aligned Modified
         let modified_str = format_datetime_full(&note.modified_at);
@@ -1120,6 +1125,15 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         );
     }
 
+    if let Some(path) = &app.export_overwrite_path {
+        super::inbox::render_confirm_modal(
+            frame,
+            size,
+            &t!("bulk.overwrite_title"),
+            &t!("bulk.overwrite_message", path = path.display().to_string()),
+        );
+    }
+
     // Render bulk export path input modal if showing
     if matches!(app.input_mode, InputMode::BulkExportPath) {
         let count = app.selected_note_ids.len();
@@ -1166,6 +1180,11 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     app.tags_line_area = tags_line_area_local;
     app.tag_positions = tag_positions_local;
     app.note_link_positions = note_link_positions_local;
+
+    // Where the text really stopped, so the way back up starts from there
+    if let Some(scroll) = preview_scroll {
+        app.preview_scroll_offset = scroll;
+    }
     app.preview_area = preview_area_local;
 }
 
@@ -1193,6 +1212,45 @@ mod tests {
             })
             .collect::<Vec<_>>()
             .join("\n")
+    }
+
+    fn app_showing(content: &str) -> App {
+        let mut app = test_app();
+        app.notes.push(Note::new(content.to_string()));
+        app.invalidate_filter_cache();
+        app
+    }
+
+    #[test]
+    fn a_preview_stops_scrolling_at_the_end_of_its_text() {
+        let mut app = app_showing(&(0..100).map(|i| format!("Line {i}")).collect::<Vec<_>>().join("\n"));
+        app.preview_scroll_offset = 100_000;
+
+        let shown = screen(&mut app);
+
+        assert!(app.preview_scroll_offset < 100, "{}", app.preview_scroll_offset);
+        assert!(shown.contains("Line 99"), "{shown}");
+    }
+
+    #[test]
+    fn a_short_preview_does_not_scroll_at_all() {
+        let mut app = app_showing("Short");
+        app.preview_scroll_offset = 50;
+
+        let shown = screen(&mut app);
+
+        assert_eq!(app.preview_scroll_offset, 0);
+        assert!(shown.contains("Short"), "{shown}");
+    }
+
+    #[test]
+    fn tab_indented_text_keeps_its_columns_in_a_preview() {
+        let mut app = app_showing("First\n\t\tIndented");
+        app.notes[0].set_syntax(SyntaxLanguage::Plain);
+
+        let shown = screen(&mut app);
+
+        assert!(shown.contains("        Indented"), "{shown}");
     }
 
     /// `count` notes with titles Note 0, Note 1 and so on, in display order, and

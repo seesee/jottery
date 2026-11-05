@@ -133,7 +133,7 @@ pub fn render_inbox(app: &mut App, frame: &mut Frame, area: Rect) {
     }
 }
 
-fn render_confirm_modal(frame: &mut Frame, area: Rect, title: &str, message: &str) {
+pub(super) fn render_confirm_modal(frame: &mut Frame, area: Rect, title: &str, message: &str) {
     let modal = centered_rect_percent(50, 30, area);
     frame.render_widget(Clear, modal);
 

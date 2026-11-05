@@ -617,6 +617,7 @@ cli:
   reset_cancelled: "未删除任何内容"
   reset_done: "已删除保险库和已记住的密码"
   reset_keychain_failed: "无法从钥匙串中移除密码"
+  export_force_help: "如果文件已存在则替换"
 status:
   locked: 已锁定
   unlocked: 已解锁
@@ -645,6 +646,8 @@ bulk:
   colour_of: "设置 %{count} 条笔记的颜色"
   colour_set: "已更改 %{count} 条笔记的颜色"
   unknown_colour: "没有名为 %{colour} 的颜色"
+  overwrite_title: "要替换此文件吗?"
+  overwrite_message: "%{path} 已存在。替换后无法撤销。"
 time:
   just_now: 刚刚
   minutes_ago: "%{count} 分钟前"
@@ -791,3 +794,6 @@ saved_search:
   delete_confirm: "要在所有设备上删除“%{name}”吗?(y/n)"
   not_found: "没有名为 %{name} 的已保存搜索"
   failed: "保存的搜索失败:%{error}"
+
+export:
+  file_exists: "该文件已存在。请换一个名称,或使用 --force 替换它。"

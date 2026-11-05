@@ -617,6 +617,7 @@ cli:
   reset_cancelled: "Rien n'a été supprimé"
   reset_done: "Coffre et mot de passe mémorisé supprimés"
   reset_keychain_failed: "Impossible de retirer le mot de passe du trousseau"
+  export_force_help: "Remplacer le fichier s'il existe déjà"
 status:
   locked: Verrouillé
   unlocked: Déverrouillé
@@ -645,6 +646,8 @@ bulk:
   colour_of: "Définir la couleur de %{count} notes"
   colour_set: "Couleur modifiée sur %{count} notes"
   unknown_colour: "Aucune couleur ne s'appelle %{colour}"
+  overwrite_title: "Remplacer ce fichier ?"
+  overwrite_message: "%{path} existe déjà. Son remplacement est irréversible."
 time:
   just_now: à l'instant
   minutes_ago: il y a %{count} minutes
@@ -791,3 +794,6 @@ saved_search:
   delete_confirm: "Supprimer « %{name} » sur tous les appareils ? (y/n)"
   not_found: "Aucune recherche enregistrée nommée %{name}"
   failed: "Échec de la recherche enregistrée : %{error}"
+
+export:
+  file_exists: "Ce fichier existe déjà. Choisissez un autre nom, ou utilisez --force pour le remplacer."

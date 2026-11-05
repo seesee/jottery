@@ -668,6 +668,7 @@ cli:
   reset_cancelled: "Nothing was deleted"
   reset_done: "Deleted the vault and any remembered password"
   reset_keychain_failed: "Could not remove the password from the keychain"
+  export_force_help: "Replace the file if it's already there"
 status:
   locked: "Locked"
   unlocked: "Unlocked"
@@ -700,6 +701,8 @@ bulk:
   unknown_colour: "There's no colour called %{colour}"
 
 # Date and time formatting
+  overwrite_title: "Replace this file?"
+  overwrite_message: "%{path} already exists. Replacing it can't be undone."
 time:
   just_now: "just now"
   minutes_ago: "%{count} minutes ago"
@@ -832,3 +835,6 @@ saved_search:
   delete_confirm: "Delete '%{name}' on every device? (y/n)"
   not_found: "No saved search called %{name}"
   failed: "Saved search failed: %{error}"
+
+export:
+  file_exists: "That file already exists. Choose another name, or use --force to replace it."

@@ -25,7 +25,7 @@ keychain = ["keyring"]                     # OS keychain for secure password sto
 
 [dependencies]
 # TUI Framework
-ratatui = "0.30"
+ratatui = { version = "0.30", features = ["unstable-rendered-line-info"] }
 crossterm = "0.28"
 
 # Database

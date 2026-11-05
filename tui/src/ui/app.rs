@@ -282,6 +282,8 @@ pub struct App {
     pub show_inbox_delete_confirm: bool,
     /// Show inbox delete-all confirmation
     pub show_inbox_delete_all_confirm: bool,
+    /// A file an export would replace, waiting for an answer
+    pub export_overwrite_path: Option<PathBuf>,
     /// The list of saved searches, when it's showing
     pub saved_searches: Vec<crate::repository::SavedSearch>,
     /// Selected index in the list of saved searches
@@ -444,6 +446,7 @@ impl App {
             selected_inbox_item: 0,
             show_inbox_delete_confirm: false,
             show_inbox_delete_all_confirm: false,
+            export_overwrite_path: None,
             saved_searches: Vec::new(),
             selected_saved_search: 0,
             show_saved_search_delete_confirm: false,
@@ -603,6 +606,7 @@ impl App {
         self.show_empty_bin_confirm = false;
         self.held_deletions = 0;
         self.show_disconnect_confirm = false;
+        self.export_overwrite_path = None;
         self.show_bulk_delete_confirm = false;
         self.show_bulk_combine_confirm = false;
         self.show_note_info = false;

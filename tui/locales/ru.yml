@@ -617,6 +617,7 @@ cli:
   reset_cancelled: "Ничего не удалено"
   reset_done: "Хранилище и запомненный пароль удалены"
   reset_keychain_failed: "Не удалось удалить пароль из связки ключей"
+  export_force_help: "Заменить файл, если он уже существует"
 status:
   locked: Заблокировано
   unlocked: Разблокировано
@@ -645,6 +646,8 @@ bulk:
   colour_of: "Задать цвет заметок (%{count})"
   colour_set: "Цвет изменён у заметок: %{count}"
   unknown_colour: "Цвета с названием %{colour} нет"
+  overwrite_title: "Заменить этот файл?"
+  overwrite_message: "%{path} уже существует. Замену нельзя отменить."
 time:
   just_now: только что
   minutes_ago: "%{count} минут назад"
@@ -791,3 +794,6 @@ saved_search:
   delete_confirm: "Удалить «%{name}» на всех устройствах? (y/n)"
   not_found: "Нет сохранённого поиска с именем %{name}"
   failed: "Ошибка сохранённого поиска: %{error}"
+
+export:
+  file_exists: "Такой файл уже существует. Выберите другое имя или используйте --force для замены."

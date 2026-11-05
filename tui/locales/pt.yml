@@ -617,6 +617,7 @@ cli:
   reset_cancelled: "Nada foi eliminado"
   reset_done: "O cofre e qualquer palavra-passe memorizada foram eliminados"
   reset_keychain_failed: "Não foi possível remover a palavra-passe do porta-chaves"
+  export_force_help: "Substituir o ficheiro se já existir"
 status:
   locked: Bloqueado
   unlocked: Desbloqueado
@@ -645,6 +646,8 @@ bulk:
   colour_of: "Definir a cor de %{count} notas"
   colour_set: "Cor alterada em %{count} notas"
   unknown_colour: "Não existe nenhuma cor chamada %{colour}"
+  overwrite_title: "Substituir este ficheiro?"
+  overwrite_message: "%{path} já existe. A substituição não pode ser anulada."
 time:
   just_now: agora mesmo
   minutes_ago: "%{count} minutos atrás"
@@ -791,3 +794,6 @@ saved_search:
   delete_confirm: "Eliminar '%{name}' em todos os dispositivos? (y/n)"
   not_found: "Não há nenhuma pesquisa guardada chamada %{name}"
   failed: "Falha na pesquisa guardada: %{error}"
+
+export:
+  file_exists: "Esse ficheiro já existe. Escolha outro nome ou use --force para o substituir."

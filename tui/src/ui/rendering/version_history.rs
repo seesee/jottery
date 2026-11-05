@@ -162,16 +162,16 @@ fn render_version_preview(app: &App, frame: &mut Frame, area: Rect) {
     preview_lines.push(Line::from(""));
 
     // Full content (no truncation)
-    for line in version.content.lines() {
-        preview_lines.push(Line::from(line));
+    for line in crate::ui::helpers::expand_tabs(&version.content).lines() {
+        preview_lines.push(Line::from(line.to_string()));
     }
 
     let preview = Paragraph::new(preview_lines)
         .block(preview_block)
-        .wrap(Wrap { trim: false })
-        .scroll((app.version_preview_scroll_offset as u16, 0));
+        .wrap(Wrap { trim: false });
+    let scroll = app.version_preview_scroll_offset.min(super::furthest_scroll(&preview, preview_chunks[0]));
 
-    frame.render_widget(preview, preview_chunks[0]);
+    frame.render_widget(preview.scroll((super::scroll_rows(scroll), 0)), preview_chunks[0]);
 
     // Fixed help text at bottom
     let help_text = Line::styled(

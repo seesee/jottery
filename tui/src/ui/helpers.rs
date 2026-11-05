@@ -11,6 +11,39 @@ use chrono::{DateTime, Local, TimeZone};
 use ratatui::text::Line;
 use unicode_width::UnicodeWidthStr;
 
+/// Columns between tab stops in a preview.
+const TAB_WIDTH: usize = 4;
+
+/// Replace tabs with the spaces that reach the next tab stop, because a terminal widget
+/// drops them, and tab-indented text would lose its columns.
+pub fn expand_tabs(text: &str) -> std::borrow::Cow<'_, str> {
+    if !text.contains('\t') {
+        return std::borrow::Cow::Borrowed(text);
+    }
+
+    let mut expanded = String::with_capacity(text.len() + TAB_WIDTH);
+    let mut column = 0;
+    for character in text.chars() {
+        match character {
+            '\t' => {
+                let spaces = TAB_WIDTH - column % TAB_WIDTH;
+                expanded.extend(std::iter::repeat_n(' ', spaces));
+                column += spaces;
+            }
+            '\n' => {
+                expanded.push(character);
+                column = 0;
+            }
+            _ => {
+                expanded.push(character);
+                column += 1;
+            }
+        }
+    }
+
+    std::borrow::Cow::Owned(expanded)
+}
+
 /// Get the current locale as a string reference for matching.
 fn get_locale() -> String {
     rust_i18n::locale().to_string()
@@ -757,5 +790,18 @@ mod tests {
     #[test]
     fn a_link_to_a_short_id_does_not_panic() {
         assert_eq!(render_links("[](link:ab)").note_links.len(), 1);
+    }
+
+    #[test]
+    fn tabs_reach_the_next_stop_from_wherever_they_are() {
+        assert_eq!(expand_tabs("\tindented"), "    indented");
+        assert_eq!(expand_tabs("ab\tc"), "ab  c");
+        assert_eq!(expand_tabs("abcd\te"), "abcd    e");
+        assert_eq!(expand_tabs("a\n\tb"), "a\n    b");
+    }
+
+    #[test]
+    fn text_without_tabs_is_left_as_it_is() {
+        assert!(matches!(expand_tabs("plain"), std::borrow::Cow::Borrowed("plain")));
     }
 }

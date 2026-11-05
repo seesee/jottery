@@ -4,9 +4,10 @@
 use anyhow::{Context, Result};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use chrono::{DateTime, Utc};
+use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use std::fs::File;
-use std::io::{BufReader, BufWriter};
+use std::io::{BufReader, Write};
 use std::path::Path;
 
 use crate::{
@@ -103,11 +104,44 @@ pub fn export_note(note: &Note, attachments: &AttachmentRepository<'_>, key: &[u
     }
 }
 
+/// An export would have replaced a file, and nobody has said it may.
+#[derive(Debug, thiserror::Error)]
+#[error("{}", t!("export.file_exists"))]
+pub struct ExportFileExists;
+
+/// Write a decrypted export, readable by this user alone.
+///
+/// The file only appears under its name once it's complete. A file already there stays,
+/// unless `overwrite` says otherwise, and then it's replaced rather than rewritten, or it
+/// would keep whatever permissions it had.
+pub fn write_private(path: &Path, contents: &[u8], overwrite: bool) -> Result<()> {
+    if !overwrite && path.exists() {
+        return Err(ExportFileExists.into());
+    }
+
+    let folder = match path.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent,
+        _ => Path::new("."),
+    };
+
+    // A temporary file is private from the moment it exists
+    let mut file = tempfile::NamedTempFile::new_in(folder).context("Failed to create export file")?;
+    file.write_all(contents).context("Failed to write export file")?;
+
+    let placed = if overwrite { file.persist(path) } else { file.persist_noclobber(path) };
+    match placed {
+        Ok(_) => Ok(()),
+        Err(e) if e.error.kind() == std::io::ErrorKind::AlreadyExists => Err(ExportFileExists.into()),
+        Err(e) => Err(e.error).context("Failed to create export file"),
+    }
+}
+
 /// Export notes to JSON file
 pub fn export_notes<P: AsRef<Path>>(
     db: &Database,
     key: &[u8; 32],
     path: P,
+    overwrite: bool,
 ) -> Result<usize> {
     let repo = NoteRepository::new(db.connection());
     let attachments = AttachmentRepository::new(db.connection());
@@ -127,11 +161,8 @@ pub fn export_notes<P: AsRef<Path>>(
     };
 
     // Write to file
-    let file = File::create(path.as_ref())
-        .context("Failed to create export file")?;
-    let writer = BufWriter::new(file);
-    serde_json::to_writer_pretty(writer, &export_data)
-        .context("Failed to write JSON")?;
+    let json = serde_json::to_vec_pretty(&export_data).context("Failed to write JSON")?;
+    write_private(path.as_ref(), &json, overwrite)?;
 
     Ok(notes.len())
 }
@@ -346,7 +377,7 @@ mod tests {
 
         // Export
         let export_file = NamedTempFile::new().unwrap();
-        let count = export_notes(&db, &key, export_file.path()).unwrap();
+        let count = export_notes(&db, &key, export_file.path(), true).unwrap();
         assert_eq!(count, 2);
 
         // Create new database and import
@@ -480,7 +511,7 @@ mod tests {
             .unwrap();
 
         let file = NamedTempFile::new().unwrap();
-        export_notes(&db, &key, file.path()).unwrap();
+        export_notes(&db, &key, file.path(), true).unwrap();
 
         let other = Database::in_memory(&uuid::Uuid::new_v4().to_string()).unwrap();
         import_notes(&other, &key, file.path()).unwrap();
@@ -529,5 +560,47 @@ mod tests {
 
         assert!(import_notes(&db, &key, file.path()).is_err());
         assert_eq!(NoteRepository::new(db.connection()).count(true).unwrap(), 0);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn an_export_is_readable_by_its_owner_alone() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("export.json");
+
+        write_private(&path, b"decrypted", false).unwrap();
+
+        assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
+    }
+
+    #[test]
+    fn an_export_leaves_a_file_alone_unless_told_otherwise() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("export.json");
+        std::fs::write(&path, "already here").unwrap();
+
+        let error = write_private(&path, b"decrypted", false).unwrap_err();
+
+        assert!(error.is::<ExportFileExists>());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "already here");
+    }
+
+    /// Writing over it would keep whatever permissions the old file had.
+    #[test]
+    #[cfg(unix)]
+    fn an_export_that_overwrites_takes_the_loose_permissions_away() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("export.json");
+        std::fs::write(&path, "already here").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+
+        write_private(&path, b"decrypted", true).unwrap();
+
+        assert_eq!(std::fs::read(&path).unwrap(), b"decrypted");
+        assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
     }
 }

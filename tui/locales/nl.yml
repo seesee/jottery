@@ -617,6 +617,7 @@ cli:
   reset_cancelled: "Er is niets verwijderd"
   reset_done: "De kluis en elk onthouden wachtwoord zijn verwijderd"
   reset_keychain_failed: "Het wachtwoord kon niet uit de sleutelhanger worden verwijderd"
+  export_force_help: "Het bestand vervangen als het al bestaat"
 status:
   locked: Vergrendeld
   unlocked: Ontgrendeld
@@ -645,6 +646,8 @@ bulk:
   colour_of: "Kleur van %{count} notities instellen"
   colour_set: "Kleur gewijzigd op %{count} notities"
   unknown_colour: "Er is geen kleur met de naam %{colour}"
+  overwrite_title: "Dit bestand vervangen?"
+  overwrite_message: "%{path} bestaat al. Vervangen kan niet ongedaan worden gemaakt."
 time:
   just_now: zojuist
   minutes_ago: "%{count} minuten geleden"
@@ -791,3 +794,6 @@ saved_search:
   delete_confirm: "'%{name}' op alle apparaten verwijderen? (y/n)"
   not_found: "Geen opgeslagen zoekopdracht met de naam %{name}"
   failed: "Opgeslagen zoekopdracht mislukt: %{error}"
+
+export:
+  file_exists: "Dat bestand bestaat al. Kies een andere naam of gebruik --force om het te vervangen."

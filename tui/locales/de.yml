@@ -617,6 +617,7 @@ cli:
   reset_cancelled: "Es wurde nichts gelöscht"
   reset_done: "Tresor und gespeichertes Passwort gelöscht"
   reset_keychain_failed: "Das Passwort konnte nicht aus dem Schlüsselbund entfernt werden"
+  export_force_help: "Die Datei ersetzen, falls sie bereits existiert"
 status:
   locked: Gesperrt
   unlocked: Entsperrt
@@ -645,6 +646,8 @@ bulk:
   colour_of: "Farbe von %{count} Notizen festlegen"
   colour_set: "Farbe bei %{count} Notizen geändert"
   unknown_colour: "Es gibt keine Farbe namens %{colour}"
+  overwrite_title: "Diese Datei ersetzen?"
+  overwrite_message: "%{path} existiert bereits. Das Ersetzen kann nicht rückgängig gemacht werden."
 time:
   just_now: gerade eben
   minutes_ago: vor %{count} Minuten
@@ -791,3 +794,6 @@ saved_search:
   delete_confirm: "'%{name}' auf allen Geräten löschen? (y/n)"
   not_found: "Keine gespeicherte Suche namens %{name}"
   failed: "Fehler bei der gespeicherten Suche: %{error}"
+
+export:
+  file_exists: "Diese Datei existiert bereits. Wählen Sie einen anderen Namen oder ersetzen Sie sie mit --force."

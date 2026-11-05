@@ -617,6 +617,7 @@ cli:
   reset_cancelled: "何も削除されませんでした"
   reset_done: "保管庫と記憶されたパスワードを削除しました"
   reset_keychain_failed: "キーチェーンからパスワードを削除できませんでした"
+  export_force_help: "ファイルが既にある場合は置き換える"
 status:
   locked: ロック中
   unlocked: ロック解除
@@ -645,6 +646,8 @@ bulk:
   colour_of: "%{count} 件のノートの色を設定"
   colour_set: "%{count} 件のノートの色を変更しました"
   unknown_colour: "%{colour} という色はありません"
+  overwrite_title: "このファイルを置き換えますか?"
+  overwrite_message: "%{path} は既に存在します。置き換えると元に戻せません。"
 time:
   just_now: たった今
   minutes_ago: "%{count} 分前"
@@ -791,3 +794,6 @@ saved_search:
   delete_confirm: "すべてのデバイスで「%{name}」を削除しますか? (y/n)"
   not_found: "%{name} という保存した検索はありません"
   failed: "保存した検索に失敗しました: %{error}"
+
+export:
+  file_exists: "そのファイルは既に存在します。別の名前を選ぶか、--force で置き換えてください。"

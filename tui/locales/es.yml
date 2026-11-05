@@ -617,6 +617,7 @@ cli:
   reset_cancelled: "No se ha eliminado nada"
   reset_done: "Se han eliminado la bóveda y cualquier contraseña recordada"
   reset_keychain_failed: "No se ha podido quitar la contraseña del llavero"
+  export_force_help: "Reemplazar el archivo si ya existe"
 status:
   locked: Bloqueado
   unlocked: Desbloqueado
@@ -645,6 +646,8 @@ bulk:
   colour_of: "Definir el color de %{count} notas"
   colour_set: "Color cambiado en %{count} notas"
   unknown_colour: "No hay ningún color llamado %{colour}"
+  overwrite_title: "¿Reemplazar este archivo?"
+  overwrite_message: "%{path} ya existe. Reemplazarlo no se puede deshacer."
 time:
   just_now: justo ahora
   minutes_ago: hace %{count} minutos
@@ -791,3 +794,6 @@ saved_search:
   delete_confirm: "¿Eliminar '%{name}' en todos los dispositivos? (y/n)"
   not_found: "No hay ninguna búsqueda guardada llamada %{name}"
   failed: "Error en la búsqueda guardada: %{error}"
+
+export:
+  file_exists: "Ese archivo ya existe. Elige otro nombre o usa --force para reemplazarlo."

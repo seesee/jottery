@@ -617,6 +617,7 @@ cli:
   reset_cancelled: "Non è stato eliminato nulla"
   reset_done: "Archivio e password memorizzata eliminati"
   reset_keychain_failed: "Impossibile rimuovere la password dal portachiavi"
+  export_force_help: "Sostituisci il file se esiste già"
 status:
   locked: Bloccato
   unlocked: Sbloccato
@@ -645,6 +646,8 @@ bulk:
   colour_of: "Imposta il colore di %{count} note"
   colour_set: "Colore cambiato su %{count} note"
   unknown_colour: "Non esiste un colore chiamato %{colour}"
+  overwrite_title: "Sostituire questo file?"
+  overwrite_message: "%{path} esiste già. La sostituzione non può essere annullata."
 time:
   just_now: proprio ora
   minutes_ago: "%{count} minuti fa"
@@ -791,3 +794,6 @@ saved_search:
   delete_confirm: "Eliminare '%{name}' su tutti i dispositivi? (y/n)"
   not_found: "Nessuna ricerca salvata chiamata %{name}"
   failed: "Ricerca salvata non riuscita: %{error}"
+
+export:
+  file_exists: "Il file esiste già. Scegli un altro nome oppure usa --force per sostituirlo."

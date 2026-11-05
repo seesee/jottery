@@ -617,6 +617,7 @@ cli:
   reset_cancelled: "아무것도 삭제되지 않았습니다"
   reset_done: "보관함과 기억된 비밀번호를 삭제했습니다"
   reset_keychain_failed: "키체인에서 비밀번호를 제거할 수 없습니다"
+  export_force_help: "파일이 이미 있으면 바꾸기"
 status:
   locked: "잠김"
   unlocked: "잠금 해제됨"
@@ -645,6 +646,8 @@ bulk:
   colour_of: "노트 %{count}개의 색상 설정"
   colour_set: "노트 %{count}개의 색상을 변경했습니다"
   unknown_colour: "%{colour}(이)라는 색상이 없습니다"
+  overwrite_title: "이 파일을 바꿀까요?"
+  overwrite_message: "%{path}이(가) 이미 있습니다. 바꾸면 되돌릴 수 없습니다."
 time:
   just_now: "방금"
   minutes_ago: "%{count}분 전"
@@ -791,3 +794,6 @@ saved_search:
   delete_confirm: "모든 기기에서 '%{name}'을(를) 삭제할까요? (y/n)"
   not_found: "%{name}(이)라는 저장된 검색이 없습니다"
   failed: "저장된 검색 실패: %{error}"
+
+export:
+  file_exists: "이미 있는 파일입니다. 다른 이름을 선택하거나 --force로 바꾸세요."
