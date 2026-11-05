@@ -104,7 +104,7 @@ struct MarkdownFormattingTests {
     // MARK: - In the Editor
 
     @Test func theBarWrapsTheSelection() {
-        let editor = Editor(text: "a word")
+        let editor = HeadlessEditor(text: "a word")
         editor.textView.selectedRange = NSRange(location: 2, length: 4)
 
         editor.textView.apply(.bold)
@@ -116,7 +116,7 @@ struct MarkdownFormattingTests {
 
     @Test(arguments: MarkdownFormat.allCases)
     func undoPutsItBack(format: MarkdownFormat) throws {
-        let editor = Editor(text: "a word")
+        let editor = HeadlessEditor(text: "a word")
         editor.textView.selectedRange = NSRange(location: 2, length: 4)
 
         editor.textView.apply(format)
@@ -129,7 +129,7 @@ struct MarkdownFormattingTests {
     }
 
     @Test func anInsertIsItsOwnUndoStep() throws {
-        let editor = Editor(text: "")
+        let editor = HeadlessEditor(text: "")
         editor.textView.insertText("typed ")
 
         editor.textView.insert(try #require(QuickCommands.all.last))
@@ -140,7 +140,7 @@ struct MarkdownFormattingTests {
     }
 
     @Test func theInsertReplacesTheSelection() throws {
-        let editor = Editor(text: "old")
+        let editor = HeadlessEditor(text: "old")
         editor.textView.selectedRange = NSRange(location: 0, length: 3)
 
         editor.textView.insert(try #require(QuickCommands.all.last))
@@ -149,7 +149,7 @@ struct MarkdownFormattingTests {
     }
 
     @Test func aReadOnlyNoteCantBeFormatted() throws {
-        let editor = Editor(text: "locked")
+        let editor = HeadlessEditor(text: "locked")
         editor.textView.isEditable = false
         editor.textView.selectedRange = NSRange(location: 0, length: 6)
 

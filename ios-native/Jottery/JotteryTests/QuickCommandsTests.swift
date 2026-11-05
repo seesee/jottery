@@ -73,8 +73,8 @@ struct QuickCommandsTests {
 
     // MARK: - In the Editor
 
-    private func makeEditor(_ text: String) -> Editor {
-        Editor(text: text)
+    private func makeEditor(_ text: String) -> HeadlessEditor {
+        HeadlessEditor(text: text)
     }
 
     @Test func typingASpaceAfterACommandExpandsIt() {
@@ -142,7 +142,7 @@ struct QuickCommandsTests {
 
 /// A text view wired up as `RunestoneEditorView` does it, without a window.
 @MainActor
-final class Editor {
+final class HeadlessEditor {
     let textView = EditorTextView()
     let coordinator: RunestoneEditorView.Coordinator
     private(set) var bound: String

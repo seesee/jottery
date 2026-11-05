@@ -65,8 +65,8 @@ struct AttachmentMarkdownTests {
 
     // MARK: - At the Cursor
 
-    private func makeEditor(_ text: String) -> (EditorCursor, Editor) {
-        let editor = Editor(text: text)
+    private func makeEditor(_ text: String) -> (EditorCursor, HeadlessEditor) {
+        let editor = HeadlessEditor(text: text)
         let cursor = EditorCursor()
         cursor.attach(editor.textView)
         return (cursor, editor)

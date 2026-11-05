@@ -40,9 +40,10 @@ struct EditorResponderTests {
         return pasteboard
     }
 
+    /// Runestone's own input answers first, going by the general pasteboard, which
+    /// other suites use. So this checks the two halves that don't depend on it:
+    /// what it turns down comes here next, and here says yes.
     @Test func pastingAPictureComesUpTheChainToTheEditor() throws {
-        // Runestone's own input takes the paste if the general pasteboard has text.
-        UIPasteboard.general.items = []
         let textView = EditorTextView()
         let window = try makeWindow(textView)
         defer { window.isHidden = true }
@@ -52,11 +53,11 @@ struct EditorResponderTests {
         #expect(textView.becomeFirstResponder())
         let responder = try #require(firstResponder(in: textView))
 
-        #expect(responder.target(forAction: paste, withSender: nil) as? EditorTextView === textView)
+        #expect(responder.next === textView)
+        #expect(textView.canPerformAction(paste, withSender: nil))
     }
 
     @Test func withNothingToAttachPasteIsNotOffered() throws {
-        UIPasteboard.general.items = []
         let textView = EditorTextView()
         let window = try makeWindow(textView)
         defer { window.isHidden = true }
@@ -64,9 +65,8 @@ struct EditorResponderTests {
         textView.onPasteAttachment = {}
 
         #expect(textView.becomeFirstResponder())
-        let responder = try #require(firstResponder(in: textView))
 
-        #expect(responder.target(forAction: paste, withSender: nil) as? EditorTextView == nil)
+        #expect(!textView.canPerformAction(paste, withSender: nil))
     }
 
     @Test func commandBAndCommandIReachTheEditor() throws {

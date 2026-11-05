@@ -189,28 +189,33 @@ struct AttachmentThumbnailsTests {
     @Test func lockingTheVaultClearsThem() async throws {
         let state = try TestVaults.makeState()
         try await state.createVault(password: "notes-password-correct-horse")
+        // Its own: other suites' vaults lock while this runs, and clear the shared one.
+        let thumbnails = AttachmentThumbnails()
+        state.attachmentThumbnails = thumbnails
         let attachment = ref()
         let data = try png()
-        _ = await AttachmentThumbnails.shared.image(for: attachment) { data }
-        #expect(AttachmentThumbnails.shared.cached(attachment.id) != nil)
+        _ = await thumbnails.image(for: attachment) { data }
+        #expect(thumbnails.cached(attachment.id) != nil)
 
         state.lock()
 
-        #expect(AttachmentThumbnails.shared.cached(attachment.id) == nil)
+        #expect(thumbnails.cached(attachment.id) == nil)
     }
 
     @Test func removingAnAttachmentTakesItsPictureToo() async throws {
         let state = try TestVaults.makeState()
         try await state.createVault(password: "notes-password-correct-horse")
+        let thumbnails = AttachmentThumbnails()
+        state.attachmentThumbnails = thumbnails
         let note = try #require(try state.createNote(content: "hello"))
         let data = try png()
         let added = try #require(try state.addAttachment(to: note.id, data: data, filename: "a.png", mimeType: "image/png"))
-        _ = await AttachmentThumbnails.shared.image(for: added) { data }
-        #expect(AttachmentThumbnails.shared.cached(added.id) != nil)
+        _ = await thumbnails.image(for: added) { data }
+        #expect(thumbnails.cached(added.id) != nil)
 
         try state.removeAttachment(from: note.id, attachmentId: added.id)
 
-        #expect(AttachmentThumbnails.shared.cached(added.id) == nil)
+        #expect(thumbnails.cached(added.id) == nil)
     }
 }
 

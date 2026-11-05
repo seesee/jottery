@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 /// Reads attachable content (images, PDFs) from the general pasteboard.
 ///
 /// Runestone's editor only pastes strings, so images copied from other
-/// apps are attached via the editor toolbar instead.
+/// apps are attached by `EditorTextView` and the editor's menu instead.
 @MainActor
 enum PasteboardService {
 

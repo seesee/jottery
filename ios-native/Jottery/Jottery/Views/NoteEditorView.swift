@@ -698,12 +698,12 @@ struct PhotoPickerView: UIViewControllerRepresentable {
             }
         }
 
-        static func load(_ provider: NSItemProvider) async -> IncomingAttachment {
+        static func load(_ provider: NSItemProvider, files: TemporaryFiles = .shared) async -> IncomingAttachment {
             if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
-                return await load(provider, type: .image, fallbackMimeType: "image/jpeg")
+                return await load(provider, type: .image, fallbackMimeType: "image/jpeg", files: files)
             }
             if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
-                return await load(provider, type: .movie, fallbackMimeType: "video/mp4")
+                return await load(provider, type: .movie, fallbackMimeType: "video/mp4", files: files)
             }
             return unreadable(named: provider.suggestedName)
         }
@@ -713,7 +713,8 @@ struct PhotoPickerView: UIViewControllerRepresentable {
         private static func load(
             _ provider: NSItemProvider,
             type: UTType,
-            fallbackMimeType: String
+            fallbackMimeType: String,
+            files: TemporaryFiles
         ) async -> IncomingAttachment {
             let suggestedName = provider.suggestedName
             return await withCheckedContinuation { continuation in
@@ -726,7 +727,8 @@ struct PhotoPickerView: UIViewControllerRepresentable {
                     continuation.resume(returning: .copying(
                         url,
                         filename: filename,
-                        mimeType: IncomingAttachment.mimeType(forFilename: filename, fallback: fallbackMimeType)
+                        mimeType: IncomingAttachment.mimeType(forFilename: filename, fallback: fallbackMimeType),
+                        files: files
                     ))
                 }
             }

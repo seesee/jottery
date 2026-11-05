@@ -21,7 +21,7 @@ struct IncomingAttachment: Sendable {
         /// A file outside the app, reached through the document picker.
         case pickedFile(URL)
         /// A copy in `TemporaryFiles`, which goes once it's been dealt with.
-        case temporaryFile(URL)
+        case temporaryFile(URL, TemporaryFiles)
         /// It never got as far as being read.
         case refused(AttachmentImportError)
     }
@@ -45,11 +45,16 @@ struct IncomingAttachment: Sendable {
 
     /// For a file that goes away when the callback handing it over returns, as
     /// the photo picker's and a drop's do. One over the limit isn't copied.
-    static func copying(_ url: URL, filename: String, mimeType: String) -> IncomingAttachment {
+    static func copying(
+        _ url: URL,
+        filename: String,
+        mimeType: String,
+        files: TemporaryFiles = .shared
+    ) -> IncomingAttachment {
         let contents: Contents
         do {
             try checkFileSize(url)
-            contents = .temporaryFile(try TemporaryFiles.shared.copy(url, named: filename))
+            contents = .temporaryFile(try files.copy(url, named: filename), files)
         } catch let error as AttachmentImportError {
             contents = .refused(error)
         } catch {
@@ -67,7 +72,7 @@ struct IncomingAttachment: Sendable {
         switch contents {
         case .data(let data):
             return try Self.checked(data)
-        case .temporaryFile(let url):
+        case .temporaryFile(let url, _):
             return try Self.readFile(url)
         case .pickedFile(let url):
             // False for a file the app can reach anyway, which is still worth trying.
@@ -81,8 +86,8 @@ struct IncomingAttachment: Sendable {
 
     /// Let go of any copy made on the way in.
     func discard() {
-        if case .temporaryFile(let url) = contents {
-            TemporaryFiles.shared.remove(url)
+        if case .temporaryFile(let url, let files) = contents {
+            files.remove(url)
         }
     }
 

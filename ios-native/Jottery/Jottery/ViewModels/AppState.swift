@@ -144,6 +144,7 @@ final class AppState {
     @ObservationIgnored var pendingEditorNote: DecryptedNote?
     /// Swept at launch, lock and wipe, so nothing decrypted outlives the session.
     @ObservationIgnored var temporaryFiles = TemporaryFiles.shared
+    @ObservationIgnored var attachmentThumbnails = AttachmentThumbnails.shared
     @ObservationIgnored private var networkMonitor: NWPathMonitor?
     @ObservationIgnored private var networkWasSatisfied = true
     @ObservationIgnored private var autoSyncTask: Task<Void, Never>?
@@ -332,7 +333,7 @@ final class AppState {
     private func removeTemporaryFiles() {
         temporaryFiles.removeAll()
         TemporaryFiles.removeLeftovers()
-        AttachmentThumbnails.shared.removeAll()
+        attachmentThumbnails.removeAll()
     }
 
     /// Wire repositories to a specific database. Internal so tests can
@@ -1461,7 +1462,7 @@ final class AppState {
 
         // Delete blob
         try? attachmentRepo.deleteBlob(id: ref.data)
-        AttachmentThumbnails.shared.remove(attachmentId)
+        attachmentThumbnails.remove(attachmentId)
 
         refreshNoteFromStore(id: noteId)
     }

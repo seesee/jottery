@@ -38,6 +38,11 @@ struct AttachmentImportTests {
         return url
     }
 
+    /// Its own, because any other suite's vault locking sweeps the shared one.
+    private func makeFiles() throws -> TemporaryFiles {
+        TemporaryFiles(root: try makeFolder())
+    }
+
     private func item(_ name: String, bytes: Int = 4, mimeType: String = "image/png") -> IncomingAttachment {
         IncomingAttachment(filename: name, mimeType: mimeType, contents: .data(Data(repeating: 1, count: bytes)))
     }
@@ -135,8 +140,8 @@ struct AttachmentImportTests {
         let (state, noteId) = try await makeState()
         let folder = try makeFolder()
         let source = try makeFile("photo.png", bytes: 8, in: folder)
-        let copied = IncomingAttachment.copying(source, filename: "photo.png", mimeType: "image/png")
-        guard case .temporaryFile(let copy) = copied.contents else {
+        let copied = IncomingAttachment.copying(source, filename: "photo.png", mimeType: "image/png", files: try makeFiles())
+        guard case .temporaryFile(let copy, _) = copied.contents else {
             Issue.record("Expected a copy")
             return
         }
@@ -152,8 +157,8 @@ struct AttachmentImportTests {
         let (state, noteId) = try await makeState()
         try state.toggleLock(id: noteId)
         let source = try makeFile("photo.png", bytes: 8, in: try makeFolder())
-        let copied = IncomingAttachment.copying(source, filename: "photo.png", mimeType: "image/png")
-        guard case .temporaryFile(let copy) = copied.contents else {
+        let copied = IncomingAttachment.copying(source, filename: "photo.png", mimeType: "image/png", files: try makeFiles())
+        guard case .temporaryFile(let copy, _) = copied.contents else {
             Issue.record("Expected a copy")
             return
         }
@@ -186,44 +191,44 @@ struct AttachmentImportTests {
 
     // MARK: - Drops and the Pickers
 
-    @Test func aDropKeepsTheFilesNameAndContents() async throws {
+    private func drop(_ provider: NSItemProvider) async throws -> DroppedAttachment {
+        try await withCheckedThrowingContinuation { continuation in
+            _ = provider.loadTransferable(type: DroppedAttachment.self) { continuation.resume(with: $0) }
+        }
+    }
+
+    @Test func aDropKeepsTheFilesName() async throws {
         // As a drag from another app offers it: its data, and a name to go with it.
         let provider = NSItemProvider(item: Data([1, 2, 3]) as NSData, typeIdentifier: UTType.png.identifier)
         provider.suggestedName = "holiday photo.png"
 
-        let dropped: DroppedAttachment = try await withCheckedThrowingContinuation { continuation in
-            _ = provider.loadTransferable(type: DroppedAttachment.self) { continuation.resume(with: $0) }
-        }
+        let dropped = try await drop(provider)
         defer { dropped.incoming.discard() }
 
         #expect(dropped.incoming.filename == "holiday photo.png")
         #expect(dropped.incoming.mimeType == "image/png")
-        #expect(try dropped.incoming.read() == Data([1, 2, 3]))
     }
 
-    @Test func aDroppedCopyIsInTheFolderThatLockSweeps() async throws {
-        let source = try makeFile("report.pdf", bytes: 8, in: try makeFolder())
-        let provider = try #require(NSItemProvider(contentsOf: source))
-
-        let dropped: DroppedAttachment = try await withCheckedThrowingContinuation { continuation in
-            _ = provider.loadTransferable(type: DroppedAttachment.self) { continuation.resume(with: $0) }
+    /// A drop has to use the shared folder, where the lock can reach it, so another
+    /// suite's vault locking can take a copy away. That's why this gets more than
+    /// one go. Each is a whole new drop.
+    @Test func aDropArrivesWhole() async throws {
+        let root = TemporaryFiles.shared.root.standardizedFileURL.path
+        let arrived = try await waitUntil {
+            let provider = NSItemProvider(item: Data([1, 2, 3]) as NSData, typeIdentifier: UTType.png.identifier)
+            let dropped = try await drop(provider)
+            defer { dropped.incoming.discard() }
+            guard case .temporaryFile(let copy, _) = dropped.incoming.contents else { return false }
+            return copy.standardizedFileURL.path.hasPrefix(root) && (try? dropped.incoming.read()) == Data([1, 2, 3])
         }
-        defer { dropped.incoming.discard() }
-
-        guard case .temporaryFile(let copy) = dropped.incoming.contents else {
-            Issue.record("Expected a copy")
-            return
-        }
-        #expect(copy.standardizedFileURL.path.hasPrefix(TemporaryFiles.shared.root.standardizedFileURL.path))
+        #expect(arrived)
     }
 
     @Test func aDropOverTheLimitIsRefusedWithoutCopying() async throws {
         let big = try makeFile("big.mov", bytes: AttachmentLimits.maxBytes + 1, in: try makeFolder())
         let provider = try #require(NSItemProvider(contentsOf: big))
 
-        let dropped: DroppedAttachment = try await withCheckedThrowingContinuation { continuation in
-            _ = provider.loadTransferable(type: DroppedAttachment.self) { continuation.resume(with: $0) }
-        }
+        let dropped = try await drop(provider)
 
         guard case .refused(.tooLarge) = dropped.incoming.contents else {
             Issue.record("Expected it to be refused")
@@ -239,7 +244,7 @@ struct AttachmentImportTests {
         let source = try makeFile("IMG_0001.png", bytes: 8, in: try makeFolder())
         let provider = try #require(NSItemProvider(contentsOf: source))
 
-        let incoming = await PhotoPickerView.Coordinator.load(provider)
+        let incoming = await PhotoPickerView.Coordinator.load(provider, files: try makeFiles())
         defer { incoming.discard() }
 
         #expect(incoming.filename.hasSuffix(".png"))
