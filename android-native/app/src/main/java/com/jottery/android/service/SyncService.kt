@@ -190,7 +190,7 @@ class SyncService(
             storageFull?.let { throw it }
             tooLarge?.let { throw it }
         } catch (e: Exception) {
-            Log.e(TAG, "Push failed: ${e.message}")
+            Log.e(TAG, "Push failed: ${e.javaClass.simpleName}")
             throw e
         }
     }
@@ -708,7 +708,7 @@ class SyncService(
             warnIfClockLooksWrong(watermark)
             return totalNewCount
         } catch (e: Exception) {
-            Log.e(TAG, "Pull failed: ${e.message}")
+            Log.e(TAG, "Pull failed: ${e.javaClass.simpleName}")
             throw e
         }
     }
@@ -1019,7 +1019,7 @@ class SyncService(
             syncRepo.saveConflict(stored)
             onConflictDetected?.invoke(describe(stored, requireKey()))
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to handle rejection for ${rejected.id}: ${e.message}")
+            Log.e(TAG, "Failed to handle rejection for ${rejected.id}: ${e.javaClass.simpleName}")
         }
     }
 

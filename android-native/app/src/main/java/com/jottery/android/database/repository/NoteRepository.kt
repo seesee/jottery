@@ -71,7 +71,7 @@ class NoteRepository(
             } catch (e: Exception) {
                 failCount++
                 if (failCount <= 3) {
-                    Log.w(TAG, "Decrypt failed for note ${record.id}: ${e.javaClass.simpleName}: ${e.message}")
+                    Log.w(TAG, "Decrypt failed for note ${record.id}: ${e.javaClass.simpleName}")
                 }
             }
         }

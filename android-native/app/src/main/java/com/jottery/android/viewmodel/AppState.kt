@@ -327,14 +327,14 @@ class AppState(application: Application) : AndroidViewModel(application) {
                         keyManager.autoLockTimeout = loaded.autoLockTimeout.toLong() * 60L
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Initialisation error: ${e.message}")
+                    Log.e(TAG, "Initialisation error: ${e.javaClass.simpleName}")
                     _isFirstLaunch.value = true
                 } finally {
                     _isInitialised.value = true
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Database init failed: ${e.message}")
+            Log.e(TAG, "Database init failed: ${e.javaClass.simpleName}")
             _isFirstLaunch.value = true
             _isInitialised.value = true
         }
@@ -1265,7 +1265,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             val base64 = android.util.Base64.encodeToString(decryptedData, android.util.Base64.NO_WRAP)
             "data:${ref.mimeType};base64,$base64"
         } catch (e: Exception) {
-            Log.w("AppState", "Failed to resolve attachment $attachmentId: ${e.message}")
+            Log.w("AppState", "Failed to resolve attachment $attachmentId: ${e.javaClass.simpleName}")
             null
         }
     }
@@ -1288,7 +1288,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             val enc = CryptoService.parseEncryptedJSON(version.content)
             CryptoService.decryptText(enc, key)
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to decrypt version content: ${e.message}")
+            Log.w(TAG, "Failed to decrypt version content: ${e.javaClass.simpleName}")
             null
         }
     }
@@ -1899,7 +1899,6 @@ class AppState(application: Application) : AndroidViewModel(application) {
             return
         }
 
-        Log.d(TAG, "[Sync] setupSync: OK -- endpoint=$endpoint")
 
         val noteRepository = noteRepo ?: return
         val versionRepository = versionRepo ?: return
@@ -1970,7 +1969,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
             }
             service.startSSE()
             try { triggerSync() } catch (e: Exception) {
-                Log.w(TAG, "[Sync] Initial sync failed: ${e.message}")
+                Log.w(TAG, "[Sync] Initial sync failed: ${e.javaClass.simpleName}")
             }
         }
     }

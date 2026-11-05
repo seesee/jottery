@@ -226,7 +226,7 @@ class WebBridge(
                 }
             }
         } catch (e: Exception) {
-            Log.e("WebBridge", "postMessage failed: ${e.message}", e)
+            Log.e("WebBridge", "postMessage failed: ${e.javaClass.simpleName}")
         }
     }
 }
