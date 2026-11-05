@@ -102,6 +102,7 @@
     "vitest": "^4.1.12"
   },
   "dependencies": {
+    "dompurify": "^3.4.17",
     "pako": "^2.1.0"
   }
 }
