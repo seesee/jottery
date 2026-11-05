@@ -180,3 +180,87 @@ async fn deleting_through_the_notes_route_leaves_a_tombstone() {
     let after = pull(&app, &key, serde_json::json!({ "cursor": before["nextCursor"] })).await;
     assert_eq!(after["deletions"][0]["id"], serde_json::json!(id));
 }
+
+async fn last_seen(pool: &SqlitePool, device: &str) -> String {
+    sqlx::query_scalar("SELECT last_seen_at FROM clients WHERE id = ?")
+        .bind(device)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+}
+
+async fn set_last_seen(pool: &SqlitePool, device: &str, value: &str) {
+    sqlx::query("UPDATE clients SET last_seen_at = ? WHERE id = ?")
+        .bind(value)
+        .bind(device)
+        .execute(pool)
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn a_device_is_not_written_to_on_every_request() {
+    // Every authenticated request used to write, and SQLite has one write lock
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let user = create_user(&db.pool, &format!("{}@example.com", new_id()), &random_password()).await;
+    let (device, key) = create_device(&db.pool, &user).await;
+    let moments_ago = chrono::Utc::now().to_rfc3339();
+    set_last_seen(&db.pool, &device, &moments_ago).await;
+
+    call(&app, "GET", "/api/v1/sync/status", Some(&key), None).await;
+
+    assert_eq!(last_seen(&db.pool, &device).await, moments_ago);
+}
+
+#[tokio::test]
+async fn a_device_is_seen_again_after_a_while() {
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let user = create_user(&db.pool, &format!("{}@example.com", new_id()), &random_password()).await;
+    let (device, key) = create_device(&db.pool, &user).await;
+    set_last_seen(&db.pool, &device, "2026-01-01T00:00:00+00:00").await;
+
+    call(&app, "GET", "/api/v1/sync/status", Some(&key), None).await;
+
+    assert_ne!(last_seen(&db.pool, &device).await, "2026-01-01T00:00:00+00:00");
+}
+
+async fn last_used(pool: &SqlitePool, id: &str) -> String {
+    sqlx::query_scalar("SELECT last_used_at FROM sessions WHERE id = ?")
+        .bind(id)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+}
+
+#[tokio::test]
+async fn a_session_records_its_use_at_most_once_a_minute() {
+    let db = migrated_db().await;
+    let user = create_user(&db.pool, &format!("{}@example.com", new_id()), &random_password()).await;
+    let token = new_id();
+    let session = jottery_server::db::SessionRepository::create(
+        &db.pool,
+        jottery_server::models::CreateSessionParams {
+            user_id: user,
+            token: token.clone(),
+            expires_at: "2999-01-01T00:00:00+00:00".to_string(),
+            user_agent: None,
+            ip_address: None,
+        },
+    )
+    .await
+    .unwrap();
+    let validate = || jottery_server::db::SessionRepository::validate_and_get(&db.pool, &token);
+
+    validate().await.unwrap().unwrap();
+    assert_eq!(last_used(&db.pool, &session.id).await, session.last_used_at);
+
+    sqlx::query("UPDATE sessions SET last_used_at = '2026-01-01T00:00:00+00:00' WHERE id = ?")
+        .bind(&session.id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    validate().await.unwrap().unwrap();
+    assert_ne!(last_used(&db.pool, &session.id).await, "2026-01-01T00:00:00+00:00");
+}

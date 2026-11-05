@@ -19,7 +19,7 @@ pub mod middleware {
 
     use crate::{
         api::cookies::{is_forgeable, session_credential},
-        db::SessionRepository,
+        db::{activity_is_stale, SessionRepository},
         error::AppError,
         utils::crypto::hash_sha256,
         AppState,
@@ -35,6 +35,7 @@ pub mod middleware {
     pub struct ClientInfo {
         pub client_id: String,
         pub user_id: String,
+        pub last_seen_at: Option<String>,
     }
 
     /// Find the device an API key belongs to, if it may still be used.
@@ -49,7 +50,7 @@ pub mod middleware {
         let hashed_key = hash_sha256(api_key);
 
         let client = sqlx::query!(
-            r#"SELECT c.id, c.user_id, c.is_active, u.is_active AS user_is_active, u.approved AS user_approved
+            r#"SELECT c.id, c.user_id, c.is_active, c.last_seen_at, u.is_active AS user_is_active, u.approved AS user_approved
                FROM clients c
                JOIN users u ON u.id = c.user_id
                WHERE c.api_key = ?"#,
@@ -79,6 +80,7 @@ pub mod middleware {
         Ok(ClientInfo {
             client_id: client.id,
             user_id: client.user_id,
+            last_seen_at: client.last_seen_at,
         })
     }
 
@@ -102,21 +104,21 @@ pub mod middleware {
         let api_key = &auth_header[7..]; // Remove "Bearer " prefix
 
         let client = authenticate_device(&state.pool, api_key).await?;
-        let client_id = client.client_id.clone();
+
+        if activity_is_stale(client.last_seen_at.as_deref()) {
+            let now = chrono::Utc::now().to_rfc3339();
+            let _ = sqlx::query!(
+                "UPDATE clients SET last_seen_at = ? WHERE id = ?",
+                now,
+                client.client_id
+            )
+            .execute(&state.pool)
+            .await;
+        }
 
         // Add both client_id and user_id to request extensions
         // client_id for audit trail, user_id for access control
         request.extensions_mut().insert(client);
-
-        // Update last_seen_at
-        let now = chrono::Utc::now().to_rfc3339();
-        let _ = sqlx::query!(
-            "UPDATE clients SET last_seen_at = ? WHERE id = ?",
-            now,
-            client_id
-        )
-        .execute(&state.pool)
-        .await;
 
         Ok(next.run(request).await)
     }

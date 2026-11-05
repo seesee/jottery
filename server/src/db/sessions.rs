@@ -85,8 +85,9 @@ impl SessionRepository {
             return Ok(None);
         }
 
-        // Update last used timestamp
-        Self::update_last_used(pool, &session.id).await?;
+        if super::activity_is_stale(Some(&session.last_used_at)) {
+            Self::update_last_used(pool, &session.id).await?;
+        }
 
         Ok(Some(session))
     }

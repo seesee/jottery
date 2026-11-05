@@ -103,13 +103,6 @@ pub async fn admin_auth_middleware(
     };
     request.extensions_mut().insert(actor);
 
-    // Update last_used_at timestamp (fire and forget)
-    let pool = state.pool.clone();
-    let session_id = session.id.clone();
-    tokio::spawn(async move {
-        let _ = SessionRepository::update_last_used(&pool, &session_id).await;
-    });
-
     request.extensions_mut().insert(session);
 
     Ok(next.run(request).await)

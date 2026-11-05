@@ -24,17 +24,29 @@ const BUSY_TIMEOUT: Duration = Duration::from_secs(30);
 pub async fn init_pool(database_url: &str) -> Result<SqlitePool, sqlx::Error> {
     let options = SqliteConnectOptions::from_str(database_url)?.busy_timeout(BUSY_TIMEOUT);
 
-    let pool = SqlitePoolOptions::new()
+    // Foreign keys are on by default, on every connection in the pool. The journal
+    // stays in its default mode on purpose: in WAL mode, recent commits sit in a
+    // second file, so the plain copy of the database file that server/README.md
+    // describes would quietly miss them.
+    SqlitePoolOptions::new()
         .max_connections(5)
         .connect_with(options)
-        .await?;
+        .await
+}
 
-    // Enable foreign keys
-    sqlx::query("PRAGMA foreign_keys = ON")
-        .execute(&pool)
-        .await?;
+/// How often a device's or session's "last active" time is written. A write needs
+/// SQLite's one write lock, so doing it on each request would make every read wait
+/// behind every other client's write, for a time nobody needs to the second.
+const ACTIVITY_WRITE_INTERVAL_SECS: i64 = 60;
 
-    Ok(pool)
+/// Whether a "last active" time is old enough to be worth writing again.
+pub fn activity_is_stale(last_active: Option<&str>) -> bool {
+    last_active
+        .and_then(|time| chrono::DateTime::parse_from_rfc3339(time).ok())
+        .is_none_or(|time| {
+            (chrono::Utc::now() - time.with_timezone(&chrono::Utc)).num_seconds()
+                >= ACTIVITY_WRITE_INTERVAL_SECS
+        })
 }
 
 /// Apply pending migrations with foreign keys off.
