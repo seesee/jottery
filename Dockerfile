@@ -62,7 +62,9 @@ RUN npm run build
 # -----------------------------
 # Stage 3: Build the Rust server (using cargo-chef for dependency caching)
 # -----------------------------
-FROM rust:1.85@sha256:e51d0265072d2d9d5d320f6a44dde6b9ef13653b035098febd68cce8fa7c0bc4 AS chef
+# The version has to match server/rust-toolchain.toml, so that the tests run on the
+# compiler that builds the release. scripts/check-rust-toolchain.sh checks it.
+FROM rust:1.85.1@sha256:e51d0265072d2d9d5d320f6a44dde6b9ef13653b035098febd68cce8fa7c0bc4 AS chef
 WORKDIR /app
 # 0.1.75 is the newest cargo-chef whose lock file builds on Rust 1.85
 RUN cargo install cargo-chef --locked --version 0.1.75
