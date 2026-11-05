@@ -201,6 +201,51 @@ describe('sync boundary', () => {
       expect(rejected()).toEqual([expect.objectContaining({ kind: 'savedSearch' })]);
     });
 
+    async function searchRow(overrides: Record<string, unknown> = {}) {
+      const enc = async (text: string) => JSON.stringify(await cryptoService.encryptText(text, masterKey));
+      return {
+        id: GOOD_ID, name: await enc('Name'), query: await enc('query'), order: 0,
+        createdAt: NOW, modifiedAt: NOW, deleted: false, version: 1, ...overrides,
+      } as unknown as NonNullable<SyncPullResponse['savedSearches']>[number];
+    }
+
+    it('accepts a saved search this vault can read', async () => {
+      serve({ savedSearches: [await searchRow()] });
+      await syncService.syncNow();
+      expect((await savedSearchRepository.getById(GOOD_ID))?.name).toBe('Name');
+    });
+
+    it('refuses a saved search the server wrote in plaintext', async () => {
+      serve({ savedSearches: [await searchRow({ name: 'planted', query: 'planted' })] });
+
+      const result = await syncService.syncNow();
+
+      expect(result.success).toBe(true);
+      expect(await savedSearchRepository.getById(GOOD_ID)).toBeUndefined();
+      expect(rejected()).toEqual([expect.objectContaining({ kind: 'savedSearch', id: GOOD_ID })]);
+    });
+
+    it('still applies a deletion, whatever the row holds', async () => {
+      await savedSearchRepository.create('Keep', 'keep');
+      const existing = (await savedSearchRepository.getAll())[0];
+      serve({ savedSearches: [await searchRow({ id: existing.id, name: 'x', query: 'x', deleted: true, modifiedAt: '2099-01-01T00:00:00.000Z' })] });
+
+      await syncService.syncNow();
+
+      expect(await savedSearchRepository.getAll()).toEqual([]);
+    });
+
+    it('does not stop the pull on a local row that will not decrypt', async () => {
+      const { getDB, STORES } = await import('./db');
+      await getDB().put(STORES.SAVED_SEARCHES, { id: GOOD_ID, name: 'x', query: 'x', order: 0, createdAt: NOW, modifiedAt: NOW, deleted: false, version: 1 });
+      serve({ savedSearches: [await searchRow({ modifiedAt: '2099-01-01T00:00:00.000Z' })], notes: [await remoteNote(BAD_ID)] });
+
+      const result = await syncService.syncNow();
+
+      expect(result.success).toBe(true);
+      expect((await savedSearchRepository.getById(GOOD_ID))?.name).toBe('Name');
+    });
+
     it('does not store a blob under a hostile id', async () => {
       serve({ attachments: [{ id: HOSTILE, data: 'AAAA' }, { id: ATTACHMENT_ID, data: 'AAAA' }] });
 

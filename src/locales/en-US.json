@@ -1232,7 +1232,9 @@
     "resolveButton": "Resolve Conflict",
     "syncNotification": "{count, plural, one {1 note has a sync conflict} other {{count} notes have sync conflicts}}",
     "commonAncestor": "Common ancestor",
-    "ancestorDescription": "The version you both started from"
+    "ancestorDescription": "The version you both started from",
+    "serverUnreadable": "The server's copy of this note can't be read, and may have been altered. Only your version can be kept.",
+    "localUnreadable": "This device's copy of the note can't be read."
   },
   "pullToRefresh": {
     "pull": "Pull down to sync",

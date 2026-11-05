@@ -29,7 +29,9 @@ import { keyManager } from './keyManager';
 import { encryptionRepository } from './encryptionRepository';
 import { syncRepository } from './syncRepository';
 import { noteRepository } from './noteRepository';
-import { closeDB, deleteDB, initDB } from './db';
+import { savedSearchRepository } from './savedSearchRepository';
+import { settingsRepository } from './settingsRepository';
+import { closeDB, deleteDB, getDB, initDB, STORES } from './db';
 import { createTestNote } from '../../test/db-utils';
 import { AccountKeyExistsError, AccountKeyUnreadableError, LocalNotesOrphanedError, ValidationError } from '../errors';
 import { base64ToUint8Array } from '../utils/base64';
@@ -373,6 +375,39 @@ describe('server-wrapped master key', () => {
       lock();
       await unlock('short');
       expect(isLocked()).toBe(false);
+    }, 60_000);
+  });
+
+  describe('saved searches stored as plaintext', () => {
+    const ROW = {
+      id: 'c0000000-0000-4000-8000-000000000001', name: 'Old name', query: 'old query', order: 1,
+      createdAt: '2026-01-01T00:00:00.000Z', modifiedAt: '2026-01-01T00:00:00.000Z', deleted: false, version: 1,
+    };
+
+    it('are encrypted at unlock, once, and queued for sync', async () => {
+      await initialize(NOTES_PASSWORD);
+      await getDB().put(STORES.SAVED_SEARCHES, ROW);
+      lock();
+
+      await unlock(NOTES_PASSWORD);
+
+      const stored = await getDB().get(STORES.SAVED_SEARCHES, ROW.id);
+      expect(JSON.parse(stored.name).ciphertext).toBeDefined();
+      expect(stored.needsSync).toBe(true);
+      expect((await settingsRepository.get()).savedSearchesEncrypted).toBe(true);
+    }, 60_000);
+
+    it('are left unreadable once the migration has run', async () => {
+      await initialize(NOTES_PASSWORD);
+      await settingsRepository.update({ savedSearchesEncrypted: true });
+      await getDB().put(STORES.SAVED_SEARCHES, ROW);
+      lock();
+
+      await unlock(NOTES_PASSWORD);
+
+      expect((await getDB().get(STORES.SAVED_SEARCHES, ROW.id)).name).toBe('Old name');
+      const [read] = await savedSearchRepository.getAll();
+      expect(read.name).not.toBe('Old name');
     }, 60_000);
   });
 

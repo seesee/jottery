@@ -1176,7 +1176,9 @@
     "indicator": "同步冲突",
     "bannerText": "此笔记存在需要解决的同步冲突",
     "resolveButton": "解决冲突",
-    "syncNotification": "{count}个笔记有同步冲突"
+    "syncNotification": "{count}个笔记有同步冲突",
+    "serverUnreadable": "服务器上此笔记的副本无法读取，可能已被篡改。只能保留您的版本。",
+    "localUnreadable": "无法读取此设备上的笔记副本。"
   },
   "pullToRefresh": {
     "pull": "下拉同步",

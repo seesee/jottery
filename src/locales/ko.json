@@ -1176,7 +1176,9 @@
     "indicator": "동기화 충돌",
     "bannerText": "이 노트에 해결해야 할 동기화 충돌이 있습니다",
     "resolveButton": "충돌 해결",
-    "syncNotification": "{count}개의 노트에 동기화 충돌이 있습니다"
+    "syncNotification": "{count}개의 노트에 동기화 충돌이 있습니다",
+    "serverUnreadable": "서버에 있는 이 메모의 사본을 읽을 수 없으며 변조되었을 수 있습니다. 내 버전만 유지할 수 있습니다.",
+    "localUnreadable": "이 기기에 있는 메모의 사본을 읽을 수 없습니다."
   },
   "pullToRefresh": {
     "pull": "아래로 당겨서 동기화",

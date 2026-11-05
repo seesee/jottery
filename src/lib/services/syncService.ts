@@ -647,7 +647,7 @@ class SyncService {
     if (batchIndex === 0) {
       if (savedSearchesForPush.length > 0) {
         for (const search of savedSearchesForPush) {
-          await savedSearchRepository.markSynced(search.id);
+          await savedSearchRepository.markSynced(search.id, search.version);
         }
         console.log(`[SyncService] Marked ${savedSearchesForPush.length} saved searches as synced`);
       }
@@ -985,7 +985,14 @@ class SyncService {
       }
 
       const remoteSearch = validated.value;
-      const localSearch = await savedSearchRepository.getById(remoteSearch.id);
+      const localSearch = await savedSearchRepository.getStoredById(remoteSearch.id);
+
+      // A live row has to decrypt. A deleted one is never shown, and older clients
+      // pushed some as plaintext, so a deletion is applied whatever the row holds.
+      if (!remoteSearch.deleted && !(await savedSearchRepository.isReadable(remoteSearch))) {
+        recordRejectedRemoteRecord('savedSearch', remoteSearch.id, 'unreadable');
+        continue;
+      }
 
       if (!localSearch || remoteSearch.modifiedAt > localSearch.modifiedAt) {
         await db.put(STORES.SAVED_SEARCHES, {

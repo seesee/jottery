@@ -9,6 +9,7 @@ import { encryptionRepository } from './encryptionRepository';
 import { settingsRepository } from './settingsRepository';
 import { noteRepository } from './noteRepository';
 import { syncRepository } from './syncRepository';
+import { savedSearchRepository } from './savedSearchRepository';
 import { cryptoService } from './crypto';
 import { keyManager, setupActivityListeners } from './keyManager';
 import { sessionStorageService } from './sessionStorageService';
@@ -200,6 +201,8 @@ export async function unlock(password: string): Promise<void> {
   // Handle restored credentials (RESTORE: marker from backup restore)
   await handleImportedCredentials(key);
 
+  await encryptLegacySavedSearches();
+
   // Attempt migration from legacy to envelope encryption
   if (!metadata.envelopeVersion) {
     await tryMigrateToEnvelope(password, keyBytes);
@@ -296,6 +299,27 @@ async function handleImportedCredentials(masterKey: CryptoKey): Promise<void> {
   } catch (error) {
     console.error('[ImportHandler] ERROR handling restored credentials:', error);
     // Don't throw - this shouldn't prevent unlock
+  }
+}
+
+/**
+ * One-off repair of saved searches stored as plaintext. It must finish before any
+ * sync, or they would be pushed as they are. A failure is retried at the next unlock.
+ */
+async function encryptLegacySavedSearches(): Promise<void> {
+  try {
+    const current = await settingsRepository.get();
+    if (current.savedSearchesEncrypted) {
+      return;
+    }
+
+    const changed = await savedSearchRepository.encryptLegacyRows();
+    await settingsRepository.update({ savedSearchesEncrypted: true });
+    if (changed > 0) {
+      console.log(`[Unlock] Encrypted ${changed} saved search(es) stored as plaintext`);
+    }
+  } catch (error) {
+    console.warn('[Unlock] Could not encrypt plaintext saved searches (will retry next unlock):', error);
   }
 }
 
@@ -840,6 +864,7 @@ export async function restoreFromBackup(
     // Step 4: Restore all data from backup (passing the keyBytes for JWE decryption)
     console.log('[RestoreFromBackup] Restoring data...');
     await restoreBackupData(backup, verification.keyBytes, onProgress);
+    await encryptLegacySavedSearches();
 
     // Step 5: Log restored sync configuration for debugging
     try {

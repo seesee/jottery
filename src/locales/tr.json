@@ -1176,7 +1176,9 @@
     "indicator": "Senkronizasyon çakışması",
     "bannerText": "Bu notun çözülmesi gereken bir senkronizasyon çakışması var",
     "resolveButton": "Çakışmayı çöz",
-    "syncNotification": "{count, plural, one {1 not senkronizasyon çakışması var} other {{count} not senkronizasyon çakışması var}}"
+    "syncNotification": "{count, plural, one {1 not senkronizasyon çakışması var} other {{count} not senkronizasyon çakışması var}}",
+    "serverUnreadable": "Bu notun sunucudaki kopyası okunamıyor ve değiştirilmiş olabilir. Yalnızca kendi sürümünüz korunabilir.",
+    "localUnreadable": "Notun bu cihazdaki kopyası okunamıyor."
   },
   "pullToRefresh": {
     "pull": "Senkronize etmek için aşağı çekin",

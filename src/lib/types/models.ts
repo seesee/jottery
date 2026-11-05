@@ -162,6 +162,7 @@ export interface UserSettings {
   swipeHintsShown?: boolean; // Whether mobile swipe gesture hints have been shown
   recentSearches?: string[]; // Recently used search queries (last 10 unique)
   welcomeNoteCreated?: boolean; // Whether the welcome note has been created for new vaults
+  savedSearchesEncrypted?: boolean; // One-off migration of plaintext saved searches has run
 }
 
 /**

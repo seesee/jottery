@@ -1176,7 +1176,9 @@
     "indicator": "Synchronisatieconflict",
     "bannerText": "Deze notitie heeft een synchronisatieconflict dat moet worden opgelost",
     "resolveButton": "Conflict oplossen",
-    "syncNotification": "{count, plural, one {1 notitie heeft een synchronisatieconflict} other {{count} notities hebben synchronisatieconflicten}}"
+    "syncNotification": "{count, plural, one {1 notitie heeft een synchronisatieconflict} other {{count} notities hebben synchronisatieconflicten}}",
+    "serverUnreadable": "De kopie van deze notitie op de server is niet leesbaar en is mogelijk gewijzigd. Alleen jouw versie kan worden behouden.",
+    "localUnreadable": "De kopie van deze notitie op dit apparaat is niet leesbaar."
   },
   "pullToRefresh": {
     "pull": "Trek omlaag om te synchroniseren",

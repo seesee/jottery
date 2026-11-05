@@ -1176,7 +1176,9 @@
     "indicator": "Konflikt synchronizacji",
     "bannerText": "Ta notatka ma konflikt synchronizacji, który należy rozwiązać",
     "resolveButton": "Rozwiąż konflikt",
-    "syncNotification": "{count, plural, one {1 notatka ma konflikt synchronizacji} few {{count} notatki mają konflikty synchronizacji} other {{count} notatek ma konflikty synchronizacji}}"
+    "syncNotification": "{count, plural, one {1 notatka ma konflikt synchronizacji} few {{count} notatki mają konflikty synchronizacji} other {{count} notatek ma konflikty synchronizacji}}",
+    "serverUnreadable": "Kopii tej notatki na serwerze nie można odczytać i mogła zostać zmieniona. Można zachować tylko Twoją wersję.",
+    "localUnreadable": "Nie można odczytać kopii tej notatki na tym urządzeniu."
   },
   "pullToRefresh": {
     "pull": "Pociągnij w dół, aby zsynchronizować",

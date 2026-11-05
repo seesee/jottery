@@ -61,25 +61,8 @@ async function decryptSavedSearch(savedSearch: SavedSearch): Promise<SavedSearch
   }
 
   try {
-    // Decrypt name
-    let name: string;
-    try {
-      const encryptedName = JSON.parse(savedSearch.name);
-      name = await cryptoService.decryptText(encryptedName, masterKey.key);
-    } catch {
-      // Handle unencrypted data (legacy)
-      name = savedSearch.name;
-    }
-
-    // Decrypt query
-    let query: string;
-    try {
-      const encryptedQuery = JSON.parse(savedSearch.query);
-      query = await cryptoService.decryptText(encryptedQuery, masterKey.key);
-    } catch {
-      // Handle unencrypted data (legacy)
-      query = savedSearch.query;
-    }
+    const name = await cryptoService.decryptText(JSON.parse(savedSearch.name), masterKey.key);
+    const query = await cryptoService.decryptText(JSON.parse(savedSearch.query), masterKey.key);
 
     return {
       ...savedSearch,
@@ -95,6 +78,76 @@ async function decryptSavedSearch(savedSearch: SavedSearch): Promise<SavedSearch
       query: '[Encrypted]',
     };
   }
+}
+
+/** Whether a stored field has the shape of ciphertext, as opposed to plaintext */
+function isEncryptedField(value: string): boolean {
+  try {
+    const parsed = JSON.parse(value);
+    return typeof parsed?.ciphertext === 'string' && typeof parsed?.iv === 'string';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Whether this vault can read a row. Rows from the sync server must pass this: a
+ * row that doesn't decrypt came from something without the key.
+ */
+export async function isReadable(savedSearch: Pick<SavedSearch, 'name' | 'query'>): Promise<boolean> {
+  const masterKey = keyManager.getMasterKey();
+  if (!masterKey) {
+    throw new ApplicationLockedError();
+  }
+
+  try {
+    await cryptoService.decryptText(JSON.parse(savedSearch.name), masterKey.key);
+    await cryptoService.decryptText(JSON.parse(savedSearch.query), masterKey.key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Encrypt rows stored as plaintext. markSynced used to write decrypted rows back,
+ * so these exist on real devices, and a later reorder or delete could have pushed
+ * them to the server.
+ *
+ * Each row is queued for sync with a new timestamp, which replaces the plaintext
+ * copy on the server. Plaintext can't be told apart from a value a server planted
+ * before rows from the server were checked, so this runs once only, behind a flag
+ * held by the caller. After that, plaintext is an error like any other.
+ *
+ * @returns the number of rows changed
+ */
+export async function encryptLegacyRows(): Promise<number> {
+  const masterKey = keyManager.getMasterKey();
+  if (!masterKey) {
+    throw new ApplicationLockedError();
+  }
+
+  const db = getDB();
+  const rows = await db.getAll(STORES.SAVED_SEARCHES);
+  let changed = 0;
+
+  for (const row of rows) {
+    const nameEncrypted = isEncryptedField(row.name);
+    const queryEncrypted = isEncryptedField(row.query);
+    if (nameEncrypted && queryEncrypted) continue;
+
+    await db.put(STORES.SAVED_SEARCHES, {
+      ...row,
+      name: nameEncrypted ? row.name : JSON.stringify(await cryptoService.encryptText(row.name, masterKey.key)),
+      query: queryEncrypted ? row.query : JSON.stringify(await cryptoService.encryptText(row.query, masterKey.key)),
+      modifiedAt: new Date().toISOString(),
+      version: row.version + 1,
+      needsSync: true,
+    });
+    changed++;
+  }
+
+  return changed;
 }
 
 /**
@@ -134,6 +187,15 @@ export async function getById(id: string): Promise<SavedSearch | undefined> {
   const savedSearch = await db.get(STORES.SAVED_SEARCHES, id);
   if (!savedSearch) return undefined;
   return await decryptSavedSearch(savedSearch);
+}
+
+/**
+ * Get a row exactly as stored, without decrypting it. For anything that only needs
+ * the plaintext metadata, or that writes the row back: a decrypted copy must never
+ * reach the database.
+ */
+export async function getStoredById(id: string): Promise<SavedSearch | undefined> {
+  return await getDB().get(STORES.SAVED_SEARCHES, id);
 }
 
 /**
@@ -199,7 +261,7 @@ export async function permanentDelete(id: string): Promise<void> {
  */
 export async function reorder(orderedIds: string[]): Promise<void> {
   for (let i = 0; i < orderedIds.length; i++) {
-    const savedSearch = await getById(orderedIds[i]);
+    const savedSearch = await getStoredById(orderedIds[i]);
     if (savedSearch) {
       await update(orderedIds[i], { order: i + 1 });
     }
@@ -224,25 +286,34 @@ export async function getAllNeedingSync(): Promise<SavedSearch[]> {
 }
 
 /**
- * Mark saved search as synced
+ * Mark saved search as synced. This works on the stored row, so the name and query
+ * stay encrypted.
+ *
+ * @param pushedVersion - The version that was pushed. Every update raises it, so a
+ *                        row with a different one changed during the push and still
+ *                        needs syncing. A timestamp can't show this: two writes can
+ *                        share a millisecond.
  */
-export async function markSynced(id: string): Promise<void> {
+export async function markSynced(id: string, pushedVersion?: number): Promise<void> {
   const db = getDB();
-  const savedSearch = await getById(id);
+  const savedSearch = await getStoredById(id);
   if (!savedSearch) return;
 
-  const updated: SavedSearch = {
+  const changedSincePush = pushedVersion !== undefined && savedSearch.version !== pushedVersion;
+
+  await db.put(STORES.SAVED_SEARCHES, {
     ...savedSearch,
     syncedAt: new Date().toISOString(),
-    needsSync: false,
-  };
-
-  await db.put(STORES.SAVED_SEARCHES, updated);
+    needsSync: changedSincePush,
+  });
 }
 
 export const savedSearchRepository = {
   create,
+  encryptLegacyRows,
   getAll,
+  getStoredById,
+  isReadable,
   getById,
   update,
   softDelete,

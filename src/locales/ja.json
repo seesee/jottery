@@ -1176,7 +1176,9 @@
     "indicator": "同期の競合",
     "bannerText": "このノートには解決が必要な同期の競合があります",
     "resolveButton": "競合を解決",
-    "syncNotification": "{count}件のノートに同期の競合があります"
+    "syncNotification": "{count}件のノートに同期の競合があります",
+    "serverUnreadable": "サーバー上のこのノートのコピーは読み取れず、改ざんされている可能性があります。保持できるのはお使いのバージョンのみです。",
+    "localUnreadable": "このデバイス上のノートのコピーは読み取れません。"
   },
   "pullToRefresh": {
     "pull": "下に引いて同期",

@@ -1176,7 +1176,9 @@
     "indicator": "Synchronisationskonflikt",
     "bannerText": "Diese Notiz hat einen Synchronisationskonflikt, der gelöst werden muss",
     "resolveButton": "Konflikt lösen",
-    "syncNotification": "{count, plural, one {1 Notiz hat einen Synchronisierungskonflikt} other {{count} Notizen haben Synchronisierungskonflikte}}"
+    "syncNotification": "{count, plural, one {1 Notiz hat einen Synchronisierungskonflikt} other {{count} Notizen haben Synchronisierungskonflikte}}",
+    "serverUnreadable": "Die Kopie dieser Notiz auf dem Server kann nicht gelesen werden und wurde möglicherweise verändert. Nur Ihre Version kann behalten werden.",
+    "localUnreadable": "Die Kopie dieser Notiz auf diesem Gerät kann nicht gelesen werden."
   },
   "pullToRefresh": {
     "pull": "Nach unten ziehen zum Synchronisieren",

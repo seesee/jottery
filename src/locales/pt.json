@@ -1176,7 +1176,9 @@
     "indicator": "Conflito de sincronização",
     "bannerText": "Esta nota tem um conflito de sincronização que precisa ser resolvido",
     "resolveButton": "Resolver conflito",
-    "syncNotification": "{count, plural, one {1 nota tem um conflito de sincronização} other {{count} notas têm conflitos de sincronização}}"
+    "syncNotification": "{count, plural, one {1 nota tem um conflito de sincronização} other {{count} notas têm conflitos de sincronização}}",
+    "serverUnreadable": "A cópia desta nota no servidor não pode ser lida e pode ter sido alterada. Só é possível manter a sua versão.",
+    "localUnreadable": "A cópia desta nota neste dispositivo não pode ser lida."
   },
   "pullToRefresh": {
     "pull": "Puxe para baixo para sincronizar",
