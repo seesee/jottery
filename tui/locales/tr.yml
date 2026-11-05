@@ -236,6 +236,7 @@ sync:
 
 # Gelen Kutusu
   stopped_unexpectedly: "Eşitleme beklenmedik şekilde durdu. Hiçbir şey kaybolmadı, yeniden denenecek."
+  clock_ahead: "Bu cihazın saati yanlış olabilir: bazı değişikliklerin tarihi sunucudan bir günden fazla ileride olduğu için gönderilmedi. Saat düzeltildiğinde gönderilecekler."
 inbox:
   title: "Gelen Kutusu"
   empty: "Gelen kutusu boş. Gelen Kutusu API'si üzerinden gönderilen notlar burada görünecek."

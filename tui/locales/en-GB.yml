@@ -258,6 +258,7 @@ sync:
 
 # Inbox
   stopped_unexpectedly: "The sync stopped unexpectedly. Nothing was lost, and it will try again."
+  clock_ahead: "This device's clock may be wrong: some changes are dated more than a day ahead of the server, so they weren't sent. They'll go once the clock is right."
 inbox:
   title: "Inbox"
   empty: "Inbox is empty. Notes submitted via the Inbox API will appear here."

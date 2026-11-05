@@ -210,6 +210,9 @@ pub struct SyncPushResponse {
     /// Deletions refused because the note has a newer edit. Older servers don't send
     /// this, which means the same as an empty list.
     pub rejected_deletions: Vec<String>,
+    /// Pushed notes skipped because they were permanently deleted after this edit. Older
+    /// servers don't send this either.
+    pub skipped_deleted: Vec<String>,
 }
 
 /// A push response as it arrives, before anything in it is trusted.
@@ -224,6 +227,8 @@ struct WirePushResponse {
     attachment_warnings: Lenient<AttachmentWarning>,
     #[serde(default)]
     rejected_deletions: Lenient<String>,
+    #[serde(default)]
+    skipped_deleted: Lenient<String>,
 }
 
 impl SyncPushResponse {
@@ -242,6 +247,7 @@ impl SyncPushResponse {
                 })
                 .collect(),
             rejected_deletions: wire.rejected_deletions.items.into_iter().filter(|id| validation::is_uuid(id)).collect(),
+            skipped_deleted: wire.skipped_deleted.items.into_iter().filter(|id| validation::is_uuid(id)).collect(),
         })
     }
 }

@@ -236,6 +236,7 @@ sync:
 
 # Skrzynka odbiorcza
   stopped_unexpectedly: "Synchronizacja nieoczekiwanie się zatrzymała. Nic nie zostało utracone, a próba zostanie ponowiona."
+  clock_ahead: "Zegar tego urządzenia może być nieprawidłowy: niektóre zmiany mają datę o ponad dzień późniejszą niż serwer, więc nie zostały wysłane. Zostaną wysłane, gdy zegar będzie poprawny."
 inbox:
   title: "Skrzynka odbiorcza"
   empty: "Skrzynka odbiorcza jest pusta. Notatki przesłane przez API skrzynki odbiorczej pojawią się tutaj."

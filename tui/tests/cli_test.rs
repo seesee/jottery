@@ -411,6 +411,14 @@ fn a_backup_this_client_wrote_restores() {
 
     let (_, stdout, _) = run_on(&db, &["list", "--archived", "-p", &password]);
     assert!(stdout.contains("An archived note"), "{stdout}");
+
+    let (ok, stdout, stderr) = run_on(&db, &["search", "--saved", "cross-client work", "-p", &password]);
+    assert!(ok, "{stderr}");
+    assert!(stdout.contains("A note from the TUI"), "{stdout}");
+
+    let (ok, _, stderr) = run_on(&db, &["search", "--saved", "no such search", "-p", &password]);
+    assert!(!ok);
+    assert!(stderr.contains("no such search"), "{stderr}");
 }
 
 #[test]

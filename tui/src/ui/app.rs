@@ -272,6 +272,8 @@ pub struct App {
     pub(crate) password_storage: Box<dyn PasswordStorage>,
     /// SSE handle for real-time sync notifications (when connected)
     pub(crate) sse_handle: Option<crate::sse::SseHandle>,
+    /// The stream stopped trying. A sync that works shows the device is welcome again.
+    pub(crate) sse_gave_up: bool,
     /// Inbox items from server (unencrypted)
     pub inbox_items: Vec<crate::models::sync::InboxItem>,
     /// Selected inbox item index
@@ -437,6 +439,7 @@ impl App {
             database_encrypted: Database::encrypts_files(),
             password_storage,
             sse_handle: None,
+            sse_gave_up: false,
             inbox_items: Vec::new(),
             selected_inbox_item: 0,
             show_inbox_delete_confirm: false,
@@ -1276,6 +1279,7 @@ impl App {
 
         // Stop existing SSE connection if any
         self.stop_sse();
+        self.sse_gave_up = false;
 
         // Start new SSE connection
         self.debug_log(&format!("SSE: Starting connection to {}", endpoint));
@@ -1337,6 +1341,7 @@ impl App {
                     self.debug_log(&format!("SSE: Connection failed: {}", err));
                     self.sync_status = Some(t!("sync.sse_failed").to_string());
                     self.sync_status_set_at = Some(Instant::now());
+                    self.sse_gave_up = true;
                 }
             }
         }

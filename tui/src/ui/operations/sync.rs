@@ -64,6 +64,9 @@ const MASS_DELETION_THRESHOLD: usize = 10;
 /// How long a note deleted elsewhere stays restorable in the bin here.
 const REMOTE_DELETION_RETENTION_DAYS: i64 = 30;
 
+/// How far ahead of its own clock the server accepts a date.
+const SERVER_CLOCK_TOLERANCE_HOURS: i64 = 24;
+
 /// How often the list on screen catches up with a sync that's still running.
 const SYNC_REFRESH_INTERVAL: Duration = Duration::from_secs(2);
 
@@ -84,6 +87,12 @@ pub struct SyncOutcome {
     pub quota_exceeded: bool,
     /// Notes the server says to delete, waiting for the user to confirm
     pub deletions_held: usize,
+    /// Changes dated too far ahead of the server's clock for it to take. They stay here,
+    /// and go once this device's clock is right.
+    pub clock_ahead: bool,
+    /// The latest date on any note the server said nothing about. A server skips what's
+    /// dated too far ahead without saying so, and only a pull says what time it is there.
+    unanswered_until: Option<DateTime<Utc>>,
 }
 
 /// The server turned this device away, and retrying at once won't help.
@@ -574,6 +583,9 @@ fn record_push(run: &Run<'_>, batch: &PushBatch, response: SyncPushResponse, out
     let pushed: HashMap<&str, &Note> = batch.notes.iter().map(|note| (note.id.as_str(), note)).collect();
     let sent_blobs: HashSet<&str> = batch.request.attachments.iter().map(|blob| blob.id.as_str()).collect();
 
+    let accepted_ids: Vec<String> = response.accepted.iter().map(|note| note.id.clone()).collect();
+    let rejected_ids: Vec<String> = response.rejected.iter().map(|note| note.id.clone()).collect();
+
     let transaction = run.conn.unchecked_transaction()?;
 
     for accepted in &response.accepted {
@@ -603,6 +615,21 @@ fn record_push(run: &Run<'_>, batch: &PushBatch, response: SyncPushResponse, out
         sync_repo.set_conflict(&note_id, &conflict_from_rejection(rejected))?;
     }
 
+    // Deleted for good after this edit. The ids only count for what this batch sent.
+    for id in &response.skipped_deleted {
+        if let Some(note) = pushed.get(id.as_str()) {
+            (run.log)(&format!("Sync - Note {id} was deleted for good, so it stops being sent"));
+            note_repo.hold_skipped_note(note)?;
+        }
+    }
+
+    let answered: HashSet<&str> = accepted_ids.iter().chain(&rejected_ids).chain(&response.skipped_deleted)
+        .map(String::as_str)
+        .collect();
+    for note in batch.notes.iter().filter(|note| !answered.contains(note.id.as_str())) {
+        outcome.unanswered_until = outcome.unanswered_until.max(Some(latest_date(note)));
+    }
+
     // A deletion the server refused stops being sent, or the note would be announced
     // to every device on each push. The note itself comes back through the pull.
     let refused: HashSet<&String> = response.rejected_deletions.iter().collect();
@@ -614,6 +641,20 @@ fn record_push(run: &Run<'_>, batch: &PushBatch, response: SyncPushResponse, out
 
     transaction.commit()?;
     Ok(())
+}
+
+/// The furthest date a note carries, any of which the server checks.
+fn latest_date(note: &Note) -> DateTime<Utc> {
+    [Some(note.created_at), Some(note.modified_at), note.deleted_at, note.archived_at, note.locked_at]
+        .into_iter()
+        .flatten()
+        .max()
+        .unwrap_or(note.modified_at)
+}
+
+/// Whether a server whose clock says `server_now` will have refused this date.
+fn beyond_server_clock(date: DateTime<Utc>, server_now: DateTime<Utc>) -> bool {
+    date > server_now + chrono::Duration::hours(SERVER_CLOCK_TOLERANCE_HOURS)
 }
 
 /// Re-push blobs the server says it's missing, in one attachments-only push. Failing
@@ -973,7 +1014,17 @@ fn apply_remote_note(page: &PullPage<'_>, remote_note: SyncNote) -> Result<Appli
     let sync_repo = run.sync_repo();
     if let Some(conflict) = sync_repo.get_note_sync(&remote_note.id)?.and_then(|sync| sync.conflict_data) {
         if conflict.server_modified_at < remote_note.modified_at {
-            sync_repo.set_conflict(&remote_note.id, &conflict_from_pull(&local_note, &remote_note))?;
+            let mut newer = conflict_from_pull(&local_note, &remote_note);
+
+            // A pull has no ancestor's text to offer, and the one a refused push brought
+            // is still a common ancestor, which is what a three-way merge needs
+            if newer.ancestor_hash.is_none() || newer.ancestor_hash == conflict.ancestor_hash {
+                newer.ancestor_hash = conflict.ancestor_hash;
+                newer.ancestor_content = conflict.ancestor_content;
+                newer.ancestor_tags = conflict.ancestor_tags;
+            }
+
+            sync_repo.set_conflict(&remote_note.id, &newer)?;
         }
         return Ok(applied);
     }
@@ -1147,8 +1198,13 @@ fn apply_remote_saved_searches(
 
 /// Send the saved searches the server hasn't got. These go after the pull, so a newer
 /// copy from another device has already won, and the server's clock is known.
-fn push_saved_searches(run: &Run<'_>, outcome: &mut SyncOutcome) -> Result<()> {
-    let searches = run.saved_search_repo().pending()?;
+fn push_saved_searches(run: &Run<'_>, server_now: Option<DateTime<Utc>>, outcome: &mut SyncOutcome) -> Result<()> {
+    // The server skips these without saying so, and they'd look pushed
+    let (ahead, searches): (Vec<_>, Vec<_>) = run.saved_search_repo().pending()?
+        .into_iter()
+        .partition(|search| server_now.is_some_and(|now| beyond_server_clock(search.modified_at, now)));
+    outcome.clock_ahead |= !ahead.is_empty();
+
     if searches.is_empty() {
         return Ok(());
     }
@@ -1388,7 +1444,13 @@ fn sync_vault(
     push_changes(&run, &mut metadata, &mut outcome)?;
     let pulled = pull_changes(&run, &mut metadata, force, &mut outcome)?;
     link.write(|| settle_remote_deletions(&run, &mut outcome))?;
-    push_saved_searches(&run, &mut outcome)?;
+
+    // The server's time at the start of the pull
+    let server_now = metadata.last_pull_at;
+    outcome.clock_ahead = outcome.unanswered_until.zip(server_now)
+        .is_some_and(|(date, now)| beyond_server_clock(date, now));
+
+    push_saved_searches(&run, server_now, &mut outcome)?;
     fetch_missing_blobs(&run);
 
     // last_sync_at stays on this device's clock. The pull position in last_pull_at
@@ -1636,6 +1698,11 @@ fn report_finished_sync(app: &mut App, outcome: &SyncOutcome, force: bool) {
     };
     app.notify(status_msg);
     report_skipped(app, outcome);
+
+    // A disabled account gets its stream back when it's turned on again
+    if app.sse_gave_up {
+        app.start_sse_if_enabled();
+    }
 }
 
 /// Show why a sync failed, and hold off automatic syncs if the server asked for that.
@@ -1669,6 +1736,9 @@ fn report_skipped(app: &mut App, outcome: &SyncOutcome) {
     }
     if outcome.quota_exceeded {
         app.error = Some(t!("sync.quota_exceeded").to_string());
+    }
+    if outcome.clock_ahead {
+        app.error = Some(t!("sync.clock_ahead").to_string());
     }
     app.held_deletions = outcome.deletions_held;
 }
@@ -2081,6 +2151,8 @@ mod tests {
         quota_full: Arc<Mutex<bool>>,
         /// The next request to this path doesn't get an answer until the test says
         held: Arc<Mutex<Option<Held>>>,
+        /// Note ids that are neither accepted nor rejected, as a server skips a note
+        passed_over: Arc<Mutex<std::collections::HashSet<String>>>,
     }
 
     fn reply(stream: &mut std::net::TcpStream, body: &str) {
@@ -2127,6 +2199,8 @@ mod tests {
             let held: Arc<Mutex<Option<Held>>> = Arc::new(Mutex::new(None));
             let holding = held.clone();
             let blobs = attachments.clone();
+            let passed_over = Arc::new(Mutex::new(std::collections::HashSet::new()));
+            let passing_over: Arc<Mutex<std::collections::HashSet<String>>> = passed_over.clone();
 
             std::thread::spawn(move || {
                 for stream in listener.incoming() {
@@ -2187,6 +2261,7 @@ mod tests {
                         }
 
                         let (rejected, accepted): (Vec<Value>, Vec<Value>) = pushed.iter()
+                            .filter(|note| !passing_over.lock().unwrap().contains(note["id"].as_str().unwrap_or("")))
                             .cloned()
                             .partition(|note| rejecting.lock().unwrap().contains(note["id"].as_str().unwrap_or("")));
                         let mut response = json!({
@@ -2250,7 +2325,12 @@ mod tests {
                 }
             });
 
-            Self { endpoint, pulls, pushes, refuse, script, push_reply, fail_next, wrapped_key, quota_full, held }
+            Self { endpoint, pulls, pushes, refuse, script, push_reply, fail_next, wrapped_key, quota_full, held, passed_over }
+        }
+
+        /// Leave this note out of every push response from now on.
+        fn pass_over(&self, id: &str) {
+            self.passed_over.lock().unwrap().insert(id.to_string());
         }
 
         /// Sit on the next request to a path ending in `path`.
@@ -3197,6 +3277,226 @@ mod tests {
         perform_sync(&mut app, false).unwrap();
 
         assert_eq!(saved_search_names(&app), ["Work"]);
+    }
+
+    /// A note held for a conflict can be clean: a pull raises one on a note that's open.
+    /// Its local side is the only copy, so that has to count as an edit.
+    fn note_with_a_pending_conflict(app: &App, needs_sync: bool) -> Note {
+        let mut note = Note::new("The only copy of this side".to_string());
+        note.id = note_id(0);
+        note.needs_sync = needs_sync;
+        note.content_hash = Some("local-hash".to_string());
+        let db = app.db.as_ref().unwrap();
+        let repo = NoteRepository::new(db.connection());
+        repo.create(&note, key()).unwrap();
+        repo.store(&note, key()).unwrap();
+
+        let earlier = remote_notes(1).remove(0);
+        let mut conflict = conflict_from_pull(&note, &serde_json::from_value(earlier).unwrap());
+        conflict.ancestor_hash = Some("ancestor-hash".to_string());
+        conflict.ancestor_content = Some(encrypted("The ancestor"));
+        SyncRepository::new(db.connection()).set_conflict(&note.id, &conflict).unwrap();
+        note
+    }
+
+    fn newer_copy_of_note_zero() -> Value {
+        let mut remote = remote_notes(1).remove(0);
+        remote["content"] = json!(encrypted("Moved on again"));
+        remote["modifiedAt"] = json!("2026-06-01T00:00:00Z");
+        remote["contentHash"] = json!("remote-hash");
+        // A chain that holds the local hash would otherwise read as "includes the edit"
+        remote["hashChain"] = json!(["remote-hash", "local-hash"]);
+        remote
+    }
+
+    #[test]
+    fn a_pending_conflict_counts_as_an_unsent_edit() {
+        for needs_sync in [false, true] {
+            let server = StubServer::start(vec![], vec![]);
+            let mut app = app_connected_to(&server.endpoint);
+            let note = note_with_a_pending_conflict(&app, needs_sync);
+            server.script(vec![cursor_page(vec![newer_copy_of_note_zero()], "c1", false)]);
+
+            perform_sync(&mut app, false).unwrap();
+
+            assert_eq!(stored_note(&app, &note.id).content, "The only copy of this side");
+        }
+    }
+
+    /// The conflict screen should show where the server is now, and a three-way merge
+    /// still needs the ancestor that the refused push brought.
+    #[test]
+    fn a_pending_conflict_follows_the_server_and_keeps_its_ancestor() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let note = note_with_a_pending_conflict(&app, true);
+        server.script(vec![cursor_page(vec![newer_copy_of_note_zero()], "c1", false)]);
+
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let conflict = SyncRepository::new(db.connection()).get_note_sync(&note.id).unwrap().unwrap().conflict_data.unwrap();
+        assert_eq!(conflict.server_content_hash.as_deref(), Some("remote-hash"));
+        assert_eq!(conflict.ancestor_hash.as_deref(), Some("ancestor-hash"));
+        assert!(conflict.ancestor_content.is_some());
+    }
+
+    /// A pending note, as the server's skip list would name it.
+    fn pending_note(app: &App, text: &str) -> Note {
+        let note = Note::new(text.to_string());
+        NoteRepository::new(app.db.as_ref().unwrap().connection()).create(&note, key()).unwrap();
+        note
+    }
+
+    fn stored_note(app: &App, id: &str) -> Note {
+        NoteRepository::new(app.db.as_ref().unwrap().connection()).get(id, key()).unwrap().unwrap()
+    }
+
+    #[test]
+    fn a_note_deleted_for_good_stops_being_sent_and_goes_to_the_bin() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let note = pending_note(&app, "Deleted elsewhere after this edit");
+        server.pass_over(&note.id);
+        server.add_to_push_replies(json!({ "skippedDeleted": [note.id] }));
+
+        perform_sync(&mut app, false).unwrap();
+
+        let stored = stored_note(&app, &note.id);
+        assert!(stored.deleted);
+        assert!(!stored.needs_sync);
+
+        let pushes = server.all_pushes().len();
+        perform_sync(&mut app, false).unwrap();
+        assert_eq!(server.all_pushes().len(), pushes);
+    }
+
+    /// An edit later than the deletion beats it, so that one has to go.
+    #[test]
+    fn a_skipped_note_that_changed_since_stays_and_goes_again() {
+        let server = StubServer::start(vec![], vec![]);
+        let held = server.hold_next("/sync/push");
+        let mut app = app_syncing_in_background(&server.endpoint);
+        let note = pending_note(&app, "As sent");
+        server.pass_over(&note.id);
+        server.add_to_push_replies(json!({ "skippedDeleted": [note.id] }));
+
+        trigger_sync(&mut app);
+        held.wait_until_reached();
+
+        let mut edited = stored_note(&app, &note.id);
+        edited.content = "Edited while the push was out".to_string();
+        edited.touch();
+        NoteRepository::new(app.db.as_ref().unwrap().connection()).update(&edited, key()).unwrap();
+
+        held.release();
+        finish_background_sync_now(&mut app);
+
+        let stored = stored_note(&app, &note.id);
+        assert!(!stored.deleted);
+        assert!(stored.needs_sync);
+    }
+
+    /// The list comes from the server, so it can't reach a note this push didn't send.
+    #[test]
+    fn a_server_cannot_skip_a_note_it_was_not_sent() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let sent = pending_note(&app, "Sent");
+        let mut other = Note::new("Not sent".to_string());
+        other.needs_sync = false;
+        let db = app.db.as_ref().unwrap();
+        let repo = NoteRepository::new(db.connection());
+        repo.create(&other, key()).unwrap();
+        repo.store(&other, key()).unwrap();
+        SyncRepository::new(db.connection()).update_last_sync(Utc::now()).unwrap();
+        server.add_to_push_replies(json!({ "skippedDeleted": [other.id] }));
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert!(!stored_note(&app, &other.id).deleted);
+        assert!(!stored_note(&app, &sent.id).deleted);
+    }
+
+    /// An older server sends no such list, so a note it passes over stays pending.
+    #[test]
+    fn a_note_an_older_server_says_nothing_about_stays_pending() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let note = pending_note(&app, "Passed over");
+        server.pass_over(&note.id);
+
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        let stored = stored_note(&app, &note.id);
+        assert!(stored.needs_sync);
+        assert!(!stored.deleted);
+        assert!(!outcome.clock_ahead);
+    }
+
+    /// The stub's clock is `server_time`, so a device a few years behind it isn't ahead.
+    fn note_dated(app: &App, date: DateTime<Utc>) -> Note {
+        let mut note = Note::new("Dated".to_string());
+        note.modified_at = date;
+        note.created_at = date;
+        NoteRepository::new(app.db.as_ref().unwrap().connection()).create(&note, key()).unwrap();
+        note
+    }
+
+    #[test]
+    fn a_note_dated_past_the_servers_clock_says_the_clock_may_be_wrong() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        app.settings.sync_enabled = true;
+        app.settings.sync_endpoint = Some(server.endpoint.clone());
+        let note = note_dated(&app, server_time(0) + chrono::Duration::hours(25));
+        server.pass_over(&note.id);
+
+        trigger_sync(&mut app);
+
+        assert_eq!(app.error, Some(t!("sync.clock_ahead").to_string()));
+        assert!(stored_note(&app, &note.id).needs_sync);
+    }
+
+    #[test]
+    fn a_note_within_a_day_of_the_servers_clock_is_not_the_clocks_fault() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let note = note_dated(&app, server_time(0) + chrono::Duration::hours(23));
+        server.pass_over(&note.id);
+
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        assert!(!outcome.clock_ahead);
+    }
+
+    /// Dates on a note the server took don't matter, whatever they say.
+    #[test]
+    fn an_accepted_note_says_nothing_about_the_clock() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        note_dated(&app, server_time(0) + chrono::Duration::days(30));
+
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        assert!(!outcome.clock_ahead);
+    }
+
+    #[test]
+    fn a_saved_search_dated_past_the_servers_clock_stays_pending() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        let repo = SavedSearchRepository::new(db.connection());
+        let mut row: SyncSavedSearch = serde_json::from_value(wire_saved_search(1, "Ahead", "x")).unwrap();
+        row.modified_at = server_time(0) + chrono::Duration::hours(25);
+        repo.apply(&row, true, None).unwrap();
+
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        assert!(outcome.clock_ahead);
+        let db = app.db.as_ref().unwrap();
+        assert_eq!(SavedSearchRepository::new(db.connection()).pending().unwrap().len(), 1);
     }
 
     /// Without this, a server that always says there's more would keep a sync running.

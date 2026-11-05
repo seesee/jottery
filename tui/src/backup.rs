@@ -1379,6 +1379,33 @@ mod tests {
         assert_eq!(repo.pending().unwrap().len(), 2);
     }
 
+    /// Rewrites the fixture in tests/fixtures with a version and a saved search on top of
+    /// what it held, keeping its key and its notes.
+    #[test]
+    #[ignore = "rewrites a file in the repository, so it only runs when asked"]
+    fn regenerate_the_backup_fixture() {
+        let fixtures = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+        let path = fixtures.join("tui-v3.jottery-backup");
+        let password = std::fs::read_to_string(fixtures.join("tui-v3.jottery-backup.password")).unwrap();
+
+        let backup = validate_backup(&path).unwrap();
+        let db = empty_database();
+        let keys = restore_keys(&db, &backup, &password, &password).unwrap();
+        restore_backup(&db, &backup, &keys, None).unwrap();
+
+        let note = notes_in(&db, &keys.vault_key).into_iter()
+            .find(|note| note.content.contains("A note from the TUI"))
+            .unwrap();
+        NoteVersionRepository::new(db.connection())
+            .create_version(&note, Utc::now(), VersionReason::Sync, &keys.vault_key)
+            .unwrap();
+        crate::repository::SavedSearchRepository::new(db.connection())
+            .create("Cross-client work", "#work", &keys.vault_key)
+            .unwrap();
+
+        write_backup(&create_backup(&db, &keys.vault_key, None).unwrap(), &path).unwrap();
+    }
+
     /// Older web clients kept these in plaintext, and a backup holds what they kept.
     #[test]
     fn a_plaintext_saved_search_from_an_older_web_backup_is_encrypted() {

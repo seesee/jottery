@@ -236,6 +236,7 @@ sync:
 
 # Caixa de entrada
   stopped_unexpectedly: "A sincronização parou inesperadamente. Nada se perdeu e será tentada de novo."
+  clock_ahead: "O relógio deste dispositivo pode estar errado: algumas alterações têm uma data mais de um dia à frente do servidor, por isso não foram enviadas. Serão enviadas quando o relógio estiver certo."
 inbox:
   title: "Caixa de entrada"
   empty: "A caixa de entrada está vazia. Notas enviadas via API da caixa de entrada aparecerão aqui."

@@ -236,6 +236,7 @@ sync:
 
 # Posta in arrivo
   stopped_unexpectedly: "La sincronizzazione si è interrotta inaspettatamente. Non è andato perso nulla e verrà ritentata."
+  clock_ahead: "L'orologio di questo dispositivo potrebbe essere sbagliato: alcune modifiche hanno una data di oltre un giorno successiva a quella del server e non sono state inviate. Verranno inviate quando l'orologio sarà corretto."
 inbox:
   title: "Posta in arrivo"
   empty: "La posta in arrivo è vuota. Le note inviate tramite l'API Inbox appariranno qui."

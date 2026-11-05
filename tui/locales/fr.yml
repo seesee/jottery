@@ -236,6 +236,7 @@ sync:
 
 # Boîte de réception
   stopped_unexpectedly: "La synchronisation s'est arrêtée de façon inattendue. Rien n'a été perdu et elle sera relancée."
+  clock_ahead: "L'horloge de cet appareil est peut-être incorrecte : certaines modifications sont datées de plus d'un jour après l'heure du serveur et n'ont pas été envoyées. Elles partiront une fois l'horloge corrigée."
 inbox:
   title: "Boîte de réception"
   empty: "La boîte de réception est vide. Les notes soumises via l'API de boîte de réception apparaîtront ici."

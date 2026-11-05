@@ -236,6 +236,7 @@ sync:
 
 # Bandeja de entrada
   stopped_unexpectedly: "La sincronización se detuvo inesperadamente. No se ha perdido nada y volverá a intentarse."
+  clock_ahead: "Es posible que el reloj de este dispositivo esté mal: algunos cambios tienen una fecha de más de un día por delante del servidor, así que no se han enviado. Se enviarán cuando el reloj sea correcto."
 inbox:
   title: "Bandeja de entrada"
   empty: "La bandeja de entrada está vacía. Las notas enviadas a través de la API de bandeja de entrada aparecerán aquí."

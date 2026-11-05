@@ -236,6 +236,7 @@ sync:
 
 # Postvak IN
   stopped_unexpectedly: "De synchronisatie is onverwacht gestopt. Er is niets verloren gegaan en het wordt opnieuw geprobeerd."
+  clock_ahead: "De klok van dit apparaat klopt mogelijk niet: sommige wijzigingen zijn meer dan een dag later gedateerd dan de server en zijn niet verzonden. Ze worden verzonden zodra de klok klopt."
 inbox:
   title: "Postvak IN"
   empty: "Postvak IN is leeg. Notities ingediend via de Postvak IN API verschijnen hier."

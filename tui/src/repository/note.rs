@@ -432,6 +432,23 @@ impl<'a> NoteRepository<'a> {
         Ok(())
     }
 
+    /// The server won't take this note because it was permanently deleted after this
+    /// edit. Stop sending it, and treat it as any other deletion from the server, unless
+    /// it's changed since it was read for the push: an edit later than the deletion beats
+    /// the deletion, so that one goes on the next push.
+    pub fn hold_skipped_note(&self, pushed: &Note) -> Result<()> {
+        let unchanged = self.conn.execute(
+            "UPDATE notes SET needs_sync = 0
+             WHERE id = ?1 AND modified_at = ?2 AND content_hash IS ?3 AND deleted = ?4",
+            params![&pushed.id, pushed.modified_at.to_rfc3339(), &pushed.content_hash, pushed.deleted as i32],
+        )?;
+
+        if unchanged > 0 {
+            self.hold_deletion(&pushed.id)?;
+        }
+        Ok(())
+    }
+
     /// Give a note from an older build its first hash, unless it's changed and got one.
     pub fn set_first_hash(&self, id: &str, hash: &str, chain: &[String]) -> Result<()> {
         self.conn.execute(

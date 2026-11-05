@@ -728,6 +728,9 @@ fn report_sync(outcome: &ui::operations::sync::SyncOutcome) {
     if outcome.deletions_held > 0 {
         errln!("⚠ {}", t!("sync.deletions_held_cli", count = outcome.deletions_held));
     }
+    if outcome.clock_ahead {
+        errln!("⚠ {}", t!("sync.clock_ahead"));
+    }
 }
 
 /// Format a note for display

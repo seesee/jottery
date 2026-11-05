@@ -236,6 +236,7 @@ sync:
 
 # Posteingang
   stopped_unexpectedly: "Die Synchronisierung wurde unerwartet beendet. Es ging nichts verloren, und sie wird erneut versucht."
+  clock_ahead: "Die Uhr dieses Geräts geht möglicherweise falsch: Einige Änderungen sind mehr als einen Tag später datiert als die Serverzeit und wurden nicht gesendet. Sie werden gesendet, sobald die Uhr stimmt."
 inbox:
   title: "Posteingang"
   empty: "Posteingang ist leer. Notizen, die über die Posteingang-API eingereicht werden, erscheinen hier."
