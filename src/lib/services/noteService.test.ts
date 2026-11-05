@@ -8,6 +8,7 @@ import { get } from 'svelte/store';
 import { noteService } from './noteService';
 import { noteRepository } from './noteRepository';
 import { keyManager } from './keyManager';
+import { attachmentRepository } from './attachmentRepository';
 import { cryptoService, MAX_HASH_CHAIN_LENGTH } from './crypto';
 import { NoteReadOnlyError } from '../errors';
 import { undecryptableNotes, resetVaultHealth } from './vaultHealthService';
@@ -366,3 +367,97 @@ describe('noteService', () => {
     });
   });
 });
+
+describe('duplicateNote', () => {
+  const FILE_ID = '5b1d3a7c-2f4e-4c6b-8a9d-0e1f2a3b4c5d';
+  const OTHER_ID = '6c2e4b8d-3a5f-4d7c-9bae-1f2a3b4c5d6e';
+  const attachment = (id: string, thumbnailData?: string) => ({
+    id, filename: '{"ciphertext":"x","iv":"y"}', mimeType: 'image/png', size: 3, data: id, thumbnailData,
+  });
+
+  beforeEach(async () => {
+    const { masterKey } = await initTestDB();
+    keyManager.setMasterKey({ key: masterKey, keyBytes: new Uint8Array(32), derivedAt: Date.now() });
+  });
+
+  afterEach(async () => {
+    keyManager.clearMasterKey();
+    await cleanupTestDB();
+  });
+
+  async function noteWithFile(content: string, thumbnail = false) {
+    await attachmentRepository.storeBlob(FILE_ID, new Uint8Array([1, 2, 3]).buffer);
+    if (thumbnail) {
+      await attachmentRepository.storeThumbnail(FILE_ID, new Uint8Array([9]).buffer);
+    }
+    return noteService.createNote(content, [], { attachments: [attachment(FILE_ID, thumbnail ? FILE_ID : undefined)] });
+  }
+
+  it('copies each attachment under a new id, so that the two notes share nothing', async () => {
+    const original = await noteWithFile('text');
+
+    const copy = await noteService.duplicateNote(original.id);
+
+    expect(copy.attachments).toHaveLength(1);
+    expect(copy.attachments[0].id).not.toBe(FILE_ID);
+    expect(copy.attachments[0].data).toBe(copy.attachments[0].id);
+    expect(new Uint8Array((await attachmentRepository.getBlob(copy.attachments[0].data))!)).toEqual(new Uint8Array([1, 2, 3]));
+  });
+
+  it('points the copied text at the copies', async () => {
+    const original = await noteWithFile(`![a](attachment:${FILE_ID}) and [b](attachment:${FILE_ID})`);
+
+    const copy = await noteService.duplicateNote(original.id);
+
+    const newId = copy.attachments[0].id;
+    expect((await noteService.getNote(copy.id))?.content).toBe(`![a](attachment:${newId}) and [b](attachment:${newId})`);
+  });
+
+  it('survives the original being emptied from the bin', async () => {
+    const original = await noteWithFile('text');
+    const copy = await noteService.duplicateNote(original.id);
+
+    await noteService.permanentlyDeleteNote(original.id);
+
+    expect(await attachmentRepository.getBlob(copy.attachments[0].data)).toBeTruthy();
+  });
+
+  it('copies a thumbnail too', async () => {
+    const original = await noteWithFile('text', true);
+
+    const copy = await noteService.duplicateNote(original.id);
+
+    const { id, thumbnailData } = copy.attachments[0];
+    expect(thumbnailData).toBe(id);
+    expect(await attachmentRepository.getThumbnail(id)).toBeTruthy();
+  });
+
+  it('keeps the colour', async () => {
+    const original = await noteService.createNote('text', [], { color: 'red' });
+
+    const copy = await noteService.duplicateNote(original.id);
+
+    expect(copy.color).toBe(original.color);
+  });
+
+  it('changes nothing if a blob is missing, rather than leaving a broken copy', async () => {
+    const original = await noteWithFile('text');
+    await attachmentRepository.deleteBlob(FILE_ID);
+    const before = await noteRepository.getAll();
+
+    await expect(noteService.duplicateNote(original.id)).rejects.toThrow();
+
+    expect(await noteRepository.getAll()).toHaveLength(before.length);
+  });
+
+  it('leaves nothing behind when a later attachment turns out to be missing', async () => {
+    await attachmentRepository.storeBlob(FILE_ID, new Uint8Array([1]).buffer);
+    const original = await noteService.createNote('text', [], { attachments: [attachment(FILE_ID), attachment(OTHER_ID)] });
+    const before = (await attachmentRepository.listAllIds()).length;
+
+    await expect(noteService.duplicateNote(original.id)).rejects.toThrow();
+
+    expect(await attachmentRepository.listAllIds()).toHaveLength(before);
+  });
+});
+
