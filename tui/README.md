@@ -270,6 +270,15 @@ jottery
 - Manual sync: Press `s` → navigate to "Sync Now" → press `Enter`
 - Sync settings available in the settings panel (`s` key)
 
+## Passwords on the Command Line
+
+Commands prompt for a password when they need one. For scripts, pipe it in with
+`--password-stdin` (one password per line, ahead of anything else on stdin), or set
+`JOTTERY_PASSWORD`, `JOTTERY_ACCOUNT_PASSWORD` or `JOTTERY_KEY_PASSWORD`.
+
+`--password` still works, but it's visible in `ps` and your shell history, so it's
+deprecated and says so.
+
 ## Temporary Files
 
 An editor, a pager or a viewer can only work on a file, so a note or attachment leaves the

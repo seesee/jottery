@@ -603,6 +603,8 @@ cli:
   password_change_required: "Сначала нужно сменить пароль этой учётной записи. Войдите в веб-приложение, смените его и повторите попытку."
   insecure_endpoint: "%{endpoint} использует незашифрованный HTTP, поэтому пароль может быть перехвачен. Используйте https:// или укажите --allow-insecure-http, чтобы принять риск."
   allow_insecure_http_help: "Разрешить отправку пароля по незашифрованному HTTP на публичный хост"
+  password_flag_deprecated: "Пароль в командной строке виден в ps и истории оболочки. Используйте --password-stdin или JOTTERY_PASSWORD."
+  password_stdin_help: "Читать пароли из stdin, по одному в строке, вместо запроса"
 status:
   locked: Заблокировано
   unlocked: Разблокировано

@@ -603,6 +603,8 @@ cli:
   password_change_required: "Dit account moet eerst zijn wachtwoord wijzigen. Meld je daarvoor aan bij de webapp en probeer het opnieuw."
   insecure_endpoint: "%{endpoint} gebruikt onversleuteld HTTP, dus het wachtwoord kan onderweg worden gelezen. Gebruik https:// of geef --allow-insecure-http op om dit te accepteren."
   allow_insecure_http_help: "Sta toe dat een wachtwoord via onversleuteld HTTP naar een openbare host gaat"
+  password_flag_deprecated: "Een wachtwoord op de opdrachtregel is zichtbaar in ps en de shellgeschiedenis. Gebruik in plaats daarvan --password-stdin of JOTTERY_PASSWORD."
+  password_stdin_help: "Lees wachtwoorden van stdin, één per regel, in plaats van te vragen"
 status:
   locked: Vergrendeld
   unlocked: Ontgrendeld

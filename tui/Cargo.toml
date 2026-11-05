@@ -89,7 +89,9 @@ rpassword = "7.5"
 dirs = "5.0"
 
 # OS keychain for secure password storage (optional)
-keyring = { version = "3", optional = true }
+# Without a store chosen here, keyring uses a mock that forgets everything at exit. The
+# Secret Service one is the pure Rust kind, so builds don't need libdbus.
+keyring = { version = "3", optional = true, features = ["apple-native", "windows-native", "async-secret-service", "tokio", "crypto-rust"] }
 
 # Hostname detection
 hostname = "0.4"

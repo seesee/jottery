@@ -603,6 +603,8 @@ cli:
   password_change_required: "このアカウントは先にパスワードを変更する必要があります。Web アプリにサインインして変更してから、もう一度お試しください。"
   insecure_endpoint: "%{endpoint} は暗号化されていない HTTP を使うため、パスワードが途中で読み取られる可能性があります。https:// を使うか、承知のうえで --allow-insecure-http を指定してください。"
   allow_insecure_http_help: "パスワードを暗号化されていない HTTP で公開ホストに送信することを許可"
+  password_flag_deprecated: "コマンドラインのパスワードは ps やシェル履歴に表示されます。代わりに --password-stdin か JOTTERY_PASSWORD を使ってください。"
+  password_stdin_help: "パスワードを尋ねずに stdin から 1 行ずつ読み取る"
 status:
   locked: ロック中
   unlocked: ロック解除

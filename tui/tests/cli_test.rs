@@ -315,7 +315,7 @@ fn connecting_an_existing_vault_with_one_password_for_both_jobs_only_warns() {
     ]);
 
     assert!(!succeeded);
-    assert!(stderr.contains("⚠"), "should warn: {stderr}");
+    assert!(stderr.contains("same as your notes password"), "should warn: {stderr}");
     assert!(!stderr.contains("Use different passwords"), "should not refuse: {stderr}");
 }
 
@@ -446,6 +446,74 @@ fn the_debug_log_is_private_and_holds_no_password() {
     let contents = fs::read_to_string(&log).unwrap();
     assert!(contents.contains("Opening database"), "{contents}");
     assert!(!contents.contains(&password));
+}
+
+/// Run jottery with these extra environment variables.
+fn run_with_env(db: &Path, args: &[&str], env: &[(&str, &str)], input: &str) -> (bool, String, String) {
+    let mut child = Command::new(get_binary_path())
+        .env("JOTTERY_DB_PATH", db)
+        .envs(env.iter().copied())
+        .args(args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("jottery should start");
+
+    child.stdin.take().unwrap().write_all(input.as_bytes()).unwrap();
+    let output = child.wait_with_output().unwrap();
+
+    (
+        output.status.success(),
+        String::from_utf8_lossy(&output.stdout).into_owned(),
+        String::from_utf8_lossy(&output.stderr).into_owned(),
+    )
+}
+
+#[test]
+fn a_password_can_come_from_stdin_and_a_piped_note_after_it() {
+    let (_temp_dir, db) = create_test_env();
+    let password = uuid::Uuid::new_v4().to_string();
+
+    let input = format!("{password}\nWritten through a pipe");
+    let (ok, _, stderr) = run_with_input(&db, &["--password-stdin", "note"], &input);
+    assert!(ok, "{stderr}");
+    assert!(!stderr.contains("--password"), "{stderr}");
+
+    let (ok, stdout, stderr) = run_with_input(&db, &["--password-stdin", "list"], &format!("{password}\n"));
+    assert!(ok, "{stderr}");
+    assert!(stdout.contains("Written through a pipe"), "{stdout}");
+}
+
+#[test]
+fn a_password_can_come_from_the_environment() {
+    let (dir, db) = create_test_env();
+    let password = uuid::Uuid::new_v4().to_string();
+    vault_with_note(&db, &password, "Hello");
+
+    let output = dir.path().join("export.json");
+    let (ok, _, stderr) = run_with_env(
+        &db,
+        &["export", "-o", output.to_str().unwrap()],
+        &[("JOTTERY_PASSWORD", &password)],
+        "",
+    );
+
+    assert!(ok, "{stderr}");
+    assert!(fs::read_to_string(output).unwrap().contains("Hello"));
+}
+
+/// Scripts keep working, but a password on the command line shows in `ps` and history.
+#[test]
+fn a_password_on_the_command_line_still_works_and_says_why_it_should_not() {
+    let (_temp_dir, db) = create_test_env();
+    let password = uuid::Uuid::new_v4().to_string();
+    vault_with_note(&db, &password, "Hello");
+
+    let (ok, _, stderr) = run_on(&db, &["list", "-p", &password]);
+
+    assert!(ok, "{stderr}");
+    assert!(stderr.contains("--password-stdin"), "{stderr}");
 }
 
 #[test]

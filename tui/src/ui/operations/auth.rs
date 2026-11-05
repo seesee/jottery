@@ -278,8 +278,19 @@ pub fn toggle_remember_password(app: &mut App) -> Result<()> {
 
 /// Store password for auto-unlock (call after successful unlock when user confirms)
 pub fn store_password_for_autounlock(app: &mut App, password: &str) -> Result<()> {
-    // Store password using the storage backend (keychain or file)
-    app.password_storage.store(password)?;
+    // Store password using the storage backend (keychain or file). A keychain that
+    // doesn't keep it isn't worth keeping either: the file works, and says what it is.
+    if let Err(e) = app.password_storage.store(password) {
+        if !app.password_storage.backend_type().is_secure() {
+            return Err(e);
+        }
+
+        app.debug_log(&format!("Keychain refused the password, falling back to file: {}", e));
+        let config_dir = app.db_path.parent().context("Invalid db path")?;
+        let file_storage = crate::password_storage::create_file_storage(config_dir);
+        file_storage.store(password)?;
+        app.password_storage = file_storage;
+    }
 
     app.debug_log(&format!(
         "Password stored using {} backend",

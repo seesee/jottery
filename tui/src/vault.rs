@@ -13,6 +13,24 @@ use crate::crypto::{CryptoService, EncryptedData, DEFAULT_ITERATIONS, WRAPPING_K
 use crate::repository::encryption::EncryptionMetadata;
 use crate::repository::{sync::SyncRepository, EncryptionRepository};
 
+/// The password is wrong, as opposed to the vault being out of reach for now.
+#[derive(Debug, thiserror::Error)]
+#[error("{}", t!("password.incorrect"))]
+pub struct WrongPassword;
+
+/// Whether an error from unlocking means the password is wrong. Plain SQLite takes any
+/// password and the vault's own check says so. SQLCipher fails to read the file.
+pub fn is_wrong_password(error: &anyhow::Error) -> bool {
+    if error.downcast_ref::<WrongPassword>().is_some() {
+        return true;
+    }
+
+    matches!(
+        error.downcast_ref::<rusqlite::Error>(),
+        Some(rusqlite::Error::SqliteFailure(failure, _)) if failure.code == rusqlite::ErrorCode::NotADatabase,
+    )
+}
+
 /// Shortest notes password accepted when one is being set. Unlocking has no
 /// minimum, because existing vaults can have shorter ones.
 pub const MIN_NOTES_PASSWORD_CHARS: usize = 8;
@@ -73,7 +91,7 @@ fn key_for_password(
 
         let device_key = crypto.derive_key(password, &device_salt, DEFAULT_ITERATIONS)?;
         crypto.unwrap_master_key(&device_key, &wrapped)
-            .map_err(|_| anyhow::anyhow!("{}", t!("password.incorrect")))
+            .map_err(|_| WrongPassword.into())
     } else if let (Some(salt), Some(iterations)) = (&metadata.salt, metadata.iterations) {
         crypto.derive_key(password, salt, iterations)
     } else {
@@ -134,7 +152,7 @@ pub fn unlock(conn: &Connection, crypto: &CryptoService, password: &str) -> Resu
     let key = key_for_password(crypto, &metadata, password)?;
 
     if metadata.envelope_version.is_none() && !key_opens_contents(conn, crypto, &key)? {
-        anyhow::bail!("{}", t!("password.incorrect"));
+        return Err(WrongPassword.into());
     }
 
     Ok(key)

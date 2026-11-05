@@ -603,6 +603,8 @@ cli:
   password_change_required: "Ce compte doit d'abord changer son mot de passe. Connectez-vous à l'application web pour le faire, puis réessayez."
   insecure_endpoint: "%{endpoint} utilise HTTP en clair : le mot de passe pourrait être lu en chemin. Utilisez https://, ou passez --allow-insecure-http pour l'accepter."
   allow_insecure_http_help: "Autoriser l'envoi d'un mot de passe en HTTP clair vers un hôte public"
+  password_flag_deprecated: "Un mot de passe en ligne de commande est visible dans ps et l'historique du shell. Utilisez plutôt --password-stdin ou JOTTERY_PASSWORD."
+  password_stdin_help: "Lire les mots de passe sur stdin, un par ligne, au lieu de les demander"
 status:
   locked: Verrouillé
   unlocked: Déverrouillé

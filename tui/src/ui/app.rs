@@ -687,8 +687,11 @@ impl App {
             }
             Err(e) => {
                 self.password_input.zeroize();
-                // Delete invalid stored password
-                let _ = self.password_storage.delete();
+                // Only a wrong password makes the stored one useless. A locked file or a
+                // server that's down will pass, and the user would have to set it again.
+                if crate::vault::is_wrong_password(&e) {
+                    let _ = self.password_storage.delete();
+                }
                 Err(e).context("Auto-unlock failed")
             }
         }
@@ -1467,6 +1470,65 @@ mod lock_tests {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Holds one password in memory, and says whether it has been asked to forget it.
+    struct RememberedPassword {
+        password: String,
+        deleted: Arc<Mutex<bool>>,
+    }
+
+    impl PasswordStorage for RememberedPassword {
+        fn store(&self, _password: &str) -> Result<()> {
+            Ok(())
+        }
+
+        fn retrieve(&self) -> RetrieveResult {
+            RetrieveResult::Found(self.password.clone())
+        }
+
+        fn delete(&self) -> Result<()> {
+            *self.deleted.lock().unwrap() = true;
+            Ok(())
+        }
+
+        fn backend_type(&self) -> StorageBackendType {
+            StorageBackendType::File
+        }
+    }
+
+    fn app_remembering(path: PathBuf, password: &str) -> (App, Arc<Mutex<bool>>) {
+        let deleted = Arc::new(Mutex::new(false));
+        let storage = RememberedPassword { password: password.to_string(), deleted: deleted.clone() };
+        (App::with_storage(path, None, Box::new(storage)), deleted)
+    }
+
+    #[test]
+    fn a_wrong_stored_password_is_forgotten() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("test.db");
+        let password = uuid::Uuid::new_v4().to_string();
+        let db = Database::open(&path, &password).unwrap();
+        crate::vault::unlock(db.connection(), &CryptoService::new(), &password).unwrap();
+        drop(db);
+
+        let (mut app, deleted) = app_remembering(path, &uuid::Uuid::new_v4().to_string());
+
+        assert!(app.try_auto_unlock().is_err());
+        assert!(*deleted.lock().unwrap());
+    }
+
+    /// The vault can't be opened just now, which says nothing about the password.
+    #[test]
+    fn a_stored_password_survives_a_vault_it_cannot_reach() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("not-a-file");
+        std::fs::create_dir(&path).unwrap();
+
+        let (mut app, deleted) = app_remembering(path, &uuid::Uuid::new_v4().to_string());
+
+        assert!(app.try_auto_unlock().is_err());
+        assert!(!*deleted.lock().unwrap());
+    }
 
     #[test]
     fn test_sort_notes_by_pinned_and_date() {

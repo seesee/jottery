@@ -603,6 +603,8 @@ cli:
   password_change_required: "此账户需要先更改密码。请登录 Web 应用进行更改，然后重试。"
   insecure_endpoint: "%{endpoint} 使用未加密的 HTTP，密码可能在传输途中被读取。请使用 https://，或指定 --allow-insecure-http 接受此风险。"
   allow_insecure_http_help: "允许通过未加密的 HTTP 将密码发送到公共主机"
+  password_flag_deprecated: "命令行上的密码会显示在 ps 和 shell 历史记录中。请改用 --password-stdin 或 JOTTERY_PASSWORD。"
+  password_stdin_help: "从 stdin 逐行读取密码，而不是提示输入"
 status:
   locked: 已锁定
   unlocked: 已解锁

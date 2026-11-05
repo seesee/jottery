@@ -603,6 +603,8 @@ cli:
   password_change_required: "Questo account deve prima cambiare la password. Accedi all'app web per farlo, poi riprova."
   insecure_endpoint: "%{endpoint} usa HTTP non cifrato, quindi la password potrebbe essere letta lungo il percorso. Usa https:// o passa --allow-insecure-http per accettare."
   allow_insecure_http_help: "Consenti l'invio di una password via HTTP non cifrato a un host pubblico"
+  password_flag_deprecated: "Una password sulla riga di comando è visibile in ps e nella cronologia della shell. Usa invece --password-stdin o JOTTERY_PASSWORD."
+  password_stdin_help: "Leggi le password da stdin, una per riga, invece di chiederle"
 status:
   locked: Bloccato
   unlocked: Sbloccato

@@ -21,6 +21,7 @@ use rust_i18n::t;
 use clap::{Parser, Subcommand, CommandFactory, FromArgMatches};
 use std::path::{Path, PathBuf};
 use std::fs::OpenOptions;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::io::{self, Read, Write};
 use std::env;
@@ -55,6 +56,7 @@ fn build_translated_cli() -> clap::Command {
     cmd = cmd.mut_arg("debug_log", |a| a.help(t!("cli.debug_log_help").to_string()));
     cmd = cmd.mut_arg("reset", |a| a.help(t!("cli.reset_help").to_string()));
     cmd = cmd.mut_arg("allow_insecure_http", |a| a.help(t!("cli.allow_insecure_http_help").to_string()));
+    cmd = cmd.mut_arg("password_stdin", |a| a.help(t!("cli.password_stdin_help").to_string()));
 
     // Update subcommands
     cmd = cmd.mut_subcommand("note", |sub| {
@@ -214,6 +216,10 @@ struct Cli {
     #[arg(long, global = true)]
     allow_insecure_http: bool,
 
+    /// Read passwords from stdin, one per line, instead of prompting
+    #[arg(long, global = true)]
+    password_stdin: bool,
+
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -365,9 +371,9 @@ enum Commands {
         #[arg(short, long)]
         output: PathBuf,
 
-        /// Password for decryption
+        /// Password for decryption (will prompt if not provided)
         #[arg(short, long)]
-        password: String,
+        password: Option<String>,
     },
     /// Import notes from JSON file
     Import {
@@ -375,9 +381,9 @@ enum Commands {
         #[arg(short, long)]
         input: PathBuf,
 
-        /// Password for encryption
+        /// Password for encryption (will prompt if not provided)
         #[arg(short, long)]
-        password: String,
+        password: Option<String>,
     },
     /// Create encrypted backup (compatible with web app)
     Backup {
@@ -385,9 +391,9 @@ enum Commands {
         #[arg(short, long)]
         output: PathBuf,
 
-        /// Password for encryption
+        /// Password for encryption (will prompt if not provided)
         #[arg(short, long)]
-        password: String,
+        password: Option<String>,
     },
     /// Manage inbox API token
     InboxToken {
@@ -400,9 +406,9 @@ enum Commands {
         #[arg(short, long)]
         input: PathBuf,
 
-        /// Password for decryption (backup password)
+        /// Password for decryption (backup password, will prompt if not provided)
         #[arg(short, long)]
-        password: String,
+        password: Option<String>,
 
         /// Local database encryption password (defaults to backup password)
         #[arg(short = 'k', long)]
@@ -410,9 +416,9 @@ enum Commands {
     },
     /// Store password for auto-unlock (used for demo/testing automation)
     StorePassword {
-        /// Password to store
+        /// Password to store (will prompt if not provided)
         #[arg(short, long)]
-        password: String,
+        password: Option<String>,
     },
 }
 
@@ -516,12 +522,69 @@ impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for SharedLog {
     }
 }
 
+/// Set by --password-stdin
+static PASSWORD_ON_STDIN: AtomicBool = AtomicBool::new(false);
+
 /// Prompt for password from stdin
 fn prompt_password() -> Result<String> {
     print!("{}", t!("password.prompt"));
     io::stdout().flush()?;
     let password = rpassword::read_password()?;
     Ok(password)
+}
+
+/// The next password piped in with --password-stdin, one per line.
+fn password_from_stdin() -> Result<Option<String>> {
+    if !PASSWORD_ON_STDIN.load(Ordering::Relaxed) {
+        return Ok(None);
+    }
+
+    // Byte by byte, because anything read past the line belongs to the command, such as
+    // a note piped in after the password
+    let mut line = Vec::new();
+    let mut byte = [0u8; 1];
+    while io::stdin().read(&mut byte)? == 1 && byte[0] != b'\n' {
+        line.push(byte[0]);
+    }
+
+    let line = String::from_utf8(line).context("The password on stdin isn't valid UTF-8")?;
+    Ok(Some(line.trim_end_matches('\r').to_string()))
+}
+
+/// A password given without a prompt. On the command line it's visible in `ps` and shell
+/// history, so that still works for existing scripts but says so.
+fn supplied_password(flag: Option<String>, env_var: &str) -> Result<Option<String>> {
+    if let Some(password) = flag {
+        errln!("⚠ {}", t!("cli.password_flag_deprecated"));
+        return Ok(Some(password));
+    }
+
+    if let Some(password) = password_from_stdin()? {
+        return Ok(Some(password));
+    }
+
+    Ok(env::var(env_var).ok().filter(|password| !password.is_empty()))
+}
+
+/// The notes password, if it was given without a prompt.
+fn supplied_notes_password(flag: Option<String>) -> Result<Option<String>> {
+    supplied_password(flag, "JOTTERY_PASSWORD")
+}
+
+/// The account password, from wherever it was given, or by asking.
+fn account_password(flag: Option<String>) -> Result<String> {
+    match supplied_password(flag, "JOTTERY_ACCOUNT_PASSWORD")? {
+        Some(password) => Ok(password),
+        None => prompt_password(),
+    }
+}
+
+/// A password that has no stored copy to fall back on.
+fn required_password(flag: Option<String>) -> Result<String> {
+    match supplied_notes_password(flag)? {
+        Some(password) => Ok(password),
+        None => prompt_password(),
+    }
 }
 
 /// Try to load stored password using the password storage backend
@@ -543,7 +606,7 @@ fn try_load_stored_password(db_path: &Path) -> Result<Option<String>> {
 
 /// Get or prompt for password, checking stored password first
 fn get_password(password_opt: Option<String>, db_path: &Path) -> Result<String> {
-    match password_opt {
+    match supplied_notes_password(password_opt)? {
         Some(pwd) => Ok(pwd),
         None => {
             // Try to load stored password first
@@ -794,6 +857,7 @@ fn run() -> Result<()> {
     }
 
     let allow_insecure_http = cli.allow_insecure_http;
+    PASSWORD_ON_STDIN.store(cli.password_stdin, Ordering::Relaxed);
 
     // Handle subcommands
     match cli.command {
@@ -989,14 +1053,7 @@ fn run() -> Result<()> {
             api::require_safe_endpoint(&server, allow_insecure_http)?;
 
             // Get password
-            let password = match password {
-                Some(pwd) => pwd,
-                None => {
-                    print!("{}", t!("password.prompt"));
-                    io::stdout().flush()?;
-                    rpassword::read_password()?
-                }
-            };
+            let password = account_password(password)?;
 
             // Validate password strength
             if password.len() < 12 {
@@ -1042,17 +1099,10 @@ fn run() -> Result<()> {
             api::require_safe_endpoint(&server, allow_insecure_http)?;
 
             // Get user password
-            let password = match password {
-                Some(pwd) => pwd,
-                None => {
-                    print!("{}", t!("password.prompt"));
-                    io::stdout().flush()?;
-                    rpassword::read_password()?
-                }
-            };
+            let password = account_password(password)?;
 
             // Get encryption password for local database
-            let key_password = match key_password {
+            let key_password = match supplied_notes_password(key_password)? {
                 Some(pwd) => pwd,
                 None => {
                     print!("{}", t!("password.enter"));
@@ -1182,14 +1232,7 @@ fn run() -> Result<()> {
             };
             api::require_safe_endpoint(&server, allow_insecure_http)?;
 
-            let password = match password {
-                Some(pwd) => pwd,
-                None => {
-                    print!("{}", t!("password.prompt"));
-                    io::stdout().flush()?;
-                    rpassword::read_password()?
-                }
-            };
+            let password = account_password(password)?;
 
             // Both passwords being in hand is a chance to spot a dangerous reuse. It's
             // an existing account, so this warns: refusing would help nobody.
@@ -1266,6 +1309,7 @@ fn run() -> Result<()> {
         }
         Some(Commands::Export { output, password }) => {
             info!("{}: {}", t!("cli.export"), output.display());
+            let password = get_password(password, &db_path)?;
             let db = Database::open(&db_path, &password)
                 .context(t!("password.unlock_failed", error = ""))?;
 
@@ -1278,6 +1322,7 @@ fn run() -> Result<()> {
         }
         Some(Commands::Import { input, password }) => {
             info!("{}: {}", t!("cli.import"), input.display());
+            let password = get_password(password, &db_path)?;
             let db = Database::open(&db_path, &password)
                 .context(t!("password.unlock_failed", error = ""))?;
 
@@ -1297,6 +1342,7 @@ fn run() -> Result<()> {
         }
         Some(Commands::Backup { output, password }) => {
             info!("{}: {}", t!("backup.created"), output.display());
+            let password = get_password(password, &db_path)?;
             let db = Database::open(&db_path, &password)
                 .context(t!("password.unlock_failed", error = ""))?;
 
@@ -1344,6 +1390,9 @@ fn run() -> Result<()> {
                 t!("backup.records")
             );
 
+            let password = required_password(password)?;
+            let key_password = supplied_password(key_password, "JOTTERY_KEY_PASSWORD")?;
+
             // Use key_password for local database if provided, otherwise use backup password
             let local_password = key_password.as_ref().unwrap_or(&password);
 
@@ -1379,6 +1428,8 @@ fn run() -> Result<()> {
             return Ok(());
         }
         Some(Commands::StorePassword { password }) => {
+            let password = required_password(password)?;
+
             // Store password for auto-unlock (used for demo/testing automation)
             // First verify the password works with the database
             if db_path.exists() {

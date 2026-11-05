@@ -652,6 +652,8 @@ cli:
   password_change_required: "This account has to change its password first. Sign in to the web app to do that, then try again."
   insecure_endpoint: "%{endpoint} uses plain HTTP, so the password could be read on the way. Use https://, or pass --allow-insecure-http to accept that."
   allow_insecure_http_help: "Allow sending a password over plain HTTP to a public host"
+  password_flag_deprecated: "A password on the command line shows in ps and shell history. Use --password-stdin or JOTTERY_PASSWORD instead."
+  password_stdin_help: "Read passwords from stdin, one per line, instead of prompting"
 
 # Status messages
 status:

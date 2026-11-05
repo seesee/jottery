@@ -603,6 +603,8 @@ cli:
   password_change_required: "Dieses Konto muss zuerst sein Passwort ändern. Melden Sie sich dazu in der Web-App an und versuchen Sie es dann erneut."
   insecure_endpoint: "%{endpoint} nutzt unverschlüsseltes HTTP, daher könnte das Passwort unterwegs mitgelesen werden. Verwenden Sie https:// oder akzeptieren Sie das mit --allow-insecure-http."
   allow_insecure_http_help: "Passwort per unverschlüsseltem HTTP an einen öffentlichen Host erlauben"
+  password_flag_deprecated: "Ein Passwort in der Befehlszeile ist in ps und im Shell-Verlauf sichtbar. Verwenden Sie stattdessen --password-stdin oder JOTTERY_PASSWORD."
+  password_stdin_help: "Passwörter zeilenweise von stdin lesen, statt nachzufragen"
 status:
   locked: Gesperrt
   unlocked: Entsperrt
