@@ -309,6 +309,30 @@ test.describe('Attachments', () => {
     }
   });
 
+  test('should not let a locked note lose or gain an attachment', async ({ page }) => {
+    const filePath = createTestFile('locked-note.txt');
+    try {
+      await openAttachmentsModal(page, jp);
+      await uploadFileAndWait(page, jp, filePath, 'locked-note.txt');
+      await closeAttachmentsModal(page, jp);
+
+      await page.evaluate(() => {
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true, shiftKey: true, bubbles: true }));
+      });
+      const palette = page.getByRole('dialog').locator('input').first();
+      await palette.fill('Lock/Unlock');
+      await palette.press('Enter');
+      await expect(page.getByText(/this note is locked/i)).toBeVisible({ timeout: 5000 });
+
+      await openAttachmentsModal(page, jp);
+      await expect(jp.dialog.locator('.attachment-item')).toHaveCount(1);
+      await expect(jp.dialog.locator('input[type="file"]')).toHaveCount(0);
+      await expect(jp.dialog.getByRole('button', { name: /delete/i })).toHaveCount(0);
+    } finally {
+      cleanupTestFile(filePath);
+    }
+  });
+
   test('should handle multiple attachments', async ({ page }) => {
     await openAttachmentsModal(page, jp);
 

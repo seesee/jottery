@@ -33,6 +33,7 @@ export interface Note {
   syntaxLanguage?: string; // Syntax highlighting language (any supported language ID)
   showPreview?: boolean; // Show preview panel for markdown/html (default: false)
   color?: string; // Semantic color name (e.g., 'red', 'blue') - unencrypted
+  serverHash?: string; // Local-only: the hash the server held when this note last became unsynced
   needsSync?: boolean; // Local-only flag indicating note needs to be synced (never sent to server)
 }
 

@@ -8,7 +8,8 @@ import { get } from 'svelte/store';
 import { noteService } from './noteService';
 import { noteRepository } from './noteRepository';
 import { keyManager } from './keyManager';
-import { cryptoService } from './crypto';
+import { cryptoService, MAX_HASH_CHAIN_LENGTH } from './crypto';
+import { NoteReadOnlyError } from '../errors';
 import { undecryptableNotes, resetVaultHealth } from './vaultHealthService';
 import type { Note } from '../types';
 import { initTestDB, cleanupTestDB } from '../../test/db-utils';
@@ -283,6 +284,85 @@ describe('noteService', () => {
       const restored = await noteRepository.getById(created.id) as Note;
       expect(restored.tags).toHaveLength(1);
       expect((await noteService.getNote(created.id))?.tags).toEqual(expected);
+    });
+  });
+
+  describe('locked and archived notes', () => {
+    const lockedNote = async (state: 'lock' | 'archive') => {
+      const note = await noteService.createNote('protected', ['tag']);
+      await noteRepository[state](note.id);
+      return note;
+    };
+
+    for (const state of ['lock', 'archive'] as const) {
+      it(`refuses a change to the text once you ${state} it`, async () => {
+        const note = await lockedNote(state);
+        await expect(noteService.updateNote(note.id, { content: 'changed' })).rejects.toBeInstanceOf(NoteReadOnlyError);
+      });
+
+      it(`refuses a change to the tags once you ${state} it`, async () => {
+        const note = await lockedNote(state);
+        await expect(noteService.updateNote(note.id, { tags: ['other'] })).rejects.toBeInstanceOf(NoteReadOnlyError);
+      });
+
+      it(`refuses a change to the attachments once you ${state} it`, async () => {
+        const note = await lockedNote(state);
+        const attachment = { id: 'a', filename: 'f', mimeType: 'text/plain', size: 1, data: 'a' };
+        await expect(noteService.updateNote(note.id, { attachments: [attachment] })).rejects.toBeInstanceOf(NoteReadOnlyError);
+      });
+
+      it(`refuses a version restore once you ${state} it`, async () => {
+        const note = await lockedNote(state);
+        const stored = await noteRepository.getById(note.id) as Note;
+        await expect(noteService.restoreVersion(note.id, stored)).rejects.toBeInstanceOf(NoteReadOnlyError);
+      });
+    }
+
+    it('allows a save that changes nothing, which is all an autosave does', async () => {
+      const note = await lockedNote('lock');
+      await expect(noteService.updateNote(note.id, { content: 'protected', tags: ['tag'] })).resolves.toBeTruthy();
+    });
+
+    it('still allows what doesn\'t touch the note\'s contents', async () => {
+      const note = await lockedNote('lock');
+      await expect(noteService.updateNote(note.id, { pinned: true })).resolves.toBeTruthy();
+    });
+
+    it('allows editing again once unlocked', async () => {
+      const note = await lockedNote('lock');
+      await noteRepository.unlock(note.id);
+      await expect(noteService.updateNote(note.id, { content: 'changed' })).resolves.toBeTruthy();
+    });
+  });
+
+  describe('a long run of saves between syncs', () => {
+    it('keeps the hash the server holds, or the push comes back as a conflict', async () => {
+      const created = await noteService.createNote('start');
+      const synced = await noteRepository.getById(created.id) as Note;
+      await noteRepository.update({ ...synced, needsSync: false }, false, true);
+
+      for (let save = 0; save < 60; save++) {
+        await noteService.updateNote(created.id, { content: `save ${save}` });
+      }
+
+      const note = await noteRepository.getById(created.id) as Note;
+      expect(note.hashChain).toContain(synced.contentHash);
+      expect(note.hashChain?.[0]).toBe(note.contentHash);
+    });
+
+    it('goes back to the usual length once it has synced', async () => {
+      const created = await noteService.createNote('start');
+      const synced = await noteRepository.getById(created.id) as Note;
+      await noteRepository.update({ ...synced, needsSync: false }, false, true);
+      for (let save = 0; save < 60; save++) {
+        await noteService.updateNote(created.id, { content: `save ${save}` });
+      }
+
+      const pushed = await noteRepository.getById(created.id) as Note;
+      await noteRepository.update({ ...pushed, needsSync: false }, false, true);
+      await noteService.updateNote(created.id, { content: 'after' });
+
+      expect((await noteRepository.getById(created.id) as Note).hashChain?.length).toBe(MAX_HASH_CHAIN_LENGTH);
     });
   });
 });

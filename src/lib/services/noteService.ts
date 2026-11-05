@@ -11,7 +11,7 @@ import { versionRepository } from './versionRepository';
 import { advanceContentHash, cryptoService, encryptStringArray, decryptStringArray, updateHashChain } from './crypto';
 import { recordDecryptFailure } from './vaultHealthService';
 import { keyManager } from './keyManager';
-import { ApplicationLockedError, NotFoundError, CryptoError } from '../errors';
+import { ApplicationLockedError, NotFoundError, NoteReadOnlyError, CryptoError } from '../errors';
 import { syncToStorage } from './tagConversionService';
 import { backupSchedulerService } from './backupSchedulerService';
 import { getNoteTitle } from '../utils/noteTitle';
@@ -348,6 +348,7 @@ class NoteService {
 
     // Track if actual content changed (not just UI state)
     let hasContentChange = false;
+    let changesWhatItHolds = false;
     let removedAttachmentIds: string[] = [];
 
     // Decrypt current content to compare
@@ -373,6 +374,7 @@ class NoteService {
       );
       note.content = JSON.stringify(encryptedContent);
       hasContentChange = true;
+      changesWhatItHolds = true;
     }
 
     // Update tags if provided and changed
@@ -385,6 +387,7 @@ class NoteService {
         const encryptedTags = await encryptStringArray(updates.tags, masterKey.key);
         note.tags = [JSON.stringify(encryptedTags)];
         hasContentChange = true;
+        changesWhatItHolds = true;
       }
     }
 
@@ -401,7 +404,14 @@ class NoteService {
         removedAttachmentIds = [...oldAttachmentIds].filter(id => !newAttachmentIds.has(id));
         note.attachments = updates.attachments;
         hasContentChange = true;
+        changesWhatItHolds = true;
       }
+    }
+
+    // The one place this is enforced: read-only is otherwise only a matter of which
+    // controls the UI shows. A save that changes nothing, such as an autosave, is fine.
+    if (changesWhatItHolds && (note.locked || note.archived)) {
+      throw new NoteReadOnlyError(id);
     }
 
     // Update pinned status if provided and changed
@@ -436,15 +446,7 @@ class NoteService {
 
     // Update hash chain if content changed
     if (hasContentChange) {
-      // Store old hash as parent
-      const oldContentHash = note.contentHash;
-      const oldHashChain = note.hashChain || [];
-
-      // Compute new content hash
-      const newContentHash = await cryptoService.computeContentHash(note);
-      note.contentHash = newContentHash;
-      note.parentHash = oldContentHash || null;
-      note.hashChain = updateHashChain(newContentHash, oldHashChain);
+      await advanceContentHash(note);
     }
 
     // Update modifiedAt for any change (content or UI state) so it syncs properly
@@ -473,6 +475,10 @@ class NoteService {
     const note = await noteRepository.getById(id);
     if (!note) {
       throw new NotFoundError('Note', id);
+    }
+
+    if (note.locked || note.archived) {
+      throw new NoteReadOnlyError(id);
     }
 
     const masterKey = keyManager.getMasterKey();

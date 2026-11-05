@@ -13,6 +13,7 @@
   // Callbacks
   export let onClose: () => void;
   export let onDelete: (attachment: Attachment) => void;
+  export let readOnly: boolean = false;
   export let onFileUpload: (files: FileList) => void;
 </script>
 
@@ -55,7 +56,7 @@
         {#if attachments.length > 0}
           <AttachmentList
             {attachments}
-            readonly={false}
+            readonly={readOnly}
             onDelete={onDelete}
           />
         {:else}
@@ -66,12 +67,14 @@
       </div>
 
       <!-- Footer with Add Button -->
-      <div class="border-t border-gray-200 dark:border-gray-700 p-4">
-        <FileUpload
-          onUpload={onFileUpload}
-          disabled={isUploading}
-        />
-      </div>
+      {#if !readOnly}
+        <div class="border-t border-gray-200 dark:border-gray-700 p-4">
+          <FileUpload
+            onUpload={onFileUpload}
+            disabled={isUploading}
+          />
+        </div>
+      {/if}
     </div>
   </div>
 {/if}

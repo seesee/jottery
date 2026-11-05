@@ -21,6 +21,7 @@
   export let currentVersion: number | undefined = undefined;
   export let onClose: () => void;
   export let onRestore: ((version: number) => Promise<void>) | undefined = undefined;
+  export let readOnly: boolean = false;
 
   let versions: DecryptedNoteVersion[] = [];
   let loading = false;
@@ -311,7 +312,7 @@
           >
             {$_('common.close')}
           </button>
-          {#if selectedVersion && selectedVersion.version !== currentVersion}
+          {#if !readOnly && selectedVersion && selectedVersion.version !== currentVersion}
             <button
               on:click={handleRestoreClick}
               class="px-4 py-2.5 min-h-11 bg-blue-600 active:bg-blue-700 text-white font-medium rounded-md transition-colors"

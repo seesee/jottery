@@ -1230,7 +1230,7 @@
 {#if isEditing && ($selectedNote || $isDraftMode)}
   <div
     class="h-full flex flex-col bg-white dark:bg-gray-900"
-    use:dropzone={{ onDrop: handleFileUpload, onDragStateChange: handleDragStateChange }}
+    use:dropzone={{ onDrop: handleFileUpload, onDragStateChange: handleDragStateChange, disabled: isReadOnly }}
     role="region"
     aria-label="Note editor"
   >
@@ -1306,6 +1306,7 @@
     <!-- Attachments Section - Only show if attachments exist or dragging files (hidden on mobile) -->
     {#if !forceMobileLayout && (attachments.length > 0 || isDraggingFile)}
       <AttachmentsPanel
+        readOnly={isReadOnly}
         {attachments}
         isExpanded={isAttachmentsExpanded}
         {isDraggingFile}
@@ -1357,6 +1358,7 @@
 <!-- Version History Modal -->
 <VersionHistoryModal
   show={showVersionHistory}
+  readOnly={isReadOnly}
   noteId={$selectedNote?.id}
   currentVersion={$selectedNote?.version}
   onClose={() => showVersionHistory = false}
@@ -1412,6 +1414,7 @@
 
 <!-- Attachments Modal (Mobile) -->
 <MobileAttachmentsModal
+  readOnly={isReadOnly}
   show={showAttachmentsModal}
   {forceMobileLayout}
   {attachments}

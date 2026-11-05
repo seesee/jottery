@@ -204,6 +204,17 @@ export class AccountKeyUnreadableError extends AppError {
 }
 
 /**
+ * The note is locked or archived, so what it holds can't be changed until it is
+ * unlocked or unarchived.
+ */
+export class NoteReadOnlyError extends AppError {
+  constructor(noteId: string) {
+    super(`Note ${noteId} is locked or archived`);
+    this.name = 'NoteReadOnlyError';
+  }
+}
+
+/**
  * The account already has a key, so this device isn't the first one. Uploading
  * this device's key would replace the account's real key.
  */

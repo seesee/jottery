@@ -14,6 +14,7 @@
   // Callbacks
   export let onToggleExpanded: () => void;
   export let onDelete: (attachment: Attachment) => void;
+  export let readOnly: boolean = false;
   export let onFileUpload: (files: FileList) => void;
 </script>
 
@@ -39,17 +40,19 @@
   {#if isExpanded || isDraggingFile}
     <div class="px-3 pb-3 max-h-64 overflow-y-auto space-y-3">
       <!-- File Upload - Show when expanded or dragging -->
+      {#if !readOnly}
       <FileUpload
         onUpload={onFileUpload}
         disabled={isUploading}
       />
+      {/if}
 
       <!-- Attachment List -->
       {#if attachments.length > 0}
         <AttachmentList
           {attachments}
           onDelete={onDelete}
-          readonly={false}
+          readonly={readOnly}
         />
       {/if}
 
