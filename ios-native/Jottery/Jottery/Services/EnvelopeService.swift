@@ -37,22 +37,51 @@ enum EnvelopeService {
         try await syncClient.putWrappedKey(putRequest)
     }
 
-    /// Upload the wrapped master key only if the server has none yet.
-    /// An existing server copy is never overwritten. Returns `true` if a key
-    /// was uploaded. Throws if the server cannot be reached or rejects the upload.
+    /// What `reconcileWrappedKey` found on the server, and did about it.
+    enum WrappedKeyOutcome: Equatable {
+        /// The server held no key: this device's was uploaded.
+        case published
+        /// The notes password opens the server's copy, so it was left alone.
+        case leftAlone
+        /// The notes password can't open the server's copy, and this device
+        /// has synced with the account: its key was uploaded over it.
+        case repaired
+        /// The notes password can't open the server's copy, and this device
+        /// has never synced, so it can't know it holds the account's key.
+        case unreadable
+    }
+
+    /// Make sure the account's wrapped key can be opened with the notes
+    /// password. Throws if the server can't be reached or rejects an upload.
     ///
     /// New vaults are in envelope format from the start, so nothing else ever
     /// publishes their key: without this a first device leaves the server with
     /// no key and every other device fails with "no wrapped key found".
+    ///
+    /// Older builds could wrap the key with the account password, which the
+    /// server knows, and nothing may adopt a key opened that way. Those
+    /// accounts are repaired here, by any device that has synced with the
+    /// account and so holds its real key (`hasSyncedWithAccount`).
+    ///
+    /// A blob the notes password does open is never overwritten, even when it
+    /// holds a different key: that means this device has diverged from the
+    /// account, and replacing the account's key would damage it.
     @discardableResult
-    static func publishWrappedKeyIfMissing(
+    static func reconcileWrappedKey(
         syncClient: SyncClient,
         userId: String,
         password: String,
-        masterKeyData: Data
-    ) async throws -> Bool {
-        if try await syncClient.getWrappedKey() != nil {
-            return false
+        masterKeyData: Data,
+        hasSyncedWithAccount: Bool
+    ) async throws -> WrappedKeyOutcome {
+        let outcome: WrappedKeyOutcome
+        do {
+            let serverKey = try await fetchServerKey(syncClient: syncClient, userId: userId, password: password)
+            guard serverKey == nil else { return .leftAlone }
+            outcome = .published
+        } catch EnvelopeError.cannotUnwrapServerKey {
+            guard hasSyncedWithAccount else { return .unreadable }
+            outcome = .repaired
         }
         try await uploadWrappedKey(
             syncClient: syncClient,
@@ -60,7 +89,7 @@ enum EnvelopeService {
             password: password,
             masterKeyData: masterKeyData
         )
-        return true
+        return outcome
     }
 
     // MARK: - Migrate Legacy → Envelope
@@ -163,13 +192,16 @@ enum EnvelopeService {
     /// Download the account's wrapped master key and unwrap it, without
     /// changing anything locally. Returns `nil` if the server holds no key.
     ///
-    /// The blob is wrapped with the notes password, so `password` should be
-    /// that. Builds before this fix could wrap it with the account password,
-    /// so `alternatePassword` (the account password) is tried if the first
-    /// attempt fails to unwrap. An empty alternate is ignored.
+    /// `password` must be the notes password, and it is the only one ever
+    /// tried. The server sees the account password in plaintext and chooses
+    /// the user ID, so it could wrap a key of its own with them: a key opened
+    /// that way proves nothing, and adopting it would hand the server every
+    /// note. Blobs older builds wrapped with the account password are therefore
+    /// refused here, until a connected device repairs them
+    /// (`reconcileWrappedKey`).
     ///
-    /// Throws `EnvelopeError.cannotUnwrapServerKey` when neither password
-    /// opens the key. Any other error (the server being unreachable, say) is
+    /// Throws `EnvelopeError.cannotUnwrapServerKey` when the password doesn't
+    /// open the key. Any other error (the server being unreachable, say) is
     /// passed through unchanged, so a caller can tell "no key", "wrong
     /// password" and "could not ask" apart. Splitting this from
     /// `adoptServerKey` lets the connect flow check the key BEFORE it creates
@@ -177,33 +209,55 @@ enum EnvelopeService {
     static func fetchServerKey(
         syncClient: SyncClient,
         userId: String,
-        password: String,
-        alternatePassword: String? = nil
+        password: String
     ) async throws -> Data? {
         guard let response = try await syncClient.getWrappedKey() else {
             return nil
         }
 
-        let serverWrapped = try CryptoService.parseEncryptedJSON(response.blob)
-
-        // Try each candidate password; the wrapping key derives from password + userId
-        var candidates = [password]
-        if let alternatePassword, !alternatePassword.isEmpty, alternatePassword != password {
-            candidates.append(alternatePassword)
+        guard let serverWrapped = try? CryptoService.parseEncryptedJSON(response.blob) else {
+            throw EnvelopeError.cannotUnwrapServerKey
         }
-
-        for candidate in candidates {
-            let wrappingKey = CryptoService.deriveWrappingKey(password: candidate, userId: userId)
-            guard let unwrapped = try? CryptoService.unwrapMasterKey(serverWrapped, with: wrappingKey) else {
-                continue
-            }
-            guard unwrapped.count == CryptoService.keyLength else {
-                throw EnvelopeError.invalidMasterKeyLength
-            }
-            return unwrapped
+        let wrappingKey = CryptoService.deriveWrappingKey(password: password, userId: userId)
+        guard let unwrapped = try? CryptoService.unwrapMasterKey(serverWrapped, with: wrappingKey) else {
+            throw EnvelopeError.cannotUnwrapServerKey
         }
+        guard unwrapped.count == CryptoService.keyLength else {
+            throw EnvelopeError.invalidMasterKeyLength
+        }
+        return unwrapped
+    }
 
-        throw EnvelopeError.cannotUnwrapServerKey
+    /// For a device with no vault yet, connecting with `notesPassword`: the
+    /// account's key to adopt, or nil when the account has none and this
+    /// password is about to protect a brand-new vault. Nothing is changed.
+    ///
+    /// Throws a `SyncSetupError` when the password can't be used, and passes
+    /// server failures through. The minimum length only applies to that new
+    /// vault: an account's existing password has to keep working, however
+    /// short, and only the notes password opening the key proves it is one.
+    static func accountKeyForNewVault(
+        syncClient: SyncClient,
+        userId: String,
+        notesPassword: String,
+        accountPassword: String
+    ) async throws -> Data? {
+        guard !PasswordPolicy.matchesAccountPassword(notesPassword, accountPassword: accountPassword) else {
+            throw SyncSetupError.notesPasswordMatchesAccountPassword
+        }
+        do {
+            if let serverKey = try await fetchServerKey(
+                syncClient: syncClient, userId: userId, password: notesPassword
+            ) {
+                return serverKey
+            }
+        } catch EnvelopeError.cannotUnwrapServerKey {
+            throw SyncSetupError.encryptionPasswordMismatch
+        }
+        guard PasswordPolicy.violation(newNotesPassword: notesPassword) == nil else {
+            throw SyncSetupError.notesPasswordTooShort
+        }
+        return nil
     }
 
     /// How the account's server key relates to this device's own vault key.
@@ -212,30 +266,33 @@ enum EnvelopeService {
         case noServerKey
         /// The server key is the same as this device's key: safe to sync.
         case matchesLocalKey
-        /// The account already has a different key, unwrapped here. Syncing as
-        /// things are would leave notes unreadable in both directions, so the
-        /// caller either moves the vault onto this key
+        /// The account already has a different key, opened here with the notes
+        /// password. Syncing as things are would leave notes unreadable in both
+        /// directions, so the caller either moves the vault onto this key
         /// (`AppState.switchVaultToMasterKey`) or refuses to join.
+        ///
+        /// Only the notes password can produce this, and that is the whole
+        /// basis for trusting the key: the server doesn't know that password,
+        /// so it can't have wrapped this. Moving a vault re-encrypts everything
+        /// and uploads it, so it must never happen without the user agreeing.
         case differs(accountKey: Data)
     }
 
     /// Before a device that already has a vault joins an existing account,
     /// compare the account's key with the vault's own. Nothing is changed.
     ///
-    /// Throws `cannotUnwrapServerKey` when the account's key cannot be opened
-    /// with either password, and passes server failures through.
+    /// Throws `cannotUnwrapServerKey` when the notes password can't open the
+    /// account's key, and passes server failures through.
     static func checkAccountKey(
         syncClient: SyncClient,
         userId: String,
         password: String,
-        alternatePassword: String? = nil,
         localMasterKeyData: Data
     ) async throws -> AccountKeyStatus {
         guard let serverKey = try await fetchServerKey(
             syncClient: syncClient,
             userId: userId,
-            password: password,
-            alternatePassword: alternatePassword
+            password: password
         ) else {
             return .noServerKey
         }
@@ -254,7 +311,6 @@ enum EnvelopeService {
         syncClient: SyncClient,
         userId: String,
         password: String,
-        alternatePassword: String? = nil,
         localMasterKeyData: Data
     ) async throws -> AccountKeyStatus {
         do {
@@ -262,7 +318,6 @@ enum EnvelopeService {
                 syncClient: syncClient,
                 userId: userId,
                 password: password,
-                alternatePassword: alternatePassword,
                 localMasterKeyData: localMasterKeyData
             )
         } catch {
@@ -351,14 +406,12 @@ enum EnvelopeService {
         encryptionRepo: EncryptionRepository,
         password: String,
         userId: String,
-        localPassword: String? = nil,
-        alternatePassword: String? = nil
+        localPassword: String? = nil
     ) async throws -> SymmetricKey {
         guard let masterKeyData = try await fetchServerKey(
             syncClient: syncClient,
             userId: userId,
-            password: password,
-            alternatePassword: alternatePassword
+            password: password
         ) else {
             throw EnvelopeError.noWrappedKeyOnServer
         }
@@ -374,9 +427,12 @@ enum EnvelopeService {
 
     /// Set up envelope encryption after device registration or on unlock.
     /// Checks the server for an existing wrapped key first (another device may
-    /// have already uploaded one). If found, onboards from the server key and
-    /// re-encrypts local data if the master key differs. If no server key exists,
-    /// falls through to `tryMigrateToEnvelope` to upload ours.
+    /// have already uploaded one). If found, a legacy vault onboards from it,
+    /// asking the user first if that means re-encrypting local data
+    /// (`AppState.pendingAccountKeyMerge`). If no server key exists, falls
+    /// through to `tryMigrateToEnvelope` to upload ours. An envelope vault
+    /// publishes a missing key and repairs one the notes password can't open
+    /// (`reconcileWrappedKey`).
     ///
     /// Non-fatal, same as `tryMigrateToEnvelope`: returns `true` on success
     /// or when nothing was needed, `false` only when the attempt failed.
@@ -416,32 +472,43 @@ enum EnvelopeService {
                 return true
             }
 
+            let hasSyncedWithAccount = syncMeta.lastSyncAt != nil
+
             // Already in envelope format (every vault created by this build is):
-            // nothing to migrate locally, but the server may still hold no key,
-            // which leaves every other device unable to connect. Publish ours
-            // if it is missing; an existing server key is never overwritten.
+            // nothing to migrate locally, but the server may hold no key, which
+            // leaves every other device unable to connect, or one that older
+            // builds wrapped with the account password.
             if let metadata = try encryptionRepo.get(), metadata.envelopeVersion != nil {
-                let uploaded = try await publishWrappedKeyIfMissing(
+                let outcome = try await reconcileWrappedKey(
                     syncClient: syncClient,
                     userId: userId,
                     password: password,
-                    masterKeyData: masterKey.withUnsafeBytes { Data($0) }
+                    masterKeyData: masterKey.withUnsafeBytes { Data($0) },
+                    hasSyncedWithAccount: hasSyncedWithAccount
                 )
-                Log.debug(uploaded
-                    ? "[Envelope] Server had no wrapped key — uploaded ours"
-                    : "[Envelope] Already migrated, server key present — nothing to do")
-                return true
+                Log.debug("[Envelope] Server key check: \(outcome)")
+                return outcome != .unreadable
             }
 
             // Legacy vault: check for a key another device has already put on
             // the account. A server failure throws (caught below) rather than
             // being taken for "no key", which would migrate this vault onto
             // its own key and leave it diverged from the account's.
-            if let serverKeyData = try await fetchServerKey(
-                syncClient: syncClient,
-                userId: userId,
-                password: password
-            ) {
+            let serverKeyData: Data?
+            do {
+                serverKeyData = try await fetchServerKey(
+                    syncClient: syncClient,
+                    userId: userId,
+                    password: password
+                )
+            } catch EnvelopeError.cannotUnwrapServerKey where hasSyncedWithAccount {
+                // As in `reconcileWrappedKey`: this device has synced, so it
+                // holds the account's key. Migrating publishes it.
+                Log.debug("[Envelope] Notes password can't open the server key — repairing it")
+                serverKeyData = nil
+            }
+
+            if let serverKeyData {
                 Log.debug("[Envelope] Server has wrapped key — onboarding from server")
                 let localKeyData = masterKey.withUnsafeBytes { Data($0) }
                 if serverKeyData == localKeyData {
@@ -449,12 +516,12 @@ enum EnvelopeService {
                         serverKeyData, encryptionRepo: encryptionRepo, localPassword: password
                     )
                 } else {
-                    // Re-encrypt the whole vault onto the account's key and
-                    // switch to it in one transaction: a failure changes nothing.
-                    // (Saving the server key first, as this used to, left notes
-                    // under the old key whenever re-encryption skipped any.)
-                    Log.debug("[Envelope] Server key differs from local — re-encrypting the vault onto it")
-                    try await appState.switchVaultToMasterKey(serverKeyData, notesPassword: password)
+                    // Moving the vault uploads everything under the account's
+                    // key, so the user decides. Nothing changes until they do.
+                    Log.debug("[Envelope] Server key differs from local — asking before re-encrypting")
+                    appState.pendingAccountKeyMerge = PendingAccountKeyMerge(
+                        accountKey: serverKeyData, notesPassword: password
+                    )
                 }
                 return true
             } else {
@@ -561,7 +628,7 @@ enum EnvelopeError: LocalizedError {
         case .noWrappedKeyOnServer:
             return "No wrapped key found on server — the source device may not have migrated yet"
         case .cannotUnwrapServerKey:
-            return "The account's encryption key could not be opened with the password provided"
+            return "The account's encryption key could not be opened with the notes password"
         case .invalidMasterKeyLength:
             return "Invalid master key length after unwrapping"
         case .notInitialised:

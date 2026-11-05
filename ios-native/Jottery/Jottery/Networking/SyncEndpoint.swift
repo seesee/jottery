@@ -127,6 +127,11 @@ enum SyncEndpoint {
         return error.localizedDescription
     }
 
+    /// The server's name, for telling the user where something will go.
+    static func displayHost(_ endpoint: String) -> String {
+        URLComponents(string: endpoint)?.host ?? endpoint
+    }
+
     /// Percent-encode a value being interpolated into a URL path segment.
     static func encodePathComponent(_ raw: String) -> String {
         var allowed = CharacterSet.urlPathAllowed
