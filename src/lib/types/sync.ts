@@ -22,6 +22,10 @@ export interface SyncMetadata {
   serverKeyVerified?: boolean;
   /** A password change here hasn't reached the server yet. Retried at unlock. */
   serverKeyStale?: boolean;
+  /** Opaque position in the server's change sequence. Sent back, never interpreted. */
+  pullCursor?: string;
+  /** The one full pull on moving to the cursor has been done (see docs/sync-protocol.md) */
+  cursorFullPullDone?: boolean;
   pendingDeviceName?: string;     // Device name for pending clone-device call (during import)
 }
 
@@ -182,6 +186,8 @@ export interface ConflictData {
 
 // Pull request payload
 export interface SyncPullRequest {
+  /** Selects cursor mode. A server that doesn't know it ignores it */
+  cursor?: string;
   lastSyncAt?: string;
   knownNoteIds: string[];
   knownAttachmentIds: string[];
@@ -211,6 +217,8 @@ export interface SyncPullResponse {
   // Pagination metadata for large datasets
   totalCount?: number;
   hasMore?: boolean;
+  /** Only from a server that supports the cursor */
+  nextCursor?: string;
   // Inbox items (unencrypted, pending acceptance)
   inboxItems?: InboxItem[];
   inboxCount?: number;

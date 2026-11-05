@@ -36,6 +36,7 @@ import {
   isUuid,
   validateConflict,
   validateInboxItem,
+  validatePullResponse,
   validateRemoteNote,
   validateRemoteVersion,
   validateSavedSearch,
@@ -55,6 +56,17 @@ const BACKGROUND_SYNC_DEBOUNCE_MS = 30000;
 
 // Maximum time a sync can run before we consider it stuck (2 minutes)
 const SYNC_STUCK_TIMEOUT_MS = 120000;
+
+// How far before the last sync an older server is asked to look. It stamps a push
+// before committing it, so a slow one can land behind a timestamp. Anything sent
+// twice is harmless, because applying a pulled note is idempotent.
+const PULL_OVERLAP_MS = 2 * 60 * 1000;
+
+function withOverlap(lastSyncAt: string | undefined): string | undefined {
+  if (!lastSyncAt) return undefined;
+  const time = Date.parse(lastSyncAt);
+  return Number.isNaN(time) ? lastSyncAt : new Date(time - PULL_OVERLAP_MS).toISOString();
+}
 
 class SyncService {
   private isSyncing = false;
@@ -293,6 +305,7 @@ class SyncService {
     }
 
     console.log('[SyncService] Starting sync', forceFullSync ? '(force full)' : '');
+    const startedAt = new Date().toISOString();
     this.isSyncing = true;
     this.syncStartTime = Date.now();
     isSyncingStore.set(true);
@@ -325,11 +338,12 @@ class SyncService {
       const pushedCount = await this.push(metadata.syncEndpoint, apiKey, forceFullSync);
 
       // 3. Pull remote changes
-      const pulledCount = await this.pull(metadata.syncEndpoint, apiKey);
+      const { pulledCount, serverTime } = await this.pull(metadata.syncEndpoint, apiKey);
 
-      // 4. Update last sync timestamp
+      // 4. Update last sync timestamp. The server filters on its own clock, and on
+      // when the pull began: a push landing during a long pull must not be skipped.
       await syncRepository.updateMetadata({
-        lastSyncAt: new Date().toISOString(),
+        lastSyncAt: serverTime ?? startedAt,
       });
 
       // 5. Only reload notes if we PULLED remote changes
@@ -1097,13 +1111,17 @@ class SyncService {
   }
 
   /**
-   * Pull remote changes from server (with pagination for large datasets)
-   * @returns Number of notes received from server
+   * Pull remote changes, following the loop in docs/sync-protocol.md. It works
+   * against both kinds of server: an old one ignores `cursor` and a new one ignores
+   * `offset`, so every response is checked rather than remembering what the last
+   * one said. The cursor is saved only after its page is applied. A page repeated
+   * after a crash is harmless, whereas saving first could lose one.
+   *
+   * @returns How many notes changed, and the server's time when the pull began
    */
-  private async pull(endpoint: string, apiKey: string): Promise<number> {
+  private async pull(endpoint: string, apiKey: string): Promise<{ pulledCount: number; serverTime?: string }> {
     endpoint = normalizeEndpoint(endpoint);
     const metadata = await syncRepository.getMetadata();
-    const allNotes = await noteRepository.getAll();
 
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
@@ -1112,46 +1130,39 @@ class SyncService {
 
     this.pulledNoteIds = [];
 
-    let offset = 0;
     let hasMore = true;
+    let serverTime: string | undefined;
+    let progressStarted = false;
     let totalNotes = 0;
     let totalAttachments = 0;
     let totalDeletions = 0;
-    let totalCount = 0;
+    let fullPullDone = metadata?.cursorFullPullDone ?? false;
+    let storedCursor = metadata?.pullCursor;
 
-    // Computed once per pull, not per page
-    const knownNoteIds = allNotes.map(n => n.id);
-    const knownAttachmentIds = await this.getKnownAttachmentIds();
+    const request: SyncPullRequest = {
+      cursor: metadata?.pullCursor ?? '',
+      lastSyncAt: withOverlap(metadata?.lastSyncAt),
+      // Older servers require this field, and no server has ever used its contents
+      knownNoteIds: [],
+      knownAttachmentIds: await this.getKnownAttachmentIds(),
+      limit: SYNC_PULL_BATCH_SIZE,
+      offset: 0,
+    };
 
     while (hasMore) {
-      const pullRequest: SyncPullRequest = {
-        lastSyncAt: metadata?.lastSyncAt,
-        knownNoteIds,
-        knownAttachmentIds,
-        limit: SYNC_PULL_BATCH_SIZE,
-        offset,
-      };
-
-      const result = await pullFromServer(endpoint, apiKey, pullRequest);
-      const syncedAt = isTimestamp(result.syncedAt) ? result.syncedAt : new Date().toISOString();
-
-      // Update pagination state
+      const result = validatePullResponse(await pullFromServer(endpoint, apiKey, request));
+      const syncedAt = result.syncedAt ?? new Date().toISOString();
+      serverTime ??= result.syncedAt;
       hasMore = result.hasMore ?? false;
-      const previousTotalCount = totalCount;
-      totalCount = result.totalCount ?? result.notes.length;
-      offset += result.notes.length;
 
-      if (previousTotalCount === 0 && totalCount > 0) {
+      const totalCount = result.totalCount ?? result.notes.length;
+      if (!progressStarted && totalCount > 0) {
+        progressStarted = true;
         syncProgress.update(p => ({ ...p, total: p.total + totalCount }));
       }
 
       totalAttachments += result.attachments.length;
       totalDeletions += result.deletions?.length || 0;
-
-      if (totalCount > SYNC_PULL_BATCH_SIZE) {
-        const page = Math.floor((offset - result.notes.length) / SYNC_PULL_BATCH_SIZE) + 1;
-        console.log(`[SyncService] Pulling page ${page}/${Math.ceil(totalCount / SYNC_PULL_BATCH_SIZE)} (${result.notes.length} notes)`);
-      }
 
       // Process notes with incremental progress updates
       let processedInBatch = 0;
@@ -1185,19 +1196,49 @@ class SyncService {
         await this.processRemoteDeletions(result.deletions);
       }
 
-      // Update inbox items from pull response
-      if (result.inboxItems && result.inboxItems.length > 0) {
-        inboxItems.set(this.validInboxItems(result.inboxItems));
-      } else if (offset === 0) {
-        // Only clear on first page (full sync) — subsequent pages don't repeat inbox
-        inboxItems.set([]);
+      // The server sends the whole inbox on every page, or nothing if it's empty
+      inboxItems.set(this.validInboxItems(result.inboxItems ?? []));
+
+      if (result.nextCursor !== undefined) {
+        // Timestamp mode can have silently skipped changes, and nothing can detect
+        // that afterwards, so a device moving to the cursor reads everything once.
+        // What this page held was applied, and arrives again, which is harmless.
+        if (!fullPullDone && !request.cursor && request.lastSyncAt) {
+          console.log('[SyncService] Server supports the pull cursor, doing one full pull');
+          request.lastSyncAt = undefined;
+          progressStarted = false;
+          hasMore = true;
+          continue;
+        }
+
+        fullPullDone = true;
+        storedCursor = result.nextCursor;
+        await syncRepository.updateMetadata({ pullCursor: result.nextCursor, cursorFullPullDone: true });
+
+        if (hasMore && result.nextCursor === request.cursor) {
+          console.warn('[SyncService] Server reported more to pull without moving on, stopping');
+          break;
+        }
+        request.cursor = result.nextCursor;
+      } else {
+        // An older server, or one that has lost the cursor
+        if (storedCursor !== undefined) {
+          storedCursor = undefined;
+          await syncRepository.updateMetadata({ pullCursor: undefined });
+        }
+
+        if (hasMore && result.notes.length === 0) {
+          console.warn('[SyncService] Server reported more to pull without sending any, stopping');
+          break;
+        }
+        request.offset = (request.offset ?? 0) + result.notes.length;
       }
     }
 
     console.log(`[SyncService] Pulled ${totalNotes} notes, ${totalAttachments} attachments, ${totalDeletions} deletions`);
     await syncRepository.updateMetadata({ lastPullAt: new Date().toISOString() });
 
-    return totalNotes;
+    return { pulledCount: totalNotes, serverTime };
   }
 
   /**

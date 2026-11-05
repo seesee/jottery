@@ -21,6 +21,8 @@ import type {
   InboxItem,
   SyncNote,
   SyncNoteVersion,
+  SyncPullResponse,
+  SyncPushResponse,
   SyncRejected,
   SyncSavedSearch,
 } from '../types';
@@ -39,6 +41,8 @@ const LANGUAGE_PATTERN = /^[a-z0-9][a-z0-9+#._-]{0,39}$/i;
 const COLOUR_PATTERN = /^[a-z0-9][a-z0-9_-]{0,39}$/i;
 // Every client writes content hashes as standard base64 of a SHA-256 digest
 const HASH_PATTERN = /^[A-Za-z0-9+/]{16,128}={0,2}$/;
+// The protocol says a short ASCII string. Anything else isn't a cursor
+const CURSOR_PATTERN = /^[\x21-\x7e]{0,256}$/;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -117,6 +121,37 @@ function validateAttachmentRefs(value: unknown): AttachmentRef[] | null {
 /** Reasons are logged and shown in vault health, so they never quote the value. */
 function fail<T>(reason: string): Validated<T> {
   return { ok: false, reason };
+}
+
+/** A list a response may leave out. Anything else in its place means the response is broken. */
+function optionalList<T>(value: unknown, field: string): T[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw new Error(`Malformed sync response: ${field} is not a list`);
+  return value as T[];
+}
+
+/**
+ * Check the shape of a pull response before anything in it is applied. Records are
+ * validated one at a time later, and a bad one is dropped. A page that is broken as
+ * a whole is refused instead: accepting it would move the cursor past whatever it
+ * should have held. Refusing costs nothing, because the same page comes again.
+ */
+export function validatePullResponse(value: unknown): SyncPullResponse {
+  if (!isRecord(value)) throw new Error('Malformed sync response');
+  if (!Array.isArray(value.notes)) throw new Error('Malformed sync response: notes is not a list');
+
+  return {
+    notes: value.notes as SyncNote[],
+    deletions: optionalList(value.deletions, 'deletions'),
+    attachments: optionalList(value.attachments, 'attachments'),
+    versions: optionalList(value.versions, 'versions'),
+    savedSearches: optionalList(value.savedSearches, 'savedSearches'),
+    inboxItems: optionalList(value.inboxItems, 'inboxItems'),
+    syncedAt: isTimestamp(value.syncedAt) ? value.syncedAt : undefined,
+    totalCount: isVersionNumber(value.totalCount) ? value.totalCount : undefined,
+    hasMore: value.hasMore === true,
+    nextCursor: typeof value.nextCursor === 'string' && CURSOR_PATTERN.test(value.nextCursor) ? value.nextCursor : undefined,
+  };
 }
 
 export function validateRemoteNote(value: unknown): Validated<SyncNote> {

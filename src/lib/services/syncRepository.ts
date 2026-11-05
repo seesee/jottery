@@ -8,7 +8,9 @@ import { getDB, STORES } from './db';
 const METADATA_KEY = 'metadata';
 
 /** Facts about one account on one server, so they can't outlive a change of either. */
-const ACCOUNT_SCOPED_FIELDS: (keyof SyncMetadata)[] = ['lastSyncAt', 'serverKeyVerified', 'serverKeyStale'];
+const ACCOUNT_SCOPED_FIELDS: (keyof SyncMetadata)[] = [
+  'lastSyncAt', 'pullCursor', 'cursorFullPullDone', 'serverKeyVerified', 'serverKeyStale',
+];
 
 function isDifferentAccount(current: SyncMetadata, next: Partial<SyncMetadata>): boolean {
   const moved = (from?: string, to?: string) => !!from && !!to && from !== to;
