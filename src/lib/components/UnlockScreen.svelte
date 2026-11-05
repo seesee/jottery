@@ -11,6 +11,7 @@
   import { isNotesPasswordLongEnough, isSamePassword } from '../utils/passwordRules';
   import { onboardingErrorKey } from '../utils/onboardingErrors';
   import { isConnectionRestricted } from '../services/cspService';
+  import { toast } from '../utils/toast.svelte';
   import { BackupStorageFullError } from '../errors';
   import ConfirmModal from './ConfirmModal.svelte';
   import LandingPage from './LandingPage.svelte';
@@ -331,10 +332,6 @@
       connectError = $_('settings.syncSetup.notesPassword.required');
       return;
     }
-    if (isSamePassword(connectNotesPassword, connectServerPassword)) {
-      connectError = $_('settings.syncSetup.notesPassword.mustDiffer');
-      return;
-    }
 
     connectLoading = true;
 
@@ -417,6 +414,12 @@
       // Step 6: Unlock
       isInitializedStore.set(true);
       isLocked.set(false);
+
+      // Neither password is being chosen here, so a match is warned about, not
+      // refused: refusing would stop anyone who already has one adding a device.
+      if (isSamePassword(connectNotesPassword, connectServerPassword)) {
+        toast.error($_('settings.syncSetup.notesPassword.matchesAccountWarning'));
+      }
 
       // Store password for session if applicable
       try {

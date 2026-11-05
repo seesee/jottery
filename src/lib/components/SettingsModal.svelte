@@ -324,7 +324,9 @@
       return;
     }
 
-    if (isSamePassword(notesPassword, userPassword)) {
+    // Joining an account chooses neither password, so a match is warned about below.
+    // Refusing would stop anyone who already has one adding a device.
+    if (registrationMode !== 'existingUser' && isSamePassword(notesPassword, userPassword)) {
       syncError = $_('settings.syncSetup.notesPassword.mustDiffer');
       return;
     }
@@ -431,6 +433,10 @@
 
       registrationStep = 'complete';
       syncError = keyUploadError;
+
+      if (isSamePassword(notesPassword, userPassword)) {
+        toast.error($_('settings.syncSetup.notesPassword.matchesAccountWarning'));
+      }
 
       // Create sync recovery note (non-blocking)
       createSyncRecoveryNote().catch(err =>
