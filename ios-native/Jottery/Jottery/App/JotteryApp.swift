@@ -288,6 +288,23 @@ struct MainView: View {
         } message: {
             Text(L.syncServerRemovedMessage(appState.notesRemovedByServer.count))
         }
+        .alert(L.unlockEnableFaceIdTitle, isPresented: Binding(
+            get: { appState.offersFaceID },
+            set: { appState.offersFaceID = $0 }
+        )) {
+            Button(L.unlockEnableFaceIdAction) {
+                do {
+                    try appState.keyManager.enableBiometricUnlock()
+                } catch {
+                    appState.reportError(error.localizedDescription)
+                }
+            }
+            Button(L.unlockEnableFaceIdLater, role: .cancel) {
+                appState.declineFaceID()
+            }
+        } message: {
+            Text(L.unlockEnableFaceIdMessage)
+        }
         .alert(accountKeyNoticeTitle, isPresented: Binding(
             get: { appState.accountKeyNotice != nil },
             set: { if !$0 { appState.accountKeyNotice = nil } }

@@ -52,6 +52,9 @@ final class AppState {
     /// are enough of them to be suspicious. They're in the bin, and `MainView`
     /// offers to put them back (see `restoreNotesRemovedByServer()`).
     var notesRemovedByServer: [String] = []
+    /// Offer to turn on Face ID. Set here, not in the unlock screen, because a
+    /// successful unlock replaces that screen before an alert on it could show.
+    var offersFaceID = false
 
     /// Set while the whole vault is being re-encrypted, which can take a while.
     /// `ContentView` covers the app, and nothing may be encrypted until it's
@@ -2109,6 +2112,26 @@ final class AppState {
             Log.debug("[Settings] couldn't save the sort order: \(error)")
             sortOrder = order
         }
+    }
+
+    /// Whether to offer Face ID after a password unlock. Asked once: someone who
+    /// says later can still turn it on in Settings.
+    static func shouldOfferFaceID(isAvailable: Bool, isEnabled: Bool, wasDeclined: Bool) -> Bool {
+        isAvailable && !isEnabled && !wasDeclined
+    }
+
+    static let faceIDDeclinedKey = "faceIDOfferDeclined"
+
+    func offerFaceIDIfUseful() {
+        offersFaceID = Self.shouldOfferFaceID(
+            isAvailable: keyManager.isBiometricAvailable,
+            isEnabled: keyManager.isBiometricEnabled,
+            wasDeclined: UserDefaults.standard.bool(forKey: Self.faceIDDeclinedKey)
+        )
+    }
+
+    func declineFaceID() {
+        UserDefaults.standard.set(true, forKey: Self.faceIDDeclinedKey)
     }
 
     func updateSettings(_ newSettings: UserSettings) throws {
