@@ -39,6 +39,11 @@ final class AppState {
     /// can be published (see `checkAccountKeyAfterBiometricUnlock()`).
     var needsNotesPasswordForAccountKey = false
 
+    /// Set when a legacy vault finds that the account holds a different key.
+    /// `MainView` then asks whether to move the vault onto it, because that
+    /// re-encrypts everything and uploads it (see `mergeOntoAccountKey(_:)`).
+    var pendingAccountKeyMerge: PendingAccountKeyMerge?
+
     // MARK: - User-Facing Errors
 
     /// A transient, localised error message surfaced to the user via a
@@ -91,6 +96,8 @@ final class AppState {
     /// Current unsaved editor state — NoteEditorView keeps this updated so
     /// `lock()` can flush pending changes before wiping the encryption key.
     @ObservationIgnored var pendingEditorNote: DecryptedNote?
+    /// Swept at launch, lock and wipe, so nothing decrypted outlives the session.
+    @ObservationIgnored var temporaryFiles = TemporaryFiles.shared
     @ObservationIgnored private var networkMonitor: NWPathMonitor?
     @ObservationIgnored private var networkWasSatisfied = true
     @ObservationIgnored private var autoSyncTask: Task<Void, Never>?
@@ -253,12 +260,20 @@ final class AppState {
     func initialise() {
         guard db == nil else { return }  // Already initialised
 
+        removeTemporaryFiles()
+
         do {
             try initialise(database: DatabaseManager())
         } catch {
             // Database init failed — stay on first launch screen
             isFirstLaunch = true
         }
+    }
+
+    /// Remove every file that held something on its way in or out of the vault.
+    private func removeTemporaryFiles() {
+        temporaryFiles.removeAll()
+        TemporaryFiles.removeLeftovers()
     }
 
     /// Wire repositories to a specific database. Internal so tests can
@@ -537,6 +552,7 @@ final class AppState {
         // Retry any edit that failed to flush at lock time now that the key
         // is available again.
         flushPendingEditorNote()
+        await repairStoredData()
 
         #if DEBUG
         let loadStart = CFAbsoluteTimeGetCurrent()
@@ -578,6 +594,22 @@ final class AppState {
         }
 
         return true
+    }
+
+    /// Clean up what older builds left in the vault. Runs on every unlock, and
+    /// before sync starts, so the first push carries the repairs.
+    func repairStoredData() async {
+        guard let noteRepo, let key = keyManager.masterKey else { return }
+        await Task.detached(priority: .userInitiated) {
+            do {
+                let repaired = try noteRepo.encryptPlaintextAttachmentFilenames(key: key)
+                if repaired > 0 {
+                    Log.debug("[Repair] Encrypted attachment filenames in \(repaired) note(s)")
+                }
+            } catch {
+                Log.debug("[Repair] Couldn't encrypt attachment filenames: \(error)")
+            }
+        }.value
     }
 
     /// Whether the key now loaded is this vault's key, checked against the
@@ -733,7 +765,9 @@ final class AppState {
 
         keyManager.lock()
         isLocked = true
+        removeTemporaryFiles()
         needsNotesPasswordForAccountKey = false
+        pendingAccountKeyMerge = nil
         notes = []
         archivedNotes = []
         pendingConflicts = []
@@ -792,6 +826,17 @@ final class AppState {
         guard ok else { return .failed }
         needsNotesPasswordForAccountKey = false
         return .published
+    }
+
+    /// The user agreed to move this vault onto the account's key.
+    func mergeOntoAccountKey(_ pending: PendingAccountKeyMerge) async {
+        pendingAccountKeyMerge = nil
+        do {
+            try await switchVaultToMasterKey(pending.accountKey, notesPassword: pending.notesPassword)
+        } catch {
+            Log.debug("[Envelope] Merging onto the account key failed: \(error)")
+            reportError(L.syncMergeFailedOnUnlock)
+        }
     }
 
     // MARK: - User-Facing Errors
@@ -1109,9 +1154,10 @@ final class AppState {
         try addAttachment(to: noteId, data: try Data(contentsOf: url), filename: filename, mimeType: mimeType)
     }
 
-    func addAttachment(to noteId: String, data fileData: Data, filename: String, mimeType: String) throws {
+    func addAttachment(to noteId: String, data fileData: Data, filename rawFilename: String, mimeType: String) throws {
         guard let noteRepo, let attachmentRepo, let key = keyManager.masterKey else { return }
         guard try noteRepo.get(id: noteId, key: key) != nil else { return }
+        let filename = AttachmentFilename.safe(rawFilename)
 
         // Encrypt the file data
         let encrypted = try CryptoService.encrypt(fileData, key: key)
@@ -1126,8 +1172,7 @@ final class AppState {
         try attachmentRepo.storeBlob(id: attachmentId, filename: filename, mimeType: mimeType, size: fileData.count, data: blobData)
 
         // Encrypt the filename for storage
-        let encFilename = try CryptoService.encryptText(filename, key: key)
-        let encFilenameJSON = try CryptoService.serializeEncryptedJSON(encFilename)
+        let encFilenameJSON = try AttachmentFilename.encrypted(filename, key: key)
 
         // Create attachment ref (data = attachmentId so blob lookup matches)
         let ref = AttachmentRef(
@@ -1214,7 +1259,7 @@ final class AppState {
                 }
 
                 let alreadyAttached = Set(note.attachments.map { $0.filename })
-                for file in item.manifest.files where !alreadyAttached.contains(file.filename) {
+                for file in item.manifest.files where !alreadyAttached.contains(AttachmentFilename.safe(file.filename)) {
                     let fileURL = item.directory.appendingPathComponent(file.storedName)
                     let data = try Data(contentsOf: fileURL)
                     try addAttachment(to: note.id, data: data, filename: file.filename, mimeType: file.mimeType)
@@ -1518,13 +1563,32 @@ final class AppState {
 
     // MARK: - Lifecycle
 
+    /// Start the auto-lock clock, if it isn't already running.
+    func noteEnteredBackground() {
+        if backgroundedAt == nil {
+            backgroundedAt = Date()
+        }
+    }
+
+    /// Lock if the app has been away longer than the auto-lock timeout
+    /// (timeout 0 means "never"). Returns true if it did. Safe to call from
+    /// more than one place on the way back: the first call decides.
+    @discardableResult
+    func lockIfAwayTooLong() -> Bool {
+        guard !isLocked, let away = backgroundedAt, keyManager.autoLockTimeout > 0,
+              Date().timeIntervalSince(away) >= keyManager.autoLockTimeout else {
+            return false
+        }
+        lock()
+        backgroundedAt = nil
+        return true
+    }
+
     func handleScenePhaseChange(_ phase: ScenePhase) {
         switch phase {
         case .background:
             // Genuinely backgrounded — stop SSE and record timestamp for auto-lock.
-            if backgroundedAt == nil {
-                backgroundedAt = Date()
-            }
+            noteEnteredBackground()
             Task { await syncService?.stopSSE() }
         case .inactive:
             // Transient inactivity (Face ID prompt, notification centre, share sheet).
@@ -1532,16 +1596,7 @@ final class AppState {
             // SSE restart and full sync when the app returns to .active.
             break
         case .active:
-            guard !isLocked else { return }
-            // Check auto-lock (timeout 0 means "never")
-            if let bg = backgroundedAt, keyManager.autoLockTimeout > 0 {
-                let elapsed = Date().timeIntervalSince(bg)
-                if elapsed >= keyManager.autoLockTimeout {
-                    lock()
-                    backgroundedAt = nil
-                    return
-                }
-            }
+            guard !isLocked, !lockIfAwayTooLong() else { return }
             let wasBackgrounded = backgroundedAt != nil
             backgroundedAt = nil
             keyManager.recordActivity()
@@ -1567,6 +1622,8 @@ final class AppState {
         KeychainService.deleteAPIKey()
         KeychainService.deleteClientId()
         KeychainService.deleteBiometricKey()
+
+        removeTemporaryFiles()
 
         // Delete database file
         let fm = FileManager.default
@@ -1596,6 +1653,7 @@ final class AppState {
         filteredNotes = []
         savedSearches = []
         pendingConflicts = []
+        pendingAccountKeyMerge = nil
         inboxItems = []
         showArchive = false
         selectedNoteId = nil
@@ -1619,6 +1677,9 @@ final class AppState {
     /// Change the vault password. With envelope encryption, only re-wraps the master key (fast).
     /// For legacy vaults, re-encrypts all notes, attachments, versions, and the verification token.
     func changePassword(currentPassword: String, newPassword: String) async throws {
+        guard PasswordPolicy.violation(newNotesPassword: newPassword) == nil else {
+            throw AppStateError.passwordTooShort
+        }
         guard let encryptionRepo else {
             throw AppStateError.notInitialised
         }
@@ -1835,6 +1896,13 @@ final class AppState {
     }
 }
 
+/// The account's key, opened with the notes password, and that password,
+/// held only while the user is asked whether to move the vault onto the key.
+struct PendingAccountKeyMerge {
+    let accountKey: Data
+    let notesPassword: String
+}
+
 enum AppStateError: LocalizedError {
     case notInitialised
     case noVault
@@ -1842,6 +1910,8 @@ enum AppStateError: LocalizedError {
     case wrongPassword
     /// A sync was still running when the vault's key was about to change.
     case syncBusy
+    /// A new notes password is shorter than `PasswordPolicy` allows.
+    case passwordTooShort
 
     var errorDescription: String? {
         switch self {
@@ -1850,6 +1920,7 @@ enum AppStateError: LocalizedError {
         case .invalidSalt: return "Invalid encryption salt"
         case .wrongPassword: return "Incorrect password"
         case .syncBusy: return "Sync is still running. Try again in a moment."
+        case .passwordTooShort: return L.notesPasswordTooShort(PasswordPolicy.minimumNotesPasswordLength)
         }
     }
 }

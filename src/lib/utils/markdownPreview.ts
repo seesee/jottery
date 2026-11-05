@@ -6,6 +6,7 @@
 import { marked } from 'marked';
 import type { Attachment, HighlightJsInstance } from '../types';
 import { TITLE_TAG_PREFIX } from './virtualTags';
+import { escapeAttribute, escapeHtml, sanitiseHtml } from './htmlSanitiser';
 
 export interface MarkdownPreviewOptions {
   attachments: Attachment[];
@@ -14,6 +15,8 @@ export interface MarkdownPreviewOptions {
   loadingText?: string;
   notes?: Array<{ id: string; content: string; tags?: string[] }>; // For resolving note links by title
 }
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Extract title from note, checking for t: tag first, then first non-empty line
@@ -53,7 +56,7 @@ function findNoteByTitleOrId(
   ref: string
 ): { id: string; title: string } | undefined {
   // Check if ref looks like a UUID
-  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ref);
+  const isUuid = UUID_PATTERN.test(ref);
 
   if (isUuid) {
     const note = notes.find(n => n.id === ref);
@@ -106,7 +109,7 @@ function parseWikiLinks(
     // Try to find the note
     const foundNote = findNoteByTitleOrId(notes, noteRef);
 
-    if (foundNote) {
+    if (foundNote && UUID_PATTERN.test(foundNote.id)) {
       // Found the note - create a link with the note's UUID
       // Use the note's actual title if no custom display text was provided
       const linkText = pipeIndex !== -1 ? displayText : foundNote.title;
@@ -149,25 +152,28 @@ function findAttachment(attachments: Attachment[], ref: string): Attachment | un
 }
 
 /**
- * Create HTML for attachment download link
+ * Create HTML for attachment download link.
+ * displayText is HTML: rendered link text, or an escaped reference.
  */
 function createAttachmentDownloadHtml(
   attachment: Attachment,
   displayText: string
 ): string {
-  const icon = getAttachmentIcon(attachment.mimeType);
-  return `<div class="attachment-download p-3 my-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-attachment-id="${attachment.id}" data-attachment-data="${attachment.data}">
+  const icon = getAttachmentIcon(String(attachment.mimeType));
+  const sizeKb = (Number(attachment.size) / 1024 || 0).toFixed(1);
+  return `<div class="attachment-download p-3 my-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-attachment-id="${escapeAttribute(attachment.id)}" data-attachment-data="${escapeAttribute(attachment.data)}">
     <span class="text-2xl mr-2">${icon}</span>
     <span class="font-medium text-gray-900 dark:text-gray-100">${displayText}</span>
-    <span class="ml-2 text-gray-600 dark:text-gray-400 text-sm">(${(attachment.size / 1024).toFixed(1)} KB)</span>
+    <span class="ml-2 text-gray-600 dark:text-gray-400 text-sm">(${sizeKb} KB)</span>
   </div>`;
 }
 
 /**
- * Create placeholder HTML for unresolved attachment (will be resolved by filename in afterUpdate)
+ * Create placeholder HTML for unresolved attachment (will be resolved by filename in afterUpdate).
+ * displayText is HTML: rendered link text, or an escaped reference.
  */
 function createAttachmentPlaceholderHtml(ref: string, displayText: string): string {
-  return `<div class="attachment-download p-3 my-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-attachment-filename="${ref}" data-loaded="false">
+  return `<div class="attachment-download p-3 my-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-50 dark:bg-gray-800 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors" data-attachment-filename="${escapeAttribute(ref)}" data-loaded="false">
     <span class="text-2xl mr-2">📎</span>
     <span class="font-medium text-gray-900 dark:text-gray-100">${displayText}</span>
   </div>`;
@@ -204,9 +210,9 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
 
     // Custom heading renderer to add IDs for anchor links
     renderer.heading = function(token) {
-      const text = token.text;
+      const text = this.parser.parseInline(token.tokens);
       const depth = token.depth;
-      const id = text.toLowerCase()
+      const id = token.text.toLowerCase()
         .replace(/[^\w\s-]/g, '')  // Remove special characters
         .replace(/\s+/g, '-')       // Replace spaces with hyphens
         .replace(/-+/g, '-')        // Collapse multiple hyphens
@@ -217,7 +223,7 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
     // Custom link renderer to handle attachment: and note: URLs
     renderer.link = function(token) {
       const href = token.href;
-      const text = token.text || '';
+      const text = token.tokens ? this.parser.parseInline(token.tokens) : escapeHtml(token.text || '');
 
       // Check if this is an attachment URL
       if (href && href.startsWith('attachment:')) {
@@ -225,9 +231,9 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
         const attachment = findAttachment(attachments, attachmentRef);
 
         if (attachment) {
-          return createAttachmentDownloadHtml(attachment, text || attachmentRef);
+          return createAttachmentDownloadHtml(attachment, text || escapeHtml(attachmentRef));
         } else {
-          return createAttachmentPlaceholderHtml(attachmentRef, text || attachmentRef);
+          return createAttachmentPlaceholderHtml(attachmentRef, text || escapeHtml(attachmentRef));
         }
       }
 
@@ -238,19 +244,15 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
         // Check if it's a broken link (note not found during pre-processing)
         if (noteRef.startsWith('not-found:')) {
           const originalRef = decodeURIComponent(noteRef.substring('not-found:'.length));
-          return `<span class="note-link-broken inline-flex items-center px-1.5 py-0.5 rounded text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 cursor-not-allowed" title="Note not found: ${originalRef}">
-            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-            </svg>
+          return `<span class="note-link-broken inline-flex items-center px-1.5 py-0.5 rounded text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 cursor-not-allowed" title="Note not found: ${escapeAttribute(originalRef)}">
+            <span class="note-link-icon note-link-icon-broken"></span>
             ${text}
           </span>`;
         }
 
         // Valid note link - render as clickable
-        return `<a href="${href}" data-note-id="${noteRef}" class="note-link inline-flex items-center px-1.5 py-0.5 rounded text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 cursor-pointer transition-colors no-underline">
-          <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
+        return `<a href="${escapeAttribute(href)}" data-note-id="${escapeAttribute(noteRef)}" class="note-link inline-flex items-center px-1.5 py-0.5 rounded text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 cursor-pointer transition-colors no-underline">
+          <span class="note-link-icon"></span>
           ${text}
         </a>`;
       }
@@ -265,22 +267,18 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
 
         if (!foundNote) {
           // Note not found - render as broken link
-          return `<span class="note-link-broken inline-flex items-center px-1.5 py-0.5 rounded text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 cursor-not-allowed" title="Note not found: ${noteId}">
-            <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-            </svg>
+          return `<span class="note-link-broken inline-flex items-center px-1.5 py-0.5 rounded text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 cursor-not-allowed" title="Note not found: ${escapeAttribute(noteId)}">
+            <span class="note-link-icon note-link-icon-broken"></span>
             ${text || 'Note not found'}
           </span>`;
         }
 
         // Auto-populate title if link text is empty
-        const displayText = text || extractNoteTitle(foundNote.content, foundNote.tags);
+        const displayText = text || escapeHtml(extractNoteTitle(foundNote.content, foundNote.tags));
 
         // Valid note link - render as clickable
-        return `<a href="note:${noteId}" data-note-id="${noteId}" class="note-link inline-flex items-center px-1.5 py-0.5 rounded text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 cursor-pointer transition-colors no-underline">
-          <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
+        return `<a href="note:${escapeAttribute(noteId)}" data-note-id="${escapeAttribute(noteId)}" class="note-link inline-flex items-center px-1.5 py-0.5 rounded text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/40 cursor-pointer transition-colors no-underline">
+          <span class="note-link-icon"></span>
           ${displayText}
         </a>`;
       }
@@ -289,10 +287,8 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
       const isExternal = href && (href.startsWith('http://') || href.startsWith('https://'));
 
       if (isExternal && openLinksInNewTab) {
-        // Escape HTML entities in href to prevent XSS
-        const safeHref = href.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-        const title = token.title ? ` title="${token.title.replace(/"/g, '&quot;')}"` : '';
-        return `<a href="${safeHref}"${title} target="_blank" rel="noopener noreferrer">${text}</a>`;
+        const title = token.title ? ` title="${escapeAttribute(token.title)}"` : '';
+        return `<a href="${escapeAttribute(href)}"${title} target="_blank" rel="noopener noreferrer">${text}</a>`;
       }
 
       // For internal links or when setting is disabled, use default renderer
@@ -313,17 +309,17 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
         // If not found by UUID, mark for filename lookup in afterUpdate
         if (!attachment) {
           const placeholder = createLoadingPlaceholder(loadingText);
-          return `<img src="${placeholder}" data-attachment-filename="${attachmentRef}" data-loaded="false" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
+          return `<img src="${placeholder}" data-attachment-filename="${escapeAttribute(attachmentRef)}" data-loaded="false" alt="${escapeAttribute(text)}" title="${escapeAttribute(title)}" class="attachment-image" />`;
         }
 
         if (attachment) {
           // Check if it's an image
-          if (attachment.mimeType.startsWith('image/')) {
+          if (String(attachment.mimeType).startsWith('image/')) {
             const placeholder = createLoadingPlaceholder(loadingText);
-            return `<img src="${placeholder}" data-attachment-id="${attachment.data}" data-loaded="false" alt="${text}" title="${title}" class="attachment-image" style="max-width: 100%; height: auto;" />`;
+            return `<img src="${placeholder}" data-attachment-id="${escapeAttribute(attachment.data)}" data-loaded="false" alt="${escapeAttribute(text)}" title="${escapeAttribute(title)}" class="attachment-image" />`;
           } else {
             // For non-image attachments, create a download link
-            return createAttachmentDownloadHtml(attachment, text || attachmentRef);
+            return createAttachmentDownloadHtml(attachment, escapeHtml(text || attachmentRef));
           }
         }
       }
@@ -343,7 +339,7 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
         if (language && hljs.getLanguage(language)) {
           try {
             const highlighted = hljs.highlight(code, { language }).value;
-            return `<pre><code class="hljs language-${language}">${highlighted}</code></pre>`;
+            return `<pre><code class="hljs language-${escapeAttribute(language)}">${highlighted}</code></pre>`;
           } catch (err) {
             console.error('Syntax highlighting error:', err);
           }
@@ -364,18 +360,33 @@ export function renderMarkdown(content: string, options: MarkdownPreviewOptions)
       return originalCode.call(this, token);
     };
 
-    return marked.parse(processedContent, { renderer }) as string;
+    // Last, over the final string: attachment and note values are interpolated
+    // by the renderers above, after marked has finished with the source
+    return sanitiseHtml(marked.parse(processedContent, { renderer }) as string);
   } catch (error) {
     console.error('Markdown parsing error:', error);
-    return `<p>Error rendering markdown: ${error}</p>`;
+    return `<p>Error rendering markdown: ${escapeHtml(error)}</p>`;
   }
 }
 
 /**
- * Render HTML preview (just returns the content as-is)
+ * Render an HTML note for use in the app's own document.
+ * The live preview of these notes uses a sandboxed iframe instead.
  */
 export function renderHtml(content: string): string {
-  return content;
+  return sanitiseHtml(content);
+}
+
+/**
+ * Wrap an HTML or XML note for the preview iframe.
+ *
+ * The iframe's sandbox stops script, and this policy stops the note reaching the
+ * network with anything else. Neither depends on the app's own policy, which a
+ * srcdoc frame inherits but which allows same-origin requests.
+ */
+export function buildSandboxedPreview(content: string): string {
+  const policy = "default-src 'none'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:";
+  return `<!doctype html><meta http-equiv="Content-Security-Policy" content="${policy}">${content}`;
 }
 
 /**

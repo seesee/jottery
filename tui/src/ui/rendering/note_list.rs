@@ -12,15 +12,233 @@ use crate::ui::state::{FocusedPanel, InputMode, ViewMode};
 use crate::ui::helpers::{strip_markdown, render_markdown_for_terminal, truncate_to_width, display_width, format_date_short, format_datetime_full};
 use crate::ui::rendering::modal::{centered_rect, render_confirmation_modal, render_input_modal};
 use crate::ui::note_colors::{get_note_color, get_tag_color, is_dark_theme};
-use crate::models::{SyntaxLanguage, get_note_title, get_regular_tags};
+use crate::models::{Note, SyntaxLanguage, get_note_title, get_regular_tags};
+
+/// Where a note landed in the list area: rows `top..bottom`, counted from the top of
+/// the area, and its index in the visible notes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NoteRow {
+    pub top: u16,
+    pub bottom: u16,
+    pub index: usize,
+}
+
+/// Build the list item for one note.
+fn note_list_item(app: &App, note: &Note) -> ListItem<'static> {
+    // Generate multi-line preview (like web UI)
+    // Line 1: Title (first non-empty line)
+    // Line 2-3: Preview (next 2 lines of content)
+    // Line 4: Date + Tags
+    // Line 5: Blank separator
+
+    // Extract title using custom t: tag or first non-empty line
+    let title_raw = get_note_title(&note.content, &note.tags);
+    let title_content = if note.syntax_language == SyntaxLanguage::Markdown {
+        strip_markdown(&title_raw)
+    } else {
+        title_raw
+    };
+
+    // Get content lines for preview (excluding first line if no custom title)
+    let content_lines: Vec<&str> = note.content.lines()
+        .filter(|line| !line.trim().is_empty())
+        .take(3)
+        .collect();
+
+    // Build indicators for pinned, attachments, and multi-select FIRST
+    // so we can calculate remaining space for title
+    let mut indicators = String::new();
+
+    // Show checkbox for multi-select mode
+    if app.is_multi_select_mode {
+        if app.selected_note_ids.contains(&note.id) {
+            indicators.push_str("[✓] ");
+        } else {
+            indicators.push_str("[ ] ");
+        }
+    }
+
+    if note.pinned {
+        indicators.push_str("📌 ");
+    }
+    if note.locked {
+        indicators.push_str("🔒 ");
+    }
+    if !note.attachments.is_empty() {
+        indicators.push_str(&format!("📎{} ", note.attachments.len()));
+    }
+    // Conflict indicator
+    if app.conflict_note_ids.contains(&note.id) {
+        indicators.push_str("⚠ ");
+    }
+
+    // Calculate available width for title (40 columns minus borders, minus indicator width)
+    // Left pane is 42 cols, borders take 2, leaving 40 for content
+    let max_line_width: usize = 40;
+    let indicator_width = display_width(&indicators);
+    let available_title_width = max_line_width.saturating_sub(indicator_width);
+
+    // Truncate title to fit in remaining space
+    // Use Unicode-aware width calculation to handle emojis and wide characters
+    let title_truncated = truncate_to_width(&title_content, available_title_width);
+
+    let title_line = if !indicators.is_empty() {
+        format!("{}{}", indicators, title_truncated)
+    } else {
+        title_truncated
+    };
+
+    // Extract preview lines (lines 2-3 from content)
+    // Use Unicode-aware width calculation for proper truncation
+    // Preview lines are indented by 2 spaces, so reduce available width
+    let preview_max_width = max_line_width.saturating_sub(2);
+    let preview_of = |line: Option<&&str>| -> String {
+        let Some(line) = line else {
+            return String::new();
+        };
+        let stripped = if note.syntax_language == SyntaxLanguage::Markdown {
+            strip_markdown(line)
+        } else {
+            line.to_string()
+        };
+        truncate_to_width(&stripped, preview_max_width)
+    };
+    let preview_line1 = preview_of(content_lines.get(1));
+    let preview_line2 = preview_of(content_lines.get(2));
+
+    // Format date + tags line (locale-aware)
+    // Filter out virtual tags (e.g., t: title tags)
+    let date_str = format_date_short(&note.modified_at);
+    let regular_tags = get_regular_tags(&note.tags);
+    let tags_str = if !regular_tags.is_empty() {
+        let tag_preview: String = regular_tags.iter()
+            .take(3)
+            .map(|t| format!("#{}", t))
+            .collect::<Vec<_>>()
+            .join(" ");
+        if regular_tags.len() > 3 {
+            format!("{} +{}", tag_preview, regular_tags.len() - 3)
+        } else {
+            tag_preview
+        }
+    } else {
+        String::new()
+    };
+
+    let metadata_line = if !tags_str.is_empty() {
+        format!("{} • {}", date_str, tags_str)
+    } else {
+        date_str
+    };
+
+    // Get note background color if set (same as web UI)
+    let is_dark = is_dark_theme(&app.settings.theme.to_string());
+    let note_bg_color = get_note_color(note.color.as_ref(), &app.settings, is_dark);
+
+    // Style selected notes differently in multi-select mode
+    let mut style = if app.selected_note_ids.contains(&note.id) {
+        // Selected notes use accent color
+        Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)
+    } else {
+        // Unselected notes use default foreground
+        Style::default()
+    };
+
+    // Apply background color if note has a color (for both selected and unselected)
+    if let Some(bg_color) = note_bg_color {
+        style = style.bg(bg_color);
+    }
+
+    // Create multi-line text for this note
+    let mut lines = vec![
+        // Title: Gray + Bold for emphasis
+        Line::from(Span::styled(
+            title_line,
+            Style::default().fg(Color::Gray).add_modifier(Modifier::BOLD)
+        )),
+    ];
+
+    // Add preview lines if they exist (use gray for readability)
+    if !preview_line1.is_empty() {
+        lines.push(Line::from(Span::styled(
+            format!("  {}", preview_line1),
+            Style::default().fg(Color::Gray)
+        )));
+    }
+    if !preview_line2.is_empty() {
+        lines.push(Line::from(Span::styled(
+            format!("  {}", preview_line2),
+            Style::default().fg(Color::Gray)
+        )));
+    }
+
+    // Add metadata line (brighter for better readability)
+    lines.push(Line::from(Span::styled(
+        format!("  {}", metadata_line),
+        Style::default().fg(Color::White)
+    )));
+
+    // Add blank separator line
+    lines.push(Line::from(""));
+
+    ListItem::new(Text::from(lines)).style(style)
+}
+
+/// Work out which notes fit in `height` rows, keeping the selected note on screen.
+///
+/// Returns the index of the first one, their list items, and where each landed.
+fn visible_list_items(
+    app: &App,
+    filtered: &[&Note],
+    height: usize,
+) -> (usize, Vec<ListItem<'static>>, Vec<NoteRow>) {
+    if filtered.is_empty() || height == 0 {
+        return (0, Vec::new(), Vec::new());
+    }
+
+    let selected = app.selected_note.min(filtered.len() - 1);
+
+    // The earliest first note that still leaves the selection fully on screen
+    let mut earliest = selected;
+    let mut used = note_list_item(app, filtered[selected]).height();
+    while earliest > 0 {
+        let above = note_list_item(app, filtered[earliest - 1]).height();
+        if used + above > height {
+            break;
+        }
+        used += above;
+        earliest -= 1;
+    }
+
+    // Stay where the list was unless the selection has moved out of view
+    let offset = app.note_list_offset.clamp(earliest, selected);
+
+    let mut items = Vec::new();
+    let mut rows = Vec::new();
+    let mut top = 0;
+    for (index, note) in filtered.iter().enumerate().skip(offset) {
+        if top >= height {
+            break;
+        }
+        let item = note_list_item(app, note);
+        let bottom = top + item.height();
+
+        // The list leaves out an item that doesn't fit, so nothing's clickable there
+        if bottom <= height {
+            rows.push(NoteRow { top: top as u16, bottom: bottom as u16, index });
+        }
+        items.push(item);
+        top = bottom;
+    }
+
+    (offset, items, rows)
+}
 
 /// Render note list (split pane view)
 pub fn render_note_list(app: &mut App, frame: &mut Frame) {
-    app.debug_log("render_note_list() started");
     let size = frame.area();
 
     // Main layout: content + optional inbox indicator + help at bottom
-    app.debug_log(&format!("Frame size: {}x{}", size.width, size.height));
     let show_inbox_bar = !app.inbox_items.is_empty() && matches!(app.view_mode, ViewMode::NoteList);
     let main_layout = if show_inbox_bar {
         Layout::default()
@@ -50,9 +268,8 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     let right_pane = main_chunks[1];
 
     // Left pane layout: search bar (optional), list
-    app.debug_log("Calling filtered_notes()");
     let filtered = app.filtered_notes();
-    app.debug_log(&format!("filtered_notes() returned {} notes", filtered.len()));
+    let notes_in_this_view = app.notes.iter().filter(|n| n.archived == app.archive_mode).count();
     let title = match app.view_mode {
         ViewMode::RecycleBin => t!("ui.recycle_bin").to_string(),
         ViewMode::AttachmentViewer => t!("ui.attachment_viewer").to_string(),
@@ -62,16 +279,23 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         ViewMode::NoteList => {
             if app.archive_mode {
                 if app.search_active && !app.search_input.is_empty() {
-                    format!("Jottery v{} - {} ({}/{})", env!("CARGO_PKG_VERSION"), t!("ui.archive"), filtered.len(), app.notes.len())
+                    format!("Jottery v{} - {} ({}/{})", env!("CARGO_PKG_VERSION"), t!("ui.archive"), filtered.len(), notes_in_this_view)
                 } else {
                     format!("Jottery v{} - {}", env!("CARGO_PKG_VERSION"), t!("ui.archive"))
                 }
             } else if app.search_active && !app.search_input.is_empty() {
-                format!("Jottery v{} - {} ({}/{})", env!("CARGO_PKG_VERSION"), t!("ui.notes"), filtered.len(), app.notes.len())
+                format!("Jottery v{} - {} ({}/{})", env!("CARGO_PKG_VERSION"), t!("ui.notes"), filtered.len(), notes_in_this_view)
             } else {
                 format!("Jottery v{} - {}", env!("CARGO_PKG_VERSION"), t!("ui.notes"))
             }
         }
+    };
+
+    // Notes the vault can't read would otherwise just be missing from the list
+    let title = if app.unreadable_notes > 0 {
+        format!("{} ⚠ {}", title, app.unreadable_notes)
+    } else {
+        title
     };
 
     let left_constraints = if app.search_active {
@@ -106,210 +330,11 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         .title(title)
         .borders(Borders::ALL);
 
-    app.debug_log("Building list items");
-    let items: Vec<ListItem> = filtered
-        .iter()
-        .enumerate()
-        .map(|(i, note)| {
-            // Generate multi-line preview (like web UI)
-            // Line 1: Title (first non-empty line)
-            // Line 2-3: Preview (next 2 lines of content)
-            // Line 4: Date + Tags
-            // Line 5: Blank separator
-
-            // Extract title using custom t: tag or first non-empty line
-            let title_raw = get_note_title(&note.content, &note.tags);
-            let title_content = if note.syntax_language == SyntaxLanguage::Markdown {
-                strip_markdown(&title_raw)
-            } else {
-                title_raw
-            };
-
-            // Get content lines for preview (excluding first line if no custom title)
-            let content_lines: Vec<&str> = note.content.lines()
-                .filter(|line| !line.trim().is_empty())
-                .collect();
-
-            // Build indicators for pinned, attachments, and multi-select FIRST
-            // so we can calculate remaining space for title
-            let mut indicators = String::new();
-
-            // Show checkbox for multi-select mode
-            if app.is_multi_select_mode {
-                if app.selected_note_ids.contains(&note.id) {
-                    indicators.push_str("[✓] ");
-                } else {
-                    indicators.push_str("[ ] ");
-                }
-            }
-
-            if note.pinned {
-                indicators.push_str("📌 ");
-            }
-            if note.locked {
-                indicators.push_str("🔒 ");
-            }
-            if !note.attachments.is_empty() {
-                indicators.push_str(&format!("📎{} ", note.attachments.len()));
-            }
-            // Conflict indicator
-            if app.conflict_note_ids.contains(&note.id) {
-                indicators.push_str("⚠ ");
-            }
-
-            // Calculate available width for title (40 columns minus borders, minus indicator width)
-            // Left pane is 42 cols, borders take 2, leaving 40 for content
-            let max_line_width: usize = 40;
-            let indicator_width = display_width(&indicators);
-            let available_title_width = max_line_width.saturating_sub(indicator_width);
-
-            // Truncate title to fit in remaining space
-            // Use Unicode-aware width calculation to handle emojis and wide characters
-            let title_truncated = truncate_to_width(&title_content, available_title_width);
-
-            let title_line = if !indicators.is_empty() {
-                format!("{}{}", indicators, title_truncated)
-            } else {
-                title_truncated
-            };
-
-            // Extract preview lines (lines 2-3 from content)
-            // Use Unicode-aware width calculation for proper truncation
-            // Preview lines are indented by 2 spaces, so reduce available width
-            let preview_max_width = max_line_width.saturating_sub(2);
-            let preview_line1 = if content_lines.len() > 1 {
-                let line = content_lines[1];
-                let stripped = if note.syntax_language == SyntaxLanguage::Markdown {
-                    strip_markdown(line)
-                } else {
-                    line.to_string()
-                };
-                truncate_to_width(&stripped, preview_max_width)
-            } else {
-                String::new()
-            };
-
-            let preview_line2 = if content_lines.len() > 2 {
-                let line = content_lines[2];
-                let stripped = if note.syntax_language == SyntaxLanguage::Markdown {
-                    strip_markdown(line)
-                } else {
-                    line.to_string()
-                };
-                truncate_to_width(&stripped, preview_max_width)
-            } else {
-                String::new()
-            };
-
-            // Format date + tags line (locale-aware)
-            // Filter out virtual tags (e.g., t: title tags)
-            let date_str = format_date_short(&note.modified_at);
-            let regular_tags = get_regular_tags(&note.tags);
-            let tags_str = if !regular_tags.is_empty() {
-                let tag_preview: String = regular_tags.iter()
-                    .take(3)
-                    .map(|t| format!("#{}", t))
-                    .collect::<Vec<_>>()
-                    .join(" ");
-                if regular_tags.len() > 3 {
-                    format!("{} +{}", tag_preview, regular_tags.len() - 3)
-                } else {
-                    tag_preview
-                }
-            } else {
-                String::new()
-            };
-
-            let metadata_line = if !tags_str.is_empty() {
-                format!("{} • {}", date_str, tags_str)
-            } else {
-                date_str
-            };
-
-            // Get note background color if set (same as web UI)
-            let theme_name = app.settings.theme.to_string();
-            let is_dark = is_dark_theme(&theme_name);
-
-            // Get palette info for debugging
-            let palette = app.settings.get_color_palette();
-            app.debug_log(&format!("Note {} - id={}, theme_name={}, is_dark={}, color={:?}, palette_size={}",
-                i, &note.id[..8], theme_name, is_dark, note.color, palette.len()));
-
-            // Log detailed color resolution
-            if let Some(ref color_key) = note.color {
-                app.debug_log(&format!("Note {} - Looking up color_key='{}' in palette", i, color_key));
-                if let Some(color_def) = palette.get(color_key) {
-                    app.debug_log(&format!("Note {} - Found in palette: light={}, dark={}",
-                        i, color_def.light, color_def.dark));
-                    let hex = if is_dark { &color_def.dark } else { &color_def.light };
-                    app.debug_log(&format!("Note {} - Using hex={}", i, hex));
-                } else {
-                    app.debug_log(&format!("Note {} - Color '{}' NOT found in palette, will use ANSI fallback",
-                        i, color_key));
-                }
-            }
-
-            let note_bg_color = get_note_color(note.color.as_ref(), &app.settings, is_dark);
-            app.debug_log(&format!("Note {} - get_note_color returned: {:?}", i, note_bg_color));
-
-            // Style selected notes differently in multi-select mode
-            let is_selected = app.selected_note_ids.contains(&note.id);
-            app.debug_log(&format!("Note {} - is_selected={}", i, is_selected));
-
-            let mut style = if is_selected {
-                app.debug_log(&format!("Note {} - Using SELECTED style (accent color)", i));
-                // Selected notes use accent color
-                Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)
-            } else {
-                app.debug_log(&format!("Note {} - Using DEFAULT style", i));
-                // Unselected notes use default foreground
-                Style::default()
-            };
-
-            // Apply background color if note has a color (for both selected and unselected)
-            if let Some(bg_color) = note_bg_color {
-                app.debug_log(&format!("Note {} - Applying BACKGROUND color: {:?}", i, bg_color));
-                style = style.bg(bg_color);
-            }
-
-            app.debug_log(&format!("Note {} - Final style: {:?}", i, style));
-
-            // Create multi-line text for this note
-            let mut lines = vec![
-                // Title: Gray + Bold for emphasis
-                Line::from(Span::styled(
-                    title_line,
-                    Style::default().fg(Color::Gray).add_modifier(Modifier::BOLD)
-                )),
-            ];
-
-            // Add preview lines if they exist (use gray for readability)
-            if !preview_line1.is_empty() {
-                lines.push(Line::from(Span::styled(
-                    format!("  {}", preview_line1),
-                    Style::default().fg(Color::Gray)
-                )));
-            }
-            if !preview_line2.is_empty() {
-                lines.push(Line::from(Span::styled(
-                    format!("  {}", preview_line2),
-                    Style::default().fg(Color::Gray)
-                )));
-            }
-
-            // Add metadata line (brighter for better readability)
-            lines.push(Line::from(Span::styled(
-                format!("  {}", metadata_line),
-                Style::default().fg(Color::White)
-            )));
-
-            // Add blank separator line
-            lines.push(Line::from(""));
-
-            let text = Text::from(lines);
-            ListItem::new(text).style(style)
-        })
-        .collect();
+    // Only the notes on screen are built, so a large vault costs no more than a
+    // small one. List items are several rows tall, which is why this is worked out
+    // here and not left to the List widget: mouse clicks need the same answer.
+    let list_height = list_chunk.height.saturating_sub(2) as usize;
+    let (list_offset, items, rows) = visible_list_items(app, &filtered, list_height);
 
     let list = List::new(items)
         .block(list_block)
@@ -319,9 +344,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 .fg(app.color_scheme.accent)
         );
 
-    // Create list state for scrolling
+    // The list holds just the visible window, so selection is relative to it
     let mut list_state = ratatui::widgets::ListState::default();
-    list_state.select(Some(app.selected_note));
+    list_state.select(app.selected_note.checked_sub(list_offset));
 
     frame.render_stateful_widget(list, list_chunk, &mut list_state);
 
@@ -334,8 +359,11 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         height: list_chunk.height.saturating_sub(2),
     };
 
-    // Help text (full width at bottom)
-    let status_text = if let Some(ref status) = app.sync_status {
+    // Help text (full width at bottom). An error comes first: handlers report
+    // failures through app.error, and this is the only place they'd be seen.
+    let status_text = if let Some(ref error) = app.error {
+        error.clone()
+    } else if let Some(ref status) = app.sync_status {
         status.clone()
     } else if app.search_active {
         // Show count of matching notes in opposite mode (if > 0)
@@ -359,9 +387,10 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                     t!("status_bar.back_to_notes"), t!("status_bar.navigate"))
             }
             ViewMode::AttachmentViewer => {
-                format!("↑/↓: {} | 1-9: {} | Enter: {} | d: {} | Esc: {}",
+                format!("↑/↓: {} | 1-9: {} | Enter: {} | S: {} | +: {} | d: {} | Esc: {}",
                     t!("status_bar.navigate"), t!("status_bar.quick_select"),
-                    t!("status_bar.view"), t!("status_bar.delete"), t!("status_bar.close"))
+                    t!("status_bar.view"), t!("status_bar.save"), t!("status_bar.add"),
+                    t!("status_bar.delete"), t!("status_bar.close"))
             }
             ViewMode::VersionHistory => {
                 format!("↑/↓: {} | Enter: {} | Esc: {}",
@@ -379,16 +408,16 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             }
             ViewMode::NoteList => {
                 if app.archive_mode {
-                    format!("A: {} | Shift+A: {} | ↑/↓: {} | /: {} | Esc: {}",
+                    format!("a: {} | Shift+A: {} | ↑/↓: {} | /: {} | Esc: {}",
                         t!("status_bar.unarchive"), t!("status_bar.toggle_mode"),
                         t!("status_bar.navigate"), t!("status_bar.search"), t!("status_bar.exit_archive"))
                 } else if app.is_multi_select_mode {
-                    format!("Space: {} | Esc: {} | t: {} | d: {} | c: {} | e: {} ({} {})",
+                    format!("Space: {} | Esc: {} | t: {} | d: {} | z: {} | c: {} | e: {} ({} {})",
                         t!("status_bar.toggle"), t!("status_bar.clear"), t!("status_bar.add_tags"),
-                        t!("status_bar.delete"), t!("status_bar.combine"), t!("status_bar.export"),
-                        app.selected_note_ids.len(), t!("status_bar.selected"))
+                        t!("status_bar.delete"), t!("status_bar.archive"), t!("status_bar.combine"),
+                        t!("status_bar.export"), app.selected_note_ids.len(), t!("status_bar.selected"))
                 } else {
-                    format!("?: {} | /: {} | Space: {} | p: {} | t: {} | []: {} | r: {} | Shift+A: {} | v: {} | n: {}",
+                    format!("?: {} | /: {} | Space: {} | p: {} | t: {} | []: {} | r: {} | z: {} | v: {} | n: {}",
                         t!("status_bar.help"), t!("status_bar.search"), t!("status_bar.select"),
                         t!("status_bar.pin"), t!("status_bar.tags"), t!("status_bar.type"),
                         t!("status_bar.bin"), t!("status_bar.archive"), t!("status_bar.ver"), t!("status_bar.new"))
@@ -397,7 +426,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         }
     };
     let help = Paragraph::new(status_text)
-        .style(if let Some(ref status) = app.sync_status {
+        .style(if app.error.is_some() {
+            Style::default().fg(app.color_scheme.error)
+        } else if let Some(ref status) = app.sync_status {
             // Show red for errors, yellow for other sync status, green for success
             if status.contains("failed") || status.contains("error") {
                 Style::default().fg(app.color_scheme.error)
@@ -476,9 +507,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                 x_offset += tag_display_width + 1; // +1 for space separator
 
                 // Get tag color and create styled span
-                app.debug_log(&format!("Tag '{}' - looking up color", tag));
                 let tag_color = get_tag_color(tag, &app.settings, is_dark);
-                app.debug_log(&format!("Tag '{}' - color resolved: {:?}", tag, tag_color.is_some()));
                 let tag_style = if let Some(color) = tag_color {
                     Style::default().bg(color).add_modifier(Modifier::BOLD)
                 } else {
@@ -605,9 +634,9 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
             // Show header with focus indicator
             let header_text = if is_focused {
-                "▶ Attachments: (Tab to switch, j/k to navigate, Enter to view, d to delete)"
+                format!("▶ {}", t!("ui.attachments_focused_hint"))
             } else {
-                "Attachments: (Tab to focus)"
+                t!("ui.attachments_hint").to_string()
             };
             let header_style = if is_focused {
                 Style::default().fg(app.color_scheme.accent).add_modifier(Modifier::BOLD)
@@ -650,7 +679,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             if !is_focused {
                 lines.push(Line::raw(""));
                 lines.push(Line::styled(
-                    "Press 'a' + number to view, 'A' to add, 'X' to remove selected",
+                    t!("ui.attachments_keys_hint").to_string(),
                     Style::default().fg(app.color_scheme.muted)
                 ));
             }
@@ -752,15 +781,20 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         frame.render_widget(Clear, modal_area);
 
         // Render modal background
+        let modal_title = if app.attachment_to_save.is_some() {
+            t!("ui.save_attachment").to_string()
+        } else {
+            t!("ui.add_attachment").to_string()
+        };
         let modal_block = Block::default()
-            .title(t!("ui.add_attachment").to_string())
+            .title(modal_title)
             .borders(Borders::ALL)
             .style(Style::default().bg(app.color_scheme.background).fg(app.color_scheme.accent));
 
         // Build content lines
         let mut lines = vec![
             Line::styled(
-                format!("Path: {}█", app.attachment_path_input),
+                format!("{}: {}█", t!("ui.path"), app.attachment_path_input),
                 Style::default().fg(app.color_scheme.foreground)
             ),
         ];
@@ -813,6 +847,44 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             app.color_scheme.accent,
             &app.color_scheme,
             60,
+            7,
+        );
+    }
+
+    // Render the question about an attachment that won't be opened
+    if let Some(attachment) = &app.attachment_to_confirm {
+        render_confirmation_modal(
+            frame,
+            size,
+            &t!("attachment.unsafe_title"),
+            vec![
+                Line::from(format!("{} ({})", attachment.filename, attachment.mime_type))
+                    .style(Style::default().fg(app.color_scheme.foreground)),
+                Line::from(t!("attachment.unsafe_body").to_string())
+                    .style(Style::default().fg(app.color_scheme.muted)),
+            ],
+            app.color_scheme.accent,
+            &app.color_scheme,
+            96,
+            7,
+        );
+    }
+
+    // Render empty bin confirmation modal if showing
+    if app.show_empty_bin_confirm {
+        render_confirmation_modal(
+            frame,
+            size,
+            &t!("note.empty_bin_title"),
+            vec![
+                Line::from(t!("note.empty_bin_confirm", count = app.notes.len()).to_string())
+                    .style(Style::default().fg(app.color_scheme.foreground)),
+                Line::from(t!("note.empty_bin_warning").to_string())
+                    .style(Style::default().fg(app.color_scheme.muted)),
+            ],
+            app.color_scheme.error,
+            &app.color_scheme,
+            96,
             7,
         );
     }
@@ -878,7 +950,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
             modal_lines.push(Line::from(""));
             modal_lines.push(Line::styled(
-                "↑/↓: navigate │ 1-9: quick select │ Enter: view │ d: delete │ Esc: close",
+                t!("ui.attachment_viewer_hint").to_string(),
                 Style::default().fg(app.color_scheme.muted)
             ));
 
@@ -1020,8 +1092,168 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
 
     // Store click detection areas in app (after all borrows of filtered are done)
     app.note_list_area = Some(note_list_inner_area);
+    app.note_list_offset = list_offset;
+    app.note_list_rows = rows;
     app.tags_line_area = tags_line_area_local;
     app.tag_positions = tag_positions_local;
     app.note_link_positions = note_link_positions_local;
     app.preview_area = preview_area_local;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ratatui::{backend::TestBackend, Terminal};
+
+    pub(crate) fn test_app() -> App {
+        let dir = tempfile::tempdir().unwrap();
+        let app = App::new(dir.path().join("test.db"), None).unwrap();
+        std::mem::forget(dir);
+        app
+    }
+
+    pub(crate) fn screen(app: &mut App) -> String {
+        let mut terminal = Terminal::new(TestBackend::new(120, 30)).unwrap();
+        terminal.draw(|frame| render_note_list(app, frame)).unwrap();
+        let buffer = terminal.backend().buffer();
+        (0..buffer.area.height)
+            .map(|y| {
+                (0..buffer.area.width)
+                    .map(|x| buffer[(x, y)].symbol().to_string())
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    /// `count` notes with titles Note 0, Note 1 and so on, in display order, and
+    /// heights that vary because every other note has preview lines.
+    fn app_with_notes(count: usize) -> App {
+        let mut app = test_app();
+        let now = chrono::Utc::now();
+        for i in 0..count {
+            let text = if i % 2 == 0 {
+                format!("Note {i}\nA preview line\nAnother one")
+            } else {
+                format!("Note {i}")
+            };
+            let mut note = Note::new(text);
+            note.modified_at = now - chrono::Duration::minutes(i as i64);
+            app.notes.push(note);
+        }
+        app
+    }
+
+    /// The text on a row of the list area.
+    fn row_text(drawn: &str, app: &App, row: u16) -> String {
+        let area = app.note_list_area.unwrap();
+        drawn.lines().nth((area.y + row) as usize).unwrap().to_string()
+    }
+
+    #[test]
+    fn a_click_lands_on_the_note_drawn_at_that_row() {
+        let mut app = app_with_notes(5);
+        let drawn = screen(&mut app);
+
+        for drawn_note in app.note_list_rows.clone() {
+            for row in drawn_note.top..drawn_note.bottom {
+                assert_eq!(app.note_at_row(row), Some(drawn_note.index));
+            }
+            let title = format!("Note {}", drawn_note.index);
+            assert!(row_text(&drawn, &app, drawn_note.top).contains(&title));
+        }
+
+        // Five rows down is the second note, not the sixth
+        assert_eq!(app.note_at_row(5), Some(1));
+    }
+
+    #[test]
+    fn a_click_still_lands_correctly_after_scrolling() {
+        let mut app = app_with_notes(40);
+        app.selected_note = 30;
+
+        let drawn = screen(&mut app);
+
+        assert!(app.note_list_offset > 0);
+        let first = app.note_list_rows[0];
+        assert_eq!(first.index, app.note_list_offset);
+        assert_eq!(app.note_at_row(0), Some(app.note_list_offset));
+        assert!(row_text(&drawn, &app, first.top).contains(&format!("Note {}", first.index)));
+    }
+
+    #[test]
+    fn a_click_below_the_last_note_lands_nowhere() {
+        let mut app = app_with_notes(1);
+        screen(&mut app);
+
+        assert_eq!(app.note_at_row(20), None);
+    }
+
+    #[test]
+    fn the_selected_note_is_always_on_screen() {
+        let mut app = app_with_notes(40);
+
+        for selected in [0, 5, 39, 38, 20, 0] {
+            app.selected_note = selected;
+            screen(&mut app);
+            assert!(app.note_list_rows.iter().any(|row| row.index == selected), "note {selected}");
+        }
+    }
+
+    #[test]
+    fn moving_within_the_window_does_not_scroll() {
+        let mut app = app_with_notes(40);
+        app.selected_note = 30;
+        screen(&mut app);
+        let offset = app.note_list_offset;
+
+        app.selected_note = offset + 1;
+        screen(&mut app);
+
+        assert_eq!(app.note_list_offset, offset);
+    }
+
+    #[test]
+    fn only_the_visible_notes_are_built() {
+        let mut app = app_with_notes(5000);
+        app.selected_note = 4000;
+
+        screen(&mut app);
+
+        assert!(app.note_list_rows.len() < 20);
+    }
+
+    #[test]
+    fn an_error_is_shown_in_the_status_bar() {
+        let mut app = test_app();
+        app.notes.push(Note::new("A note".to_string()));
+        app.error = Some("The disk is full".to_string());
+
+        assert!(screen(&mut app).contains("The disk is full"));
+    }
+
+    #[test]
+    fn an_error_outranks_a_sync_status() {
+        let mut app = test_app();
+        app.error = Some("The disk is full".to_string());
+        app.sync_status = Some("All synced".to_string());
+
+        let drawn = screen(&mut app);
+        assert!(drawn.contains("The disk is full"));
+        assert!(!drawn.contains("All synced"));
+    }
+
+    #[test]
+    fn a_note_with_a_short_or_multi_byte_id_draws() {
+        let mut app = test_app();
+        let mut short = Note::new("Short id".to_string());
+        short.id = "x".to_string();
+        let mut wide = Note::new("Wide id".to_string());
+        wide.id = "日本語のノート".to_string();
+        app.notes.push(short);
+        app.notes.push(wide);
+
+        let drawn = screen(&mut app);
+        assert!(drawn.contains("Short id"));
+    }
 }

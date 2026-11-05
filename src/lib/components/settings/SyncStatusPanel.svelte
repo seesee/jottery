@@ -5,6 +5,7 @@
   import ConfirmModal from '../ConfirmModal.svelte';
   import type { SyncStatus } from '../../types';
   import { changePassword } from '../../services';
+  import { isNotesPasswordLongEnough } from '../../utils/passwordRules';
   import { toast } from '../../utils/toast.svelte';
 
   // Sync status
@@ -54,6 +55,7 @@
   async function handleChangePassword() {
     if (!currentPasswordInput || !newPasswordInput) return;
     if (newPasswordInput !== confirmPasswordInput) return;
+    if (!isNotesPasswordLongEnough(newPasswordInput)) return;
 
     changingPassword = true;
     try {
@@ -286,11 +288,16 @@
             {$_('settings.syncTab.changePassword.mismatch')}
           </p>
         {/if}
+        {#if newPasswordInput && !isNotesPasswordLongEnough(newPasswordInput)}
+          <p class="text-xs text-red-600 dark:text-red-400 mt-1">
+            {$_('unlock.passwordMinLength')}
+          </p>
+        {/if}
       </div>
 
       <button
         on:click={handleChangePassword}
-        disabled={!currentPasswordInput || !newPasswordInput || !confirmPasswordInput || newPasswordInput !== confirmPasswordInput || changingPassword}
+        disabled={!currentPasswordInput || !newPasswordInput || !confirmPasswordInput || newPasswordInput !== confirmPasswordInput || !isNotesPasswordLongEnough(newPasswordInput) || changingPassword}
         class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-md transition-colors"
       >
         {changingPassword ? $_('settings.syncTab.changePassword.changing') : $_('settings.syncTab.changePassword.button')}

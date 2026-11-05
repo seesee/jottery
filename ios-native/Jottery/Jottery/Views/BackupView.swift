@@ -10,12 +10,15 @@ struct BackupView: View {
     @State private var showFilePicker = false
     @State private var showPasswordPrompt = false
     @State private var backupPassword = ""
+    /// The picked backup, read in place. Its security scope stays open until
+    /// the restore ends or the password prompt is cancelled.
     @State private var pendingBackupURL: URL?
     @State private var errorMessage: String?
     @State private var exportFile: ExportFile?
-    @State private var showCreateSuccess = false
     @State private var showRestoreSuccess = false
-    @State private var restoredCount = 0
+    @State private var skippedCount = 0
+    @State private var progress: BackupService.Progress?
+    @State private var work: Task<Void, Never>?
 
     var body: some View {
         NavigationStack {
@@ -58,6 +61,16 @@ struct BackupView: View {
                     Text(L.backupRestoreDescription)
                 }
 
+                if let progress {
+                    Section {
+                        ProgressView(value: Double(progress.completed), total: Double(max(progress.total, 1))) {
+                            Text(isCreating
+                                ? L.backupProgress(progress.completed, progress.total)
+                                : L.restoreProgress(progress.completed, progress.total))
+                        }
+                    }
+                }
+
                 if let errorMessage {
                     Section {
                         Text(errorMessage)
@@ -70,7 +83,14 @@ struct BackupView: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L.settingsDone) { dismiss() }
+                        .disabled(isCreating || isRestoring)
                 }
+            }
+            .interactiveDismissDisabled(isCreating || isRestoring)
+            .onDisappear {
+                // The app can lock while this runs, which takes the view away.
+                work?.cancel()
+                if !isRestoring { releasePendingBackup() }
             }
             .fileImporter(
                 isPresented: $showFilePicker,
@@ -86,24 +106,17 @@ struct BackupView: View {
                 }
                 Button(L.commonCancel, role: .cancel) {
                     backupPassword = ""
-                    pendingBackupURL = nil
+                    releasePendingBackup()
                 }
             } message: {
                 Text(L.backupPasswordHint)
             }
-            .alert(L.backupSuccessTitle, isPresented: $showCreateSuccess) {
-                Button(L.settingsDone) {}
-            } message: {
-                Text(L.backupSuccessMessage)
-            }
             .alert(L.backupRestoreSuccessTitle, isPresented: $showRestoreSuccess) {
                 Button(L.settingsDone) {}
             } message: {
-                Text(L.backupRestoreSuccessMessage)
+                Text(skippedCount > 0 ? L.backupRestoreSkipped(skippedCount) : L.backupRestoreSuccessMessage)
             }
-            .sheet(item: $exportFile) { file in
-                ActivityView(activityItems: [file.url])
-            }
+            .shareTemporaryFile($exportFile)
         }
     }
 
@@ -111,7 +124,6 @@ struct BackupView: View {
 
     private func createBackup() {
         guard let noteRepo = appState.noteRepo,
-              let versionRepo = appState.versionRepo,
               let attachmentRepo = appState.attachmentRepo,
               let savedSearchRepo = appState.savedSearchRepo,
               let encryptionRepo = appState.encryptionRepo,
@@ -120,24 +132,32 @@ struct BackupView: View {
         errorMessage = nil
         isCreating = true
 
-        Task { @MainActor in
-            defer { isCreating = false }
+        work = Task { @MainActor in
+            defer {
+                isCreating = false
+                progress = nil
+            }
+            var file: URL?
             do {
-                let data = try BackupService.createBackup(
-                    noteRepo: noteRepo,
-                    versionRepo: versionRepo,
-                    attachmentRepo: attachmentRepo,
-                    savedSearchRepo: savedSearchRepo,
-                    encryptionRepo: encryptionRepo,
-                    key: key
-                )
-                let filename = BackupService.defaultFilename()
-                let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
-                try data.write(to: tempURL)
-                exportFile = ExportFile(url: tempURL)
-                showCreateSuccess = true
+                let url = try TemporaryFiles.shared.createFile(named: BackupService.defaultFilename())
+                file = url
+                try await offMainActor {
+                    try BackupService.writeBackup(
+                        to: url,
+                        noteRepo: noteRepo,
+                        attachmentRepo: attachmentRepo,
+                        savedSearchRepo: savedSearchRepo,
+                        encryptionRepo: encryptionRepo,
+                        key: key,
+                        progress: { update in Task { @MainActor in progress = update } }
+                    )
+                }
+                exportFile = ExportFile(url: url)
             } catch {
-                errorMessage = error.localizedDescription
+                if let file { TemporaryFiles.shared.remove(file) }
+                if !(error is CancellationError) {
+                    errorMessage = error.localizedDescription
+                }
             }
         }
     }
@@ -148,20 +168,14 @@ struct BackupView: View {
         guard case .success(let urls) = result, let url = urls.first else { return }
         guard url.startAccessingSecurityScopedResource() else { return }
 
-        // Copy to temp location so we can access it after the picker dismisses
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("jottery-restore-\(UUID().uuidString).jottery")
-        do {
-            try FileManager.default.copyItem(at: url, to: tempURL)
-        } catch {
-            url.stopAccessingSecurityScopedResource()
-            errorMessage = error.localizedDescription
-            return
-        }
-        url.stopAccessingSecurityScopedResource()
-
-        pendingBackupURL = tempURL
+        pendingBackupURL = url
         backupPassword = ""
         showPasswordPrompt = true
+    }
+
+    private func releasePendingBackup() {
+        pendingBackupURL?.stopAccessingSecurityScopedResource()
+        pendingBackupURL = nil
     }
 
     private func restoreFromPendingFile() {
@@ -169,34 +183,41 @@ struct BackupView: View {
         guard let noteRepo = appState.noteRepo,
               let versionRepo = appState.versionRepo,
               let attachmentRepo = appState.attachmentRepo,
-              let key = appState.keyManager.masterKey else { return }
+              let savedSearchRepo = appState.savedSearchRepo,
+              let key = appState.keyManager.masterKey else {
+            releasePendingBackup()
+            return
+        }
 
         let password = backupPassword
         backupPassword = ""
         errorMessage = nil
         isRestoring = true
 
-        Task { @MainActor in
+        work = Task { @MainActor in
             defer {
                 isRestoring = false
-                pendingBackupURL = nil
-                try? FileManager.default.removeItem(at: url)
+                progress = nil
+                releasePendingBackup()
             }
             do {
-                let data = try Data(contentsOf: url)
-                let count = try BackupService.restoreBackup(
-                    data: data,
-                    password: password,
-                    noteRepo: noteRepo,
-                    versionRepo: versionRepo,
-                    attachmentRepo: attachmentRepo,
-                    currentKey: key
-                )
-                restoredCount = count
+                let result = try await offMainActor {
+                    try BackupService.restoreBackup(
+                        from: url,
+                        password: password,
+                        noteRepo: noteRepo,
+                        versionRepo: versionRepo,
+                        attachmentRepo: attachmentRepo,
+                        savedSearchRepo: savedSearchRepo,
+                        currentKey: key,
+                        progress: { update in Task { @MainActor in progress = update } }
+                    )
+                }
+                skippedCount = result.skipped
                 try? await appState.loadNotes()
                 showRestoreSuccess = true
-            } catch BackupError.wrongPassword {
-                errorMessage = BackupError.wrongPassword.localizedDescription
+            } catch is CancellationError {
+                // The view went away, so there's nobody to tell.
             } catch {
                 errorMessage = error.localizedDescription
             }

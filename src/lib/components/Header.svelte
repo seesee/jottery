@@ -56,10 +56,12 @@
 
   onMount(() => {
     window.addEventListener('open-search-help', handleOpenSearchHelpEvent);
+    window.addEventListener('command-palette-action', handleCommandPaletteAction);
   });
 
   onDestroy(() => {
     window.removeEventListener('open-search-help', handleOpenSearchHelpEvent);
+    window.removeEventListener('command-palette-action', handleCommandPaletteAction);
   });
 
   // Keep recentSearches in sync if settings change externally
@@ -119,6 +121,12 @@
   function handleNewNoteClick() {
     // Call parent handler
     onNewNote();
+  }
+
+  function handleCommandPaletteAction(event: Event) {
+    if ((event as CustomEvent<string>).detail === 'lockApp') {
+      void handleLockRequest();
+    }
   }
 
   async function handleLockRequest() {

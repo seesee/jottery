@@ -6,7 +6,9 @@ import { readFileSync } from 'fs';
 const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
 const version = packageJson.version;
 
-export default defineConfig(({ command }) => ({
+export default defineConfig(({ command, mode }) => ({
+  // Component tests need Svelte's client build, not the server one
+  resolve: mode === 'test' ? { conditions: ['browser'] } : undefined,
   define: {
     '__APP_VERSION__': JSON.stringify(version),
   },

@@ -150,6 +150,13 @@ impl KeyManager {
         }
     }
 
+    /// Move the last activity into the past, for testing the timeout
+    #[cfg(test)]
+    pub fn pretend_idle_for(&self, idle: Duration) {
+        let mut inner = self.inner.lock().unwrap();
+        inner.last_activity = Instant::now() - idle;
+    }
+
     /// Check if auto-lock should trigger
     pub fn should_lock(&self) -> bool {
         let inner = self.inner.lock().unwrap();

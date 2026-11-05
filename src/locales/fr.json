@@ -254,7 +254,8 @@
         "title": "Informations de sauvegarde",
         "created": "Créé le",
         "records": "Enregistrements"
-      }
+      },
+      "storageFull": "Le navigateur n'a plus d'espace de stockage : la restauration n'a pas abouti et rien n'a été conservé. Votre fichier de sauvegarde est intact : libérez de l'espace et restaurez-le à nouveau."
     }
   },
   "settings": {
@@ -442,8 +443,11 @@
         "hintExisting": "Le mot de passe avec lequel vous déverrouillez vos notes sur vos autres appareils. Il n'est jamais envoyé au serveur.",
         "required": "Veuillez saisir le mot de passe de vos notes.",
         "incorrect": "Ce n'est pas le mot de passe qui déverrouille vos notes sur cet appareil. Saisissez le mot de passe des notes, pas celui du serveur.",
-        "uploadFailed": "La synchronisation est configurée, mais la clé de chiffrement n'a pas pu être enregistrée sur le serveur, donc les autres appareils ne peuvent pas encore se connecter. Une nouvelle tentative aura lieu au prochain déverrouillage"
-      }
+        "uploadFailed": "La synchronisation est configurée, mais la clé de chiffrement n'a pas pu être enregistrée sur le serveur, donc les autres appareils ne peuvent pas encore se connecter. Une nouvelle tentative aura lieu au prochain déverrouillage",
+        "mustDiffer": "Votre mot de passe des notes et celui de votre compte doivent être différents. Le serveur de synchronisation voit le mot de passe de votre compte : s'ils sont identiques, il pourrait lire vos notes. S'ils sont identiques sur vos autres appareils, changez d'abord le mot de passe des notes sur ceux-ci.",
+        "matchesAccountWarning": "Votre mot de passe des notes est identique à celui de votre compte : le serveur de synchronisation pourrait donc lire vos notes. Changez votre mot de passe des notes pour corriger cela."
+      },
+      "existingAccountDetected": "Cette adresse e-mail a déjà un compte : cet appareil va donc s'y connecter. Saisissez le mot de passe des notes que vous utilisez sur vos autres appareils."
     },
     "editorTab": {
       "vimMode": "Mode éditeur",
@@ -919,7 +923,9 @@
         "emailRequired": "L'adresse e-mail est requise.",
         "serverPasswordRequired": "Le mot de passe du serveur est requis.",
         "notesPasswordMinLength": "Le mot de passe des notes doit comporter au moins 8 caractères.",
-        "onboardingFailed": "Échec du téléchargement des clés de chiffrement depuis le serveur. Vérifiez que votre mot de passe des notes correspond à celui de vos autres appareils et que l'appareil source a été synchronisé"
+        "onboardingFailed": "Échec du téléchargement des clés de chiffrement depuis le serveur. Vérifiez que votre mot de passe des notes correspond à celui de vos autres appareils et que l'appareil source a été synchronisé",
+        "accountKeyUnreadable": "Ce mot de passe des notes ne peut pas ouvrir la clé de votre compte. Vérifiez le mot de passe. S'il est correct, la clé a peut-être été enregistrée par une ancienne version de Jottery : déverrouiller Jottery sur un appareil déjà connecté corrigera cela. Réessayez ensuite.",
+        "localNotesOrphaned": "Les notes de cet appareil utilisent une clé différente de celle de votre compte : la connexion les rendrait illisibles. Rien n'a été modifié. Pour les conserver, exportez vos notes, supprimez les données de cet appareil, connectez-vous, puis importez-les."
       },
       "steps": {
         "initialising": "Initialisation du chiffrement local…",
@@ -1005,6 +1011,11 @@
       "notAvailable": "Aperçu non disponible pour ce type de fichier.",
       "audioNotSupported": "Votre navigateur ne prend pas en charge la lecture audio.",
       "videoNotSupported": "Votre navigateur ne prend pas en charge la lecture vidéo."
+    },
+    "confirmDelete": {
+      "title": "Retirer la pièce jointe ?",
+      "message": "Le fichier sera retiré de cette note. À moins qu'une version antérieure de la note ne le contienne encore, il ne pourra pas être récupéré.",
+      "confirmButton": "Retirer"
     }
   },
   "keyboard": {
@@ -1171,7 +1182,9 @@
     "indicator": "Conflit de synchronisation",
     "bannerText": "Cette note a un conflit de synchronisation qui doit être résolu",
     "resolveButton": "Résoudre le conflit",
-    "syncNotification": "{count, plural, one {1 note a un conflit de synchronisation} other {{count} notes ont des conflits de synchronisation}}"
+    "syncNotification": "{count, plural, one {1 note a un conflit de synchronisation} other {{count} notes ont des conflits de synchronisation}}",
+    "serverUnreadable": "La copie de cette note sur le serveur est illisible et a peut-être été modifiée. Seule votre version peut être conservée.",
+    "localUnreadable": "La copie de cette note sur cet appareil est illisible."
   },
   "pullToRefresh": {
     "pull": "Tirez vers le bas pour synchroniser",
@@ -1420,6 +1433,17 @@
     "openNote": "Ouvrir cette note",
     "repairNotOnServer": "Absente du serveur également — ouvrez la note et supprimez la pièce jointe",
     "serverMissingTitle": "Absent du serveur",
-    "serverMissingHint": "Le serveur de synchronisation n'a aucune copie de ces pièces jointes, ni cet appareil. Ouvrez la note et supprimez la pièce jointe, ou synchronisez depuis un appareil qui possède encore le fichier."
+    "serverMissingHint": "Le serveur de synchronisation n'a aucune copie de ces pièces jointes, ni cet appareil. Ouvrez la note et supprimez la pièce jointe, ou synchronisez depuis un appareil qui possède encore le fichier.",
+    "rejectedTitle": "Rejeté depuis le serveur de synchronisation",
+    "rejectedHint": "Le serveur de synchronisation les a envoyés sous une forme non fiable, ils n'ont donc pas été enregistrés. Vos notes existantes ne sont pas affectées. Si cela se reproduit, vérifiez qui contrôle le serveur.",
+    "rejectedKind": {
+      "note": "Note",
+      "version": "Version de note",
+      "conflict": "Conflit de synchronisation",
+      "savedSearch": "Recherche enregistrée",
+      "attachment": "Pièce jointe",
+      "inboxItem": "Élément de la boîte de réception",
+      "deletion": "Suppression"
+    }
   }
 }

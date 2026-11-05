@@ -6,8 +6,7 @@ on:
     paths:
       - 'ios-native/**'
       - '.github/workflows/ios-tests.yml'
-  push:
-    tags: ['v*']  # Run on release tags
+  workflow_call:  # Run before publishing, from build-multiarch.yml
   workflow_dispatch:  # Manual trigger
 
 permissions:
@@ -22,7 +21,9 @@ jobs:
     timeout-minutes: 45
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Package.resolved holds the Runestone pin, which the iOS 26 SDK needs,
       # so resolution must not move it.
@@ -37,7 +38,7 @@ jobs:
             -resultBundlePath TestResults.xcresult
 
       - name: Upload test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: failure()
         with:
           name: ios-test-results

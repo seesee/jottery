@@ -162,6 +162,7 @@ export interface UserSettings {
   swipeHintsShown?: boolean; // Whether mobile swipe gesture hints have been shown
   recentSearches?: string[]; // Recently used search queries (last 10 unique)
   welcomeNoteCreated?: boolean; // Whether the welcome note has been created for new vaults
+  savedSearchesEncrypted?: boolean; // One-off migration of plaintext saved searches has run
 }
 
 /**
@@ -247,10 +248,16 @@ export interface DecryptedNoteVersion extends Omit<NoteVersion, 'content' | 'tag
 /**
  * Search query structure
  */
+/**
+ * One term of a search query. Values are normalised for comparison.
+ */
+export interface SearchTerm {
+  type: 'contains' | 'phrase' | 'prefix' | 'suffix' | 'tag';
+  value: string;
+}
+
 export interface SearchQuery {
-  text?: string; // Full-text search terms
-  tags?: string[]; // Tags to filter by (AND logic)
-  orTags?: string[]; // Tags to filter by (OR logic)
+  groups?: SearchTerm[][]; // Every group must match, through any one of its terms
   excludeText?: string[]; // Text to exclude
   excludeTags?: string[]; // Tags to exclude
   // Advanced search modifiers

@@ -3,7 +3,14 @@ import SwiftUI
 @main
 struct JotteryApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @State private var appState = AppState()
+    @State private var appState: AppState
+    @State private var privacyCover: PrivacyCoverController
+
+    init() {
+        let state = AppState()
+        _appState = State(initialValue: state)
+        _privacyCover = State(initialValue: PrivacyCoverController(appState: state))
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -78,16 +85,6 @@ struct ContentView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.scenePhase) private var scenePhase
 
-    /// Whether the privacy cover should be shown over the current content.
-    /// See `PrivacyCover.isVisible` for the underlying (unit-tested) rule.
-    private var showPrivacyCover: Bool {
-        PrivacyCover.isVisible(
-            scenePhase: scenePhase,
-            isLocked: appState.isLocked,
-            isFirstLaunch: appState.isFirstLaunch
-        )
-    }
-
     var body: some View {
         Group {
             if appState.isFirstLaunch {
@@ -100,13 +97,6 @@ struct ContentView: View {
         }
         .animation(.default, value: appState.isLocked)
         .animation(.default, value: appState.isFirstLaunch)
-        .overlay {
-            if showPrivacyCover {
-                PrivacyCoverView()
-                    .transition(.opacity)
-            }
-        }
-        .animation(.easeInOut(duration: 0.15), value: showPrivacyCover)
         .onAppear {
             appState.initialise()
             pickUpPendingShortcut()
@@ -268,6 +258,22 @@ struct MainView: View {
             }
         } message: {
             Text(accountKeyPasswordWasWrong ? L.accountKeyPromptWrongPassword : L.accountKeyPromptMessage)
+        }
+        // A legacy vault found a different key on the account. Moving onto it
+        // uploads everything under that key, so it never happens unasked.
+        .alert(L.syncMergeTitle, isPresented: Binding(
+            get: { appState.pendingAccountKeyMerge != nil },
+            set: { if !$0 { appState.pendingAccountKeyMerge = nil } }
+        ), presenting: appState.pendingAccountKeyMerge) { pending in
+            Button(L.syncMergeConfirm, role: .destructive) {
+                Task { await appState.mergeOntoAccountKey(pending) }
+            }
+            Button(L.commonCancel, role: .cancel) {}
+        } message: { _ in
+            Text(L.syncMergeMessage(
+                server: SyncEndpoint.displayHost(appState.settings.syncEndpoint ?? ""),
+                noteCount: appState.notes.count + appState.archivedNotes.count
+            ))
         }
     }
 

@@ -207,7 +207,7 @@
       clearSelection();
 
       // Reload all notes to refresh the UI
-      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      const allNotes = await noteService.getNotesForList($settings.sortOrder);
       notes.set(allNotes);
       searchService.indexNotes(allNotes);
     } catch (error) {
@@ -221,7 +221,7 @@
       await noteService.togglePin($selectedNoteId);
 
       // Reload all notes to refresh the UI
-      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      const allNotes = await noteService.getNotesForList($settings.sortOrder);
       notes.set(allNotes);
       searchService.indexNotes(allNotes);
 

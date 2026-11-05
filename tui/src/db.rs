@@ -4,6 +4,38 @@ use rusqlite::{Connection, OpenFlags};
 use std::path::Path;
 use tracing::{debug, info};
 
+/// Make the database file readable by this user alone, creating it if needed.
+///
+/// Without SQLCipher it holds the email, server address and metadata in the clear,
+/// and even with it there's no reason for other users to read it.
+#[cfg(unix)]
+fn restrict_to_owner(path: &Path) -> Result<()> {
+    use std::fs::{self, OpenOptions, Permissions};
+    use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+
+    match fs::metadata(path) {
+        Ok(metadata) if metadata.permissions().mode() & 0o077 != 0 => {
+            fs::set_permissions(path, Permissions::from_mode(0o600))
+                .context("Failed to restrict database permissions")?;
+        }
+        Ok(_) => {}
+        Err(_) => {
+            OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .mode(0o600)
+                .open(path)
+                .context("Failed to create database")?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn restrict_to_owner(_path: &Path) -> Result<()> {
+    Ok(())
+}
+
 /// Database manager for Jottery TUI
 pub struct Database {
     conn: Connection,
@@ -19,6 +51,8 @@ impl Database {
         let path = path.as_ref();
 
         info!("Opening database at: {}", path.display());
+
+        restrict_to_owner(path)?;
 
         let conn = Connection::open_with_flags(
             path,
@@ -47,6 +81,16 @@ impl Database {
         db.run_migrations()?;
 
         Ok(db)
+    }
+
+    /// Whether this build encrypts the database file.
+    ///
+    /// `PRAGMA key` does nothing on plain SQLite, so being asked for a password says
+    /// nothing about it. Only SQLCipher answers `cipher_version`.
+    pub fn encrypts_files() -> bool {
+        Connection::open_in_memory().is_ok_and(|conn| {
+            conn.query_row("PRAGMA cipher_version", [], |row| row.get::<_, String>(0)).is_ok()
+        })
     }
 
     /// Create an in-memory database (for testing)
@@ -288,6 +332,39 @@ mod tests {
         // Try to open with wrong password - intentionally incorrect for test
         let result = Database::open(&db_path, "intentionally_wrong_password");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn the_build_knows_whether_it_encrypts_files() {
+        assert_eq!(Database::encrypts_files(), cfg!(feature = "sqlcipher"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_new_database_is_private_to_its_owner() {
+        use std::os::unix::fs::PermissionsExt;
+        let temp_dir = tempfile::tempdir().unwrap();
+        let db_path = temp_dir.path().join("test.db");
+
+        Database::open(&db_path, &test_password()).unwrap();
+
+        let mode = std::fs::metadata(&db_path).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o600);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn an_existing_database_with_loose_permissions_is_tightened() {
+        use std::os::unix::fs::PermissionsExt;
+        let temp_dir = tempfile::tempdir().unwrap();
+        let db_path = temp_dir.path().join("test.db");
+        Database::open(&db_path, &test_password()).unwrap();
+        std::fs::set_permissions(&db_path, std::fs::Permissions::from_mode(0o644)).unwrap();
+
+        Database::open(&db_path, &test_password()).unwrap();
+
+        let mode = std::fs::metadata(&db_path).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o600);
     }
 
     #[test]

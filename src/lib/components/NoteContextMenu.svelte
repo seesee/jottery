@@ -19,7 +19,9 @@
   }
 
   function handleKeyDown(event: KeyboardEvent) {
-    if (event.key === 'Escape') {
+    // Every note in the list mounts one of these, so this must not act while closed.
+    // It listens in the capture phase, so it would stop Escape reaching anything else.
+    if (show && event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
       onClose();

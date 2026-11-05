@@ -72,7 +72,7 @@ The easiest way to get started is with Docker. Pre-built multi-architecture imag
     docker-compose up -d
     ```
 
-    The web interface will be available at `http://localhost:8088`.
+    The web interface will be available at `http://localhost:8088`. The port is only published on this machine, because it's plain HTTP and Docker's published ports bypass host firewalls such as ufw. `docker-compose.yml` shows how to widen it for a trusted LAN. Anything else should go through a TLS proxy.
 
 #### Building from Source
 
@@ -99,6 +99,8 @@ You can configure the server using environment variables:
 | `DEFAULT_STORAGE_QUOTA_MB` | `1000` | Default user storage quota in MB |
 | `MAX_PAYLOAD_SIZE` | `5242880` | Max upload size in bytes (5MB) |
 | `CORS_ALLOWED_ORIGINS` | *(none)* | Comma-separated list of allowed CORS origins |
+| `ENABLE_HSTS` | `false` | Send `Strict-Transport-Security`, on the web client as well as the server's routes. Set to `true` only when clients reach the site over HTTPS |
+| `ADMIN_ALLOWED_IPS` | *(everyone)* | Space-separated addresses or CIDR ranges allowed to reach `/admin` and the admin API; everyone else gets a 403. Behind another proxy, every request appears to come from that proxy, so restrict access there instead. If it's set but empty, nobody can reach them. The notes app, sync and the user portal aren't affected |
 | `TRUSTED_PROXY_HOPS` | `1` in the Docker image, otherwise `0` | Proxies that append to `X-Forwarded-For`, used for rate limiting. See the [server README](server/README.md#rate-limiting) |
 
 Example with custom admin credentials:
@@ -112,6 +114,18 @@ docker run -d \
   -e DEFAULT_ADMIN_PASSWORD='Choose-a-Str0ng-Password' \
   ghcr.io/seesee/jottery:latest
 ```
+
+#### Upgrading
+
+`docker-compose.yml` names an exact version, so a pull never brings in a new release and its database migrations unannounced. Some migrations can't be rolled back, so back up the `jottery_data` volume first. Then change the `image:` tag to the version you want and run:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+The `:latest` tag used in the `docker run` examples moves with each release, so pin a version there too if you want the same control.
+
+The services run as an unprivileged `jottery` user (uid 10001). Earlier images ran as root, so on its first start a new image takes ownership of the data volume, then drops to that user. If you bind-mount a host directory instead, that changes its owner to uid 10001. To keep your own owner, start the container with `--user` (`user:` in Compose) set to a uid that can write to the directory.
 
 ### First-Time Setup
 
@@ -356,6 +370,18 @@ Download the standalone web application for local use from the [Releases](https:
 ### TUI Client
 
 Pre-compiled binaries for the TUI client (Linux, macOS, Windows) are available from the [Releases](https://github.com/seesee/jottery/releases) page.
+
+### Verifying a Download
+
+Each release includes a `SHA256SUMS` file. Download it alongside the files you want, then check them:
+
+```bash
+sha256sum --check --ignore-missing SHA256SUMS
+```
+
+On macOS, use `shasum -a 256 --check --ignore-missing SHA256SUMS`.
+
+The checksums come from the same release as the files, so they detect a corrupted or incomplete download. They don't prove who published the release.
 
 ## Import/Export Format
 

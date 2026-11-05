@@ -254,7 +254,8 @@
         "title": "Yedekleme Bilgileri",
         "created": "Oluşturulma",
         "records": "Kayıtlar"
-      }
+      },
+      "storageFull": "Tarayıcının depolama alanı bitti, bu yüzden geri yükleme tamamlanmadı ve hiçbir şey saklanmadı. Yedek dosyanız sağlam: yer açıp yeniden geri yükleyin."
     }
   },
   "settings": {
@@ -442,8 +443,11 @@
         "hintExisting": "Diğer cihazlarınızda notlarınızın kilidini açtığınız parola. Sunucuya hiçbir zaman gönderilmez.",
         "required": "Lütfen not parolanızı girin.",
         "incorrect": "Bu, notlarınızın bu cihazdaki kilidini açan parola değil. Sunucu parolanızı değil, not parolanızı girin.",
-        "uploadFailed": "Eşitleme kuruldu, ancak şifreleme anahtarı sunucuya kaydedilemedi; bu nedenle diğer cihazlar henüz bağlanamıyor. Bir sonraki kilit açışınızda yeniden denenecek"
-      }
+        "uploadFailed": "Eşitleme kuruldu, ancak şifreleme anahtarı sunucuya kaydedilemedi; bu nedenle diğer cihazlar henüz bağlanamıyor. Bir sonraki kilit açışınızda yeniden denenecek",
+        "mustDiffer": "Not parolanız ile hesap parolanız farklı olmalıdır. Eşitleme sunucusu hesap parolanızı görür, bu yüzden aynı olurlarsa notlarınızı okuyabilir. Diğer cihazlarınızda aynıysa önce orada not parolanızı değiştirin.",
+        "matchesAccountWarning": "Not parolanız hesap parolanızla aynı, bu yüzden eşitleme sunucusu notlarınızı okuyabilir. Bunu düzeltmek için not parolanızı değiştirin."
+      },
+      "existingAccountDetected": "Bu e-postanın zaten bir hesabı var, bu yüzden bu cihaz ona bağlanacak. Diğer cihazlarınızda kullandığınız not parolasını girin."
     },
     "editorTab": {
       "vimMode": "Düzenleyici modu",
@@ -919,7 +923,9 @@
         "emailRequired": "E-posta adresi gereklidir.",
         "serverPasswordRequired": "Sunucu şifresi gereklidir.",
         "notesPasswordMinLength": "Not şifresi en az 8 karakter olmalıdır.",
-        "onboardingFailed": "Şifreleme anahtarları sunucudan indirilemedi. Not şifrenizin diğer cihazlarınızdakiyle aynı olduğundan ve kaynak cihazın senkronize edildiğinden emin olun"
+        "onboardingFailed": "Şifreleme anahtarları sunucudan indirilemedi. Not şifrenizin diğer cihazlarınızdakiyle aynı olduğundan ve kaynak cihazın senkronize edildiğinden emin olun",
+        "accountKeyUnreadable": "Bu not parolası hesabınızın anahtarını açamıyor. Parolayı kontrol edin. Doğruysa anahtar Jottery'nin eski bir sürümüyle kaydedilmiş olabilir: zaten bağlı bir cihazda Jottery'nin kilidini açmak bunu düzeltir. Ardından yeniden deneyin.",
+        "localNotesOrphaned": "Bu cihazdaki notlar hesabınızdan farklı bir anahtar kullanıyor, bu yüzden bağlanmak onları okunamaz hale getirir. Hiçbir şey değiştirilmedi. Korumak için notlarınızı dışa aktarın, bu cihazın verilerini silin, bağlanın ve ardından içe aktarın."
       },
       "steps": {
         "initialising": "Yerel şifreleme başlatılıyor…",
@@ -1005,6 +1011,11 @@
       "notAvailable": "Bu dosya türü için önizleme kullanılamıyor.",
       "audioNotSupported": "Tarayıcınız ses oynatmayı desteklemiyor.",
       "videoNotSupported": "Tarayıcınız video oynatmayı desteklemiyor."
+    },
+    "confirmDelete": {
+      "title": "Ek kaldırılsın mı?",
+      "message": "Dosya bu nottan kaldırılacak. Notun önceki bir sürümünde hâlâ yoksa kurtarılamaz.",
+      "confirmButton": "Kaldır"
     }
   },
   "keyboard": {
@@ -1171,7 +1182,9 @@
     "indicator": "Senkronizasyon çakışması",
     "bannerText": "Bu notun çözülmesi gereken bir senkronizasyon çakışması var",
     "resolveButton": "Çakışmayı çöz",
-    "syncNotification": "{count, plural, one {1 not senkronizasyon çakışması var} other {{count} not senkronizasyon çakışması var}}"
+    "syncNotification": "{count, plural, one {1 not senkronizasyon çakışması var} other {{count} not senkronizasyon çakışması var}}",
+    "serverUnreadable": "Bu notun sunucudaki kopyası okunamıyor ve değiştirilmiş olabilir. Yalnızca kendi sürümünüz korunabilir.",
+    "localUnreadable": "Notun bu cihazdaki kopyası okunamıyor."
   },
   "pullToRefresh": {
     "pull": "Senkronize etmek için aşağı çekin",
@@ -1420,6 +1433,17 @@
     "openNote": "Bu notu aç",
     "repairNotOnServer": "Sunucuda da yok — notu açın ve eki kaldırın",
     "serverMissingTitle": "Sunucuda eksik",
-    "serverMissingHint": "Senkronizasyon sunucusunda bu eklerin kopyası yok, bu cihazda da yok. Notu açıp eki kaldırın veya dosyaya hâlâ sahip bir cihazdan senkronize edin."
+    "serverMissingHint": "Senkronizasyon sunucusunda bu eklerin kopyası yok, bu cihazda da yok. Notu açıp eki kaldırın veya dosyaya hâlâ sahip bir cihazdan senkronize edin.",
+    "rejectedTitle": "Eşitleme sunucusundan reddedilenler",
+    "rejectedHint": "Eşitleme sunucusu bunları güvenilemeyecek bir biçimde gönderdi, bu yüzden kaydedilmediler. Mevcut notlarınız etkilenmedi. Bu tekrarlanırsa sunucuyu kimin yönettiğini kontrol edin.",
+    "rejectedKind": {
+      "note": "Not",
+      "version": "Not sürümü",
+      "conflict": "Eşitleme çakışması",
+      "savedSearch": "Kayıtlı arama",
+      "attachment": "Ek",
+      "inboxItem": "Gelen kutusu öğesi",
+      "deletion": "Silme"
+    }
   }
 }

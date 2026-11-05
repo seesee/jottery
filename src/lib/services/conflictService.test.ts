@@ -4,11 +4,13 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { initTestDB, cleanupTestDB, createTestNote } from '../../test/db-utils';
-import { storeConflict, getConflicts, getConflictInfo, resolveKeepMine, resolveKeepServer, resolveKeepBoth } from './conflictService';
+import { raiseConflictWithStoredNote, storeConflict, getConflicts, getConflictInfo, resolveKeepMine, resolveKeepServer, resolveKeepBoth } from './conflictService';
 import { noteRepository } from './noteRepository';
+import { noteService } from './noteService';
 import { syncRepository } from './syncRepository';
 import { keyManager } from './keyManager';
 import { cryptoService, decryptStringArray } from './crypto';
+import { CryptoError } from '../errors';
 import type { ConflictData } from '../types';
 
 describe('conflictService', () => {
@@ -490,7 +492,7 @@ describe('conflictService', () => {
       // Set conflicts on all
       for (const noteId of ['note-1', 'note-2', 'note-3']) {
         await storeConflict(noteId, {
-          serverContent: `server-${noteId}`,
+          serverContent: JSON.stringify(await cryptoService.encryptText(`server-${noteId}`, masterKey)),
           serverTags: [],
           serverModifiedAt: new Date().toISOString(),
           serverVersion: 2,
@@ -512,5 +514,146 @@ describe('conflictService', () => {
       conflicts = await getConflicts();
       expect(conflicts).toHaveLength(0);
     });
+  });
+});
+
+describe('a server copy that fails to decrypt is never treated as plaintext', () => {
+  const FORGED = '<img src=x onerror=alert(1)>';
+  let masterKey: CryptoKey;
+  let noteId: string;
+
+  beforeEach(async () => {
+    const testDB = await initTestDB();
+    masterKey = testDB.masterKey;
+    keyManager.setMasterKey({ key: masterKey, keyBytes: new Uint8Array(32), derivedAt: Date.now() });
+
+    const content = JSON.stringify(await cryptoService.encryptText('Mine', masterKey));
+    const note = createTestNote({ content });
+    await noteRepository.create(note);
+    noteId = note.id;
+  });
+
+  afterEach(async () => {
+    keyManager.clearMasterKey();
+    await cleanupTestDB();
+  });
+
+  async function conflictWith(serverContent: string) {
+    await storeConflict(noteId, {
+      serverContent,
+      serverTags: [],
+      serverModifiedAt: new Date().toISOString(),
+      serverVersion: 2,
+      serverAttachments: [],
+      serverPinned: false,
+      serverSyntaxLanguage: 'html',
+    });
+  }
+
+  async function forgedUnderAnotherKey(): Promise<string> {
+    const other = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+    return JSON.stringify(await cryptoService.encryptText('forged', other));
+  }
+
+  it('reports forged text as unreadable rather than showing it', async () => {
+    await conflictWith(FORGED);
+    const info = await getConflictInfo(noteId);
+    expect(info).not.toBeNull();
+    expect(info?.serverContent).toBeNull();
+  });
+
+  it('reports a failed authentication check as unreadable', async () => {
+    await conflictWith(await forgedUnderAnotherKey());
+    expect((await getConflictInfo(noteId))?.serverContent).toBeNull();
+  });
+
+  it('still shows a server copy that does decrypt', async () => {
+    await conflictWith(JSON.stringify(await cryptoService.encryptText('Theirs', masterKey)));
+    expect((await getConflictInfo(noteId))?.serverContent).toBe('Theirs');
+  });
+
+  it('refuses Keep Both, and creates no note from forged text', async () => {
+    await conflictWith(FORGED);
+    const before = (await noteRepository.getAll()).length;
+
+    await expect(resolveKeepBoth(noteId)).rejects.toBeInstanceOf(CryptoError);
+
+    expect((await noteRepository.getAll()).length).toBe(before);
+    expect((await syncRepository.getNoteSyncMetadata(noteId))?.conflictData).toBeDefined();
+  });
+
+  it('refuses Keep Server, and leaves the local note alone', async () => {
+    await conflictWith(FORGED);
+    const before = await noteRepository.getById(noteId);
+
+    await expect(resolveKeepServer(noteId)).rejects.toBeInstanceOf(CryptoError);
+
+    expect((await noteRepository.getById(noteId))?.content).toBe(before?.content);
+  });
+
+  it('still allows Keep Mine', async () => {
+    await conflictWith(FORGED);
+    await expect(resolveKeepMine(noteId)).resolves.toBeUndefined();
+    expect((await syncRepository.getNoteSyncMetadata(noteId))?.conflictData).toBeUndefined();
+  });
+});
+
+describe('a pull that lands while the editor has unsaved text', () => {
+  let masterKey: CryptoKey;
+  let noteId: string;
+
+  beforeEach(async () => {
+    masterKey = (await initTestDB()).masterKey;
+    keyManager.setMasterKey({ key: masterKey, keyBytes: new Uint8Array(32), derivedAt: Date.now() });
+
+    const pulled = await noteService.createNote('Pulled text', ['from-elsewhere']);
+    noteId = pulled.id;
+  });
+
+  afterEach(async () => {
+    keyManager.clearMasterKey();
+    await cleanupTestDB();
+  });
+
+  it('records the pulled copy, so it can be chosen', async () => {
+    await raiseConflictWithStoredNote(noteId);
+
+    const info = await getConflictInfo(noteId);
+    expect(info?.serverContent).toBe('Pulled text');
+    expect(info?.serverTags).toEqual(['from-elsewhere']);
+    expect(await getConflicts()).toEqual([noteId]);
+  });
+
+  it('keeps the pulled copy after the editor saves over it', async () => {
+    await raiseConflictWithStoredNote(noteId);
+
+    await noteService.updateNote(noteId, { content: 'Typed here' });
+
+    expect((await getConflictInfo(noteId))?.serverContent).toBe('Pulled text');
+  });
+
+  it('can bring the pulled copy back', async () => {
+    await raiseConflictWithStoredNote(noteId);
+    await noteService.updateNote(noteId, { content: 'Typed here' });
+
+    await resolveKeepServer(noteId);
+
+    const restored = await noteService.getNote(noteId);
+    expect(restored?.content).toBe('Pulled text');
+    expect(restored?.tags).toEqual(['from-elsewhere']);
+  });
+
+  it('can keep what was typed', async () => {
+    await raiseConflictWithStoredNote(noteId);
+    await noteService.updateNote(noteId, { content: 'Typed here' });
+
+    await resolveKeepMine(noteId);
+
+    expect((await noteService.getNote(noteId))?.content).toBe('Typed here');
+    expect(await getConflicts()).toEqual([]);
+  });
+
+  it('does nothing for a note that has gone', async () => {
+    await expect(raiseConflictWithStoredNote('a0000000-0000-4000-8000-000000000099')).resolves.toBeUndefined();
   });
 });

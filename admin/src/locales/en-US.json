@@ -46,6 +46,23 @@
     "confirmTitle": "Confirm Logout",
     "confirmMessage": "Are you sure you want to log out?"
   },
+  "errors": {
+    "unknown": "Something went wrong. Please try again.",
+    "network": "Couldn't reach the server. Check your connection and try again.",
+    "forbidden": "You don't have permission to do that.",
+    "wrongPassword": "Current password is incorrect",
+    "rateLimited": "Too many attempts. Try again in {seconds} seconds.",
+    "tooManyAttempts": "Too many attempts. Please wait and try again.",
+    "passwordTooShort": "New password must be at least 12 characters",
+    "passwordSameAsCurrent": "New password must be different from the current one"
+  },
+  "session": {
+    "expired": "Your session has expired. Please sign in again."
+  },
+  "forcedPasswordChange": {
+    "title": "Change your password",
+    "description": "You must choose a new password before you can continue. It must be at least 12 characters long."
+  },
   "dashboard": {
     "title": "Dashboard",
     "loadingStats": "Loading statistics...",
@@ -248,6 +265,7 @@
       "errors": {
         "invalidCredentials": "Invalid email or password",
         "accountInactive": "Your account is inactive. Please contact the administrator.",
+        "accountPending": "Your account is waiting for an administrator's approval.",
         "unexpected": "An unexpected error occurred",
         "statusCheckFailed": "Failed to check status. Please try again."
       },

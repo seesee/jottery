@@ -46,6 +46,23 @@
     "confirmTitle": "确认退出登录",
     "confirmMessage": "您确定要退出登录吗？"
   },
+  "errors": {
+    "unknown": "出现问题，请重试。",
+    "network": "无法连接到服务器。请检查您的网络连接后重试。",
+    "forbidden": "您没有执行此操作的权限。",
+    "wrongPassword": "当前密码不正确",
+    "rateLimited": "尝试次数过多。请在 {seconds} 秒后重试。",
+    "tooManyAttempts": "尝试次数过多。请稍候再试。",
+    "passwordTooShort": "新密码必须至少包含12个字符",
+    "passwordSameAsCurrent": "新密码必须与当前密码不同"
+  },
+  "session": {
+    "expired": "您的会话已过期。请重新登录。"
+  },
+  "forcedPasswordChange": {
+    "title": "更改您的密码",
+    "description": "您必须设置新密码才能继续。密码长度至少为 12 个字符。"
+  },
   "dashboard": {
     "title": "仪表板",
     "loadingStats": "正在加载统计信息...",
@@ -248,6 +265,7 @@
       "errors": {
         "invalidCredentials": "电子邮件或密码无效",
         "accountInactive": "您的账户已停用。请联系管理员。",
+        "accountPending": "您的账户正在等待管理员批准。",
         "unexpected": "发生意外错误",
         "statusCheckFailed": "Failed to check status. Please try again."
       },

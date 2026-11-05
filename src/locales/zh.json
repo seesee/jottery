@@ -254,7 +254,8 @@
         "title": "备份信息",
         "created": "创建时间",
         "records": "记录"
-      }
+      },
+      "storageFull": "浏览器存储空间不足，恢复未完成，也未保留任何内容。您的备份文件没有问题：请释放一些空间后重新恢复。"
     }
   },
   "settings": {
@@ -442,8 +443,11 @@
         "hintExisting": "您在其他设备上解锁笔记所用的密码。该密码不会发送到服务器。",
         "required": "请输入您的笔记密码。",
         "incorrect": "这不是在此设备上解锁笔记的密码。请输入笔记密码，而不是服务器密码。",
-        "uploadFailed": "同步已设置，但加密密钥未能保存到服务器，因此其他设备暂时无法连接。下次解锁时将重试"
-      }
+        "uploadFailed": "同步已设置，但加密密钥未能保存到服务器，因此其他设备暂时无法连接。下次解锁时将重试",
+        "mustDiffer": "笔记密码和账户密码必须不同。同步服务器能看到您的账户密码，如果两者相同，它就可以读取您的笔记。如果您的其他设备上两者相同，请先在那些设备上更改笔记密码。",
+        "matchesAccountWarning": "您的笔记密码与账户密码相同，因此同步服务器可以读取您的笔记。请更改笔记密码以解决此问题。"
+      },
+      "existingAccountDetected": "此邮箱已有账户，因此本设备将连接到该账户。请输入您在其他设备上使用的笔记密码。"
     },
     "editorTab": {
       "vimMode": "编辑器模式",
@@ -919,7 +923,9 @@
         "emailRequired": "电子邮件地址为必填项。",
         "serverPasswordRequired": "服务器密码为必填项。",
         "notesPasswordMinLength": "笔记密码至少需要8个字符。",
-        "onboardingFailed": "从服务器下载加密密钥失败。请确保笔记密码与其他设备上的一致，且源设备已完成同步"
+        "onboardingFailed": "从服务器下载加密密钥失败。请确保笔记密码与其他设备上的一致，且源设备已完成同步",
+        "accountKeyUnreadable": "此笔记密码无法打开您账户的密钥。请检查密码。如果密码正确，该密钥可能是由旧版 Jottery 保存的：在已连接的设备上解锁 Jottery 即可修复，然后再试一次。",
+        "localNotesOrphaned": "此设备上的笔记使用的密钥与您的账户不同，连接后将无法读取。没有进行任何更改。要保留这些笔记，请先导出，删除此设备的数据，连接后再导入。"
       },
       "steps": {
         "initialising": "正在初始化本地加密…",
@@ -1005,6 +1011,11 @@
       "notAvailable": "此文件类型无法预览。",
       "audioNotSupported": "您的浏览器不支持音频播放。",
       "videoNotSupported": "您的浏览器不支持视频播放。"
+    },
+    "confirmDelete": {
+      "title": "移除附件？",
+      "message": "该文件将从此笔记中移除。除非笔记的早期版本中仍有此文件，否则无法恢复。",
+      "confirmButton": "移除"
     }
   },
   "keyboard": {
@@ -1171,7 +1182,9 @@
     "indicator": "同步冲突",
     "bannerText": "此笔记存在需要解决的同步冲突",
     "resolveButton": "解决冲突",
-    "syncNotification": "{count}个笔记有同步冲突"
+    "syncNotification": "{count}个笔记有同步冲突",
+    "serverUnreadable": "服务器上此笔记的副本无法读取，可能已被篡改。只能保留您的版本。",
+    "localUnreadable": "无法读取此设备上的笔记副本。"
   },
   "pullToRefresh": {
     "pull": "下拉同步",
@@ -1420,6 +1433,17 @@
     "openNote": "打开此笔记",
     "repairNotOnServer": "服务器上也不存在 — 请打开笔记并移除该附件",
     "serverMissingTitle": "服务器上缺失",
-    "serverMissingHint": "同步服务器和本设备都没有这些附件的副本。请打开笔记移除附件，或从仍保有该文件的设备进行同步。"
+    "serverMissingHint": "同步服务器和本设备都没有这些附件的副本。请打开笔记移除附件，或从仍保有该文件的设备进行同步。",
+    "rejectedTitle": "来自同步服务器的已拒绝数据",
+    "rejectedHint": "同步服务器发送的这些数据格式不可信，因此未保存。您现有的笔记不受影响。如果反复出现，请确认服务器由谁控制。",
+    "rejectedKind": {
+      "note": "笔记",
+      "version": "笔记版本",
+      "conflict": "同步冲突",
+      "savedSearch": "已保存的搜索",
+      "attachment": "附件",
+      "inboxItem": "收件箱项目",
+      "deletion": "删除"
+    }
   }
 }

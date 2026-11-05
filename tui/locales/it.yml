@@ -23,11 +23,11 @@ password:
   change_success: Password modificata con successo
   change_title: "Cambia password"
   change_enter_current: "Inserisci la password attuale:"
-  change_enter_new: "Inserisci la nuova password (min. 12 caratteri):"
+  change_enter_new: "Inserisci la nuova password (min. 8 caratteri):"
   change_confirm_new: "Conferma la nuova password:"
   change_current_required: "Inserisci la password attuale"
   change_wrong_current: "La password attuale non è corretta"
-  change_too_short: "La nuova password deve avere almeno 12 caratteri"
+  change_too_short: "La nuova password deve avere almeno 8 caratteri"
   change_mismatch: "Le password non corrispondono"
   change_failed: "Modifica password non riuscita"
   remember: Ricorda password
@@ -46,6 +46,10 @@ password:
   enter_to_enable: "Inserisci la password per attivare lo sblocco automatico:"
   create_title: Crea password
   unlock_title: Sblocca
+  too_short: "La password deve contenere almeno %{min} caratteri"
+  same_as_account: "Usa password diverse. Il server vede la password dell'account, quindi non deve aprire anche le note."
+  same_as_account_warning: "La password dell'account è uguale a quella delle note, quindi il server potrebbe leggerle. Cambia la password delle note nelle Impostazioni."
+  no_file_encryption: "Questa build non cifra il file del database. Note e tag restano cifrati, ma non l'email, l'indirizzo del server, i nomi degli allegati e le date."
 menu:
   notes: Note
   new_note: Nuova nota
@@ -78,6 +82,13 @@ note:
   info: Info nota
   info_title: Informazioni nota
   untitled: "Senza titolo"
+  save_retry_hint: "q: riprova a salvare | e: modifica | Esc: scarta le modifiche"
+  empty_bin_title: "Svuota cestino"
+  empty_bin_confirm: "Eliminare definitivamente %{count} note nel cestino?"
+  empty_bin_warning: "Verranno eliminate anche dal server e dagli altri dispositivi. Non si può annullare."
+  bin_emptied: "%{count} note eliminate definitivamente"
+  locked_cannot_archive: "Impossibile archiviare una nota bloccata"
+  unreadable: "%{count} note di questo archivio non sono leggibili"
 archive:
   view: "Visualizza archivio"
   title: "Archivio"
@@ -115,6 +126,18 @@ attachment:
   delete: Elimina allegato
   no_attachments: Nessun allegato
   total: "%{count} allegati"
+  press_enter: "Premi Invio per continuare..."
+  opened: "File aperto nell'applicazione predefinita."
+  no_opener: "Nessun programma per aprire i file su questo sistema. Salva invece l'allegato con S."
+  delete_failed: "Impossibile eliminare l'allegato: %{error}"
+  deleted: "Eliminato: %{name}"
+  exists: "%{path} esiste già. Scegli un altro nome."
+  saved: "Salvato in %{path}"
+  save_failed: "Impossibile salvare l'allegato: %{error}"
+  added: "%{name} allegato"
+  too_large: "Il file è troppo grande. Il limite è %{max_mb} MB."
+  unsafe_title: "Questo file non verrà aperto"
+  unsafe_body: "Aprire questo tipo di file potrebbe eseguire codice del mittente. Salvarlo invece?"
 version:
   history: Cronologia versioni
   restore: Ripristina versione
@@ -188,6 +211,8 @@ sync:
   reload_failed: "Sincronizzazione riuscita ma ricaricamento note fallito: %{error}"
   note: nota
   notes: note
+  skipped_notes: "%{count} elementi dal server non erano leggibili e sono stati saltati"
+  rejected_notes: "%{count} note sono in conflitto con il server. Apri Jottery per risolverle."
 
 # Posta in arrivo
 inbox:
@@ -233,6 +258,7 @@ register:
   device_failed: Registrazione dispositivo non riuscita
   cleared: Registrazione cancellata. Puoi ricominciare.
   pending_status: In attesa di approvazione
+  password_differs: "Deve essere diversa dalla password delle note."
 color_scheme:
   default_dark: Scuro predefinito
   default_light: Chiaro predefinito
@@ -386,8 +412,8 @@ help:
   s_q_close_desc: Chiudi pannello impostazioni
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: Sposta focus sul pannello allegati (j/k per navigare, Invio per visualizzare, d per eliminare)
-  A_add_attachment_key: A
-  A_add_attachment_desc: Aggiungi allegato (inserisci percorso file)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: Aggiungi allegato (inserisci percorso file)
   a_view_attachment_key: a + numero
   a_view_attachment_desc: Visualizza allegato (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -450,6 +476,14 @@ help:
   click_tags_desc: Entra in modalità modifica tag
   scroll_key: Rotella del mouse
   scroll_desc: Scorri anteprima su/giù
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Blocca Jottery"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Salva l'allegato selezionato in un file"
+  z_archive_key: "z"
+  z_archive_desc: "Archivia la nota selezionata (o ripristinala in modalità archivio)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Archivia le note selezionate"
 cli:
   # Alt (usato in alcuni contesti)
   list: Elenca note
@@ -513,6 +547,14 @@ cli:
   # Messaggi di output
   notes_count: "%{count} note"
   results_count: "%{count} risultati: '%{query}'"
+  attach_about: "Allega un file a una nota"
+  save_attachment_about: "Salva l'allegato di una nota in un file"
+  archive_about: "Archivia una nota"
+  unarchive_about: "Ripristina una nota dall'archivio"
+  note_id_help: "ID nota (corrispondenza parziale supportata)"
+  attach_file_help: "File da allegare"
+  attachment_number_help: "Quale allegato, secondo la numerazione di show"
+  archived_help: "Elenca invece le note archiviate"
 status:
   locked: Bloccato
   unlocked: Sbloccato
@@ -534,6 +576,7 @@ bulk:
   enter_export_path: "Percorso di esportazione:"
   add_tags_to: Aggiungi tag a
   export_notes_to: Esporta
+  archived: "%{count} note archiviate"
 time:
   just_now: proprio ora
   minutes_ago: "%{count} minuti fa"
@@ -568,6 +611,8 @@ backup:
   restoring: "Ripristino dati..."
   restored: "Ripristinato"
   key_not_in_backup: "Questo backup è stato creato da una versione precedente di Jottery e non contiene la sua chiave. Può essere ripristinato solo nella cassaforte da cui proviene."
+  incomplete: "Questo backup è incompleto: %{count} elementi non erano leggibili e sono stati esclusi."
+  records_failed: "%{count} record di questo backup non sono stati ripristinati. Tutto il resto sì."
 
 # Progress indicators
 progress:
@@ -591,6 +636,12 @@ ui:
   type: "Tipo:"
   modified: "Modificato:"
   version: "Versione:"
+  save_attachment: "Salva allegato (Tab: completa, ↑↓: seleziona, Invio: conferma)"
+  path: "Percorso"
+  attachments_hint: "Allegati: (Tab per il focus)"
+  attachments_focused_hint: "Allegati: (Tab per cambiare, j/k per navigare, Invio per vedere, S per salvare, d per eliminare)"
+  attachments_keys_hint: "'a' per vedere, '+' per aggiungere, 'X' per rimuovere il selezionato"
+  attachment_viewer_hint: "↑/↓: naviga │ 1-9: selezione rapida │ Invio: vedi │ S: salva │ +: aggiungi │ d: elimina │ Esc: chiudi"
 
 # Testo di aiuto barra di stato
 status_bar:
@@ -640,8 +691,21 @@ status_bar:
   quick_select: "Selezione rapida"
   view: "visualizza"
   restore_version: "Ripristina versione"
+  save: "salva"
+  add: "aggiungi"
 
 # Virtual tags
 tags:
   virtual:
     title: "titolo"
+
+calc:
+  line_too_long: "⚠ Riga troppo lunga da calcolare (limite %{max} byte)"
+  numbers_only: "⚠ Calc lavora con i numeri: testo, tuple e ; non vengono calcolati"
+  too_deep: "⚠ Troppe parentesi annidate (limite %{max})"
+  gave_up: "Il calcolo di questa nota ha richiesto troppo tempo, quindi viene mostrata senza risultati."
+
+envelope:
+  unwrap_failed: "La password delle note non apre la chiave di questo account. Potrebbe essere stata salvata da una versione precedente. Sblocca Jottery su un dispositivo già connesso, che risolverà il problema, poi riprova."
+  rekey_failed: "Non è stato possibile spostare le note locali sulla chiave di questo account, quindi non è cambiato nulla: %{error}"
+  diverged: "La chiave di questo dispositivo è diversa da quella dell'account. Le note degli altri dispositivi potrebbero non aprirsi qui."

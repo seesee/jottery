@@ -1,6 +1,7 @@
 // API client for Jottery Admin Dashboard
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+import { ApiError, DashboardClient } from './dashboardClient';
+import type { RequestOptions } from './dashboardClient';
 
 interface LoginRequest {
   email: string;
@@ -8,13 +9,17 @@ interface LoginRequest {
 }
 
 interface LoginResponse {
-  sessionId: string;
+  // Absent when the server keeps the session in an HttpOnly cookie
+  sessionId?: string;
+  cookieSession?: boolean;
   expiresAt: string;
   user: {
     id: string;
     email: string;
     isAdmin: boolean;
   };
+  // Older servers don't send this
+  mustChangePassword?: boolean;
 }
 
 interface UserListItem {
@@ -100,56 +105,23 @@ interface UpdateUserSettingsRequest {
   inboxMaxSizeMb?: number;
 }
 
-class ApiError extends Error {
-  constructor(
-    public status: number,
-    public message: string,
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
-
 class ApiClient {
-  private sessionToken: string | null = null;
+  private client = new DashboardClient('admin_session_token');
 
-  constructor() {
-    // Try to load session token from localStorage
-    this.sessionToken = localStorage.getItem('admin_session_token');
+  private get session() {
+    return this.client.session;
   }
 
-  private async request<T>(
-    method: string,
-    path: string,
-    body?: unknown,
-  ): Promise<T> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+  private request<T>(method: string, path: string, body?: unknown, options?: RequestOptions): Promise<T> {
+    return this.client.request<T>(method, path, body, options);
+  }
 
-    // Add session token to Authorization header if available
-    if (this.sessionToken) {
-      headers['Authorization'] = `Bearer ${this.sessionToken}`;
-    }
+  onSessionExpired(listener: () => void): void {
+    this.client.onSessionExpired(listener);
+  }
 
-    const response = await fetch(`${API_BASE}${path}`, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-      credentials: 'include', // Include cookies
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new ApiError(response.status, errorData.error || `HTTP ${response.status}`);
-    }
-
-    // Handle 204 No Content
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    return response.json();
+  onPasswordChangeRequired(listener: () => void): void {
+    this.client.onPasswordChangeRequired(listener);
   }
 
   // Authentication
@@ -157,22 +129,38 @@ class ApiClient {
     const response = await this.request<LoginResponse>('POST', '/api/v1/auth/login', {
       email,
       password,
-    });
+      // Servers without cookie sessions ignore this and return a token
+      cookieSession: true,
+    }, { checksPassword: true });
 
-    // Store session token
-    this.sessionToken = response.sessionId;
-    localStorage.setItem('admin_session_token', response.sessionId);
+    this.session.start(response);
 
     return response;
   }
 
-  logout(): void {
-    this.sessionToken = null;
-    localStorage.removeItem('admin_session_token');
+  async logout(): Promise<void> {
+    // End the session on the server, or a stolen token would stay valid until it
+    // expires. Admin cookies are scoped to the admin API, so they need the admin
+    // route. A token works on the user route, which every server version has.
+    const path = this.session.usesCookie ? '/api/v1/admin/logout' : '/api/v1/user/logout';
+    try {
+      await this.request('POST', path);
+    } catch (e) {
+      // Clear local state regardless
+      console.warn('Logout request failed:', e);
+    }
+    this.session.clear();
   }
 
   isAuthenticated(): boolean {
-    return this.sessionToken !== null;
+    return this.session.isActive;
+  }
+
+  /** Who is signed in, which also shows whether the session still works. */
+  async currentUser(): Promise<{ email: string }> {
+    // As with logout: a token works on the user route, which every server version has
+    const path = this.session.usesCookie ? '/api/v1/admin/me' : '/api/v1/user/account';
+    return this.request('GET', path);
   }
 
   // Admin - Users
@@ -238,7 +226,7 @@ class ApiClient {
     return this.request('POST', '/api/v1/admin/change-password', {
       current_password: currentPassword,
       new_password: newPassword,
-    });
+    }, { checksPassword: true });
   }
 }
 

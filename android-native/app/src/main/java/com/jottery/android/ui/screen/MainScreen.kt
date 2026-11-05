@@ -6,10 +6,15 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -18,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -32,22 +38,31 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.window.core.layout.WindowHeightSizeClass
 import androidx.window.core.layout.WindowWidthSizeClass
+import com.jottery.android.R
 import com.jottery.android.model.SortOrder
 import com.jottery.android.ui.component.NoteEditorView
 import com.jottery.android.ui.component.NoteListView
@@ -55,13 +70,17 @@ import com.jottery.android.ui.component.SearchBar
 import com.jottery.android.viewmodel.AppState
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MainScreen(
     appState: AppState,
     onNavigateToRecycleBin: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToConflicts: () -> Unit,
+    onNavigateToInbox: () -> Unit,
 ) {
+    val conflicts by appState.pendingConflicts.collectAsState()
+    val inboxItems by appState.inboxItems.collectAsState()
     val notes by appState.filteredNotes.collectAsState()
     val allNotes by appState.notes.collectAsState()
     val archivedNotes by appState.archivedNotes.collectAsState()
@@ -73,7 +92,16 @@ fun MainScreen(
     val syncError by appState.syncError.collectAsState()
     val syncEnabled by appState.syncEnabled.collectAsState()
     val showArchive by appState.showArchive.collectAsState()
+    val userMessage by appState.userMessage.collectAsState()
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(userMessage) {
+        userMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            appState.clearMessage()
+        }
+    }
 
     // Derive counts from collected state
     val noteCount by remember(allNotes, archivedNotes, showArchive) {
@@ -91,6 +119,11 @@ fun MainScreen(
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
     val isExpandedLayout = windowSizeClass.windowWidthSizeClass != WindowWidthSizeClass.COMPACT
 
+    // A phone in landscape has no height to spare: with the keyboard up, the app
+    // bars would leave the editor no room at all.
+    val keyboardNeedsTheSpace = WindowInsets.isImeVisible &&
+        windowSizeClass.windowHeightSizeClass == WindowHeightSizeClass.COMPACT
+
     // Selected note for editor
     val selectedNote = remember(selectedNoteId, notes) {
         notes.firstOrNull { it.id == selectedNoteId }
@@ -107,8 +140,9 @@ fun MainScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            if (showListOnNarrow) {
+            if (showListOnNarrow && !(keyboardNeedsTheSpace && selectedNote != null)) {
                 TopAppBar(
                     title = {
                         Text(if (showArchive) "Archive" else "Jottery")
@@ -170,6 +204,18 @@ fun MainScreen(
                                         Icon(Icons.Default.Archive, contentDescription = null)
                                     },
                                 )
+                                if (syncEnabled) {
+                                    DropdownMenuItem(
+                                        text = { Text(stringResource(R.string.inbox_menu, inboxItems.size)) },
+                                        onClick = {
+                                            overflowMenuExpanded = false
+                                            onNavigateToInbox()
+                                        },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Inbox, contentDescription = null)
+                                        },
+                                    )
+                                }
                                 DropdownMenuItem(
                                     text = { Text("Recycle Bin") },
                                     onClick = {
@@ -226,7 +272,10 @@ fun MainScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(paddingValues)
+                // Edge-to-edge windows don't resize for the keyboard
+                .consumeWindowInsets(paddingValues)
+                .imePadding(),
         ) {
             // Search bar
             AnimatedVisibility(
@@ -271,13 +320,18 @@ fun MainScreen(
 
                     // Editor pane
                     if (selectedNote != null) {
-                        NoteEditorView(
-                            appState = appState,
-                            note = selectedNote,
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight(),
-                        )
+                        // A new composition per note: no undo stack, WebView
+                        // buffer or pending save may carry over to another note.
+                        key(selectedNote.id) {
+                            NoteEditorView(
+                                appState = appState,
+                                note = selectedNote,
+                                showAppBar = !keyboardNeedsTheSpace,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight(),
+                            )
+                        }
                     } else {
                         // Empty state for editor pane
                         Box(
@@ -306,11 +360,30 @@ fun MainScreen(
                         modifier = Modifier.weight(1f),
                     )
                 } else if (selectedNote != null) {
-                    NoteEditorView(
-                        appState = appState,
-                        note = selectedNote,
-                        onNavigateBack = { appState.setSelectedNoteId(null) },
-                        modifier = Modifier.weight(1f),
+                    key(selectedNote.id) {
+                        NoteEditorView(
+                            appState = appState,
+                            note = selectedNote,
+                            onNavigateBack = { appState.setSelectedNoteId(null) },
+                            showAppBar = !keyboardNeedsTheSpace,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+
+            // A conflict is held until the user decides, so it must stay visible
+            if (conflicts.isNotEmpty()) {
+                Surface(
+                    onClick = onNavigateToConflicts,
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        text = pluralStringResource(R.plurals.conflict_banner, conflicts.size, conflicts.size),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                     )
                 }
             }

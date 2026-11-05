@@ -5,6 +5,14 @@ use rusqlite::{params, Connection, OptionalExtension};
 
 use crate::models::sync::{ConflictData, NoteSyncMetadata, SyncMetadata, SyncStatus};
 
+/// A timestamp column. A value that won't parse fails the query rather than
+/// panicking, because this table holds whatever an older build wrote.
+fn stored_time(row: &rusqlite::Row<'_>, index: usize) -> rusqlite::Result<DateTime<Utc>> {
+    row.get::<_, String>(index)?.parse().map_err(|e: chrono::ParseError| {
+        rusqlite::Error::FromSqlConversionFailure(index, rusqlite::types::Type::Text, Box::new(e))
+    })
+}
+
 /// Repository for sync metadata operations
 pub struct SyncRepository<'a> {
     conn: &'a Connection,
@@ -130,7 +138,7 @@ impl<'a> SyncRepository<'a> {
 
                     Ok(NoteSyncMetadata {
                         note_id: row.get(0)?,
-                        synced_at: row.get::<_, String>(1)?.parse().unwrap(),
+                        synced_at: stored_time(row, 1)?,
                         sync_hash: row.get(2)?,
                         server_version: row.get(3)?,
                         last_sync_status: parse_sync_status(&row.get::<_, String>(4)?),
@@ -207,7 +215,7 @@ impl<'a> SyncRepository<'a> {
 
                     Ok(NoteSyncMetadata {
                         note_id: row.get(0)?,
-                        synced_at: row.get::<_, String>(1)?.parse().unwrap(),
+                        synced_at: stored_time(row, 1)?,
                         sync_hash: row.get(2)?,
                         server_version: row.get(3)?,
                         last_sync_status: parse_sync_status(&row.get::<_, String>(4)?),

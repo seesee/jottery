@@ -46,6 +46,23 @@
     "confirmTitle": "Confirmar cierre de sesión",
     "confirmMessage": "¿Estás seguro de que quieres cerrar sesión?"
   },
+  "errors": {
+    "unknown": "Algo ha ido mal. Inténtalo de nuevo.",
+    "network": "No se ha podido conectar con el servidor. Comprueba tu conexión e inténtalo de nuevo.",
+    "forbidden": "No tienes permiso para hacer eso.",
+    "wrongPassword": "La contraseña actual es incorrecta",
+    "rateLimited": "Demasiados intentos. Inténtalo de nuevo en {seconds} segundos.",
+    "tooManyAttempts": "Demasiados intentos. Espera e inténtalo de nuevo.",
+    "passwordTooShort": "La nueva contraseña debe tener al menos 12 caracteres",
+    "passwordSameAsCurrent": "La nueva contraseña debe ser distinta de la actual"
+  },
+  "session": {
+    "expired": "Tu sesión ha caducado. Inicia sesión de nuevo."
+  },
+  "forcedPasswordChange": {
+    "title": "Cambia tu contraseña",
+    "description": "Debes elegir una contraseña nueva para continuar. Debe tener al menos 12 caracteres."
+  },
   "dashboard": {
     "title": "Panel",
     "loadingStats": "Cargando estadísticas...",
@@ -248,6 +265,7 @@
       "errors": {
         "invalidCredentials": "Correo electrónico o contraseña incorrectos",
         "accountInactive": "Tu cuenta está inactiva. Por favor, contacta al administrador.",
+        "accountPending": "Tu cuenta está pendiente de la aprobación de un administrador.",
         "unexpected": "Ocurrió un error inesperado",
         "statusCheckFailed": "Failed to check status. Please try again."
       },

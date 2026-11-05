@@ -82,6 +82,14 @@ impl<'a> AttachmentRepository<'a> {
         }
     }
 
+    /// Every attachment's id
+    pub fn list_ids(&self) -> Result<Vec<String>> {
+        let mut stmt = self.conn.prepare("SELECT id FROM attachments")?;
+        let ids = stmt.query_map([], |row| row.get(0))?
+            .collect::<rusqlite::Result<_>>()?;
+        Ok(ids)
+    }
+
     /// Delete an attachment
     pub fn delete(&self, id: &str) -> Result<()> {
         self.conn
