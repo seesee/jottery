@@ -101,6 +101,11 @@ final class AppState {
 
     var backgroundedAt: ContinuousClock.Instant?
 
+    // MARK: - Backup Reminders
+
+    /// Replaced in tests, which mustn't reach the real notification centre.
+    @ObservationIgnored var backupReminders: any BackupReminderCentre = SystemBackupReminderCentre()
+
     // MARK: - Editor Font
 
     /// Multiplier applied to the system body font size.
@@ -1855,6 +1860,8 @@ final class AppState {
             // The database can't open while the device is locked (see
             // `DatabaseManager`), which a launch in the background can run into.
             if db == nil { initialise() }
+            // A reminder fires once, so coming back is when the next is set.
+            Task { await refreshBackupReminder() }
             guard !isLocked, !lockIfAwayTooLong() else { return }
             let wasBackgrounded = backgroundedAt != nil
             backgroundedAt = nil
@@ -1903,6 +1910,7 @@ final class AppState {
 
         teardownSync()
         removeTemporaryFiles()
+        backupReminders.cancel()
         SharedInboxStore.removeAll(in: sharedInboxRoot)
 
         // Delete database file

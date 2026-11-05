@@ -13,6 +13,12 @@ struct UserSettings: Codable, FetchableRecord, PersistableRecord {
     var autoLockTimeout: Int     // Minutes
     var syncEnabled: Bool
     var syncEndpoint: String?
+    /// When a backup last left this device (ISO 8601). Never when nil.
+    var lastBackupAt: String?
+    /// Days between backup reminders. Off when nil.
+    var backupReminderDays: Int?
+    /// When reminders were turned on, to count from if there's no backup yet.
+    var backupReminderSince: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -22,6 +28,9 @@ struct UserSettings: Codable, FetchableRecord, PersistableRecord {
         case autoLockTimeout = "auto_lock_timeout"
         case syncEnabled = "sync_enabled"
         case syncEndpoint = "sync_endpoint"
+        case lastBackupAt = "last_backup_at"
+        case backupReminderDays = "backup_reminder_days"
+        case backupReminderSince = "backup_reminder_since"
     }
 
     static let defaults = UserSettings(
@@ -41,6 +50,10 @@ struct UserSettings: Codable, FetchableRecord, PersistableRecord {
     var sort: SortOrder {
         get { SortOrder(rawValue: sortOrder) ?? .recent }
         set { sortOrder = newValue.rawValue }
+    }
+
+    var lastBackupDate: Date? {
+        lastBackupAt.flatMap { Date(iso8601: $0) }
     }
 }
 

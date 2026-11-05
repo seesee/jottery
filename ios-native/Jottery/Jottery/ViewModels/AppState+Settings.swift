@@ -34,4 +34,64 @@ extension AppState {
         }
         return outcome.result
     }
+
+    // MARK: - Backup Reminders
+
+    var backupReminderFrequency: BackupReminderFrequency {
+        settings.backupReminderDays.flatMap(BackupReminderFrequency.init(rawValue:)) ?? .off
+    }
+
+    /// Set how often to be reminded. Turning it on is the only thing that ever
+    /// asks to show notifications. Returns false if they aren't allowed, and
+    /// the reminder then stays as it was.
+    @discardableResult
+    func setBackupReminder(_ frequency: BackupReminderFrequency) async -> Bool {
+        guard frequency != .off else {
+            backupReminders.cancel()
+            saveBackupSettings { $0.backupReminderDays = nil; $0.backupReminderSince = nil }
+            return true
+        }
+        guard await backupReminders.requestPermission() else { return false }
+        let since = settings.backupReminderSince ?? Date().iso8601
+        saveBackupSettings {
+            $0.backupReminderDays = frequency.rawValue
+            $0.backupReminderSince = since
+        }
+        await refreshBackupReminder()
+        return true
+    }
+
+    /// Note that a backup has left the device. Making the file doesn't count:
+    /// it isn't a backup until the share sheet has put it somewhere.
+    func recordBackupMade(at date: Date = Date()) {
+        saveBackupSettings { $0.lastBackupAt = date.iso8601 }
+        Task { await refreshBackupReminder() }
+    }
+
+    /// Set the reminder for its next date, if there is a reminder.
+    func refreshBackupReminder(now: Date = Date()) async {
+        let frequency = backupReminderFrequency
+        guard frequency != .off else { return }
+        let anchor = settings.lastBackupDate
+            ?? settings.backupReminderSince.flatMap { Date(iso8601: $0) }
+            ?? now
+        let date = BackupReminder.nextDate(anchor: anchor, everyDays: frequency.rawValue, after: now)
+        do {
+            try await backupReminders.schedule(
+                title: L.backupReminderTitle, body: L.backupReminderBody, at: date
+            )
+        } catch {
+            Log.debug("[Backup] Couldn't schedule the reminder: \(error)")
+        }
+    }
+
+    private func saveBackupSettings(_ change: (inout UserSettings) -> Void) {
+        var updated = settings
+        change(&updated)
+        do {
+            try updateSettings(updated)
+        } catch {
+            reportError(L.errorCouldntSaveSettings)
+        }
+    }
 }

@@ -24,6 +24,8 @@ struct BackupView: View {
     var body: some View {
         NavigationStack {
             Form {
+                BackupReminderSection()
+
                 // Create Backup
                 Section {
                     Button {
@@ -117,7 +119,7 @@ struct BackupView: View {
             } message: {
                 Text(restoreSummary)
             }
-            .shareTemporaryFile($exportFile)
+            .shareTemporaryFile($exportFile, onShared: { appState.recordBackupMade() })
         }
     }
 

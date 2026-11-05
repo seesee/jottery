@@ -335,6 +335,12 @@ final class DatabaseManager: Sendable {
             try db.execute(sql: "UPDATE attachments SET filename = ''")
         }
 
+        migrator.registerMigration("ios_w3_settings_1") { db in
+            try db.execute(sql: "ALTER TABLE settings ADD COLUMN last_backup_at TEXT")
+            try db.execute(sql: "ALTER TABLE settings ADD COLUMN backup_reminder_days INTEGER")
+            try db.execute(sql: "ALTER TABLE settings ADD COLUMN backup_reminder_since TEXT")
+        }
+
         try migrator.migrate(dbPool)
     }
 }
