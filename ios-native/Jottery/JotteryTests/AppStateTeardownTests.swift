@@ -91,9 +91,7 @@ struct AppStateTeardownTests {
 
         service = nil
 
-        for _ in 0..<500 where released != nil {
-            try await Task.sleep(for: .milliseconds(1))
-        }
+        await waitUntil { released == nil }
         #expect(released == nil)
     }
 }

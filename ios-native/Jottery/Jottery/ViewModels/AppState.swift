@@ -60,6 +60,12 @@ final class AppState {
     /// `reportError(_:duration:)`, which also schedules it to auto-clear.
     var userErrorMessage: String?
 
+    /// How a message waits out its `duration`. Tests replace this, to decide
+    /// when a timer fires rather than race it.
+    @ObservationIgnored var waitOutErrorMessage: @Sendable (Duration) async -> Void = { duration in
+        try? await Task.sleep(for: duration)
+    }
+
     #if DEBUG
     /// Demo screenshot mode: presents the settings sheet (see DemoSeedService).
     var demoShowSettings = false
@@ -880,8 +886,8 @@ final class AppState {
     func reportError(_ message: String, duration: Duration = .seconds(4)) {
         userErrorMessage = message
         userErrorClearTask?.cancel()
-        userErrorClearTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(for: duration)
+        userErrorClearTask = Task { @MainActor [weak self, waitOutErrorMessage] in
+            await waitOutErrorMessage(duration)
             guard !Task.isCancelled else { return }
             if self?.userErrorMessage == message {
                 self?.userErrorMessage = nil
@@ -1969,12 +1975,15 @@ final class AppState {
         return summary
     }
 
+    /// How long a key change waits for a sync in progress.
+    @ObservationIgnored var syncShutdownTimeout: Duration = .seconds(30)
+
     /// Detach the sync service so nothing new can start, and wait for a sync
     /// in progress to finish. False if one was still running at the deadline.
     private func stopSyncForKeyChange() async -> Bool {
         guard let service = syncService else { return true }
         syncService = nil
-        return await service.shutDown()
+        return await service.shutDown(timeout: syncShutdownTimeout)
     }
 
     /// After the vault has been re-encrypted under `newKey`: use it from now

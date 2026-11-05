@@ -11,8 +11,8 @@ actor SyncClient {
     var endpoint: String
     var apiKey: String?
 
-    /// - Parameter configuration: overrides the URLSession configuration. Only
-    ///   used by tests, to install a stub `URLProtocol`.
+    /// - Parameter configuration: replaces the URLSession configuration, timeouts
+    ///   included. Only used by tests, to install a stub `URLProtocol`.
     init(
         endpoint: String = "",
         apiKey: String? = nil,
@@ -20,10 +20,12 @@ actor SyncClient {
     ) {
         self.endpoint = endpoint.hasSuffix("/") ? String(endpoint.dropLast()) : endpoint
         self.apiKey = apiKey
-        let config = configuration ?? URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 30
-        config.timeoutIntervalForResource = 60
-        self.session = URLSession(configuration: config)
+        self.session = URLSession(configuration: configuration ?? {
+            let config = URLSessionConfiguration.default
+            config.timeoutIntervalForRequest = 30
+            config.timeoutIntervalForResource = 60
+            return config
+        }())
     }
 
     func updateCredentials(endpoint: String, apiKey: String) {

@@ -11,6 +11,8 @@ import UIKit
 @Observable
 final class EditorPresence {
     var isShown = true
+    /// Set once SwiftUI has taken the editor away, which is what saves it.
+    var didDisappear = false
 }
 
 /// Lets SwiftUI catch up. Several short sleeps rather than one long one: each
@@ -34,6 +36,7 @@ struct NoteEditorStaleStateTests {
             Group {
                 if presence.isShown, let note = appState.displayedNote(id: noteId) {
                     NoteEditorView(note: note)
+                        .onDisappear { presence.didDisappear = true }
                 }
             }
             .environment(appState)
@@ -48,16 +51,28 @@ struct NoteEditorStaleStateTests {
         /// Types into the real text view, as the keyboard would.
         func typeText(_ text: String) async throws {
             // Layout can take a moment while other tests share the main thread.
-            var found: UIView?
-            for _ in 0..<100 where found == nil {
-                found = firstTextInput(in: window)
-                if found == nil { await settle() }
-            }
-            let textView = try #require(found)
+            await waitUntil { firstTextInput(in: window) != nil }
+            let textView = try #require(firstTextInput(in: window))
             textView.becomeFirstResponder()
-            await settle()
+            await waitUntil { textView.isFirstResponder }
+            let before = shownText
             (textView as? UIKeyInput)?.insertText(text)
+            await waitUntil { shownText != before }
             await settle()
+        }
+
+        /// What the text view holds.
+        var shownText: String? {
+            guard let input = firstTextInput(in: window) as? UITextInput,
+                  let all = input.textRange(from: input.beginningOfDocument, to: input.endOfDocument) else {
+                return nil
+            }
+            return input.text(in: all)
+        }
+
+        /// Waits for a change from outside to reach the text view.
+        func waitToShow(_ text: String) async {
+            await waitUntil { shownText == text }
         }
 
         private func firstTextInput(in view: UIView) -> UIView? {
@@ -68,7 +83,7 @@ struct NoteEditorStaleStateTests {
         /// Leaving the note is what saves anything the editor thinks has changed.
         func leave() async {
             presence.isShown = false
-            await settle()
+            await waitUntil { presence.didDisappear }
             window.isHidden = true
         }
     }
@@ -82,8 +97,9 @@ struct NoteEditorStaleStateTests {
             rootView: Host(appState: state, noteId: noteId, presence: presence)
         )
         window.makeKeyAndVisible()
-        await settle()
-        return OpenEditor(window: window, presence: presence)
+        let editor = OpenEditor(window: window, presence: presence)
+        await waitUntil { editor.shownText != nil }
+        return editor
     }
 
     private func makeVault() async throws -> AppState {
@@ -116,7 +132,7 @@ struct NoteEditorStaleStateTests {
 
         let editor = await open(note.id, in: state)
         try state.restoreVersion(noteId: note.id, version: version)
-        await settle()
+        await editor.waitToShow("the earlier text")
         await editor.leave()
 
         #expect(try storedContent(of: note.id, in: state) == "the earlier text")
@@ -144,7 +160,10 @@ struct NoteEditorStaleStateTests {
         try await editor.typeText("typed ")
         note.content = "arrived from elsewhere"
         try state.saveNote(note)
-        await settle()
+        // The editor keeps the typing, and puts what arrived in history.
+        try await waitUntil {
+            try versionRepo.getVersions(noteId: note.id).contains { $0.reason == "pre-overwrite" }
+        }
         await editor.leave()
 
         let stored = try #require(try storedContent(of: note.id, in: state))
@@ -221,7 +240,7 @@ struct NoteEditorStaleStateTests {
         let editor = await open(note.id, in: state)
         note.content = "edited on another device"
         try state.saveNote(note)
-        await settle()
+        await editor.waitToShow("edited on another device")
         await editor.leave()
 
         #expect(try storedContent(of: note.id, in: state) == "edited on another device")

@@ -39,14 +39,10 @@ struct MarkdownPreviewSecurityTests {
             try await text("window.\(name) === undefined") == "false"
         }
 
-        /// Waits for `script` to come back true, by attempts: each one needs the
-        /// main actor back, so a stalled actor can't use the wait up.
+        /// Waits for `script` to come back true.
         func wait(until script: String) async throws {
-            for _ in 0..<200 {
-                if try await text(script) == "true" { return }
-                try? await Task.sleep(for: .milliseconds(20))
-            }
-            Issue.record("Timed out waiting for: \(script)")
+            let succeeded = try await waitUntil { try await text(script) == "true" }
+            if !succeeded { Issue.record("Timed out waiting for: \(script)") }
         }
 
         /// Gives anything a note scheduled the chance to run.
@@ -78,12 +74,8 @@ struct MarkdownPreviewSecurityTests {
         ))
         window.makeKeyAndVisible()
 
-        var found: WKWebView?
-        for _ in 0..<200 where found == nil {
-            found = findWebView(in: window)
-            if found == nil { try? await Task.sleep(for: .milliseconds(20)) }
-        }
-        let hosted = Hosted(window: window, webView: try #require(found))
+        await waitUntil { findWebView(in: window) != nil }
+        let hosted = Hosted(window: window, webView: try #require(findWebView(in: window)))
         try await hosted.wait(until: "document.getElementById('content') !== null && document.getElementById('content').childElementCount > 0")
         return hosted
     }

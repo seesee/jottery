@@ -8,21 +8,26 @@ struct KeyManagerTests {
 
     @Test func concurrentBiometricUnlockAttemptsOnlyTriggerOnePrompt() async {
         let manager = KeyManager()
-        // Each retriever invocation stands in for one Face ID prompt.
+        // Each retriever invocation stands in for one Face ID prompt, which
+        // stays up until the test ends it.
         let counter = PromptCounter()
-        let slowRetrieve: @Sendable () async throws -> Data = {
+        let prompt = AsyncGate()
+        let retrieve: @Sendable () async throws -> Data = {
             await counter.increment()
-            try await Task.sleep(for: .milliseconds(200))
+            await prompt.wait()
             return Data(repeating: 7, count: 32)
         }
 
         // Two overlapping attempts — mirrors UnlockScreen.onAppear firing twice.
-        async let first = manager.attemptBiometricUnlock(retrieve: slowRetrieve)
-        async let second = manager.attemptBiometricUnlock(retrieve: slowRetrieve)
-        let results = await [first, second]
+        // The second starts while the first is provably still waiting on Face ID.
+        let first = Task { await manager.attemptBiometricUnlock(retrieve: retrieve) }
+        await waitUntil { await prompt.waitingCount == 1 }
+        let second = await manager.attemptBiometricUnlock(retrieve: retrieve)
+        await prompt.open()
 
+        #expect(second == false)                   // refused while one is in flight
+        #expect(await first.value == true)         // the real attempt succeeded
         #expect(await counter.count == 1)          // one prompt, not two
-        #expect(results.contains(true))            // the real attempt succeeded
         #expect(manager.isUnlocked)
     }
 

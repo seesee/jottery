@@ -1251,7 +1251,7 @@ actor SyncService {
     }
 
     /// Set by `shutDown(timeout:)` and `stop()`: no new sync starts on this service.
-    private var isShutDown = false
+    private(set) var isShutDown = false
 
     /// Stop this service for good, without waiting for a sync in progress. Used
     /// when the app locks or the account goes away.

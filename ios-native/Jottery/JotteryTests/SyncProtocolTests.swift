@@ -724,8 +724,9 @@ struct SyncProtocolTests {
     @Test func aRateLimitedSyncWaitsBeforeTryingAgain() async throws {
         let fixture = try makeFixture()
         _ = try fixture.repo.create(content: "a note", key: key)
-        ScriptedServerProtocol.pushHandler = { _ in .init(status: 429, headers: ["Retry-After": "30"]) }
-        ScriptedServerProtocol.pullReplies = [.init(status: 429, headers: ["Retry-After": "30"])]
+        // The longest wait allowed, so it can't run out while the test looks.
+        ScriptedServerProtocol.pushHandler = { _ in .init(status: 429, headers: ["Retry-After": "3600"]) }
+        ScriptedServerProtocol.pullReplies = [.init(status: 429, headers: ["Retry-After": "3600"])]
 
         await #expect(throws: (any Error).self) { try await fixture.service.sync() }
         let requestsAfterFirstTry = ScriptedServerProtocol.pushRequests.count
