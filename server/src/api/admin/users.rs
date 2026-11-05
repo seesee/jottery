@@ -11,8 +11,9 @@ use std::sync::Arc;
 use crate::{
     api::cookies::{clear_session_cookie, CookieScope},
     db::{SessionRepository, UserRepository},
-    error::AppResult,
-    models::{Session, UserInfo},
+    error::{AppError, AppResult},
+    models::{Session, User, UserInfo},
+    services::{AdminError, AdminService},
     utils::password::validate_password_strength,
     AppState,
 };
@@ -262,21 +263,35 @@ pub async fn get_user(
     ))
 }
 
+/// Look up the user a route names. Ids are exact here: only the command line
+/// accepts a prefix.
+async fn target_user(state: &AppState, user_id: &str) -> AppResult<User> {
+    UserRepository::get_by_id(&state.pool, user_id)
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => AppError::NotFound("User not found".to_string()),
+            e => e.into(),
+        })
+}
+
+/// What a dashboard asks for is already true, which isn't an error to the person
+/// clicking the button.
+fn tolerate_no_change(result: Result<(), AdminError>) -> AppResult<()> {
+    match result {
+        Ok(()) | Err(AdminError::AlreadyInState(_)) => Ok(()),
+        Err(e) => Err(e.into()),
+    }
+}
+
 /// Approve pending user
 /// POST /api/v1/admin/users/:id/approve
 pub async fn approve_user(
     State(state): State<Arc<AppState>>,
     Path(user_id): Path<String>,
+    axum::Extension(current_user_id): axum::Extension<String>,
 ) -> AppResult<StatusCode> {
-    let now = chrono::Utc::now().to_rfc3339();
-
-    sqlx::query!(
-        r#"UPDATE users SET approved = 1, approved_at = ? WHERE id = ?"#,
-        now,
-        user_id
-    )
-    .execute(&state.pool)
-    .await?;
+    let user = target_user(&state, &user_id).await?;
+    tolerate_no_change(AdminService::approve(&state.pool, &user, Some(&current_user_id)).await)?;
 
     tracing::info!("User approved: user_id={}", user_id);
     Ok(StatusCode::NO_CONTENT)
@@ -288,12 +303,8 @@ pub async fn deactivate_user(
     State(state): State<Arc<AppState>>,
     Path(user_id): Path<String>,
 ) -> AppResult<StatusCode> {
-    sqlx::query!(
-        r#"UPDATE users SET is_active = 0 WHERE id = ?"#,
-        user_id
-    )
-    .execute(&state.pool)
-    .await?;
+    let user = target_user(&state, &user_id).await?;
+    tolerate_no_change(AdminService::deactivate(&state.pool, &user).await)?;
 
     tracing::info!("User deactivated: user_id={}", user_id);
     Ok(StatusCode::NO_CONTENT)
@@ -305,12 +316,8 @@ pub async fn activate_user(
     State(state): State<Arc<AppState>>,
     Path(user_id): Path<String>,
 ) -> AppResult<StatusCode> {
-    sqlx::query!(
-        r#"UPDATE users SET is_active = 1 WHERE id = ?"#,
-        user_id
-    )
-    .execute(&state.pool)
-    .await?;
+    let user = target_user(&state, &user_id).await?;
+    tolerate_no_change(AdminService::activate(&state.pool, &user).await)?;
 
     tracing::info!("User activated: user_id={}", user_id);
     Ok(StatusCode::NO_CONTENT)
@@ -336,30 +343,12 @@ pub async fn toggle_admin(
         ));
     }
 
-    // If demoting an admin, check if there are other admins
+    let user = target_user(&state, &user_id).await?;
+
+    let mut tx = state.pool.begin_with("BEGIN IMMEDIATE").await?;
+
     if !req.is_admin {
-        let target_user = sqlx::query!(
-            r#"SELECT is_admin FROM users WHERE id = ?"#,
-            user_id
-        )
-        .fetch_optional(&state.pool)
-        .await?
-        .ok_or_else(|| crate::error::AppError::NotFound("User not found".to_string()))?;
-
-        // Only check if currently an admin
-        if target_user.is_admin == 1 {
-            let admin_count = sqlx::query!(
-                r#"SELECT COUNT(*) as count FROM users WHERE is_admin = 1 AND is_active = 1"#
-            )
-            .fetch_one(&state.pool)
-            .await?;
-
-            if admin_count.count <= 1 {
-                return Err(crate::error::AppError::BadRequest(
-                    "Cannot demote the last admin user".to_string(),
-                ));
-            }
-        }
+        AdminService::ensure_not_last_admin(&mut tx, &user).await?;
     }
 
     // Update admin status
@@ -369,8 +358,10 @@ pub async fn toggle_admin(
         is_admin_value,
         user_id
     )
-    .execute(&state.pool)
+    .execute(&mut *tx)
     .await?;
+
+    tx.commit().await?;
 
     let action = if req.is_admin { "promoted to admin" } else { "demoted from admin" };
     tracing::info!("User {}: user_id={} by admin={}", action, user_id, current_user_id);
@@ -391,37 +382,8 @@ pub async fn delete_user(
         ));
     }
 
-    // Check if target user is an admin
-    let target_user = sqlx::query!(
-        r#"SELECT is_admin FROM users WHERE id = ?"#,
-        user_id
-    )
-    .fetch_optional(&state.pool)
-    .await?
-    .ok_or_else(|| crate::error::AppError::NotFound("User not found".to_string()))?;
-
-    // If deleting an admin, check if there are other admins
-    if target_user.is_admin == 1 {
-        let admin_count = sqlx::query!(
-            r#"SELECT COUNT(*) as count FROM users WHERE is_admin = 1 AND is_active = 1"#
-        )
-        .fetch_one(&state.pool)
-        .await?;
-
-        if admin_count.count <= 1 {
-            return Err(crate::error::AppError::BadRequest(
-                "Cannot delete the last admin user".to_string(),
-            ));
-        }
-    }
-
-    // Delete user (CASCADE will handle related records)
-    sqlx::query!(
-        r#"DELETE FROM users WHERE id = ?"#,
-        user_id
-    )
-    .execute(&state.pool)
-    .await?;
+    let user = target_user(&state, &user_id).await?;
+    AdminService::delete(&state.pool, &user).await?;
 
     tracing::info!("User deleted: user_id={} by admin={}", user_id, current_user_id);
     Ok(StatusCode::NO_CONTENT)

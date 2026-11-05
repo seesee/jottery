@@ -262,8 +262,8 @@ async fn handle_users(
                 Err(jottery_server::services::AdminError::AlreadyInState(_)) => {
                     println!("User is already inactive.");
                 }
-                Err(jottery_server::services::AdminError::CannotModifyAdmin) => {
-                    eprintln!("Error: Cannot deactivate admin user via CLI.");
+                Err(jottery_server::services::AdminError::LastAdmin) => {
+                    eprintln!("Error: This is the last admin, and a server needs one.");
                     std::process::exit(1);
                 }
                 Err(e) => return Err(e.into()),
@@ -282,11 +282,6 @@ async fn handle_users(
 
         UserCommands::Delete { user, yes } => {
             let info = AdminService::get_user_info(pool, &user).await?;
-
-            if info.user.is_admin == 1 {
-                eprintln!("Error: Cannot delete admin user via CLI.");
-                std::process::exit(1);
-            }
 
             if !yes {
                 println!(
@@ -307,8 +302,14 @@ async fn handle_users(
                 }
             }
 
-            let deleted = AdminService::delete_user(pool, &info.user.id).await?;
-            println!("✓ Deleted user: {}", deleted.email);
+            match AdminService::delete_user(pool, &info.user.id).await {
+                Ok(deleted) => println!("✓ Deleted user: {}", deleted.email),
+                Err(jottery_server::services::AdminError::LastAdmin) => {
+                    eprintln!("Error: This is the last admin, and a server needs one.");
+                    std::process::exit(1);
+                }
+                Err(e) => return Err(e.into()),
+            }
         }
 
         UserCommands::ResetPassword { user, password } => {

@@ -11,6 +11,7 @@ use crate::{
     db::{SessionRepository, UserRepository},
     error::{AppError, AppResult},
     models::{CreateSessionParams, Session},
+    services::AdminService,
     utils::{
         crypto::hash_sha256,
         password::{hash_password_with_params, validate_password_strength, verify_password},
@@ -453,47 +454,18 @@ pub async fn delete_account(
 ) -> AppResult<StatusCode> {
     let user_id = &session.user_id;
 
+    let user = UserRepository::get_by_id(&state.pool, user_id).await?;
+
     match query.mode.as_str() {
         "deactivate" => {
-            // Soft delete: set is_active = 0, allowing re-registration with admin approval
-            sqlx::query!(
-                r#"UPDATE users SET is_active = 0 WHERE id = ?"#,
-                user_id
-            )
-            .execute(&state.pool)
-            .await?;
-
-            // Invalidate all sessions for this user
-            sqlx::query!(
-                r#"DELETE FROM sessions WHERE user_id = ?"#,
-                user_id
-            )
-            .execute(&state.pool)
-            .await?;
-
+            // Soft delete: allows re-registration with admin approval
+            AdminService::deactivate(&state.pool, &user).await?;
             tracing::info!("User deactivated their account: {}", user_id);
             Ok(StatusCode::NO_CONTENT)
         }
         "delete" => {
             // Hard delete: remove all user data
-            let mut tx = state.pool.begin().await.map_err(|e| {
-                tracing::error!("Failed to start transaction: {}", e);
-                AppError::InternalServerError
-            })?;
-
-            // Use the helper to delete all account data
-            UserRepository::delete_account_data(&mut tx, &user_id)
-                .await
-                .map_err(|e| {
-                    tracing::error!("Failed to delete account data: {}", e);
-                    AppError::InternalServerError
-                })?;
-
-            tx.commit().await.map_err(|e| {
-                tracing::error!("Failed to commit transaction: {}", e);
-                AppError::InternalServerError
-            })?;
-
+            AdminService::delete(&state.pool, &user).await?;
             tracing::warn!("User permanently deleted their account: {}", user_id);
             Ok(StatusCode::NO_CONTENT)
         }

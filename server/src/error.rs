@@ -53,6 +53,23 @@ impl From<sqlx::Error> for AppError {
     }
 }
 
+impl From<crate::services::AdminError> for AppError {
+    fn from(err: crate::services::AdminError) -> Self {
+        use crate::services::AdminError;
+
+        match err {
+            AdminError::UserNotFound(_) => AppError::NotFound("User not found".to_string()),
+            AdminError::DeviceNotFound(_) => AppError::NotFound("Device not found".to_string()),
+            AdminError::LastAdmin | AdminError::WeakPassword(_) => {
+                AppError::BadRequest(err.to_string())
+            }
+            AdminError::AlreadyInState(_) => AppError::Conflict(err.to_string()),
+            AdminError::Database(e) => AppError::DatabaseError(e),
+            AdminError::PasswordHash(e) => AppError::InternalError(e),
+        }
+    }
+}
+
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         if matches!(self, AppError::PasswordChangeRequired) {

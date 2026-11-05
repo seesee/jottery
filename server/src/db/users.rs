@@ -88,12 +88,12 @@ impl UserRepository {
         .await
     }
 
-    /// Approve a user
-    #[allow(dead_code)]
+    /// Approve a user. `approved_by` is the admin who did, if it was one: the
+    /// command line has no account behind it.
     pub async fn approve(
         pool: &SqlitePool,
         user_id: &str,
-        approved_by: &str,
+        approved_by: Option<&str>,
     ) -> Result<(), sqlx::Error> {
         let now = chrono::Utc::now().to_rfc3339();
 
@@ -131,13 +131,12 @@ impl UserRepository {
     }
 
     /// Deactivate a user
-    #[allow(dead_code)]
-    pub async fn deactivate(pool: &SqlitePool, user_id: &str) -> Result<(), sqlx::Error> {
+    pub async fn deactivate(conn: &mut SqliteConnection, user_id: &str) -> Result<(), sqlx::Error> {
         sqlx::query!(
             r#"UPDATE users SET is_active = 0 WHERE id = ?"#,
             user_id
         )
-        .execute(pool)
+        .execute(conn)
         .await?;
 
         Ok(())

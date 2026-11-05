@@ -6,7 +6,7 @@
 use crate::db::{SessionRepository, UserRepository};
 use crate::models::User;
 use crate::utils::password::{hash_password_with_params, validate_password_strength};
-use sqlx::SqlitePool;
+use sqlx::{SqliteConnection, SqlitePool};
 
 /// Device information returned by admin service
 #[derive(Debug, Clone)]
@@ -61,8 +61,8 @@ pub enum AdminError {
     #[error("Device not found: {0}")]
     DeviceNotFound(String),
 
-    #[error("Cannot modify admin user")]
-    CannotModifyAdmin,
+    #[error("This is the last admin, and a server needs one")]
+    LastAdmin,
 
     #[error("User is already {0}")]
     AlreadyInState(String),
@@ -118,73 +118,95 @@ impl AdminService {
         })
     }
 
-    /// Approve a pending user
-    pub async fn approve_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
-        let user = Self::find_user(pool, identifier).await?;
+    /// Refuse if taking `user` out of the admin role, however that happens, would
+    /// leave the server without an admin. Nobody could then approve users, and an
+    /// image without jottery-admin can't be repaired from inside. Call it inside
+    /// the write transaction, so that two admins can't each leave the other last.
+    pub async fn ensure_not_last_admin(conn: &mut SqliteConnection, user: &User) -> Result<()> {
+        if user.is_admin != 1 || user.is_active != 1 {
+            return Ok(());
+        }
 
+        let active_admins =
+            sqlx::query_scalar!("SELECT COUNT(*) FROM users WHERE is_admin = 1 AND is_active = 1")
+                .fetch_one(conn)
+                .await?;
+
+        if active_admins <= 1 {
+            return Err(AdminError::LastAdmin);
+        }
+        Ok(())
+    }
+
+    /// Approve a pending user. `approved_by` is the acting admin's id, if any.
+    pub async fn approve(pool: &SqlitePool, user: &User, approved_by: Option<&str>) -> Result<()> {
         if user.approved == 1 {
             return Err(AdminError::AlreadyInState("approved".to_string()));
         }
 
-        UserRepository::approve(pool, &user.id, "admin").await?;
-
-        // Return updated user
-        Self::find_user(pool, &user.id).await
+        UserRepository::approve(pool, &user.id, approved_by).await?;
+        Ok(())
     }
 
-    /// Deactivate a user account
-    pub async fn deactivate_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
-        let user = Self::find_user(pool, identifier).await?;
-
+    /// Deactivate an account. Its devices stop working at once, and a session from
+    /// before must not come back if the account is reactivated.
+    pub async fn deactivate(pool: &SqlitePool, user: &User) -> Result<()> {
         if user.is_active == 0 {
             return Err(AdminError::AlreadyInState("inactive".to_string()));
         }
 
-        if user.is_admin == 1 {
-            return Err(AdminError::CannotModifyAdmin);
-        }
-
-        UserRepository::deactivate(pool, &user.id).await?;
-
-        // Return updated user
-        Self::find_user(pool, &user.id).await
+        let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+        Self::ensure_not_last_admin(&mut tx, user).await?;
+        UserRepository::deactivate(&mut tx, &user.id).await?;
+        SessionRepository::delete_all_for_user(&mut tx, &user.id).await?;
+        tx.commit().await?;
+        Ok(())
     }
 
-    /// Activate a user account
-    pub async fn activate_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
-        let user = Self::find_user(pool, identifier).await?;
-
+    /// Reactivate an account.
+    pub async fn activate(pool: &SqlitePool, user: &User) -> Result<()> {
         if user.is_active == 1 {
             return Err(AdminError::AlreadyInState("active".to_string()));
         }
 
         UserRepository::activate(pool, &user.id).await?;
+        Ok(())
+    }
 
-        // Return updated user
+    /// Delete an account and everything in it.
+    pub async fn delete(pool: &SqlitePool, user: &User) -> Result<()> {
+        let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+        Self::ensure_not_last_admin(&mut tx, user).await?;
+        UserRepository::delete_account_data(&mut tx, &user.id).await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    /// Approve a pending user, found by id, id prefix or email
+    pub async fn approve_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
+        let user = Self::find_user(pool, identifier).await?;
+        Self::approve(pool, &user, None).await?;
         Self::find_user(pool, &user.id).await
     }
 
-    /// Delete a user and all their data
+    /// Deactivate a user account, found by id, id prefix or email
+    pub async fn deactivate_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
+        let user = Self::find_user(pool, identifier).await?;
+        Self::deactivate(pool, &user).await?;
+        Self::find_user(pool, &user.id).await
+    }
+
+    /// Activate a user account, found by id, id prefix or email
+    pub async fn activate_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
+        let user = Self::find_user(pool, identifier).await?;
+        Self::activate(pool, &user).await?;
+        Self::find_user(pool, &user.id).await
+    }
+
+    /// Delete a user and all their data, found by id, id prefix or email
     pub async fn delete_user(pool: &SqlitePool, identifier: &str) -> Result<User> {
         let user = Self::find_user(pool, identifier).await?;
-
-        if user.is_admin == 1 {
-            return Err(AdminError::CannotModifyAdmin);
-        }
-
-        // Delete user's notes
-        sqlx::query!("DELETE FROM notes WHERE user_id = ?", user.id)
-            .execute(pool)
-            .await?;
-
-        // Delete user's devices
-        sqlx::query!("DELETE FROM clients WHERE user_id = ?", user.id)
-            .execute(pool)
-            .await?;
-
-        // Delete user
-        UserRepository::delete(pool, &user.id).await?;
-
+        Self::delete(pool, &user).await?;
         Ok(user)
     }
 
