@@ -343,7 +343,7 @@ class SyncService {
         isSyncRefreshing.set(true);
 
         // Get all notes from database (already decrypted and sorted)
-        const allNotes = await noteService.getAllNotes(sortOrder);
+        const allNotes = await noteService.getNotesForList(sortOrder);
 
         // Replace store with properly sorted notes from database
         notes.set(allNotes);
@@ -360,7 +360,7 @@ class SyncService {
         let settingsSnapshot: { sortOrder?: string } = {};
         settings.subscribe(s => settingsSnapshot = s)();
         const sortOrder = (settingsSnapshot.sortOrder ?? 'recent') as 'recent' | 'oldest' | 'alpha' | 'created';
-        const allNotes = await noteService.getAllNotes(sortOrder);
+        const allNotes = await noteService.getNotesForList(sortOrder);
         notes.set(allNotes);
         console.log('[SyncService] Pushed', pushedCount, 'notes, refreshed store');
       } else {

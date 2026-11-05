@@ -104,12 +104,24 @@ class NoteService {
    * Get all active notes (decrypted)
    */
   async getAllNotes(sortOrder: SortOrder = 'recent'): Promise<DecryptedNote[]> {
+    return this.decryptAndSort(await noteRepository.getAllActive(), sortOrder);
+  }
+
+  /**
+   * Get everything the note list and search hold, which includes archived notes.
+   * This is what the first load puts in the store, so a refresh has to use it too,
+   * or the Archive view empties and archived notes drop out of search.
+   */
+  async getNotesForList(sortOrder: SortOrder = 'recent'): Promise<DecryptedNote[]> {
+    return this.decryptAndSort(await noteRepository.getAllNonDeleted(), sortOrder);
+  }
+
+  private async decryptAndSort(notes: Note[], sortOrder: SortOrder): Promise<DecryptedNote[]> {
     const masterKey = keyManager.getMasterKey();
     if (!masterKey) {
       throw new ApplicationLockedError();
     }
 
-    const notes = await noteRepository.getAllActive();
     const results = await Promise.allSettled(
       notes.map(note => this.decryptNote(note, masterKey.key))
     );

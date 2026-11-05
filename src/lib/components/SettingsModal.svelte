@@ -1091,7 +1091,7 @@
       });
 
       // Reload notes
-      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      const allNotes = await noteService.getNotesForList($settings.sortOrder);
       notes.set(allNotes);
       searchService.indexNotes(allNotes);
 

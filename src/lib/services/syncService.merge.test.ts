@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
+import { get } from 'svelte/store';
 import { syncService } from './syncService';
 import { syncRepository } from './syncRepository';
 import { noteRepository } from './noteRepository';
@@ -13,7 +14,8 @@ import { noteService } from './noteService';
 import { keyManager } from './keyManager';
 import { cryptoService } from './crypto';
 import { initTestDB, cleanupTestDB, createTestNote } from '../../test/db-utils';
-import { settings } from '../stores/appStore';
+import { notes, settings } from '../stores/appStore';
+import { searchService } from './searchService';
 import { DEFAULT_SETTINGS } from '../types';
 import type { Note, SyncNote, SyncPullResponse, SyncPushRequest, SyncPushResponse } from '../types';
 
@@ -289,6 +291,58 @@ describe('sync merge', () => {
       const note = await stored();
       expect(note.pinned).toBe(true);
       expect(note.attachments.map(x => x.id)).toEqual([ATTACHMENT_A]);
+    });
+  });
+
+  describe('the note list after a sync', () => {
+    async function archivedNote() {
+      const note = createTestNote({
+        content: await encrypted('archived text'),
+        tags: [],
+        archived: true,
+        archivedAt: NOW,
+      });
+      await noteRepository.create(note);
+      return note.id;
+    }
+
+    it('keeps archived notes after a pull', async () => {
+      const archivedId = await archivedNote();
+      serve({ notes: [await remoteNote()] });
+
+      await syncService.syncNow();
+
+      expect(get(notes).map(note => note.id)).toContain(archivedId);
+    });
+
+    it('keeps archived notes after a push', async () => {
+      const archivedId = await archivedNote();
+      await localNote({ needsSync: true });
+      serve({}, async () => ({ accepted: [{ id: NOTE_ID, serverVersion: 2, syncedAt: NOW }] }));
+
+      await syncService.syncNow();
+
+      expect(get(notes).map(note => note.id)).toContain(archivedId);
+    });
+
+    it('keeps archived notes in the search index', async () => {
+      const archivedId = await archivedNote();
+      serve({ notes: [await remoteNote()] });
+
+      await syncService.syncNow();
+
+      const found = await searchService.searchNotes('archived', get(notes), 'recent', true);
+      expect(found.map(note => note.id)).toContain(archivedId);
+    });
+
+    it('still leaves deleted notes out', async () => {
+      const deleted = createTestNote({ content: await encrypted('gone'), tags: [], deleted: true, deletedAt: NOW });
+      await noteRepository.create(deleted);
+      serve({ notes: [await remoteNote()] });
+
+      await syncService.syncNow();
+
+      expect(get(notes).map(note => note.id)).not.toContain(deleted.id);
     });
   });
 

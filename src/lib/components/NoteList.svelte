@@ -445,7 +445,7 @@
   async function reloadNotes() {
     // Reload notes after deletion
     try {
-      const allNotes = await noteService.getAllNotes($settings.sortOrder);
+      const allNotes = await noteService.getNotesForList($settings.sortOrder);
       notes.set(allNotes);
     } catch (error) {
       console.error('Failed to reload notes:', error);
