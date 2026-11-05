@@ -26,16 +26,20 @@ struct EncryptionRepository: Sendable {
     }
 
     /// Save envelope encryption metadata, clearing legacy salt/iterations.
+    ///
+    /// The wrapped key and its verification token go together. A wrapped key
+    /// saved without its token, by being killed between two writes, leaves a
+    /// vault that says wrong password for ever.
     func saveEnvelope(envelopeVersion: Int, deviceSalt: String,
-                      localWrappedMaster: String, wrappingKdfVersion: Int) throws {
+                      localWrappedMaster: String, wrappingKdfVersion: Int, verification: String) throws {
         try db.dbPool.write { db in
             try db.execute(sql: """
                 UPDATE encryption_metadata
                 SET envelope_version = ?, device_salt = ?,
                     local_wrapped_master = ?, wrapping_kdf_version = ?,
-                    salt = '', iterations = 0
+                    salt = '', iterations = 0, verification = ?
                 WHERE id = 1
-            """, arguments: [envelopeVersion, deviceSalt, localWrappedMaster, wrappingKdfVersion])
+            """, arguments: [envelopeVersion, deviceSalt, localWrappedMaster, wrappingKdfVersion, verification])
         }
     }
 }

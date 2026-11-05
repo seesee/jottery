@@ -403,26 +403,11 @@ final class AppState {
                 return (localBlob, verificationJSON)
             }.value
 
-            // Store initial metadata (needed before saveEnvelope which does UPDATE)
-            let initialMetadata = EncryptionMetadata.new(
-                salt: deviceSalt, iterations: CryptoService.defaultIterations,
-                verification: verificationJSON
-            )
-            try encryptionRepo.store(initialMetadata)
-
-            // Convert to envelope format
-            try encryptionRepo.saveEnvelope(
-                envelopeVersion: 1,
-                deviceSalt: deviceSalt.base64EncodedString(),
-                localWrappedMaster: localBlob,
-                wrappingKdfVersion: CryptoService.wrappingKdfVersion
-            )
-
-            // Update verification (saveEnvelope clears salt/iterations but not verification)
-            if var metadata = try encryptionRepo.get() {
-                metadata.verification = verificationJSON
-                try encryptionRepo.store(metadata)
-            }
+            // One write: a vault stopped partway through would read as a legacy
+            // vault whose token never matches, and refuse every password.
+            try encryptionRepo.store(EncryptionMetadata.newEnvelope(
+                deviceSalt: deviceSalt, localWrappedMaster: localBlob, verification: verificationJSON
+            ))
 
             keyManager.unlockWithKeyData(masterKeyData)
         }

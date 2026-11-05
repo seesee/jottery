@@ -228,14 +228,9 @@ enum EnvelopeService {
                 envelopeVersion: 1,
                 deviceSalt: deviceSalt.base64EncodedString(),
                 localWrappedMaster: localBlob,
-                wrappingKdfVersion: CryptoService.wrappingKdfVersion
+                wrappingKdfVersion: CryptoService.wrappingKdfVersion,
+                verification: verificationJSON
             )
-
-            // Update verification token
-            if var metadata = try encryptionRepo.get() {
-                metadata.verification = verificationJSON
-                try encryptionRepo.store(metadata)
-            }
 
             Log.debug("[Envelope] Migration complete")
             return true
@@ -428,14 +423,9 @@ enum EnvelopeService {
             envelopeVersion: 1,
             deviceSalt: local.deviceSalt,
             localWrappedMaster: local.localWrappedMaster,
-            wrappingKdfVersion: CryptoService.wrappingKdfVersion
+            wrappingKdfVersion: CryptoService.wrappingKdfVersion,
+            verification: local.verification
         )
-
-        // Update verification token
-        if var metadata = try encryptionRepo.get() {
-            metadata.verification = local.verification
-            try encryptionRepo.store(metadata)
-        }
 
         return SymmetricKey(data: masterKeyData)
     }
@@ -686,14 +676,9 @@ enum EnvelopeService {
             envelopeVersion: 1,
             deviceSalt: newDeviceSalt.base64EncodedString(),
             localWrappedMaster: localBlob,
-            wrappingKdfVersion: CryptoService.wrappingKdfVersion
+            wrappingKdfVersion: CryptoService.wrappingKdfVersion,
+            verification: verificationJSON
         )
-
-        // Update verification token
-        if var metadata = try encryptionRepo.get() {
-            metadata.verification = verificationJSON
-            try encryptionRepo.store(metadata)
-        }
 
         Log.debug("[Envelope] Local password re-wrap complete")
     }

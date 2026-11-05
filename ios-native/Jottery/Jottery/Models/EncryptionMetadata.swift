@@ -49,4 +49,19 @@ struct EncryptionMetadata: Codable, FetchableRecord, PersistableRecord {
             verification: verification
         )
     }
+
+    /// Create metadata for a new vault in envelope format, complete in one record.
+    static func newEnvelope(deviceSalt: Data, localWrappedMaster: String, verification: String) -> EncryptionMetadata {
+        EncryptionMetadata(
+            salt: "",
+            iterations: 0,
+            createdAt: ISO8601DateFormatter.jottery.string(from: Date()),
+            algorithm: "AES-256-GCM",
+            verification: verification,
+            envelopeVersion: 1,
+            deviceSalt: deviceSalt.base64EncodedString(),
+            localWrappedMaster: localWrappedMaster,
+            wrappingKdfVersion: CryptoService.wrappingKdfVersion
+        )
+    }
 }
