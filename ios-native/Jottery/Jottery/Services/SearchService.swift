@@ -33,13 +33,23 @@ enum SearchService {
 
     /// Sort notes by the given order, pinned notes always first.
     static func sort(notes: [DecryptedNote], order: SortOrder) -> [DecryptedNote] {
-        notes.sorted { a, b in
+        // A title is built from the note's tags and content, so it's built once
+        // per note here: a comparison runs some n log n times.
+        if order == .alpha {
+            return notes.map { (note: $0, title: $0.title) }
+                .sorted { a, b in
+                    if a.note.pinned != b.note.pinned { return a.note.pinned }
+                    return a.title.localizedCaseInsensitiveCompare(b.title) == .orderedAscending
+                }
+                .map(\.note)
+        }
+        return notes.sorted { a, b in
             if a.pinned != b.pinned { return a.pinned }
             switch order {
             case .recent:  return a.modifiedAt > b.modifiedAt
             case .oldest:  return a.modifiedAt < b.modifiedAt
-            case .alpha:   return a.title.localizedCaseInsensitiveCompare(b.title) == .orderedAscending
             case .created: return a.createdAt > b.createdAt
+            case .alpha:   return false  // Handled above.
             }
         }
     }
