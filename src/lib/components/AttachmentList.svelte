@@ -5,6 +5,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { toast } from '../utils/toast.svelte';
   import AttachmentPreviewModal from './AttachmentPreviewModal.svelte';
+  import { attachmentMarkdown } from '../utils/attachmentMarkdown';
 
   export let attachments: Attachment[] = [];
   export let onDelete: (attachment: Attachment) => void;
@@ -87,12 +88,8 @@
 
   // Copy markdown link to clipboard
   async function handleCopyMarkdown(attachment: Attachment) {
-    const filename = filenames.get(attachment.id) || $_('attachments.attachment');
-
-    // Use image syntax for images, regular link for others
-    const markdown = attachment.mimeType.startsWith('image/')
-      ? `![${filename}](attachment:${filename})`
-      : `[Attachment: ${filename}](attachment:${filename})`;
+    const label = $_('attachments.attachment');
+    const markdown = attachmentMarkdown(attachment, filenames.get(attachment.id) || label, label);
 
     try {
       await navigator.clipboard.writeText(markdown);
