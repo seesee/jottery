@@ -164,6 +164,7 @@ impl Database {
             (23, include_str!("../migrations/023_clear_stored_password.sql")),
             (24, include_str!("../migrations/024_restart_the_bins_clock.sql")),
             (25, include_str!("../migrations/025_add_default_note_type.sql")),
+            (26, include_str!("../migrations/026_remember_asked_deletions.sql")),
         ];
 
         // Run pending migrations
@@ -423,7 +424,7 @@ mod tests {
     fn test_in_memory_database() {
         let db = Database::in_memory(&test_password()).unwrap();
         assert!(db.is_initialized().unwrap() == false);
-        assert_eq!(db.schema_version().unwrap(), 25);
+        assert_eq!(db.schema_version().unwrap(), 26);
         assert_eq!(db.count_notes(false).unwrap(), 0);
     }
 
@@ -486,13 +487,13 @@ mod tests {
         // Create and close database
         {
             let db = Database::open(&db_path, &password).unwrap();
-            assert_eq!(db.schema_version().unwrap(), 25);
+            assert_eq!(db.schema_version().unwrap(), 26);
         }
 
         // Reopen and verify
         {
             let db = Database::open(&db_path, &password).unwrap();
-            assert_eq!(db.schema_version().unwrap(), 25);
+            assert_eq!(db.schema_version().unwrap(), 26);
         }
     }
 }

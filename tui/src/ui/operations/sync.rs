@@ -61,6 +61,9 @@ const MAX_RETRY_AFTER_SECONDS: u64 = 3600;
 /// A sync that would remove this many notes asks first.
 const MASS_DELETION_THRESHOLD: usize = 10;
 
+/// How far back notes that reached the bin from elsewhere count towards that.
+const MASS_DELETION_WINDOW_HOURS: i64 = 24;
+
 /// How long a note deleted elsewhere stays restorable in the bin here.
 const REMOTE_DELETION_RETENTION_DAYS: i64 = 30;
 
@@ -1172,8 +1175,14 @@ fn settle_remote_deletions(run: &Run<'_>, outcome: &mut SyncOutcome) -> Result<(
     let note_repo = run.note_repo();
     let transaction = run.conn.unchecked_transaction()?;
 
+    // What's gone lately counts, or a server could stay under the limit on every sync.
+    // What's been asked about stays asked, or taking some of it away would free the rest.
     let held = note_repo.count_held_deletions()?;
-    if held >= MASS_DELETION_THRESHOLD {
+    let window_start = Utc::now() - chrono::Duration::hours(MASS_DELETION_WINDOW_HOURS);
+    let lately = note_repo.count_arrived_in_bin_since(window_start)?;
+
+    if held > 0 && (note_repo.has_unanswered_deletions()? || held + lately >= MASS_DELETION_THRESHOLD) {
+        note_repo.mark_held_deletions_asked()?;
         outcome.deletions_held = held;
     } else {
         outcome.synced += note_repo.apply_held_deletions()?;
@@ -4663,6 +4672,172 @@ mod tests {
 
         assert_eq!(note_repo.purge_remote_deletions(Utc::now() + chrono::Duration::days(1)).unwrap(), 1);
         assert!(note_repo.get(&notes[0].id, key()).unwrap().is_none());
+    }
+
+    /// A page naming these notes as deleted, as a server can send as often as it likes.
+    fn deletions_page(notes: &[Note], cursor: &str) -> Value {
+        let mut page = cursor_page(vec![], cursor, false);
+        page["deletions"] = json!(notes.iter()
+            .map(|note| json!({ "id": note.id, "deletedAt": "2031-01-01T00:00:00Z" }))
+            .collect::<Vec<_>>());
+        page
+    }
+
+    /// A pulled copy of `note`, newer than the one here, in the bin since long ago.
+    fn binned_long_ago(note: &Note) -> Value {
+        let mut pulled = remote_notes(1).remove(0);
+        pulled["id"] = json!(note.id);
+        pulled["modifiedAt"] = json!("2040-01-01T00:00:00Z");
+        pulled["deleted"] = json!(true);
+        pulled["deletedAt"] = json!("2001-01-01T00:00:00Z");
+        pulled
+    }
+
+    /// When this device says a note reached the bin from elsewhere.
+    fn bin_clock(app: &App, id: &str) -> Option<String> {
+        app.db.as_ref().unwrap().connection()
+            .query_row("SELECT remote_deleted_at FROM notes WHERE id = ?1", [id], |row| row.get(0))
+            .unwrap()
+    }
+
+    /// Synced notes on an app whose server has nothing queued for it.
+    fn app_with_synced_notes(count: usize) -> (App, StubServer, Vec<Note>) {
+        let (mut app, server, _) = app_with_deletions_from_the_server(0);
+        perform_sync(&mut app, false).unwrap();
+
+        let notes: Vec<Note> = (0..count).map(|i| {
+            let mut note = Note::new(format!("Note {i}"));
+            note.needs_sync = false;
+            note
+        }).collect();
+        let db = app.db.as_ref().unwrap();
+        for note in &notes {
+            NoteRepository::new(db.connection()).create(note, key()).unwrap();
+        }
+
+        (app, server, notes)
+    }
+
+    /// Web lost notes this way: the first pull could only reach the bin, and a second
+    /// naming the same notes found them there and took them out of it.
+    #[test]
+    fn a_server_repeating_a_deletion_cannot_take_a_note_out_of_the_bin() {
+        let (mut app, server, notes) = app_with_deletions_from_the_server(3);
+        perform_sync(&mut app, false).unwrap();
+        assert_eq!(bin_count(&app), 3);
+        let clock = bin_clock(&app, &notes[0].id);
+        assert!(clock.is_some());
+
+        for cursor in ["c2", "c3"] {
+            server.script(vec![deletions_page(&notes, cursor)]);
+            perform_sync(&mut app, false).unwrap();
+        }
+
+        assert_eq!(bin_count(&app), 3);
+        assert_eq!(bin_clock(&app, &notes[0].id), clock);
+
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        let thirty_days_ago = Utc::now() - chrono::Duration::days(30);
+        assert_eq!(note_repo.purge_remote_deletions(thirty_days_ago).unwrap(), 0);
+        assert_eq!(note_repo.purge_expired_bin(thirty_days_ago).unwrap(), 0);
+    }
+
+    #[test]
+    fn a_held_deletion_stays_held_however_often_the_server_repeats_it() {
+        let (mut app, server, notes) = app_with_deletions_from_the_server(MASS_DELETION_THRESHOLD);
+        assert_eq!(perform_sync(&mut app, false).unwrap().deletions_held, MASS_DELETION_THRESHOLD);
+
+        for cursor in ["c2", "c3"] {
+            server.script(vec![deletions_page(&notes, cursor)]);
+            let outcome = perform_sync(&mut app, false).unwrap();
+            assert_eq!(outcome.deletions_held, MASS_DELETION_THRESHOLD);
+        }
+
+        assert_eq!(bin_count(&app), 0);
+        assert_eq!(stored_note_count(&app), MASS_DELETION_THRESHOLD);
+    }
+
+    /// The limit would mean nothing if a server could stay under it on each sync.
+    #[test]
+    fn a_few_deletions_at_a_time_do_not_get_past_the_limit() {
+        let batch = MASS_DELETION_THRESHOLD - 1;
+        let (mut app, server, notes) = app_with_synced_notes(batch * 2);
+
+        server.script(vec![deletions_page(&notes[..batch], "c2")]);
+        assert_eq!(perform_sync(&mut app, false).unwrap().deletions_held, 0);
+        assert_eq!(bin_count(&app), batch);
+
+        server.script(vec![deletions_page(&notes[batch..], "c3")]);
+        assert_eq!(perform_sync(&mut app, false).unwrap().deletions_held, batch);
+        assert_eq!(bin_count(&app), batch);
+    }
+
+    /// Taking some of a held batch away another way mustn't drop what's left under the
+    /// limit, or the rest would go without the question ever being answered.
+    #[test]
+    fn a_held_deletion_stays_held_when_some_of_it_goes_another_way() {
+        let (mut app, server, notes) = app_with_deletions_from_the_server(MASS_DELETION_THRESHOLD);
+        perform_sync(&mut app, false).unwrap();
+
+        let pulled: Vec<Value> = notes[..2].iter().map(binned_long_ago).collect();
+        server.script(vec![cursor_page(pulled, "c2", false)]);
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(outcome.deletions_held, MASS_DELETION_THRESHOLD - 2);
+        assert_eq!(bin_count(&app), 2);
+    }
+
+    /// Once it's been answered, it's over.
+    #[test]
+    fn an_answered_deletion_does_not_hold_up_the_next_one() {
+        let (mut app, server, notes) = app_with_deletions_from_the_server(MASS_DELETION_THRESHOLD);
+        perform_sync(&mut app, false).unwrap();
+        refuse_held_deletions(&mut app).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        assert_eq!(note_repo.count_held_deletions().unwrap(), 0);
+        assert!(!note_repo.has_unanswered_deletions().unwrap());
+
+        // One note on its own is under the limit, so it goes to the bin as usual
+        server.script(vec![deletions_page(&notes[..1], "c2")]);
+        let outcome = perform_sync(&mut app, false).unwrap();
+        assert_eq!(outcome.deletions_held, 0);
+    }
+
+    /// The first pull of a note can't be the only way in: one already here goes the same.
+    #[test]
+    fn a_note_here_that_a_pull_puts_in_the_bin_starts_its_time_now() {
+        let (mut app, server, notes) = app_with_synced_notes(1);
+        server.script(vec![cursor_page(vec![binned_long_ago(&notes[0])], "c2", false)]);
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(bin_count(&app), 1);
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        let thirty_days_ago = Utc::now() - chrono::Duration::days(30);
+        assert_eq!(note_repo.purge_expired_bin(thirty_days_ago).unwrap(), 0);
+        assert_eq!(note_repo.purge_remote_deletions(thirty_days_ago).unwrap(), 0);
+        assert!(note_repo.get_pending_deletions().unwrap().is_empty());
+    }
+
+    /// A live note can carry a date from a pull. It says nothing about when it was deleted.
+    #[test]
+    fn a_date_left_on_a_live_note_does_not_date_its_deletion() {
+        let (mut app, server, notes) = app_with_synced_notes(1);
+        let mut pulled = binned_long_ago(&notes[0]);
+        pulled["deleted"] = json!(false);
+        server.script(vec![cursor_page(vec![pulled], "c2", false)]);
+        perform_sync(&mut app, false).unwrap();
+
+        server.script(vec![deletions_page(&notes, "c3")]);
+        perform_sync(&mut app, false).unwrap();
+
+        let stored = stored_note(&app, &notes[0].id);
+        assert!(stored.deleted);
+        assert!(stored.deleted_at.unwrap() > Utc::now() - chrono::Duration::days(1));
     }
 
     /// A note restored from the bin isn't deleted any more, whatever the old mark said.

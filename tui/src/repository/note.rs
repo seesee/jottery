@@ -612,6 +612,33 @@ impl<'a> NoteRepository<'a> {
         Ok(count as usize)
     }
 
+    /// Whether the user has been asked about deletions and hasn't answered yet.
+    pub fn has_unanswered_deletions(&self) -> Result<bool> {
+        Ok(self.conn.query_row(
+            "SELECT EXISTS (SELECT 1 FROM held_deletions WHERE asked = 1)",
+            [],
+            |row| row.get(0),
+        )?)
+    }
+
+    /// Note that the user is being asked about everything held. It stays held until
+    /// they answer, whatever happens to some of it in the meantime.
+    pub fn mark_held_deletions_asked(&self) -> Result<()> {
+        self.conn.execute("UPDATE held_deletions SET asked = 1", [])?;
+        Ok(())
+    }
+
+    /// How many notes have reached the bin from elsewhere since `since`, by this device's
+    /// clock. A server staying under the limit on each sync adds up here.
+    pub fn count_arrived_in_bin_since(&self, since: DateTime<Utc>) -> Result<usize> {
+        let count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM notes WHERE deleted = 1 AND remote_deleted_at >= ?1",
+            params![since.to_rfc3339()],
+            |row| row.get(0),
+        )?;
+        Ok(count as usize)
+    }
+
     /// Move held deletions into the bin, returning how many notes went there.
     ///
     /// The server's word isn't proof that one of this user's devices asked for this, so
@@ -621,7 +648,7 @@ impl<'a> NoteRepository<'a> {
         let now = Utc::now().to_rfc3339();
 
         let moved = self.conn.execute(
-            "UPDATE notes SET deleted = 1, deleted_at = COALESCE(deleted_at, ?1), needs_sync = 0
+            "UPDATE notes SET deleted = 1, deleted_at = ?1, needs_sync = 0
              WHERE deleted = 0 AND id IN (SELECT id FROM held_deletions)",
             params![now],
         )?;
