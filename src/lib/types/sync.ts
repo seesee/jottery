@@ -38,6 +38,8 @@ export interface NoteSyncMetadata {
   lastSyncStatus: 'synced' | 'pending' | 'conflict' | 'error';
   errorMessage?: string;
   conflictData?: ConflictData;    // Server version data when in conflict
+  /** Attachments of this note the server already has, so their blobs needn't be sent again */
+  uploadedAttachmentIds?: string[];
 }
 
 // Current sync status for UI display

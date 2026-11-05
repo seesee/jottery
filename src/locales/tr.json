@@ -1196,7 +1196,8 @@
   },
   "sync": {
     "syncing": "Senkronize ediliyor...",
-    "syncProgress": "Senkronizasyon: %{percentage} tamamlandı"
+    "syncProgress": "Senkronizasyon: %{percentage} tamamlandı",
+    "notesRefused": "Bazı notlar hesabınızın yükleme sınırını aşıyor ve eşitlenmedi. Geri kalan her şey eşitlendi."
   },
   "inbox": {
     "title": "Gelen Kutusu",

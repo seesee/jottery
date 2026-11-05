@@ -1278,7 +1278,8 @@
   },
   "sync": {
     "syncing": "Syncing...",
-    "syncProgress": "Syncing: {percentage}% complete"
+    "syncProgress": "Syncing: {percentage}% complete",
+    "notesRefused": "Some notes are too large for your account's upload limit and weren't synced. Everything else was."
   },
   "outliner": {
     "name": "Outliner",

@@ -58,9 +58,11 @@ export class SyncApiError extends Error {
  */
 function handleHttpError(response: Response, errorText: string, operation: string): never {
   if (response.status === 413) {
-    const errorMessage = operation === 'push'
-      ? 'Upload too large. Please reduce attachment sizes or sync fewer notes at once. Maximum size: 5MB'
-      : 'Server response too large. Please contact your administrator.';
+    // A refused push is split and retried, so the caller reports the outcome once
+    if (operation === 'push') {
+      throw new SyncApiError('Upload too large', response.status, errorText);
+    }
+    const errorMessage = 'Server response too large. Please contact your administrator.';
     toast.error(errorMessage);
     throw new SyncApiError(errorMessage, response.status, errorText);
   }

@@ -1196,7 +1196,8 @@
   },
   "sync": {
     "syncing": "同期中...",
-    "syncProgress": "同期中: {percentage}% 完了"
+    "syncProgress": "同期中: {percentage}% 完了",
+    "notesRefused": "一部のノートはアカウントのアップロード上限を超えているため同期されませんでした。それ以外はすべて同期されました。"
   },
   "inbox": {
     "title": "受信トレイ",

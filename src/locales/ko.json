@@ -1196,7 +1196,8 @@
   },
   "sync": {
     "syncing": "동기화 중...",
-    "syncProgress": "동기화: {percentage}% 완료"
+    "syncProgress": "동기화: {percentage}% 완료",
+    "notesRefused": "일부 메모가 계정의 업로드 제한을 초과하여 동기화되지 않았습니다. 나머지는 모두 동기화되었습니다."
   },
   "inbox": {
     "title": "받은 편지함",

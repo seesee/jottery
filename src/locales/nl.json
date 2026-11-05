@@ -1196,7 +1196,8 @@
   },
   "sync": {
     "syncing": "Synchroniseren...",
-    "syncProgress": "Synchroniseren: {percentage}% voltooid"
+    "syncProgress": "Synchroniseren: {percentage}% voltooid",
+    "notesRefused": "Sommige notities zijn te groot voor de uploadlimiet van je account en zijn niet gesynchroniseerd. De rest wel."
   },
   "inbox": {
     "title": "Postvak IN",

@@ -1196,7 +1196,8 @@
   },
   "sync": {
     "syncing": "Synchronizacja...",
-    "syncProgress": "Synchronizacja: {percentage}% ukończono"
+    "syncProgress": "Synchronizacja: {percentage}% ukończono",
+    "notesRefused": "Niektóre notatki przekraczają limit przesyłania Twojego konta i nie zostały zsynchronizowane. Cała reszta tak."
   },
   "inbox": {
     "title": "Skrzynka odbiorcza",

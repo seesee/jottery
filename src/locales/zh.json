@@ -1196,7 +1196,8 @@
   },
   "sync": {
     "syncing": "同步中...",
-    "syncProgress": "同步中: {percentage}% 已完成"
+    "syncProgress": "同步中: {percentage}% 已完成",
+    "notesRefused": "部分笔记超出了您账户的上传限制，未能同步。其余内容均已同步。"
   },
   "inbox": {
     "title": "收件箱",

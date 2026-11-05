@@ -1196,7 +1196,8 @@
   },
   "sync": {
     "syncing": "Synchronisiere...",
-    "syncProgress": "Synchronisierung: {percentage}% abgeschlossen"
+    "syncProgress": "Synchronisierung: {percentage}% abgeschlossen",
+    "notesRefused": "Einige Notizen überschreiten das Upload-Limit Ihres Kontos und wurden nicht synchronisiert. Alles andere wurde synchronisiert."
   },
   "inbox": {
     "title": "Posteingang",

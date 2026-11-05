@@ -4,6 +4,12 @@
  * one that doesn't. Released servers stay in service, so neither is a special case.
  */
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
+
+// The message key is what matters here, not its translation
+vi.mock('svelte-i18n', () => ({
+  _: { subscribe: (run: (format: (key: string) => string) => void) => { run((key: string) => key); return () => undefined; } },
+}));
+
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { get } from 'svelte/store';
@@ -217,10 +223,7 @@ describe('sync protocol', () => {
   describe('moving to the cursor', () => {
     it('does one full pull the first time a server turns out to support it', async () => {
       await syncRepository.updateMetadata({ lastSyncAt: NOW });
-      serve((request, index) => {
-        if (index === 0) return { nextCursor: 'c1' };
-        return { nextCursor: 'c2' };
-      });
+      serve((_, index) => ({ nextCursor: index === 0 ? 'c1' : 'c2' }));
 
       await syncService.syncNow();
 
@@ -487,6 +490,179 @@ describe('sync protocol', () => {
 
       expect(pushes[0].notes[0].locked).toBe(true);
       expect(pushes[0].notes[0].lockedAt).toBe(NOW);
+    });
+  });
+
+  describe('pushes the server refuses', () => {
+    const MB = 1024 * 1024;
+
+    async function noteWithBlob(n: number, bytes: number, overrides: Partial<Note> = {}): Promise<void> {
+      const { attachmentRepository } = await import('./attachmentRepository');
+      await attachmentRepository.storeBlob(ID(100 + n), new Uint8Array(bytes).buffer);
+      await noteRepository.create(createTestNote({
+        id: ID(n), content: await encrypted('x'), needsSync: true,
+        contentHash: HASH('a'), parentHash: null, hashChain: [HASH('a')],
+        attachments: [{ id: ID(100 + n), filename: 'f', mimeType: 'image/png', size: bytes, data: ID(100 + n) }],
+        ...overrides,
+      }));
+    }
+
+    const accept = (body: SyncPushRequest) => ({ accepted: body.notes.map(n => ({ id: n.id })) });
+    const payloadBytes = (body: SyncPushRequest) => body.attachments.reduce((sum, a) => sum + a.data.length, 0);
+
+    /** The server's rule: over the limit fails the whole push, and writes nothing */
+    function serveWithLimit(limit: number) {
+      server.use(
+        http.get(`${ENDPOINT}/api/v1/sync/status`, () => HttpResponse.json({ serverTime: NOW })),
+        http.post(`${ENDPOINT}/api/v1/sync/push`, async ({ request }) => {
+          const body = await request.json() as SyncPushRequest;
+          pushes.push(body);
+          if (payloadBytes(body) > limit) return new HttpResponse('too large', { status: 413 });
+          return HttpResponse.json({ rejected: [], ...accept(body) });
+        }),
+        http.post(`${ENDPOINT}/api/v1/sync/pull`, async ({ request }) => {
+          pulls.push(await request.json() as SyncPullRequest);
+          return HttpResponse.json({ notes: [], attachments: [], versions: [], syncedAt: NOW });
+        }),
+      );
+    }
+
+    it('sizes batches by bytes, not just by note count', async () => {
+      await noteWithBlob(1, 2 * MB);
+      await noteWithBlob(2, 2 * MB);
+      await noteWithBlob(3, 2 * MB);
+      serve(() => ({}), accept);
+
+      await syncService.syncNow();
+
+      expect(pushes.length).toBeGreaterThanOrEqual(2);
+      for (const body of pushes) {
+        expect(payloadBytes(body)).toBeLessThanOrEqual(5 * MB);
+      }
+      expect(pushes.flatMap(p => p.notes.map(n => n.id)).sort()).toEqual([ID(1), ID(2), ID(3)]);
+    });
+
+    it('still pulls when a push fails', async () => {
+      await noteWithBlob(1, 16);
+      server.use(
+        http.get(`${ENDPOINT}/api/v1/sync/status`, () => HttpResponse.json({ serverTime: NOW })),
+        http.post(`${ENDPOINT}/api/v1/sync/push`, () => new HttpResponse('nope', { status: 500 })),
+        http.post(`${ENDPOINT}/api/v1/sync/pull`, async ({ request }) => {
+          pulls.push(await request.json() as SyncPullRequest);
+          return HttpResponse.json({ notes: [], attachments: [], versions: [], syncedAt: NOW });
+        }),
+      );
+
+      const result = await syncService.syncNow();
+
+      expect(pulls).toHaveLength(1);
+      expect(result.success).toBe(false);
+    });
+
+    it('splits a batch the account limit refuses, so the rest get through', async () => {
+      await noteWithBlob(1, 600 * 1024);
+      await noteWithBlob(2, 600 * 1024);
+      await noteWithBlob(3, 600 * 1024);
+      serveWithLimit(MB);
+
+      await syncService.syncNow();
+
+      for (const n of [1, 2, 3]) {
+        expect((await noteRepository.getById(ID(n)))?.needsSync).toBe(false);
+      }
+    });
+
+    it('isolates the one note that can never fit, and syncs the others', async () => {
+      await noteWithBlob(1, 16);
+      await noteWithBlob(2, 2 * MB);
+      await noteWithBlob(3, 16);
+      serveWithLimit(MB);
+
+      const result = await syncService.syncNow();
+
+      expect((await noteRepository.getById(ID(1)))?.needsSync).toBe(false);
+      expect((await noteRepository.getById(ID(3)))?.needsSync).toBe(false);
+      expect((await noteRepository.getById(ID(2)))?.needsSync).toBe(true);
+      expect((await syncRepository.getNoteSyncMetadata(ID(2)))?.lastSyncStatus).toBe('error');
+      expect(pulls).toHaveLength(1);
+      expect(result.success).toBe(true);
+    });
+
+    it('sends a blob once, not with every later edit of its note', async () => {
+      await noteWithBlob(1, 16);
+      serve(() => ({}), accept);
+      await syncService.syncNow();
+      expect(pushes[0].attachments).toHaveLength(1);
+
+      pushes = [];
+      const note = await noteRepository.getById(ID(1)) as Note;
+      await noteRepository.update({ ...note, needsSync: true }, false, true);
+      await syncService.syncNow();
+
+      expect(pushes[0].attachments).toEqual([]);
+    });
+
+    it('does not send a blob back to the server it came from', async () => {
+      const attachment = { id: ID(190), filename: 'f', mimeType: 'image/png', size: 3, data: ID(190) };
+      const note = await remoteNote(1, { attachments: [attachment] });
+      serve(() => ({ notes: [note], attachments: [{ id: ID(190), data: 'AQID' }] }), accept);
+      await syncService.syncNow();
+
+      const stored = await noteRepository.getById(ID(1)) as Note;
+      await noteRepository.update({ ...stored, needsSync: true }, false, true);
+      await syncService.syncNow();
+
+      expect(pushes[0].notes).toHaveLength(1);
+      expect(pushes[0].attachments).toEqual([]);
+    });
+
+    it('sends a blob again if the push it went with was not accepted', async () => {
+      await noteWithBlob(1, 16);
+      serve(() => ({}), () => ({ accepted: [] }));
+      await syncService.syncNow();
+
+      pushes = [];
+      await syncService.syncNow();
+
+      expect(pushes[0].attachments).toHaveLength(1);
+    });
+
+    it('re-uploads a blob the server says it lost, even after sending it once', async () => {
+      await noteWithBlob(1, 16);
+      serve(() => ({}), accept);
+      await syncService.syncNow();
+
+      pushes = [];
+      const note = await noteRepository.getById(ID(1)) as Note;
+      await noteRepository.update({ ...note, needsSync: true }, false, true);
+      serve(() => ({}), body => (body.notes.length > 0
+        ? { ...accept(body), attachmentWarnings: [{ noteId: ID(1), attachmentIds: [ID(101)] }] }
+        : {}));
+      await syncService.syncNow();
+
+      expect(pushes[1].attachments.map(a => a.id)).toEqual([ID(101)]);
+    });
+
+    it('re-uploads lost blobs in pieces the server can take', async () => {
+      await noteWithBlob(1, 3 * MB);
+      await noteWithBlob(2, 3 * MB);
+      serve(() => ({}), accept);
+      await syncService.syncNow();
+
+      pushes = [];
+      for (const n of [1, 2]) {
+        const note = await noteRepository.getById(ID(n)) as Note;
+        await noteRepository.update({ ...note, needsSync: true }, false, true);
+      }
+      serve(() => ({}), body => (body.notes.length > 0
+        ? { ...accept(body), attachmentWarnings: [
+            { noteId: ID(1), attachmentIds: [ID(101)] }, { noteId: ID(2), attachmentIds: [ID(102)] },
+          ] }
+        : {}));
+      await syncService.syncNow();
+
+      const repairs = pushes.filter(p => p.notes.length === 0);
+      expect(repairs).toHaveLength(2);
     });
   });
 

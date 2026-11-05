@@ -1196,7 +1196,8 @@
   },
   "sync": {
     "syncing": "Sincronizando...",
-    "syncProgress": "Sincronizando: {percentage}% concluído"
+    "syncProgress": "Sincronizando: {percentage}% concluído",
+    "notesRefused": "Algumas notas excedem o limite de envio da sua conta e não foram sincronizadas. Tudo o resto foi."
   },
   "inbox": {
     "title": "Caixa de entrada",

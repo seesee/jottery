@@ -44,14 +44,17 @@ import {
   validateSavedSearch,
 } from './syncValidation';
 import { isDBAvailable, wasDBTerminated } from './db';
-import { SYNC_PUSH_BATCH_SIZE, SYNC_PULL_BATCH_SIZE, SYNC_AUTO_INTERVAL_MINUTES } from '../constants';
+import { SYNC_PUSH_BATCH_SIZE, SYNC_PUSH_MAX_BYTES, SYNC_PULL_BATCH_SIZE, SYNC_AUTO_INTERVAL_MINUTES } from '../constants';
 import {
   normalizeEndpoint,
   registerDevice as registerDeviceApi,
   pushToServer,
   pullFromServer,
   getServerStatus,
+  SyncApiError,
 } from './syncClient';
+import { get } from 'svelte/store';
+import { _ } from 'svelte-i18n';
 
 // Debounce delay for background sync (30 seconds of inactivity)
 const BACKGROUND_SYNC_DEBOUNCE_MS = 30000;
@@ -63,6 +66,39 @@ const SYNC_STUCK_TIMEOUT_MS = 120000;
 // before committing it, so a slow one can land behind a timestamp. Anything sent
 // twice is harmless, because applying a pulled note is idempotent.
 const PULL_OVERLAP_MS = 2 * 60 * 1000;
+
+// The server refuses these for what the request holds, so a smaller one can succeed
+const REFUSED_PUSH_STATUSES = new Set([400, 413]);
+
+interface PushOutcome {
+  accepted: number;
+  rejected: number;
+  warnings: AttachmentWarning[];
+  refused: number;
+}
+
+/** Group items so each group stays within a size and a count. An oversized item goes alone. */
+function chunkBySize<T>(items: T[], sizeOf: (item: T) => number, maxBytes: number, maxItems = Infinity): T[][] {
+  const chunks: T[][] = [];
+  let current: T[] = [];
+  let bytes = 0;
+
+  for (const item of items) {
+    const size = sizeOf(item);
+    if (current.length > 0 && (current.length >= maxItems || bytes + size > maxBytes)) {
+      chunks.push(current);
+      current = [];
+      bytes = 0;
+    }
+    current.push(item);
+    bytes += size;
+  }
+
+  if (current.length > 0) {
+    chunks.push(current);
+  }
+  return chunks;
+}
 
 function withOverlap(lastSyncAt: string | undefined): string | undefined {
   if (!lastSyncAt) return undefined;
@@ -341,8 +377,16 @@ class SyncService {
         // Continue anyway - server might be slow but still functional
       }
 
-      // 2. Push local changes (force full sync if requested)
-      const pushedCount = await this.push(metadata.syncEndpoint, apiKey, forceFullSync);
+      // 2. Push local changes (force full sync if requested). A push that fails must
+      // not stop this device hearing about changes made elsewhere.
+      let pushedCount = 0;
+      let pushError: unknown;
+      try {
+        pushedCount = await this.push(metadata.syncEndpoint, apiKey, forceFullSync);
+      } catch (error) {
+        console.warn('[SyncService] Push failed, pulling anyway:', error);
+        pushError = error;
+      }
 
       // 3. Pull remote changes
       const { pulledCount, serverTime } = await this.pull(metadata.syncEndpoint, apiKey);
@@ -400,6 +444,10 @@ class SyncService {
           ? '1 note has a sync conflict'
           : `${conflictCount} notes have sync conflicts`;
         toast.info(message);
+      }
+
+      if (pushError !== undefined) {
+        throw pushError;
       }
 
       return { success: true };
@@ -501,12 +549,26 @@ class SyncService {
   // Push Helper Methods
   // ===========================================================================
 
-  /** Collect attachment blobs for a batch of notes */
-  private async collectAttachmentsForBatch(batchNotes: Note[]): Promise<Map<string, string>> {
+  /** Attachments of a note the server already has. A forced push sends everything again. */
+  private async attachmentsOnServer(note: Note, forceAll: boolean): Promise<Set<string>> {
+    if (forceAll || note.attachments.length === 0) {
+      return new Set();
+    }
+    const metadata = await syncRepository.getNoteSyncMetadata(note.id);
+    return new Set(metadata?.uploadedAttachmentIds ?? []);
+  }
+
+  /**
+   * Collect the blobs a batch of notes needs to send. Most edits don't touch an
+   * attachment, and re-sending them on every save could by itself exceed the upload
+   * limit. If the server has lost one, it says so in attachmentWarnings.
+   */
+  private async collectAttachmentsForBatch(batchNotes: Note[], forceAll: boolean): Promise<Map<string, string>> {
     const attachmentMap = new Map<string, string>();
     for (const note of batchNotes) {
+      const onServer = await this.attachmentsOnServer(note, forceAll);
       for (const attachment of note.attachments) {
-        if (!attachmentMap.has(attachment.id)) {
+        if (!attachmentMap.has(attachment.id) && !onServer.has(attachment.id)) {
           const blob = await attachmentRepository.getBlob(attachment.data);
           if (blob) {
             const base64 = arrayBufferToBase64(blob);
@@ -520,6 +582,14 @@ class SyncService {
       }
     }
     return attachmentMap;
+  }
+
+  /** About what a note adds to a push, counted the way the server counts it */
+  private async estimatePushBytes(note: Note, forceAll: boolean): Promise<number> {
+    const onServer = await this.attachmentsOnServer(note, forceAll);
+    return note.attachments
+      .filter(attachment => !onServer.has(attachment.id))
+      .reduce((bytes, attachment) => bytes + Math.ceil(attachment.size / 3) * 4, note.content.length);
   }
 
   /** Collect saved searches that need syncing */
@@ -549,17 +619,31 @@ class SyncService {
   }
 
   /** Process notes accepted by server during push */
-  private async processAcceptedNotes(accepted: SyncAccepted[], pushedNotes: Map<string, Note>): Promise<void> {
+  private async processAcceptedNotes(
+    accepted: SyncAccepted[],
+    pushedNotes: Map<string, Note>,
+    sentBlobs: Set<string>
+  ): Promise<void> {
     for (const item of accepted) {
       if (!isUuid(item?.id)) continue;
       const syncedAt = isTimestamp(item.syncedAt) ? item.syncedAt : new Date().toISOString();
       const serverVersion = typeof item.serverVersion === 'number' ? item.serverVersion : 1;
+
+      // A blob only counts once its note is accepted: the server ignores one with no
+      // reference, which is what happens to a note refused as a conflict
+      const previous = await syncRepository.getNoteSyncMetadata(item.id);
+      const alreadyThere = new Set(previous?.uploadedAttachmentIds ?? []);
+      const uploadedAttachmentIds = (pushedNotes.get(item.id)?.attachments ?? [])
+        .map(attachment => attachment.id)
+        .filter(id => sentBlobs.has(id) || alreadyThere.has(id));
 
       await syncRepository.updateNoteSyncMetadata(item.id, {
         noteId: item.id,
         syncedAt,
         serverVersion,
         lastSyncStatus: 'synced',
+        errorMessage: undefined,
+        uploadedAttachmentIds,
       });
 
       const note = await noteRepository.getById(item.id);
@@ -661,19 +745,15 @@ class SyncService {
   /** Process a single batch of notes for pushing */
   private async processPushBatch(
     batchNotes: Note[],
-    batchIndex: number,
-    totalBatches: number,
     endpoint: string,
     apiKey: string,
-    masterKey: CryptoKey
-  ): Promise<{ accepted: number; rejected: number; warnings: AttachmentWarning[] }> {
-    if (totalBatches > 1) {
-      console.log(`[SyncService] Pushing batch ${batchIndex + 1}/${totalBatches} (${batchNotes.length} notes)`);
-    }
+    masterKey: CryptoKey,
+    forceAll: boolean
+  ): Promise<PushOutcome> {
     this.noteSyncActivity();
 
     // Collect attachments and build request
-    const attachmentMap = await this.collectAttachmentsForBatch(batchNotes);
+    const attachmentMap = await this.collectAttachmentsForBatch(batchNotes, forceAll);
 
     const pushRequest: SyncPushRequest = {
       notes: await Promise.all(batchNotes.map(note => this.convertNoteToSyncFormat(note, masterKey))),
@@ -685,14 +765,56 @@ class SyncService {
     // Send to server and process results
     const result = validatePushResponse(await pushToServer(endpoint, apiKey, pushRequest));
     const pushedNotes = new Map(batchNotes.map(note => [note.id, note]));
-    await this.processAcceptedNotes(result.accepted, pushedNotes);
+    await this.processAcceptedNotes(result.accepted, pushedNotes, new Set(attachmentMap.keys()));
     await this.processRejectedNotes(result.rejected, pushedNotes);
     const warnings = result.attachmentWarnings ?? [];
 
     // Update progress
     syncProgress.update(p => ({ ...p, completed: p.completed + batchNotes.length }));
 
-    return { accepted: result.accepted.length, rejected: result.rejected.length, warnings };
+    return { accepted: result.accepted.length, rejected: result.rejected.length, warnings, refused: 0 };
+  }
+
+  /**
+   * Push a batch, splitting it if the server refuses what it holds. A push over the
+   * limit fails entirely, so one oversized note would otherwise hold back every note
+   * pushed with it, on every sync, for good. A single note that is still refused is
+   * set aside and stays marked for the next sync.
+   */
+  private async pushNotes(
+    batchNotes: Note[],
+    endpoint: string,
+    apiKey: string,
+    masterKey: CryptoKey,
+    forceAll: boolean
+  ): Promise<PushOutcome> {
+    try {
+      return await this.processPushBatch(batchNotes, endpoint, apiKey, masterKey, forceAll);
+    } catch (error) {
+      if (!(error instanceof SyncApiError) || !REFUSED_PUSH_STATUSES.has(error.status)) {
+        throw error;
+      }
+
+      if (batchNotes.length === 1) {
+        console.warn(`[SyncService] Server refused note ${batchNotes[0].id}:`, error.message);
+        await syncRepository.updateNoteSyncMetadata(batchNotes[0].id, {
+          noteId: batchNotes[0].id,
+          lastSyncStatus: 'error',
+          errorMessage: error.message,
+        });
+        return { accepted: 0, rejected: 0, warnings: [], refused: 1 };
+      }
+
+      const middle = Math.ceil(batchNotes.length / 2);
+      const first = await this.pushNotes(batchNotes.slice(0, middle), endpoint, apiKey, masterKey, forceAll);
+      const second = await this.pushNotes(batchNotes.slice(middle), endpoint, apiKey, masterKey, forceAll);
+      return {
+        accepted: first.accepted + second.accepted,
+        rejected: first.rejected + second.rejected,
+        warnings: [...first.warnings, ...second.warnings],
+        refused: first.refused + second.refused,
+      };
+    }
   }
 
   /**
@@ -757,23 +879,31 @@ class SyncService {
 
     syncProgress.update(p => ({ ...p, total: p.total + modifiedNotes.length }));
 
-    const totalBatches = Math.ceil(modifiedNotes.length / SYNC_PUSH_BATCH_SIZE);
+    const pushSizes = new Map<string, number>();
+    for (const note of modifiedNotes) {
+      pushSizes.set(note.id, await this.estimatePushBytes(note, forceAll));
+    }
+    const batches = chunkBySize(modifiedNotes, note => pushSizes.get(note.id) ?? 0, SYNC_PUSH_MAX_BYTES, SYNC_PUSH_BATCH_SIZE);
+
     let totalAccepted = 0;
     let totalRejected = 0;
+    let totalRefused = 0;
     const allWarnings: AttachmentWarning[] = [];
 
-    console.log(`[SyncService] Pushing ${modifiedNotes.length} notes in ${totalBatches} batch${totalBatches > 1 ? 'es' : ''}${forceAll ? ' (force)' : ''}`);
+    console.log(`[SyncService] Pushing ${modifiedNotes.length} notes in ${batches.length} batch${batches.length > 1 ? 'es' : ''}${forceAll ? ' (force)' : ''}`);
 
-    for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
-      const start = batchIndex * SYNC_PUSH_BATCH_SIZE;
-      const batchNotes = modifiedNotes.slice(start, start + SYNC_PUSH_BATCH_SIZE);
-
-      const { accepted, rejected, warnings } = await this.processPushBatch(
-        batchNotes, batchIndex, totalBatches, endpoint, apiKey, masterKey.key
+    for (const batchNotes of batches) {
+      const { accepted, rejected, warnings, refused } = await this.pushNotes(
+        batchNotes, endpoint, apiKey, masterKey.key, forceAll
       );
       totalAccepted += accepted;
       totalRejected += rejected;
+      totalRefused += refused;
       allWarnings.push(...warnings);
+    }
+
+    if (totalRefused > 0) {
+      toast.error(get(_)('sync.notesRefused'));
     }
 
     if (allWarnings.length > 0) {
@@ -817,10 +947,10 @@ class SyncService {
       }
     }
 
-    if (repairAttachments.length > 0) {
+    for (const attachments of chunkBySize(repairAttachments, item => item.data.length, SYNC_PUSH_MAX_BYTES)) {
       try {
-        await pushToServer(endpoint, apiKey, { notes: [], attachments: repairAttachments, versions: [] });
-        console.log(`[SyncService] Re-uploaded ${repairAttachments.length} attachment(s) the server was missing`);
+        await pushToServer(endpoint, apiKey, { notes: [], attachments, versions: [] });
+        console.log(`[SyncService] Re-uploaded ${attachments.length} attachment(s) the server was missing`);
       } catch (error) {
         console.error('[SyncService] Attachment repair push failed:', error);
       }
@@ -898,6 +1028,7 @@ class SyncService {
         syncedAt,
         serverVersion: remoteNote.version,
         lastSyncStatus: 'synced',
+        uploadedAttachmentIds: remoteNote.attachments.map(attachment => attachment.id),
       });
       return true;
     }
@@ -986,6 +1117,7 @@ class SyncService {
         syncedAt,
         serverVersion: remoteNote.version,
         lastSyncStatus: 'synced',
+        uploadedAttachmentIds: remoteNote.attachments.map(attachment => attachment.id),
       });
       return true;
     }
