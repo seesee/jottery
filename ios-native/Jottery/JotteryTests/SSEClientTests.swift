@@ -3,21 +3,50 @@ import Testing
 
 @testable import Jottery
 
-/// A server that hands out tokens and refuses a stream until told otherwise.
+/// What one test's server does and has seen. Each test has its own, on a host of
+/// its own: a stopped client can still have a request in flight, and one test's
+/// stragglers must not land in the next test's record.
+private final class StreamScript: @unchecked Sendable {
+    private let lock = NSLock()
+    private var issued = 0
+    private var statuses: [Int]
+    private let refused: Set<String>
+    private var requests: [String] = []
+
+    init(tokenStatuses: [Int] = [], refusedTokens: Set<String> = []) {
+        self.statuses = tokenStatuses
+        self.refused = refusedTokens
+    }
+
+    /// A token, or the status a token request gets instead.
+    func nextToken() -> (status: Int, token: String?) {
+        lock.withLock {
+            let status = statuses.isEmpty ? 200 : statuses.removeFirst()
+            guard status == 200 else { return (status, nil) }
+            issued += 1
+            return (200, "token-\(issued)")
+        }
+    }
+
+    func connect(with token: String) -> Bool {
+        lock.withLock {
+            requests.append(token)
+            return !refused.contains(token)
+        }
+    }
+
+    var tokensIssued: Int { lock.withLock { issued } }
+    var streamRequests: [String] { lock.withLock { requests } }
+    var statusesLeft: Int { lock.withLock { statuses.count } }
+}
+
 private final class ScriptedStreamProtocol: URLProtocol, @unchecked Sendable {
 
-    nonisolated(unsafe) static var tokensIssued = 0
-    /// What a token request gets, in turn. When they run out, each gets a token.
-    nonisolated(unsafe) static var tokenStatuses: [Int] = []
-    /// The tokens the stream refuses.
-    nonisolated(unsafe) static var refusedTokens: Set<String> = []
-    nonisolated(unsafe) static var streamRequests: [String] = []
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var scripts: [String: StreamScript] = [:]
 
-    static func reset() {
-        tokensIssued = 0
-        tokenStatuses = []
-        refusedTokens = []
-        streamRequests = []
+    static func add(_ script: StreamScript, host: String) {
+        lock.withLock { scripts[host] = script }
     }
 
     override class func canInit(with request: URLRequest) -> Bool { true }
@@ -25,28 +54,22 @@ private final class ScriptedStreamProtocol: URLProtocol, @unchecked Sendable {
 
     override func startLoading() {
         let url = request.url!
-        var status = 200
+        let script = Self.lock.withLock { Self.scripts[url.host ?? ""] }
+        var status = 404
         var body = Data()
 
-        if url.path.hasSuffix("sync/events/token") {
-            status = Self.tokenStatuses.isEmpty ? 200 : Self.tokenStatuses.removeFirst()
-            if status == 200 {
-                Self.tokensIssued += 1
-                body = Data(#"{"token":"token-\#(Self.tokensIssued)","expires_in":300}"#.utf8)
-            } else {
-                body = Data(#"{"error":"refused"}"#.utf8)
-            }
-        } else if url.path.hasSuffix("sync/events") {
+        if url.path.hasSuffix("sync/events/token"), let answer = script?.nextToken() {
+            status = answer.status
+            body = answer.token.map { Data(#"{"token":"\#($0)","expires_in":300}"#.utf8) } ?? Data(#"{"error":"refused"}"#.utf8)
+        } else if url.path.hasSuffix("sync/events"), let script {
             let token = URLComponents(url: url, resolvingAgainstBaseURL: false)?
                 .queryItems?.first { $0.name == "token" }?.value ?? ""
-            Self.streamRequests.append(token)
-            if Self.refusedTokens.contains(token) {
-                status = 401
-            } else {
+            if script.connect(with: token) {
+                status = 200
                 body = Data("event: sync\ndata: pull\n\n".utf8)
+            } else {
+                status = 401
             }
-        } else {
-            status = 404
         }
 
         let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: "HTTP/1.1", headerFields: nil)!
@@ -65,20 +88,20 @@ private actor EventCounter {
 
 /// A stream can end, and connecting can get 401, for a revoked device. The token
 /// request is what says why (docs/sync-protocol.md).
-@Suite(.serialized)
 struct SSEClientTests {
 
-    private func makeClient() -> SSEClient {
-        ScriptedStreamProtocol.reset()
+    private func makeClient(_ script: StreamScript) -> SSEClient {
+        let host = "\(UUID().uuidString).example.test"
+        ScriptedStreamProtocol.add(script, host: host)
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [ScriptedStreamProtocol.self]
-        let syncClient = SyncClient(endpoint: "https://sync.example.test", apiKey: "device-key", configuration: configuration)
+        let syncClient = SyncClient(endpoint: "https://\(host)", apiKey: "device-key", configuration: configuration)
         return SSEClient(syncClient: syncClient, configuration: configuration)
     }
 
     @Test func aRefusedTokenIsReplacedAndTheStreamCarriesOn() async {
-        let client = makeClient()
-        ScriptedStreamProtocol.refusedTokens = ["token-1"]
+        let script = StreamScript(refusedTokens: ["token-1"])
+        let client = makeClient(script)
         let events = EventCounter()
         await client.setOnSyncEvent { await events.record() }
 
@@ -87,42 +110,40 @@ struct SSEClientTests {
         await client.stop()
 
         #expect(await events.count > 0)
-        #expect(ScriptedStreamProtocol.streamRequests.prefix(2) == ["token-1", "token-2"])
+        #expect(script.streamRequests.prefix(2) == ["token-1", "token-2"])
     }
 
     @Test func aRevokedDeviceStopsWhenTheNewTokenIsRefused() async {
-        let client = makeClient()
-        ScriptedStreamProtocol.refusedTokens = ["token-1"]
-        ScriptedStreamProtocol.tokenStatuses = [200, 401]
+        let script = StreamScript(tokenStatuses: [200, 401], refusedTokens: ["token-1"])
+        let client = makeClient(script)
 
         await client.start()
         await client.waitUntilStopped()
 
-        #expect(ScriptedStreamProtocol.streamRequests == ["token-1"])
-        #expect(ScriptedStreamProtocol.tokensIssued == 1)
-        #expect(ScriptedStreamProtocol.tokenStatuses.isEmpty, "it has to have asked")
+        #expect(script.streamRequests == ["token-1"])
+        #expect(script.tokensIssued == 1)
+        #expect(script.statusesLeft == 0, "it has to have asked")
     }
 
     @Test func aDisabledAccountStopsWhenTheNewTokenIsRefused() async {
-        let client = makeClient()
-        ScriptedStreamProtocol.refusedTokens = ["token-1"]
-        ScriptedStreamProtocol.tokenStatuses = [200, 403]
+        let script = StreamScript(tokenStatuses: [200, 403], refusedTokens: ["token-1"])
+        let client = makeClient(script)
 
         await client.start()
         await client.waitUntilStopped()
 
-        #expect(ScriptedStreamProtocol.streamRequests == ["token-1"])
+        #expect(script.streamRequests == ["token-1"])
     }
 
     /// A stream that ends is how a revoked device finds out if it was connected
     /// already. The reconnection asks for a token, and that's refused.
     @Test func aStreamThatEndsAsksForANewTokenBeforeConnectingAgain() async {
-        let client = makeClient()
-        ScriptedStreamProtocol.tokenStatuses = [200, 401]
+        let script = StreamScript(tokenStatuses: [200, 401])
+        let client = makeClient(script)
 
         await client.start()
         await client.waitUntilStopped()
 
-        #expect(ScriptedStreamProtocol.streamRequests == ["token-1"])
+        #expect(script.streamRequests == ["token-1"])
     }
 }

@@ -439,7 +439,7 @@ struct BackupFormatTests {
 
     /// The file chooses the rounds, before any password is tried (R2-106). Above
     /// UInt32's range it crashed the app, and just below it froze for hours.
-    @Test(arguments: [99_999, 10_000_001, 4_294_967_295, 4_294_967_296, 9_007_199_254_740_991])
+    @Test(arguments: [10_000_001, 4_294_967_295, 4_294_967_296, 9_007_199_254_740_991])
     func anAbsurdIterationCountIsRefused(iterations: Int) async throws {
         let state = try await makeVault()
         let header = #"{"version":"3.0","type":"jottery-encrypted-backup","createdAt":"2026-11-05T00:00:00Z","#

@@ -691,9 +691,9 @@ enum BackupService {
     ///
     /// Backups of envelope vaults made before the header carried the wrapped key
     /// have an empty salt, and only open with the vault's own master key.
-    /// The PBKDF2 rounds a backup may ask for. Every client has used at least the
-    /// bottom of this range, and the top takes seconds, not hours.
-    static let backupIterations = 100_000...10_000_000
+    /// The most PBKDF2 rounds a backup may ask for: seconds of work, not hours.
+    /// Every client writes far fewer.
+    static let maxBackupIterations = 10_000_000
 
     private static func keyNamedByHeader(_ encryption: BackupEncryption, password: String) throws -> SymmetricKey? {
         if encryption.envelopeVersion != nil {
@@ -719,7 +719,9 @@ enum BackupService {
         }
         // The file chooses this, before any password is tried. A value above
         // UInt32's range would crash, and one just below would run for hours.
-        guard backupIterations.contains(iterations), let rounds = UInt32(exactly: iterations) else {
+        // A low one needs no check: `deriveKey` raises it to the minimum, as it
+        // always has, so an old backup that names one still opens.
+        guard iterations <= maxBackupIterations, let rounds = UInt32(exactly: iterations) else {
             throw BackupError.invalidFormat
         }
         guard let saltData = Data(base64Encoded: salt) else {
