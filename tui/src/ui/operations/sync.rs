@@ -174,6 +174,10 @@ pub(crate) struct SyncLink {
 }
 
 impl SyncLink {
+    fn is_cancelled(&self) -> bool {
+        self.cancelled.load(Ordering::SeqCst)
+    }
+
     /// Change the vault, unless this sync has been cancelled.
     ///
     /// Cancelling happens with the gate held, so after it this runs nothing. That's what
@@ -181,7 +185,7 @@ impl SyncLink {
     /// sync that may be stuck on a slow server.
     pub(crate) fn write<T>(&self, change: impl FnOnce() -> Result<T>) -> Result<T> {
         let _held = self.gate.hold();
-        if self.cancelled.load(Ordering::SeqCst) {
+        if self.is_cancelled() {
             return Err(SyncCancelled.into());
         }
 
@@ -1263,6 +1267,11 @@ fn fetch_missing_blobs(run: &Run<'_>, limit: usize) {
     };
 
     for attachment in missing.iter().take(limit) {
+        // Nothing else stops this loop, and the key is in memory until the thread ends
+        if run.link.is_cancelled() {
+            return;
+        }
+
         match fetch_blob(run, &attachment.id) {
             Ok(Some(data)) => {
                 let stored = run.link.write(|| {
@@ -2181,6 +2190,8 @@ mod tests {
         held: Arc<Mutex<Option<Held>>>,
         /// Note ids that are neither accepted nor rejected, as a server skips a note
         passed_over: Arc<Mutex<std::collections::HashSet<String>>>,
+        /// How many attachment files it's been asked for
+        blob_requests: Arc<Mutex<usize>>,
     }
 
     fn reply(stream: &mut std::net::TcpStream, body: &str) {
@@ -2229,6 +2240,8 @@ mod tests {
             let blobs = attachments.clone();
             let passed_over = Arc::new(Mutex::new(std::collections::HashSet::new()));
             let passing_over: Arc<Mutex<std::collections::HashSet<String>>> = passed_over.clone();
+            let blob_requests = Arc::new(Mutex::new(0));
+            let counting_blobs = blob_requests.clone();
 
             std::thread::spawn(move || {
                 for stream in listener.incoming() {
@@ -2270,6 +2283,7 @@ mod tests {
                     }
 
                     if method == "GET" {
+                        *counting_blobs.lock().unwrap() += 1;
                         let id = path.rsplit('/').next().unwrap_or("");
                         match blobs.iter().find(|blob| blob["id"] == id) {
                             Some(blob) => reply(&mut stream, &blob.to_string()),
@@ -2353,7 +2367,11 @@ mod tests {
                 }
             });
 
-            Self { endpoint, pulls, pushes, refuse, script, push_reply, fail_next, wrapped_key, quota_full, held, passed_over }
+            Self { endpoint, pulls, pushes, refuse, script, push_reply, fail_next, wrapped_key, quota_full, held, passed_over, blob_requests }
+        }
+
+        fn blob_requests(&self) -> usize {
+            *self.blob_requests.lock().unwrap()
         }
 
         /// Leave this note out of every push response from now on.
@@ -3125,6 +3143,38 @@ mod tests {
         assert_eq!(NoteRepository::new(db.connection()).list(true, key()).unwrap().len(), 0);
         let metadata = SyncRepository::new(db.connection()).get_metadata().unwrap().unwrap();
         assert_eq!(metadata.last_sync_at, None);
+    }
+
+    /// The thread holds a copy of the key until it ends, so it can't go on fetching.
+    #[test]
+    fn a_locked_vault_stops_a_sync_fetching_files() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_syncing_in_background(&server.endpoint);
+
+        let db = app.db.as_ref().unwrap();
+        let mut note = Note::new("Names two files it hasn't got".to_string());
+        for id in [note_id(1), note_id(2)] {
+            note.attachments.push(Attachment {
+                id: id.clone(),
+                filename: "a.txt".to_string(),
+                mime_type: "text/plain".to_string(),
+                size: 1,
+                data: id,
+                thumbnail_data: None,
+            });
+        }
+        NoteRepository::new(db.connection()).create(&note, key()).unwrap();
+
+        let held = server.hold_next(Box::leak(note_id(1).into_boxed_str()));
+        trigger_sync(&mut app);
+        held.wait_until_reached();
+
+        let thread = app.sync_job.as_mut().unwrap().thread.take().unwrap();
+        app.lock();
+        held.release();
+        thread.join().unwrap();
+
+        assert_eq!(server.blob_requests(), 1);
     }
 
     /// The sync read these before it started, so writing them back would undo the change.
