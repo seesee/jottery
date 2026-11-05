@@ -118,6 +118,7 @@ editor:
   temp_write_error: Fehler beim Schreiben in temporäre Datei
   temp_read_error: Fehler beim Lesen der temporären Datei
   default_editor: vi
+  temp_on_disk: "Dieser Rechner hat keinen speicherbasierten Temp-Ordner, daher liegt eine geöffnete Notiz auf der Festplatte, bis Sie sie schließen."
 attachment:
   add: Anhang hinzufügen
   add_failed: "Fehler beim Hinzufügen des Anhangs: %{error}"

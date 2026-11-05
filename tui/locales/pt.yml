@@ -118,6 +118,7 @@ editor:
   temp_write_error: Falha ao gravar arquivo temporário
   temp_read_error: Falha ao ler arquivo temporário
   default_editor: vi
+  temp_on_disk: "Esta máquina não tem pasta temporária em memória, por isso uma nota aberta fica no disco até a fechar."
 attachment:
   add: Adicionar anexo
   add_failed: "Falha ao adicionar anexo: %{error}"

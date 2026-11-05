@@ -130,6 +130,7 @@ editor:
   temp_write_error: "Failed to write to temporary file"
   temp_read_error: "Failed to read temporary file"
   default_editor: "vi"
+  temp_on_disk: "This machine has no memory-backed temp folder, so an open note is on disk until you close it."
 
 # Attachments
 attachment:

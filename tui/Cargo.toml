@@ -122,6 +122,11 @@ shell-words = "1"
 # Compression for backups, which the web app writes with zlib
 flate2 = "1"
 
+[target.'cfg(unix)'.dependencies]
+# Clearing decrypted temporary files when the process is told to stop
+signal-hook = "0.3"
+libc = "0.2"
+
 [dev-dependencies]
 
 [profile.release]

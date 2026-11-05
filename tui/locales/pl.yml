@@ -118,6 +118,7 @@ editor:
   temp_write_error: Zapis do pliku tymczasowego nie powiódł się
   temp_read_error: Odczyt pliku tymczasowego nie powiódł się
   default_editor: vi
+  temp_on_disk: "Ten komputer nie ma folderu tymczasowego w pamięci, więc otwarta notatka jest na dysku do czasu jej zamknięcia."
 attachment:
   add: Dodaj załącznik
   add_failed: "Dodawanie załącznika nie powiodło się: %{error}"

@@ -118,6 +118,7 @@ editor:
   temp_write_error: "임시 파일 쓰기 실패"
   temp_read_error: "임시 파일 읽기 실패"
   default_editor: vi
+  temp_on_disk: "이 컴퓨터에는 메모리 기반 임시 폴더가 없어 열린 노트는 닫을 때까지 디스크에 있습니다."
 attachment:
   add: "첨부 파일 추가"
   add_failed: "첨부 파일 추가 실패: %{error}"

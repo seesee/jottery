@@ -118,6 +118,7 @@ editor:
   temp_write_error: Error al escribir en archivo temporal
   temp_read_error: Error al leer archivo temporal
   default_editor: vi
+  temp_on_disk: "Este equipo no tiene carpeta temporal en memoria, así que una nota abierta está en disco hasta que la cierres."
 attachment:
   add: Añadir adjunto
   add_failed: "Error al añadir adjunto: %{error}"

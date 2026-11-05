@@ -118,6 +118,7 @@ editor:
   temp_write_error: 写入临时文件失败
   temp_read_error: 读取临时文件失败
   default_editor: vi
+  temp_on_disk: "此计算机没有内存临时文件夹，因此打开的笔记在关闭前都保存在磁盘上。"
 attachment:
   add: 添加附件
   add_failed: "添加附件失败: %{error}"

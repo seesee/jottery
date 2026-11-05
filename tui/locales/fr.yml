@@ -118,6 +118,7 @@ editor:
   temp_write_error: Échec de l'écriture dans le fichier temporaire
   temp_read_error: Échec de la lecture du fichier temporaire
   default_editor: vi
+  temp_on_disk: "Cette machine n'a pas de dossier temporaire en mémoire : une note ouverte reste sur le disque jusqu'à sa fermeture."
 attachment:
   add: Ajouter une pièce jointe
   add_failed: "Échec de l'ajout de la pièce jointe : %{error}"

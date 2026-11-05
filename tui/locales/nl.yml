@@ -118,6 +118,7 @@ editor:
   temp_write_error: Schrijven naar tijdelijk bestand mislukt
   temp_read_error: Lezen tijdelijk bestand mislukt
   default_editor: vi
+  temp_on_disk: "Deze computer heeft geen tijdelijke map in het geheugen, dus een geopende notitie staat op schijf tot je hem sluit."
 attachment:
   add: Bijlage toevoegen
   add_failed: "Toevoegen bijlage mislukt: %{error}"

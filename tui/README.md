@@ -270,6 +270,23 @@ jottery
 - Manual sync: Press `s` → navigate to "Sync Now" → press `Enter`
 - Sync settings available in the settings panel (`s` key)
 
+## Temporary Files
+
+An editor, a pager or a viewer can only work on a file, so a note or attachment leaves the
+vault while it's open. It goes in a private folder (`0700`), under `$XDG_RUNTIME_DIR` or
+`/dev/shm` where there is one, so that it stays in memory. Elsewhere, including macOS, it's
+in the system temp folder on disk, and Jottery says so the first time.
+
+The folder is emptied when the file closes, and if Jottery gets SIGHUP, SIGTERM or SIGINT,
+as it does when an SSH connection drops. If it's killed outright, or the power goes, the
+next run clears up.
+
+vim and neovim are started with swap, backup, undo and viminfo turned off. Other editors
+keep their own copies, and those are up to you. Side files beside the note go with the
+folder, such as nano's `.save` and emacs's `file~` and `#file#`, but anything an editor
+keeps elsewhere doesn't. Check your editor's settings if that matters, for example
+`backup-directory-alist` and `auto-save-file-name-transforms` in emacs.
+
 ## Search Syntax
 
 The search bar supports powerful query syntax:

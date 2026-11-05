@@ -118,6 +118,7 @@ editor:
   temp_write_error: Geçici dosyaya yazma başarısız
   temp_read_error: Geçici dosya okuma başarısız
   default_editor: vi
+  temp_on_disk: "Bu makinede bellek tabanlı geçici klasör yok, bu yüzden açık bir not siz kapatana kadar diskte durur."
 attachment:
   add: Ek ekle
   add_failed: "Ek ekleme başarısız: %{error}"

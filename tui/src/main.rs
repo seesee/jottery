@@ -7,6 +7,7 @@ mod models;
 mod password_storage;
 mod repository;
 mod search;
+mod secure_temp;
 mod sse;
 mod terminal_text;
 mod ui;
@@ -23,7 +24,6 @@ use std::fs::OpenOptions;
 use std::sync::{Arc, Mutex};
 use std::io::{self, Read, Write};
 use std::env;
-use tempfile::NamedTempFile;
 use tracing::info;
 
 use crypto::CryptoService;
@@ -520,16 +520,23 @@ fn derive_key_from_db(db: &Database, password: &str) -> Result<[u8; 32]> {
 /// Open $EDITOR with content and return the edited result
 fn open_editor(initial_content: &str) -> Result<String> {
     // Create temporary file
-    let mut temp_file = NamedTempFile::new()
+    let mut temp_file = secure_temp::create("")
         .context(t!("editor.temp_file_error"))?;
     temp_file
         .write_all(initial_content.as_bytes())
         .context(t!("editor.temp_write_error"))?;
     temp_file.flush()?;
 
+    if secure_temp::take_disk_warning() {
+        errln!("⚠ {}", t!("editor.temp_on_disk"));
+    }
+
     let temp_path = temp_file.path();
 
-    ui::operations::external::run_editor(&ui::operations::external::editor_command(), temp_path)?;
+    secure_temp::set_child_has_terminal(true);
+    let edited = ui::operations::external::run_editor(&ui::operations::external::editor_command(), temp_path);
+    secure_temp::set_child_has_terminal(false);
+    edited?;
 
     // Read the edited content
     let content = std::fs::read_to_string(temp_path)
@@ -644,7 +651,10 @@ fn format_note_preview(note: &Note, show_content: bool) -> String {
 fn main() {
     // Reported here, not by returning the error, because a failure can quote
     // whatever a server sent and Rust's default report would print it raw.
-    if let Err(error) = run() {
+    let result = run();
+    secure_temp::remove_everything();
+
+    if let Err(error) = result {
         errln!("Error: {:?}", error);
         std::process::exit(1);
     }
@@ -717,6 +727,11 @@ fn run() -> Result<()> {
         }
         return Ok(());
     }
+
+    // Whatever a killed run left behind goes first. A command only needs the handler
+    // for its editor. The TUI also has a terminal to put back.
+    secure_temp::sweep_leftovers();
+    secure_temp::install_signal_cleanup(cli.command.is_none());
 
     // The TUI says this on its unlock screen. A script only needs telling once.
     if cli.command.is_some() && !db_path.exists() && !Database::encrypts_files() {

@@ -118,6 +118,7 @@ editor:
   temp_write_error: Scrittura su file temporaneo fallita
   temp_read_error: Lettura file temporaneo fallita
   default_editor: vi
+  temp_on_disk: "Questa macchina non ha una cartella temporanea in memoria, quindi una nota aperta resta su disco finché non la chiudi."
 attachment:
   add: Aggiungi allegato
   add_failed: "Aggiunta allegato fallita: %{error}"
