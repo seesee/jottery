@@ -48,6 +48,11 @@ final class AppState {
     /// `MainView`. Nothing here stops the app working.
     var accountKeyNotice: AccountKeyNotice?
 
+    /// Notes in use that the server listed as permanently deleted, when there
+    /// are enough of them to be suspicious. They're in the bin, and `MainView`
+    /// offers to put them back (see `restoreNotesRemovedByServer()`).
+    var notesRemovedByServer: [String] = []
+
     // MARK: - User-Facing Errors
 
     /// A transient, localised error message surfaced to the user via a
@@ -758,14 +763,7 @@ final class AppState {
         // the next successful unlock (see flushPendingEditorNote).
         flushPendingEditorNote()
 
-        // Stop SSE, network monitor, and release sync objects
-        stopNetworkMonitor()
-        if let service = syncService {
-            Task { await service.stopSSE() }
-        }
-        syncClient = nil
-        syncService = nil
-        syncEnabled = false
+        teardownSync()
 
         keyManager.lock()
         isLocked = true
@@ -773,11 +771,34 @@ final class AppState {
         needsNotesPasswordForAccountKey = false
         pendingAccountKeyMerge = nil
         accountKeyNotice = nil
+        notesRemovedByServer = []
+        // A refresh decrypting right now holds an older ticket, so it can't put
+        // what it decrypted back in memory behind the lock screen.
+        lastPublishedTicket = nextLoadTicket()
+        searchTask?.cancel()
         notes = []
         archivedNotes = []
+        filteredNotes = []
+        savedSearches = []
         pendingConflicts = []
         inboxItems = []
         selectedNoteId = nil
+    }
+
+    /// Stop everything that talks to the server and let go of the sync objects,
+    /// so a revoked key stops being used and the master key they hold is
+    /// released. Used whenever sync ends: lock, disconnect, deleting the
+    /// account, and wiping the vault.
+    func teardownSync() {
+        stopNetworkMonitor()
+        autoSyncTask?.cancel()
+        autoSyncTask = nil
+        if let service = syncService {
+            Task { await service.stop() }
+        }
+        syncClient = nil
+        syncService = nil
+        syncEnabled = false
     }
 
     // MARK: - Account Key (Face ID Unlock)
@@ -1067,6 +1088,28 @@ final class AppState {
         scheduleAutoSync()
     }
 
+    /// Delete a note from the bin for good, on every device.
+    func permanentlyDeleteNote(id: String) throws {
+        guard let noteRepo else { return }
+        try noteRepo.permanentlyDelete(id: id)
+        scheduleAutoSync()
+    }
+
+    /// Put back what a sync moved to the bin (`notesRemovedByServer`). Pushing
+    /// the notes again brings them back on the server too.
+    func restoreNotesRemovedByServer() async {
+        let ids = notesRemovedByServer
+        notesRemovedByServer = []
+        guard let noteRepo else { return }
+        do {
+            for id in ids { try noteRepo.restore(id: id) }
+            try await loadNotes()
+            scheduleAutoSync()
+        } catch {
+            reportError(L.errorCouldntRestoreNote)
+        }
+    }
+
     func restoreNote(id: String) async throws {
         guard let noteRepo else { return }
         try noteRepo.restore(id: id)
@@ -1174,7 +1217,7 @@ final class AppState {
         let attachmentId = CryptoService.generateUUID()
 
         // Store encrypted blob with the same ID used for the attachment ref
-        try attachmentRepo.storeBlob(id: attachmentId, filename: filename, mimeType: mimeType, size: fileData.count, data: blobData)
+        try attachmentRepo.storeBlob(id: attachmentId, mimeType: mimeType, size: fileData.count, data: blobData)
 
         // Encrypt the filename for storage
         let encFilenameJSON = try AttachmentFilename.encrypted(filename, key: key)
@@ -1355,7 +1398,15 @@ final class AppState {
     private func handlePostSyncCompletion(_ changes: SyncChanges) async {
         await applySyncChanges(changes)
         lastSyncAt = Date()
+        if changes.removedByServerIds.count >= Self.suspiciousRemovalCount {
+            notesRemovedByServer = Array(Set(notesRemovedByServer).union(changes.removedByServerIds))
+        }
     }
+
+    /// How many notes in use one sync can remove before the user is asked. A
+    /// note normally reaches the bin first, so even a big clear-out on another
+    /// device doesn't get here.
+    private static let suspiciousRemovalCount = 10
 
     /// Set up the sync client. Pass `apiKey` directly after registration
     /// to avoid Keychain retrieval timing issues; otherwise reads from Keychain.
@@ -1628,6 +1679,7 @@ final class AppState {
         KeychainService.deleteClientId()
         KeychainService.deleteBiometricKey()
 
+        teardownSync()
         removeTemporaryFiles()
 
         // Delete database file
@@ -1651,8 +1703,9 @@ final class AppState {
         versionRepo = nil
         attachmentRepo = nil
         savedSearchRepo = nil
-        syncClient = nil
-        syncService = nil
+        pendingEditorNote = nil
+        lastPublishedTicket = nextLoadTicket()
+        searchTask?.cancel()
         notes = []
         archivedNotes = []
         filteredNotes = []
@@ -1660,11 +1713,11 @@ final class AppState {
         pendingConflicts = []
         pendingAccountKeyMerge = nil
         accountKeyNotice = nil
+        notesRemovedByServer = []
         inboxItems = []
         showArchive = false
         selectedNoteId = nil
         searchQuery = ""
-        syncEnabled = false
         isSyncing = false
         lastSyncAt = nil
         syncError = nil

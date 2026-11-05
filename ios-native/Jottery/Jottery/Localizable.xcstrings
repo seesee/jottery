@@ -3109,6 +3109,61 @@
         }
       }
     },
+    "syncError.accountDisabled": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This account has been deactivated, so sync has stopped. Your notes on this device are safe, and sync carries on if the account is reactivated."
+          }
+        }
+      }
+    },
+    "syncError.accountPending": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This account is waiting for an administrator to approve it."
+          }
+        }
+      }
+    },
+    "syncError.notesTooLarge": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes the server won't accept because they're too large: %lld. They're safe on this device, and everything else has synced."
+          }
+        }
+      }
+    },
+    "syncError.passwordChangeRequired": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This account has to change its password before a new device can connect. Sign in to your server in a browser to change it, then try again."
+          }
+        }
+      }
+    },
+    "syncError.rateLimited": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too many attempts. Try again in %lld seconds."
+          }
+        }
+      }
+    },
     "syncMerge.confirm": {
       "extractionState": "manual",
       "localizations": {
@@ -3160,6 +3215,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "Move Your Notes to This Account?"
+          }
+        }
+      }
+    },
+    "syncServerRemoved.keep": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave in Bin"
+          }
+        }
+      }
+    },
+    "syncServerRemoved.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The server says notes were permanently deleted, and they've moved to the Recycle Bin: %lld. If you didn't delete them, put them back now. They stay in the bin for 30 days."
+          }
+        }
+      }
+    },
+    "syncServerRemoved.restore": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Put Them Back"
+          }
+        }
+      }
+    },
+    "syncServerRemoved.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes Removed by the Server"
           }
         }
       }

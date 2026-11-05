@@ -16,7 +16,7 @@ import GRDB
 /// What the master key protects:
 /// - `notes` and `note_versions`: content, tags, and each attachment filename
 ///   in the attachments JSON
-/// - `attachments`: the blob data (the filename column there is plaintext)
+/// - `attachments`: the blob data, which the server then needs again
 /// - `saved_searches`: name and query
 /// - `encryption_metadata`: the verification token (replaced with `newMetadata`)
 ///
@@ -110,7 +110,7 @@ enum VaultReKeyService {
             for id in try String.fetchAll(db, sql: "SELECT id FROM attachments") {
                 let data = try Data.fetchOne(db, sql: "SELECT data FROM attachments WHERE id = ?", arguments: [id])
                 guard let reEncrypted = try keys.blob(data, "attachments", id) else { continue }
-                try db.execute(sql: "UPDATE attachments SET data = ? WHERE id = ?", arguments: [reEncrypted, id])
+                try db.execute(sql: "UPDATE attachments SET data = ?, uploaded = 0 WHERE id = ?", arguments: [reEncrypted, id])
                 summary.attachments += 1
             }
 

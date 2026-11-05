@@ -100,6 +100,12 @@ struct SyncRepository: Sendable {
         }
     }
 
+    func updatePullCursor(_ cursor: String?) throws {
+        try db.dbPool.write { db in
+            try db.execute(sql: "UPDATE sync_metadata SET pull_cursor = ? WHERE id = 1", arguments: [cursor])
+        }
+    }
+
     func updateLastPush(at timestamp: String) throws {
         try db.dbPool.write { db in
             try db.execute(sql: """
@@ -190,10 +196,15 @@ struct SyncRepository: Sendable {
 
     func recordDeletion(id: String, deletedAt: String) throws {
         try db.dbPool.write { db in
-            try db.execute(sql: """
-                INSERT OR REPLACE INTO note_deletions (id, deleted_at) VALUES (?, ?)
-            """, arguments: [id, deletedAt])
+            try Self.recordDeletion(id: id, deletedAt: deletedAt, in: db)
         }
+    }
+
+    /// Queue a permanent deletion to be pushed, as part of `db`'s transaction.
+    static func recordDeletion(id: String, deletedAt: String, in db: Database) throws {
+        try db.execute(sql: """
+            INSERT OR REPLACE INTO note_deletions (id, deleted_at) VALUES (?, ?)
+        """, arguments: [id, deletedAt])
     }
 
     func getPendingDeletions() throws -> [(id: String, deletedAt: String)] {

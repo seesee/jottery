@@ -275,6 +275,19 @@ struct MainView: View {
                 noteCount: appState.notes.count + appState.archivedNotes.count
             ))
         }
+        // The server can't prove a deletion came from one of the user's devices.
+        // The notes are safe in the bin, and a real clear-out wouldn't get here.
+        .alert(L.syncServerRemovedTitle, isPresented: Binding(
+            get: { !appState.notesRemovedByServer.isEmpty },
+            set: { if !$0 { appState.notesRemovedByServer = [] } }
+        )) {
+            Button(L.syncServerRemovedRestore) {
+                Task { await appState.restoreNotesRemovedByServer() }
+            }
+            Button(L.syncServerRemovedKeep, role: .cancel) {}
+        } message: {
+            Text(L.syncServerRemovedMessage(appState.notesRemovedByServer.count))
+        }
         .alert(accountKeyNoticeTitle, isPresented: Binding(
             get: { appState.accountKeyNotice != nil },
             set: { if !$0 { appState.accountKeyNotice = nil } }

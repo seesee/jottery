@@ -672,7 +672,7 @@ enum BackupService {
         let plaintext = try CryptoService.decrypt(encrypted, key: backupKey)
         let reEncrypted = try CryptoService.serializeEncryptedJSON(CryptoService.encrypt(plaintext, key: currentKey))
         try repo.storeBlob(
-            id: attachment.id, filename: "", mimeType: "",
+            id: attachment.id, mimeType: "",
             size: plaintext.count, data: Data(reEncrypted.utf8)
         )
     }

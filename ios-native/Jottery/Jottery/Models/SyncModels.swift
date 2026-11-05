@@ -24,6 +24,9 @@ struct SyncPushRequest: Codable {
     let versions: [SyncNoteVersion]
     var deletions: [SyncDeletion]?
     var savedSearches: [SyncSavedSearch]?
+    /// Each note's `attachments` is its complete list, so the server can drop
+    /// the references that are gone. A server that doesn't know it ignores it.
+    var attachmentsAuthoritative: Bool?
 }
 
 struct SyncPushResponse: Codable {
@@ -33,6 +36,9 @@ struct SyncPushResponse: Codable {
     /// Accepted notes referencing attachment data the server does not hold.
     /// Absent on older servers; the client re-pushes blobs it has (self-heal).
     var attachmentWarnings: [AttachmentWarning]?
+    /// Deletions refused because the note has a newer edit. Absent on older
+    /// servers. The note comes back through a normal pull.
+    var rejectedDeletions: [String]?
 }
 
 /// One accepted note whose attachment references have no data on the server.
@@ -56,9 +62,14 @@ struct SyncRejected: Codable {
     let serverVersion: Int
     let serverAttachments: [AttachmentRef]
     let serverPinned: Bool
+    var serverArchived: Bool?
+    var serverArchivedAt: String?
+    var serverLocked: Bool?
+    var serverLockedAt: String?
     var serverSyntaxLanguage: String?
     var serverWordWrap: Bool?
     var serverShowPreview: Bool?
+    var serverColor: String?
     var serverContentHash: String?
     var serverParentHash: String?
     var serverHashChain: [String]?
@@ -70,6 +81,9 @@ struct SyncRejected: Codable {
 // MARK: - Sync Pull
 
 struct SyncPullRequest: Codable {
+    /// Selects cursor mode, even when empty. An older server ignores it and
+    /// goes by `lastSyncAt` and `offset`.
+    var cursor: String?
     var lastSyncAt: String?
     let knownNoteIds: [String]
     let knownAttachmentIds: [String]
@@ -78,14 +92,44 @@ struct SyncPullRequest: Codable {
 }
 
 struct SyncPullResponse: Codable {
-    let notes: [SyncNote]
+    var notes: [SyncNote]
     var deletions: [SyncDeletion]?
-    let attachments: [SyncAttachment]
-    let versions: [SyncNoteVersion]
+    var attachments: [SyncAttachment]
+    var versions: [SyncNoteVersion]
     var savedSearches: [SyncSavedSearch]?
     var syncedAt: String?
     var totalCount: Int?
     var hasMore: Bool?
+    /// Only in reply to a request with a `cursor`, from a server that has them.
+    var nextCursor: String?
+    /// How many notes the server sent, including any that were malformed: what
+    /// an offset has to advance by.
+    var receivedNoteCount: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case notes, deletions, attachments, versions, savedSearches
+        case syncedAt, totalCount, hasMore, nextCursor
+    }
+}
+
+extension SyncPullResponse {
+    /// One malformed entry mustn't lose the rest of the page.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let notes = try container.decodeLossily([SyncNote].self, forKey: .notes)
+        self.init(
+            notes: notes.elements,
+            deletions: try container.decodeLossilyIfPresent([SyncDeletion].self, forKey: .deletions),
+            attachments: try container.decodeLossily([SyncAttachment].self, forKey: .attachments).elements,
+            versions: try container.decodeLossily([SyncNoteVersion].self, forKey: .versions).elements,
+            savedSearches: try container.decodeLossilyIfPresent([SyncSavedSearch].self, forKey: .savedSearches),
+            syncedAt: try? container.decodeIfPresent(String.self, forKey: .syncedAt),
+            totalCount: try? container.decodeIfPresent(Int.self, forKey: .totalCount),
+            hasMore: try? container.decodeIfPresent(Bool.self, forKey: .hasMore),
+            nextCursor: try? container.decodeIfPresent(String.self, forKey: .nextCursor),
+            receivedNoteCount: notes.received
+        )
+    }
 }
 
 // MARK: - Sync Note
@@ -251,6 +295,10 @@ enum AccountDeletionMode: String {
 struct SyncChanges: Sendable {
     var updatedIds: Set<String> = []
     var deletedIds: Set<String> = []
+    /// Notes that were in use until the server listed them as permanently
+    /// deleted, and are now in the bin. Normally a note reaches the bin first,
+    /// so a lot of these at once is suspicious.
+    var removedByServerIds: Set<String> = []
     var fullReloadRequired: Bool = false
 
     /// No changes, no reload needed — the default/no-op value.
@@ -262,6 +310,7 @@ struct SyncChanges: Sendable {
     mutating func merge(_ other: SyncChanges) {
         updatedIds.formUnion(other.updatedIds)
         deletedIds.formUnion(other.deletedIds)
+        removedByServerIds.formUnion(other.removedByServerIds)
         fullReloadRequired = fullReloadRequired || other.fullReloadRequired
     }
 }

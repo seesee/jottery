@@ -56,6 +56,23 @@ enum L {
         String(format: String(localized: "notesPassword.tooShort"), minimum)
     }
 
+    // MARK: - Sync Errors
+    static var syncErrorAccountDisabled: String { String(localized: "syncError.accountDisabled") }
+    static var syncErrorAccountPending: String { String(localized: "syncError.accountPending") }
+    static var syncErrorPasswordChangeRequired: String { String(localized: "syncError.passwordChangeRequired") }
+    static func syncErrorRateLimited(_ seconds: Int) -> String {
+        String(format: String(localized: "syncError.rateLimited"), seconds)
+    }
+    static func syncNotesTooLarge(_ count: Int) -> String {
+        String(format: String(localized: "syncError.notesTooLarge"), count)
+    }
+    static var syncServerRemovedTitle: String { String(localized: "syncServerRemoved.title") }
+    static func syncServerRemovedMessage(_ count: Int) -> String {
+        String(format: String(localized: "syncServerRemoved.message"), count)
+    }
+    static var syncServerRemovedRestore: String { String(localized: "syncServerRemoved.restore") }
+    static var syncServerRemovedKeep: String { String(localized: "syncServerRemoved.keep") }
+
     // MARK: - Sync Merge
     static var syncMergeTitle: String { String(localized: "syncMerge.title") }
     static func syncMergeMessage(server: String, noteCount: Int) -> String {

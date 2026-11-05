@@ -31,6 +31,14 @@ struct NoteRecord: Codable, FetchableRecord, PersistableRecord, Identifiable {
     var parentHash: String?
     var hashChain: String?         // JSON array of hash strings
     var needsSync: Bool
+    /// The hash the server is known to hold, while a local edit is pending.
+    var syncHash: String?
+    /// When this note reached the bin on this device. The purge goes by this
+    /// and not `deletedAt`, which the server could backdate to skip the bin.
+    var localDeletedAt: String?
+    /// Accepted from the inbox, so anyone with the inbox token wrote it. Its
+    /// preview stays off until someone turns it on here. Never synced.
+    var fromInbox: Bool = false
 
     // MARK: - Column Mapping
 
@@ -58,6 +66,9 @@ struct NoteRecord: Codable, FetchableRecord, PersistableRecord, Identifiable {
         case parentHash = "parent_hash"
         case hashChain = "hash_chain"
         case needsSync = "needs_sync"
+        case syncHash = "sync_hash"
+        case localDeletedAt = "local_deleted_at"
+        case fromInbox = "from_inbox"
     }
 
     // MARK: - Coding Keys (snake_case ↔ camelCase)
@@ -86,6 +97,9 @@ struct NoteRecord: Codable, FetchableRecord, PersistableRecord, Identifiable {
         case parentHash = "parent_hash"
         case hashChain = "hash_chain"
         case needsSync = "needs_sync"
+        case syncHash = "sync_hash"
+        case localDeletedAt = "local_deleted_at"
+        case fromInbox = "from_inbox"
     }
 
     // MARK: - Factory

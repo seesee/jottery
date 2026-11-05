@@ -227,9 +227,37 @@ actor SyncClient {
             throw SyncClientError.invalidResponse
         }
         guard (200...299).contains(http.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            throw SyncClientError.httpError(status: http.statusCode, body: body)
+            let details = try? JSONDecoder().decode(ErrorBody.self, from: data)
+            switch http.statusCode {
+            case 403:
+                if details?.code == "password_change_required" { throw SyncClientError.passwordChangeRequired }
+                if details?.error?.localizedCaseInsensitiveContains("pending") == true {
+                    throw SyncClientError.accountPendingApproval
+                }
+                throw SyncClientError.accountDisabled
+            case 429:
+                let header = http.value(forHTTPHeaderField: "Retry-After").flatMap(TimeInterval.init)
+                throw SyncClientError.rateLimited(
+                    retryAfter: Self.waitTime(header ?? details?.retryAfter.map(TimeInterval.init))
+                )
+            default:
+                throw SyncClientError.httpError(status: http.statusCode, body: String(data: data, encoding: .utf8) ?? "")
+            }
         }
+    }
+
+    /// A wait the server asked for, kept to something sensible: it can't be
+    /// allowed to stop this device syncing for a year.
+    private static func waitTime(_ requested: TimeInterval?) -> TimeInterval {
+        min(max(requested ?? 60, 1), 3600)
+    }
+
+    /// The server's error shape. `error` is its own wording, used only to tell
+    /// cases apart: what the user sees comes from the app.
+    private struct ErrorBody: Decodable {
+        var error: String?
+        var code: String?
+        var retryAfter: Int?
     }
 }
 
@@ -238,6 +266,15 @@ enum SyncClientError: LocalizedError {
     case httpError(status: Int, body: String)
     case unauthorized
     case deviceRevokeUnsupported
+    /// 403: the key or password is right, but the account is deactivated.
+    /// Keep the credentials: reactivating the account restores them.
+    case accountDisabled
+    /// 403: the account hasn't been approved yet.
+    case accountPendingApproval
+    /// 403: the account must change its password before anything else.
+    case passwordChangeRequired
+    /// 429: wait this many seconds before trying again.
+    case rateLimited(retryAfter: TimeInterval)
 
     var errorDescription: String? {
         switch self {
@@ -245,6 +282,10 @@ enum SyncClientError: LocalizedError {
         case .httpError(let status, let body): return "HTTP \(status): \(body)"
         case .unauthorized: return "Unauthorised — check API key"
         case .deviceRevokeUnsupported: return L.syncDisconnectServerTooOld
+        case .accountDisabled: return L.syncErrorAccountDisabled
+        case .accountPendingApproval: return L.syncErrorAccountPending
+        case .passwordChangeRequired: return L.syncErrorPasswordChangeRequired
+        case .rateLimited(let wait): return L.syncErrorRateLimited(Int(wait.rounded(.up)))
         }
     }
 }

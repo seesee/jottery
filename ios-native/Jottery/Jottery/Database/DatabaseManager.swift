@@ -296,6 +296,17 @@ final class DatabaseManager: Sendable {
             try db.execute(sql: "ALTER TABLE sync_metadata ADD COLUMN pending_wrapped_key TEXT")
         }
 
+        // What the server has been sent and told. Filenames in `attachments`
+        // were never read, and everything uses the refs in the note, so the
+        // plaintext names older builds left there are simply removed.
+        migrator.registerMigration("ios_009_local_sync_tracking") { db in
+            try db.execute(sql: "ALTER TABLE notes ADD COLUMN local_deleted_at TEXT")
+            try db.execute(sql: "ALTER TABLE notes ADD COLUMN from_inbox INTEGER NOT NULL DEFAULT 0")
+            try db.execute(sql: "UPDATE notes SET local_deleted_at = deleted_at WHERE deleted = 1")
+            try db.execute(sql: "ALTER TABLE attachments ADD COLUMN uploaded INTEGER NOT NULL DEFAULT 0")
+            try db.execute(sql: "UPDATE attachments SET filename = ''")
+        }
+
         try migrator.migrate(dbPool)
     }
 }

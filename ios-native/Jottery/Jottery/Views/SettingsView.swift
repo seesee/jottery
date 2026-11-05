@@ -351,9 +351,7 @@ struct SettingsView: View {
         settings.syncEndpoint = nil
         appState.settings.syncEnabled = false
         appState.settings.syncEndpoint = nil
-        appState.syncEnabled = false
-        appState.syncClient = nil
-        appState.syncService = nil
+        appState.teardownSync()
     }
 
     /// Unlink this device, server-side first and then locally.
@@ -388,9 +386,7 @@ struct SettingsView: View {
         settings.syncEndpoint = nil
         appState.settings.syncEnabled = false
         appState.settings.syncEndpoint = nil
-        appState.syncEnabled = false
-        appState.syncClient = nil
-        appState.syncService = nil
+        appState.teardownSync()
     }
 }
 
