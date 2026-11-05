@@ -31,7 +31,7 @@ impl<'a> SyncRepository<'a> {
                 "SELECT last_sync_at, last_push_at, last_pull_at, api_key, client_id,
                         sync_enabled, sync_endpoint, auto_sync_interval, user_email,
                         pending_registration_email, pending_device_name, user_id,
-                        server_key_seen, server_key_stale
+                        server_key_seen, server_key_stale, pull_cursor
                  FROM sync_metadata WHERE id = 1",
                 [],
                 |row| {
@@ -65,6 +65,7 @@ impl<'a> SyncRepository<'a> {
                         user_id: row.get(11)?,
                         server_key_seen: row.get(12)?,
                         server_key_stale: row.get::<_, i32>(13)? != 0,
+                        pull_cursor: row.get(14)?,
                     })
                 },
             )
@@ -80,8 +81,8 @@ impl<'a> SyncRepository<'a> {
                 id, last_sync_at, last_push_at, last_pull_at, api_key, client_id,
                 sync_enabled, sync_endpoint, auto_sync_interval, user_email,
                 pending_registration_email, pending_device_name, user_id,
-                server_key_seen, server_key_stale
-            ) VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+                server_key_seen, server_key_stale, pull_cursor
+            ) VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15)",
             params![
                 metadata.last_sync_at.map(|dt| dt.to_rfc3339()),
                 metadata.last_push_at.map(|dt| dt.to_rfc3339()),
@@ -97,6 +98,7 @@ impl<'a> SyncRepository<'a> {
                 &metadata.user_id,
                 &metadata.server_key_seen,
                 metadata.server_key_stale as i32,
+                &metadata.pull_cursor,
             ],
         )?;
 
@@ -108,6 +110,16 @@ impl<'a> SyncRepository<'a> {
         self.conn.execute(
             "UPDATE sync_metadata SET last_sync_at = ?1 WHERE id = 1",
             params![timestamp.to_rfc3339()],
+        )?;
+        Ok(())
+    }
+
+    /// Save how far the pull has got. A page and this go in one transaction, so a crash
+    /// can only repeat a page, never lose one.
+    pub fn set_pull_cursor(&self, cursor: Option<&str>) -> Result<()> {
+        self.conn.execute(
+            "UPDATE sync_metadata SET pull_cursor = ?1 WHERE id = 1",
+            params![cursor],
         )?;
         Ok(())
     }

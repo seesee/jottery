@@ -213,6 +213,8 @@ sync:
   notes: "노트"
   skipped_notes: "서버의 항목 %{count}개를 읽을 수 없어 건너뛰었습니다"
   rejected_notes: "노트 %{count}개가 서버와 충돌합니다. Jottery를 열어 해결하세요."
+  rate_limited: "서버가 다시 동기화하기 전에 %{seconds}초 기다리도록 요청했습니다."
+  key_refused: "서버가 이 기기의 API 키를 받아들이지 않았습니다. 기기를 다시 등록하세요."
 
 # 받은편지함
 inbox:

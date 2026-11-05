@@ -235,6 +235,8 @@ sync:
     inactive: "Your account has been deactivated. Please contact an administrator."
   skipped_notes: "%{count} items from the server couldn't be read and were skipped"
   rejected_notes: "%{count} notes conflict with the server. Open Jottery to resolve them."
+  rate_limited: "The server asked Jottery to wait %{seconds} seconds before syncing again."
+  key_refused: "The server didn't accept this device's API key. Register the device again."
 
 # Inbox
 inbox:

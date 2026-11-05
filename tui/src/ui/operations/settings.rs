@@ -382,6 +382,7 @@ pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &st
     metadata.pending_registration_email = None;
     metadata.last_sync_at = None;
     metadata.last_pull_at = None;
+    metadata.pull_cursor = None;
     sync_repo.update_metadata(&metadata)?;
     app.debug_log("[Register] Sync metadata saved to database");
 
@@ -446,8 +447,7 @@ pub fn clear_pending_registration(app: &mut App) -> Result<()> {
     metadata.user_email = None;
     metadata.user_id = None;
     metadata.sync_enabled = false;
-    metadata.server_key_seen = None;
-    metadata.server_key_stale = false;
+    metadata.forget_server_state();
     sync_repo.update_metadata(&metadata)?;
 
     // Also clear app settings

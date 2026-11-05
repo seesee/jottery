@@ -213,6 +213,8 @@ sync:
   notes: notas
   skipped_notes: "Não foi possível ler %{count} itens do servidor, pelo que foram ignorados"
   rejected_notes: "%{count} notas entram em conflito com o servidor. Abra o Jottery para os resolver."
+  rate_limited: "O servidor pediu ao Jottery que aguarde %{seconds} segundos antes de sincronizar novamente."
+  key_refused: "O servidor não aceitou a chave de API deste dispositivo. Registe o dispositivo novamente."
 
 # Caixa de entrada
 inbox:

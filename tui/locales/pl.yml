@@ -213,6 +213,8 @@ sync:
   notes: notatek
   skipped_notes: "Nie udało się odczytać elementów z serwera (%{count}) i zostały pominięte"
   rejected_notes: "Notatki w konflikcie z serwerem: %{count}. Otwórz Jottery, aby je rozwiązać."
+  rate_limited: "Serwer poprosił Jottery o odczekanie %{seconds} s przed ponowną synchronizacją."
+  key_refused: "Serwer nie zaakceptował klucza API tego urządzenia. Zarejestruj urządzenie ponownie."
 
 # Skrzynka odbiorcza
 inbox:

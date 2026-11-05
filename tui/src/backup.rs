@@ -876,6 +876,11 @@ fn read_note(crypto: &CryptoService, item: Value, key: &[u8; 32]) -> Result<(Not
         content_hash: note.content_hash,
         parent_hash: note.parent_hash,
         hash_chain: note.hash_chain,
+        show_preview: None,
+        // Settled when the restore finishes, by comparing with the last sync
+        needs_sync: false,
+        // A backup from an older build can have lost a note's list
+        attachments_complete: false,
     }, lost_tags + lost_attachments))
 }
 
@@ -985,7 +990,7 @@ pub fn restore_backup(
                 references.extend(note.attachments.iter().map(|a| (a.id.clone(), a.clone())));
 
                 let stored = note_repo.create(&note, &keys.vault_key)
-                    .or_else(|_| note_repo.update(&note, &keys.vault_key));
+                    .or_else(|_| note_repo.store(&note, &keys.vault_key));
                 match stored {
                     Ok(()) => summary.notes += 1,
                     Err(e) => {
@@ -1067,6 +1072,10 @@ pub fn restore_backup(
             warn!("[Backup] Could not restore settings: {e}");
         }
     }
+
+    // The server may not have what came from the backup
+    note_repo.mark_changed_since_last_sync()?;
+    version_repo.mark_all_unpushed()?;
 
     transaction.commit()?;
 

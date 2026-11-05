@@ -213,6 +213,8 @@ sync:
     inactive: Votre compte a été désactivé. Veuillez contacter un administrateur.
   skipped_notes: "%{count} éléments du serveur n'ont pas pu être lus et ont été ignorés"
   rejected_notes: "%{count} notes sont en conflit avec le serveur. Ouvrez Jottery pour les résoudre."
+  rate_limited: "Le serveur a demandé à Jottery d'attendre %{seconds} secondes avant de synchroniser à nouveau."
+  key_refused: "Le serveur n'a pas accepté la clé API de cet appareil. Enregistrez à nouveau l'appareil."
 
 # Boîte de réception
 inbox:

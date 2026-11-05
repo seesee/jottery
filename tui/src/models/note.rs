@@ -29,6 +29,16 @@ pub struct Note {
     pub content_hash: Option<String>,      // SHA-256 of content + tags + attachments + change fields
     pub parent_hash: Option<String>,       // Hash of previous version (None for new notes)
     pub hash_chain: Option<Vec<String>>,   // Array of ancestor hashes (max 50)
+    /// Whether another client shows this note's preview. This client has none, but it
+    /// keeps the value so that its pushes don't erase it.
+    #[serde(default)]
+    pub show_preview: Option<bool>,
+    /// A local change the server hasn't accepted yet
+    #[serde(default)]
+    pub needs_sync: bool,
+    /// This device can vouch that `attachments` is the note's whole list
+    #[serde(default)]
+    pub attachments_complete: bool,
 }
 
 /// Syntax highlighting language options
@@ -171,6 +181,9 @@ impl Note {
             content_hash: None,
             parent_hash: None,
             hash_chain: None,
+            show_preview: None,
+            needs_sync: true,
+            attachments_complete: true,
         }
     }
 

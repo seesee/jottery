@@ -213,6 +213,8 @@ sync:
   notes: notities
   skipped_notes: "%{count} items van de server konden niet worden gelezen en zijn overgeslagen"
   rejected_notes: "%{count} notities conflicteren met de server. Open Jottery om ze op te lossen."
+  rate_limited: "De server heeft Jottery gevraagd %{seconds} seconden te wachten voordat er opnieuw wordt gesynchroniseerd."
+  key_refused: "De server heeft de API-sleutel van dit apparaat niet geaccepteerd. Registreer het apparaat opnieuw."
 
 # Postvak IN
 inbox:

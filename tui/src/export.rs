@@ -236,6 +236,10 @@ fn create_from_file(
     note.word_wrap = imported.word_wrap.unwrap_or(true);
     note.syntax_language = imported.syntax_language.and_then(|name| name.parse().ok()).unwrap_or_default();
     note.color = imported.color;
+    // The server may know this note, and the file can't speak for its whole list
+    note.attachments_complete = false;
+    // Previews can render, and a file can come from anywhere
+    note.show_preview = Some(false);
 
     repo.create(&note, key)?;
     Ok(failed)

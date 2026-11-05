@@ -213,6 +213,8 @@ sync:
   notes: 条笔记
   skipped_notes: "服务器上的 %{count} 项无法读取，已跳过"
   rejected_notes: "%{count} 条笔记与服务器冲突。请打开 Jottery 解决。"
+  rate_limited: "服务器要求 Jottery 等待 %{seconds} 秒后再同步。"
+  key_refused: "服务器未接受此设备的 API 密钥。请重新注册设备。"
 
 # 收件箱
 inbox:

@@ -27,6 +27,10 @@ pub struct SyncMetadata {
     /// This device changed the notes password and owes the server the new wrapping.
     #[serde(default)]
     pub server_key_stale: bool,
+    /// Where the next pull starts, as the server gave it. It belongs to one account on
+    /// one server, so anything that changes those clears it.
+    #[serde(default)]
+    pub pull_cursor: Option<String>,
 }
 
 impl Default for SyncMetadata {
@@ -46,7 +50,17 @@ impl Default for SyncMetadata {
             pending_device_name: None,
             server_key_seen: None,
             server_key_stale: false,
+            pull_cursor: None,
         }
+    }
+}
+
+impl SyncMetadata {
+    /// Forget what belongs to one account on one server, when either changes.
+    pub fn forget_server_state(&mut self) {
+        self.pull_cursor = None;
+        self.server_key_seen = None;
+        self.server_key_stale = false;
     }
 }
 
@@ -107,6 +121,10 @@ pub struct SyncPushRequest {
     /// Hard-deleted note IDs (from emptying trash)
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub deletions: Vec<SyncDeletion>,
+    /// Each note's `attachments` is its whole list, so the server can drop what's gone.
+    /// Older servers ignore this.
+    #[serde(rename = "attachmentsAuthoritative", default, skip_serializing_if = "std::ops::Not::not")]
+    pub attachments_authoritative: bool,
 }
 
 /// Note structure for sync (matches server expectations)
@@ -120,14 +138,18 @@ pub struct SyncNote {
     pub tags: Vec<String>,            // Array of encrypted JSON strings
     pub attachments: Vec<AttachmentRef>,
     pub pinned: bool,
+    #[serde(default)]
     pub archived: bool,
     pub archived_at: Option<DateTime<Utc>>,
+    #[serde(default)]
     pub locked: bool,
     pub locked_at: Option<DateTime<Utc>>,
     pub deleted: bool,
     pub deleted_at: Option<DateTime<Utc>>,
     pub version: i32,
     pub word_wrap: Option<bool>,
+    #[serde(default)]
+    pub show_preview: Option<bool>,
     pub syntax_language: Option<String>,
     pub color: Option<String>,        // Semantic color name (unencrypted)
     // Hash chain fields for git-like conflict detection
@@ -166,6 +188,9 @@ pub struct SyncPushResponse {
     /// Accepted notes referencing attachment data the server does not hold.
     /// Absent on older servers; clients re-push blobs they have (self-heal).
     pub attachment_warnings: Vec<AttachmentWarning>,
+    /// Deletions refused because the note has a newer edit. Older servers don't send
+    /// this, which means the same as an empty list.
+    pub rejected_deletions: Vec<String>,
 }
 
 /// A push response as it arrives, before anything in it is trusted.
@@ -178,6 +203,8 @@ struct WirePushResponse {
     rejected: Lenient<SyncRejected>,
     #[serde(default)]
     attachment_warnings: Lenient<AttachmentWarning>,
+    #[serde(default)]
+    rejected_deletions: Lenient<String>,
 }
 
 impl SyncPushResponse {
@@ -195,6 +222,7 @@ impl SyncPushResponse {
                     ..warning
                 })
                 .collect(),
+            rejected_deletions: wire.rejected_deletions.items.into_iter().filter(|id| validation::is_uuid(id)).collect(),
         })
     }
 }
@@ -235,6 +263,8 @@ pub struct SyncRejected {
     pub server_locked_at: Option<DateTime<Utc>>,
     pub server_syntax_language: Option<String>,
     pub server_word_wrap: Option<bool>,
+    #[serde(default)]
+    pub server_show_preview: Option<bool>,
     pub server_color: Option<String>,     // Semantic color name
     // Hash chain fields for git-like conflict detection
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -269,6 +299,8 @@ pub struct ConflictData {
     pub server_locked_at: Option<DateTime<Utc>>,
     pub server_syntax_language: Option<String>,
     pub server_word_wrap: Option<bool>,
+    #[serde(default)]
+    pub server_show_preview: Option<bool>,
     pub server_color: Option<String>,     // Semantic color name
     pub detected_at: DateTime<Utc>,       // When conflict was detected
     // Hash chain fields for git-like conflict detection
@@ -291,6 +323,9 @@ pub struct ConflictData {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncPullRequest {
+    /// Opaque position in the server's changes. Sending it, even empty, selects cursor
+    /// mode. Older servers ignore it.
+    pub cursor: Option<String>,
     pub last_sync_at: Option<DateTime<Utc>>,
     pub known_note_ids: Vec<String>,
     pub known_attachment_ids: Vec<String>,
@@ -307,8 +342,11 @@ pub struct SyncPullResponse {
     pub attachments: Vec<SyncAttachment>,
     pub versions: Vec<SyncNoteVersion>,
     pub synced_at: DateTime<Utc>,
-    /// More notes remain: ask again with a larger offset.
+    /// More remains. In cursor mode ask again from `next_cursor`, or with a larger
+    /// offset otherwise.
     pub has_more: bool,
+    /// Only a server with the pull cursor sends this
+    pub next_cursor: Option<String>,
     pub inbox_items: Option<Vec<InboxItem>>,
     pub inbox_count: Option<i64>,
     /// Entries that were dropped, because they didn't parse or failed the checks
@@ -330,6 +368,8 @@ struct WirePullResponse {
     synced_at: DateTime<Utc>,
     #[serde(default)]
     has_more: bool,
+    #[serde(default)]
+    next_cursor: Option<String>,
     #[serde(default)]
     inbox_items: Option<Lenient<InboxItem>>,
     #[serde(default)]
@@ -362,6 +402,7 @@ impl SyncPullResponse {
             versions,
             synced_at: wire.synced_at,
             has_more: wire.has_more,
+            next_cursor: wire.next_cursor,
             inbox_items,
             inbox_count: wire.inbox_count,
             dropped,
@@ -502,6 +543,7 @@ mod tests {
             deleted_at: None,
             version: 1,
             word_wrap: Some(true),
+            show_preview: None,
             syntax_language: Some("markdown".to_string()),
             archived: false,
             archived_at: None,
@@ -536,6 +578,7 @@ mod tests {
             deleted_at: None,
             version: 1,
             word_wrap: Some(true),
+            show_preview: None,
             syntax_language: Some("markdown".to_string()),
             color: None,
             archived: false,
@@ -594,6 +637,7 @@ mod tests {
             server_pinned: false,
             server_syntax_language: Some("markdown".to_string()),
             server_word_wrap: Some(true),
+            server_show_preview: None,
             server_color: Some("green".to_string()),
             server_archived: false,
             server_archived_at: None,
@@ -629,6 +673,7 @@ mod tests {
             server_pinned: false,
             server_syntax_language: Some("markdown".to_string()),
             server_word_wrap: Some(true),
+            server_show_preview: None,
             server_color: Some("yellow".to_string()),
             server_archived: false,
             server_archived_at: None,
@@ -664,6 +709,7 @@ mod tests {
             deleted_at: None,
             version: 1,
             word_wrap: Some(true),
+            show_preview: None,
             syntax_language: Some("markdown".to_string()),
             color: Some("purple".to_string()),
             archived: false,

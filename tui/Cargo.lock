@@ -1499,6 +1499,7 @@ dependencies = [
  "evalexpr",
  "flate2",
  "hex",
+ "hmac",
  "hostname",
  "keyring",
  "native-tls",

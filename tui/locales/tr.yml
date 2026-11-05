@@ -213,6 +213,8 @@ sync:
   notes: not
   skipped_notes: "Sunucudan gelen %{count} öğe okunamadı ve atlandı"
   rejected_notes: "%{count} not sunucuyla çakışıyor. Çözmek için Jottery uygulamasını açın."
+  rate_limited: "Sunucu, Jottery'den yeniden eşitlemeden önce %{seconds} saniye beklemesini istedi."
+  key_refused: "Sunucu bu cihazın API anahtarını kabul etmedi. Cihazı yeniden kaydedin."
 
 # Gelen Kutusu
 inbox:

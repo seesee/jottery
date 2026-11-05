@@ -256,6 +256,8 @@ pub struct App {
     pub(crate) last_auto_sync: Option<Instant>,
     /// When sync status was set (for auto-clearing)
     pub(crate) sync_status_set_at: Option<Instant>,
+    /// Automatic syncs wait until then, because the server asked or refused
+    pub(crate) sync_paused_until: Option<Instant>,
     /// Current color scheme (cached from settings)
     pub color_scheme: crate::ui::ColorScheme,
     /// Cached color palette names (for color cycling without allocation)
@@ -447,6 +449,7 @@ impl App {
             syntax_highlighter: crate::ui::syntax::SyntaxHighlighter::new(),
             last_auto_sync: None,
             sync_status_set_at: None,
+            sync_paused_until: None,
             color_scheme: crate::ui::ColorScheme::default(),
             color_palette_cache: Vec::new(), // Populated when settings are loaded
             all_tags_cache: Vec::new(), // Populated when notes are loaded
@@ -1315,8 +1318,13 @@ impl App {
             return; // Not unlocked, can't sync
         }
 
-        // Check time since last auto-sync
+        // The server said to wait, or that this account can't sync at the moment
         let now = Instant::now();
+        if self.sync_paused_until.is_some_and(|until| now < until) {
+            return;
+        }
+
+        // Check time since last auto-sync
         let should_sync = match self.last_auto_sync {
             None => true, // Never synced, do it now
             Some(last) => {

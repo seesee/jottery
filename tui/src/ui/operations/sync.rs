@@ -1,29 +1,76 @@
 //! Sync operations for bidirectional sync with server
+//!
+//! `docs/sync-protocol.md` is the reference. The server stores ciphertext and isn't
+//! trusted: `SyncPullResponse::parse` checks what it sends, and everything here acts on
+//! what's left.
 
 use anyhow::{Context, Result};
+use base64::{engine::general_purpose, Engine as _};
+use chrono::{DateTime, Utc};
+use reqwest::blocking::Client;
+use rusqlite::Connection;
 use rust_i18n::t;
-use std::time::Instant;
+use serde::Serialize;
+use std::collections::{HashMap, HashSet};
+use std::time::{Duration, Instant};
 
 use crate::{
-    crypto::{CryptoService, EncryptedData},
-    models::{Attachment, Note, sync::{SyncPushRequest, SyncPullRequest, SyncNote, SyncPushResponse, SyncPullResponse, AttachmentRef, SyncAttachment, SyncNoteVersion, SyncDeletion}},
+    crypto::{update_hash_chain, CryptoService, EncryptedData},
+    models::{
+        char_prefix, Attachment, Note,
+        sync::{
+            AttachmentRef, AttachmentWarning, ConflictData, InboxItem, SyncAttachment, SyncDeletion, SyncMetadata,
+            SyncNote, SyncNoteVersion, SyncPullRequest, SyncPullResponse, SyncPushRequest,
+            SyncPushResponse,
+        },
+    },
     repository::{attachment::AttachmentRepository, NoteRepository, NoteVersionRepository, VersionReason, sync::SyncRepository},
 };
 
 use super::super::app::App;
 
-/// Notes to ask for per pull request.
+/// Changes to ask for per pull request.
 const PULL_PAGE_SIZE: i64 = 100;
+
+/// Notes per push. The server holds its write lock for the whole of one.
+const PUSH_NOTES_PER_BATCH: usize = 100;
+
+/// Roughly how much blob data goes in one push. A single larger blob still goes alone.
+const PUSH_BYTES_PER_BATCH: usize = 8 * 1024 * 1024;
+
+/// How long the server may take to accept a connection, and to answer a request. Long
+/// enough for a push of blobs on a slow line, and short enough to give up on a dead one.
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(120);
+
+/// More pages than any real vault needs, so a server that always says there's more
+/// can't keep a sync going for ever.
+const MAX_PULL_PAGES: usize = 100_000;
+
+/// The longest a server can ask this device to wait.
+const MAX_RETRY_AFTER_SECONDS: u64 = 3600;
 
 /// What a sync achieved.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct SyncOutcome {
     /// Notes pushed, or changed by the pull
     pub synced: usize,
-    /// Notes the server refused because of a conflict
+    /// Notes in conflict with the server, whether refused by a push or found by a pull
     pub rejected: usize,
     /// Notes or attachments from the server that couldn't be read, and were skipped
     pub skipped: usize,
+}
+
+/// The server turned this device away, and retrying at once won't help.
+#[derive(Debug, thiserror::Error)]
+pub enum SyncRefused {
+    /// The account is deactivated or not approved. The credentials stay, because
+    /// reactivating the account brings the key back.
+    #[error("{0}")]
+    AccountDisabled(String),
+    /// Too many requests: wait this long
+    #[error("{message}")]
+    RateLimited { seconds: u64, message: String },
 }
 
 /// A filename as it goes to the server: encrypted, like everything else in a note.
@@ -66,36 +113,21 @@ fn attachment_refs(crypto: &CryptoService, attachments: &[Attachment], key: &[u8
         .collect()
 }
 
-/// What applying a page of pulled notes needs.
-struct PullPage<'a> {
-    crypto: &'a CryptoService,
-    key: &'a [u8; 32],
-    note_repo: &'a NoteRepository<'a>,
-    version_repo: &'a NoteVersionRepository<'a>,
-    attachment_repo: &'a AttachmentRepository<'a>,
-    attachment_data: &'a std::collections::HashMap<String, Vec<u8>>,
-    synced_at: chrono::DateTime<chrono::Utc>,
-    force: bool,
-    log: &'a dyn Fn(&str),
-}
-
-/// A note's tags as sent by the server: each one encrypted on its own, holding
-/// a JSON string, or a JSON array in the older format.
-fn decrypt_note_tags(page: &PullPage<'_>, tags: &[String]) -> Vec<String> {
+/// Tags as sent by the server: each one encrypted on its own, holding a JSON string, or
+/// all of them in one JSON array. Writers differ, and old rows of both kinds exist on
+/// the server, so every reader takes both.
+fn decrypt_tags(crypto: &CryptoService, key: &[u8; 32], tags: &[String]) -> Vec<String> {
     tags.iter()
         .flat_map(|tag_json| {
-            // Parse and decrypt the tag
             let encrypted_tag: EncryptedData = serde_json::from_str(tag_json).ok()?;
-            let tag_json_str = page.crypto.decrypt_text(&encrypted_tag, page.key).ok()?;
+            let tag_json_str = crypto.decrypt_text(&encrypted_tag, key).ok()?;
 
-            // Try parsing as individual string first (new format)
             if let Ok(tag) = serde_json::from_str::<String>(&tag_json_str) {
                 if !tag.trim().is_empty() {
                     return Some(vec![tag]);
                 }
             }
 
-            // Try parsing as array (legacy format)
             if let Ok(tags) = serde_json::from_str::<Vec<String>>(&tag_json_str) {
                 let valid_tags: Vec<String> = tags.into_iter()
                     .filter(|t| !t.trim().is_empty())
@@ -111,38 +143,477 @@ fn decrypt_note_tags(page: &PullPage<'_>, tags: &[String]) -> Vec<String> {
         .collect()
 }
 
-/// Store the attachments the server sent for a note, returning those that made it
-/// and how many couldn't be read.
-fn store_note_attachments(page: &PullPage<'_>, remote_note: &SyncNote) -> Result<(Vec<Attachment>, usize)> {
+/// Tags as they go to the server: one ciphertext each, the form notes use.
+fn encrypt_tags(crypto: &CryptoService, key: &[u8; 32], tags: &[String]) -> Result<Vec<String>> {
+    tags.iter()
+        .map(|tag| {
+            let tag_json = serde_json::to_string(tag)?;
+            let encrypted_tag = crypto.encrypt_text(&tag_json, key)?;
+            Ok(serde_json::to_string(&encrypted_tag)?)
+        })
+        .collect()
+}
+
+/// What a sync run works with. Nothing here belongs to the terminal.
+struct Run<'a> {
+    conn: &'a Connection,
+    crypto: &'a CryptoService,
+    key: &'a [u8; 32],
+    client: Client,
+    endpoint: String,
+    api_key: String,
+    log: &'a dyn Fn(&str),
+}
+
+impl Run<'_> {
+    fn note_repo(&self) -> NoteRepository<'_> {
+        NoteRepository::new(self.conn)
+    }
+
+    fn version_repo(&self) -> NoteVersionRepository<'_> {
+        NoteVersionRepository::new(self.conn)
+    }
+
+    fn attachment_repo(&self) -> AttachmentRepository<'_> {
+        AttachmentRepository::new(self.conn)
+    }
+
+    fn sync_repo(&self) -> SyncRepository<'_> {
+        SyncRepository::new(self.conn)
+    }
+
+    /// POST to a device endpoint and return the body, turning a refusal into an error
+    /// that says what to do about it.
+    fn post<T: Serialize>(&self, path: &str, body: &T) -> Result<String> {
+        let response = self.client
+            .post(format!("{}{path}", self.endpoint))
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .json(body)
+            .send()
+            .with_context(|| format!("Failed to reach {path}"))?;
+
+        let status = response.status();
+        if status.is_success() {
+            return response.text().context("Failed to read the server's response");
+        }
+
+        let retry_after = response.headers()
+            .get(reqwest::header::RETRY_AFTER)
+            .and_then(|value| value.to_str().ok())
+            .and_then(|value| value.trim().parse::<u64>().ok());
+        let body = response.text().unwrap_or_default();
+
+        Err(match status.as_u16() {
+            403 => SyncRefused::AccountDisabled(t!("sync.account_deactivated").to_string()).into(),
+            429 => {
+                let seconds = retry_after.unwrap_or(60).min(MAX_RETRY_AFTER_SECONDS);
+                SyncRefused::RateLimited { seconds, message: t!("sync.rate_limited", seconds = seconds).to_string() }.into()
+            }
+            401 => anyhow::anyhow!("{}", t!("sync.key_refused")),
+            _ => anyhow::anyhow!("{} {}: {}", path, status, char_prefix(&body, 200)),
+        })
+    }
+}
+
+/// Connect to the server this vault is set up for.
+fn open_run<'a>(
+    conn: &'a Connection,
+    crypto: &'a CryptoService,
+    key: &'a [u8; 32],
+    metadata: &SyncMetadata,
+    log: &'a dyn Fn(&str),
+) -> Result<Run<'a>> {
+    let encrypted_api_key = metadata.api_key.as_ref()
+        .ok_or_else(|| anyhow::anyhow!("No API key configured"))?;
+    let api_key_encrypted: EncryptedData = serde_json::from_str(encrypted_api_key)
+        .map_err(|e| anyhow::anyhow!("Invalid API key format: {}", e))?;
+    let api_key = crypto.decrypt_text(&api_key_encrypted, key)?;
+
+    let client = Client::builder()
+        .connect_timeout(CONNECT_TIMEOUT)
+        .timeout(REQUEST_TIMEOUT)
+        .build()
+        .context("Failed to set up the HTTP client")?;
+
+    Ok(Run { conn, crypto, key, client, endpoint: metadata.sync_endpoint.clone(), api_key, log })
+}
+
+/// A blob as it goes to the server: encrypted, wrapped in JSON, in base64.
+fn blob_for_sync(run: &Run<'_>, id: &str, data: &[u8]) -> Result<SyncAttachment> {
+    let encrypted_blob = run.crypto.encrypt_binary(data, run.key)?;
+    let payload = serde_json::to_vec(&encrypted_blob)?;
+    Ok(SyncAttachment { id: id.to_string(), data: general_purpose::STANDARD.encode(payload) })
+}
+
+/// A note as it goes to the server.
+fn note_for_sync(run: &Run<'_>, note: &Note) -> Result<SyncNote> {
+    let encrypted_content = run.crypto.encrypt_text(&note.content, run.key)?;
+
+    Ok(SyncNote {
+        id: note.id.clone(),
+        created_at: note.created_at,
+        modified_at: note.modified_at,
+        content: serde_json::to_string(&encrypted_content)?,
+        tags: encrypt_tags(run.crypto, run.key, &note.tags)?,
+        attachments: attachment_refs(run.crypto, &note.attachments, run.key)?,
+        pinned: note.pinned,
+        archived: note.archived,
+        archived_at: note.archived_at,
+        locked: note.locked,
+        locked_at: note.locked_at,
+        deleted: note.deleted,
+        deleted_at: note.deleted_at,
+        version: note.version,
+        word_wrap: Some(note.word_wrap),
+        show_preview: note.show_preview,
+        syntax_language: Some(note.syntax_language.to_string()),
+        color: note.color.clone(),
+        // Hash chain fields for git-like conflict detection
+        content_hash: note.content_hash.clone(),
+        parent_hash: note.parent_hash.clone(),
+        hash_chain: note.hash_chain.clone(),
+    })
+}
+
+/// A version as it goes to the server.
+fn version_for_sync(run: &Run<'_>, version: &crate::repository::NoteVersion) -> Result<SyncNoteVersion> {
+    let encrypted_content = run.crypto.encrypt_text(&version.content, run.key)?;
+
+    Ok(SyncNoteVersion {
+        version_key: format!("{}:{}", version.note_id, version.version),
+        note_id: version.note_id.clone(),
+        version: version.version,
+        created_at: version.created_at,
+        synced_at: version.synced_at,
+        content: serde_json::to_string(&encrypted_content)?,
+        tags: encrypt_tags(run.crypto, run.key, &version.tags)?,
+        attachments: attachment_refs(run.crypto, &version.attachments, run.key)?,
+        syntax_language: version.syntax_language.as_ref().map(|s| s.to_string()),
+        word_wrap: version.word_wrap,
+        show_preview: version.show_preview,
+        color: version.color.clone(),
+        reason: version.reason.to_string(),
+        // Hash chain fields
+        content_hash: version.content_hash.clone(),
+        parent_hash: version.parent_hash.clone(),
+    })
+}
+
+/// A note written by an older build has no hash yet. It gets one before it goes, so the
+/// server can tell this version from the next.
+fn with_hash(run: &Run<'_>, mut note: Note) -> Result<Note> {
+    if note.content_hash.is_none() {
+        let hash = run.crypto.compute_content_hash(&note, run.key);
+        note.hash_chain = Some(update_hash_chain(&hash, note.hash_chain.as_deref()));
+        note.content_hash = Some(hash);
+        run.note_repo().store(&note, run.key)?;
+    }
+    Ok(note)
+}
+
+/// One push: a batch of notes, with the versions and blobs the server hasn't got.
+#[derive(Default)]
+struct PushBatch {
+    notes: Vec<Note>,
+    request: SyncPushRequest,
+    version_keys: Vec<String>,
+    bytes: usize,
+}
+
+impl PushBatch {
+    fn is_full(&self) -> bool {
+        self.notes.len() >= PUSH_NOTES_PER_BATCH || self.bytes >= PUSH_BYTES_PER_BATCH
+    }
+
+    /// Add a note and whatever of it the server still needs.
+    fn add(&mut self, run: &Run<'_>, note: Note) -> Result<()> {
+        let note = with_hash(run, note)?;
+        self.request.notes.push(note_for_sync(run, &note)?);
+
+        for version in run.version_repo().get_unpushed_versions(&note.id, run.key)? {
+            self.version_keys.push(version.version_key.clone());
+            self.request.versions.push(version_for_sync(run, &version)?);
+        }
+
+        // A missing blob doesn't stop the push: the note syncs without it, the server
+        // answers with attachmentWarnings, and any device holding the blob heals the gap
+        for attachment in &note.attachments {
+            if run.attachment_repo().is_pushed(&attachment.id)?
+                || self.request.attachments.iter().any(|blob| blob.id == attachment.id)
+            {
+                continue;
+            }
+
+            match run.attachment_repo().get(&attachment.id, run.key) {
+                Ok(Some((_, _, _, data))) => {
+                    let blob = blob_for_sync(run, &attachment.id, &data)?;
+                    self.bytes += blob.data.len();
+                    self.request.attachments.push(blob);
+                }
+                Ok(None) => tracing::warn!("Attachment {} has no local blob, so the note goes without it", attachment.id),
+                Err(e) => tracing::warn!("Attachment {} could not be read ({e}), so the note goes without it", attachment.id),
+            }
+        }
+
+        self.notes.push(note);
+        Ok(())
+    }
+}
+
+/// What the server said about a refused note, in the form the conflict screen reads.
+fn conflict_from_rejection(rejected: crate::models::sync::SyncRejected) -> ConflictData {
+    ConflictData {
+        note_id: rejected.id,
+        server_content: rejected.server_content,
+        server_tags: rejected.server_tags,
+        server_modified_at: rejected.server_modified_at,
+        server_version: rejected.server_version,
+        server_attachments: rejected.server_attachments,
+        server_pinned: rejected.server_pinned,
+        server_archived: rejected.server_archived,
+        server_archived_at: rejected.server_archived_at,
+        server_locked: rejected.server_locked,
+        server_locked_at: rejected.server_locked_at,
+        server_syntax_language: rejected.server_syntax_language,
+        server_word_wrap: rejected.server_word_wrap,
+        server_show_preview: rejected.server_show_preview,
+        server_color: rejected.server_color,
+        detected_at: Utc::now(),
+        // Hash chain fields for git-like conflict detection
+        server_content_hash: rejected.server_content_hash,
+        server_parent_hash: rejected.server_parent_hash,
+        server_hash_chain: rejected.server_hash_chain,
+        // Ancestor data for 3-way merge
+        ancestor_hash: rejected.ancestor_hash,
+        ancestor_content: rejected.ancestor_content,
+        ancestor_tags: rejected.ancestor_tags,
+    }
+}
+
+/// A pulled note in the same form, for a conflict the pull found.
+fn conflict_from_pull(local: &Note, remote: &SyncNote) -> ConflictData {
+    let ancestor_hash = match (&local.hash_chain, &remote.hash_chain) {
+        (Some(local_chain), Some(remote_chain)) => crate::crypto::find_common_ancestor(local_chain, remote_chain),
+        _ => None,
+    };
+
+    ConflictData {
+        note_id: remote.id.clone(),
+        server_content: remote.content.clone(),
+        server_tags: remote.tags.clone(),
+        server_modified_at: remote.modified_at,
+        server_version: remote.version,
+        server_attachments: remote.attachments.clone(),
+        server_pinned: remote.pinned,
+        server_archived: remote.archived,
+        server_archived_at: remote.archived_at,
+        server_locked: remote.locked,
+        server_locked_at: remote.locked_at,
+        server_syntax_language: remote.syntax_language.clone(),
+        server_word_wrap: remote.word_wrap,
+        server_show_preview: remote.show_preview,
+        server_color: remote.color.clone(),
+        detected_at: Utc::now(),
+        server_content_hash: remote.content_hash.clone(),
+        server_parent_hash: remote.parent_hash.clone(),
+        server_hash_chain: remote.hash_chain.clone(),
+        ancestor_hash,
+        ancestor_content: None,
+        ancestor_tags: None,
+    }
+}
+
+/// Send one batch and record what the server made of it.
+fn push_batch(run: &Run<'_>, mut batch: PushBatch, deletions: Vec<SyncDeletion>, authoritative: bool, outcome: &mut SyncOutcome) -> Result<()> {
+    batch.request.deletions = deletions;
+    batch.request.attachments_authoritative = authoritative;
+
+    let body = run.post("/api/v1/sync/push", &batch.request)?;
+    let response = SyncPushResponse::parse(&body).context("Failed to parse push response")?;
+
+    let note_repo = run.note_repo();
+    let version_repo = run.version_repo();
+    let attachment_repo = run.attachment_repo();
+    let sync_repo = run.sync_repo();
+
+    // Only what this batch sent counts. The server doesn't get to name anything else.
+    let pushed: HashMap<&str, &Note> = batch.notes.iter().map(|note| (note.id.as_str(), note)).collect();
+    let sent_blobs: HashSet<&str> = batch.request.attachments.iter().map(|blob| blob.id.as_str()).collect();
+
+    let transaction = run.conn.unchecked_transaction()?;
+
+    for accepted in &response.accepted {
+        let Some(note) = pushed.get(accepted.id.as_str()) else {
+            continue;
+        };
+        outcome.synced += 1;
+        note_repo.mark_pushed(&note.id, note.modified_at, accepted.synced_at)?;
+
+        for attachment in note.attachments.iter().filter(|a| sent_blobs.contains(a.id.as_str())) {
+            attachment_repo.mark_pushed(&attachment.id)?;
+        }
+
+        if let Ok(Some(stored)) = note_repo.get(&accepted.id, run.key) {
+            let _ = version_repo.create_version(&stored, accepted.synced_at, VersionReason::Sync, run.key);
+        }
+    }
+    version_repo.mark_pushed(&batch.version_keys)?;
+
+    for rejected in response.rejected {
+        if !pushed.contains_key(rejected.id.as_str()) {
+            continue;
+        }
+        (run.log)(&format!("Sync conflict for note {}: {}", rejected.id, rejected.reason));
+        outcome.rejected += 1;
+        let note_id = rejected.id.clone();
+        sync_repo.set_conflict(&note_id, &conflict_from_rejection(rejected))?;
+    }
+
+    // A deletion the server refused stops being sent, or the note would be announced
+    // to every device on each push. The note itself comes back through the pull.
+    let refused: HashSet<&String> = response.rejected_deletions.iter().collect();
+    let (forgotten, delivered): (Vec<String>, Vec<String>) = batch.request.deletions.iter()
+        .map(|deletion| deletion.id.clone())
+        .partition(|id| refused.contains(id));
+    note_repo.forget_deletions(&forgotten)?;
+    note_repo.mark_deletions_synced(&delivered)?;
+
+    transaction.commit()?;
+
+    repair_missing_blobs(run, &response.attachment_warnings);
+    Ok(())
+}
+
+/// Re-push blobs the server says it's missing, in one attachments-only push. Failing
+/// here isn't worth failing the sync: the warning comes back on the next push.
+fn repair_missing_blobs(run: &Run<'_>, warnings: &[AttachmentWarning]) {
+    let mut repairs = SyncPushRequest::default();
+
+    for warning in warnings {
+        for id in &warning.attachment_ids {
+            match run.attachment_repo().get(id, run.key) {
+                Ok(Some((_, _, _, data))) => match blob_for_sync(run, id, &data) {
+                    Ok(blob) => {
+                        tracing::warn!("Server is missing attachment {id} (note {}), so it's going again", warning.note_id);
+                        repairs.attachments.push(blob);
+                    }
+                    Err(e) => tracing::warn!("Could not prepare attachment {id} for repair: {e}"),
+                },
+                _ => tracing::warn!("Neither the server nor this device has attachment {id} (note {})", warning.note_id),
+            }
+        }
+    }
+
+    if repairs.attachments.is_empty() {
+        return;
+    }
+
+    match run.post("/api/v1/sync/push", &repairs) {
+        Ok(_) => {
+            (run.log)("[Sync] Re-uploaded attachments the server was missing");
+            for blob in &repairs.attachments {
+                if let Err(e) = run.attachment_repo().mark_pushed(&blob.id) {
+                    tracing::warn!("Could not record attachment {}: {e}", blob.id);
+                }
+            }
+        }
+        Err(e) => tracing::warn!("Attachment repair push failed: {e}"),
+    }
+}
+
+/// Send everything the server hasn't got: changed notes, in batches, and deletions.
+///
+/// A push may only claim to hold each note's whole attachment list if this device can
+/// vouch for it, and the claim covers the whole request, so notes it can't vouch for
+/// go in their own pushes.
+fn push_changes(run: &Run<'_>, metadata: &mut SyncMetadata, outcome: &mut SyncOutcome) -> Result<()> {
+    let note_repo = run.note_repo();
+
+    // The first sync with an account pushes the whole vault
+    if metadata.last_sync_at.is_none() {
+        note_repo.mark_all_pending()?;
+    }
+
+    let (vouched, unproven): (Vec<Note>, Vec<Note>) = note_repo.get_pending(run.key)?.notes
+        .into_iter()
+        .partition(|note| note.attachments_complete);
+
+    // Pending deletions (from emptying the bin) go whether or not any note changed,
+    // or an emptied bin would wait for the next edit to reach the server.
+    let mut deletions: Vec<SyncDeletion> = note_repo.get_pending_deletions()?
+        .into_iter()
+        .map(|(id, deleted_at)| SyncDeletion {
+            id,
+            deleted_at: deleted_at.parse().unwrap_or_else(|_| Utc::now()),
+        })
+        .collect();
+
+    let anything_to_push = !vouched.is_empty() || !unproven.is_empty() || !deletions.is_empty();
+
+    for (notes, authoritative) in [(vouched, true), (unproven, false)] {
+        let mut batch = PushBatch::default();
+        for note in notes {
+            batch.add(run, note)?;
+            if batch.is_full() {
+                push_batch(run, std::mem::take(&mut batch), std::mem::take(&mut deletions), authoritative, outcome)?;
+            }
+        }
+        if !batch.notes.is_empty() {
+            push_batch(run, batch, std::mem::take(&mut deletions), authoritative, outcome)?;
+        }
+    }
+
+    if !deletions.is_empty() {
+        push_batch(run, PushBatch::default(), deletions, false, outcome)?;
+    }
+
+    if anything_to_push {
+        metadata.last_push_at = Some(Utc::now());
+    }
+    Ok(())
+}
+
+/// What applying a page of pulled notes needs.
+struct PullPage<'a> {
+    run: &'a Run<'a>,
+    attachment_data: &'a HashMap<String, Vec<u8>>,
+    synced_at: DateTime<Utc>,
+    force: bool,
+}
+
+/// Read a pulled note's attachment list, storing any blobs that came with it. Returns
+/// the list and how many references couldn't be read.
+///
+/// The list keeps a reference even when no blob came, because the server leaves out
+/// blobs this device already has, and a shorter list here would later tell the server
+/// the attachment is gone.
+fn read_note_attachments(page: &PullPage<'_>, remote_note: &SyncNote) -> Result<(Vec<Attachment>, usize)> {
     let mut note_attachments: Vec<Attachment> = Vec::new();
     let mut unreadable = 0;
 
     for attachment_ref in &remote_note.attachments {
-        // Without data here, the server left it out because this device has it
-        let Some(decrypted_data) = page.attachment_data.get(&attachment_ref.id) else {
-            continue;
-        };
-
-        let filename = match filename_from_sync(page.crypto, &attachment_ref.filename, page.key) {
+        let filename = match filename_from_sync(page.run.crypto, &attachment_ref.filename, page.run.key) {
             Ok(filename) => filename,
             Err(e) => {
-                (page.log)(&format!("Pull - Failed to read filename for {}: {}", attachment_ref.id, e));
+                (page.run.log)(&format!("Pull - Failed to read filename for {}: {}", attachment_ref.id, e));
                 unreadable += 1;
                 continue;
             }
         };
 
-        // Store in database
-        page.attachment_repo.store(
-            &attachment_ref.id,
-            &filename,
-            &attachment_ref.mime_type,
-            attachment_ref.size,
-            decrypted_data,
-            page.key,
-        )?;
+        if let Some(decrypted_data) = page.attachment_data.get(&attachment_ref.id) {
+            let attachment_repo = page.run.attachment_repo();
+            attachment_repo.store(
+                &attachment_ref.id,
+                &filename,
+                &attachment_ref.mime_type,
+                attachment_ref.size,
+                decrypted_data,
+                page.run.key,
+            )?;
+            attachment_repo.mark_pushed(&attachment_ref.id)?;
+        }
 
-        // Add to note's attachment array
         note_attachments.push(Attachment {
             id: attachment_ref.id.clone(),
             filename,
@@ -156,170 +627,570 @@ fn store_note_attachments(page: &PullPage<'_>, remote_note: &SyncNote) -> Result
     Ok((note_attachments, unreadable))
 }
 
-/// Apply one pulled note, returning whether it changed anything here and how many
-/// of its attachments couldn't be read.
-fn apply_remote_note(page: &PullPage<'_>, notes: &mut Vec<Note>, remote_note: SyncNote) -> Result<(bool, usize)> {
-    // Decrypt content and tags from server (they're stored encrypted on server)
+/// What to do with a pulled note this device already has.
+#[derive(Debug, PartialEq, Eq)]
+enum PullAction {
+    /// It's the note this device has
+    Ignore,
+    /// It's older than the local edit, which stays and gets pushed
+    KeepLocal,
+    /// It's newer, or there's nothing local to protect
+    Take,
+    /// The two have diverged
+    Conflict,
+}
+
+/// Whether two notes with the same hash differ anyway. Not every client's hash covers
+/// every field: `deleted` is in nobody's, and some don't recompute it for a pin or an
+/// attachment. showPreview stays out, because each device keeps its own.
+fn differs_despite_equal_hash(local: &Note, remote: &SyncNote) -> bool {
+    let local_attachments: HashSet<&str> = local.attachments.iter().map(|a| a.id.as_str()).collect();
+    let remote_attachments: HashSet<&str> = remote.attachments.iter().map(|a| a.id.as_str()).collect();
+
+    local.deleted != remote.deleted
+        || local.pinned != remote.pinned
+        || local.archived != remote.archived
+        || local.locked != remote.locked
+        || local.color != remote.color
+        || local_attachments != remote_attachments
+}
+
+/// Decide what a pulled note means, following "Applying a pulled note" in the protocol.
+///
+/// Any pull can deliver a note this device already has, so this has to be idempotent,
+/// and it must never overwrite a local edit that hasn't been pushed.
+fn decide_pull(local: &Note, remote: &SyncNote, force: bool) -> PullAction {
+    let pending = local.needs_sync;
+
+    if let (Some(local_hash), Some(remote_hash)) = (&local.content_hash, &remote.content_hash) {
+        if local_hash == remote_hash {
+            return if !pending && differs_despite_equal_hash(local, remote) {
+                PullAction::Take
+            } else {
+                PullAction::Ignore
+            };
+        }
+
+        if !pending {
+            return PullAction::Take;
+        }
+
+        let local_has_seen_it = local.parent_hash.as_ref() == Some(remote_hash)
+            || local.hash_chain.as_ref().is_some_and(|chain| chain.contains(remote_hash));
+        if local_has_seen_it {
+            return PullAction::KeepLocal;
+        }
+
+        let includes_local_edit = remote.hash_chain.as_ref().is_some_and(|chain| chain.contains(local_hash));
+        return if includes_local_edit { PullAction::Take } else { PullAction::Conflict };
+    }
+
+    // Without hashes on both sides, the times are all there is to go on
+    let remote_is_newer = remote.modified_at > local.modified_at;
+
+    if pending {
+        return if remote_is_newer { PullAction::Conflict } else { PullAction::KeepLocal };
+    }
+
+    let lists_differ = local.attachments.len() != remote.attachments.len();
+    let gains_a_hash = local.content_hash.is_none() && remote.content_hash.is_some();
+
+    if force || remote_is_newer || lists_differ || gains_a_hash {
+        PullAction::Take
+    } else {
+        PullAction::Ignore
+    }
+}
+
+/// What applying a note did.
+#[derive(Debug, Default, PartialEq, Eq)]
+struct Applied {
+    changed: bool,
+    conflict: bool,
+    unreadable_attachments: usize,
+}
+
+/// Replace a local note with what the server sent.
+fn take_remote_note(
+    page: &PullPage<'_>,
+    mut local_note: Note,
+    remote_note: &SyncNote,
+    mut attachments: Vec<Attachment>,
+    unreadable: usize,
+) -> Result<()> {
+    let run = page.run;
+
+    // Decrypt first: a note that can't be read leaves this device's copy alone
     let encrypted_content: EncryptedData = serde_json::from_str(&remote_note.content)?;
-    let decrypted_content = page.crypto.decrypt_text(&encrypted_content, page.key)?;
-    let decrypted_tags = decrypt_note_tags(page, &remote_note.tags);
+    let decrypted_content = run.crypto.decrypt_text(&encrypted_content, run.key)?;
 
-    let (mut note_attachments, unreadable) = store_note_attachments(page, &remote_note)?;
-
-    // Check if we have this note in the database (not just in-memory list)
-    let existing_note = page.note_repo.get(&remote_note.id, page.key)?;
-
-    // Keep any local attachment the server didn't resend because we already had it
-    if let Some(ref local_note) = existing_note {
+    // A reference that couldn't be read keeps what this device knew about it
+    if unreadable > 0 {
         for attachment_ref in &remote_note.attachments {
-            if !note_attachments.iter().any(|a| a.id == attachment_ref.id) {
-                if let Some(local_att) = local_note.attachments.iter().find(|a| a.id == attachment_ref.id) {
-                    note_attachments.push(local_att.clone());
-                } else {
-                    (page.log)(&format!("Pull - Attachment {} not found locally either", attachment_ref.id));
+            if !attachments.iter().any(|a| a.id == attachment_ref.id) {
+                if let Some(known) = local_note.attachments.iter().find(|a| a.id == attachment_ref.id) {
+                    attachments.push(known.clone());
                 }
             }
         }
     }
+    let complete = attachments.len() == remote_note.attachments.len();
 
-    if let Some(mut local_note) = existing_note {
-        // Conflict resolution: Last-Write-Wins, but also update if attachments differ
-        // During force sync, always update to ensure we pull latest from server
-        let should_update = page.force
-            || remote_note.modified_at > local_note.modified_at
-            || note_attachments.len() != local_note.attachments.len();
+    // Capture local version BEFORE overwriting with remote
+    let _ = run.version_repo().create_version(&local_note, page.synced_at, VersionReason::Sync, run.key);
 
-        if !should_update {
-            return Ok((false, unreadable));
+    local_note.content = decrypted_content;
+    local_note.tags = decrypt_tags(run.crypto, run.key, &remote_note.tags);
+    local_note.attachments = attachments;
+    local_note.attachments_complete = complete;
+    local_note.modified_at = remote_note.modified_at;
+    local_note.synced_at = Some(page.synced_at); // Mark as synced
+    local_note.pinned = remote_note.pinned;
+    local_note.archived = remote_note.archived;
+    local_note.archived_at = remote_note.archived_at;
+    local_note.locked = remote_note.locked;
+    local_note.locked_at = remote_note.locked_at;
+    local_note.deleted = remote_note.deleted;
+    local_note.deleted_at = remote_note.deleted_at;
+    local_note.version = remote_note.version;
+    local_note.word_wrap = remote_note.word_wrap.unwrap_or(true);
+    local_note.show_preview = remote_note.show_preview;
+    if let Some(lang_str) = &remote_note.syntax_language {
+        local_note.syntax_language = lang_str.parse().unwrap_or_default();
+    }
+    local_note.color = remote_note.color.clone();
+    local_note.content_hash = remote_note.content_hash.clone();
+    local_note.parent_hash = remote_note.parent_hash.clone();
+    local_note.hash_chain = remote_note.hash_chain.clone();
+    local_note.needs_sync = false;
+
+    run.note_repo().store(&local_note, run.key)
+}
+
+/// Add a note this device hasn't seen.
+fn create_remote_note(page: &PullPage<'_>, remote_note: &SyncNote, attachments: Vec<Attachment>) -> Result<()> {
+    let run = page.run;
+
+    let encrypted_content: EncryptedData = serde_json::from_str(&remote_note.content)?;
+    let decrypted_content = run.crypto.decrypt_text(&encrypted_content, run.key)?;
+
+    let mut new_note = Note::new(decrypted_content);
+    new_note.id = remote_note.id.clone();
+    new_note.created_at = remote_note.created_at;
+    new_note.modified_at = remote_note.modified_at;
+    new_note.synced_at = Some(page.synced_at); // Mark as synced
+    new_note.tags = decrypt_tags(run.crypto, run.key, &remote_note.tags);
+    new_note.attachments_complete = attachments.len() == remote_note.attachments.len();
+    new_note.attachments = attachments;
+    new_note.pinned = remote_note.pinned;
+    new_note.archived = remote_note.archived;
+    new_note.archived_at = remote_note.archived_at;
+    new_note.locked = remote_note.locked;
+    new_note.locked_at = remote_note.locked_at;
+    new_note.deleted = remote_note.deleted;
+    new_note.deleted_at = remote_note.deleted_at;
+    new_note.version = remote_note.version;
+    new_note.word_wrap = remote_note.word_wrap.unwrap_or(true);
+    new_note.show_preview = remote_note.show_preview;
+    if let Some(lang_str) = &remote_note.syntax_language {
+        new_note.syntax_language = lang_str.parse().unwrap_or_default();
+    }
+    new_note.color = remote_note.color.clone();
+    new_note.content_hash = remote_note.content_hash.clone();
+    new_note.parent_hash = remote_note.parent_hash.clone();
+    new_note.hash_chain = remote_note.hash_chain.clone();
+    new_note.needs_sync = false;
+
+    run.note_repo().create(&new_note, run.key)
+}
+
+/// Apply one pulled note.
+fn apply_remote_note(page: &PullPage<'_>, remote_note: SyncNote) -> Result<Applied> {
+    let run = page.run;
+    let (attachments, unreadable) = read_note_attachments(page, &remote_note)?;
+    let mut applied = Applied { unreadable_attachments: unreadable, ..Default::default() };
+
+    let Some(local_note) = run.note_repo().get(&remote_note.id, run.key)? else {
+        create_remote_note(page, &remote_note, attachments)?;
+        applied.changed = true;
+        return Ok(applied);
+    };
+
+    // A note waiting for the user stays as it is, whatever arrives. The pull in the
+    // same sync as a refused push lands here too, so it can't replace the local edit.
+    // If the server has moved on, the conflict screen should show where it is now.
+    let sync_repo = run.sync_repo();
+    if let Some(conflict) = sync_repo.get_note_sync(&remote_note.id)?.and_then(|sync| sync.conflict_data) {
+        if conflict.server_modified_at < remote_note.modified_at {
+            sync_repo.set_conflict(&remote_note.id, &conflict_from_pull(&local_note, &remote_note))?;
         }
+        return Ok(applied);
+    }
 
-        // Capture local version BEFORE overwriting with remote
-        let _ = page.version_repo.create_version(&local_note, page.synced_at, VersionReason::Sync, page.key);
-
-        // Remote is newer, update local with decrypted content
-        local_note.content = decrypted_content;
-        local_note.tags = decrypted_tags;
-        local_note.attachments = note_attachments;
-        local_note.modified_at = remote_note.modified_at;
-        local_note.synced_at = Some(page.synced_at); // Mark as synced
-        local_note.pinned = remote_note.pinned;
-        local_note.archived = remote_note.archived;
-        local_note.archived_at = remote_note.archived_at;
-        local_note.locked = remote_note.locked;
-        local_note.locked_at = remote_note.locked_at;
-        local_note.deleted = remote_note.deleted;
-        local_note.deleted_at = remote_note.deleted_at;
-        local_note.version = remote_note.version;
-        local_note.word_wrap = remote_note.word_wrap.unwrap_or(true);
-        if let Some(lang_str) = &remote_note.syntax_language {
-            local_note.syntax_language = lang_str.parse().unwrap_or_default();
+    match decide_pull(&local_note, &remote_note, page.force) {
+        PullAction::Ignore => {
+            // A full pull that agrees with this device proves its list
+            let same_list = !differs_despite_equal_hash(&local_note, &remote_note);
+            if same_list && !local_note.attachments_complete && !local_note.needs_sync && unreadable == 0 {
+                let mut proven = local_note;
+                proven.attachments_complete = true;
+                run.note_repo().store(&proven, run.key)?;
+            }
         }
-        local_note.color = remote_note.color.clone();
-
-        page.note_repo.update(&local_note, page.key)?;
-
-        // Also update in-memory list if present
-        if let Some(mem_note) = notes.iter_mut().find(|n| n.id == remote_note.id) {
-            *mem_note = local_note;
+        PullAction::KeepLocal => {}
+        PullAction::Conflict => {
+            sync_repo.set_conflict(&remote_note.id, &conflict_from_pull(&local_note, &remote_note))?;
+            applied.conflict = true;
         }
-    } else {
-        // New note from server, add it with decrypted content
-        let mut new_note = Note::new(decrypted_content);
-        new_note.id = remote_note.id.clone();
-        new_note.created_at = remote_note.created_at;
-        new_note.modified_at = remote_note.modified_at;
-        new_note.synced_at = Some(page.synced_at); // Mark as synced
-        new_note.tags = decrypted_tags;
-        new_note.attachments = note_attachments;
-        new_note.pinned = remote_note.pinned;
-        new_note.archived = remote_note.archived;
-        new_note.archived_at = remote_note.archived_at;
-        new_note.locked = remote_note.locked;
-        new_note.locked_at = remote_note.locked_at;
-        new_note.deleted = remote_note.deleted;
-        new_note.deleted_at = remote_note.deleted_at;
-        new_note.version = remote_note.version;
-        new_note.word_wrap = remote_note.word_wrap.unwrap_or(true);
-        if let Some(lang_str) = &remote_note.syntax_language {
-            new_note.syntax_language = lang_str.parse().unwrap_or_default();
-        }
-        new_note.color = remote_note.color.clone();
-
-        page.note_repo.create(&new_note, page.key)?;
-
-        // Add to in-memory list only if not deleted
-        if !new_note.deleted {
-            notes.insert(0, new_note);
+        PullAction::Take => {
+            take_remote_note(page, local_note, &remote_note, attachments, unreadable)?;
+            applied.changed = true;
         }
     }
 
-    Ok((true, unreadable))
+    Ok(applied)
+}
+
+/// Store a version from the server, if it's new here and can be read.
+fn apply_remote_version(run: &Run<'_>, server_version: &SyncNoteVersion) -> Result<()> {
+    let version_repo = run.version_repo();
+
+    if version_repo.get_version_by_key(&server_version.version_key)?.is_some() {
+        return Ok(());
+    }
+
+    let encrypted_content: EncryptedData = serde_json::from_str(&server_version.content)
+        .context("Version content isn't ciphertext")?;
+    let content = run.crypto.decrypt_text(&encrypted_content, run.key)?;
+
+    let attachments = server_version.attachments.iter()
+        .filter_map(|att_ref| Some(Attachment {
+            id: att_ref.id.clone(),
+            filename: filename_from_sync(run.crypto, &att_ref.filename, run.key).ok()?,
+            mime_type: att_ref.mime_type.clone(),
+            size: att_ref.size,
+            data: att_ref.data.clone(),
+            thumbnail_data: None,
+        }))
+        .collect();
+
+    let reason = if server_version.reason == "manual-sync" {
+        VersionReason::ManualSync
+    } else {
+        VersionReason::Sync
+    };
+
+    version_repo.insert_version_from_sync(&crate::repository::NoteVersion {
+        version_key: server_version.version_key.clone(),
+        note_id: server_version.note_id.clone(),
+        version: server_version.version,
+        created_at: server_version.created_at,
+        synced_at: server_version.synced_at,
+        content,
+        tags: decrypt_tags(run.crypto, run.key, &server_version.tags),
+        attachments,
+        syntax_language: server_version.syntax_language.as_ref().and_then(|s| s.parse().ok()),
+        word_wrap: Some(server_version.word_wrap.unwrap_or(true)),
+        show_preview: server_version.show_preview,
+        color: server_version.color.clone(),
+        reason,
+        // Hash chain fields from server
+        content_hash: server_version.content_hash.clone(),
+        parent_hash: server_version.parent_hash.clone(),
+    }, run.key)
+}
+
+/// Store the versions whose notes are here, returning the rest.
+///
+/// A page holds a range of changes, so a version can arrive before its note, whose own
+/// change is further on. It waits for that page. If the note never comes, because it
+/// couldn't be read, the version is dropped with it when the pull ends.
+fn apply_remote_versions(run: &Run<'_>, versions: Vec<SyncNoteVersion>) -> Result<Vec<SyncNoteVersion>> {
+    let note_repo = run.note_repo();
+    let mut waiting = Vec::new();
+
+    for version in versions {
+        if !note_repo.exists(&version.note_id)? {
+            waiting.push(version);
+            continue;
+        }
+
+        if let Err(e) = apply_remote_version(run, &version) {
+            (run.log)(&format!("Pull - Skipping version {}: {e}", version.version_key));
+        }
+    }
+
+    Ok(waiting)
+}
+
+/// Apply notes permanently deleted elsewhere. An edit made after the deletion beats it,
+/// as it does on the server, so that note stays and the next push brings it back.
+fn apply_remote_deletions(run: &Run<'_>, deletions: Vec<SyncDeletion>, outcome: &mut SyncOutcome) -> Result<()> {
+    let note_repo = run.note_repo();
+
+    for deletion in deletions {
+        if note_repo.has_edit_after(&deletion.id, deletion.deleted_at)? {
+            (run.log)(&format!("Pull - Keeping note {}: edited after it was deleted", deletion.id));
+            continue;
+        }
+
+        if note_repo.apply_remote_deletion(&deletion.id)? {
+            (run.log)(&format!("Pull - Hard deleted note {}", deletion.id));
+            outcome.synced += 1;
+        }
+    }
+
+    Ok(())
+}
+
+/// Decrypt the blobs of a pull. One that fails is left out.
+fn read_blobs(run: &Run<'_>, attachments: &[SyncAttachment]) -> HashMap<String, Vec<u8>> {
+    attachments.iter()
+        .filter_map(|attachment| {
+            let decoded = general_purpose::STANDARD.decode(&attachment.data).ok()?;
+            let encrypted: EncryptedData = serde_json::from_slice(&decoded).ok()?;
+            let data = run.crypto.decrypt_binary(&encrypted, run.key).ok()?;
+            Some((attachment.id.clone(), data))
+        })
+        .collect()
+}
+
+/// What a pull found that belongs to the running app, rather than the database.
+struct Pulled {
+    inbox_items: Vec<InboxItem>,
+}
+
+/// Get everything that changed on the server.
+///
+/// This follows "Moving a client to the cursor" in the protocol. It sends a cursor and
+/// looks at every response to see which kind of server answered, because a server can
+/// be rolled back, or be a different one. A newer server takes the cursor and sends one
+/// range of its changes per page. An older one ignores it and pages by offset.
+fn pull_changes(run: &Run<'_>, metadata: &mut SyncMetadata, force: bool, outcome: &mut SyncOutcome) -> Result<Pulled> {
+    let stored_cursor = if force { None } else { metadata.pull_cursor.clone() };
+    let last_sync_at = if force { None } else { metadata.last_pull_at.or(metadata.last_sync_at) };
+
+    // Timestamp pulls can have skipped changes without anyone noticing, so the first
+    // time a server turns out to have cursors, this device starts again from the top.
+    let mut full_pull_owed = stored_cursor.is_none() && last_sync_at.is_some();
+
+    let mut request = SyncPullRequest {
+        cursor: Some(stored_cursor.unwrap_or_default()),
+        last_sync_at,
+        // The server ignores these, but older ones require them to be there
+        known_note_ids: Vec::new(),
+        known_attachment_ids: if force { Vec::new() } else { run.attachment_repo().list_ids()? },
+        limit: Some(PULL_PAGE_SIZE),
+        offset: Some(0),
+    };
+
+    let mut first_page_at = None;
+    let mut inbox_items = Vec::new();
+    let mut versions_waiting: Vec<SyncNoteVersion> = Vec::new();
+
+    for _ in 0..MAX_PULL_PAGES {
+        let body = run.post("/api/v1/sync/pull", &request)?;
+        let response = SyncPullResponse::parse(&body).context("Failed to parse pull response")?;
+        outcome.skipped += response.dropped;
+        first_page_at.get_or_insert(response.synced_at);
+
+        let cursor_mode = response.next_cursor.is_some();
+        let page_note_count = response.notes.len() as i64;
+        let moved = response.next_cursor != request.cursor;
+        let is_last_page = !response.has_more
+            || if cursor_mode { !moved } else { page_note_count == 0 };
+
+        let attachment_data = read_blobs(run, &response.attachments);
+        let page = PullPage { run, attachment_data: &attachment_data, synced_at: response.synced_at, force };
+
+        // A page applies whole or not at all, along with the position it moves to
+        let transaction = run.conn.unchecked_transaction()?;
+
+        // A note that can't be read costs that note, not the sync. Stopping here
+        // would hold the cursor back and block every later change for good.
+        for remote_note in response.notes {
+            let note_id = remote_note.id.clone();
+            match apply_remote_note(&page, remote_note) {
+                Ok(applied) => {
+                    outcome.synced += applied.changed as usize;
+                    outcome.rejected += applied.conflict as usize;
+                    outcome.skipped += applied.unreadable_attachments;
+                }
+                Err(e) => {
+                    tracing::warn!("Skipping note {note_id} from the server: {e}");
+                    (run.log)(&format!("Pull - Skipping note {note_id}: {e}"));
+                    outcome.skipped += 1;
+                }
+            }
+        }
+
+        // In cursor mode each page has its own share of these. An older server sends
+        // them whole with every page, so they're applied once, when every note is in.
+        if cursor_mode || is_last_page {
+            versions_waiting.extend(response.versions);
+            versions_waiting = apply_remote_versions(run, versions_waiting)?;
+            apply_remote_deletions(run, response.deletions, outcome)?;
+        }
+
+        if is_last_page {
+            inbox_items = response.inbox_items.unwrap_or_default();
+        }
+
+        let restarting = cursor_mode && std::mem::take(&mut full_pull_owed);
+
+        if restarting {
+            transaction.commit()?;
+            request.cursor = Some(String::new());
+            request.last_sync_at = None;
+            continue;
+        }
+
+        if cursor_mode {
+            // Versions still waiting for their note only exist in memory, so the saved
+            // position stays behind them until they've gone in
+            if versions_waiting.is_empty() {
+                run.sync_repo().set_pull_cursor(response.next_cursor.as_deref())?;
+            }
+            metadata.pull_cursor = response.next_cursor.clone();
+            request.cursor = response.next_cursor;
+        } else {
+            metadata.pull_cursor = None;
+            request.offset = Some(request.offset.unwrap_or(0) + page_note_count);
+        }
+
+        transaction.commit()?;
+
+        if is_last_page {
+            break;
+        }
+    }
+
+    // The server's time at the first page, so whatever changes during a long pull is
+    // fetched next time. It's only used if the cursor ever can't be.
+    metadata.last_pull_at = first_page_at;
+
+    Ok(Pulled { inbox_items })
+}
+
+/// What a finished sync leaves for the running app.
+pub struct SyncReport {
+    pub outcome: SyncOutcome,
+    pub inbox_items: Vec<InboxItem>,
+    /// A password change still owes the server a new wrapping of the key
+    pub server_key_stale: bool,
+}
+
+/// Push and pull everything, working only with the database.
+fn sync_vault(
+    conn: &Connection,
+    crypto: &CryptoService,
+    key: &[u8; 32],
+    force: bool,
+    log: &dyn Fn(&str),
+) -> Result<SyncReport> {
+    let sync_repo = SyncRepository::new(conn);
+    let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
+    let run = open_run(conn, crypto, key, &metadata, log)?;
+
+    let mut outcome = SyncOutcome::default();
+
+    push_changes(&run, &mut metadata, &mut outcome)?;
+    let pulled = pull_changes(&run, &mut metadata, force, &mut outcome)?;
+
+    // last_sync_at stays on this device's clock. The pull position in last_pull_at
+    // is the server's.
+    metadata.last_sync_at = Some(Utc::now());
+    sync_repo.update_metadata(&metadata)?;
+
+    Ok(SyncReport { outcome, inbox_items: pulled.inbox_items, server_key_stale: metadata.server_key_stale })
 }
 
 /// Trigger manual sync
 pub fn trigger_sync(app: &mut App) {
-    app.debug_log("trigger_sync - Called");
-    app.debug_log(&format!("trigger_sync - sync_enabled: {}", app.settings.sync_enabled));
-    app.debug_log(&format!("trigger_sync - sync_endpoint: {:?}", app.settings.sync_endpoint));
+    run_sync_from_ui(app, false);
+}
 
+/// Force full resync from server
+pub fn force_full_sync(app: &mut App) {
+    run_sync_from_ui(app, true);
+}
+
+/// Sync on the user's behalf and show the result.
+fn run_sync_from_ui(app: &mut App, force: bool) {
     // Check if sync is configured
     if !app.settings.sync_enabled {
-        app.debug_log("trigger_sync - Sync not enabled, returning");
-        app.sync_status = Some(t!("sync.not_enabled").to_string());
-        app.sync_status_set_at = Some(Instant::now());
+        app.notify(t!("sync.not_enabled").to_string());
         return;
     }
 
     if app.settings.sync_endpoint.is_none() {
-        app.debug_log("trigger_sync - Sync endpoint not configured, returning");
-        app.sync_status = Some(t!("sync.endpoint_not_configured").to_string());
-        app.sync_status_set_at = Some(Instant::now());
+        app.notify(t!("sync.endpoint_not_configured").to_string());
         return;
     }
 
-    // Perform sync
-    app.debug_log("trigger_sync - Starting sync");
-    app.sync_status = Some(t!("status.syncing").to_string());
-    app.sync_status_set_at = Some(Instant::now());
+    app.notify(if force { t!("sync.force_syncing") } else { t!("status.syncing") }.to_string());
 
-    match perform_sync(app, false) {
-        Ok(outcome) => {
-            // Reload notes from database to pick up sync changes
-            if let Err(e) = super::notes::load_notes(app) {
-                app.error = Some(format!("Sync succeeded but failed to reload notes: {}", e));
-            }
-            // Refresh conflict cache after sync
-            app.refresh_conflict_cache();
-            let conflict_count = app.conflict_note_ids.len();
-
-            let result = outcome.synced;
-            let unit = if result == 1 { t!("sync.note").to_string() } else { t!("sync.notes").to_string() };
-            let status_msg = if conflict_count > 0 {
-                let conflict_word = if conflict_count == 1 {
-                    t!("conflict.count_singular").to_string()
-                } else {
-                    t!("conflict.count_plural").to_string()
-                };
-                format!("{} ({} {})",
-                    t!("sync.complete", count = result, unit = unit),
-                    conflict_count,
-                    conflict_word
-                )
-            } else {
-                t!("sync.complete", count = result, unit = unit).to_string()
-            };
-            app.sync_status = Some(status_msg);
-            app.sync_status_set_at = Some(Instant::now());
-            report_skipped(app, &outcome);
-        }
-        Err(e) => {
-            reload_after_failed_sync(app);
-            app.error = Some(format!("Sync failed: {}", e));
-            app.sync_status = Some(format!("Sync failed: {}", e));
-            app.sync_status_set_at = Some(Instant::now());
-        }
+    match perform_sync(app, force) {
+        Ok(outcome) => report_finished_sync(app, &outcome, force),
+        Err(e) => report_failed_sync(app, &e, force),
     }
 }
+
+/// Show what a finished sync did.
+fn report_finished_sync(app: &mut App, outcome: &SyncOutcome, force: bool) {
+    // Reload notes from database to pick up sync changes
+    if let Err(e) = super::notes::load_notes(app) {
+        app.error = Some(format!("Sync succeeded but failed to reload notes: {}", e));
+    }
+    // Refresh conflict cache after sync
+    app.refresh_conflict_cache();
+    let conflict_count = app.conflict_note_ids.len();
+
+    let result = outcome.synced;
+    let unit = if result == 1 { t!("sync.note").to_string() } else { t!("sync.notes").to_string() };
+    let summary = if force {
+        t!("sync.force_complete", count = result, unit = unit).to_string()
+    } else {
+        t!("sync.complete", count = result, unit = unit).to_string()
+    };
+
+    let status_msg = if conflict_count > 0 {
+        let conflict_word = if conflict_count == 1 {
+            t!("conflict.count_singular").to_string()
+        } else {
+            t!("conflict.count_plural").to_string()
+        };
+        format!("{} ({} {})", summary, conflict_count, conflict_word)
+    } else {
+        summary
+    };
+    app.notify(status_msg);
+    report_skipped(app, outcome);
+}
+
+/// Show why a sync failed, and hold off automatic syncs if the server asked for that.
+fn report_failed_sync(app: &mut App, error: &anyhow::Error, force: bool) {
+    reload_after_failed_sync(app);
+
+    match error.downcast_ref::<SyncRefused>() {
+        Some(SyncRefused::RateLimited { seconds, .. }) => {
+            app.sync_paused_until = Some(Instant::now() + Duration::from_secs(*seconds));
+        }
+        Some(SyncRefused::AccountDisabled(_)) => {
+            app.sync_paused_until = Some(Instant::now() + ACCOUNT_DISABLED_PAUSE);
+        }
+        None => {}
+    }
+
+    let label = if force { "Force sync failed" } else { "Sync failed" };
+    let message = format!("{label}: {error}");
+    app.error = Some(message.clone());
+    app.notify(message);
+}
+
+/// How long automatic syncs stop for an account that's been disabled. It can be turned
+/// back on, so they don't stop for good, and a manual sync still tries.
+const ACCOUNT_DISABLED_PAUSE: Duration = Duration::from_secs(15 * 60);
 
 /// Tell the user about anything the sync had to leave behind.
 fn report_skipped(app: &mut App, outcome: &SyncOutcome) {
@@ -335,666 +1206,23 @@ fn reload_after_failed_sync(app: &mut App) {
     }
 }
 
-/// Force full resync from server
-pub fn force_full_sync(app: &mut App) {
-    app.debug_log("force_full_sync - Called");
-
-    // Check if sync is configured
-    if !app.settings.sync_enabled {
-        app.debug_log("force_full_sync - Sync not enabled, returning");
-        app.sync_status = Some(t!("sync.not_enabled").to_string());
-        app.sync_status_set_at = Some(Instant::now());
-        return;
-    }
-
-    if app.settings.sync_endpoint.is_none() {
-        app.debug_log("force_full_sync - Sync endpoint not configured, returning");
-        app.sync_status = Some(t!("sync.endpoint_not_configured").to_string());
-        app.sync_status_set_at = Some(Instant::now());
-        return;
-    }
-
-    // Perform force sync
-    app.debug_log("force_full_sync - Starting force full sync");
-    app.sync_status = Some(t!("sync.force_syncing").to_string());
-    app.sync_status_set_at = Some(Instant::now());
-
-    match perform_sync(app, true) {
-        Ok(outcome) => {
-            // Reload notes from database to pick up sync changes
-            if let Err(e) = super::notes::load_notes(app) {
-                app.error = Some(format!("Sync succeeded but failed to reload notes: {}", e));
-            }
-            // Refresh conflict cache after sync
-            app.refresh_conflict_cache();
-            let conflict_count = app.conflict_note_ids.len();
-
-            let result = outcome.synced;
-            let unit = if result == 1 { t!("sync.note").to_string() } else { t!("sync.notes").to_string() };
-            let status_msg = if conflict_count > 0 {
-                let conflict_word = if conflict_count == 1 {
-                    t!("conflict.count_singular").to_string()
-                } else {
-                    t!("conflict.count_plural").to_string()
-                };
-                format!("{} ({} {})",
-                    t!("sync.force_complete", count = result, unit = unit),
-                    conflict_count,
-                    conflict_word
-                )
-            } else {
-                t!("sync.force_complete", count = result, unit = unit).to_string()
-            };
-            app.sync_status = Some(status_msg);
-            app.sync_status_set_at = Some(Instant::now());
-            report_skipped(app, &outcome);
-        }
-        Err(e) => {
-            reload_after_failed_sync(app);
-            app.error = Some(format!("Force sync failed: {}", e));
-            app.sync_status = Some(format!("Force sync failed: {}", e));
-            app.sync_status_set_at = Some(Instant::now());
-        }
-    }
-}
-
 /// Perform bidirectional sync with server
 /// If force is true, pulls all notes from server regardless of last sync time
 pub fn perform_sync(app: &mut App, force: bool) -> Result<SyncOutcome> {
-    use chrono::Utc;
-
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not available"))?;
     let key = app.key.as_ref().ok_or_else(|| anyhow::anyhow!("Encryption key not available"))?;
-
-    app.debug_log(&format!("[Sync] Starting sync (force={}), key fingerprint: {:02x}{:02x}{:02x}{:02x}",
-        force, key[0], key[1], key[2], key[3]));
-
-    let sync_repo = SyncRepository::new(db.connection());
-    let note_repo = NoteRepository::new(db.connection());
-    let version_repo = NoteVersionRepository::new(db.connection());
-
-    // Get sync metadata
-    let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
-    app.debug_log(&format!("[Sync] Metadata: endpoint={}, has_api_key={}, sync_enabled={}",
-        metadata.sync_endpoint, metadata.api_key.is_some(), metadata.sync_enabled));
-
-    // Get API key
-    let encrypted_api_key = metadata.api_key.as_ref()
-        .ok_or_else(|| anyhow::anyhow!("No API key configured"))?;
-    let api_key_encrypted: crate::crypto::EncryptedData = serde_json::from_str(encrypted_api_key)
-        .map_err(|e| {
-            app.debug_log(&format!("[Sync] Failed to parse API key JSON: {}", e));
-            anyhow::anyhow!("Invalid API key format: {}", e)
-        })?;
-    let api_key = app.crypto.decrypt_text(&api_key_encrypted, key)
-        .map_err(|e| {
-            app.debug_log(&format!("[Sync] Failed to decrypt API key: {}", e));
-            e
-        })?;
-    app.debug_log("[Sync] API key decrypted successfully");
-
-    let endpoint = metadata.sync_endpoint.clone();
 
     let debug_log = app.debug_log.clone();
     let log = move |message: &str| crate::ui::app::write_debug_log(&debug_log, message);
 
-    // PUSH: Send local changes to server
-    let last_sync = metadata.last_sync_at;
-    let notes_to_push = if let Some(last_sync) = last_sync {
-        note_repo.get_modified_after(last_sync, key)?
-    } else {
-        // Include deleted notes in full sync so soft-deleted notes sync to other devices
-        note_repo.list(true, key)?
-    };
-
-    let mut outcome = SyncOutcome::default();
-
-    // Collect pending deletions (from emptying trash). These go even when no note
-    // changed, or an emptied bin would wait for the next edit to reach the server.
-    let pending_deletions = note_repo.get_pending_deletions()?;
-
-    if !notes_to_push.is_empty() || !pending_deletions.is_empty() {
-        use base64::{Engine as _, engine::general_purpose};
-
-        // Collect all unique attachment IDs that need to be pushed
-        let mut attachment_ids_to_push: std::collections::HashSet<String> = std::collections::HashSet::new();
-
-        // Convert notes to sync format, encrypting content and tags
-        let sync_notes: Result<Vec<SyncNote>> = notes_to_push.iter().map(|note| {
-            // Encrypt content and tags for transmission to server
-            let encrypted_content = app.crypto.encrypt_text(&note.content, key)?;
-            let content_json = serde_json::to_string(&encrypted_content)?;
-
-            let encrypted_tags: Result<Vec<String>> = note.tags.iter()
-                .map(|tag| {
-                    // JSON-encode the tag first, then encrypt it
-                    let tag_json = serde_json::to_string(tag)?;
-                    let encrypted_tag = app.crypto.encrypt_text(&tag_json, key)?;
-                    Ok(serde_json::to_string(&encrypted_tag)?)
-                })
-                .collect();
-
-            // Build attachment references from note.attachments
-            attachment_ids_to_push.extend(note.attachments.iter().map(|att| att.id.clone()));
-
-            Ok(SyncNote {
-                id: note.id.clone(),
-                created_at: note.created_at,
-                modified_at: note.modified_at,
-                content: content_json,
-                tags: encrypted_tags?,
-                attachments: attachment_refs(&app.crypto, &note.attachments, key)?,
-                pinned: note.pinned,
-                archived: note.archived,
-                archived_at: note.archived_at,
-                locked: note.locked,
-                locked_at: note.locked_at,
-                deleted: note.deleted,
-                deleted_at: note.deleted_at,
-                version: note.version,
-                word_wrap: Some(note.word_wrap),
-                syntax_language: Some(note.syntax_language.to_string()),
-                color: note.color.clone(),
-                // Hash chain fields for git-like conflict detection
-                content_hash: note.content_hash.clone(),
-                parent_hash: note.parent_hash.clone(),
-                hash_chain: note.hash_chain.clone(),
-            })
-        }).collect();
-
-        let sync_notes = sync_notes?;
-
-        // Collect versions for all notes being pushed
-        let mut sync_versions: Vec<SyncNoteVersion> = Vec::new();
-
-        for note in &notes_to_push {
-            let note_versions = version_repo.get_versions_for_note(&note.id, key)?;
-
-            for version in note_versions {
-                // Encrypt content and tags for transmission
-                let encrypted_content = app.crypto.encrypt_text(&version.content, key)?;
-                let content_json = serde_json::to_string(&encrypted_content)?;
-
-                let encrypted_tags: Result<Vec<String>> = version.tags.iter()
-                    .map(|tag| {
-                        let tag_json = serde_json::to_string(tag)?;
-                        let encrypted_tag = app.crypto.encrypt_text(&tag_json, key)?;
-                        Ok(serde_json::to_string(&encrypted_tag)?)
-                    })
-                    .collect();
-
-                sync_versions.push(SyncNoteVersion {
-                    version_key: format!("{}:{}", version.note_id, version.version),
-                    note_id: version.note_id.clone(),
-                    version: version.version,
-                    created_at: version.created_at,
-                    synced_at: version.synced_at,
-                    content: content_json,
-                    tags: encrypted_tags?,
-                    attachments: attachment_refs(&app.crypto, &version.attachments, key)?,
-                    syntax_language: version.syntax_language.as_ref().map(|s| s.to_string()),
-                    word_wrap: version.word_wrap,
-                    show_preview: version.show_preview,
-                    color: version.color.clone(),
-                    reason: version.reason.to_string(),
-                    // Hash chain fields
-                    content_hash: version.content_hash.clone(),
-                    parent_hash: version.parent_hash.clone(),
-                });
-            }
-        }
-
-        // Fetch binary data for all attachments that need to be pushed.
-        // A missing blob no longer aborts the whole push: the note syncs
-        // without it, the server responds with an attachmentWarnings entry,
-        // and any device still holding the blob heals the gap.
-        let attachment_repo = AttachmentRepository::new(db.connection());
-        let sync_attachments: Vec<SyncAttachment> = attachment_ids_to_push
-            .iter()
-            .filter_map(|att_id| {
-                let encrypted_data = match attachment_repo.get(att_id, key) {
-                    Ok(Some((_filename, _mime_type, _size, data))) => data,
-                    Ok(None) => {
-                        tracing::warn!(
-                            "Attachment {} has no local blob — pushing note without it",
-                            att_id
-                        );
-                        return None;
-                    }
-                    Err(e) => {
-                        tracing::warn!(
-                            "Attachment {} could not be read ({}) — pushing note without it",
-                            att_id,
-                            e
-                        );
-                        return None;
-                    }
-                };
-                let encrypted_blob = app.crypto.encrypt_binary(&encrypted_data, key).ok()?;
-                let payload = serde_json::to_vec(&encrypted_blob).ok()?;
-                Some(SyncAttachment {
-                    id: att_id.clone(),
-                    data: general_purpose::STANDARD.encode(payload),
-                })
-            })
-            .collect();
-
-        let sync_deletions: Vec<SyncDeletion> = pending_deletions
-            .iter()
-            .map(|(id, deleted_at)| SyncDeletion {
-                id: id.clone(),
-                deleted_at: deleted_at.parse().unwrap_or_else(|_| chrono::Utc::now()),
-            })
-            .collect();
-
-        let push_request = SyncPushRequest {
-            notes: sync_notes,
-            attachments: sync_attachments,
-            versions: sync_versions,
-            deletions: sync_deletions,
-        };
-
-        // Create HTTP client
-        let client = reqwest::blocking::Client::new();
-        let push_url = format!("{}/api/v1/sync/push", endpoint);
-
-        let response = client
-            .post(&push_url)
-            .header("Authorization", format!("Bearer {}", api_key))
-            .json(&push_request)
-            .send()
-            .context("Failed to send push request")?;
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
-
-            // Provide user-friendly error messages
-            let error_msg = if status == 403 {
-                "Your account has been deactivated or is pending admin approval. Please contact the administrator."
-            } else if status == 401 {
-                "Invalid API key or authentication failed. Try re-registering your device."
-            } else if status == 409 {
-                "Sync conflict detected. Some notes have conflicting changes on the server."
-            } else {
-                &error_body
-            };
-
-            anyhow::bail!("Push failed: {}", error_msg);
-        }
-
-        let push_response = SyncPushResponse::parse(&response.text().context("Failed to read push response")?)
-            .context("Failed to parse push response")?;
-
-        outcome.synced += push_response.accepted.len();
-        outcome.rejected += push_response.rejected.len();
-
-        // Create version snapshots for accepted notes
-        for accepted in &push_response.accepted {
-            if let Ok(Some(note)) = note_repo.get(&accepted.id, key) {
-                let _ = version_repo.create_version(&note, accepted.synced_at, VersionReason::Sync, key);
-            }
-        }
-
-        // Store conflict data for rejected notes
-        for rejected in &push_response.rejected {
-            app.debug_log(&format!("Sync conflict for note {}: {}", rejected.id, rejected.reason));
-
-            // Create ConflictData from the SyncRejected response
-            let conflict_data = crate::models::sync::ConflictData {
-                note_id: rejected.id.clone(),
-                server_content: rejected.server_content.clone(),
-                server_tags: rejected.server_tags.clone(),
-                server_modified_at: rejected.server_modified_at,
-                server_version: rejected.server_version,
-                server_attachments: rejected.server_attachments.clone(),
-                server_pinned: rejected.server_pinned,
-                server_archived: rejected.server_archived,
-                server_archived_at: rejected.server_archived_at,
-                server_locked: rejected.server_locked,
-                server_locked_at: rejected.server_locked_at,
-                server_syntax_language: rejected.server_syntax_language.clone(),
-                server_word_wrap: rejected.server_word_wrap,
-                server_color: rejected.server_color.clone(),
-                detected_at: Utc::now(),
-                // Hash chain fields for git-like conflict detection
-                server_content_hash: rejected.server_content_hash.clone(),
-                server_parent_hash: rejected.server_parent_hash.clone(),
-                server_hash_chain: rejected.server_hash_chain.clone(),
-                // Ancestor data for 3-way merge
-                ancestor_hash: rejected.ancestor_hash.clone(),
-                ancestor_content: rejected.ancestor_content.clone(),
-                ancestor_tags: rejected.ancestor_tags.clone(),
-            };
-
-            // Store conflict in sync metadata
-            if let Err(e) = sync_repo.set_conflict(&rejected.id, &conflict_data) {
-                app.debug_log(&format!("Failed to store conflict for note {}: {}", rejected.id, e));
-            }
-        }
-
-        // React to server attachment warnings: re-push blobs this device
-        // holds (one attachments-only push, no in-run retry), log the rest.
-        if !push_response.attachment_warnings.is_empty() {
-            let mut repair_attachments: Vec<SyncAttachment> = Vec::new();
-            for warning in &push_response.attachment_warnings {
-                for att_id in &warning.attachment_ids {
-                    match attachment_repo.get(att_id, key) {
-                        Ok(Some((_f, _m, _s, encrypted_data))) => {
-                            match app.crypto.encrypt_binary(&encrypted_data, key)
-                                .and_then(|blob| serde_json::to_vec(&blob).map_err(Into::into))
-                            {
-                                Ok(payload) => {
-                                    tracing::warn!(
-                                        "Server is missing attachment {} (note {}) — re-uploading",
-                                        att_id, warning.note_id
-                                    );
-                                    repair_attachments.push(SyncAttachment {
-                                        id: att_id.clone(),
-                                        data: general_purpose::STANDARD.encode(payload),
-                                    });
-                                }
-                                Err(e) => tracing::warn!(
-                                    "Could not prepare attachment {} for repair: {}", att_id, e
-                                ),
-                            }
-                        }
-                        _ => tracing::warn!(
-                            "Server has no data for attachment {} (note {}) and neither does this device",
-                            att_id, warning.note_id
-                        ),
-                    }
-                }
-            }
-            if !repair_attachments.is_empty() {
-                let repair_request = SyncPushRequest {
-                    notes: Vec::new(),
-                    attachments: repair_attachments,
-                    versions: Vec::new(),
-                    deletions: Vec::new(),
-                };
-                match client
-                    .post(&push_url)
-                    .header("Authorization", format!("Bearer {}", api_key))
-                    .json(&repair_request)
-                    .send()
-                {
-                    Ok(resp) if resp.status().is_success() => {
-                        app.debug_log("[Sync] Re-uploaded attachments the server was missing");
-                    }
-                    Ok(resp) => tracing::warn!(
-                        "Attachment repair push failed with status {}", resp.status()
-                    ),
-                    Err(e) => tracing::warn!("Attachment repair push failed: {}", e),
-                }
-            }
-        }
-
-        // Mark deletions as synced (push was successful)
-        if !pending_deletions.is_empty() {
-            let deletion_ids: Vec<String> = pending_deletions.iter().map(|(id, _)| id.clone()).collect();
-            if let Err(e) = note_repo.mark_deletions_synced(&deletion_ids) {
-                app.debug_log(&format!("Failed to mark deletions as synced: {}", e));
-            } else {
-                app.debug_log(&format!("Marked {} deletions as synced", deletion_ids.len()));
-            }
-        }
-
-        // Update last push timestamp
-        metadata.last_push_at = Some(Utc::now());
-    }
-
-    // PULL: Get changes from server
-    let (last_sync_for_pull, known_note_ids, known_attachment_ids) = if force {
-        // Force full sync: request all notes and attachments from server
-        (None, vec![], vec![])
-    } else {
-        // Normal sync: use last sync time, known note IDs, and known attachment IDs
-        let known_ids = app.notes.iter().map(|n| n.id.clone()).collect();
-
-        // Collect all attachment IDs we already have locally
-        let known_att_ids: Vec<String> = app.notes.iter()
-            .flat_map(|note| note.attachments.iter().map(|att| att.id.clone()))
-            .collect();
-
-        (metadata.last_pull_at.or(last_sync), known_ids, known_att_ids)
-    };
-
-    let pull_url = format!("{}/api/v1/sync/pull", endpoint);
-    let client = reqwest::blocking::Client::new();
-
-    // The server sends one page of notes at a time. Versions, deletions and the
-    // inbox come whole with every page, so they're applied once, from the last
-    // page, when all the notes they refer to exist.
-    let mut offset: i64 = 0;
-    let mut first_page_at = None;
-    loop {
-        let pull_request = SyncPullRequest {
-            last_sync_at: last_sync_for_pull,
-            known_note_ids: known_note_ids.clone(),
-            known_attachment_ids: known_attachment_ids.clone(),
-            limit: Some(PULL_PAGE_SIZE),
-            offset: Some(offset),
-        };
-
-        let response = client
-            .post(&pull_url)
-            .header("Authorization", format!("Bearer {}", api_key))
-            .json(&pull_request)
-            .send()
-            .context("Failed to send pull request")?;
-
-        if !response.status().is_success() {
-            let status = response.status();
-            let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
-
-            // Provide user-friendly error messages
-            let error_msg = if status == 403 {
-                "Your account has been deactivated or is pending admin approval. Please contact the administrator."
-            } else if status == 401 {
-                "Invalid API key or authentication failed. Try re-registering your device."
-            } else {
-                &error_body
-            };
-
-            anyhow::bail!("Pull failed: {}", error_msg);
-        }
-
-        // Parse the JSON response
-        let response_text = response.text()
-            .context("Failed to read pull response text")?;
-        let pull_response = SyncPullResponse::parse(&response_text)
-            .context("Failed to parse pull response")?;
-        outcome.skipped += pull_response.dropped;
-
-        let page_note_count = pull_response.notes.len() as i64;
-        let is_last_page = !pull_response.has_more || page_note_count == 0;
-        first_page_at.get_or_insert(pull_response.synced_at);
-
-        use base64::{Engine as _, engine::general_purpose};
-        let attachment_repo = AttachmentRepository::new(db.connection());
-
-        // Decrypt attachments and build a map for quick lookup
-        let mut attachment_data_map: std::collections::HashMap<String, Vec<u8>> = std::collections::HashMap::new();
-        for sync_attachment in &pull_response.attachments {
-            if let Ok(decoded_data) = general_purpose::STANDARD.decode(&sync_attachment.data) {
-                if let Ok(encrypted_blob) = serde_json::from_slice::<EncryptedData>(&decoded_data) {
-                    if let Ok(decrypted_data) = app.crypto.decrypt_binary(&encrypted_blob, key) {
-                        attachment_data_map.insert(sync_attachment.id.clone(), decrypted_data);
-                    }
-                }
-            }
-        }
-
-        // A page applies whole or not at all. The pull cursor only moves at the end
-        // of the sync, so an interrupted page is simply fetched again.
-        let transaction = db.connection().unchecked_transaction()?;
-
-        let page = PullPage {
-            crypto: &app.crypto,
-            key,
-            note_repo: &note_repo,
-            version_repo: &version_repo,
-            attachment_repo: &attachment_repo,
-            attachment_data: &attachment_data_map,
-            synced_at: pull_response.synced_at,
-            force,
-            log: &log,
-        };
-
-        // A note that can't be read costs that note, not the sync. Stopping here
-        // would hold the cursor back and block every later change for good.
-        for remote_note in pull_response.notes {
-            let note_id = remote_note.id.clone();
-            match apply_remote_note(&page, &mut app.notes, remote_note) {
-                Ok((changed, unreadable_attachments)) => {
-                    outcome.synced += changed as usize;
-                    outcome.skipped += unreadable_attachments;
-                }
-                Err(e) => {
-                    tracing::warn!("Skipping note {} from the server: {}", note_id, e);
-                    log(&format!("Pull - Skipping note {}: {}", note_id, e));
-                    outcome.skipped += 1;
-                }
-            }
-        }
-
-        if is_last_page {
-            // Process incoming versions from server
-            app.debug_log(&format!("Pull - Received {} versions from server", pull_response.versions.len()));
-
-            for server_version in &pull_response.versions {
-                app.debug_log(&format!("Pull - Processing version: {} (v{})", server_version.version_key, server_version.version));
-
-                // Check if this version already exists
-                let existing_version = version_repo.get_version_by_key(&server_version.version_key)?;
-
-                if existing_version.is_none() {
-                    // New version from server - decrypt and store it locally
-
-                    // Decrypt content
-                    let encrypted_content: crate::crypto::EncryptedData = match serde_json::from_str(&server_version.content) {
-                        Ok(data) => data,
-                        Err(e) => {
-                            app.debug_log(&format!("Pull - Failed to parse version content: {}, skipping", e));
-                            continue;
-                        }
-                    };
-
-                    let decrypted_content = match app.crypto.decrypt_text(&encrypted_content, key) {
-                        Ok(content) => content,
-                        Err(e) => {
-                            app.debug_log(&format!("Pull - Failed to decrypt version content: {}, skipping", e));
-                            continue;
-                        }
-                    };
-
-                    // Decrypt tags
-                    let decrypted_tags: Vec<String> = server_version.tags.iter()
-                        .flat_map(|tag_json| {
-                            let encrypted_tag: crate::crypto::EncryptedData = serde_json::from_str(tag_json).ok()?;
-                            let tag_json_str = app.crypto.decrypt_text(&encrypted_tag, key).ok()?;
-                            serde_json::from_str::<String>(&tag_json_str).ok()
-                        })
-                        .collect();
-
-                    // Convert attachment refs
-                    let version_attachments: Vec<Attachment> = server_version.attachments.iter().filter_map(|att_ref| {
-                        Some(Attachment {
-                            id: att_ref.id.clone(),
-                            filename: filename_from_sync(&app.crypto, &att_ref.filename, key).ok()?,
-                            mime_type: att_ref.mime_type.clone(),
-                            size: att_ref.size,
-                            data: att_ref.data.clone(),
-                            thumbnail_data: None,
-                        })
-                    }).collect();
-
-                    // Parse version reason
-                    let reason = if server_version.reason == "manual-sync" {
-                        VersionReason::ManualSync
-                    } else {
-                        VersionReason::Sync
-                    };
-
-                    // Create local version
-                    let local_version = crate::repository::NoteVersion {
-                        version_key: server_version.version_key.clone(),
-                        note_id: server_version.note_id.clone(),
-                        version: server_version.version,
-                        created_at: server_version.created_at,
-                        synced_at: server_version.synced_at,
-                        content: decrypted_content,
-                        tags: decrypted_tags,
-                        attachments: version_attachments,
-                        syntax_language: server_version.syntax_language
-                            .as_ref()
-                            .and_then(|s| s.parse().ok()),
-                        word_wrap: Some(server_version.word_wrap.unwrap_or(true)),
-                        show_preview: server_version.show_preview,
-                        color: server_version.color.clone(),
-                        reason,
-                        // Hash chain fields from server
-                        content_hash: server_version.content_hash.clone(),
-                        parent_hash: server_version.parent_hash.clone(),
-                    };
-
-                    // Store the version
-                    if let Err(e) = version_repo.insert_version_from_sync(&local_version, key) {
-                        app.debug_log(&format!("Pull - Failed to store version {}: {}", server_version.version_key, e));
-                    } else {
-                        app.debug_log(&format!("Pull - Stored version from server: {}", server_version.version_key));
-                    }
-                }
-            }
-
-            // Handle hard deletions from server
-            // These are notes that were permanently deleted (trash emptied) on another device
-            for deletion in pull_response.deletions {
-                app.debug_log(&format!("Pull - Processing deletion for note {}", deletion.id));
-
-                // Apply remote deletion (hard delete without re-syncing back)
-                if note_repo.apply_remote_deletion(&deletion.id)? {
-                    app.debug_log(&format!("Pull - Hard deleted note {}", deletion.id));
-
-                    // Remove from in-memory list if present
-                    if let Some(pos) = app.notes.iter().position(|n| n.id == deletion.id) {
-                        app.notes.remove(pos);
-                    }
-                    outcome.synced += 1;
-                } else {
-                    app.debug_log(&format!("Pull - Note {} not found locally (already deleted)", deletion.id));
-                }
-            }
-
-            // Process inbox items from pull response
-            if let Some(inbox_items) = pull_response.inbox_items {
-                app.inbox_items = inbox_items;
-                app.debug_log(&format!("Pull - Received {} inbox items", app.inbox_items.len()));
-            } else {
-                app.inbox_items.clear();
-            }
-            transaction.commit()?;
-            break;
-        }
-
-        transaction.commit()?;
-        offset += page_note_count;
-    }
-
-    // Update sync metadata. The pull cursor is the server's time at the first page,
-    // so whatever changes during a long pull is fetched next time. last_sync_at
-    // stays on this device's clock: it picks which local notes to push, by comparing
-    // them with modified_at.
-    metadata.last_sync_at = Some(Utc::now());
-    metadata.last_pull_at = first_page_at;
-    sync_repo.update_metadata(&metadata)?;
+    let report = sync_vault(db.connection(), &app.crypto, key, force, &log)?;
+    app.inbox_items = report.inbox_items;
 
     // Reload notes to ensure UI is up to date
     super::notes::load_notes(app)?;
 
     // The server is reachable, so a re-wrap a password change couldn't deliver can go now
-    if metadata.server_key_stale {
+    if report.server_key_stale {
         if let Some(password) = app.unlock_password.clone() {
             if let Err(e) = super::envelope::repair_server_key(app, &password) {
                 app.debug_log(&format!("[Sync] Could not update the server's wrapped key: {}", e));
@@ -1002,7 +1230,7 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<SyncOutcome> {
         }
     }
 
-    Ok(outcome)
+    Ok(report.outcome)
 }
 
 /// Open conflict resolution for a note
@@ -1032,13 +1260,7 @@ pub fn open_conflict_resolution(app: &mut App, note_id: &str) -> Result<()> {
     let server_content = app.crypto.decrypt_text(&encrypted_content, key)?;
 
     // Decrypt server tags
-    let server_tags: Vec<String> = conflict_data.server_tags.iter()
-        .filter_map(|tag_json| {
-            let encrypted_tag: crate::crypto::EncryptedData = serde_json::from_str(tag_json).ok()?;
-            let tag_json_str = app.crypto.decrypt_text(&encrypted_tag, key).ok()?;
-            serde_json::from_str::<String>(&tag_json_str).ok()
-        })
-        .collect();
+    let server_tags = decrypt_tags(&app.crypto, key, &conflict_data.server_tags);
 
     // Decrypt ancestor content if available (for 3-way merge)
     let ancestor_content = conflict_data.ancestor_content.as_ref().and_then(|encrypted_ancestor| {
@@ -1047,18 +1269,9 @@ pub fn open_conflict_resolution(app: &mut App, note_id: &str) -> Result<()> {
     });
 
     // Decrypt ancestor tags if available
-    let ancestor_tags = if let Some(ref encrypted_tags) = conflict_data.ancestor_tags {
-        let tags: Vec<String> = encrypted_tags.iter()
-            .filter_map(|tag_json| {
-                let encrypted_tag: crate::crypto::EncryptedData = serde_json::from_str(tag_json).ok()?;
-                let tag_json_str = app.crypto.decrypt_text(&encrypted_tag, key).ok()?;
-                serde_json::from_str::<String>(&tag_json_str).ok()
-            })
-            .collect();
-        if tags.is_empty() { None } else { Some(tags) }
-    } else {
-        None
-    };
+    let ancestor_tags = conflict_data.ancestor_tags.as_ref()
+        .map(|encrypted_tags| decrypt_tags(&app.crypto, key, encrypted_tags))
+        .filter(|tags| !tags.is_empty());
 
     // Store data in app for display
     app.conflict_note_id = Some(note_id.to_string());
@@ -1077,11 +1290,97 @@ pub fn open_conflict_resolution(app: &mut App, note_id: &str) -> Result<()> {
     Ok(())
 }
 
+/// Make `note`'s local edit a new version on top of what the server has, so the next
+/// push is a fast-forward rather than the same conflict again.
+fn build_on_server_version(crypto: &CryptoService, key: &[u8; 32], note: &mut Note, conflict: &ConflictData) {
+    let hash = crypto.compute_content_hash(note, key);
+
+    // A chain starts with its note's own hash, but not one from an older client
+    let mut server_chain = conflict.server_hash_chain.clone().unwrap_or_default();
+    if let Some(server_hash) = &conflict.server_content_hash {
+        if server_chain.first() != Some(server_hash) {
+            server_chain.insert(0, server_hash.clone());
+        }
+    }
+
+    note.hash_chain = Some(update_hash_chain(&hash, Some(&server_chain)));
+    if conflict.server_content_hash.is_some() {
+        note.parent_hash = conflict.server_content_hash.clone();
+    }
+    note.content_hash = Some(hash);
+    note.modified_at = Utc::now();
+    note.version = note.version.max(conflict.server_version) + 1;
+    note.needs_sync = true;
+}
+
+/// The server's attachment list from a conflict, and whether all of it could be read.
+fn server_attachments(crypto: &CryptoService, key: &[u8; 32], conflict: &ConflictData) -> (Vec<Attachment>, bool) {
+    let attachments: Vec<Attachment> = conflict.server_attachments.iter()
+        .filter_map(|reference| Some(Attachment {
+            id: reference.id.clone(),
+            filename: filename_from_sync(crypto, &reference.filename, key).ok()?,
+            mime_type: reference.mime_type.clone(),
+            size: reference.size,
+            data: reference.data.clone(),
+            thumbnail_data: None,
+        }))
+        .collect();
+
+    let complete = attachments.len() == conflict.server_attachments.len();
+    (attachments, complete)
+}
+
+/// Fetch the files of attachments this device has only heard of. A conflict's server
+/// copy names attachments the pull never sent, so this is how they arrive. One that
+/// can't be fetched stays listed, and viewing it will say so.
+fn fetch_missing_blobs(app: &App, attachments: &[Attachment]) -> Result<()> {
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not available"))?;
+    let key = app.key.as_ref().ok_or_else(|| anyhow::anyhow!("Encryption key not available"))?;
+
+    let attachment_repo = AttachmentRepository::new(db.connection());
+    let known: HashSet<String> = attachment_repo.list_ids()?.into_iter().collect();
+    let missing: Vec<&Attachment> = attachments.iter().filter(|a| !known.contains(&a.id)).collect();
+    if missing.is_empty() {
+        return Ok(());
+    }
+
+    let Some(metadata) = SyncRepository::new(db.connection()).get_metadata()? else {
+        return Ok(());
+    };
+    let log = |_: &str| {};
+    let run = open_run(db.connection(), &app.crypto, key, &metadata, &log)?;
+
+    for attachment in missing {
+        let fetched = run.client
+            .get(format!("{}/api/v1/sync/attachments/{}", run.endpoint, attachment.id))
+            .header("Authorization", format!("Bearer {}", run.api_key))
+            .send()
+            .and_then(|response| response.error_for_status())
+            .and_then(|response| response.json::<SyncAttachment>());
+
+        match fetched {
+            Ok(blob) if blob.id == attachment.id => {
+                if let Some(data) = read_blobs(&run, std::slice::from_ref(&blob)).get(&attachment.id) {
+                    attachment_repo.store(&attachment.id, &attachment.filename, &attachment.mime_type, attachment.size, data, key)?;
+                    attachment_repo.mark_pushed(&attachment.id)?;
+                }
+            }
+            Ok(_) => tracing::warn!("The server sent the wrong file for attachment {}", attachment.id),
+            Err(e) => tracing::warn!("Could not fetch attachment {}: {e}", attachment.id),
+        }
+    }
+
+    Ok(())
+}
+
 /// Resolve conflict by keeping local version
 /// Clears conflict status and marks note for sync
 pub fn resolve_keep_local(app: &mut App) -> Result<()> {
     let note_id = app.conflict_note_id.clone()
         .ok_or_else(|| anyhow::anyhow!("No conflict being resolved"))?;
+
+    let conflict_data = app.conflict_data.clone()
+        .ok_or_else(|| anyhow::anyhow!("No conflict data available"))?;
 
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not available"))?;
     let key = app.key.as_ref().ok_or_else(|| anyhow::anyhow!("Encryption key not available"))?;
@@ -1089,18 +1388,17 @@ pub fn resolve_keep_local(app: &mut App) -> Result<()> {
     let note_repo = NoteRepository::new(db.connection());
     let sync_repo = SyncRepository::new(db.connection());
 
-    // Clear conflict status - the local version will be pushed on next sync
-    sync_repo.clear_conflict(&note_id)?;
-
-    // Update the note's modified_at to ensure it gets pushed
+    let transaction = db.connection().unchecked_transaction()?;
     if let Some(mut note) = note_repo.get(&note_id, key)? {
-        note.modified_at = chrono::Utc::now();
-        note.version += 1;
-        note_repo.update(&note, key)?;
+        build_on_server_version(&app.crypto, key, &mut note, &conflict_data);
+        note_repo.store(&note, key)?;
     }
+    sync_repo.clear_conflict(&note_id)?;
+    transaction.commit()?;
 
     // Clear conflict state in app
     clear_conflict_state(app);
+    super::notes::load_notes(app)?;
 
     Ok(())
 }
@@ -1121,16 +1419,23 @@ pub fn resolve_keep_server(app: &mut App) -> Result<()> {
     let sync_repo = SyncRepository::new(db.connection());
     let version_repo = NoteVersionRepository::new(db.connection());
 
+    let (attachments, complete) = server_attachments(&app.crypto, key, &conflict_data);
+
+    let transaction = db.connection().unchecked_transaction()?;
+
     // Get the local note to save a version before overwriting
     if let Some(local_note) = note_repo.get(&note_id, key)? {
         // Create version snapshot of local before overwriting
-        let _ = version_repo.create_version(&local_note, chrono::Utc::now(), VersionReason::Sync, key);
+        let _ = version_repo.create_version(&local_note, Utc::now(), VersionReason::Sync, key);
 
         // Create updated note with server content (already decrypted in conflict_server_content)
         let mut updated_note = local_note.clone();
         updated_note.content = app.conflict_server_content.clone();
         updated_note.tags = app.conflict_server_tags.clone();
+        updated_note.attachments = attachments.clone();
+        updated_note.attachments_complete = complete;
         updated_note.modified_at = conflict_data.server_modified_at;
+        updated_note.synced_at = Some(Utc::now());
         updated_note.version = conflict_data.server_version;
         updated_note.pinned = conflict_data.server_pinned;
         updated_note.archived = conflict_data.server_archived;
@@ -1143,13 +1448,24 @@ pub fn resolve_keep_server(app: &mut App) -> Result<()> {
         if let Some(wrap) = conflict_data.server_word_wrap {
             updated_note.word_wrap = wrap;
         }
+        updated_note.show_preview = conflict_data.server_show_preview;
         updated_note.color = conflict_data.server_color.clone();
+        // It's the server's note now, history and all, so there's nothing to push
+        updated_note.content_hash = conflict_data.server_content_hash.clone();
+        updated_note.parent_hash = conflict_data.server_parent_hash.clone();
+        updated_note.hash_chain = conflict_data.server_hash_chain.clone();
+        updated_note.needs_sync = false;
 
-        note_repo.update(&updated_note, key)?;
+        note_repo.store(&updated_note, key)?;
     }
 
     // Clear conflict status
     sync_repo.clear_conflict(&note_id)?;
+    transaction.commit()?;
+
+    if let Err(e) = fetch_missing_blobs(app, &attachments) {
+        app.debug_log(&format!("Could not fetch the server's attachments: {}", e));
+    }
 
     // Clear conflict state in app and reload notes
     clear_conflict_state(app);
@@ -1158,8 +1474,10 @@ pub fn resolve_keep_server(app: &mut App) -> Result<()> {
     Ok(())
 }
 
-/// Resolve conflict by keeping both versions
-/// Creates a new note from the server version
+/// Resolve conflict by keeping both versions.
+///
+/// The server's version becomes a new note and the local edit stays where it is, on top
+/// of what the server has. Both are pending, so both reach every device.
 pub fn resolve_keep_both(app: &mut App) -> Result<String> {
     let note_id = app.conflict_note_id.clone()
         .ok_or_else(|| anyhow::anyhow!("No conflict being resolved"))?;
@@ -1173,10 +1491,13 @@ pub fn resolve_keep_both(app: &mut App) -> Result<String> {
     let note_repo = NoteRepository::new(db.connection());
     let sync_repo = SyncRepository::new(db.connection());
 
+    let (attachments, complete) = server_attachments(&app.crypto, key, &conflict_data);
+
     // Create a new note from the server version
     let mut new_note = Note::new(app.conflict_server_content.clone());
     new_note.tags = app.conflict_server_tags.clone();
-    new_note.modified_at = conflict_data.server_modified_at;
+    new_note.attachments = attachments.clone();
+    new_note.attachments_complete = complete;
     new_note.pinned = conflict_data.server_pinned;
     new_note.archived = conflict_data.server_archived;
     new_note.archived_at = conflict_data.server_archived_at;
@@ -1188,13 +1509,26 @@ pub fn resolve_keep_both(app: &mut App) -> Result<String> {
     if let Some(wrap) = conflict_data.server_word_wrap {
         new_note.word_wrap = wrap;
     }
+    new_note.show_preview = conflict_data.server_show_preview;
     new_note.color = conflict_data.server_color.clone();
 
     let new_note_id = new_note.id.clone();
+
+    let transaction = db.connection().unchecked_transaction()?;
     note_repo.create(&new_note, key)?;
+
+    if let Some(mut local_note) = note_repo.get(&note_id, key)? {
+        build_on_server_version(&app.crypto, key, &mut local_note, &conflict_data);
+        note_repo.store(&local_note, key)?;
+    }
 
     // Clear conflict status on the original note
     sync_repo.clear_conflict(&note_id)?;
+    transaction.commit()?;
+
+    if let Err(e) = fetch_missing_blobs(app, &attachments) {
+        app.debug_log(&format!("Could not fetch the server's attachments: {}", e));
+    }
 
     // Clear conflict state in app and reload notes
     clear_conflict_state(app);
@@ -1251,11 +1585,23 @@ mod tests {
         pulls: Arc<Mutex<Vec<Value>>>,
         pushes: Arc<Mutex<Vec<Value>>>,
         refuse: Arc<Mutex<std::collections::HashSet<String>>>,
+        /// Responses to give to the next pulls, in order, instead of the usual pages
+        script: Arc<Mutex<std::collections::VecDeque<Value>>>,
+        /// Merged into every push response
+        push_reply: Arc<Mutex<Value>>,
+        /// The next response's status line and extra headers, instead of 200
+        fail_next: Arc<Mutex<Option<String>>>,
+        /// The wrapped key the server holds
+        wrapped_key: Arc<Mutex<Option<String>>>,
     }
 
     fn reply(stream: &mut std::net::TcpStream, body: &str) {
+        reply_with(stream, "200 OK", body);
+    }
+
+    fn reply_with(stream: &mut std::net::TcpStream, status: &str, body: &str) {
         let response = format!(
-            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
             body.len(),
             body
         );
@@ -1280,11 +1626,46 @@ mod tests {
             let pushes_seen = pushes.clone();
             let refuse = Arc::new(Mutex::new(std::collections::HashSet::new()));
             let rejecting = refuse.clone();
+            let script = Arc::new(Mutex::new(std::collections::VecDeque::new()));
+            let scripted: Arc<Mutex<std::collections::VecDeque<Value>>> = script.clone();
+            let push_reply = Arc::new(Mutex::new(json!({})));
+            let push_extras = push_reply.clone();
+            let fail_next: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+            let failing = fail_next.clone();
+            let wrapped_key: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+            let held_key = wrapped_key.clone();
 
             std::thread::spawn(move || {
                 for stream in listener.incoming() {
                     let mut stream = stream.unwrap();
-                    let body = read_body(&mut stream);
+                    let (method, path, body) = read_request(&mut stream);
+
+                    if let Some(status) = failing.lock().unwrap().take() {
+                        reply_with(&mut stream, &status, r#"{"error":"refused"}"#);
+                        continue;
+                    }
+
+                    if path.ends_with("/auth/wrapped-key") {
+                        if method == "PUT" {
+                            let request: Value = serde_json::from_slice(&body).unwrap();
+                            *held_key.lock().unwrap() = request["blob"].as_str().map(String::from);
+                            reply(&mut stream, "{}");
+                        } else {
+                            match held_key.lock().unwrap().as_ref() {
+                                Some(blob) => reply(&mut stream, &json!({
+                                    "blob": blob, "kdfVersion": 1, "kdfIterations": 1_000_000,
+                                }).to_string()),
+                                None => reply_with(&mut stream, "404 Not Found", "{}"),
+                            }
+                        }
+                        continue;
+                    }
+
+                    if method == "GET" {
+                        reply_with(&mut stream, "404 Not Found", "{}");
+                        continue;
+                    }
+
                     let request: Value = serde_json::from_slice(&body).unwrap();
 
                     // A push has notes of its own. Conflicts are the ones marked
@@ -1293,7 +1674,7 @@ mod tests {
                         let (rejected, accepted): (Vec<Value>, Vec<Value>) = pushed.iter()
                             .cloned()
                             .partition(|note| rejecting.lock().unwrap().contains(note["id"].as_str().unwrap_or("")));
-                        let response = json!({
+                        let mut response = json!({
                             "accepted": accepted.iter().map(|note| json!({
                                 "id": note["id"],
                                 "syncedAt": server_time(0),
@@ -1304,17 +1685,28 @@ mod tests {
                                 "reason": "conflict",
                                 "serverVersion": 2,
                                 "serverModifiedAt": server_time(0),
-                                "serverContent": note["content"],
+                                "serverContent": encrypted("The server's text"),
                                 "serverTags": [],
                                 "serverAttachments": [],
                                 "serverPinned": false,
                                 "serverArchived": false,
                                 "serverLocked": false,
+                                "serverContentHash": "server-hash",
+                                "serverHashChain": ["server-hash", "older-hash"],
                             })).collect::<Vec<_>>(),
                             "errors": [],
-                        }).to_string();
+                        });
+                        for (field, value) in push_extras.lock().unwrap().as_object().unwrap() {
+                            response[field] = value.clone();
+                        }
                         pushes_seen.lock().unwrap().push(request);
-                        reply(&mut stream, &response);
+                        reply(&mut stream, &response.to_string());
+                        continue;
+                    }
+
+                    if let Some(page) = scripted.lock().unwrap().pop_front() {
+                        recorded.lock().unwrap().push(request);
+                        reply(&mut stream, &page.to_string());
                         continue;
                     }
 
@@ -1339,7 +1731,30 @@ mod tests {
                 }
             });
 
-            Self { endpoint, pulls, pushes, refuse }
+            Self { endpoint, pulls, pushes, refuse, script, push_reply, fail_next, wrapped_key }
+        }
+
+        /// Give these pull responses next, in order.
+        fn script(&self, pages: Vec<Value>) {
+            self.script.lock().unwrap().extend(pages);
+        }
+
+        /// Add these fields to every push response from now on.
+        fn add_to_push_replies(&self, fields: Value) {
+            *self.push_reply.lock().unwrap() = fields;
+        }
+
+        /// Answer the next request with this status line, and any headers after it.
+        fn fail_next(&self, status: &str) {
+            *self.fail_next.lock().unwrap() = Some(status.to_string());
+        }
+
+        fn all_pushes(&self) -> Vec<Value> {
+            self.pushes.lock().unwrap().clone()
+        }
+
+        fn all_pulls(&self) -> Vec<Value> {
+            self.pulls.lock().unwrap().clone()
         }
 
         /// The note ids the server will refuse from now on.
@@ -1360,7 +1775,8 @@ mod tests {
         }
     }
 
-    fn read_body(stream: &mut std::net::TcpStream) -> Vec<u8> {
+    /// A request's method, path and body.
+    fn read_request(stream: &mut std::net::TcpStream) -> (String, String, Vec<u8>) {
         let mut received = Vec::new();
         let mut buffer = [0u8; 8192];
         loop {
@@ -1369,14 +1785,17 @@ mod tests {
             let Some(header_end) = received.windows(4).position(|w| w == b"\r\n\r\n") else {
                 continue;
             };
-            let headers = String::from_utf8_lossy(&received[..header_end]).to_lowercase();
+            let headers = String::from_utf8_lossy(&received[..header_end]).to_string();
             let length: usize = headers
+                .to_lowercase()
                 .lines()
-                .find_map(|line| line.strip_prefix("content-length:"))
-                .map(|value| value.trim().parse().unwrap())
+                .find_map(|line| line.strip_prefix("content-length:").map(|value| value.trim().parse().unwrap()))
                 .unwrap_or(0);
             if received.len() >= header_end + 4 + length {
-                return received[header_end + 4..header_end + 4 + length].to_vec();
+                let mut request_line = headers.split_whitespace();
+                let method = request_line.next().unwrap_or("").to_string();
+                let path = request_line.next().unwrap_or("").to_string();
+                return (method, path, received[header_end + 4..header_end + 4 + length].to_vec());
             }
         }
     }
@@ -1750,5 +2169,985 @@ mod tests {
         let db = app.db.as_ref().unwrap();
         let versions = NoteVersionRepository::new(db.connection());
         assert!(versions.get_version_by_key(&format!("{}:1", note_id(150))).unwrap().is_some());
+    }
+
+    /// A pull response from a server with cursors.
+    fn cursor_page(notes: Vec<Value>, next_cursor: &str, has_more: bool) -> Value {
+        json!({
+            "notes": notes,
+            "deletions": [],
+            "attachments": [],
+            "versions": [],
+            "syncedAt": server_time(0),
+            "hasMore": has_more,
+            "nextCursor": next_cursor,
+        })
+    }
+
+    fn cursors_sent(server: &StubServer) -> Vec<Value> {
+        server.all_pulls().iter().map(|pull| pull["cursor"].clone()).collect()
+    }
+
+    #[test]
+    fn a_server_with_cursors_is_followed_page_by_page() {
+        let server = StubServer::start(vec![], vec![]);
+        server.script(vec![
+            cursor_page(remote_notes(1), "c1", true),
+            cursor_page(vec![], "c2", true),
+            cursor_page(vec![], "c3", false),
+        ]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        // hasMore alone decides: the middle page holds no notes and there was still more
+        assert_eq!(cursors_sent(&server), vec![json!(""), json!("c1"), json!("c2")]);
+        assert_eq!(sync_metadata(&app).pull_cursor.as_deref(), Some("c3"));
+        assert_eq!(stored_note_count(&app), 1);
+    }
+
+    #[test]
+    fn the_next_sync_starts_from_the_stored_cursor() {
+        let server = StubServer::start(vec![], vec![]);
+        server.script(vec![cursor_page(vec![], "c1", false), cursor_page(vec![], "c1", false)]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(cursors_sent(&server), vec![json!(""), json!("c1")]);
+    }
+
+    #[test]
+    fn an_older_server_is_paged_by_offset_and_no_cursor_is_kept() {
+        let server = StubServer::start(remote_notes(150), vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(server.offsets(), vec![0, 100]);
+        assert_eq!(sync_metadata(&app).pull_cursor, None);
+        assert_eq!(stored_note_count(&app), 150);
+    }
+
+    /// A server can be rolled back, so the answer can't be remembered.
+    #[test]
+    fn a_server_that_stops_sending_cursors_goes_back_to_offsets() {
+        let server = StubServer::start(remote_notes(1), vec![]);
+        server.script(vec![cursor_page(vec![], "c1", false)]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+        assert_eq!(sync_metadata(&app).pull_cursor.as_deref(), Some("c1"));
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(sync_metadata(&app).pull_cursor, None);
+        assert_eq!(stored_note_count(&app), 1);
+    }
+
+    #[test]
+    fn a_failed_page_leaves_the_cursor_on_the_last_page_applied() {
+        let server = StubServer::start(vec![], vec![]);
+        server.script(vec![cursor_page(remote_notes(1), "c1", true)]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        // The stub's next unscripted pull has no cursor, so make it fail instead
+        let db = app.db.as_ref().unwrap();
+        NoteRepository::new(db.connection()).create(&Note::new("Local".to_string()), key()).unwrap();
+
+        let outcome = {
+            let failing = server.fail_next.clone();
+            let observed = server.script.clone();
+            std::thread::spawn(move || {
+                // Once the first page has been taken, the next request fails
+                while !observed.lock().unwrap().is_empty() {
+                    std::thread::yield_now();
+                }
+                *failing.lock().unwrap() = Some("500 Internal Server Error".to_string());
+            });
+            perform_sync(&mut app, false)
+        };
+
+        assert!(outcome.is_err());
+        assert_eq!(sync_metadata(&app).pull_cursor.as_deref(), Some("c1"));
+        assert_eq!(stored_note_count(&app), 2);
+    }
+
+    /// Without this, a server that always says there's more would keep a sync running.
+    #[test]
+    fn a_page_that_goes_nowhere_ends_the_pull() {
+        let server = StubServer::start(vec![], vec![]);
+        server.script(vec![cursor_page(vec![], "c1", true), cursor_page(vec![], "c1", true)]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(cursors_sent(&server), vec![json!(""), json!("c1")]);
+    }
+
+    #[test]
+    fn versions_and_deletions_are_applied_from_every_cursor_page() {
+        let doomed = Note::new("Doomed".to_string());
+        let version = json!({
+            "versionKey": format!("{}:1", note_id(0)),
+            "noteId": note_id(0),
+            "version": 1,
+            "createdAt": "2020-01-01T00:00:00Z",
+            "syncedAt": "2020-01-01T00:00:00Z",
+            "content": encrypted("Earlier"),
+            "tags": [],
+            "attachments": [],
+            "reason": "sync",
+        });
+        let mut first = cursor_page(vec![], "c1", true);
+        first["versions"] = json!([version]);
+        first["deletions"] = json!([{ "id": doomed.id, "deletedAt": "2031-01-01T00:00:00Z" }]);
+
+        let server = StubServer::start(vec![], vec![]);
+        server.script(vec![first, cursor_page(remote_notes(1), "c2", false)]);
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        let mut synced = doomed.clone();
+        synced.needs_sync = false;
+        NoteRepository::new(db.connection()).create(&synced, key()).unwrap();
+        SyncRepository::new(db.connection()).update_last_sync(Utc::now()).unwrap();
+
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        assert!(NoteRepository::new(db.connection()).get(&doomed.id, key()).unwrap().is_none());
+        let versions = NoteVersionRepository::new(db.connection());
+        assert!(versions.get_version_by_key(&format!("{}:1", note_id(0))).unwrap().is_some());
+    }
+
+    /// The cursor can't pass a version that's only held in memory, or a crash here
+    /// would lose it for good.
+    #[test]
+    fn the_cursor_waits_for_a_version_whose_note_is_on_a_later_page() {
+        let version = json!({
+            "versionKey": format!("{}:1", note_id(0)),
+            "noteId": note_id(0),
+            "version": 1,
+            "createdAt": "2020-01-01T00:00:00Z",
+            "syncedAt": "2020-01-01T00:00:00Z",
+            "content": encrypted("Earlier"),
+            "tags": [],
+            "attachments": [],
+            "reason": "sync",
+        });
+        let mut first = cursor_page(vec![], "c1", true);
+        first["versions"] = json!([version]);
+
+        let server = StubServer::start(vec![], vec![]);
+        server.script(vec![first]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        // The note's page never arrives
+        let failing = server.fail_next.clone();
+        let observed = server.script.clone();
+        std::thread::spawn(move || {
+            while !observed.lock().unwrap().is_empty() {
+                std::thread::yield_now();
+            }
+            *failing.lock().unwrap() = Some("500 Internal Server Error".to_string());
+        });
+
+        assert!(perform_sync(&mut app, false).is_err());
+
+        assert_eq!(sync_metadata(&app).pull_cursor, None);
+    }
+
+    #[test]
+    fn a_version_whose_note_never_arrives_does_not_stop_the_pull() {
+        let version = json!({
+            "versionKey": format!("{}:1", note_id(7)),
+            "noteId": note_id(7),
+            "version": 1,
+            "createdAt": "2020-01-01T00:00:00Z",
+            "syncedAt": "2020-01-01T00:00:00Z",
+            "content": encrypted("Earlier"),
+            "tags": [],
+            "attachments": [],
+            "reason": "sync",
+        });
+        let mut only = cursor_page(vec![], "c1", false);
+        only["versions"] = json!([version]);
+
+        let server = StubServer::start(vec![], vec![]);
+        server.script(vec![only]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(sync_metadata(&app).pull_cursor.as_deref(), Some("c1"));
+    }
+
+    /// Timestamp pulls can have skipped changes, and nothing can detect that afterwards.
+    #[test]
+    fn the_first_cursor_after_timestamps_starts_again_from_the_top() {
+        let server = StubServer::start(vec![], vec![]);
+        server.script(vec![cursor_page(vec![], "c1", false), cursor_page(remote_notes(1), "c9", false)]);
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        let repo = SyncRepository::new(db.connection());
+        let mut metadata = repo.get_metadata().unwrap().unwrap();
+        metadata.last_sync_at = Some(Utc::now());
+        metadata.last_pull_at = Some(server_time(-5));
+        repo.update_metadata(&metadata).unwrap();
+
+        perform_sync(&mut app, false).unwrap();
+
+        let pulls = server.all_pulls();
+        assert_eq!(pulls.len(), 2);
+        assert_eq!(pulls[0]["cursor"], json!(""));
+        assert!(pulls[0]["lastSyncAt"].is_string());
+        assert_eq!(pulls[1]["cursor"], json!(""));
+        assert!(pulls[1]["lastSyncAt"].is_null());
+        assert_eq!(sync_metadata(&app).pull_cursor.as_deref(), Some("c9"));
+        assert_eq!(stored_note_count(&app), 1);
+    }
+
+    #[test]
+    fn force_sync_starts_from_nothing_whatever_is_stored() {
+        let server = StubServer::start(vec![], vec![]);
+        server.script(vec![cursor_page(vec![], "c5", false)]);
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        let repo = SyncRepository::new(db.connection());
+        let mut metadata = repo.get_metadata().unwrap().unwrap();
+        metadata.pull_cursor = Some("c4".to_string());
+        metadata.last_pull_at = Some(server_time(-5));
+        metadata.last_sync_at = Some(Utc::now());
+        repo.update_metadata(&metadata).unwrap();
+
+        perform_sync(&mut app, true).unwrap();
+
+        let pulls = server.all_pulls();
+        assert_eq!(pulls[0]["cursor"], json!(""));
+        assert!(pulls[0]["lastSyncAt"].is_null());
+    }
+
+    #[test]
+    fn known_attachments_come_from_the_blobs_this_device_holds() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        add_note_with_attachment(&app, "plain.txt");
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(server.all_pulls()[0]["knownAttachmentIds"], json!([ATTACHMENT_ID]));
+    }
+
+    #[test]
+    fn a_refused_deletion_stops_being_sent() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        let note = Note::new("Edited elsewhere".to_string());
+        note_repo.create(&note, key()).unwrap();
+        note_repo.hard_delete(&note.id).unwrap();
+        server.add_to_push_replies(json!({ "rejectedDeletions": [note.id] }));
+
+        perform_sync(&mut app, false).unwrap();
+        assert_eq!(server.last_push()["deletions"][0]["id"], note.id);
+
+        let db = app.db.as_ref().unwrap();
+        assert!(NoteRepository::new(db.connection()).get_pending_deletions().unwrap().is_empty());
+
+        let pushes_so_far = server.all_pushes().len();
+        perform_sync(&mut app, false).unwrap();
+        assert_eq!(server.all_pushes().len(), pushes_so_far);
+    }
+
+    #[test]
+    fn a_response_without_rejected_deletions_means_none_were() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        let note = Note::new("Gone".to_string());
+        note_repo.create(&note, key()).unwrap();
+        note_repo.hard_delete(&note.id).unwrap();
+
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        assert!(NoteRepository::new(db.connection()).get_pending_deletions().unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_push_only_claims_lists_this_device_can_vouch_for() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+
+        let written_here = Note::new("Written here".to_string());
+        note_repo.create(&written_here, key()).unwrap();
+
+        // What the migration leaves an existing note as
+        let mut from_before = Note::new("From an older build".to_string());
+        from_before.attachments_complete = false;
+        note_repo.create(&from_before, key()).unwrap();
+
+        perform_sync(&mut app, false).unwrap();
+
+        let pushes = server.all_pushes();
+        assert_eq!(pushes.len(), 2);
+        assert_eq!(pushes[0]["attachmentsAuthoritative"], json!(true));
+        assert_eq!(pushes[0]["notes"][0]["id"], json!(written_here.id));
+        assert!(pushes[1]["attachmentsAuthoritative"].is_null());
+        assert_eq!(pushes[1]["notes"][0]["id"], json!(from_before.id));
+    }
+
+    #[test]
+    fn a_list_taken_from_the_server_can_be_vouched_for() {
+        let mut notes = remote_notes(1);
+        notes[0]["contentHash"] = json!("server-hash");
+        let server = StubServer::start(notes, vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        let mut stale = Note::new("Stale".to_string());
+        stale.id = note_id(0);
+        stale.needs_sync = false;
+        stale.attachments_complete = false;
+        NoteRepository::new(db.connection()).create(&stale, key()).unwrap();
+        SyncRepository::new(db.connection()).update_last_sync(Utc::now()).unwrap();
+
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let note = NoteRepository::new(db.connection()).get(&note_id(0), key()).unwrap().unwrap();
+        assert!(note.attachments_complete);
+    }
+
+    /// The server leaves out blobs this device has, and a reference with no blob here
+    /// still has to stay on the list, or a later push would tell the server it's gone.
+    #[test]
+    fn a_reference_with_no_blob_stays_on_the_list() {
+        let mut notes = remote_notes(1);
+        notes[0]["attachments"] = json!([{
+            "id": ATTACHMENT_ID, "filename": encrypted("kept.txt"), "mimeType": "text/plain", "size": 3, "data": ATTACHMENT_ID,
+        }]);
+        let server = StubServer::start(notes, vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let stored = NoteRepository::new(db.connection()).get(&note_id(0), key()).unwrap().unwrap();
+        assert_eq!(stored.attachments.len(), 1);
+        assert!(stored.attachments_complete);
+    }
+
+    #[test]
+    fn a_list_with_a_reference_that_cannot_be_read_is_not_vouched_for() {
+        let crypto = CryptoService::new();
+        let other_key = crypto.generate_master_key();
+        let unreadable = serde_json::to_string(&crypto.encrypt_text("secret.txt", &other_key).unwrap()).unwrap();
+        let mut notes = remote_notes(1);
+        notes[0]["attachments"] = json!([{
+            "id": ATTACHMENT_ID, "filename": unreadable, "mimeType": "text/plain", "size": 3, "data": ATTACHMENT_ID,
+        }]);
+        let server = StubServer::start(notes, vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let stored = NoteRepository::new(db.connection()).get(&note_id(0), key()).unwrap().unwrap();
+        assert!(stored.attachments.is_empty());
+        assert!(!stored.attachments_complete);
+    }
+
+    /// A local note and a pulled note with these hashes.
+    fn pair(local: (&str, Option<&str>, &[&str], bool), remote: (&str, &[&str])) -> (Note, SyncNote) {
+        let (hash, parent, chain, pending) = local;
+        let mut note = Note::new("Local".to_string());
+        note.content_hash = Some(hash.to_string());
+        note.parent_hash = parent.map(String::from);
+        note.hash_chain = Some(chain.iter().map(|h| h.to_string()).collect());
+        note.needs_sync = pending;
+
+        let (remote_hash, remote_chain) = remote;
+        let mut pulled: SyncNote = serde_json::from_value(remote_notes(1).remove(0)).unwrap();
+        pulled.content_hash = Some(remote_hash.to_string());
+        pulled.hash_chain = Some(remote_chain.iter().map(|h| h.to_string()).collect());
+        (note, pulled)
+    }
+
+    #[test]
+    fn the_same_note_is_left_alone_whether_or_not_an_edit_is_pending() {
+        let (local, remote) = pair(("a", None, &["a"], true), ("a", &["a"]));
+        assert_eq!(decide_pull(&local, &remote, false), PullAction::Ignore);
+
+        let (local, remote) = pair(("a", None, &["a"], false), ("a", &["a"]));
+        assert_eq!(decide_pull(&local, &remote, false), PullAction::Ignore);
+    }
+
+    #[test]
+    fn a_copy_older_than_the_local_edit_keeps_the_edit() {
+        // The local parent
+        let (local, remote) = pair(("b", Some("a"), &["b", "a"], true), ("a", &["a"]));
+        assert_eq!(decide_pull(&local, &remote, false), PullAction::KeepLocal);
+
+        // Further back along the local chain
+        let (local, remote) = pair(("c", Some("b"), &["c", "b", "a"], true), ("a", &["a"]));
+        assert_eq!(decide_pull(&local, &remote, false), PullAction::KeepLocal);
+    }
+
+    #[test]
+    fn a_copy_that_includes_the_local_edit_is_taken() {
+        let (local, remote) = pair(("b", Some("a"), &["b", "a"], true), ("c", &["c", "b", "a"]));
+        assert_eq!(decide_pull(&local, &remote, false), PullAction::Take);
+    }
+
+    /// Sharing an ancestor doesn't make the pulled note newer. Every note's chain starts
+    /// with its own hash, so this is what two edits from one parent look like.
+    #[test]
+    fn two_edits_from_one_parent_are_a_conflict() {
+        let (local, remote) = pair(("b", Some("a"), &["b", "a"], true), ("c", &["c", "a"]));
+        assert_eq!(decide_pull(&local, &remote, false), PullAction::Conflict);
+    }
+
+    #[test]
+    fn with_no_edit_pending_a_different_note_is_taken() {
+        let (local, remote) = pair(("a", None, &["a"], false), ("b", &["b"]));
+        assert_eq!(decide_pull(&local, &remote, false), PullAction::Take);
+    }
+
+    /// Not every client's hash covers these, so an equal hash doesn't settle it.
+    #[test]
+    fn a_state_change_with_an_equal_hash_still_arrives() {
+        let (local, mut remote) = pair(("a", None, &["a"], false), ("a", &["a"]));
+        remote.deleted = true;
+        assert_eq!(decide_pull(&local, &remote, false), PullAction::Take);
+
+        let (local, mut remote) = pair(("a", None, &["a"], false), ("a", &["a"]));
+        remote.pinned = true;
+        assert_eq!(decide_pull(&local, &remote, false), PullAction::Take);
+
+        // A pending edit pushes its own state instead
+        let (local, mut remote) = pair(("a", None, &["a"], true), ("a", &["a"]));
+        remote.deleted = true;
+        assert_eq!(decide_pull(&local, &remote, false), PullAction::Ignore);
+    }
+
+    #[test]
+    fn without_hashes_the_times_protect_a_pending_edit() {
+        let (mut local, mut remote) = pair(("a", None, &[], true), ("b", &[]));
+        local.content_hash = None;
+        remote.content_hash = None;
+        remote.modified_at = local.modified_at - chrono::Duration::days(1);
+        assert_eq!(decide_pull(&local, &remote, false), PullAction::KeepLocal);
+
+        remote.modified_at = local.modified_at + chrono::Duration::days(1);
+        assert_eq!(decide_pull(&local, &remote, false), PullAction::Conflict);
+
+        local.needs_sync = false;
+        assert_eq!(decide_pull(&local, &remote, false), PullAction::Take);
+    }
+
+    #[test]
+    fn force_sync_does_not_overwrite_a_pending_edit() {
+        let (local, remote) = pair(("b", Some("a"), &["b", "a"], true), ("a", &["a"]));
+        assert_eq!(decide_pull(&local, &remote, true), PullAction::KeepLocal);
+    }
+
+    /// A note this device has already seen, as a server would resend it.
+    fn resent(note: &Note, text: &str) -> Value {
+        let mut value = remote_notes(1).remove(0);
+        value["id"] = json!(note.id);
+        value["content"] = json!(encrypted(text));
+        value["modifiedAt"] = json!((note.modified_at + chrono::Duration::days(1)).to_rfc3339());
+        value["contentHash"] = json!("server-hash");
+        value["hashChain"] = json!(["server-hash"]);
+        value
+    }
+
+    /// The push is refused and the pull in the same sync delivers the server's copy.
+    /// That used to replace the local edit, so the conflict screen compared two identical
+    /// notes and the edit was gone.
+    #[test]
+    fn a_refused_note_is_not_overwritten_by_the_pull_after_it() {
+        let note = Note::new("My edit".to_string());
+        let server = StubServer::start(vec![resent(&note, "The server's text")], vec![]);
+        server.refuse(&note.id);
+        let mut app = app_connected_to(&server.endpoint);
+        NoteRepository::new(app.db.as_ref().unwrap().connection()).create(&note, key()).unwrap();
+
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(outcome.rejected, 1);
+        let db = app.db.as_ref().unwrap();
+        let kept = NoteRepository::new(db.connection()).get(&note.id, key()).unwrap().unwrap();
+        assert_eq!(kept.content, "My edit");
+        assert!(kept.needs_sync);
+
+        open_conflict_resolution(&mut app, &note.id).unwrap();
+        assert_eq!(app.conflict_local_content, "My edit");
+        assert_eq!(app.conflict_server_content, "The server's text");
+    }
+
+    #[test]
+    fn a_note_in_conflict_is_not_pushed_until_it_is_resolved() {
+        let note = Note::new("My edit".to_string());
+        let server = StubServer::start(vec![], vec![]);
+        server.refuse(&note.id);
+        let mut app = app_connected_to(&server.endpoint);
+        NoteRepository::new(app.db.as_ref().unwrap().connection()).create(&note, key()).unwrap();
+
+        perform_sync(&mut app, false).unwrap();
+        let pushes = server.all_pushes().len();
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(server.all_pushes().len(), pushes);
+    }
+
+    #[test]
+    fn a_pull_finds_a_conflict_a_push_never_tried() {
+        let note = Note::new("My edit".to_string());
+        let server = StubServer::start(vec![resent(&note, "The server's text")], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        let mut local = note.clone();
+        local.content_hash = Some("local-hash".to_string());
+        local.hash_chain = Some(vec!["local-hash".to_string()]);
+        NoteRepository::new(db.connection()).create(&local, key()).unwrap();
+
+        // The note goes up after the pull has started, in the sense that it's still
+        // pending when the server's copy lands: this server accepts nothing
+        server.add_to_push_replies(json!({ "accepted": [] }));
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(outcome.rejected, 1);
+        let db = app.db.as_ref().unwrap();
+        assert_eq!(NoteRepository::new(db.connection()).get(&note.id, key()).unwrap().unwrap().content, "My edit");
+        assert_eq!(SyncRepository::new(db.connection()).get_conflict_note_ids().unwrap(), vec![note.id.clone()]);
+    }
+
+    #[test]
+    fn pulling_the_same_note_twice_changes_nothing_the_second_time() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut notes = remote_notes(1);
+        notes[0]["contentHash"] = json!("server-hash");
+        notes[0]["hashChain"] = json!(["server-hash"]);
+        server.script(vec![cursor_page(notes.clone(), "c1", false), cursor_page(notes, "c1", false)]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        let first = perform_sync(&mut app, false).unwrap();
+        let second = perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(first.synced, 1);
+        assert_eq!(second.synced, 0);
+        let db = app.db.as_ref().unwrap();
+        assert_eq!(NoteVersionRepository::new(db.connection()).count_versions_for_note(&note_id(0)).unwrap(), 0);
+    }
+
+    #[test]
+    fn a_pulled_note_keeps_its_hashes_and_show_preview_through_an_edit() {
+        let mut notes = remote_notes(1);
+        notes[0]["contentHash"] = json!("server-hash");
+        notes[0]["parentHash"] = json!("older-hash");
+        notes[0]["hashChain"] = json!(["server-hash", "older-hash"]);
+        notes[0]["showPreview"] = json!(true);
+        let server = StubServer::start(notes, vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        let mut note = note_repo.get(&note_id(0), key()).unwrap().unwrap();
+        assert_eq!(note.content_hash.as_deref(), Some("server-hash"));
+        assert_eq!(note.show_preview, Some(true));
+
+        note.content = "Edited here".to_string();
+        note.touch();
+        note_repo.update(&note, key()).unwrap();
+        perform_sync(&mut app, false).unwrap();
+
+        let pushed = &server.last_push()["notes"][0];
+        assert_eq!(pushed["showPreview"], json!(true));
+        assert_eq!(pushed["parentHash"], json!("server-hash"));
+        assert_eq!(pushed["hashChain"][1], json!("server-hash"));
+        assert_eq!(pushed["hashChain"][2], json!("older-hash"));
+        assert_ne!(pushed["contentHash"], json!("server-hash"));
+    }
+
+    #[test]
+    fn a_pushed_hash_gives_the_server_nothing_to_guess_at() {
+        use sha2::{Digest, Sha256};
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let note = Note::new("My PIN is 1234".to_string());
+        NoteRepository::new(app.db.as_ref().unwrap().connection()).create(&note, key()).unwrap();
+
+        perform_sync(&mut app, false).unwrap();
+
+        let pushed = server.last_push()["notes"][0]["contentHash"].as_str().unwrap().to_string();
+        let unkeyed = {
+            let mut hasher = Sha256::new();
+            hasher.update(note.content.as_bytes());
+            general_purpose::STANDARD.encode(hasher.finalize())
+        };
+        assert_ne!(pushed, unkeyed);
+        assert_ne!(pushed, CryptoService::new().compute_content_hash(&note, &[0u8; 32]));
+    }
+
+    #[test]
+    fn a_note_without_a_change_is_not_pushed_again() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let note = Note::new("Once".to_string());
+        NoteRepository::new(app.db.as_ref().unwrap().connection()).create(&note, key()).unwrap();
+
+        perform_sync(&mut app, false).unwrap();
+        let pushes = server.all_pushes().len();
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(server.all_pushes().len(), pushes);
+        let db = app.db.as_ref().unwrap();
+        assert!(!NoteRepository::new(db.connection()).get(&note.id, key()).unwrap().unwrap().needs_sync);
+    }
+
+    /// Modified_at used to pick what to push, so a change saved with an older timestamp
+    /// never went. Keep Both was one such change.
+    #[test]
+    fn a_change_with_an_old_timestamp_is_still_pushed() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        perform_sync(&mut app, false).unwrap();
+
+        let mut note = Note::new("Old date".to_string());
+        note.modified_at = Utc.with_ymd_and_hms(2001, 1, 1, 0, 0, 0).unwrap();
+        NoteRepository::new(app.db.as_ref().unwrap().connection()).create(&note, key()).unwrap();
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(server.last_push()["notes"][0]["id"], json!(note.id));
+    }
+
+    #[test]
+    fn a_blob_goes_up_once() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let note = add_note_with_attachment(&app, "plain.txt");
+
+        perform_sync(&mut app, false).unwrap();
+        assert_eq!(server.last_push()["attachments"].as_array().unwrap().len(), 1);
+
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        let mut edited = note_repo.get(&note.id, key()).unwrap().unwrap();
+        edited.content = "Edited".to_string();
+        edited.touch();
+        note_repo.update(&edited, key()).unwrap();
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(server.last_push()["attachments"].as_array().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn a_missing_blob_the_server_warns_about_goes_again() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let note = add_note_with_attachment(&app, "plain.txt");
+        server.add_to_push_replies(json!({
+            "attachmentWarnings": [{ "noteId": note.id, "attachmentIds": [ATTACHMENT_ID] }],
+        }));
+
+        perform_sync(&mut app, false).unwrap();
+
+        let repair = server.last_push();
+        assert_eq!(repair["notes"], json!([]));
+        assert_eq!(repair["attachments"][0]["id"], json!(ATTACHMENT_ID));
+    }
+
+    #[test]
+    fn a_version_goes_up_once() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let note = add_note_with_attachment(&app, "plain.txt");
+        let db = app.db.as_ref().unwrap();
+        NoteVersionRepository::new(db.connection())
+            .create_version(&note, Utc::now(), VersionReason::Sync, key())
+            .unwrap();
+
+        perform_sync(&mut app, false).unwrap();
+        assert_eq!(server.last_push()["versions"].as_array().unwrap().len(), 1);
+
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        let mut edited = note_repo.get(&note.id, key()).unwrap().unwrap();
+        edited.content = "Edited".to_string();
+        edited.touch();
+        note_repo.update(&edited, key()).unwrap();
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(server.last_push()["versions"].as_array().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn a_large_vault_is_pushed_in_batches() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        for i in 0..250 {
+            note_repo.create(&Note::new(format!("Note {i}")), key()).unwrap();
+        }
+
+        perform_sync(&mut app, false).unwrap();
+
+        let sizes: Vec<usize> = server.all_pushes().iter()
+            .map(|push| push["notes"].as_array().unwrap().len())
+            .collect();
+        assert_eq!(sizes, vec![100, 100, 50]);
+    }
+
+    #[test]
+    fn a_failed_batch_leaves_later_notes_pending() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        for i in 0..101 {
+            note_repo.create(&Note::new(format!("Note {i}")), key()).unwrap();
+        }
+        server.fail_next("500 Internal Server Error");
+
+        assert!(perform_sync(&mut app, false).is_err());
+
+        let db = app.db.as_ref().unwrap();
+        assert_eq!(NoteRepository::new(db.connection()).get_pending(key()).unwrap().notes.len(), 101);
+    }
+
+    /// Writers differ: web and Android push all of a version's tags in one ciphertext.
+    #[test]
+    fn a_version_keeps_its_tags_in_either_wire_format() {
+        let as_one = encrypted(r#"["alpha","beta"]"#);
+        let each_alone = [encrypted(r#""gamma""#), encrypted(r#""delta""#)];
+        let version = |number: i32, tags: Value| json!({
+            "versionKey": format!("{}:{number}", note_id(0)),
+            "noteId": note_id(0),
+            "version": number,
+            "createdAt": "2020-01-01T00:00:00Z",
+            "syncedAt": "2020-01-01T00:00:00Z",
+            "content": encrypted("Earlier"),
+            "tags": tags,
+            "attachments": [],
+            "reason": "sync",
+        });
+        let server = StubServer::start(remote_notes(1), vec![version(1, json!([as_one])), version(2, json!(each_alone))]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let versions = NoteVersionRepository::new(db.connection());
+        assert_eq!(versions.get_version(&note_id(0), 1, key()).unwrap().unwrap().tags, vec!["alpha", "beta"]);
+        assert_eq!(versions.get_version(&note_id(0), 2, key()).unwrap().unwrap().tags, vec!["gamma", "delta"]);
+    }
+
+    /// A deletion that lost: the local edit is newer, so it stays and comes back.
+    #[test]
+    fn an_edit_after_a_deletion_survives_it() {
+        let note = Note::new("Edited after".to_string());
+        let mut page = cursor_page(vec![], "c1", false);
+        page["deletions"] = json!([{
+            "id": note.id,
+            "deletedAt": (note.modified_at - chrono::Duration::days(1)).to_rfc3339(),
+        }]);
+        let server = StubServer::start(vec![], vec![]);
+        server.script(vec![page]);
+        server.add_to_push_replies(json!({ "accepted": [] }));
+        let mut app = app_connected_to(&server.endpoint);
+        NoteRepository::new(app.db.as_ref().unwrap().connection()).create(&note, key()).unwrap();
+
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        assert!(NoteRepository::new(db.connection()).get(&note.id, key()).unwrap().is_some());
+    }
+
+    #[test]
+    fn being_told_to_wait_holds_off_automatic_syncs() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        app.settings.sync_enabled = true;
+        app.settings.sync_endpoint = Some(server.endpoint.clone());
+        app.settings.auto_sync_interval_minutes = 1;
+        server.fail_next("429 Too Many Requests\r\nRetry-After: 900");
+
+        // Nothing to push, so the pull meets the 429
+        trigger_sync(&mut app);
+
+        let until = app.sync_paused_until.expect("should be told to wait");
+        let wait = until.saturating_duration_since(Instant::now());
+        assert!(wait > Duration::from_secs(800) && wait <= Duration::from_secs(900), "{wait:?}");
+
+        app.last_auto_sync = None;
+        let requests_before = server.all_pulls().len();
+        app.check_auto_sync();
+        assert_eq!(server.all_pulls().len(), requests_before);
+    }
+
+    #[test]
+    fn a_server_cannot_hold_this_device_off_for_ever() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        app.settings.sync_enabled = true;
+        app.settings.sync_endpoint = Some(server.endpoint.clone());
+        server.fail_next("429 Too Many Requests\r\nRetry-After: 999999999");
+
+        trigger_sync(&mut app);
+
+        let wait = app.sync_paused_until.unwrap().saturating_duration_since(Instant::now());
+        assert!(wait <= Duration::from_secs(MAX_RETRY_AFTER_SECONDS));
+    }
+
+    /// 403 means the account is disabled, not that the device is gone. Reactivating the
+    /// account brings the key back, so it has to survive.
+    #[test]
+    fn a_disabled_account_keeps_its_credentials_and_stops_syncing() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        app.settings.sync_enabled = true;
+        app.settings.sync_endpoint = Some(server.endpoint.clone());
+        server.fail_next("403 Forbidden");
+
+        trigger_sync(&mut app);
+
+        assert!(app.error.as_ref().unwrap().contains(t!("sync.account_deactivated").as_ref()));
+        assert!(sync_metadata(&app).api_key.is_some());
+        assert!(app.sync_paused_until.is_some());
+    }
+
+    #[test]
+    fn a_sync_delivers_a_rewrap_it_still_owes() {
+        let crypto = CryptoService::new();
+        let (old_password, new_password) = (uuid::Uuid::new_v4().to_string(), uuid::Uuid::new_v4().to_string());
+        let user_id = "b3c1f5a2-8f0e-4c55-9d52-2f6a1c0e7a11";
+        let wrapping_key = crypto.derive_wrapping_key(&old_password, user_id).unwrap();
+        let old_blob = serde_json::to_string(&crypto.wrap_master_key(&wrapping_key, key()).unwrap()).unwrap();
+
+        let server = StubServer::start(vec![], vec![]);
+        *server.wrapped_key.lock().unwrap() = Some(old_blob.clone());
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        let repo = SyncRepository::new(db.connection());
+        let mut metadata = repo.get_metadata().unwrap().unwrap();
+        metadata.user_id = Some(user_id.to_string());
+        metadata.last_sync_at = Some(Utc::now());
+        metadata.server_key_seen = Some(crypto.hash(&old_blob));
+        metadata.server_key_stale = true;
+        repo.update_metadata(&metadata).unwrap();
+        app.unlock_password = Some(zeroize::Zeroizing::new(new_password.clone()));
+
+        perform_sync(&mut app, false).unwrap();
+
+        let metadata = sync_metadata(&app);
+        assert!(!metadata.server_key_stale);
+        let blob = server.wrapped_key.lock().unwrap().clone().unwrap();
+        assert_ne!(blob, old_blob);
+        let wrapped: EncryptedData = serde_json::from_str(&blob).unwrap();
+        let wrapping_key = crypto.derive_wrapping_key(&new_password, user_id).unwrap();
+        assert_eq!(&crypto.unwrap_master_key(&wrapping_key, &wrapped).unwrap(), key());
+    }
+
+    /// A conflict set up the way a refused push leaves one, and opened for resolving.
+    fn app_resolving_a_conflict(server: &StubServer, note: &Note) -> App {
+        server.refuse(&note.id);
+        let mut app = app_connected_to(&server.endpoint);
+        NoteRepository::new(app.db.as_ref().unwrap().connection()).create(note, key()).unwrap();
+        perform_sync(&mut app, false).unwrap();
+        server.refuse.lock().unwrap().clear();
+        open_conflict_resolution(&mut app, &note.id).unwrap();
+        app
+    }
+
+    #[test]
+    fn keeping_mine_pushes_the_edit_on_top_of_the_server_version() {
+        let note = Note::new("My edit".to_string());
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_resolving_a_conflict(&server, &note);
+
+        resolve_keep_local(&mut app).unwrap();
+        perform_sync(&mut app, false).unwrap();
+
+        let pushed = &server.last_push()["notes"][0];
+        assert_eq!(pushed["id"], json!(note.id));
+        assert_eq!(pushed["parentHash"], json!("server-hash"));
+        assert_eq!(pushed["hashChain"][1], json!("server-hash"));
+        assert_eq!(pushed["hashChain"][2], json!("older-hash"));
+    }
+
+    #[test]
+    fn keeping_the_servers_copy_takes_its_attachments_and_hashes_and_pushes_nothing() {
+        let note = Note::new("My edit".to_string());
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_resolving_a_conflict(&server, &note);
+        let conflict = app.conflict_data.as_mut().unwrap();
+        conflict.server_attachments = vec![AttachmentRef {
+            id: ATTACHMENT_ID.to_string(),
+            filename: encrypted("server.txt"),
+            mime_type: "text/plain".to_string(),
+            size: 3,
+            data: ATTACHMENT_ID.to_string(),
+        }];
+
+        resolve_keep_server(&mut app).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let stored = NoteRepository::new(db.connection()).get(&note.id, key()).unwrap().unwrap();
+        assert_eq!(stored.content, "The server's text");
+        assert_eq!(stored.attachments[0].filename, "server.txt");
+        assert_eq!(stored.content_hash.as_deref(), Some("server-hash"));
+        assert!(!stored.needs_sync);
+        assert!(SyncRepository::new(db.connection()).get_conflict_note_ids().unwrap().is_empty());
+
+        let pushes = server.all_pushes().len();
+        perform_sync(&mut app, false).unwrap();
+        assert_eq!(server.all_pushes().len(), pushes);
+    }
+
+    /// Keep Both is for both versions to reach every device. The copy used to take the
+    /// server's timestamp, so it never went, and the local edit stayed behind too.
+    #[test]
+    fn keeping_both_sends_both_versions_to_the_server() {
+        let note = Note::new("My edit".to_string());
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_resolving_a_conflict(&server, &note);
+        app.conflict_data.as_mut().unwrap().server_attachments = vec![AttachmentRef {
+            id: ATTACHMENT_ID.to_string(),
+            filename: encrypted("server.txt"),
+            mime_type: "text/plain".to_string(),
+            size: 3,
+            data: ATTACHMENT_ID.to_string(),
+        }];
+
+        let copy_id = resolve_keep_both(&mut app).unwrap();
+        perform_sync(&mut app, false).unwrap();
+
+        let pushed = server.last_push();
+        let pushed_ids: Vec<&str> = pushed["notes"].as_array().unwrap().iter()
+            .map(|note| note["id"].as_str().unwrap())
+            .collect();
+        assert!(pushed_ids.contains(&note.id.as_str()));
+        assert!(pushed_ids.contains(&copy_id.as_str()));
+
+        let copy = pushed["notes"].as_array().unwrap().iter().find(|note| note["id"] == json!(copy_id)).unwrap();
+        assert_eq!(copy["attachments"][0]["id"], json!(ATTACHMENT_ID));
+
+        let original = pushed["notes"].as_array().unwrap().iter().find(|n| n["id"] == json!(note.id)).unwrap();
+        assert_eq!(original["parentHash"], json!("server-hash"));
+
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        assert_eq!(note_repo.get(&copy_id, key()).unwrap().unwrap().content, "The server's text");
+        assert_eq!(note_repo.get(&note.id, key()).unwrap().unwrap().content, "My edit");
     }
 }

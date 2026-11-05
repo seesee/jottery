@@ -69,6 +69,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
                         metadata.client_id = Some(clone_result.client_id);
                         metadata.user_id = Some(clone_result.user_id.clone());
                         metadata.sync_enabled = true;
+                        metadata.forget_server_state();
                         metadata.pending_device_name = None; // Clear pending name
                         sync_repo.update_metadata(&metadata)?;
 
@@ -142,6 +143,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
                         metadata.sync_endpoint = endpoint.to_string();
                         metadata.api_key = Some(encrypted_api_key);
                         metadata.sync_enabled = true;
+                        metadata.forget_server_state();
                         metadata.pending_device_name = None; // Clear pending name
                         sync_repo.update_metadata(&metadata)?;
 
@@ -166,6 +168,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
                         metadata.sync_endpoint = endpoint.to_string();
                         metadata.api_key = Some(encrypted_api_key);
                         metadata.sync_enabled = true;
+                        metadata.forget_server_state();
                         sync_repo.update_metadata(&metadata)?;
 
                         // Update app settings and save to database

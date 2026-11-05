@@ -219,6 +219,42 @@ impl<'a> NoteVersionRepository<'a> {
         Ok(result)
     }
 
+    /// A note's versions the server hasn't been sent yet.
+    pub fn get_unpushed_versions(&self, note_id: &str, key: &[u8; 32]) -> Result<Vec<NoteVersion>> {
+        let mut stmt = self.conn.prepare(
+            "SELECT version_key FROM note_versions WHERE note_id = ?1 AND pushed = 0"
+        )?;
+        let unpushed: std::collections::HashSet<String> = stmt
+            .query_map(params![note_id], |row| row.get(0))?
+            .collect::<rusqlite::Result<_>>()?;
+
+        if unpushed.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        Ok(self.get_versions_for_note(note_id, key)?
+            .into_iter()
+            .filter(|version| unpushed.contains(&version.version_key))
+            .collect())
+    }
+
+    /// Note that the server has these versions.
+    pub fn mark_pushed(&self, version_keys: &[String]) -> Result<()> {
+        for version_key in version_keys {
+            self.conn.execute(
+                "UPDATE note_versions SET pushed = 1 WHERE version_key = ?1",
+                params![version_key],
+            )?;
+        }
+        Ok(())
+    }
+
+    /// Forget what the server has, after a restore has replaced what's here.
+    pub fn mark_all_unpushed(&self) -> Result<()> {
+        self.conn.execute("UPDATE note_versions SET pushed = 0", [])?;
+        Ok(())
+    }
+
     /// Get a specific version of a note
     pub fn get_version(&self, note_id: &str, version: i32, key: &[u8; 32]) -> Result<Option<NoteVersion>> {
         let version_key = format!("{}:{}", note_id, version);
@@ -374,8 +410,8 @@ impl<'a> NoteVersionRepository<'a> {
         self.conn.execute(
             "INSERT INTO note_versions (
                 version_key, note_id, version, created_at, synced_at, content, tags,
-                attachments, syntax_language, word_wrap, show_preview, color, reason
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
+                attachments, syntax_language, word_wrap, show_preview, color, reason, pushed
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, 1)
             ON CONFLICT(version_key) DO NOTHING",
             params![
                 &version.version_key,
