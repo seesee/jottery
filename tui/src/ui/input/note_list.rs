@@ -81,11 +81,6 @@ fn cycle_color_backward(current_color: Option<&String>, app: &App) -> Option<Str
 
 /// Handle key events in note list state
 pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
-    // Debug: log which key was pressed
-    if let KeyCode::Char(c) = key.code {
-        app.debug_log(&format!("Key pressed: '{}'", c));
-    }
-
     // Clear sync status on any key (except 'y' which sets it)
     if key.code != KeyCode::Char('y') {
         app.sync_status = None;
@@ -226,6 +221,15 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
     // Handle search mode
     if super::search::handle_search_key(app, key)? {
         return Ok(());
+    }
+
+    // A held Ctrl or Alt makes a key something other than its letter. Only these have a
+    // meaning with Ctrl, which the arms below look for.
+    if let KeyCode::Char(c) = key.code {
+        let unbound_ctrl = key.modifiers.contains(KeyModifiers::CONTROL) && !matches!(c, 'q' | 'd' | 'u' | 'f' | 'b' | 'a');
+        if unbound_ctrl || key.modifiers.contains(KeyModifiers::ALT) {
+            return Ok(());
+        }
     }
 
     // Normal note list mode
@@ -1122,6 +1126,53 @@ mod tests {
     /// Create a key event with no modifiers
     fn key(code: KeyCode) -> KeyEvent {
         KeyEvent::new(code, KeyModifiers::NONE)
+    }
+
+    /// Ctrl+C used to recolour the note, Ctrl+P pin it, Ctrl+S open Settings and Ctrl+R
+    /// open the bin, because the letter arms didn't look at modifiers.
+    #[test]
+    fn a_held_modifier_makes_a_key_something_other_than_its_letter() {
+        for modifier in [KeyModifiers::CONTROL, KeyModifiers::ALT] {
+            for letter in ['p', 's', 'r', 'n', 'z', 'L', 'C', 'y', '/', 't', 'v'] {
+                let mut app = create_test_app();
+                app.notes.push(Note::new("Note".to_string()));
+                app.invalidate_filter_cache();
+
+                handle_note_list_key(&mut app, KeyEvent::new(KeyCode::Char(letter), modifier)).unwrap();
+
+                assert!(matches!(app.state, AppState::NoteList), "{letter} with {modifier:?}");
+                assert!(matches!(app.view_mode, ViewMode::NoteList), "{letter} with {modifier:?}");
+                assert!(!app.notes[0].pinned, "{letter} with {modifier:?}");
+                assert!(!app.search_active, "{letter} with {modifier:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn the_ctrl_shortcuts_still_work() {
+        let mut app = create_test_app();
+        handle_note_list_key(&mut app, KeyEvent::new(KeyCode::Char('d'), KeyModifiers::CONTROL)).unwrap();
+        assert_eq!(app.preview_scroll_offset, 10);
+
+        let mut app = create_test_app();
+        handle_note_list_key(&mut app, KeyEvent::new(KeyCode::Char('q'), KeyModifiers::CONTROL)).unwrap();
+        assert!(matches!(app.state, AppState::Quit));
+    }
+
+    #[test]
+    fn ctrl_c_quits_from_anywhere() {
+        let ctrl_c = KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL);
+
+        let mut app = create_test_app();
+        app.handle_key(ctrl_c).unwrap();
+        assert!(matches!(app.state, AppState::Quit));
+
+        let mut app = create_test_app();
+        app.state = AppState::Locked;
+        app.password_input = "typed so far".to_string();
+        app.handle_key(ctrl_c).unwrap();
+        assert!(matches!(app.state, AppState::Quit));
+        assert_eq!(app.password_input, "typed so far");
     }
 
     /// Create a key event with Ctrl modifier

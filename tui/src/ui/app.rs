@@ -268,6 +268,16 @@ pub struct App {
 }
 
 
+/// The key is wiped on the way out as well as on lock. `key_manager` looks after its own
+/// copy, but this one is a plain array.
+impl Drop for App {
+    fn drop(&mut self) {
+        if let Some(key) = self.key.as_mut() {
+            key.zeroize();
+        }
+    }
+}
+
 impl App {
     /// Create a new app
     pub fn new(db_path: PathBuf, debug_log: Option<Arc<Mutex<File>>>) -> Result<Self> {
@@ -568,6 +578,19 @@ impl App {
             return Ok(());
         }
 
+        // The terminal is in raw mode, so this arrives as a key rather than a signal.
+        // It means the same in every screen, and it isn't text for a prompt.
+        if key.code == KeyCode::Char('c') && key.modifiers.contains(KeyModifiers::CONTROL) {
+            if matches!(self.state, AppState::NoteView) {
+                if let Err(e) = crate::ui::operations::notes::save_note(self) {
+                    self.error = Some(t!("note.save_failed", error = e.to_string()).to_string());
+                    return Ok(());
+                }
+            }
+            self.state = AppState::Quit;
+            return Ok(());
+        }
+
         // Handle help and settings screens separately to avoid borrow issues
         if let AppState::Help { .. } = &self.state {
             return input::help::handle_help_key(self, key);
@@ -636,7 +659,7 @@ impl App {
         self.debug_log("Auto-unlock: attempting to retrieve stored password");
         let password = match self.password_storage.retrieve() {
             RetrieveResult::Found(pwd) => {
-                self.debug_log(&format!("Auto-unlock: found password ({} chars)", pwd.len()));
+                self.debug_log("Auto-unlock: found a stored password");
                 pwd
             }
             RetrieveResult::NotFound => {

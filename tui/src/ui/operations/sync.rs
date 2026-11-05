@@ -2227,9 +2227,9 @@ mod tests {
     #[test]
     fn a_headless_sync_pulls_as_well_as_pushes() {
         let server = StubServer::start(remote_notes(2), vec![]);
-        let connected = app_connected_to(&server.endpoint);
+        let mut connected = app_connected_to(&server.endpoint);
         let path = connected.db_path.clone();
-        let db = connected.db.unwrap();
+        let db = connected.db.take().unwrap();
         NoteRepository::new(db.connection()).create(&Note::new("Written here".to_string()), key()).unwrap();
 
         let mut app = App::headless(path, db, *key()).unwrap();
