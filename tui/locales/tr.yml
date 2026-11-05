@@ -645,3 +645,9 @@ status_bar:
 tags:
   virtual:
     title: "başlık"
+
+calc:
+  line_too_long: "⚠ Satır hesaplamak için çok uzun (sınır %{max} bayt)"
+  numbers_only: "⚠ Calc sayılarla çalışır: metin, demetler ve ; hesaplanmaz"
+  too_deep: "⚠ Çok fazla iç içe parantez (sınır %{max})"
+  gave_up: "Bu notun hesaplanması çok uzun sürdü, bu yüzden sonuçlar olmadan gösteriliyor."

@@ -645,3 +645,9 @@ status_bar:
 tags:
   virtual:
     title: "título"
+
+calc:
+  line_too_long: "⚠ Línea demasiado larga para calcular (límite %{max} bytes)"
+  numbers_only: "⚠ Calc trabaja con números: el texto, las tuplas y ; no se calculan"
+  too_deep: "⚠ Demasiados paréntesis anidados (límite %{max})"
+  gave_up: "Esta nota tardó demasiado en calcularse, así que se muestra sin resultados."

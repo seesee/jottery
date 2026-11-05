@@ -645,3 +645,9 @@ status_bar:
 tags:
   virtual:
     title: "标题"
+
+calc:
+  line_too_long: "⚠ 此行过长，无法计算（上限 %{max} 字节）"
+  numbers_only: "⚠ Calc 只处理数字：文本、元组和 ; 不会计算"
+  too_deep: "⚠ 括号嵌套过多（上限 %{max}）"
+  gave_up: "此笔记计算耗时过长，因此不显示结果。"

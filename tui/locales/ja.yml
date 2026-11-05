@@ -645,3 +645,9 @@ status_bar:
 tags:
   virtual:
     title: "タイトル"
+
+calc:
+  line_too_long: "⚠ 行が長すぎて計算できません（上限 %{max} バイト）"
+  numbers_only: "⚠ Calc は数値のみ扱います：テキスト、タプル、; は計算されません"
+  too_deep: "⚠ 括弧のネストが深すぎます（上限 %{max}）"
+  gave_up: "このノートの計算に時間がかかりすぎたため、結果なしで表示しています。"

@@ -645,3 +645,9 @@ status_bar:
 tags:
   virtual:
     title: "Titel"
+
+calc:
+  line_too_long: "⚠ Zeile zu lang zum Berechnen (Grenze %{max} Byte)"
+  numbers_only: "⚠ Calc rechnet nur mit Zahlen: Text, Tupel und ; werden nicht berechnet"
+  too_deep: "⚠ Zu viele verschachtelte Klammern (Grenze %{max})"
+  gave_up: "Die Berechnung dieser Notiz dauerte zu lange, daher wird sie ohne Ergebnisse angezeigt."

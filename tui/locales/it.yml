@@ -645,3 +645,9 @@ status_bar:
 tags:
   virtual:
     title: "titolo"
+
+calc:
+  line_too_long: "⚠ Riga troppo lunga da calcolare (limite %{max} byte)"
+  numbers_only: "⚠ Calc lavora con i numeri: testo, tuple e ; non vengono calcolati"
+  too_deep: "⚠ Troppe parentesi annidate (limite %{max})"
+  gave_up: "Il calcolo di questa nota ha richiesto troppo tempo, quindi viene mostrata senza risultati."

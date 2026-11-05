@@ -645,3 +645,9 @@ status_bar:
 tags:
   virtual:
     title: "tytuł"
+
+calc:
+  line_too_long: "⚠ Wiersz jest za długi do obliczenia (limit %{max} bajtów)"
+  numbers_only: "⚠ Calc działa na liczbach: tekst, krotki i ; nie są obliczane"
+  too_deep: "⚠ Zbyt wiele zagnieżdżonych nawiasów (limit %{max})"
+  gave_up: "Obliczanie tej notatki trwało zbyt długo, więc jest wyświetlana bez wyników."

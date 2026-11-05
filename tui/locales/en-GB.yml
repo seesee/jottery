@@ -686,3 +686,9 @@ status_bar:
 tags:
   virtual:
     title: "title"
+
+calc:
+  line_too_long: "⚠ Line too long to calculate (limit %{max} bytes)"
+  numbers_only: "⚠ Calc works with numbers: text, tuples and ; are not calculated"
+  too_deep: "⚠ Too many nested brackets (limit %{max})"
+  gave_up: "This note took too long to calculate, so it is shown without results."

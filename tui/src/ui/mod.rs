@@ -37,4 +37,4 @@ pub mod note_colors;
 pub use app::App;
 pub use color_scheme::ColorScheme;
 pub use event::{Event, EventHandler};
-pub use terminal::Tui;
+pub use terminal::{install_panic_hook, Tui};

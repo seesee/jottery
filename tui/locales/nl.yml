@@ -645,3 +645,9 @@ status_bar:
 tags:
   virtual:
     title: "titel"
+
+calc:
+  line_too_long: "⚠ Regel te lang om te berekenen (limiet %{max} bytes)"
+  numbers_only: "⚠ Calc werkt met getallen: tekst, tupels en ; worden niet berekend"
+  too_deep: "⚠ Te veel geneste haakjes (limiet %{max})"
+  gave_up: "Het berekenen van deze notitie duurde te lang, dus wordt ze zonder resultaten getoond."

@@ -1265,6 +1265,7 @@ fn run() -> Result<()> {
     };
 
     // Create TUI
+    ui::install_panic_hook();
     let mut tui = Tui::new()?;
     tui.enter()?;
 

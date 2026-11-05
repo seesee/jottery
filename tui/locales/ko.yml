@@ -645,3 +645,9 @@ status_bar:
 tags:
   virtual:
     title: "제목"
+
+calc:
+  line_too_long: "⚠ 줄이 너무 길어 계산할 수 없습니다 (제한 %{max}바이트)"
+  numbers_only: "⚠ Calc는 숫자만 처리합니다: 텍스트, 튜플, ;는 계산되지 않습니다"
+  too_deep: "⚠ 중첩된 괄호가 너무 많습니다 (제한 %{max})"
+  gave_up: "이 노트를 계산하는 데 시간이 너무 오래 걸려 결과 없이 표시합니다."
