@@ -5,6 +5,7 @@
   import { toast } from '../lib/toast.svelte';
   import { _ } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
+  import Modal from './Modal.svelte';
 
   interface Props {
     userId: string;
@@ -12,6 +13,9 @@
   }
 
   let { userId, onClose }: Props = $props();
+
+  const id = $props.id();
+  const titleId = `${id}-title`;
 
   let user = $state<UserDetail | null>(null);
   let loading = $state(true);
@@ -221,11 +225,15 @@
   });
 </script>
 
-<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-  <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+<Modal
+  labelledBy={titleId}
+  {onClose}
+  overlayClass="p-4"
+  panelClass="max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+>
     <!-- Header -->
     <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-      <h2 class="text-xl font-semibold text-gray-900">{$_('users.detail.title')}</h2>
+      <h2 id={titleId} class="text-xl font-semibold text-gray-900">{$_('users.detail.title')}</h2>
       <button
         onclick={onClose}
         class="text-gray-400 hover:text-gray-600 transition-colors"
@@ -244,7 +252,7 @@
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
       {:else if error}
-        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div role="alert" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {error}
         </div>
       {:else if user}
@@ -462,6 +470,7 @@
                 <input
                   id="newPassword"
                   type="password"
+                  autocomplete="new-password"
                   bind:value={newPassword}
                   placeholder={$_('users.detail.newPasswordPlaceholder')}
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -475,6 +484,7 @@
                 <input
                   id="confirmPassword"
                   type="password"
+                  autocomplete="new-password"
                   bind:value={confirmPassword}
                   placeholder={$_('users.detail.confirmPasswordPlaceholder')}
                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -535,10 +545,15 @@
                         {#if editingDevice?.id === device.id}
                           <input
                             type="text"
+                            aria-label={$_('devices.name')}
                             bind:value={editingDevice.name}
                             onkeydown={(e) => {
                               if (e.key === 'Enter') handleRenameDevice();
-                              if (e.key === 'Escape') editingDevice = null;
+                              if (e.key === 'Escape') {
+                                // Ends the rename, not the whole dialog
+                                e.stopPropagation();
+                                editingDevice = null;
+                              }
                             }}
                             class="px-2 py-1 border border-gray-300 rounded text-sm w-full"
                             use:focusOnMount
@@ -631,8 +646,7 @@
         {$_('common.close')}
       </button>
     </div>
-  </div>
-</div>
+</Modal>
 
 {#if confirmAction?.type === 'revoke'}
   <ConfirmModal

@@ -28,7 +28,6 @@
   // Account actions state
   let showDeleteNotesModal = $state(false);
   let showDeleteModal = $state(false);
-  let deleteConfirmText = $state('');
   let actionLoading = $state(false);
 
   async function handlePasswordChange(e: Event) {
@@ -85,10 +84,6 @@
   }
 
   async function handleDelete() {
-    if (deleteConfirmText !== 'DELETE') {
-      return;
-    }
-
     actionLoading = true;
     try {
       await userApi.deleteAccount();
@@ -100,7 +95,6 @@
     } finally {
       actionLoading = false;
       showDeleteModal = false;
-      deleteConfirmText = '';
     }
   }
 </script>
@@ -138,7 +132,7 @@
 
     <form onsubmit={handlePasswordChange} class="space-y-4 max-w-md">
       {#if passwordError}
-        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div role="alert" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
           {passwordError}
         </div>
       {/if}
@@ -150,6 +144,7 @@
         <input
           id="currentPassword"
           type="password"
+          autocomplete="current-password"
           required
           bind:value={currentPassword}
           disabled={passwordLoading}
@@ -164,6 +159,7 @@
         <input
           id="newPassword"
           type="password"
+          autocomplete="new-password"
           required
           minlength="12"
           bind:value={newPassword}
@@ -180,6 +176,7 @@
         <input
           id="confirmPassword"
           type="password"
+          autocomplete="new-password"
           required
           minlength="12"
           bind:value={confirmPassword}
@@ -249,41 +246,15 @@
 
 <!-- Delete Confirmation Modal -->
 {#if showDeleteModal}
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
-      <h3 class="text-lg font-semibold text-red-600 mb-2">{$_('userPortal.settings.deleteConfirmTitle')}</h3>
-      <p class="text-gray-600 mb-4">{$_('userPortal.settings.deleteConfirmMessage')}</p>
-
-      <div class="mb-4">
-        <label for="deleteConfirm" class="block text-sm font-medium text-gray-700 mb-1">
-          {$_('userPortal.settings.deleteConfirmLabel')}
-        </label>
-        <input
-          id="deleteConfirm"
-          type="text"
-          bind:value={deleteConfirmText}
-          disabled={actionLoading}
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 disabled:bg-gray-100"
-          placeholder="DELETE"
-        />
-      </div>
-
-      <div class="flex justify-end space-x-3">
-        <button
-          onclick={() => { showDeleteModal = false; deleteConfirmText = ''; }}
-          disabled={actionLoading}
-          class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
-        >
-          {$_('common.cancel')}
-        </button>
-        <button
-          onclick={handleDelete}
-          disabled={actionLoading || deleteConfirmText !== 'DELETE'}
-          class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-        >
-          {actionLoading ? $_('common.deleting') : $_('userPortal.settings.deleteForever')}
-        </button>
-      </div>
-    </div>
-  </div>
+  <ConfirmModal
+    title={$_('userPortal.settings.deleteConfirmTitle')}
+    message={$_('userPortal.settings.deleteConfirmMessage')}
+    confirmText={actionLoading ? $_('common.deleting') : $_('userPortal.settings.deleteForever')}
+    cancelText={$_('common.cancel')}
+    typeToConfirm={{ value: 'DELETE', label: $_('userPortal.settings.deleteConfirmLabel') }}
+    onConfirm={handleDelete}
+    onCancel={() => showDeleteModal = false}
+    busy={actionLoading}
+    danger={true}
+  />
 {/if}
