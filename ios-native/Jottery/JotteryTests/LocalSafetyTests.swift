@@ -129,31 +129,75 @@ struct LocalSafetyTests {
         #expect(state.displayedNote(id: note.id)?.attachments.first?.filename == "divorce-petition.pdf")
     }
 
-    /// Runs the real migration over a name an older build left behind.
-    @Test func upgradingClearsNamesAlreadyInTheColumn() throws {
+    /// A database as an older build left it: one attachment with a filename, and
+    /// `ios_009_local_sync_tracking` still to run.
+    private func databaseBeforeSyncTracking(extra: (Database) throws -> Void = { _ in }) throws -> String {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("jottery-migration-tests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let path = dir.appendingPathComponent("test.db").path
-        do {
-            let db = try DatabaseManager(path: path)
-            try db.dbPool.write { db in
-                try db.execute(sql: """
-                    INSERT INTO attachments (id, filename, mime_type, size, data)
-                    VALUES ('a', 'passport-scan.jpg', 'image/jpeg', 1, x'00')
-                """)
-                try db.execute(sql: "ALTER TABLE attachments DROP COLUMN uploaded")
-                try db.execute(sql: "ALTER TABLE notes DROP COLUMN local_deleted_at")
-                try db.execute(sql: "ALTER TABLE notes DROP COLUMN from_inbox")
-                try db.execute(sql: "DELETE FROM grdb_migrations WHERE identifier = 'ios_009_local_sync_tracking'")
-            }
-            try db.dbPool.close()
+        let db = try DatabaseManager(path: path)
+        try db.dbPool.write { db in
+            try db.execute(sql: """
+                INSERT INTO attachments (id, filename, mime_type, size, data)
+                VALUES ('a', 'passport-scan.jpg', 'image/jpeg', 1, x'00')
+            """)
+            try db.execute(sql: "ALTER TABLE attachments DROP COLUMN uploaded")
+            try db.execute(sql: "ALTER TABLE notes DROP COLUMN local_deleted_at")
+            try db.execute(sql: "ALTER TABLE notes DROP COLUMN from_inbox")
+            try db.execute(sql: "DELETE FROM grdb_migrations WHERE identifier = 'ios_009_local_sync_tracking'")
+            try extra(db)
+        }
+        try db.dbPool.close()
+        return path
+    }
+
+    /// Attachment data lives in the row, so changing a row's size rewrites the data
+    /// too. A migration runs at launch, and on a real vault that took long enough
+    /// for iOS to kill the app, on every launch: the rewrite rolled back each time.
+    /// A trigger shows it whatever the size of the data, with no timing involved.
+    @Test func aMigrationNeverRewritesAttachments() throws {
+        let path = try databaseBeforeSyncTracking { db in
+            try db.execute(sql: "CREATE TABLE attachment_writes (id TEXT)")
+            try db.execute(sql: """
+                CREATE TRIGGER count_attachment_writes AFTER UPDATE ON attachments
+                BEGIN INSERT INTO attachment_writes VALUES (new.id); END
+            """)
         }
 
         let upgraded = try DatabaseManager(path: path)
 
+        let writes = try upgraded.dbPool.read { try Int.fetchOne($0, sql: "SELECT COUNT(*) FROM attachment_writes") }
+        #expect(writes == 0)
+    }
+
+    /// Runs the real migration over a name an older build left behind.
+    @Test func namesAlreadyInTheColumnAreClearedAfterTheUpgrade() throws {
+        let upgraded = try DatabaseManager(path: try databaseBeforeSyncTracking())
+        let repo = AttachmentRepository(db: upgraded)
+
+        #expect(try repo.clearOldFilenames(limit: 5) == 1)
+
         let names = try upgraded.dbPool.read { try String.fetchAll($0, sql: "SELECT filename FROM attachments") }
         #expect(names == [""])
+    }
+
+    @Test func oldNamesAreClearedAFewAtATime() throws {
+        let db = try DatabaseManager(path: try databaseBeforeSyncTracking())
+        try db.dbPool.write { db in
+            for index in 0..<11 {
+                try db.execute(sql: """
+                    INSERT INTO attachments (id, filename, mime_type, size, data)
+                    VALUES (?, 'scan.jpg', 'image/jpeg', 1, x'00')
+                """, arguments: ["attachment-\(index)"])
+            }
+        }
+        let repo = AttachmentRepository(db: db)
+
+        #expect(try repo.clearOldFilenames(limit: 5) == 5)
+        #expect(try repo.clearOldFilenames(limit: 5) == 5)
+        #expect(try repo.clearOldFilenames(limit: 5) == 2)
+        #expect(try repo.clearOldFilenames(limit: 5) == 0)
     }
 
     /// A note binned before this device kept its own time only has `deleted_at`,

@@ -92,6 +92,11 @@ final class DatabaseManager: Sendable {
 
     /// Run all migrations matching the TUI's 15 migration files.
     private func migrate() throws {
+        // Migrations run at launch, and iOS kills an app that takes over 10 seconds
+        // to start. Attachment data lives in its row, so never UPDATE `attachments`
+        // here: changing a row's size rewrites its data, and a real vault holds
+        // hundreds of megabytes. The kill rolls the migration back, so it would
+        // happen on every launch. Do that work in the background, in small batches.
         var migrator = DatabaseMigrator()
 
         // 001_initial
@@ -334,7 +339,8 @@ final class DatabaseManager: Sendable {
 
         // What the server has been sent and told. Filenames in `attachments`
         // were never read, and everything uses the refs in the note, so the
-        // plaintext names older builds left there are simply removed.
+        // plaintext names older builds left there are cleared after launch, by
+        // AppState, rather than here.
         migrator.registerMigration("ios_009_local_sync_tracking") { db in
             try db.execute(sql: "ALTER TABLE notes ADD COLUMN local_deleted_at TEXT")
             try db.execute(sql: "ALTER TABLE notes ADD COLUMN from_inbox INTEGER NOT NULL DEFAULT 0")
@@ -346,7 +352,6 @@ final class DatabaseManager: Sendable {
                 arguments: [Date().iso8601]
             )
             try db.execute(sql: "ALTER TABLE attachments ADD COLUMN uploaded INTEGER NOT NULL DEFAULT 0")
-            try db.execute(sql: "UPDATE attachments SET filename = ''")
         }
 
         migrator.registerMigration("ios_w3_settings_1") { db in

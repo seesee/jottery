@@ -57,6 +57,27 @@ final class QuickActionSceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 }
 
+// MARK: - Launch
+
+/// Shown until the database is open. Usually gone before the progress appears, so
+/// that a normal launch doesn't flash a spinner.
+struct LaunchView: View {
+    @State private var isTakingAWhile = false
+
+    var body: some View {
+        ZStack {
+            Color(.systemBackground).ignoresSafeArea()
+            if isTakingAWhile {
+                ProgressView(L.launchOpening)
+            }
+        }
+        .task {
+            try? await Task.sleep(for: .milliseconds(600))
+            isTakingAWhile = true
+        }
+    }
+}
+
 // MARK: - Content View
 
 struct ContentView: View {
@@ -65,7 +86,9 @@ struct ContentView: View {
 
     var body: some View {
         Group {
-            if appState.isFirstLaunch {
+            if !appState.isDatabaseReady {
+                LaunchView()
+            } else if appState.isFirstLaunch {
                 SetupScreen()
             } else if appState.isLocked {
                 UnlockScreen()
@@ -86,8 +109,8 @@ struct ContentView: View {
                 .ignoresSafeArea()
             }
         }
-        .onAppear {
-            appState.initialise()
+        .task {
+            await appState.initialise()
             pickUpPendingShortcut()
             #if DEBUG
             DemoSeedService.runIfRequested(appState: appState)
