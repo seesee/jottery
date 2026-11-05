@@ -66,6 +66,7 @@ const BACKUP_FILE_EXTENSION = '.jottery-backup';
 // Batch sizes for different record types
 const NOTE_BATCH_SIZE = 250;
 const ATTACHMENT_BATCH_SIZE = 50; // Larger items, smaller batches
+const ATTACHMENT_BATCH_BYTES = 16 * 1024 * 1024; // Fifty photos are too much for one batch
 const VERSION_BATCH_SIZE = 250;
 
 // JWE algorithms
@@ -403,15 +404,8 @@ export async function createBackup(onProgress?: BackupProgressCallback): Promise
   return backup;
 }
 
-/**
- * Create a batched, compressed backup (v3.0)
- *
- * Items are batched, then each batch is: JSON → compress → encrypt.
- * This significantly reduces backup size and memory usage for large collections.
- */
-export async function createBatchedBackup(
-  onProgress?: BackupProgressCallback
-): Promise<BackupDataV3> {
+/** The key and metadata a backup needs, which also means the app is unlocked */
+async function backupKeyAndMetadata(): Promise<{ keyBytes: Uint8Array; encryption: EncryptionMetadata }> {
   // Get master key (required - must be unlocked)
   const masterKey = keyManager.getMasterKey();
   if (!masterKey) {
@@ -424,8 +418,21 @@ export async function createBatchedBackup(
     throw new Error('No encryption metadata found. Application not initialised.');
   }
 
-  const keyBytes = masterKey.keyBytes;
+  return { keyBytes: masterKey.keyBytes, encryption };
+}
 
+/**
+ * Make every batch of a backup, handing each to `write` as soon as it exists. The
+ * caller decides what to keep, so a backup need never hold more than one batch of
+ * attachments.
+ *
+ * Items are batched, then each batch is: JSON → compress → encrypt.
+ */
+async function writeBatches(
+  keyBytes: Uint8Array,
+  write: (batch: BatchRecord) => void,
+  onProgress?: BackupProgressCallback
+): Promise<BackupSummary> {
   onProgress?.({ phase: 'counting' });
 
   // Gather all data
@@ -447,14 +454,13 @@ export async function createBatchedBackup(
   const totalBatches = noteBatches + attachmentBatches + versionBatches + 2; // +2 for settings/sync batches
 
   let currentBatch = 0;
-  const batches: BatchRecord[] = [];
 
   // Process notes in batches
   const noteBatchArrays = splitIntoBatches(notes, NOTE_BATCH_SIZE);
   for (let i = 0; i < noteBatchArrays.length; i++) {
     const batch = noteBatchArrays[i];
     const jwe = await encryptBatch(batch, keyBytes);
-    batches.push({
+    write({
       type: 'notes',
       index: i,
       count: batch.length,
@@ -470,9 +476,27 @@ export async function createBatchedBackup(
     onProgress?.({ phase: 'encrypting', current: currentBatch, total: totalBatches, item: 'notes' });
   }
 
-  // Process attachments in batches (need to load blob data first)
-  // Report progress during loading since this can be slow for many attachments
-  const attachmentRecords: AttachmentRecord[] = [];
+  // Attachments are encrypted as they're read. These are what can run to gigabytes,
+  // and they're base64 strings by this point, so only one batch of them can be held.
+  let pending: AttachmentRecord[] = [];
+  let pendingBytes = 0;
+  let attachmentBatchIndex = 0;
+  let attachmentCount = 0;
+
+  const writePendingAttachments = async () => {
+    if (pending.length === 0) return;
+    const jwe = await encryptBatch(pending, keyBytes);
+    write({
+      type: 'attachments',
+      index: attachmentBatchIndex++,
+      count: pending.length,
+      data: jwe,
+    });
+    attachmentCount += pending.length;
+    pending = [];
+    pendingBytes = 0;
+  };
+
   for (let idx = 0; idx < attachmentIds.length; idx++) {
     const id = attachmentIds[idx];
     onProgress?.({
@@ -486,50 +510,35 @@ export async function createBatchedBackup(
     const thumbnail = await attachmentRepository.getThumbnail(id);
 
     if (blob) {
-      attachmentRecords.push({
+      const record: AttachmentRecord = {
         id,
         blob: arrayBufferToBase64(blob),
         thumbnail: thumbnail ? arrayBufferToBase64(thumbnail) : undefined,
-      });
+      };
+      pending.push(record);
+      pendingBytes += record.blob.length + (record.thumbnail?.length ?? 0);
+    }
+
+    if (pending.length >= ATTACHMENT_BATCH_SIZE || pendingBytes >= ATTACHMENT_BATCH_BYTES) {
+      await writePendingAttachments();
     }
   }
+  await writePendingAttachments();
 
-  const attachmentBatchArrays = splitIntoBatches(attachmentRecords, ATTACHMENT_BATCH_SIZE);
-  for (let i = 0; i < attachmentBatchArrays.length; i++) {
-    const batch = attachmentBatchArrays[i];
-    const jwe = await encryptBatch(batch, keyBytes);
-    batches.push({
-      type: 'attachments',
-      index: i,
-      count: batch.length,
-      data: jwe,
-    });
-    currentBatch++;
-    onProgress?.({
-      phase: 'encrypting',
-      current: currentBatch,
-      total: totalBatches,
-      item: 'attachments',
-    });
-  }
-
-  // If no attachments, still report progress
-  if (attachmentBatchArrays.length === 0) {
-    currentBatch++;
-    onProgress?.({
-      phase: 'encrypting',
-      current: currentBatch,
-      total: totalBatches,
-      item: 'attachments',
-    });
-  }
+  currentBatch += attachmentBatches;
+  onProgress?.({
+    phase: 'encrypting',
+    current: currentBatch,
+    total: totalBatches,
+    item: 'attachments',
+  });
 
   // Process versions in batches
   const versionBatchArrays = splitIntoBatches(versions, VERSION_BATCH_SIZE);
   for (let i = 0; i < versionBatchArrays.length; i++) {
     const batch = versionBatchArrays[i];
     const jwe = await encryptBatch(batch, keyBytes);
-    batches.push({
+    write({
       type: 'versions',
       index: i,
       count: batch.length,
@@ -558,7 +567,7 @@ export async function createBatchedBackup(
   // Process saved searches (usually small, single batch)
   if (savedSearches.length > 0) {
     const jwe = await encryptBatch(savedSearches, keyBytes);
-    batches.push({
+    write({
       type: 'saved_searches',
       index: 0,
       count: savedSearches.length,
@@ -571,7 +580,7 @@ export async function createBatchedBackup(
   // Process settings (single item batch)
   const settings = await settingsRepository.get();
   const settingsJwe = await encryptBatch([settings], keyBytes);
-  batches.push({
+  write({
     type: 'settings',
     index: 0,
     count: 1,
@@ -584,7 +593,7 @@ export async function createBatchedBackup(
   const syncMetadata = await syncRepository.getMetadata();
   if (syncMetadata) {
     const jwe = await encryptBatch([syncMetadata], keyBytes);
-    batches.push({
+    write({
       type: 'sync_metadata',
       index: 0,
       count: 1,
@@ -594,21 +603,58 @@ export async function createBatchedBackup(
 
   onProgress?.({ phase: 'complete', current: totalBatches, total: totalBatches });
 
-  const backup: BackupDataV3 = {
+  return {
+    notes: notes.length,
+    attachments: attachmentCount,
+    versions: versions.length,
+    savedSearches: savedSearches.length,
+  };
+}
+
+/**
+ * Create a batched, compressed backup (v3.0) as an object in memory.
+ *
+ * The whole backup stays in memory, so for saving one use createBackupFile.
+ */
+export async function createBatchedBackup(
+  onProgress?: BackupProgressCallback
+): Promise<BackupDataV3> {
+  const { keyBytes, encryption } = await backupKeyAndMetadata();
+
+  const batches: BatchRecord[] = [];
+  const summary = await writeBatches(keyBytes, batch => batches.push(batch), onProgress);
+
+  return {
     version: BACKUP_VERSION,
     type: BACKUP_TYPE,
     createdAt: new Date().toISOString(),
     encryption,
     batches,
-    summary: {
-      notes: notes.length,
-      attachments: attachmentRecords.length,
-      versions: versions.length,
-      savedSearches: savedSearches.length,
-    },
+    summary,
   };
+}
 
-  return backup;
+/**
+ * Create a backup file (v3.0), one batch at a time. Each goes into a Blob as soon as
+ * it's made, which the browser keeps out of the page's memory, so the size of a vault
+ * doesn't decide whether it can be backed up.
+ */
+export async function createBackupFile(onProgress?: BackupProgressCallback): Promise<Blob> {
+  const { keyBytes, encryption } = await backupKeyAndMetadata();
+
+  const parts: BlobPart[] = [
+    backupFileHeader({ version: BACKUP_VERSION, type: BACKUP_TYPE, createdAt: new Date().toISOString(), encryption }),
+    ',\n"batches":[\n',
+  ];
+  let separator = '';
+
+  const summary = await writeBatches(keyBytes, batch => {
+    parts.push(new Blob([separator, JSON.stringify(batch)]));
+    separator = ',\n';
+  }, onProgress);
+
+  parts.push('\n],\n"summary":', JSON.stringify(summary), '\n}');
+  return new Blob(parts, { type: 'application/json' });
 }
 
 /**
@@ -1507,6 +1553,16 @@ export async function restoreFromBackup(
   throw new Error('Unknown backup format');
 }
 
+/** A backup file up to its batches. docs/backup-format.md says why the order matters. */
+function backupFileHeader(backup: Pick<BackupData, 'version' | 'type' | 'createdAt' | 'encryption'>): string {
+  return [
+    '{\n"version":', JSON.stringify(backup.version),
+    ',\n"type":', JSON.stringify(backup.type),
+    ',\n"createdAt":', JSON.stringify(backup.createdAt),
+    ',\n"encryption":', JSON.stringify(backup.encryption),
+  ].join('');
+}
+
 /**
  * Download a backup as a file
  *
@@ -1516,17 +1572,7 @@ export async function restoreFromBackup(
 export function downloadBackup(backup: BackupData): void {
   // Build JSON in chunks to avoid string length limits
   // Use newlines between records to enable streaming parsing on import
-  const chunks: string[] = [];
-
-  // Opening structure (with newlines for readability and streaming)
-  chunks.push('{\n"version":');
-  chunks.push(JSON.stringify(backup.version));
-  chunks.push(',\n"type":');
-  chunks.push(JSON.stringify(backup.type));
-  chunks.push(',\n"createdAt":');
-  chunks.push(JSON.stringify(backup.createdAt));
-  chunks.push(',\n"encryption":');
-  chunks.push(JSON.stringify(backup.encryption));
+  const chunks: string[] = [backupFileHeader(backup)];
 
   if (isBackupV3(backup)) {
     // v3.0 format: batches array and summary
@@ -1554,7 +1600,11 @@ export function downloadBackup(backup: BackupData): void {
     chunks.push('\n]\n}');
   }
 
-  const blob = new Blob(chunks, { type: 'application/json' });
+  downloadBackupFile(new Blob(chunks, { type: 'application/json' }));
+}
+
+/** Save a backup file made by createBackupFile */
+export function downloadBackupFile(blob: Blob): void {
   const url = URL.createObjectURL(blob);
 
   // Generate filename with date
@@ -1778,12 +1828,14 @@ export const backupService = {
   verifyBackupContents,
   createBackup,
   createBatchedBackup,
+  createBackupFile,
   validateBackup,
   verifyBackupPassword,
   restoreBackup,
   restoreBatchedBackup,
   restoreFromBackup,
   downloadBackup,
+  downloadBackupFile,
   getBackupStats,
   BACKUP_FILE_EXTENSION,
   // Constants for external use

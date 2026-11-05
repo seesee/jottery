@@ -107,7 +107,8 @@ As RFC 7516 requires, **the additional authenticated data is the ASCII bytes of 
 first part of the token**, the base64url protected header. Sealing with no additional
 data produces a token that looks right and won't decrypt.
 
-Web writes at most 250 notes, 50 attachments or 250 versions per batch. A reader
+Web writes at most 250 notes, 50 attachments or 250 versions per batch, and starts a
+new batch of attachments once one holds about 16 MB. A reader
 shouldn't depend on those sizes, or on the order of the batches. A type with nothing to
 hold can be left out. `settings` and `sync_metadata` are optional, and iOS writes
 neither.

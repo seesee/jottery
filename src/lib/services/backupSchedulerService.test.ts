@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const createBackup = vi.fn();
-const createBatchedBackup = vi.fn(async () => ({ version: '3.0' }));
-const downloadBackup = vi.fn();
+const createBackupFile = vi.fn(async () => ({ version: '3.0' }));
+const downloadBackupFile = vi.fn();
 
-vi.mock('./backupService', () => ({ createBackup, createBatchedBackup, downloadBackup }));
+vi.mock('./backupService', () => ({ createBackup, createBackupFile, downloadBackupFile }));
 vi.mock('./settingsRepository', () => ({
   settingsRepository: {
     get: vi.fn(async () => ({})),
@@ -21,8 +21,8 @@ describe('automatic backups', () => {
 
     await triggerAutoBackup();
 
-    expect(createBatchedBackup).toHaveBeenCalledOnce();
+    expect(createBackupFile).toHaveBeenCalledOnce();
     expect(createBackup).not.toHaveBeenCalled();
-    expect(downloadBackup).toHaveBeenCalledWith({ version: '3.0' });
+    expect(downloadBackupFile).toHaveBeenCalledWith({ version: '3.0' });
   });
 });

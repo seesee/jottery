@@ -3,7 +3,7 @@
   import { settings, isLocked, notes } from '../stores/appStore';
   import { settingsRepository, deleteAllLocalData, noteService, searchService, syncService, syncRepository, keyManager, cryptoService, lock, passwordStorageService, sessionStorageService, createSyncRecoveryNote, onboardFromServer, uploadWrappedKeyToServer, verifyUnlockPassword } from '../services';
   import { exportAllNotes, downloadExport, parseImportFile, importNotes } from '../services/exportService';
-  import { createBatchedBackup, downloadBackup } from '../services/backupService';
+  import { createBackupFile, downloadBackupFile } from '../services/backupService';
   import { backupSchedulerService } from '../services/backupSchedulerService';
   import { authService } from '../services/authService';
   import { _ } from 'svelte-i18n';
@@ -1068,7 +1068,7 @@
     progressTotal = 0;
 
     try {
-      const backup = await createBatchedBackup((progress) => {
+      const backup = await createBackupFile((progress) => {
         if (progress.total) progressTotal = progress.total;
         if (progress.current) progressCurrent = progress.current;
         // Show phase-specific message
@@ -1078,7 +1078,7 @@
           progressMessage = $_('backup.encrypting');
         }
       });
-      downloadBackup(backup);
+      downloadBackupFile(backup);
       // Record the backup to reset counters and hide reminder
       await backupSchedulerService.recordBackup();
       toast.success($_('backup.created'));
