@@ -249,7 +249,7 @@ A push with `attachmentsAuthoritative: true` means every note in it carries its 
 
 There are two kinds of deletion.
 
-**Soft delete** is an ordinary note update with `deleted: true` and `deletedAt`, pushed in `notes`. It syncs like any other edit. The server purges soft-deleted notes 30 days after `deletedAt`.
+**Soft delete** is an ordinary note update with `deleted: true` and `deletedAt`, pushed in `notes`. It syncs like any other edit. The server purges soft-deleted notes 30 days after it received them, and records a tombstone as it does, with the note's `deletedAt`.
 
 **Permanent delete**, as when the bin is emptied, is pushed in `deletions` with the time it happened. The server deletes the note and records a tombstone, which other devices receive in `deletions`.
 
@@ -268,7 +268,7 @@ A client that gets an id in `rejectedDeletions` should **stop sending that delet
 
 A deletion for a note the server doesn't have is ignored. No tombstone is recorded, and it isn't reported.
 
-Don't use `DELETE /api/v1/sync/notes/:id`. It records no tombstone, so other devices never hear about the deletion. No client uses it.
+Don't use `DELETE /api/v1/sync/notes/:id`. It bypasses the rule above: it deletes whatever edit the server holds. No client uses it.
 
 ## Other endpoints
 

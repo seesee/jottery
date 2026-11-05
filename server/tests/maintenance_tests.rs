@@ -45,3 +45,138 @@ async fn expired_sessions_are_removed_and_live_ones_kept() {
     assert!(!session_exists(&db.pool, &expired).await);
     assert!(session_exists(&db.pool, &live).await);
 }
+
+/// A device that signs in as `user`, with a soft-deleted note on the server.
+async fn soft_deleted_note(db: &TestDb, app: &axum::Router, deleted_at: &str) -> (String, String) {
+    let user = create_user(&db.pool, &format!("{}@example.com", new_id()), &random_password()).await;
+    let (_, key) = create_device(&db.pool, &user).await;
+    let id = new_id();
+    let mut pushed = note(&id, "binned", "2026-02-01T00:00:00Z");
+    pushed["deleted"] = serde_json::json!(true);
+    pushed["deletedAt"] = serde_json::json!(deleted_at);
+    push(app, &key, serde_json::json!({ "notes": [pushed] })).await;
+    (id, key)
+}
+
+/// Pretend the server has held this note in the bin for a long time.
+async fn age_on_server(pool: &SqlitePool, id: &str) {
+    sqlx::query("UPDATE notes SET server_modified_at = '2020-01-01T00:00:00+00:00' WHERE id = ?")
+        .bind(id)
+        .execute(pool)
+        .await
+        .unwrap();
+}
+
+async fn note_exists(pool: &SqlitePool, id: &str) -> bool {
+    sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM notes WHERE id = ?")
+        .bind(id)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+        > 0
+}
+
+#[tokio::test]
+async fn purging_a_note_tells_devices_that_missed_the_soft_delete() {
+    // A device offline while the note sat in the bin still shows it as live, and
+    // with nothing to tell it otherwise, its next edit would bring the note back.
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let (id, key) = soft_deleted_note(&db, &app, "2026-02-01T00:00:00Z").await;
+    age_on_server(&db.pool, &id).await;
+    let before = pull(&app, &key, serde_json::json!({ "cursor": "" })).await;
+
+    maintenance::run_once(&db.pool).await.unwrap();
+
+    assert!(!note_exists(&db.pool, &id).await);
+
+    let by_cursor = pull(&app, &key, serde_json::json!({ "cursor": before["nextCursor"] })).await;
+    assert_eq!(by_cursor["deletions"][0]["id"], serde_json::json!(id));
+    assert_eq!(by_cursor["deletions"][0]["deletedAt"], serde_json::json!("2026-02-01T00:00:00Z"));
+
+    let by_time = pull(&app, &key, serde_json::json!({ "lastSyncAt": before["syncedAt"] })).await;
+    assert_eq!(by_time["deletions"][0]["id"], serde_json::json!(id));
+}
+
+#[tokio::test]
+async fn an_edit_made_after_the_deletion_still_brings_a_purged_note_back() {
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let (id, key) = soft_deleted_note(&db, &app, "2026-02-01T00:00:00Z").await;
+    age_on_server(&db.pool, &id).await;
+    maintenance::run_once(&db.pool).await.unwrap();
+
+    let response = push(
+        &app,
+        &key,
+        serde_json::json!({ "notes": [note(&id, "restored", "2026-03-01T00:00:00Z")] }),
+    )
+    .await;
+
+    assert_eq!(response["accepted"][0]["id"], serde_json::json!(id));
+    assert!(note_exists(&db.pool, &id).await);
+}
+
+#[tokio::test]
+async fn a_client_clock_cannot_rush_the_purge() {
+    // deletedAt comes from the client. A note that arrives with an old one still
+    // gets its 30 days on the server, for other devices to see it.
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let (id, _) = soft_deleted_note(&db, &app, "2000-01-01T00:00:00Z").await;
+
+    maintenance::run_once(&db.pool).await.unwrap();
+
+    assert!(note_exists(&db.pool, &id).await);
+}
+
+#[tokio::test]
+async fn a_binned_note_with_no_deletion_time_is_still_purged() {
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let (id, key) = soft_deleted_note(&db, &app, "2026-02-01T00:00:00Z").await;
+    sqlx::query("UPDATE notes SET deleted_at = NULL WHERE id = ?")
+        .bind(&id)
+        .execute(&db.pool)
+        .await
+        .unwrap();
+    age_on_server(&db.pool, &id).await;
+
+    maintenance::run_once(&db.pool).await.unwrap();
+
+    assert!(!note_exists(&db.pool, &id).await);
+    let pulled = pull(&app, &key, serde_json::json!({ "cursor": "" })).await;
+    assert_eq!(pulled["deletions"][0]["id"], serde_json::json!(id));
+}
+
+#[tokio::test]
+async fn live_notes_are_not_purged() {
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let user = create_user(&db.pool, &format!("{}@example.com", new_id()), &random_password()).await;
+    let (_, key) = create_device(&db.pool, &user).await;
+    let id = new_id();
+    push(&app, &key, serde_json::json!({ "notes": [note(&id, "kept", "2026-02-01T00:00:00Z")] })).await;
+    age_on_server(&db.pool, &id).await;
+
+    maintenance::run_once(&db.pool).await.unwrap();
+
+    assert!(note_exists(&db.pool, &id).await);
+}
+
+#[tokio::test]
+async fn deleting_through_the_notes_route_leaves_a_tombstone() {
+    let db = migrated_db().await;
+    let app = app(&db.pool);
+    let user = create_user(&db.pool, &format!("{}@example.com", new_id()), &random_password()).await;
+    let (_, key) = create_device(&db.pool, &user).await;
+    let id = new_id();
+    push(&app, &key, serde_json::json!({ "notes": [note(&id, "gone", "2026-02-01T00:00:00Z")] })).await;
+    let before = pull(&app, &key, serde_json::json!({ "cursor": "" })).await;
+
+    let (status, _) = call(&app, "DELETE", &format!("/api/v1/sync/notes/{id}"), Some(&key), None).await;
+
+    assert_eq!(status, axum::http::StatusCode::NO_CONTENT);
+    let after = pull(&app, &key, serde_json::json!({ "cursor": before["nextCursor"] })).await;
+    assert_eq!(after["deletions"][0]["id"], serde_json::json!(id));
+}

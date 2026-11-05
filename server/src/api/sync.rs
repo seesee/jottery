@@ -74,6 +74,48 @@ fn decode_cursor(cursor: &str) -> Option<i64> {
         .filter(|seq| *seq >= 0)
 }
 
+/// How long a tombstone is sent to clients on timestamp mode.
+const TOMBSTONE_RETENTION_DAYS: i64 = 30;
+
+/// Record that a note is gone, so other devices hear about it. Must be called in
+/// the transaction that deletes the note. `client_id` is the device that asked, if
+/// one did.
+pub(crate) async fn record_tombstone(
+    conn: &mut SqliteConnection,
+    user_id: &str,
+    note_id: &str,
+    deleted_at: &str,
+    client_id: Option<&str>,
+    now: &str,
+) -> Result<(), sqlx::Error> {
+    let expires_at =
+        (chrono::Utc::now() + chrono::Duration::days(TOMBSTONE_RETENTION_DAYS)).to_rfc3339();
+    let change_seq = next_seq(&mut *conn, user_id).await?;
+
+    sqlx::query!(
+        r#"
+        INSERT INTO note_deletions (id, user_id, deleted_at, synced_from_client_id, expires_at, received_at, change_seq)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id, user_id) DO UPDATE SET
+            deleted_at = excluded.deleted_at,
+            synced_from_client_id = excluded.synced_from_client_id,
+            received_at = excluded.received_at,
+            change_seq = excluded.change_seq
+        "#,
+        note_id,
+        user_id,
+        deleted_at,
+        client_id,
+        expires_at,
+        now,
+        change_seq
+    )
+    .execute(&mut *conn)
+    .await?;
+
+    Ok(())
+}
+
 /// Take the next position in a user's change sequence.
 ///
 /// Must be called inside the write transaction. SQLite has one writer, so the
@@ -783,29 +825,14 @@ pub async fn push(
 
         if delete_result.rows_affected() > 0 {
             // Record the deletion so other clients can pick it up
-            // Expires after 30 days (same as cleanup_old_deleted_notes)
-            let expires_at = (chrono::Utc::now() + chrono::Duration::days(30)).to_rfc3339();
-            let change_seq = next_seq(&mut tx, &client_info.user_id).await?;
-
-            sqlx::query!(
-                r#"
-                INSERT INTO note_deletions (id, user_id, deleted_at, synced_from_client_id, expires_at, received_at, change_seq)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id, user_id) DO UPDATE SET
-                    deleted_at = excluded.deleted_at,
-                    synced_from_client_id = excluded.synced_from_client_id,
-                    received_at = excluded.received_at,
-                    change_seq = excluded.change_seq
-                "#,
-                deletion.id,
-                client_info.user_id,
-                deletion.deleted_at,
-                client_info.client_id,
-                expires_at,
-                now,
-                change_seq
+            record_tombstone(
+                &mut tx,
+                &client_info.user_id,
+                &deletion.id,
+                &deletion.deleted_at,
+                Some(&client_info.client_id),
+                &now,
             )
-            .execute(&mut *tx)
             .await?;
 
             deletions_applied = true;
@@ -1523,15 +1550,32 @@ pub async fn delete_note(
     Path(note_id): Path<String>,
 ) -> AppResult<StatusCode> {
 
+    let mut tx = state.pool.begin_with("BEGIN IMMEDIATE").await?;
+
     // Delete note for this user (cascades to attachments via foreign keys)
     // Filter by user_id to ensure users can only delete their own notes
-    sqlx::query!(
+    let deleted = sqlx::query!(
         "DELETE FROM notes WHERE id = ? AND user_id = ?",
         note_id,
         client_info.user_id
     )
-    .execute(&state.pool)
+    .execute(&mut *tx)
     .await?;
+
+    if deleted.rows_affected() > 0 {
+        let now = chrono::Utc::now().to_rfc3339();
+        record_tombstone(
+            &mut tx,
+            &client_info.user_id,
+            &note_id,
+            &now,
+            Some(&client_info.client_id),
+            &now,
+        )
+        .await?;
+    }
+
+    tx.commit().await?;
 
     tracing::info!(
         "Deleted note: {} for user: {} (client: {})",
