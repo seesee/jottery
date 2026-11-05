@@ -12,61 +12,6 @@ import TreeSitterPythonRunestone
 import TreeSitterSQLRunestone
 import TreeSitterTypeScriptRunestone
 
-// MARK: - Reaching the Text from Outside
-
-/// The way in for what doesn't come from the keyboard, such as a pasted picture
-/// or a dropped file, which goes in where the user was typing.
-@MainActor
-final class EditorCursor {
-    private weak var textView: TextView?
-
-    func attach(_ textView: TextView) {
-        self.textView = textView
-    }
-
-    /// Put `text` at the cursor, or if there isn't one, at the end. False if no
-    /// text view is showing, as in the preview.
-    @discardableResult
-    func insert(_ text: String, replacingSelection: Bool = true) -> Bool {
-        guard let textView, textView.isEditable else { return false }
-        let selection = textView.selectedRange
-        let range = replacingSelection ? selection : NSRange(location: selection.upperBound, length: 0)
-        textView.replaceAsOneUndoStep(range, with: text)
-        return true
-    }
-}
-
-extension TextView {
-    /// Replace `range`, so that undo takes back this and nothing typed around it.
-    /// Runestone otherwise groups everything from the last second into one step.
-    func replaceAsOneUndoStep(_ range: NSRange, with text: String) {
-        undoManager?.endUndoGrouping()
-        replace(range, withText: text)
-        undoManager?.endUndoGrouping()
-    }
-}
-
-/// Runestone's text view, with what it leaves to its owner.
-///
-/// Its own text input pastes anything with text in it, and turns down the rest,
-/// which then comes up the responder chain to here.
-final class EditorTextView: TextView {
-    var onPasteAttachment: (() -> Void)?
-    /// Replaceable for tests: suites run in parallel, and some use the general one.
-    var pasteboard = UIPasteboard.general
-
-    override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
-        if action == #selector(paste(_:)) {
-            return isEditing && onPasteAttachment != nil && PasteboardService.hasAttachableContent(in: pasteboard)
-        }
-        return super.canPerformAction(action, withSender: sender)
-    }
-
-    override func paste(_ sender: Any?) {
-        onPasteAttachment?()
-    }
-}
-
 // MARK: - Runestone Editor (UIViewRepresentable)
 
 /// Wraps Runestone's UIKit `TextView` in SwiftUI with tree-sitter syntax highlighting.
@@ -114,7 +59,6 @@ struct RunestoneEditorView: UIViewRepresentable {
         textView.smartDashesType = .no
         textView.smartQuotesType = .no
         textView.smartInsertDeleteType = .no
-        textView.inputAccessoryView = nil
         textView.showPageGuide = false
         textView.showTabs = false
         textView.showSpaces = false
@@ -183,6 +127,7 @@ struct RunestoneEditorView: UIViewRepresentable {
         textView.isEditable = isEditable
         textView.isLineWrappingEnabled = wordWrap
         textView.onPasteAttachment = onPasteAttachment
+        EditorFormattingBar.install(on: textView, showsFormatting: syntaxLanguage == "markdown")
     }
 
     // MARK: - State Application
@@ -273,6 +218,7 @@ struct RunestoneEditorView: UIViewRepresentable {
         var currentIsDark: Bool = false
         var currentFontSize: CGFloat = 0
         private var endEditingWorkItem: DispatchWorkItem?
+        private var isExpandingCommand = false
 
         init(text: Binding<String>) {
             self.text = text
@@ -299,6 +245,29 @@ struct RunestoneEditorView: UIViewRepresentable {
         @MainActor
         func textViewDidChange(_ textView: TextView) {
             text.wrappedValue = textView.text
+        }
+
+        /// `/now` and the rest turn into what they stand for when a space or a new
+        /// line follows them, as on the web. Text marked by an input method is left
+        /// alone, because a space there picks a word.
+        @MainActor
+        func textView(_ textView: TextView, shouldChangeTextIn range: NSRange, replacementText typed: String) -> Bool {
+            guard !isExpandingCommand, textView.isEditable, range.length == 0, textView.markedTextRange == nil,
+                  QuickCommands.endsCommand(typed) else { return true }
+            let start = max(0, range.location - QuickCommands.lookBehind)
+            guard let before = textView.text(in: NSRange(location: start, length: range.location - start)),
+                  let command = QuickCommands.match(before: before) else { return true }
+
+            isExpandingCommand = true
+            defer { isExpandingCommand = false }
+            let length = command.trigger.utf16.count
+            // Runestone's about to apply `typed` at a location this moves, so it's
+            // told not to, and `typed` goes in here. As typing, so a new line indents.
+            textView.undoManager?.endUndoGrouping()
+            textView.replace(NSRange(location: range.location - length, length: length), withText: command.expansion())
+            textView.insertText(typed)
+            textView.undoManager?.endUndoGrouping()
+            return false
         }
     }
 }

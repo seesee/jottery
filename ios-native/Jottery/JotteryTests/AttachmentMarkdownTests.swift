@@ -1,6 +1,4 @@
 import Foundation
-import Runestone
-import SwiftUI
 import Testing
 import UIKit
 
@@ -67,82 +65,71 @@ struct AttachmentMarkdownTests {
 
     // MARK: - At the Cursor
 
-    private func makeEditor(_ text: String) -> (EditorCursor, EditorTextView, Binding<String>, () -> String) {
-        final class Box { var text: String; init(_ text: String) { self.text = text } }
-        let box = Box(text)
-        let binding = Binding(get: { box.text }, set: { box.text = $0 })
-        let view = RunestoneEditorView(text: binding)
-        let coordinator = view.makeCoordinator()
-        let textView = EditorTextView()
-        textView.editorDelegate = coordinator
-        textView.text = text
+    private func makeEditor(_ text: String) -> (EditorCursor, Editor) {
+        let editor = Editor(text: text)
         let cursor = EditorCursor()
-        cursor.attach(textView)
-        // The delegate is held weakly, so something has to keep it.
-        objc_setAssociatedObject(textView, &coordinatorKey, coordinator, .OBJC_ASSOCIATION_RETAIN)
-        return (cursor, textView, binding, { box.text })
+        cursor.attach(editor.textView)
+        return (cursor, editor)
     }
 
     @Test func goesInWhereTheCursorIs() {
-        let (cursor, textView, _, text) = makeEditor("before after")
-        textView.selectedRange = NSRange(location: 7, length: 0)
+        let (cursor, editor) = makeEditor("before after")
+        editor.textView.selectedRange = NSRange(location: 7, length: 0)
 
         #expect(cursor.insert("![a](attachment:x)"))
 
-        #expect(textView.text == "before ![a](attachment:x)after")
-        #expect(text() == textView.text)
-        #expect(textView.selectedRange == NSRange(location: 25, length: 0))
+        #expect(editor.textView.text == "before ![a](attachment:x)after")
+        #expect(editor.bound == editor.textView.text)
+        #expect(editor.textView.selectedRange == NSRange(location: 25, length: 0))
     }
 
     @Test func aPasteReplacesTheSelection() {
-        let (cursor, textView, _, _) = makeEditor("one two three")
-        textView.selectedRange = NSRange(location: 4, length: 3)
+        let (cursor, editor) = makeEditor("one two three")
+        editor.textView.selectedRange = NSRange(location: 4, length: 3)
 
         cursor.insert("X")
 
-        #expect(textView.text == "one X three")
+        #expect(editor.textView.text == "one X three")
     }
 
     @Test func aDropLeavesTheSelectionAlone() {
-        let (cursor, textView, _, _) = makeEditor("one two three")
-        textView.selectedRange = NSRange(location: 4, length: 3)
+        let (cursor, editor) = makeEditor("one two three")
+        editor.textView.selectedRange = NSRange(location: 4, length: 3)
 
         cursor.insert("X", replacingSelection: false)
 
-        #expect(textView.text == "one twoX three")
+        #expect(editor.textView.text == "one twoX three")
     }
 
     @Test func undoTakesItBack() throws {
-        let (cursor, textView, _, text) = makeEditor("hello")
-        textView.selectedRange = NSRange(location: 5, length: 0)
+        let (cursor, editor) = makeEditor("hello")
 
         cursor.insert("![a](attachment:x)")
-        #expect(textView.text == "hello![a](attachment:x)")
-        let undoManager = try #require(textView.undoManager)
+        #expect(editor.textView.text == "hello![a](attachment:x)")
+        let undoManager = try #require(editor.textView.undoManager)
         #expect(undoManager.canUndo)
         undoManager.undo()
 
-        #expect(textView.text == "hello")
-        #expect(text() == "hello")
+        #expect(editor.textView.text == "hello")
+        #expect(editor.bound == "hello")
     }
 
     @Test func undoTakesBackOnlyThatAndNotWhatWasTypedBeforeIt() throws {
-        let (cursor, textView, _, _) = makeEditor("")
-        textView.selectedRange = NSRange(location: 0, length: 0)
-        textView.insertText("typed")
+        let (cursor, editor) = makeEditor("")
+        editor.textView.insertText("typed")
 
         cursor.insert("!")
-        try #require(textView.undoManager).undo()
+        try #require(editor.textView.undoManager).undo()
 
-        #expect(textView.text == "typed")
+        #expect(editor.textView.text == "typed")
     }
 
     @Test func aReadOnlyEditorTakesNothing() {
-        let (cursor, textView, _, _) = makeEditor("locked")
-        textView.isEditable = false
+        let (cursor, editor) = makeEditor("locked")
+        editor.textView.isEditable = false
 
         #expect(!cursor.insert("X"))
-        #expect(textView.text == "locked")
+        #expect(editor.textView.text == "locked")
     }
 
     @Test func withNoEditorShowingItSaysSo() {
@@ -175,5 +162,3 @@ struct AttachmentMarkdownTests {
         #expect(pasted == 1)
     }
 }
-
-nonisolated(unsafe) private var coordinatorKey: UInt8 = 0
