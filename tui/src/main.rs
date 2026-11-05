@@ -987,14 +987,26 @@ fn run() -> Result<()> {
                 }
             };
 
-            // The server will see the account password, so it mustn't be the one for the notes
-            vault::check_passwords_differ(&key_password, &password)?;
+            // The server sees the account password, so a notes password being chosen
+            // now mustn't match it. An existing vault has already chosen, and refusing
+            // would stop this person adding a device, so that only warns.
+            let passwords_differ = vault::check_passwords_differ(&key_password, &password);
+            if !db_path.exists() {
+                passwords_differ.as_ref().map_err(|e| anyhow::anyhow!("{e}"))?;
+            }
 
             // Open the vault before involving the server, so a wrong password leaves
             // no stray device behind
             let db = Database::open(&db_path, &key_password)
                 .context("Failed to create database")?;
+            let vault_exists = repository::EncryptionRepository::new(db.connection()).get()?.is_some();
+            if !vault_exists {
+                passwords_differ.as_ref().map_err(|e| anyhow::anyhow!("{e}"))?;
+            }
             let local_key = derive_key_from_db(&db, &key_password)?;
+            if passwords_differ.is_err() {
+                errln!("⚠ {}", t!("password.same_as_account_warning"));
+            }
 
             outln!("{} '{}' {}...", t!("cli.register"), device_name, email);
 
@@ -1032,9 +1044,6 @@ fn run() -> Result<()> {
             // Store sync configuration
             let sync_repo = SyncRepository::new(db.connection());
             let sync_metadata = models::sync::SyncMetadata {
-                last_sync_at: None,
-                last_push_at: None,
-                last_pull_at: None,
                 api_key: Some(api_key_json),
                 client_id: Some(response.client_id),
                 user_email: Some(email.clone()),
@@ -1042,8 +1051,9 @@ fn run() -> Result<()> {
                 sync_enabled: true,
                 sync_endpoint: server.clone(),
                 auto_sync_interval: Some(1),
-                pending_registration_email: None,
-                pending_device_name: None,
+                // Adopting the key above recorded what this device knows about it
+                server_key_seen: sync_repo.get_metadata()?.and_then(|stored| stored.server_key_seen),
+                ..Default::default()
             };
 
             sync_repo.update_metadata(&sync_metadata)?;

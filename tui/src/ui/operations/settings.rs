@@ -289,6 +289,11 @@ pub fn check_registration_status_with_endpoint(_app: &mut App, endpoint: &str, e
     Ok(status.exists && status.is_approved && status.is_active)
 }
 
+/// Whether the server already has an account for this email
+pub fn account_exists(endpoint: &str, email: &str) -> Result<bool> {
+    Ok(crate::api::AuthClient::new(endpoint.to_string()).check_status(email)?.exists)
+}
+
 /// Register a new user account
 /// Returns true if the user needs approval, false if already approved
 pub fn register_user(_app: &mut App, endpoint: &str, email: &str, password: &str) -> Result<bool> {
@@ -328,7 +333,10 @@ pub fn register_user(_app: &mut App, endpoint: &str, email: &str, password: &str
 pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &str, device_name: &str) -> Result<()> {
     let notes_password = app.unlock_password.clone()
         .ok_or_else(|| anyhow::anyhow!("Vault is locked"))?;
-    crate::vault::check_passwords_differ(&notes_password, password)?;
+
+    // Neither password is being chosen here, so a match can only be pointed out.
+    // Refusing would stop this person adding a device at all.
+    let passwords_match = crate::vault::check_passwords_differ(&notes_password, password).is_err();
 
     let local_key = app.key.ok_or_else(|| anyhow::anyhow!("No encryption key"))?;
 
@@ -385,6 +393,10 @@ pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &st
 
     super::notes::load_notes(app)?;
 
+    if passwords_match {
+        app.error = Some(t!("password.same_as_account_warning").to_string());
+    }
+
     Ok(())
 }
 
@@ -434,6 +446,8 @@ pub fn clear_pending_registration(app: &mut App) -> Result<()> {
     metadata.user_email = None;
     metadata.user_id = None;
     metadata.sync_enabled = false;
+    metadata.server_key_seen = None;
+    metadata.server_key_stale = false;
     sync_repo.update_metadata(&metadata)?;
 
     // Also clear app settings

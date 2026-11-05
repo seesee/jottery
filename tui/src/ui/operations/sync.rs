@@ -992,6 +992,15 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<SyncOutcome> {
     // Reload notes to ensure UI is up to date
     super::notes::load_notes(app)?;
 
+    // The server is reachable, so a re-wrap a password change couldn't deliver can go now
+    if metadata.server_key_stale {
+        if let Some(password) = app.unlock_password.clone() {
+            if let Err(e) = super::envelope::repair_server_key(app, &password) {
+                app.debug_log(&format!("[Sync] Could not update the server's wrapped key: {}", e));
+            }
+        }
+    }
+
     Ok(outcome)
 }
 

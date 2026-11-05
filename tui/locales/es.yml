@@ -709,3 +709,5 @@ envelope:
   unwrap_failed: "La contraseña de tus notas no puede abrir la clave de esta cuenta. Puede que la guardara una versión anterior. Desbloquea Jottery en un dispositivo ya conectado, lo que lo arreglará, y vuelve a intentarlo."
   rekey_failed: "Tus notas locales no se pudieron pasar a la clave de esta cuenta, así que no ha cambiado nada: %{error}"
   diverged: "La clave de este dispositivo no coincide con la de la cuenta. Puede que las notas de tus otros dispositivos no se abran aquí."
+  password_changed_elsewhere: "Tu contraseña de notas se cambió en otro dispositivo, así que no se ha sobrescrito nada. Este dispositivo sigue desbloqueándose con la contraseña antigua. Cámbiala aquí para que coincida y puedan unirse dispositivos nuevos."
+  server_update_pending: "Tu contraseña ha cambiado en este dispositivo, pero no se ha podido actualizar la copia de tu clave en el servidor. Jottery volverá a intentarlo. Hasta entonces, un dispositivo nuevo no podrá unirse con la contraseña nueva."

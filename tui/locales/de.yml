@@ -709,3 +709,5 @@ envelope:
   unwrap_failed: "Dein Notizenpasswort kann den Schlüssel dieses Kontos nicht öffnen. Er wurde möglicherweise von einer älteren Version gespeichert. Entsperre Jottery auf einem bereits verbundenen Gerät, das behebt das Problem, und versuche es dann erneut."
   rekey_failed: "Deine lokalen Notizen konnten nicht auf den Schlüssel dieses Kontos umgestellt werden, daher wurde nichts geändert: %{error}"
   diverged: "Der Schlüssel dieses Geräts weicht vom Kontoschlüssel ab. Notizen von deinen anderen Geräten lassen sich hier möglicherweise nicht öffnen."
+  password_changed_elsewhere: "Ihr Notizen-Passwort wurde auf einem anderen Gerät geändert, daher wurde nichts überschrieben. Dieses Gerät lässt sich weiterhin mit dem alten Passwort entsperren. Ändern Sie es hier entsprechend, damit neue Geräte beitreten können."
+  server_update_pending: "Ihr Passwort wurde auf diesem Gerät geändert, aber die Kopie Ihres Schlüssels auf dem Server konnte nicht aktualisiert werden. Jottery versucht es erneut. Bis dahin kann kein neues Gerät mit dem neuen Passwort beitreten."

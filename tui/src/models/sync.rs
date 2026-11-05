@@ -19,6 +19,12 @@ pub struct SyncMetadata {
     pub pending_registration_email: Option<String>, // Email of pending registration awaiting approval
     #[serde(default)]
     pub pending_device_name: Option<String>, // Device name for pending clone-device call (during import)
+    /// Hash of the wrapped key this device last opened or uploaded. See `envelope`.
+    #[serde(default)]
+    pub server_key_seen: Option<String>,
+    /// This device changed the notes password and owes the server the new wrapping.
+    #[serde(default)]
+    pub server_key_stale: bool,
 }
 
 impl Default for SyncMetadata {
@@ -36,6 +42,8 @@ impl Default for SyncMetadata {
             auto_sync_interval: Some(1),
             pending_registration_email: None,
             pending_device_name: None,
+            server_key_seen: None,
+            server_key_stale: false,
         }
     }
 }

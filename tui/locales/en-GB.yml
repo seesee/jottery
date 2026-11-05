@@ -750,3 +750,5 @@ envelope:
   unwrap_failed: "Your notes password can't open this account's key. It may have been saved by an older version. Unlock Jottery on a device that's already connected, which will fix it, then try again."
   rekey_failed: "Your local notes couldn't be moved to this account's key, so nothing has changed: %{error}"
   diverged: "This device's key differs from the account's. Notes from your other devices may not open here."
+  password_changed_elsewhere: "Your notes password was changed on another device, so nothing was overwritten. This device still unlocks with its old password. Change it here to match, so that new devices can join."
+  server_update_pending: "Your password changed on this device, but the server's copy of your key couldn't be updated. Jottery will try again. Until then, a new device can't join with the new password."

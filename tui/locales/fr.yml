@@ -709,3 +709,5 @@ envelope:
   unwrap_failed: "Le mot de passe de vos notes ne peut pas ouvrir la clé de ce compte. Elle a peut-être été enregistrée par une ancienne version. Déverrouillez Jottery sur un appareil déjà connecté, ce qui corrigera le problème, puis réessayez."
   rekey_failed: "Vos notes locales n'ont pas pu passer à la clé de ce compte, rien n'a donc changé : %{error}"
   diverged: "La clé de cet appareil diffère de celle du compte. Les notes de vos autres appareils risquent de ne pas s'ouvrir ici."
+  password_changed_elsewhere: "Votre mot de passe des notes a été modifié sur un autre appareil, rien n'a donc été écrasé. Cet appareil se déverrouille toujours avec l'ancien mot de passe. Modifiez-le ici pour qu'il corresponde, afin que de nouveaux appareils puissent se connecter."
+  server_update_pending: "Votre mot de passe a été modifié sur cet appareil, mais la copie de votre clé sur le serveur n'a pas pu être mise à jour. Jottery réessaiera. D'ici là, un nouvel appareil ne pourra pas se connecter avec le nouveau mot de passe."

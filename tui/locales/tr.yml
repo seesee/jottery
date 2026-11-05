@@ -709,3 +709,5 @@ envelope:
   unwrap_failed: "Not parolanız bu hesabın anahtarını açamıyor. Anahtar eski bir sürüm tarafından kaydedilmiş olabilir. Zaten bağlı bir cihazda Jottery kilidini açın, bu sorunu düzeltir, sonra yeniden deneyin."
   rekey_failed: "Yerel notlarınız bu hesabın anahtarına taşınamadı, bu yüzden hiçbir şey değişmedi: %{error}"
   diverged: "Bu cihazın anahtarı hesabın anahtarından farklı. Diğer cihazlarınızdaki notlar burada açılmayabilir."
+  password_changed_elsewhere: "Not parolanız başka bir cihazda değiştirildi, bu yüzden hiçbir şeyin üzerine yazılmadı. Bu cihazın kilidi hâlâ eski parolayla açılıyor. Yeni cihazların bağlanabilmesi için parolayı burada da değiştirin."
+  server_update_pending: "Parolanız bu cihazda değişti, ancak anahtarınızın sunucudaki kopyası güncellenemedi. Jottery yeniden deneyecek. O zamana kadar yeni bir cihaz yeni parolayla bağlanamaz."

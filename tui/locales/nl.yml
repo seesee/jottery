@@ -709,3 +709,5 @@ envelope:
   unwrap_failed: "Je notitiewachtwoord kan de sleutel van dit account niet openen. Die is mogelijk door een oudere versie opgeslagen. Ontgrendel Jottery op een apparaat dat al verbonden is, dat lost het op, en probeer het opnieuw."
   rekey_failed: "Je lokale notities konden niet naar de sleutel van dit account worden overgezet, dus er is niets gewijzigd: %{error}"
   diverged: "De sleutel van dit apparaat wijkt af van die van het account. Notities van je andere apparaten worden hier mogelijk niet geopend."
+  password_changed_elsewhere: "Je notitiewachtwoord is op een ander apparaat gewijzigd, dus er is niets overschreven. Dit apparaat ontgrendelt nog met het oude wachtwoord. Wijzig het ook hier, zodat nieuwe apparaten kunnen koppelen."
+  server_update_pending: "Je wachtwoord is op dit apparaat gewijzigd, maar de kopie van je sleutel op de server kon niet worden bijgewerkt. Jottery probeert het opnieuw. Tot die tijd kan een nieuw apparaat niet koppelen met het nieuwe wachtwoord."

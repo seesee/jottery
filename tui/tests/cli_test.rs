@@ -298,6 +298,27 @@ fn register_device_refuses_one_password_for_both_jobs() {
     assert!(stderr.contains("different"), "{stderr}");
 }
 
+/// Refusing here would stop someone whose passwords already match adding a device.
+/// Nothing listens on this port, so the command gets as far as trying to connect.
+#[test]
+fn connecting_an_existing_vault_with_one_password_for_both_jobs_only_warns() {
+    let (_temp_dir, db) = create_test_env();
+    let password = uuid::Uuid::new_v4().to_string();
+    vault_with_note(&db, &password, "Already here");
+
+    let (succeeded, _, stderr) = run_on(&db, &[
+        "register-device",
+        "--server", "http://127.0.0.1:1",
+        "--email", "someone@example.com",
+        "--password", &password,
+        "--key-password", &password,
+    ]);
+
+    assert!(!succeeded);
+    assert!(stderr.contains("⚠"), "should warn: {stderr}");
+    assert!(!stderr.contains("Use different passwords"), "should not refuse: {stderr}");
+}
+
 #[test]
 fn a_wrong_password_is_refused_rather_than_showing_an_empty_vault() {
     let (dir, _) = create_test_env();

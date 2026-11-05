@@ -138,6 +138,7 @@ impl Database {
             (15, include_str!("../migrations/015_add_hash_chain.sql")),
             (16, include_str!("../migrations/016_add_envelope_encryption.sql")),
             (17, include_str!("../migrations/017_add_user_id.sql")),
+            (18, include_str!("../migrations/018_add_server_key_state.sql")),
         ];
 
         // Run pending migrations
@@ -313,7 +314,7 @@ mod tests {
     fn test_in_memory_database() {
         let db = Database::in_memory(&test_password()).unwrap();
         assert!(db.is_initialized().unwrap() == false);
-        assert_eq!(db.schema_version().unwrap(), 17);
+        assert_eq!(db.schema_version().unwrap(), 18);
         assert_eq!(db.count_notes(false).unwrap(), 0);
     }
 
@@ -376,13 +377,13 @@ mod tests {
         // Create and close database
         {
             let db = Database::open(&db_path, &password).unwrap();
-            assert_eq!(db.schema_version().unwrap(), 17);
+            assert_eq!(db.schema_version().unwrap(), 18);
         }
 
         // Reopen and verify
         {
             let db = Database::open(&db_path, &password).unwrap();
-            assert_eq!(db.schema_version().unwrap(), 17);
+            assert_eq!(db.schema_version().unwrap(), 18);
         }
     }
 }
