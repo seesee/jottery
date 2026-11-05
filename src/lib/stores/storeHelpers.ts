@@ -8,7 +8,7 @@ import { get } from 'svelte/store';
 import { filteredNotes, inboxItems, notes, remoteNoteUpdate } from './appStore';
 import { searchService } from '../services/searchService';
 import { noteService } from '../services/noteService';
-import { removePrintFrames } from '../utils/noteExport';
+import { removePrintFrames } from '../utils/printFrames';
 
 /**
  * Drop everything decrypted that the app holds, for when it locks. Not part of lock():

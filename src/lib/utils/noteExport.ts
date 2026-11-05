@@ -13,6 +13,7 @@ import type { Attachment } from '../types';
 import { attachmentService, cryptoService, keyManager } from '../services';
 import { stripMarkdownSignifiers, isMarkdownLanguage } from './markdownStrip';
 import { escapeHtml, sanitiseHtml } from './htmlSanitiser';
+import { removePrintFrame, trackPrintFrame } from './printFrames';
 
 /**
  * Map syntax language to file extension
@@ -338,19 +339,6 @@ async function findAttachmentByFilename(
   return null;
 }
 
-/** Frames still holding a note, for as long as their print dialog is open */
-const printFrames = new Set<HTMLIFrameElement>();
-
-function removePrintFrame(frame: HTMLIFrameElement): void {
-  frame.remove();
-  printFrames.delete(frame);
-}
-
-/** Remove any note still in a print frame, which matters if the app locks meanwhile */
-export function removePrintFrames(): void {
-  printFrames.forEach(removePrintFrame);
-}
-
 /**
  * Print a document from a hidden frame, removing it afterwards so decrypted
  * content doesn't stay around.
@@ -382,7 +370,7 @@ function printInSandboxedFrame(html: string): Promise<boolean> {
     }, { once: true });
 
     frame.srcdoc = html;
-    printFrames.add(frame);
+    trackPrintFrame(frame);
     document.body.appendChild(frame);
   });
 }

@@ -11,7 +11,8 @@ vi.mock('../services', () => ({
   keyManager: { getMasterKey: vi.fn(() => ({ key: {} })) },
 }));
 
-import { generatePrintHtml, printNote, removePrintFrames } from './noteExport';
+import { generatePrintHtml, printNote } from './noteExport';
+import { removePrintFrames } from './printFrames';
 
 const HOSTILE = '<img src=x onerror="window.__pwned=1"><script>window.__pwned=1</script>Visible';
 
