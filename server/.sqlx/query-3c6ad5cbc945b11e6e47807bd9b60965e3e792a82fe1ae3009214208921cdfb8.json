@@ -1,20 +1,20 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT wrapped_blob, kdf_version, kdf_iterations FROM wrapped_keys WHERE user_id = ?",
+  "query": "SELECT max_upload_size_mb, storage_quota_mb, storage_used_bytes FROM users WHERE id = ?",
   "describe": {
     "columns": [
       {
-        "name": "wrapped_blob",
+        "name": "max_upload_size_mb",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Integer"
       },
       {
-        "name": "kdf_version",
+        "name": "storage_quota_mb",
         "ordinal": 1,
         "type_info": "Integer"
       },
       {
-        "name": "kdf_iterations",
+        "name": "storage_used_bytes",
         "ordinal": 2,
         "type_info": "Integer"
       }
@@ -24,9 +24,9 @@
     },
     "nullable": [
       false,
-      false,
+      true,
       false
     ]
   },
-  "hash": "29af93ad7287d3488ca122c23dea6c91af28e31f05e0f0ba9ac8aba5d8c7493c"
+  "hash": "3c6ad5cbc945b11e6e47807bd9b60965e3e792a82fe1ae3009214208921cdfb8"
 }

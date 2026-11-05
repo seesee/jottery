@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, api_key FROM clients WHERE user_id = ?",
+  "query": "SELECT id, storage_quota_mb FROM users",
   "describe": {
     "columns": [
       {
@@ -9,18 +9,18 @@
         "type_info": "Text"
       },
       {
-        "name": "api_key",
+        "name": "storage_quota_mb",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Integer"
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 0
     },
     "nullable": [
       false,
-      false
+      true
     ]
   },
-  "hash": "4f3c171cd20e5470adbf1ffcda00374301ea7f971703d7caa3095976566b3e05"
+  "hash": "a968d3901c2bcf5a4909eaf4924a4c40ec0b835d3a489307381f16abc9aac16d"
 }

@@ -82,6 +82,11 @@
         "name": "must_change_password",
         "ordinal": 15,
         "type_info": "Integer"
+      },
+      {
+        "name": "storage_used_bytes",
+        "ordinal": 16,
+        "type_info": "Integer"
       }
     ],
     "parameters": {
@@ -103,6 +108,7 @@
       true,
       true,
       true,
+      false,
       false
     ]
   },

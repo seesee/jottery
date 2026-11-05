@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, is_active FROM clients WHERE id = ?",
+  "query": "SELECT id, user_id FROM clients WHERE id = ?",
   "describe": {
     "columns": [
       {
@@ -9,9 +9,9 @@
         "type_info": "Text"
       },
       {
-        "name": "is_active",
+        "name": "user_id",
         "ordinal": 1,
-        "type_info": "Integer"
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -19,8 +19,8 @@
     },
     "nullable": [
       false,
-      true
+      false
     ]
   },
-  "hash": "03371f60e9ae5466c9d4e9b5ba7ef3a17f331096105a20cee3f4faf674320d81"
+  "hash": "5c7d4258cd30bb7c8fa1414cf363b8fa07e98f0c4f3a4a458c245c4267bd1c9c"
 }

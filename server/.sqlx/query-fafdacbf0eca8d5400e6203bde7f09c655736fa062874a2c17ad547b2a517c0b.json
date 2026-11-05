@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, created_at, expires_at FROM sessions WHERE user_id = ? ORDER BY id",
+  "query": "SELECT id, user_id, deleted_at FROM notes\n             WHERE deleted = 1 AND server_modified_at < ?\n             LIMIT ?",
   "describe": {
     "columns": [
       {
@@ -9,24 +9,24 @@
         "type_info": "Text"
       },
       {
-        "name": "created_at",
+        "name": "user_id",
         "ordinal": 1,
         "type_info": "Text"
       },
       {
-        "name": "expires_at",
+        "name": "deleted_at",
         "ordinal": 2,
         "type_info": "Text"
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       false,
       false,
-      false
+      true
     ]
   },
-  "hash": "b59b336fb91df6ff80bb67993e95d5bd433313ef890d560ea00c07b53172d8bb"
+  "hash": "fafdacbf0eca8d5400e6203bde7f09c655736fa062874a2c17ad547b2a517c0b"
 }

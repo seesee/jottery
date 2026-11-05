@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT c.id, c.user_id, c.is_active, u.is_active AS user_is_active, u.approved AS user_approved\n               FROM clients c\n               JOIN users u ON u.id = c.user_id\n               WHERE c.api_key = ?",
+  "query": "SELECT c.id, c.user_id, c.is_active, c.last_seen_at, u.is_active AS user_is_active, u.approved AS user_approved\n               FROM clients c\n               JOIN users u ON u.id = c.user_id\n               WHERE c.api_key = ?",
   "describe": {
     "columns": [
       {
@@ -19,13 +19,18 @@
         "type_info": "Integer"
       },
       {
-        "name": "user_is_active",
+        "name": "last_seen_at",
         "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "user_is_active",
+        "ordinal": 4,
         "type_info": "Integer"
       },
       {
         "name": "user_approved",
-        "ordinal": 4,
+        "ordinal": 5,
         "type_info": "Integer"
       }
     ],
@@ -36,9 +41,10 @@
       false,
       false,
       true,
+      true,
       false,
       false
     ]
   },
-  "hash": "21c6a314a801a17fb897377e944d6697459f3fe8508da4e7b3496fef005b4497"
+  "hash": "7d0b275c4e2fb01440728a7b728af25063f813e7f0eb98fd5bac530872d56d65"
 }
