@@ -504,6 +504,30 @@ mod tests {
         app
     }
 
+    fn app_choosing_a_new_password(input: &str) -> App {
+        let mut app = app_at_the_password_prompt("unused");
+        app.credential_input = input.to_string();
+        app.state = AppState::ChangePasswordNew {
+            current_password: Zeroizing::new("unused".to_string()),
+            previous: Box::new(AppState::NoteList),
+        };
+        app
+    }
+
+    #[test]
+    fn a_new_notes_password_needs_eight_characters() {
+        let enter = KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE);
+
+        let mut app = app_choosing_a_new_password("seven77");
+        handle_change_password_new_key(&mut app, enter).unwrap();
+        assert!(matches!(app.state, AppState::ChangePasswordNew { .. }));
+        assert!(app.error.is_some());
+
+        let mut app = app_choosing_a_new_password("eight888");
+        handle_change_password_new_key(&mut app, enter).unwrap();
+        assert!(matches!(app.state, AppState::ChangePasswordConfirm { .. }));
+    }
+
     #[test]
     fn the_account_password_cannot_be_the_notes_password() {
         let password = uuid::Uuid::new_v4().to_string();

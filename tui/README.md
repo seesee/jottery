@@ -113,6 +113,22 @@ echo "Task item" | jottery note -p yourpassword --tags todo,work
 jottery note --password yourpassword
 ```
 
+#### Attachments and the Archive via CLI
+
+```bash
+# Attach a file to a note, then save it somewhere else
+jottery attach 1a2b3c4d ~/Documents/report.pdf
+jottery show 1a2b3c4d
+jottery save-attachment 1a2b3c4d -n 1 -o ~/Downloads/report.pdf
+
+# Archive a note, list the archive, and bring the note back
+jottery archive 1a2b3c4d
+jottery list --archived
+jottery unarchive 1a2b3c4d
+```
+
+These sync afterwards if this device is connected. `$EDITOR` and `$PAGER` can include arguments, such as `code -w`.
+
 #### Other Commands
 
 ```bash
