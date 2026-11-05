@@ -498,7 +498,8 @@ describe('sync protocol', () => {
     });
   });
 
-  describe('pushes the server refuses', () => {
+  // These move megabytes through real base64, which takes a while on a busy machine
+  describe('pushes the server refuses', { timeout: 30_000 }, () => {
     const MB = 1024 * 1024;
 
     async function noteWithBlob(n: number, bytes: number, overrides: Partial<Note> = {}): Promise<void> {
