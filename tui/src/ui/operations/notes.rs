@@ -20,6 +20,7 @@ pub fn load_notes(app: &mut App) -> Result<()> {
         let repo = NoteRepository::new(db.connection());
         let list = repo.list_not_deleted(key)?;
         app.notes = list.notes;
+        app.notes_loaded();
 
         // A count that grew is news. One that stays the same is on the list's title.
         if list.unreadable > app.unreadable_notes {

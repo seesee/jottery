@@ -1175,6 +1175,9 @@ fn run() -> Result<()> {
     // Track state variant to force full redraw on major transitions
     let mut last_state = std::mem::discriminant(&app.state);
 
+    // Drawing is the expensive part of this loop, so it waits for a reason
+    let mut needs_draw = true;
+
     // Main loop
     while !app.should_quit() {
         // Force full redraw when the app state variant changes (e.g., Locked→NoteList,
@@ -1193,20 +1196,18 @@ fn run() -> Result<()> {
             // Also force a screen clear and redraw
             use crossterm::{execute, terminal::{Clear, ClearType}};
             execute!(std::io::stdout(), Clear(ClearType::All))?;
+            needs_draw = true;
         }
 
         // Render
-        info!("About to render frame");
-        tui.draw(|frame| {
-            info!("Inside draw closure, calling app.render");
-            app.render(frame);
-            info!("app.render completed");
-        })?;
-        info!("Frame rendered successfully");
+        if needs_draw {
+            tui.draw(|frame| app.render(frame))?;
+        }
 
         // Handle events
         match events.next()? {
             ui::Event::Key(key) => {
+                needs_draw = true;
                 app.register_activity();
                 // A failed action is the user's to see, not a reason to quit
                 if let Err(e) = app.handle_key(key) {
@@ -1214,17 +1215,17 @@ fn run() -> Result<()> {
                 }
             }
             ui::Event::Resize(_, _) => {
-                // Terminal resized, will redraw on next iteration
+                needs_draw = true;
             }
             ui::Event::Tick => {
-                app.check_auto_lock();
-                // Check if auto-sync should run
-                app.check_auto_sync();
+                // Auto-lock, auto-sync and anything else that runs on a timer
+                needs_draw = app.on_tick();
             }
             ui::Event::Mouse(mouse) => {
                 use crossterm::event::{MouseEventKind, MouseButton};
                 use ui::state::{AppState, ViewMode, InputMode, FocusedPanel};
 
+                needs_draw = true;
                 app.register_activity();
 
                 match mouse.kind {
@@ -1257,10 +1258,9 @@ fn run() -> Result<()> {
                             if x >= area.x && x < area.x + area.width
                                 && y >= area.y && y < area.y + area.height
                             {
-                                // Calculate which note was clicked
-                                let clicked_index = (y - area.y) as usize;
-                                let filtered_count = app.filtered_notes().len();
-                                if clicked_index < filtered_count {
+                                // Notes are several rows tall and the list scrolls, so
+                                // the row alone doesn't say which note this is
+                                if let Some(clicked_index) = app.note_at_row(y - area.y) {
                                     if app.is_multi_select_mode {
                                         // In multi-select mode, toggle selection
                                         app.toggle_note_selection(clicked_index);

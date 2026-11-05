@@ -565,6 +565,10 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                                 }
                             }
 
+                            // Pinning changes the order
+                            app.invalidate_filter_cache();
+                            app.keep_selection_on_note();
+
                             // Trigger sync to push pin change to server
                             if app.settings.sync_enabled {
                                 app.trigger_sync();
@@ -789,6 +793,10 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                                     app.error = Some(t!("note.lock_failed", error = e.to_string()).to_string());
                                 }
                             }
+
+                            // Locking touches the note, which changes the order
+                            app.invalidate_filter_cache();
+                            app.keep_selection_on_note();
                         }
                     }
                 }

@@ -20,6 +20,15 @@
 //! - [`event`] - Terminal event handling
 //! - [`terminal`] - Terminal initialization and management
 
+/// Compile a pattern once, however often the line it's on runs.
+macro_rules! regex {
+    ($pattern:literal) => {{
+        static PATTERN: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
+        PATTERN.get_or_init(|| regex::Regex::new($pattern).expect("pattern is valid"))
+    }};
+}
+pub(crate) use regex;
+
 pub mod app;
 pub mod app_state;
 pub mod calc;

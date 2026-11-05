@@ -96,6 +96,7 @@ pub fn delete_selected(app: &mut App) -> Result<usize> {
 
     // Remove deleted notes from the list
     app.notes.retain(|n| !selected_ids.contains(&n.id));
+    app.invalidate_filter_cache();
 
     // Adjust selection
     let note_count = app.notes.len();
@@ -261,6 +262,7 @@ pub fn combine_selected(app: &mut App) -> Result<usize> {
     // Insert new note at appropriate position (after pinned notes)
     let pinned_count = app.notes.iter().filter(|n| n.pinned).count();
     app.notes.insert(pinned_count, new_note);
+    app.invalidate_filter_cache();
 
     // Clear multi-selection and select the new note
     app.clear_multi_selection();

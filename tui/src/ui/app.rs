@@ -26,7 +26,7 @@ use rust_i18n::t;
 use ratatui::Frame;
 use zeroize::{Zeroize, Zeroizing};
 use std::{
-    cell::RefCell,
+    cell::{Cell, RefCell},
     collections::HashSet,
     fs::File,
     io::Write,
@@ -44,6 +44,7 @@ use crate::{
 };
 
 
+use super::regex;
 use super::state::{AppState, InputMode, ViewMode};
 use super::rendering;
 use super::input;
@@ -261,9 +262,14 @@ pub struct App {
     pub(crate) color_palette_cache: Vec<String>,
     /// Cached unique tags from all notes (for fast tag completion)
     pub(crate) all_tags_cache: Vec<String>,
-    /// Cached filtered note IDs (for avoiding repeated filtering/sorting)
-    /// Uses RefCell for interior mutability so filtered_notes(&self) can update cache
-    filtered_notes_cache: RefCell<Option<Vec<String>>>,
+    /// Indices into `notes` of the visible notes, in display order, with the length
+    /// of `notes` when they were worked out. A length that no longer matches means
+    /// they're stale. RefCell so that filtered_notes(&self) can update it.
+    filtered_notes_cache: RefCell<Option<(usize, Vec<usize>)>>,
+    /// How many notes the current search matches in the other mode (archive/active)
+    opposite_count_cache: Cell<Option<usize>>,
+    /// Counts loads of `notes`, so a tick can tell whether anything arrived
+    notes_generation: u64,
     /// Selected attachment index in preview pane
     pub selected_attachment: usize,
     /// Which panel is focused in preview pane (content or attachments)
@@ -328,6 +334,11 @@ pub struct App {
     pub show_note_info: bool,
     /// Rendered area for note list (for mouse click detection)
     pub note_list_area: Option<ratatui::layout::Rect>,
+    /// Index of the first note drawn in the list, kept between frames so that
+    /// moving the selection scrolls only as far as it has to
+    pub note_list_offset: usize,
+    /// Where each drawn note landed in the list area
+    pub note_list_rows: Vec<rendering::note_list::NoteRow>,
     /// Rendered area for tags line in preview (for mouse click detection)
     pub tags_line_area: Option<ratatui::layout::Rect>,
     /// Individual tag positions for click detection: (tag_name, x_start, x_end)
@@ -440,6 +451,8 @@ impl App {
             color_palette_cache: Vec::new(), // Populated when settings are loaded
             all_tags_cache: Vec::new(), // Populated when notes are loaded
             filtered_notes_cache: RefCell::new(None), // Populated on first access, invalidated on changes
+            opposite_count_cache: Cell::new(None),
+            notes_generation: 0,
             selected_attachment: 0,
             focused_panel: super::state::FocusedPanel::default(),
             attachment_path_input: String::new(),
@@ -472,6 +485,8 @@ impl App {
             show_empty_bin_confirm: false,
             show_note_info: false,
             note_list_area: None,
+            note_list_offset: 0,
+            note_list_rows: Vec::new(),
             tags_line_area: None,
             tag_positions: Vec::new(),
             note_link_positions: Vec::new(),
@@ -593,6 +608,8 @@ impl App {
         self.path_completions.clear();
         self.tag_positions.clear();
         self.note_link_positions.clear();
+        self.note_list_rows.clear();
+        self.note_list_offset = 0;
         self.syntax_highlighter.clear_cache();
         self.invalidate_filter_cache();
 
@@ -872,6 +889,13 @@ impl App {
         self.last_selected_index = None;
     }
 
+    /// The note drawn on a row of the list area, as an index into the visible notes
+    pub fn note_at_row(&self, row: u16) -> Option<usize> {
+        self.note_list_rows.iter()
+            .find(|drawn| (drawn.top..drawn.bottom).contains(&row))
+            .map(|drawn| drawn.index)
+    }
+
     /// Reset path completions state
     pub fn reset_path_completions(&mut self) {
         self.path_completions.clear();
@@ -925,17 +949,46 @@ impl App {
     /// - notes (load, add, delete, modify)
     pub fn invalidate_filter_cache(&self) {
         *self.filtered_notes_cache.borrow_mut() = None;
+        self.opposite_count_cache.set(None);
+    }
+
+    /// Note that `notes` was reloaded
+    pub(crate) fn notes_loaded(&mut self) {
+        self.notes_generation = self.notes_generation.wrapping_add(1);
+    }
+
+    /// Run the timed checks, and say whether they changed anything on screen.
+    ///
+    /// Drawing a vault of notes isn't free, and this runs four times a second, so an
+    /// idle app shouldn't redraw.
+    pub fn on_tick(&mut self) -> bool {
+        let status = self.sync_status.clone();
+        let error = self.error.clone();
+        let generation = self.notes_generation;
+        let inbox_items = self.inbox_items.len();
+
+        self.check_auto_lock();
+        self.check_auto_sync();
+
+        status != self.sync_status
+            || error != self.error
+            || generation != self.notes_generation
+            || inbox_items != self.inbox_items.len()
+    }
+
+    /// Display order: pinned notes first, then most recently modified
+    fn display_order(a: &Note, b: &Note) -> std::cmp::Ordering {
+        match (a.pinned, b.pinned) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => b.modified_at.cmp(&a.modified_at),
+        }
     }
 
     /// Sort notes by pinned status first (pinned at top), then by modified_at descending
+    #[cfg(test)]
     pub fn sort_notes_by_pinned_and_date(notes: &mut [&Note]) {
-        notes.sort_by(|a, b| {
-            match (a.pinned, b.pinned) {
-                (true, false) => std::cmp::Ordering::Less,
-                (false, true) => std::cmp::Ordering::Greater,
-                _ => b.modified_at.cmp(&a.modified_at),
-            }
-        });
+        notes.sort_by(|a, b| Self::display_order(a, b));
     }
 
     /// Filter notes based on search query and sort (pinned first, then by modified date)
@@ -944,20 +997,16 @@ impl App {
     /// automatically invalidated when search_input, archive_mode, or notes change.
     pub fn filtered_notes(&self) -> Vec<&Note> {
         // Check if we have a valid cache
-        {
-            let cache = self.filtered_notes_cache.borrow();
-            if let Some(cached_ids) = cache.as_ref() {
-                // Rebuild references from cached IDs
-                return cached_ids.iter()
-                    .filter_map(|id| self.notes.iter().find(|n| &n.id == id))
-                    .collect();
+        if let Some((length, indices)) = self.filtered_notes_cache.borrow().as_ref() {
+            if *length == self.notes.len() {
+                return indices.iter().map(|&index| &self.notes[index]).collect();
             }
         }
 
         // Cache miss - compute filtered notes
-        let mut notes: Vec<&Note> = if self.search_input.is_empty() {
-            self.notes.iter()
-                .filter(|note| note.archived == self.archive_mode)
+        let mut indices: Vec<usize> = if self.search_input.is_empty() {
+            (0..self.notes.len())
+                .filter(|&index| self.notes[index].archived == self.archive_mode)
                 .collect()
         } else {
             let query = self.search_input.to_lowercase();
@@ -967,9 +1016,10 @@ impl App {
             let remaining_query = Self::remove_modifiers_from_query(&query);
             let query_parts: Vec<&str> = remaining_query.split_whitespace().collect();
 
-            self.notes
-                .iter()
-                .filter(|note| {
+            (0..self.notes.len())
+                .filter(|&index| {
+                    let note = &self.notes[index];
+
                     // Filter by archive mode first
                     if note.archived != self.archive_mode {
                         return false;
@@ -1018,11 +1068,10 @@ impl App {
         };
 
         // Sort: pinned first, then by modified_at descending
-        Self::sort_notes_by_pinned_and_date(&mut notes);
+        indices.sort_by(|&a, &b| Self::display_order(&self.notes[a], &self.notes[b]));
 
-        // Cache the note IDs for future calls
-        let ids: Vec<String> = notes.iter().map(|n| n.id.clone()).collect();
-        *self.filtered_notes_cache.borrow_mut() = Some(ids);
+        let notes = indices.iter().map(|&index| &self.notes[index]).collect();
+        *self.filtered_notes_cache.borrow_mut() = Some((self.notes.len(), indices));
 
         notes
     }
@@ -1034,12 +1083,16 @@ impl App {
             return 0;
         }
 
+        if let Some(count) = self.opposite_count_cache.get() {
+            return count;
+        }
+
         let query = self.search_input.to_lowercase();
         let modifiers = Self::parse_search_modifiers(&query, &self.settings);
         let remaining_query = Self::remove_modifiers_from_query(&query);
         let query_parts: Vec<&str> = remaining_query.split_whitespace().collect();
 
-        self.notes
+        let count = self.notes
             .iter()
             .filter(|note| {
                 // Filter by OPPOSITE archive mode
@@ -1050,13 +1103,14 @@ impl App {
                 // Apply shared search logic (no color filtering for opposite mode count)
                 note_matches_search(note, &modifiers, &query_parts)
             })
-            .count()
+            .count();
+
+        self.opposite_count_cache.set(Some(count));
+        count
     }
 
     /// Parse search modifiers from query string
     fn parse_search_modifiers(query: &str, settings: &crate::models::UserSettings) -> SearchModifiers {
-        use regex::Regex;
-
         let mut modifiers = SearchModifiers::default();
 
         // has:attachment
@@ -1065,93 +1119,71 @@ impl App {
         }
 
         // created:>DATE
-        if let Some(caps) = Regex::new(r"created:>(\d{4}-\d{2}-\d{2})")
-            .ok()
-            .and_then(|re| re.captures(query))
+        if let Some(caps) = regex!(r"created:>(\d{4}-\d{2}-\d{2})").captures(query)
         {
             modifiers.created_after = Some(caps[1].to_string());
         }
 
         // created:<DATE
-        if let Some(caps) = Regex::new(r"created:<(\d{4}-\d{2}-\d{2})")
-            .ok()
-            .and_then(|re| re.captures(query))
+        if let Some(caps) = regex!(r"created:<(\d{4}-\d{2}-\d{2})").captures(query)
         {
             modifiers.created_before = Some(caps[1].to_string());
         }
 
         // created:DATE..DATE (range)
-        if let Some(caps) = Regex::new(r"created:(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})")
-            .ok()
-            .and_then(|re| re.captures(query))
+        if let Some(caps) = regex!(r"created:(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})").captures(query)
         {
             modifiers.created_after = Some(caps[1].to_string());
             modifiers.created_before = Some(caps[2].to_string());
         }
 
         // modified:>DATE
-        if let Some(caps) = Regex::new(r"modified:>(\d{4}-\d{2}-\d{2})")
-            .ok()
-            .and_then(|re| re.captures(query))
+        if let Some(caps) = regex!(r"modified:>(\d{4}-\d{2}-\d{2})").captures(query)
         {
             modifiers.modified_after = Some(caps[1].to_string());
         }
 
         // modified:<DATE
-        if let Some(caps) = Regex::new(r"modified:<(\d{4}-\d{2}-\d{2})")
-            .ok()
-            .and_then(|re| re.captures(query))
+        if let Some(caps) = regex!(r"modified:<(\d{4}-\d{2}-\d{2})").captures(query)
         {
             modifiers.modified_before = Some(caps[1].to_string());
         }
 
         // modified:DATE..DATE (range)
-        if let Some(caps) = Regex::new(r"modified:(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})")
-            .ok()
-            .and_then(|re| re.captures(query))
+        if let Some(caps) = regex!(r"modified:(\d{4}-\d{2}-\d{2})\.\.(\d{4}-\d{2}-\d{2})").captures(query)
         {
             modifiers.modified_after = Some(caps[1].to_string());
             modifiers.modified_before = Some(caps[2].to_string());
         }
 
         // words:>N
-        if let Some(caps) = Regex::new(r"words:>(\d+)")
-            .ok()
-            .and_then(|re| re.captures(query))
+        if let Some(caps) = regex!(r"words:>(\d+)").captures(query)
         {
             modifiers.word_count_min = caps[1].parse().ok();
         }
 
         // words:<N
-        if let Some(caps) = Regex::new(r"words:<(\d+)")
-            .ok()
-            .and_then(|re| re.captures(query))
+        if let Some(caps) = regex!(r"words:<(\d+)").captures(query)
         {
             modifiers.word_count_max = caps[1].parse().ok();
         }
 
         // words:N..N (range)
-        if let Some(caps) = Regex::new(r"words:(\d+)\.\.(\d+)")
-            .ok()
-            .and_then(|re| re.captures(query))
+        if let Some(caps) = regex!(r"words:(\d+)\.\.(\d+)").captures(query)
         {
             modifiers.word_count_min = caps[1].parse().ok();
             modifiers.word_count_max = caps[2].parse().ok();
         }
 
         // color:red note (notes with red color)
-        if let Some(caps) = Regex::new(r"(?i)\bcolou?r:([a-z0-9#]+)\s+note\b")
-            .ok()
-            .and_then(|re| re.captures(query))
+        if let Some(caps) = regex!(r"(?i)\bcolou?r:([a-z0-9#]+)\s+note\b").captures(query)
         {
             modifiers.colors.push(caps[1].to_lowercase());
             modifiers.color_target = ColorTarget::Note;
         }
 
         // color:red tag (notes with red-colored tags)
-        if let Some(caps) = Regex::new(r"(?i)\bcolou?r:([a-z0-9#]+)\s+tag\b")
-            .ok()
-            .and_then(|re| re.captures(query))
+        if let Some(caps) = regex!(r"(?i)\bcolou?r:([a-z0-9#]+)\s+tag\b").captures(query)
         {
             modifiers.colors.push(caps[1].to_lowercase());
             modifiers.color_target = ColorTarget::Tag;
@@ -1159,9 +1191,7 @@ impl App {
 
         // color:red (both notes and tags)
         if modifiers.colors.is_empty() {
-            if let Some(caps) = Regex::new(r"(?i)\bcolou?r:([a-z0-9#]+)\b")
-                .ok()
-                .and_then(|re| re.captures(query))
+            if let Some(caps) = regex!(r"(?i)\bcolou?r:([a-z0-9#]+)\b").captures(query)
             {
                 modifiers.colors.push(caps[1].to_lowercase());
                 modifiers.color_target = ColorTarget::Both;
@@ -1169,9 +1199,7 @@ impl App {
         }
 
         // category:important note (notes with category named "important")
-        if let Some(caps) = Regex::new(r"(?i)\bcategory:([\w-]+)\s+note\b")
-            .ok()
-            .and_then(|re| re.captures(query))
+        if let Some(caps) = regex!(r"(?i)\bcategory:([\w-]+)\s+note\b").captures(query)
         {
             let category_name = caps[1].trim();
             // Look up color key by display name
@@ -1182,9 +1210,7 @@ impl App {
         }
 
         // category:important tag (notes with tags in category named "important")
-        if let Some(caps) = Regex::new(r"(?i)\bcategory:([\w-]+)\s+tag\b")
-            .ok()
-            .and_then(|re| re.captures(query))
+        if let Some(caps) = regex!(r"(?i)\bcategory:([\w-]+)\s+tag\b").captures(query)
         {
             let category_name = caps[1].trim();
             if let Some(color_key) = settings.get_color_key_by_display_name(category_name) {
@@ -1195,9 +1221,7 @@ impl App {
 
         // category:important (both notes and tags)
         if modifiers.colors.is_empty() {
-            if let Some(caps) = Regex::new(r"(?i)\bcategory:([\w-]+)\b")
-                .ok()
-                .and_then(|re| re.captures(query))
+            if let Some(caps) = regex!(r"(?i)\bcategory:([\w-]+)\b").captures(query)
             {
                 let category_name = caps[1].trim();
                 if let Some(color_key) = settings.get_color_key_by_display_name(category_name) {
@@ -1212,34 +1236,29 @@ impl App {
 
     /// Remove search modifiers from query string, leaving only text/tag search terms
     fn remove_modifiers_from_query(query: &str) -> String {
-        use regex::Regex;
-
-        let mut result = query.to_string();
-
         // Remove all modifier patterns
         let patterns = [
-            r"has:attachment",
-            r"created:>\d{4}-\d{2}-\d{2}",
-            r"created:<\d{4}-\d{2}-\d{2}",
-            r"created:\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}",
-            r"modified:>\d{4}-\d{2}-\d{2}",
-            r"modified:<\d{4}-\d{2}-\d{2}",
-            r"modified:\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}",
-            r"words:>\d+",
-            r"words:<\d+",
-            r"words:\d+\.\.\d+",
-            r"(?i)\bcolou?r:[a-z0-9#]+\s+note\b",
-            r"(?i)\bcolou?r:[a-z0-9#]+\s+tag\b",
-            r"(?i)\bcolou?r:[a-z0-9#]+\b",
-            r"(?i)\bcategory:[\w-]+\s+note\b",
-            r"(?i)\bcategory:[\w-]+\s+tag\b",
-            r"(?i)\bcategory:[\w-]+\b",
+            regex!(r"has:attachment"),
+            regex!(r"created:>\d{4}-\d{2}-\d{2}"),
+            regex!(r"created:<\d{4}-\d{2}-\d{2}"),
+            regex!(r"created:\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}"),
+            regex!(r"modified:>\d{4}-\d{2}-\d{2}"),
+            regex!(r"modified:<\d{4}-\d{2}-\d{2}"),
+            regex!(r"modified:\d{4}-\d{2}-\d{2}\.\.\d{4}-\d{2}-\d{2}"),
+            regex!(r"words:>\d+"),
+            regex!(r"words:<\d+"),
+            regex!(r"words:\d+\.\.\d+"),
+            regex!(r"(?i)\bcolou?r:[a-z0-9#]+\s+note\b"),
+            regex!(r"(?i)\bcolou?r:[a-z0-9#]+\s+tag\b"),
+            regex!(r"(?i)\bcolou?r:[a-z0-9#]+\b"),
+            regex!(r"(?i)\bcategory:[\w-]+\s+note\b"),
+            regex!(r"(?i)\bcategory:[\w-]+\s+tag\b"),
+            regex!(r"(?i)\bcategory:[\w-]+\b"),
         ];
 
+        let mut result = query.to_string();
         for pattern in patterns {
-            if let Ok(re) = Regex::new(pattern) {
-                result = re.replace_all(&result, "").to_string();
-            }
+            result = pattern.replace_all(&result, "").to_string();
         }
 
         // Clean up extra whitespace
@@ -1629,6 +1648,35 @@ mod lock_tests {
         app.check_auto_lock();
 
         assert!(app.is_unlocked());
+    }
+
+    #[test]
+    fn an_idle_tick_asks_for_no_redraw() {
+        let (mut app, _) = unlocked_app();
+        app.settings.auto_sync_interval_minutes = 0;
+
+        assert!(!app.on_tick());
+    }
+
+    #[test]
+    fn a_status_message_expiring_asks_for_a_redraw() {
+        let (mut app, _) = unlocked_app();
+        app.settings.auto_sync_interval_minutes = 0;
+        app.sync_status = Some("Done".to_string());
+        app.sync_status_set_at = Some(Instant::now() - std::time::Duration::from_secs(6));
+
+        assert!(app.on_tick());
+        assert!(app.sync_status.is_none());
+    }
+
+    #[test]
+    fn a_filtered_list_survives_a_note_being_added_without_invalidating() {
+        let (mut app, _) = unlocked_app();
+        assert_eq!(app.filtered_notes().len(), 1);
+
+        app.notes.push(Note::new("Another".to_string()));
+
+        assert_eq!(app.filtered_notes().len(), 2);
     }
 
     #[test]

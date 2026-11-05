@@ -6,13 +6,13 @@
 use evalexpr::{eval_with_context_mut, HashMapContext, IterateVariablesContext, Value, ContextWithMutableVariables, Context};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span, Text};
-use regex::Regex;
 use rust_i18n::t;
 use std::f64::consts::{E, PI, TAU};
-use std::sync::{mpsc, OnceLock};
+use std::sync::mpsc;
 use std::time::Duration;
 
 use crate::ui::helpers::truncate_to_width;
+use crate::ui::regex;
 
 /// Maximum number of lines to evaluate in calc mode
 /// Documents longer than this will show a warning
@@ -41,14 +41,6 @@ const CALC_STACK_BYTES: usize = 8 * 1024 * 1024;
 
 /// How long drawing waits for a document before showing it without results.
 const CALC_DEADLINE: Duration = Duration::from_secs(2);
-
-/// Compile a pattern once. Evaluation runs for every line of a document.
-macro_rules! regex {
-    ($pattern:literal) => {{
-        static PATTERN: OnceLock<Regex> = OnceLock::new();
-        PATTERN.get_or_init(|| Regex::new($pattern).expect("calc pattern is valid"))
-    }};
-}
 
 /// Result of evaluating a single line
 #[derive(Debug, Clone)]
