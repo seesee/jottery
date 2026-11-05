@@ -133,6 +133,80 @@ struct BackupFormatTests {
         #expect(result.keptNewer == 0)
     }
 
+    /// A vault whose copy of a note differs from the backup's, with these times.
+    private func twoCopies(backupTime: String, hereTime: String) async throws -> (state: AppState, id: String, url: URL) {
+        let state = try await makeVault()
+        let note = try #require(try state.createNote(content: "in the backup"))
+        try TestVaults.execute(state, "UPDATE notes SET modified_at = ? WHERE id = ?", [backupTime, note.id])
+        let url = try backup(of: state)
+        var edited = note
+        edited.content = "here"
+        try state.saveNote(edited)
+        try TestVaults.execute(state, "UPDATE notes SET modified_at = ? WHERE id = ?", [hereTime, note.id])
+        return (state, note.id, url)
+    }
+
+    private func content(of id: String, in state: AppState) throws -> String? {
+        try state.noteRepo?.get(id: id, key: #require(state.keyManager.masterKey))?.content
+    }
+
+    @Test func aNewerCopyInTheBackupReplacesWhatsHere() async throws {
+        let (state, id, url) = try await twoCopies(
+            backupTime: "2026-03-01T10:00:00.000Z", hereTime: "2026-03-01T09:00:00.000Z"
+        )
+
+        let result = try restore(url, into: state)
+
+        #expect(result.notes == 1)
+        #expect(result.keptNewer == 0)
+        #expect(try content(of: id, in: state) == "in the backup")
+    }
+
+    /// Clients don't all write times alike. As text, 10:00+01:00 sorts after
+    /// 09:30Z, but it's half an hour earlier.
+    @Test func timesAreComparedAsTimesAndNotAsText() async throws {
+        let (state, id, url) = try await twoCopies(
+            backupTime: "2026-03-01T09:30:00.000Z", hereTime: "2026-03-01T10:00:00.000+01:00"
+        )
+
+        let result = try restore(url, into: state)
+
+        #expect(result.notes == 1)
+        #expect(try content(of: id, in: state) == "in the backup")
+    }
+
+    /// Nothing says the backup's copy is the better one, and this one is in use.
+    @Test func aNoteExactlyAsNewAsTheBackupsStaysAsItIs() async throws {
+        let time = "2026-03-01T10:00:00.000Z"
+        let (state, id, url) = try await twoCopies(backupTime: time, hereTime: time)
+
+        let result = try restore(url, into: state)
+
+        #expect(result.notes == 0)
+        #expect(result.keptNewer == 1)
+        #expect(try content(of: id, in: state) == "here")
+    }
+
+    /// Ids are never reused for different contents. Writing it again would change
+    /// nothing, except to send the server a blob it already has.
+    @Test func aBlobAlreadyHereIsLeftAsItIs() async throws {
+        let state = try await makeVault()
+        let note = try #require(try state.createNote(content: "with a file"))
+        try state.addAttachment(to: note.id, data: Data("the file".utf8), filename: "a.txt", mimeType: "text/plain")
+        let repo = try #require(state.attachmentRepo)
+        let key = try #require(state.keyManager.masterKey)
+        let saved = try #require(try state.noteRepo?.get(id: note.id, key: key))
+        let blobId = try #require(saved.attachments.first).data
+        try repo.markUploaded(ids: [blobId])
+        let before = try #require(try repo.getBlob(id: blobId))
+        let url = try backup(of: state)
+
+        _ = try restore(url, into: state)
+
+        #expect(try repo.getBlob(id: blobId) == before)
+        #expect(try repo.getBlobToUpload(id: blobId) == nil)
+    }
+
     /// One bad write used to leave an unknown part of the batch behind.
     /// A note restored into the bin has to leave it like any other. With no time of
     /// its own here the purge can't see it, and it would stay there for ever.
