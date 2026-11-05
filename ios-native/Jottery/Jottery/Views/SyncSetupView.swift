@@ -62,10 +62,13 @@ struct SyncSetupView: View {
             }
             .interactiveDismissDisabled(isWorking)
             .alert(L.syncMergeTitle, isPresented: $showMergePrompt, presenting: pendingMerge) { pending in
-                Button(L.syncMergeConfirm) { mergeAndJoin(pending) }
+                Button(L.syncMergeConfirm, role: .destructive) { mergeAndJoin(pending) }
                 Button(L.syncSetupCancel, role: .cancel) { declineMerge(pending) }
-            } message: { _ in
-                Text(L.syncMergeMessage)
+            } message: { pending in
+                Text(L.syncMergeMessage(
+                    server: SyncEndpoint.displayHost(pending.device.endpoint),
+                    noteCount: appState.notes.count + appState.archivedNotes.count
+                ))
             }
             .onDisappear {
                 // Never leave a device registered for a join that didn't happen.
@@ -111,6 +114,14 @@ struct SyncSetupView: View {
 
     private func registerDevice() {
         error = nil
+
+        // Checked here, before the account password is sent anywhere: if the
+        // two match, the server is about to learn the notes password as well.
+        if PasswordPolicy.matchesAccountPassword(notesPassword, accountPassword: password) {
+            error = SyncSetupError.notesPasswordMatchesAccountPassword.localizedDescription
+            return
+        }
+
         isWorking = true
 
         Task {
@@ -134,7 +145,7 @@ struct SyncSetupView: View {
                     deviceName: deviceName
                 )
                 let device = NewDevice(endpoint: normalised, response: response)
-                success = try await join(device, notesPassword: notesPassword, serverPassword: password)
+                success = try await join(device, notesPassword: notesPassword)
                 isWorking = false
             } catch {
                 self.error = error.localizedDescription
@@ -149,9 +160,9 @@ struct SyncSetupView: View {
     /// account's key, then save everything. Returns false instead when the
     /// account's key differs and the user is being asked whether to merge
     /// (`mergeAndJoin` / `declineMerge` take it from there).
-    private func join(_ device: NewDevice, notesPassword: String, serverPassword: String) async throws -> Bool {
+    private func join(_ device: NewDevice, notesPassword: String) async throws -> Bool {
         if case .differs(let accountKey) = try await checkAccountKeyBeforeJoining(
-            device, notesPassword: notesPassword, serverPassword: serverPassword
+            device, notesPassword: notesPassword
         ) {
             pendingMerge = PendingMerge(device: device, accountKey: accountKey, notesPassword: notesPassword)
             showMergePrompt = true
@@ -223,28 +234,21 @@ struct SyncSetupView: View {
 
     // MARK: - Account key
 
-    private func currentVaultIsEnvelope() -> Bool {
-        (try? appState.encryptionRepo?.get())?.envelopeVersion != nil
-    }
-
     /// A device that already has a vault must share the account's master key,
     /// or syncing would leave notes unreadable in both directions. Compare them
     /// straight after the device is registered, BEFORE anything is saved
     /// locally. A failed check revokes the device again; `.differs` keeps it,
-    /// for `join` to offer the merge. Returns nil for a legacy vault, which
-    /// moves onto the account's key during envelope setup.
+    /// for `join` to offer the merge. Only the notes password is ever tried.
     private func checkAccountKeyBeforeJoining(
         _ device: NewDevice,
-        notesPassword: String,
-        serverPassword: String
+        notesPassword: String
     ) async throws -> EnvelopeService.AccountKeyStatus? {
-        guard currentVaultIsEnvelope(), let masterKey = appState.keyManager.masterKey else { return nil }
+        guard let masterKey = appState.keyManager.masterKey else { return nil }
         do {
             return try await EnvelopeService.checkAccountKeyForNewDevice(
                 syncClient: device.client,
                 userId: device.userId,
                 password: notesPassword,
-                alternatePassword: serverPassword,
                 localMasterKeyData: masterKey.withUnsafeBytes { Data($0) }
             )
         } catch EnvelopeError.cannotUnwrapServerKey {
@@ -307,6 +311,8 @@ enum SyncSetupError: LocalizedError {
     case encryptionPasswordMismatch
     case accountKeyDiffers
     case accountKeyUnreadable
+    case notesPasswordMatchesAccountPassword
+    case notesPasswordTooShort
 
     var errorDescription: String? {
         switch self {
@@ -314,6 +320,8 @@ enum SyncSetupError: LocalizedError {
         case .encryptionPasswordMismatch: return L.syncSetupErrorEncryptionPasswordMismatch
         case .accountKeyDiffers: return L.syncSetupErrorAccountKeyDiffers
         case .accountKeyUnreadable: return L.syncSetupErrorAccountKeyUnreadable
+        case .notesPasswordMatchesAccountPassword: return L.syncSetupErrorNotesPasswordMatchesAccount
+        case .notesPasswordTooShort: return L.notesPasswordTooShort(PasswordPolicy.minimumNotesPasswordLength)
         }
     }
 }

@@ -51,12 +51,19 @@ enum L {
     static var syncSetupErrorEncryptionPasswordMismatch: String { String(localized: "syncSetupError.encryptionPasswordMismatch") }
     static var syncSetupErrorAccountKeyDiffers: String { String(localized: "syncSetupError.accountKeyDiffers") }
     static var syncSetupErrorAccountKeyUnreadable: String { String(localized: "syncSetupError.accountKeyUnreadable") }
+    static var syncSetupErrorNotesPasswordMatchesAccount: String { String(localized: "syncSetupError.notesPasswordMatchesAccount") }
+    static func notesPasswordTooShort(_ minimum: Int) -> String {
+        String(format: String(localized: "notesPassword.tooShort"), minimum)
+    }
 
     // MARK: - Sync Merge
     static var syncMergeTitle: String { String(localized: "syncMerge.title") }
-    static var syncMergeMessage: String { String(localized: "syncMerge.message") }
+    static func syncMergeMessage(server: String, noteCount: Int) -> String {
+        String(format: String(localized: "syncMerge.message"), server, noteCount)
+    }
     static var syncMergeConfirm: String { String(localized: "syncMerge.confirm") }
     static var syncMergeFailed: String { String(localized: "syncMerge.failed") }
+    static var syncMergeFailedOnUnlock: String { String(localized: "syncMerge.failedOnUnlock") }
 
     // MARK: - Unlock (Face ID key check)
     static var unlockBiometricOutOfDate: String { String(localized: "unlock.biometricOutOfDate") }

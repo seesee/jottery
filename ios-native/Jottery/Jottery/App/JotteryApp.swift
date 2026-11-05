@@ -269,6 +269,22 @@ struct MainView: View {
         } message: {
             Text(accountKeyPasswordWasWrong ? L.accountKeyPromptWrongPassword : L.accountKeyPromptMessage)
         }
+        // A legacy vault found a different key on the account. Moving onto it
+        // uploads everything under that key, so it never happens unasked.
+        .alert(L.syncMergeTitle, isPresented: Binding(
+            get: { appState.pendingAccountKeyMerge != nil },
+            set: { if !$0 { appState.pendingAccountKeyMerge = nil } }
+        ), presenting: appState.pendingAccountKeyMerge) { pending in
+            Button(L.syncMergeConfirm, role: .destructive) {
+                Task { await appState.mergeOntoAccountKey(pending) }
+            }
+            Button(L.commonCancel, role: .cancel) {}
+        } message: { _ in
+            Text(L.syncMergeMessage(
+                server: SyncEndpoint.displayHost(appState.settings.syncEndpoint ?? ""),
+                noteCount: appState.notes.count + appState.archivedNotes.count
+            ))
+        }
     }
 
     private func publishAccountKey() {

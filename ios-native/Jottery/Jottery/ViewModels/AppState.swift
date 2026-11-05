@@ -39,6 +39,11 @@ final class AppState {
     /// can be published (see `checkAccountKeyAfterBiometricUnlock()`).
     var needsNotesPasswordForAccountKey = false
 
+    /// Set when a legacy vault finds that the account holds a different key.
+    /// `MainView` then asks whether to move the vault onto it, because that
+    /// re-encrypts everything and uploads it (see `mergeOntoAccountKey(_:)`).
+    var pendingAccountKeyMerge: PendingAccountKeyMerge?
+
     // MARK: - User-Facing Errors
 
     /// A transient, localised error message surfaced to the user via a
@@ -734,6 +739,7 @@ final class AppState {
         keyManager.lock()
         isLocked = true
         needsNotesPasswordForAccountKey = false
+        pendingAccountKeyMerge = nil
         notes = []
         archivedNotes = []
         pendingConflicts = []
@@ -792,6 +798,17 @@ final class AppState {
         guard ok else { return .failed }
         needsNotesPasswordForAccountKey = false
         return .published
+    }
+
+    /// The user agreed to move this vault onto the account's key.
+    func mergeOntoAccountKey(_ pending: PendingAccountKeyMerge) async {
+        pendingAccountKeyMerge = nil
+        do {
+            try await switchVaultToMasterKey(pending.accountKey, notesPassword: pending.notesPassword)
+        } catch {
+            Log.debug("[Envelope] Merging onto the account key failed: \(error)")
+            reportError(L.syncMergeFailedOnUnlock)
+        }
     }
 
     // MARK: - User-Facing Errors
@@ -1596,6 +1613,7 @@ final class AppState {
         filteredNotes = []
         savedSearches = []
         pendingConflicts = []
+        pendingAccountKeyMerge = nil
         inboxItems = []
         showArchive = false
         selectedNoteId = nil
@@ -1619,6 +1637,9 @@ final class AppState {
     /// Change the vault password. With envelope encryption, only re-wraps the master key (fast).
     /// For legacy vaults, re-encrypts all notes, attachments, versions, and the verification token.
     func changePassword(currentPassword: String, newPassword: String) async throws {
+        guard PasswordPolicy.violation(newNotesPassword: newPassword) == nil else {
+            throw AppStateError.passwordTooShort
+        }
         guard let encryptionRepo else {
             throw AppStateError.notInitialised
         }
@@ -1835,6 +1856,13 @@ final class AppState {
     }
 }
 
+/// The account's key, opened with the notes password, and that password,
+/// held only while the user is asked whether to move the vault onto the key.
+struct PendingAccountKeyMerge {
+    let accountKey: Data
+    let notesPassword: String
+}
+
 enum AppStateError: LocalizedError {
     case notInitialised
     case noVault
@@ -1842,6 +1870,8 @@ enum AppStateError: LocalizedError {
     case wrongPassword
     /// A sync was still running when the vault's key was about to change.
     case syncBusy
+    /// A new notes password is shorter than `PasswordPolicy` allows.
+    case passwordTooShort
 
     var errorDescription: String? {
         switch self {
@@ -1850,6 +1880,7 @@ enum AppStateError: LocalizedError {
         case .invalidSalt: return "Invalid encryption salt"
         case .wrongPassword: return "Incorrect password"
         case .syncBusy: return "Sync is still running. Try again in a moment."
+        case .passwordTooShort: return L.notesPasswordTooShort(PasswordPolicy.minimumNotesPasswordLength)
         }
     }
 }
