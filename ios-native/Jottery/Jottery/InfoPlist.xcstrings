@@ -22,6 +22,12 @@
             "value": "Unlock Jottery with Face ID"
           }
         },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock Jottery with Face ID"
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
@@ -106,6 +112,12 @@
           }
         },
         "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jottery connects to your own sync server. Allow local network access if that server runs on this network."
+          }
+        },
+        "en-US": {
           "stringUnit": {
             "state": "translated",
             "value": "Jottery connects to your own sync server. Allow local network access if that server runs on this network."

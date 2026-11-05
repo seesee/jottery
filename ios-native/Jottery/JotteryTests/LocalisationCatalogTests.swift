@@ -9,8 +9,8 @@ import Testing
 @Suite("Localisation catalog")
 struct LocalisationCatalogTests {
 
-    /// Every language the web app offers, as iOS names them. en-US is here too,
-    /// but it holds only the words spelt differently and falls back to en-GB.
+    /// Every language the web app offers, as iOS names them. en-US is checked
+    /// separately, as it has to match en-GB word for word.
     static let translated = ["de", "el", "es", "fr", "it", "ja", "ko", "nl", "pl", "pt", "ru", "tr", "zh-Hans"]
 
     /// `%@`, `%lld` and their positional forms, ignoring the position, because a
@@ -35,6 +35,19 @@ struct LocalisationCatalogTests {
     /// Keys that stay the same in every language: nothing in them to translate.
     private static func hasWords(_ key: String) -> Bool {
         key.contains { $0.isLetter }
+    }
+
+    /// A language doesn't fall back to another for a string it lacks: the app
+    /// shows the raw key. So American English needs everything British English
+    /// has, even though most of it is spelt the same.
+    @Test func americanEnglishHasEveryString() throws {
+        for bundle in [Bundle.main, try #require(Self.shareExtension)] {
+            let british = Self.table("Localizable", language: "en-GB", in: bundle)
+            let american = Self.table("Localizable", language: "en-US", in: bundle)
+
+            #expect(!british.isEmpty)
+            #expect(Set(british.keys).subtracting(american.keys).isEmpty)
+        }
     }
 
     @Test func theAppOffersEveryLanguageTheWebAppDoes() {
