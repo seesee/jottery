@@ -5,6 +5,10 @@ struct SetupScreen: View {
     @State private var selectedTab = 0
 
     var body: some View {
+        ScrollableScreen { form }
+    }
+
+    private var form: some View {
         VStack(spacing: 32) {
             Spacer()
 

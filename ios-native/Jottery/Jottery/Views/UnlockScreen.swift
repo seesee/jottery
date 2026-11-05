@@ -11,6 +11,10 @@ struct UnlockScreen: View {
     @State private var didAutoAttemptBiometric = false
 
     var body: some View {
+        ScrollableScreen { form }
+    }
+
+    private var form: some View {
         VStack(spacing: 32) {
             Spacer()
 
