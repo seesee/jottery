@@ -1,30 +1,38 @@
 use sqlx::{Sqlite, SqliteConnection, SqlitePool, Transaction};
 use uuid::Uuid;
 
-use crate::models::User;
+use crate::{config::Config, models::User};
 
 /// User repository for database operations
 pub struct UserRepository;
 
 impl UserRepository {
-    /// Create a new user
+    /// Create a new user, with the limits new accounts get on this server
     pub async fn create(
         pool: &SqlitePool,
         email: &str,
         password_hash: &str,
+        config: &Config,
     ) -> Result<User, sqlx::Error> {
         let id = Uuid::new_v4().to_string();
         let now = chrono::Utc::now().to_rfc3339();
 
         sqlx::query!(
             r#"
-            INSERT INTO users (id, email, password_hash, created_at, approved, is_admin, is_active, storage_quota_mb, max_upload_size_mb)
-            VALUES (?, ?, ?, ?, 0, 0, 1, 1000, 5)
+            INSERT INTO users (
+                id, email, password_hash, created_at, approved, is_admin, is_active,
+                storage_quota_mb, max_upload_size_mb, inbox_max_items, inbox_max_size_mb
+            )
+            VALUES (?, ?, ?, ?, 0, 0, 1, ?, ?, ?, ?)
             "#,
             id,
             email,
             password_hash,
-            now
+            now,
+            config.default_storage_quota_mb,
+            config.default_max_upload_size_mb,
+            config.default_inbox_max_items,
+            config.default_inbox_max_size_mb
         )
         .execute(pool)
         .await?;

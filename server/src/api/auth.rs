@@ -61,7 +61,7 @@ pub async fn register_user(
         })?;
 
     // Create user (approved=false by default)
-    let user = UserRepository::create(&state.pool, &req.email, &password_hash).await?;
+    let user = UserRepository::create(&state.pool, &req.email, &password_hash, &state.config).await?;
 
     tracing::info!("User registered: id={}, pending approval", user.id);
 

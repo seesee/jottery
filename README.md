@@ -96,7 +96,10 @@ You can configure the server using environment variables:
 | `DATABASE_URL` | `sqlite:jottery.db` | Database file path |
 | `PORT` | `3030` | Internal server port |
 | `SESSION_EXPIRY_DAYS` | `7` | Admin session expiry in days |
-| `DEFAULT_STORAGE_QUOTA_MB` | `1000` | Default user storage quota in MB |
+| `DEFAULT_STORAGE_QUOTA_MB` | `1000` | Storage quota in MB that new users get |
+| `DEFAULT_MAX_UPLOAD_SIZE_MB` | `5` | Largest push in MB that new users can send |
+| `DEFAULT_INBOX_MAX_ITEMS` | `100` | Inbox items that new users can hold |
+| `DEFAULT_INBOX_MAX_SIZE_MB` | `10` | Inbox size in MB that new users can hold |
 | `ENFORCE_STORAGE_QUOTA` | `false` | Refuse pushes that would take an account past its quota. Check accounts in the dashboard first: quotas weren't enforced before, so one may already be over, and a refused push stops that device's sync |
 | `MAX_PAYLOAD_SIZE` | `104857600` | Max size of a sync push in bytes (100 MB). Other routes have small fixed limits |
 | `CORS_ALLOWED_ORIGINS` | *(none)* | Comma-separated list of allowed CORS origins |
