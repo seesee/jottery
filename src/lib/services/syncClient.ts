@@ -174,6 +174,24 @@ export async function pullFromServer(
 }
 
 /**
+ * Revoke the calling device, so its API key stops working
+ */
+export async function revokeDevice(endpoint: string, apiKey: string): Promise<void> {
+  endpoint = normalizeEndpoint(endpoint);
+
+  const response = await fetchWithTimeout(`${endpoint}/api/${API_VERSION}/sync/device`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+    },
+  }, 10000);
+
+  if (!response.ok) {
+    handleHttpError(response, await response.text(), 'revoke device');
+  }
+}
+
+/**
  * Get sync status from the server
  */
 export async function getServerStatus(

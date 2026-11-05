@@ -972,6 +972,63 @@ describe('sync protocol', () => {
     });
   });
 
+  describe('disconnecting', () => {
+    function serveRevoke(status: number): { calls: string[] } {
+      const seen = { calls: [] as string[] };
+      server.use(http.delete(`${ENDPOINT}/api/v1/sync/device`, ({ request }) => {
+        seen.calls.push(request.headers.get('Authorization') ?? '');
+        return new HttpResponse(null, { status });
+      }));
+      return seen;
+    }
+
+    it('revokes the device while it still has the key to', async () => {
+      const seen = serveRevoke(204);
+
+      expect(await syncService.disconnect()).toEqual({ revoked: true });
+
+      expect(seen.calls).toEqual(['Bearer key']);
+      expect(await metadata()).toBeNull();
+    });
+
+    it('still disconnects if the server refuses, and says so', async () => {
+      serveRevoke(500);
+
+      expect(await syncService.disconnect()).toEqual({ revoked: false });
+
+      expect(await metadata()).toBeNull();
+    });
+
+    it('still disconnects if the server cannot be reached', async () => {
+      server.use(http.delete(`${ENDPOINT}/api/v1/sync/device`, () => HttpResponse.error()));
+
+      expect(await syncService.disconnect()).toEqual({ revoked: false });
+
+      expect(await metadata()).toBeNull();
+    });
+  });
+
+  describe('a note permanently deleted on another device', () => {
+    it('leaves nothing behind here: versions, sync state or blobs', async () => {
+      const { versionRepository } = await import('./versionRepository');
+      const { attachmentRepository } = await import('./attachmentRepository');
+      const attachment = { id: ID(91), filename: 'f', mimeType: 'image/png', size: 1, data: ID(91) };
+      await attachmentRepository.storeBlob(ID(91), new Uint8Array([1]).buffer);
+      const note = createTestNote({ id: ID(90), tags: [], content: await encrypted('x'), needsSync: false, attachments: [attachment] });
+      await noteRepository.create(note);
+      await versionRepository.createVersion({ ...note, version: 1 }, { syncedAt: NOW, reason: 'manual-sync' });
+      await syncRepository.updateNoteSyncMetadata(ID(90), { noteId: ID(90), lastSyncStatus: 'synced' });
+      serve(() => ({ deletions: [{ id: ID(90), deletedAt: NOW }] }));
+
+      await syncService.syncNow();
+
+      expect(await noteRepository.getById(ID(90))).toBeFalsy();
+      expect(await versionRepository.getVersionsForNote(ID(90))).toEqual([]);
+      expect(await syncRepository.getNoteSyncMetadata(ID(90))).toBeNull();
+      expect(await attachmentRepository.getBlob(ID(91))).toBeNull();
+    });
+  });
+
   describe('the inbox', () => {
     const item = { id: ID(50), content: 'x', tags: [], createdAt: NOW, sizeBytes: 1 };
 

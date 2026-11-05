@@ -609,7 +609,8 @@
         "dangerZone": "Tehlikeli Bölge",
         "deleteNotesDescription": "Senkronizasyon sunucusundan tüm notlarınızı silin. Bu işlem geri alınamaz. Yerel notlarınız SİLİNMEYECEKTİR.",
         "deleteNotesButton": "Sunucudan Tüm Notları Sil"
-      }
+      },
+      "disconnectNotRevoked": "Bu cihazın bağlantısı kesildi ancak sunucuya bildirilemedi, bu yüzden hâlâ orada listeleniyor ve anahtarı çalışıyor. Kullanıcı portalından iptal edin."
     },
     "advancedTab": {
       "importExport": "İçe/Dışa Aktar",

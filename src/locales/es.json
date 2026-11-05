@@ -609,7 +609,8 @@
         "dangerZone": "Zona de peligro",
         "deleteNotesDescription": "Elimine todas sus notas del servidor de sincronización. Esta acción no se puede deshacer. Sus notas locales NO se eliminarán.",
         "deleteNotesButton": "Eliminar todas las notas del servidor"
-      }
+      },
+      "disconnectNotRevoked": "Este dispositivo se ha desconectado, pero no se pudo avisar al servidor, así que sigue en la lista y su clave sigue funcionando. Revócalo en el portal de usuario."
     },
     "advancedTab": {
       "importExport": "Importar/Exportar",

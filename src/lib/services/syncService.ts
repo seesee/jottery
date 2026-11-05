@@ -51,6 +51,7 @@ import {
   pushToServer,
   pullFromServer,
   getServerStatus,
+  revokeDevice,
   SyncApiError,
 } from './syncClient';
 import { get } from 'svelte/store';
@@ -939,6 +940,7 @@ class SyncService {
     const sent = deletions.map(deletion => deletion.id);
     await noteRepository.markDeletionsSynced(sent.filter(id => !refused.has(id)));
     await noteRepository.forgetDeletions(sent.filter(id => refused.has(id)));
+    await noteRepository.cleanupOldDeletions();
 
     console.log(`[SyncService] Pushed ${deletions.length} deletions (${refused.size} refused)`);
   }
@@ -1384,7 +1386,7 @@ class SyncService {
         continue;
       }
 
-      const wasDeleted = await noteRepository.applyRemoteDeletion(deletion.id);
+      const wasDeleted = await noteService.applyRemoteDeletion(deletion.id);
       if (wasDeleted) {
         console.log(`[SyncService] Hard deleted note ${deletion.id} (from server)`);
       }
@@ -1770,14 +1772,38 @@ class SyncService {
     return this.eventSource !== null && this.eventSource.readyState === EventSource.OPEN;
   }
 
+  /** Revoke this device on the server. A device that can't be revoked keeps a working key. */
+  private async revokeThisDevice(): Promise<boolean> {
+    try {
+      const metadata = await syncRepository.getMetadata();
+      const masterKey = keyManager.getMasterKey();
+      if (!metadata?.apiKey || !metadata.syncEndpoint || !masterKey) {
+        return false;
+      }
+
+      const apiKey = await cryptoService.decryptText(JSON.parse(metadata.apiKey), masterKey.key);
+      await revokeDevice(metadata.syncEndpoint, apiKey);
+      return true;
+    } catch (error) {
+      console.warn('[SyncService] Could not revoke this device:', error);
+      return false;
+    }
+  }
+
   /**
    * Disconnect from sync server
    * Clears all sync credentials and metadata, but preserves local notes
+   *
+   * @returns Whether the server revoked this device. Disconnecting goes ahead either
+   * way, but if it didn't, the device stays registered and its key stays valid.
    */
-  async disconnect(): Promise<void> {
+  async disconnect(): Promise<{ revoked: boolean }> {
     // Disable auto-sync and SSE first
     this.disableAutoSync();
     this.disconnectFromSyncEvents();
+
+    // Before the credentials go, because this needs them
+    const revoked = await this.revokeThisDevice();
 
     // Delete recovery note (non-blocking)
     deleteSyncRecoveryNote().catch(err =>
@@ -1794,6 +1820,7 @@ class SyncService {
     });
 
     console.log('[SyncService] Disconnected from sync server');
+    return { revoked };
   }
 
   /**

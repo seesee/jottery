@@ -589,7 +589,10 @@
 
   async function handleDisconnect() {
     try {
-      await syncService.disconnect();
+      const { revoked } = await syncService.disconnect();
+      if (!revoked) {
+        toast.error($_('settings.syncTab.disconnectNotRevoked'));
+      }
 
       // Connections are limited to the old server for this page load, and only a
       // reload can lift that, so a new server couldn't be reached otherwise

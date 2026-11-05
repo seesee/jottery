@@ -609,7 +609,8 @@
         "dangerZone": "Gevarenzone",
         "deleteNotesDescription": "Verwijder al uw notities van de synchronisatieserver. Deze actie kan niet ongedaan worden gemaakt. Uw lokale notities worden NIET verwijderd.",
         "deleteNotesButton": "Alle notities van server verwijderen"
-      }
+      },
+      "disconnectNotRevoked": "Dit apparaat is losgekoppeld, maar de server kon niet worden ingelicht, dus het staat daar nog vermeld en de sleutel werkt nog. Trek het in via het gebruikersportaal."
     },
     "advancedTab": {
       "importExport": "Importeren/Exporteren",

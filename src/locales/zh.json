@@ -609,7 +609,8 @@
         "dangerZone": "危险区域",
         "deleteNotesDescription": "从同步服务器删除所有笔记。此操作无法撤消。您的本地笔记不会被删除。",
         "deleteNotesButton": "从服务器删除所有笔记"
-      }
+      },
+      "disconnectNotRevoked": "此设备已断开连接，但无法通知服务器，因此它仍在列表中，其密钥仍然有效。请在用户门户中撤销它。"
     },
     "advancedTab": {
       "importExport": "导入/导出",

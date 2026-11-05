@@ -609,7 +609,8 @@
         "dangerZone": "Gefahrenzone",
         "deleteNotesDescription": "Löschen Sie alle Ihre Notizen vom Synchronisierungsserver. Diese Aktion kann nicht rückgängig gemacht werden. Ihre lokalen Notizen werden NICHT gelöscht.",
         "deleteNotesButton": "Alle Notizen vom Server löschen"
-      }
+      },
+      "disconnectNotRevoked": "Dieses Gerät ist getrennt, aber der Server konnte nicht benachrichtigt werden. Es ist dort weiterhin aufgeführt und sein Schlüssel funktioniert noch. Widerrufen Sie es im Benutzerportal."
     },
     "advancedTab": {
       "importExport": "Importieren/Exportieren",

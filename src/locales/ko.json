@@ -609,7 +609,8 @@
         "dangerZone": "위험 구역",
         "deleteNotesDescription": "동기화 서버에서 모든 노트를 삭제합니다. 이 작업은 취소할 수 없습니다. 로컬 노트는 삭제되지 않습니다.",
         "deleteNotesButton": "서버에서 모든 노트 삭제"
-      }
+      },
+      "disconnectNotRevoked": "이 기기의 연결이 해제되었지만 서버에 알리지 못해 목록에 남아 있으며 키도 계속 유효합니다. 사용자 포털에서 취소하세요."
     },
     "advancedTab": {
       "importExport": "가져오기/내보내기",

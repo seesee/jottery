@@ -13,6 +13,7 @@ import { recordDecryptFailure } from './vaultHealthService';
 import { keyManager } from './keyManager';
 import { ApplicationLockedError, NotFoundError, NoteReadOnlyError, CryptoError } from '../errors';
 import { syncToStorage } from './tagConversionService';
+import { syncRepository } from './syncRepository';
 import { backupSchedulerService } from './backupSchedulerService';
 import { getNoteTitle } from '../utils/noteTitle';
 import { localeIncludes, localeSort } from '../utils/stringUtils';
@@ -615,9 +616,25 @@ class NoteService {
     // Its versions can't be reached once the note has gone, and they would keep its
     // attachments in use for good
     await versionRepository.deleteVersionsForNote(id);
+    await syncRepository.deleteNoteSyncMetadata(id);
     await noteRepository.permanentDelete(id);
 
     await deleteUnreferencedAttachments(note?.attachments.map(attachment => attachment.id) ?? []);
+  }
+
+  /**
+   * Remove a note another device permanently deleted, and everything kept for it here
+   * @returns Whether this device had the note
+   */
+  async applyRemoteDeletion(id: string): Promise<boolean> {
+    const note = await noteRepository.getById(id);
+
+    await versionRepository.deleteVersionsForNote(id);
+    await syncRepository.deleteNoteSyncMetadata(id);
+    const deleted = await noteRepository.applyRemoteDeletion(id);
+
+    await deleteUnreferencedAttachments(note?.attachments.map(attachment => attachment.id) ?? []);
+    return deleted;
   }
 
   /**

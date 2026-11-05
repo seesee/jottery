@@ -609,7 +609,8 @@
         "dangerZone": "危険ゾーン",
         "deleteNotesDescription": "同期サーバーからすべてのノートを削除します。この操作は取り消せません。ローカルのノートは削除されません。",
         "deleteNotesButton": "サーバーからすべてのノートを削除"
-      }
+      },
+      "disconnectNotRevoked": "このデバイスは切断されましたが、サーバーに通知できなかったため、まだ一覧に残っており、キーも有効です。ユーザーポータルで取り消してください。"
     },
     "advancedTab": {
       "importExport": "インポート/エクスポート",

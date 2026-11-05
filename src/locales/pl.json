@@ -609,7 +609,8 @@
         "dangerZone": "Strefa niebezpieczna",
         "deleteNotesDescription": "Usuń wszystkie notatki z serwera synchronizacji. Tej czynności nie można cofnąć. Twoje lokalne notatki NIE zostaną usunięte.",
         "deleteNotesButton": "Usuń wszystkie notatki z serwera"
-      }
+      },
+      "disconnectNotRevoked": "To urządzenie zostało odłączone, ale nie udało się powiadomić serwera, więc nadal jest tam na liście, a jego klucz działa. Unieważnij je w portalu użytkownika."
     },
     "advancedTab": {
       "importExport": "Import/Eksport",

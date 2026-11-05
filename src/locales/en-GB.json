@@ -641,7 +641,8 @@
         "dangerZone": "Danger Zone",
         "deleteNotesDescription": "Delete all your notes from the sync server. This action cannot be undone. Your local notes will NOT be deleted.",
         "deleteNotesButton": "Delete All Notes from Server"
-      }
+      },
+      "disconnectNotRevoked": "This device is disconnected, but the server couldn't be told, so it's still listed there and its key still works. Revoke it in the user portal."
     },
     "advancedTab": {
       "importExport": "Import/Export",
