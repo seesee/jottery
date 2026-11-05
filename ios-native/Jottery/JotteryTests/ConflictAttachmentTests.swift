@@ -51,7 +51,7 @@ struct ConflictAttachmentTests {
     ) throws -> AttachmentRef {
         let attachmentId = CryptoService.generateUUID()
         try attachmentRepo.storeBlob(
-            id: attachmentId, filename: filename, mimeType: "text/plain", size: blobData.count, data: blobData
+            id: attachmentId, mimeType: "text/plain", size: blobData.count, data: blobData
         )
         let encFilename = try CryptoService.encryptText(filename, key: key)
         let encFilenameJSON = try CryptoService.serializeEncryptedJSON(encFilename)
@@ -223,7 +223,7 @@ struct ConflictAttachmentTests {
         let localBlob = Data("orphaned local attachment bytes".utf8)
         let attachmentId = CryptoService.generateUUID()
         try attachmentRepo.storeBlob(
-            id: attachmentId, filename: "local.txt", mimeType: "text/plain", size: localBlob.count, data: localBlob
+            id: attachmentId, mimeType: "text/plain", size: localBlob.count, data: localBlob
         )
         let encFilename = try CryptoService.encryptText("local.txt", key: key)
         let localRef = AttachmentRef(

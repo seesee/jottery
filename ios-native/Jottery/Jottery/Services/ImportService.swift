@@ -129,25 +129,21 @@ enum ImportService {
         key: SymmetricKey,
         into result: inout ImportResult
     ) {
+        // Blobs stored for this note, to remove if it can't be imported after all.
+        var storedBlobIds: [String] = []
         do {
             let existing = try noteRepo.getRaw(id: exportNote.id)
 
-            if existing != nil {
-                switch strategy {
-                case .skip:
-                    result.skipped += 1
-                    return
-                case .replace:
-                    try noteRepo.hardDelete(id: exportNote.id)
-                case .merge:
-                    // Will create with new ID below
-                    break
-                }
+            if existing != nil, strategy == .skip {
+                result.skipped += 1
+                return
             }
 
-            // Create the note
+            // Create the note. A note being replaced stays as it is until its
+            // replacement is complete, so a failure here loses nothing.
             let useNewId = (strategy == .merge && existing != nil)
             let noteId = useNewId ? UUID().uuidString : exportNote.id
+            let replacing = strategy == .replace ? existing : nil
 
             // Encrypt content and tags
             let encContent = try CryptoService.encryptText(exportNote.content, key: key)
@@ -166,11 +162,11 @@ enum ImportService {
                     let blobData = Data(encJSON.utf8)
                     try attachmentRepo.storeBlob(
                         id: attId,
-                        filename: filename,
                         mimeType: exportAtt.mimeType,
                         size: rawData.count,
                         data: blobData
                     )
+                    storedBlobIds.append(attId)
                     let encFilenameJSON = try AttachmentFilename.encrypted(filename, key: key)
                     attachmentRefs.append(AttachmentRef(
                         id: attId,
@@ -231,14 +227,35 @@ enum ImportService {
                 color: record.color
             )
             record.contentHash = contentHash
-            let hashChain = HashChainService.updateHashChain(currentHash: contentHash, parentChain: [])
+            // A replacement carries on from the note it replaces, or the server
+            // would see a stranger and call it a conflict.
+            let serverHash = replacing.flatMap { $0.needsSync ? $0.syncHash : $0.contentHash }
+            let hashChain = HashChainService.updateHashChain(
+                currentHash: contentHash,
+                parentChain: Self.decodeHashChain(replacing?.hashChain),
+                keeping: serverHash
+            )
             record.hashChain = String(data: try JSONEncoder().encode(hashChain), encoding: .utf8)
 
-            try noteRepo.insertOrReplace(record)
+            if let replacing {
+                record.parentHash = replacing.contentHash
+                record.syncHash = serverHash
+                record.version = replacing.version
+                try noteRepo.versionRepo.createVersion(from: replacing, reason: "pre-overwrite")
+                try noteRepo.replace(with: record)
+            } else {
+                try noteRepo.insertOrReplace(record)
+            }
             result.imported += 1
         } catch {
+            for id in storedBlobIds { try? attachmentRepo.deleteBlob(id: id) }
             result.errors.append("\(exportNote.id): \(error.localizedDescription)")
         }
+    }
+
+    private static func decodeHashChain(_ json: String?) -> [String] {
+        guard let json else { return [] }
+        return (try? JSONDecoder().decode([String].self, from: Data(json.utf8))) ?? []
     }
 
     enum ImportError: LocalizedError {

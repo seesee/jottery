@@ -25,7 +25,9 @@ enum PasswordPolicy {
     ///
     /// Only for a new password: a new vault or a password change. Never use it
     /// at unlock, or when joining an account that already has a key, because
-    /// an existing short password has to keep working.
+    /// an existing password has to keep working, even a short one. One that
+    /// matches the account password is warned about instead: refusing it would
+    /// stop those users adding a device.
     static func violation(newNotesPassword: String, accountPassword: String? = nil) -> Violation? {
         if let accountPassword, matchesAccountPassword(newNotesPassword, accountPassword: accountPassword) {
             return .matchesAccountPassword

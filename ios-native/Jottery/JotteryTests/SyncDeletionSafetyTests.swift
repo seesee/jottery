@@ -15,16 +15,19 @@ struct SyncDeletionSafetyTests {
         return NoteRepository(db: db, versionRepo: versionRepo)
     }
 
-    @Test func deletesNoteWithNoPendingChanges() throws {
+    @Test func movesANoteWithNoPendingChangesToTheBin() throws {
         let repo = try makeRepo()
         let key = SymmetricKey(data: Data(repeating: 7, count: 32))
         let note = try repo.create(content: "synced note", key: key)
         try repo.markSynced(id: note.id, syncedAt: Date().iso8601)
 
-        let deleted = try repo.hardDeleteIfSynced(id: note.id)
+        let result = try repo.applyServerDeletion(id: note.id)
 
-        #expect(deleted == true)
-        #expect(try repo.getRaw(id: note.id) == nil)
+        #expect(result == .movedToBin)
+        let binned = try #require(try repo.getRaw(id: note.id))
+        #expect(binned.deleted == true)
+        #expect(binned.localDeletedAt != nil)
+        #expect(binned.needsSync == false)
     }
 
     @Test func keepsNoteWithUnsyncedEdits() throws {
@@ -35,9 +38,9 @@ struct SyncDeletionSafetyTests {
         note.content = "offline edit the user must not lose"
         try repo.update(note, key: key)   // sets needs_sync = 1
 
-        let deleted = try repo.hardDeleteIfSynced(id: note.id)
+        let result = try repo.applyServerDeletion(id: note.id)
 
-        #expect(deleted == false)
+        #expect(result == .keptLocalEdit)
         let survivor = try #require(try repo.getRaw(id: note.id))
         #expect(survivor.needsSync == true)
     }
@@ -57,10 +60,10 @@ struct SyncDeletionSafetyTests {
         try repo.update(note, key: key)   // sets needs_sync = 1
 
         // Mirrors SyncService.forceFullSync's deletion loop: it calls
-        // hardDeleteIfSynced for each server-reported deletion.
-        let deleted = try repo.hardDeleteIfSynced(id: note.id)
+        // applyServerDeletion for each server-reported deletion.
+        let result = try repo.applyServerDeletion(id: note.id)
 
-        #expect(deleted == false)
+        #expect(result == .keptLocalEdit)
         let survivor = try #require(try repo.getRaw(id: note.id))
         #expect(survivor.needsSync == true)
     }

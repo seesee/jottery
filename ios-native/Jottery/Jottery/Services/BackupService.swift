@@ -59,6 +59,8 @@ enum BackupService {
         var notes = 0
         /// Items in the file that couldn't be read, and were left out.
         var skipped = 0
+        /// Notes left alone, because this device's copy is at least as new.
+        var keptNewer = 0
     }
 
     // MARK: - Backup Data Structures
@@ -505,15 +507,20 @@ enum BackupService {
                 let record = try batch(at: range)
                 switch record.type {
                 case "notes":
+                    var records: [NoteRecord] = []
                     for item in try decryptItems(record.data, as: BackupNote.self, key: backupKey, result: &result) {
                         do {
-                            try noteRepo.insertOrReplace(reEncrypted(item, from: backupKey, to: currentKey))
-                            result.notes += 1
+                            records.append(try reEncrypted(item, from: backupKey, to: currentKey))
                         } catch {
                             Log.debug("[Backup] Skipping note \(item.id): \(error)")
                             result.skipped += 1
                         }
                     }
+                    // A batch goes in whole or not at all, and restoring again
+                    // after a failure picks up what's missing.
+                    let written = try noteRepo.restore(records)
+                    result.notes += written.restored
+                    result.keptNewer += written.keptNewer
 
                 case "attachments":
                     for item in try decryptItems(record.data, as: BackupAttachment.self, key: backupKey, result: &result) {
@@ -667,12 +674,15 @@ enum BackupService {
         to currentKey: SymmetricKey,
         repo: AttachmentRepository
     ) throws {
+        // Ids are never reused for different contents, so nothing would change,
+        // and the server would be sent a blob it already has.
+        guard try !repo.hasBlob(id: attachment.id) else { return }
         guard let blob = Data(base64Encoded: attachment.blob) else { throw BackupError.invalidFormat }
         let encrypted = try CryptoService.parseEncryptedJSON(String(decoding: blob, as: UTF8.self))
         let plaintext = try CryptoService.decrypt(encrypted, key: backupKey)
         let reEncrypted = try CryptoService.serializeEncryptedJSON(CryptoService.encrypt(plaintext, key: currentKey))
         try repo.storeBlob(
-            id: attachment.id, filename: "", mimeType: "",
+            id: attachment.id, mimeType: "",
             size: plaintext.count, data: Data(reEncrypted.utf8)
         )
     }

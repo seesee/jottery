@@ -12,6 +12,7 @@ struct NoteListView: View {
     @State private var showBulkColorSheet = false
     @State private var showBulkDeleteConfirm = false
     @State private var bulkExportFile: ExportFile?
+    @State private var noteShareFile: ExportFile?
     @State private var bulkExportTask: Task<Void, Never>?
     @State private var showSavedSearches = false
     @State private var showConflicts = false
@@ -56,7 +57,10 @@ struct NoteListView: View {
                     }
 
                     Menu {
-                        Picker(L.noteListSort, selection: $state.sortOrder) {
+                        Picker(L.noteListSort, selection: Binding(
+                            get: { appState.sortOrder },
+                            set: { appState.setSortOrder($0) }
+                        )) {
                             ForEach(SortOrder.allCases, id: \.self) { order in
                                 Text(order.displayName).tag(order)
                             }
@@ -160,25 +164,23 @@ struct NoteListView: View {
             }
         }
         .shareTemporaryFile($bulkExportFile)
+        .shareTemporaryFile($noteShareFile)
         .onDisappear {
             // The app can lock during an export, which takes this view away.
             bulkExportTask?.cancel()
         }
         .alert(L.bulkDeleteConfirmTitle, isPresented: $showBulkDeleteConfirm) {
             Button(L.bulkDeleteConfirmAction, role: .destructive) {
-                var failureCount = 0
-                for id in selectedIds {
-                    do {
-                        try appState.deleteNote(id: id)
-                    } catch {
-                        failureCount += 1
-                    }
-                }
-                if failureCount > 0 {
-                    appState.reportError(L.errorCouldntDeleteNotes(failureCount))
-                }
+                let ids = selectedIds
                 isSelectMode = false
                 selectedIds.removeAll()
+                Task {
+                    do {
+                        try await appState.deleteNotes(ids: ids)
+                    } catch {
+                        appState.reportError(L.errorCouldntDeleteNotes(ids.count))
+                    }
+                }
             }
             Button(L.commonCancel, role: .cancel) {}
         } message: {
@@ -268,6 +270,9 @@ struct NoteListView: View {
                 hasConflict: appState.pendingConflicts.contains { $0.id == note.id }
             )
                 .tag(note.id)
+                .contextMenu {
+                    NoteShareActions(note: note, shareFile: $noteShareFile)
+                }
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                     if appState.showArchive {
                         Button {
@@ -383,19 +388,16 @@ struct NoteListView: View {
 
                     if !appState.showArchive {
                         Button {
-                            var failureCount = 0
-                            for id in selectedIds {
-                                do {
-                                    try appState.archiveNote(id: id)
-                                } catch {
-                                    failureCount += 1
-                                }
-                            }
-                            if failureCount > 0 {
-                                appState.reportError(L.errorCouldntArchiveNotes(failureCount))
-                            }
+                            let ids = selectedIds
                             isSelectMode = false
                             selectedIds.removeAll()
+                            Task {
+                                do {
+                                    try await appState.archiveNotes(ids: ids)
+                                } catch {
+                                    appState.reportError(L.errorCouldntArchiveNotes(ids.count))
+                                }
+                            }
                         } label: {
                             Label(L.noteListArchive, systemImage: "archivebox")
                         }

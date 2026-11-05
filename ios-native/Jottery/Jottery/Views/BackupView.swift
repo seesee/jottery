@@ -17,6 +17,7 @@ struct BackupView: View {
     @State private var exportFile: ExportFile?
     @State private var showRestoreSuccess = false
     @State private var skippedCount = 0
+    @State private var keptNewerCount = 0
     @State private var progress: BackupService.Progress?
     @State private var work: Task<Void, Never>?
 
@@ -114,10 +115,17 @@ struct BackupView: View {
             .alert(L.backupRestoreSuccessTitle, isPresented: $showRestoreSuccess) {
                 Button(L.settingsDone) {}
             } message: {
-                Text(skippedCount > 0 ? L.backupRestoreSkipped(skippedCount) : L.backupRestoreSuccessMessage)
+                Text(restoreSummary)
             }
             .shareTemporaryFile($exportFile)
         }
+    }
+
+    private var restoreSummary: String {
+        var lines: [String] = []
+        if skippedCount > 0 { lines.append(L.backupRestoreSkipped(skippedCount)) }
+        if keptNewerCount > 0 { lines.append(L.backupRestoreKeptNewer(keptNewerCount)) }
+        return lines.isEmpty ? L.backupRestoreSuccessMessage : lines.joined(separator: "\n\n")
     }
 
     // MARK: - Create
@@ -214,6 +222,7 @@ struct BackupView: View {
                     )
                 }
                 skippedCount = result.skipped
+                keptNewerCount = result.keptNewer
                 try? await appState.loadNotes()
                 showRestoreSuccess = true
             } catch is CancellationError {

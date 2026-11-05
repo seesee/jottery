@@ -6,6 +6,9 @@ import UniformTypeIdentifiers
 /// encrypted notes on its next unlocked run (`AppState.importSharedInboxItems`).
 final class ShareViewController: UIViewController {
 
+    private let label = UILabel()
+    private let closeButton = UIButton(configuration: .borderedProminent())
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .clear
@@ -18,28 +21,55 @@ final class ShareViewController: UIViewController {
         card.translatesAutoresizingMaskIntoConstraints = false
         view.addSubview(card)
 
-        let label = UILabel()
         label.text = String(localized: "share.savingToJottery", defaultValue: "Saving to Jottery…")
         label.font = .preferredFont(forTextStyle: .headline)
-        label.translatesAutoresizingMaskIntoConstraints = false
-        card.contentView.addSubview(label)
+        label.adjustsFontForContentSizeCategory = true
+        label.numberOfLines = 0
+        label.textAlignment = .center
+
+        closeButton.configuration?.title = String(localized: "share.close", defaultValue: "Close")
+        closeButton.isHidden = true
+        closeButton.addAction(UIAction { [weak self] _ in self?.finish() }, for: .touchUpInside)
+
+        let stack = UIStackView(arrangedSubviews: [label, closeButton])
+        stack.axis = .vertical
+        stack.spacing = 12
+        stack.alignment = .center
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        card.contentView.addSubview(stack)
 
         NSLayoutConstraint.activate([
             card.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             card.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            label.topAnchor.constraint(equalTo: card.contentView.topAnchor, constant: 20),
-            label.bottomAnchor.constraint(equalTo: card.contentView.bottomAnchor, constant: -20),
-            label.leadingAnchor.constraint(equalTo: card.contentView.leadingAnchor, constant: 24),
-            label.trailingAnchor.constraint(equalTo: card.contentView.trailingAnchor, constant: -24),
+            card.widthAnchor.constraint(lessThanOrEqualTo: view.widthAnchor, constant: -48),
+            stack.topAnchor.constraint(equalTo: card.contentView.topAnchor, constant: 20),
+            stack.bottomAnchor.constraint(equalTo: card.contentView.bottomAnchor, constant: -20),
+            stack.leadingAnchor.constraint(equalTo: card.contentView.leadingAnchor, constant: 24),
+            stack.trailingAnchor.constraint(equalTo: card.contentView.trailingAnchor, constant: -24),
         ])
 
         Task { await ingestAndComplete() }
     }
 
+    private func finish() {
+        extensionContext?.completeRequest(returningItems: nil)
+    }
+
+    /// Stage what was shared and say how it went. A failure stays on screen, so
+    /// nobody walks away thinking something was saved when it wasn't.
     private func ingestAndComplete() async {
+        let staging: SharedInboxStore.Staging
+        do {
+            staging = try SharedInboxStore.begin()
+        } catch {
+            show(String(localized: "share.failed", defaultValue: "This couldn't be saved to Jottery."))
+            return
+        }
+
         var text: String?
         var urls: [String] = []
-        var files: [(data: Data, filename: String, mimeType: String)] = []
+        var files: [SharedInboxStore.Manifest.File] = []
+        var failures = 0
 
         let providers = (extensionContext?.inputItems ?? [])
             .compactMap { $0 as? NSExtensionItem }
@@ -47,47 +77,87 @@ final class ShareViewController: UIViewController {
 
         for provider in providers {
             if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
-                if let file = await loadFile(from: provider, type: .image, fallbackName: "shared-image") {
-                    files.append(file)
-                }
+                await stageFile(from: provider, type: .image, fallbackName: "shared-image", in: staging, files: &files, failures: &failures)
             } else if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
-                if let file = await loadFile(from: provider, type: .data, fallbackName: "shared-file") {
-                    files.append(file)
-                }
+                await stageFile(from: provider, type: .data, fallbackName: "shared-file", in: staging, files: &files, failures: &failures)
             } else if provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
                 if let url = await loadURL(from: provider) {
                     urls.append(url.absoluteString)
+                } else {
+                    failures += 1
                 }
             } else if provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
                 if let string = await loadText(from: provider) {
                     text = [text, string].compactMap { $0 }.joined(separator: "\n")
+                } else {
+                    failures += 1
                 }
             }
         }
 
-        if text != nil || !urls.isEmpty || !files.isEmpty {
-            try? SharedInboxStore.write(text: text, urls: urls, files: files)
+        guard text != nil || !urls.isEmpty || !files.isEmpty else {
+            staging.discard()
+            if failures > 0 {
+                show(String(localized: "share.failed", defaultValue: "This couldn't be saved to Jottery."))
+            } else {
+                finish()
+            }
+            return
         }
-        extensionContext?.completeRequest(returningItems: nil)
+
+        do {
+            try staging.commit(text: text, urls: urls, files: files)
+        } catch {
+            staging.discard()
+            show(String(localized: "share.failed", defaultValue: "This couldn't be saved to Jottery."))
+            return
+        }
+
+        if failures > 0 {
+            show(String(localized: "share.partlySaved", defaultValue: "Some of this couldn't be saved. The rest will be added next time you unlock Jottery."))
+        } else {
+            // It's unencrypted until the app next runs, which the user should know.
+            label.text = String(localized: "share.saved", defaultValue: "Saved. It stays unencrypted on this device until you next unlock Jottery.")
+            try? await Task.sleep(for: .seconds(2))
+            finish()
+        }
     }
 
-    /// Load a provider as an on-disk file representation and read it.
-    private func loadFile(
-        from provider: NSItemProvider, type: UTType, fallbackName: String
-    ) async -> (data: Data, filename: String, mimeType: String)? {
-        await withCheckedContinuation { continuation in
+    private func show(_ message: String) {
+        label.text = message
+        closeButton.isHidden = false
+    }
+
+    /// Copy a provider's file into the staged item. The file is copied, never
+    /// read: extensions get very little memory, and a video would be fatal.
+    private func stageFile(
+        from provider: NSItemProvider,
+        type: UTType,
+        fallbackName: String,
+        in staging: SharedInboxStore.Staging,
+        files: inout [SharedInboxStore.Manifest.File],
+        failures: inout Int
+    ) async {
+        let index = files.count
+        let staged: SharedInboxStore.Manifest.File? = await withCheckedContinuation { continuation in
             provider.loadFileRepresentation(forTypeIdentifier: type.identifier) { url, _ in
-                // The temporary file is only valid inside this closure —
-                // read it before returning.
-                guard let url, let data = try? Data(contentsOf: url) else {
+                // The temporary file is only valid inside this closure.
+                guard let url else {
                     continuation.resume(returning: nil)
                     return
                 }
                 let filename = url.lastPathComponent.isEmpty ? fallbackName : url.lastPathComponent
                 let mimeType = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType
                     ?? "application/octet-stream"
-                continuation.resume(returning: (data, filename, mimeType))
+                continuation.resume(returning: try? staging.add(
+                    copying: url, index: index, filename: filename, mimeType: mimeType
+                ))
             }
+        }
+        if let staged {
+            files.append(staged)
+        } else {
+            failures += 1
         }
     }
 

@@ -4,6 +4,8 @@ import SwiftUI
 struct ExportFile: Identifiable {
     let id = UUID()
     let url: URL
+    /// Text to offer alongside the file, for apps that take text and not files.
+    var text: String?
 }
 
 extension View {
@@ -22,7 +24,7 @@ private struct TemporaryFileShareSheet: ViewModifier {
     func body(content: Content) -> some View {
         content
             .sheet(item: $file, onDismiss: removeShownFile) { file in
-                ActivityView(activityItems: [file.url])
+                ActivityView(activityItems: [file.text as Any?, file.url].compactMap { $0 })
             }
             .onChange(of: file?.url) { _, url in
                 if let url { shown = url }

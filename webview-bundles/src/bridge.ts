@@ -8,7 +8,8 @@ export type JsToSwift =
   | { type: 'contentChanged'; content: string }
   | { type: 'ready' }
   | { type: 'requestAttachment'; id: string }
-  | { type: 'openLink'; url: string };
+  | { type: 'openLink'; url: string }
+  | { type: 'openNote'; id: string };
 
 declare global {
   interface Window {
@@ -27,6 +28,10 @@ declare global {
       setTheme(isDark: boolean): void;
       setFontSize(px: number): void;
       resolveAttachment(id: string, dataUrl: string): void;
+      /** Editors only. Hosts built before this existed never call it. */
+      setReadOnly?(readOnly: boolean): void;
+      /** Preview only: note ids and their titles, for resolving note links. */
+      setNoteTitles?(titles: Record<string, string>): void;
     };
   }
 }
