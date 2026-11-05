@@ -115,6 +115,12 @@ struct SettingsView: View {
                     } label: {
                         Label(L.settingsImport, systemImage: "square.and.arrow.down")
                     }
+
+                    NavigationLink {
+                        VaultHealthView()
+                    } label: {
+                        Label(L.healthTitle, systemImage: "stethoscope")
+                    }
                 } header: {
                     Text(L.settingsData)
                 } footer: {

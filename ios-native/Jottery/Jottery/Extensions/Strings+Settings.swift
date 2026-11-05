@@ -26,4 +26,39 @@ extension L {
     static var backupReminderOpenSettings: String { String(localized: "backup.reminderOpenSettings") }
     static var backupReminderTitle: String { String(localized: "backup.reminderTitle") }
     static var backupReminderBody: String { String(localized: "backup.reminderBody") }
+
+    // MARK: - Vault Health
+
+    static var healthTitle: String { String(localized: "health.title") }
+    static var healthScanning: String { String(localized: "health.scanning") }
+    static var healthScanAgain: String { String(localized: "health.scanAgain") }
+    static var healthScanFailed: String { String(localized: "health.scanFailed") }
+    static var healthAllGood: String { String(localized: "health.allGood") }
+    static var healthProblemsFound: String { String(localized: "health.problemsFound") }
+    static func healthNotesChecked(_ count: Int) -> String { String(localized: "health.notesChecked \(count)") }
+    static var healthUnknownDate: String { String(localized: "health.unknownDate") }
+    static func healthNoteInBin(_ id: String) -> String { String(localized: "health.noteInBin \(id)") }
+    static var healthDeleteNote: String { String(localized: "health.deleteNote") }
+    static var healthDeleteFailed: String { String(localized: "health.deleteFailed") }
+    static var healthDeleteConfirmTitle: String { String(localized: "health.deleteConfirmTitle") }
+    static var healthDeleteConfirmMessage: String { String(localized: "health.deleteConfirmMessage") }
+    static var healthDeleteConfirmAction: String { String(localized: "health.deleteConfirmAction") }
+    static var healthUnreadableHeader: String { String(localized: "health.unreadableHeader") }
+    static var healthUnreadableFooter: String { String(localized: "health.unreadableFooter") }
+    static var healthUnreadableNoteTitle: String { String(localized: "health.unreadableNoteTitle") }
+    static var healthMissingHeader: String { String(localized: "health.missingHeader") }
+    static var healthMissingFooter: String { String(localized: "health.missingFooter") }
+    static var healthMissingFooterNoSync: String { String(localized: "health.missingFooterNoSync") }
+    static var healthRepairFromServer: String { String(localized: "health.repairFromServer") }
+    static var healthRepairNotOnServer: String { String(localized: "health.repairNotOnServer") }
+    static var healthRepairUnreadable: String { String(localized: "health.repairUnreadable") }
+    static var healthRepairFailed: String { String(localized: "health.repairFailed") }
+    static var healthServerHeader: String { String(localized: "health.serverHeader") }
+    static var healthServerFooter: String { String(localized: "health.serverFooter") }
+    static var healthCheckServer: String { String(localized: "health.checkServer") }
+    static var healthCheckingServer: String { String(localized: "health.checkingServer") }
+    static var healthServerHasEverything: String { String(localized: "health.serverHasEverything") }
+    static var healthSendToServer: String { String(localized: "health.sendToServer") }
+    static var healthUploadNotKept: String { String(localized: "health.uploadNotKept") }
+    static var healthUploadUnreadable: String { String(localized: "health.uploadUnreadable") }
 }

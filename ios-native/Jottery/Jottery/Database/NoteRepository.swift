@@ -668,7 +668,7 @@ struct NoteRepository: Sendable {
     }
 
     /// Decrypt a `NoteRecord` to a `DecryptedNote`.
-    private func decrypt(_ record: NoteRecord, key: SymmetricKey) throws -> DecryptedNote {
+    func decrypt(_ record: NoteRecord, key: SymmetricKey) throws -> DecryptedNote {
         let encContent = try CryptoService.parseEncryptedJSON(record.content)
         let content = try CryptoService.decryptText(encContent, key: key)
 

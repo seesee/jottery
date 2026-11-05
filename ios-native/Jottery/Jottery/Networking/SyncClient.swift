@@ -111,6 +111,41 @@ actor SyncClient {
         URL(string: "\(endpoint)/api/\(apiVersion)/sync/events?token=\(token)")
     }
 
+    // MARK: - Attachments
+
+    /// One attachment's blob, or nil if the server has none for this user.
+    func fetchAttachment(id: String) async throws -> SyncAttachment? {
+        do {
+            return try await get(url: attachmentURL(id: id))
+        } catch SyncClientError.httpError(let status, _) where status == 404 {
+            return nil
+        }
+    }
+
+    /// Whether the server holds an attachment's blob, without downloading it.
+    /// Anything other than a yes or a no throws. A proxy that won't pass a HEAD
+    /// gets the full request instead.
+    func hasAttachment(id: String) async throws -> Bool {
+        var request = URLRequest(url: try attachmentURL(id: id))
+        request.httpMethod = "HEAD"
+        if let apiKey {
+            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        }
+        do {
+            let (data, response) = try await session.data(for: request)
+            try validateResponse(response, data: data)
+            return true
+        } catch SyncClientError.httpError(let status, _) where status == 404 {
+            return false
+        } catch SyncClientError.httpError(let status, _) where status == 405 {
+            return try await fetchAttachment(id: id) != nil
+        }
+    }
+
+    private func attachmentURL(id: String) throws -> URL {
+        try apiURL("sync/attachments/\(SyncEndpoint.encodePathComponent(id))")
+    }
+
     // MARK: - Wrapped Key (Envelope Encryption)
 
     /// Fetch the server-stored wrapped master key. Returns nil if no key exists (404).
