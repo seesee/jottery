@@ -50,6 +50,7 @@ password:
   same_as_account: "Verwende unterschiedliche Passwörter. Der Server sieht dein Kontopasswort, daher darf es nicht auch deine Notizen öffnen."
   same_as_account_warning: "Dein Kontopasswort ist dasselbe wie dein Notizenpasswort, daher könnte der Server deine Notizen lesen. Ändere dein Notizenpasswort in den Einstellungen."
   no_file_encryption: "Dieser Build verschlüsselt die Datenbankdatei nicht. Notizen und Tags bleiben verschlüsselt, deine E-Mail-Adresse, Serveradresse, Anhangnamen und Datumsangaben jedoch nicht."
+  change_keeps_key: "Ihr Verschlüsselungsschlüssel bleibt gleich: Alte Backups lassen sich weiterhin mit dem alten Passwort öffnen."
 menu:
   notes: Notizen
   new_note: Neue Notiz
@@ -89,6 +90,12 @@ note:
   bin_emptied: "%{count} Notizen endgültig gelöscht"
   locked_cannot_archive: "Gesperrte Notiz kann nicht archiviert werden"
   unreadable: "%{count} Notizen in diesem Tresor können nicht gelesen werden"
+  duplicated: "Notiz dupliziert"
+  copied: "In die Zwischenablage kopiert"
+  copy_too_large: "Diese Notiz ist zu lang, um vom Terminal zuverlässig kopiert zu werden"
+  word_wrap_on: "Zeilenumbruch ein"
+  word_wrap_off: "Zeilenumbruch aus"
+  no_links: "Keine Links auf dem Bildschirm"
 archive:
   view: "Archiv anzeigen"
   title: "Archiv"
@@ -179,6 +186,7 @@ settings:
   disabled: disabled
   sort_order: "Sortierung"
   language_auto: "Wie im System"
+  default_note_type: "Standard-Notiztyp"
 sync:
   push: An Server senden
   pull: Vom Server abrufen
@@ -235,6 +243,8 @@ sync:
   device_still_registered: "Hier getrennt, aber der Server konnte nicht benachrichtigt werden, daher funktioniert der Schlüssel dieses Geräts weiterhin. Widerrufen Sie ihn im Benutzerportal."
 
 # Posteingang
+  stopped_unexpectedly: "Die Synchronisierung wurde unerwartet beendet. Es ging nichts verloren, und sie wird erneut versucht."
+  clock_ahead: "Die Uhr dieses Geräts geht möglicherweise falsch: Einige Änderungen sind mehr als einen Tag später datiert als die Serverzeit und wurden nicht gesendet. Sie werden gesendet, sobald die Uhr stimmt."
 inbox:
   title: "Posteingang"
   empty: "Posteingang ist leer. Notizen, die über die Posteingang-API eingereicht werden, erscheinen hier."
@@ -348,7 +358,6 @@ help:
   attachments: ANHÄNGE
   global: ALLGEMEIN
   press_esc_or_enter: Drücken Sie Esc oder Enter zum Schließen
-  press_enter_paste: Drücken Sie Enter zum Einfügen | Esc zum Abbrechen
   tab_switch: "Tab: Felder wechseln | Enter: erstellen"
   enter_unlock: "Enter: entsperren | Ctrl+Q: beenden"
   type_password_key: Tippen
@@ -527,6 +536,21 @@ help:
   multi_remove_tags_desc: "Tags von ausgewählten Notizen entfernen"
   multi_colour_key: "C"
   multi_colour_desc: "Farbe der ausgewählten Notizen festlegen"
+  g_saved_key: "g"
+  g_saved_desc: "Gespeicherte Suchen"
+  ctrl_s_save_search_key: "Strg+S"
+  ctrl_s_save_search_desc: "Diese Suche speichern"
+  enter_confirm_esc_cancel: "Enter: bestätigen | Esc: abbrechen"
+  D_duplicate_key: "Umschalt+D"
+  D_duplicate_desc: "Notiz duplizieren"
+  o_copy_key: "o"
+  o_copy_desc: "Notiztext in die Zwischenablage kopieren"
+  w_wrap_key: "w"
+  w_wrap_desc: "Zeilenumbruch ein- oder ausschalten"
+  ctrl_p_history_key: "Strg+P/N"
+  ctrl_p_history_desc: "Frühere und spätere Suchen"
+  l_link_key: "l, Enter"
+  l_link_desc: "Durch Links gehen und einem folgen"
 cli:
   # Alt (an einigen Stellen verwendet)
   list: Notizen auflisten
@@ -605,6 +629,16 @@ cli:
   allow_insecure_http_help: "Passwort per unverschlüsseltem HTTP an einen öffentlichen Host erlauben"
   password_flag_deprecated: "Ein Passwort in der Befehlszeile ist in ps und im Shell-Verlauf sichtbar. Verwenden Sie stattdessen --password-stdin oder JOTTERY_PASSWORD."
   password_stdin_help: "Passwörter zeilenweise von stdin lesen, statt nachzufragen"
+  reset_yes_help: "Nicht nachfragen, bevor --reset etwas löscht"
+  reset_confirm: "Dies löscht %{path} und jedes gespeicherte Passwort endgültig. Geben Sie %{word} ein, um fortzufahren:"
+  reset_cancelled: "Es wurde nichts gelöscht"
+  reset_done: "Tresor und gespeichertes Passwort gelöscht"
+  reset_keychain_failed: "Das Passwort konnte nicht aus dem Schlüsselbund entfernt werden"
+  export_force_help: "Die Datei ersetzen, falls sie bereits existiert"
+  account_about: "Ansehen oder löschen, was der Server für Ihr Konto speichert"
+  colours_about: "Farben benennen und Tags eine Farbe geben"
+  doctor_about: "Den Tresor auf nicht lesbare Notizen und fehlende Anhänge prüfen"
+  doctor_repair_help: "Fehlende Anhänge vom Server abrufen"
 status:
   locked: Gesperrt
   unlocked: Entsperrt
@@ -633,6 +667,8 @@ bulk:
   colour_of: "Farbe von %{count} Notizen festlegen"
   colour_set: "Farbe bei %{count} Notizen geändert"
   unknown_colour: "Es gibt keine Farbe namens %{colour}"
+  overwrite_title: "Diese Datei ersetzen?"
+  overwrite_message: "%{path} existiert bereits. Das Ersetzen kann nicht rückgängig gemacht werden."
 time:
   just_now: gerade eben
   minutes_ago: vor %{count} Minuten
@@ -768,3 +804,44 @@ envelope:
   password_changed_elsewhere: "Ihr Notizen-Passwort wurde auf einem anderen Gerät geändert, daher wurde nichts überschrieben. Dieses Gerät lässt sich weiterhin mit dem alten Passwort entsperren. Ändern Sie es hier entsprechend, damit neue Geräte beitreten können."
   server_update_pending: "Ihr Passwort wurde auf diesem Gerät geändert, aber die Kopie Ihres Schlüssels auf dem Server konnte nicht aktualisiert werden. Jottery versucht es erneut. Bis dahin kann kein neues Gerät mit dem neuen Passwort beitreten."
   key_keeps_changing: "Der Kontoschlüssel ändert sich auf dem Server ständig, daher hat dieses Gerät ihn nicht angerührt. Versuchen Sie es gleich noch einmal."
+
+saved_search:
+  title: "Gespeicherte Suchen"
+  empty: "Noch keine gespeicherten Suchen. Suchen Sie mit / und drücken Sie dann Strg+S zum Speichern."
+  name_prompt: "Diese Suche benennen"
+  nothing_to_save: "Geben Sie zuerst eine Suche ein"
+  saved: "Suche gespeichert: %{name}"
+  deleted: "Gespeicherte Suche gelöscht"
+  delete_confirm: "'%{name}' auf allen Geräten löschen? (y/n)"
+  not_found: "Keine gespeicherte Suche namens %{name}"
+  failed: "Fehler bei der gespeicherten Suche: %{error}"
+
+export:
+  file_exists: "Diese Datei existiert bereits. Wählen Sie einen anderen Namen oder ersetzen Sie sie mit --force."
+
+account:
+  email: "Konto: %{email}"
+  usage: "Notizen: %{notes}, Anhänge: %{attachments}"
+  storage: "Speicher: %{used} MB von %{quota} MB"
+  last_sync: "Letzte Synchronisierung: %{time}"
+  confirm_delete_notes: "Dies löscht alle Notizen auf dem Server für alle Geräte und kann nicht rückgängig gemacht werden. Geben Sie Ihre E-Mail-Adresse ein, um fortzufahren:"
+  confirm_delete: "Dies löscht Ihr Konto und alles auf dem Server und kann nicht rückgängig gemacht werden. Dieses Gerät behält seine Notizen. Geben Sie Ihre E-Mail-Adresse ein, um fortzufahren:"
+  cancelled: "Es wurde nichts gelöscht"
+  notes_deleted: "Alle Notizen auf dem Server wurden gelöscht"
+  deleted: "Das Konto wurde gelöscht"
+
+colours:
+  unknown: "Keine Farbe namens %{colour}"
+  named: "Farbe aktualisiert: %{colour}"
+  tag_set: "Tag aktualisiert: %{tag}"
+
+doctor:
+  notes: "Notizen: %{count}, nicht lesbar: %{unreadable}"
+  versions: "Versionen: %{count}, nicht lesbar: %{unreadable}"
+  attachments: "Anhänge: %{count}, nicht lesbar: %{unreadable}, fehlend: %{missing}"
+  saved_searches: "Gespeicherte Suchen: %{count}, nicht lesbar: %{unreadable}"
+  conflicts: "Konflikte, die auf Sie warten: %{count}"
+  problems: "Gefundene Probleme: %{count}"
+  repaired: "Abgerufene Anhänge: %{count}"
+  repair_needs_sync: "Dieser Tresor ist mit keinem Server verbunden, daher können fehlende Anhänge nicht abgerufen werden"
+  healthy: "Keine Probleme gefunden"

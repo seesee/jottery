@@ -50,6 +50,7 @@ password:
   same_as_account: "Gebruik verschillende wachtwoorden. De server ziet je accountwachtwoord, dus dat mag niet ook je notities openen."
   same_as_account_warning: "Je accountwachtwoord is hetzelfde als je notitiewachtwoord, dus de server zou je notities kunnen lezen. Wijzig je notitiewachtwoord in Instellingen."
   no_file_encryption: "Deze build versleutelt het databasebestand niet. Notities en tags blijven versleuteld, maar je e-mailadres, serveradres, bijlagenamen en datums niet."
+  change_keeps_key: "Uw versleutelingssleutel verandert niet: oude back-ups blijven openen met het oude wachtwoord."
 menu:
   notes: Notities
   new_note: Nieuwe notitie
@@ -89,6 +90,12 @@ note:
   bin_emptied: "%{count} notities definitief verwijderd"
   locked_cannot_archive: "Vergrendelde notitie kan niet worden gearchiveerd"
   unreadable: "%{count} notities in deze kluis kunnen niet worden gelezen"
+  duplicated: "Notitie gedupliceerd"
+  copied: "Naar het klembord gekopieerd"
+  copy_too_large: "Deze notitie is te lang om betrouwbaar via een terminal te kopiëren"
+  word_wrap_on: "Regelafbreking aan"
+  word_wrap_off: "Regelafbreking uit"
+  no_links: "Geen koppelingen op het scherm"
 archive:
   view: "Archief bekijken"
   title: "Archief"
@@ -179,6 +186,7 @@ settings:
   disabled: uitgeschakeld
   sort_order: "Sortering"
   language_auto: "Zelfde als systeem"
+  default_note_type: "Standaard notitietype"
 sync:
   push: Naar server pushen
   pull: Van server pullen
@@ -235,6 +243,8 @@ sync:
   device_still_registered: "Hier losgekoppeld, maar de server kon niet worden bereikt, dus de sleutel van dit apparaat werkt nog. Trek hem in via het gebruikersportaal."
 
 # Postvak IN
+  stopped_unexpectedly: "De synchronisatie is onverwacht gestopt. Er is niets verloren gegaan en het wordt opnieuw geprobeerd."
+  clock_ahead: "De klok van dit apparaat klopt mogelijk niet: sommige wijzigingen zijn meer dan een dag later gedateerd dan de server en zijn niet verzonden. Ze worden verzonden zodra de klok klopt."
 inbox:
   title: "Postvak IN"
   empty: "Postvak IN is leeg. Notities ingediend via de Postvak IN API verschijnen hier."
@@ -348,7 +358,6 @@ help:
   attachments: BIJLAGEN
   global: GLOBAAL
   press_esc_or_enter: Druk op Esc of Enter om te sluiten
-  press_enter_paste: Druk op Enter om te plakken | Esc om te annuleren
   tab_switch: "Tab: velden wisselen | Enter: aanmaken"
   enter_unlock: "Enter: ontgrendelen | Ctrl+Q: afsluiten"
   type_password_key: Typen
@@ -527,6 +536,21 @@ help:
   multi_remove_tags_desc: "Tags verwijderen van geselecteerde notities"
   multi_colour_key: "C"
   multi_colour_desc: "Kleur van geselecteerde notities instellen"
+  g_saved_key: "g"
+  g_saved_desc: "Opgeslagen zoekopdrachten"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "Deze zoekopdracht opslaan"
+  enter_confirm_esc_cancel: "Enter: bevestigen | Esc: annuleren"
+  D_duplicate_key: "Shift+D"
+  D_duplicate_desc: "Notitie dupliceren"
+  o_copy_key: "o"
+  o_copy_desc: "Notitietekst naar het klembord kopiëren"
+  w_wrap_key: "w"
+  w_wrap_desc: "Regelafbreking aan- of uitzetten"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "Eerdere en latere zoekopdrachten"
+  l_link_key: "l, Enter"
+  l_link_desc: "Door koppelingen gaan en er een volgen"
 cli:
   # Basis (op sommige plaatsen gebruikt)
   list: Notities weergeven
@@ -605,6 +629,16 @@ cli:
   allow_insecure_http_help: "Sta toe dat een wachtwoord via onversleuteld HTTP naar een openbare host gaat"
   password_flag_deprecated: "Een wachtwoord op de opdrachtregel is zichtbaar in ps en de shellgeschiedenis. Gebruik in plaats daarvan --password-stdin of JOTTERY_PASSWORD."
   password_stdin_help: "Lees wachtwoorden van stdin, één per regel, in plaats van te vragen"
+  reset_yes_help: "Niet vragen voordat --reset iets verwijdert"
+  reset_confirm: "Dit verwijdert %{path} en elk onthouden wachtwoord definitief. Typ %{word} om door te gaan:"
+  reset_cancelled: "Er is niets verwijderd"
+  reset_done: "De kluis en elk onthouden wachtwoord zijn verwijderd"
+  reset_keychain_failed: "Het wachtwoord kon niet uit de sleutelhanger worden verwijderd"
+  export_force_help: "Het bestand vervangen als het al bestaat"
+  account_about: "Bekijken of verwijderen wat de server voor uw account bewaart"
+  colours_about: "Kleuren een naam geven en tags een kleur geven"
+  doctor_about: "De kluis controleren op notities die niet openen en ontbrekende bijlagen"
+  doctor_repair_help: "Ontbrekende bijlagen van de server ophalen"
 status:
   locked: Vergrendeld
   unlocked: Ontgrendeld
@@ -633,6 +667,8 @@ bulk:
   colour_of: "Kleur van %{count} notities instellen"
   colour_set: "Kleur gewijzigd op %{count} notities"
   unknown_colour: "Er is geen kleur met de naam %{colour}"
+  overwrite_title: "Dit bestand vervangen?"
+  overwrite_message: "%{path} bestaat al. Vervangen kan niet ongedaan worden gemaakt."
 time:
   just_now: zojuist
   minutes_ago: "%{count} minuten geleden"
@@ -768,3 +804,44 @@ envelope:
   password_changed_elsewhere: "Je notitiewachtwoord is op een ander apparaat gewijzigd, dus er is niets overschreven. Dit apparaat ontgrendelt nog met het oude wachtwoord. Wijzig het ook hier, zodat nieuwe apparaten kunnen koppelen."
   server_update_pending: "Je wachtwoord is op dit apparaat gewijzigd, maar de kopie van je sleutel op de server kon niet worden bijgewerkt. Jottery probeert het opnieuw. Tot die tijd kan een nieuw apparaat niet koppelen met het nieuwe wachtwoord."
   key_keeps_changing: "De sleutel van het account verandert steeds op de server, dus dit apparaat heeft hem met rust gelaten. Probeer het zo opnieuw."
+
+saved_search:
+  title: "Opgeslagen zoekopdrachten"
+  empty: "Nog geen opgeslagen zoekopdrachten. Zoek met / en druk op Ctrl+S om op te slaan."
+  name_prompt: "Geef deze zoekopdracht een naam"
+  nothing_to_save: "Typ eerst een zoekopdracht"
+  saved: "Zoekopdracht opgeslagen: %{name}"
+  deleted: "Opgeslagen zoekopdracht verwijderd"
+  delete_confirm: "'%{name}' op alle apparaten verwijderen? (y/n)"
+  not_found: "Geen opgeslagen zoekopdracht met de naam %{name}"
+  failed: "Opgeslagen zoekopdracht mislukt: %{error}"
+
+export:
+  file_exists: "Dat bestand bestaat al. Kies een andere naam of gebruik --force om het te vervangen."
+
+account:
+  email: "Account: %{email}"
+  usage: "Notities: %{notes}, bijlagen: %{attachments}"
+  storage: "Opslag: %{used} MB van %{quota} MB"
+  last_sync: "Laatste synchronisatie: %{time}"
+  confirm_delete_notes: "Dit verwijdert alle notities op de server, voor alle apparaten, en kan niet ongedaan worden gemaakt. Typ uw e-mailadres om door te gaan:"
+  confirm_delete: "Dit verwijdert uw account en alles op de server, en kan niet ongedaan worden gemaakt. Dit apparaat houdt zijn notities. Typ uw e-mailadres om door te gaan:"
+  cancelled: "Er is niets verwijderd"
+  notes_deleted: "Alle notities op de server zijn verwijderd"
+  deleted: "Het account is verwijderd"
+
+colours:
+  unknown: "Geen kleur met de naam %{colour}"
+  named: "Kleur bijgewerkt: %{colour}"
+  tag_set: "Tag bijgewerkt: %{tag}"
+
+doctor:
+  notes: "Notities: %{count}, onleesbaar: %{unreadable}"
+  versions: "Versies: %{count}, onleesbaar: %{unreadable}"
+  attachments: "Bijlagen: %{count}, onleesbaar: %{unreadable}, ontbrekend: %{missing}"
+  saved_searches: "Opgeslagen zoekopdrachten: %{count}, onleesbaar: %{unreadable}"
+  conflicts: "Conflicten die op u wachten: %{count}"
+  problems: "Gevonden problemen: %{count}"
+  repaired: "Opgehaalde bijlagen: %{count}"
+  repair_needs_sync: "Deze kluis is niet met een server verbonden, dus ontbrekende bijlagen kunnen niet worden opgehaald"
+  healthy: "Geen problemen gevonden"

@@ -14,6 +14,9 @@ use crate::ui::app::App;
 use crate::ui::operations;
 use crate::ui::state::FocusedPanel;
 
+/// How many searches Ctrl+P can go back through.
+const MAX_SEARCH_HISTORY: usize = 50;
+
 /// Get the tag partial from search input (text after the last # that doesn't contain space)
 fn get_search_tag_partial(input: &str) -> Option<(String, usize)> {
     let last_hash = input.rfind('#')?;
@@ -41,6 +44,7 @@ pub fn handle_search_key(app: &mut App, key: KeyEvent) -> Result<bool> {
 
     match key.code {
         KeyCode::Esc => {
+            remember_search(app);
             app.search_active = false;
             app.search_input.clear();
             app.invalidate_filter_cache();
@@ -53,6 +57,15 @@ pub fn handle_search_key(app: &mut App, key: KeyEvent) -> Result<bool> {
             handle_search_enter(app)?;
         }
         // Preview scrolling controls (must come before generic Char(c) pattern)
+        KeyCode::Char('s') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            operations::saved_searches::begin_saving(app);
+        }
+        KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            recall_older_search(app);
+        }
+        KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            recall_newer_search(app);
+        }
         KeyCode::Char('d') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             // Ctrl-d: scroll preview down half page (10 lines)
             app.preview_scroll_offset = app.preview_scroll_offset.saturating_add(10);
@@ -126,8 +139,67 @@ pub fn handle_search_key(app: &mut App, key: KeyEvent) -> Result<bool> {
     Ok(true)
 }
 
+/// Keep a search for Ctrl+P, in memory, for this session. The arrow keys already move
+/// through the results, so history has the readline keys.
+fn remember_search(app: &mut App) {
+    app.search_history_position = None;
+
+    let query = app.search_input.trim().to_string();
+    if query.is_empty() {
+        return;
+    }
+
+    app.search_history.retain(|earlier| *earlier != query);
+    app.search_history.push(query);
+
+    if app.search_history.len() > MAX_SEARCH_HISTORY {
+        app.search_history.remove(0);
+    }
+}
+
+/// Put a query in the search bar, as though it had been typed.
+fn show_query(app: &mut App, query: String) {
+    app.search_input = query;
+    app.invalidate_filter_cache();
+    app.select_note_at(0);
+    app.selected_note_id = app.filtered_notes().first().map(|note| note.id.clone());
+    app.search_tag_completions.clear();
+    app.search_tag_completion_index = 0;
+}
+
+/// Ctrl+P: go one search further back.
+fn recall_older_search(app: &mut App) {
+    let next = match &app.search_history_position {
+        None if app.search_history.is_empty() => return,
+        None => (app.search_history.len() - 1, app.search_input.clone()),
+        Some((0, _)) => return,
+        Some((index, typed)) => (index - 1, typed.clone()),
+    };
+
+    let query = app.search_history[next.0].clone();
+    app.search_history_position = Some(next);
+    show_query(app, query);
+}
+
+/// Ctrl+N: come forward again, as far as what was being typed.
+fn recall_newer_search(app: &mut App) {
+    let Some((index, typed)) = app.search_history_position.take() else {
+        return;
+    };
+
+    if index + 1 < app.search_history.len() {
+        let query = app.search_history[index + 1].clone();
+        app.search_history_position = Some((index + 1, typed));
+        show_query(app, query);
+    } else {
+        show_query(app, typed);
+    }
+}
+
 /// Handle Enter key in search mode - opens selected note for editing
 fn handle_search_enter(app: &mut App) -> Result<()> {
+    remember_search(app);
+
     if app.filtered_notes().is_empty() {
         return Ok(());
     }
@@ -227,5 +299,79 @@ fn handle_search_backtab(app: &mut App) {
         app.select_note_at(0);
         let filtered = app.filtered_notes();
         app.selected_note_id = filtered.first().map(|n| n.id.clone());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crossterm::event::KeyEvent;
+
+    fn app() -> App {
+        let dir = tempfile::tempdir().unwrap();
+        let mut app = App::new(dir.path().join("test.db"), None).unwrap();
+        std::mem::forget(dir);
+        app.search_active = true;
+        app
+    }
+
+    fn ctrl(app: &mut App, letter: char) {
+        handle_search_key(app, KeyEvent::new(KeyCode::Char(letter), KeyModifiers::CONTROL)).unwrap();
+    }
+
+    fn search_for(app: &mut App, query: &str) {
+        app.search_active = true;
+        app.search_input = query.to_string();
+        handle_search_key(app, KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)).unwrap();
+    }
+
+    #[test]
+    fn ctrl_p_and_ctrl_n_move_through_earlier_searches() {
+        let mut app = app();
+        search_for(&mut app, "first");
+        search_for(&mut app, "second");
+        app.search_active = true;
+        app.search_input = "typing".to_string();
+
+        ctrl(&mut app, 'p');
+        assert_eq!(app.search_input, "second");
+        ctrl(&mut app, 'p');
+        assert_eq!(app.search_input, "first");
+        ctrl(&mut app, 'p');
+        assert_eq!(app.search_input, "first");
+
+        ctrl(&mut app, 'n');
+        assert_eq!(app.search_input, "second");
+        ctrl(&mut app, 'n');
+        assert_eq!(app.search_input, "typing");
+    }
+
+    #[test]
+    fn a_repeated_search_moves_up_rather_than_appearing_twice() {
+        let mut app = app();
+        search_for(&mut app, "same");
+        search_for(&mut app, "other");
+        search_for(&mut app, "same");
+
+        assert_eq!(app.search_history, ["other", "same"]);
+    }
+
+    #[test]
+    fn an_empty_search_is_not_kept() {
+        let mut app = app();
+        search_for(&mut app, "   ");
+
+        assert!(app.search_history.is_empty());
+    }
+
+    #[test]
+    fn history_has_a_limit() {
+        let mut app = app();
+        for i in 0..=MAX_SEARCH_HISTORY {
+            search_for(&mut app, &format!("search {i}"));
+        }
+
+        assert_eq!(app.search_history.len(), MAX_SEARCH_HISTORY);
+        assert_eq!(app.search_history[0], "search 1");
     }
 }

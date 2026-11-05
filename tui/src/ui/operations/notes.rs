@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::super::app::App;
-use super::super::state::{AppState, InputMode};
+use super::super::state::{AppState, InputMode, ViewMode};
 
 /// Load notes from database, preserving current selection via persisted ID
 ///
@@ -37,55 +37,221 @@ pub fn load_notes(app: &mut App) -> Result<()> {
     Ok(())
 }
 
+/// Reload whichever list is showing: the bin holds different notes from the rest.
+pub fn load_current_view(app: &mut App) -> Result<()> {
+    if matches!(app.view_mode, ViewMode::RecycleBin) {
+        load_deleted_notes(app)?;
+        app.notes_loaded();
+        app.keep_selection_on_note();
+        return Ok(());
+    }
+    load_notes(app)
+}
+
 /// Save current note
+///
+/// An existing note saves whatever the buffer holds, empty included: clearing a note is
+/// an edit like any other, and leaves a version behind. A new note with nothing in it
+/// isn't a note.
 pub fn save_note(app: &mut App) -> Result<()> {
     if let (Some(db), Some(key)) = (&app.db, &app.key) {
         let repo = NoteRepository::new(db.connection());
 
-        if !app.note_input.is_empty() {
-            if let Some(note_id) = &app.editing_note_id {
-                // Update existing note
-                if let Some(note) = app.notes.iter_mut().find(|n| &n.id == note_id) {
-                    // Opening a note and closing it again isn't an edit. Saving it anyway
-                    // would date it now, and let it beat a newer edit from elsewhere.
-                    if note.content == app.note_input && note.tags == app.current_tags {
-                        return Ok(());
-                    }
+        if let Some(note_id) = &app.editing_note_id {
+            // Update existing note
+            let Some(note) = app.notes.iter_mut().find(|n| &n.id == note_id) else {
+                return Ok(());
+            };
 
-                    // Before editing, create a version snapshot if one doesn't exist
-                    // This ensures we can revert to the pre-edit state
-                    let version_repo = NoteVersionRepository::new(db.connection());
-                    let version_key = format!("{}:{}", note.id, note.version);
-                    if version_repo.get_version_by_key(&version_key)?.is_none() {
-                        // No snapshot exists for current version, create one
-                        version_repo.create_version(
-                            note,
-                            note.synced_at.unwrap_or_else(chrono::Utc::now),
-                            VersionReason::ManualSync,
-                            key,
-                        )?;
-                    }
-
-                    note.content = app.note_input.clone();
-                    note.tags = app.current_tags.clone();
-                    note.touch();
-                    repo.update(note, key)?;
-                }
-            } else {
-                // Create new note
-                let mut note = Note::new(app.note_input.clone());
-                note.tags = app.current_tags.clone();
-                repo.create(&note, key)?;
-                app.notes.insert(0, note);
+            // Opening a note and closing it again isn't an edit. Saving it anyway
+            // would date it now, and let it beat a newer edit from elsewhere.
+            if note.content == app.note_input && note.tags == app.current_tags {
+                return Ok(());
             }
-            // Invalidate filter cache since notes changed
-            app.invalidate_filter_cache();
 
-            // Trigger sync to push changes to server
-            if app.settings.sync_enabled {
-                app.trigger_sync();
+            if note.locked {
+                anyhow::bail!("{}", t!("note.locked_cannot_edit"));
             }
+
+            // Before editing, create a version snapshot if one doesn't exist
+            // This ensures we can revert to the pre-edit state
+            let version_repo = NoteVersionRepository::new(db.connection());
+            let version_key = format!("{}:{}", note.id, note.version);
+            if version_repo.get_version_by_key(&version_key)?.is_none() {
+                // No snapshot exists for current version, create one
+                version_repo.create_version(
+                    note,
+                    note.synced_at.unwrap_or_else(chrono::Utc::now),
+                    VersionReason::ManualSync,
+                    key,
+                )?;
+            }
+
+            note.content = app.note_input.clone();
+            note.tags = app.current_tags.clone();
+            note.touch();
+            repo.update(note, key)?;
+        } else if !app.note_input.is_empty() {
+            // Create new note
+            let mut note = Note::new(app.note_input.clone());
+            note.tags = app.current_tags.clone();
+            note.set_syntax(app.settings.default_note_type);
+            repo.create(&note, key)?;
+            app.notes.insert(0, note);
+        } else {
+            return Ok(());
         }
+
+        // Invalidate filter cache since notes changed
+        app.invalidate_filter_cache();
+
+        // Trigger sync to push changes to server
+        if app.settings.sync_enabled {
+            app.trigger_sync();
+        }
+    }
+    Ok(())
+}
+
+/// Go to the note a link points at. If the search hides it, the search goes.
+pub fn follow_link(app: &mut App, target_note_id: String) {
+    let position = |app: &App| app.filtered_notes().iter().position(|note| note.id == target_note_id);
+
+    if position(app).is_none() {
+        app.search_input.clear();
+        app.invalidate_filter_cache();
+        app.search_active = false;
+    }
+
+    if let Some(index) = position(app) {
+        app.selected_note = index;
+        app.selected_note_id = Some(target_note_id);
+        app.preview_scroll_offset = 0;
+        app.focused_panel = super::super::state::FocusedPanel::NoteContent;
+    }
+}
+
+/// Move the keyboard to the next link on screen, coming back round to the first.
+pub fn focus_next_link(app: &mut App) {
+    let count = app.note_link_positions.len();
+    if count == 0 {
+        app.notify(t!("note.no_links").to_string());
+        return;
+    }
+
+    app.selected_link = Some(app.selected_link.map_or(0, |index| (index + 1) % count));
+}
+
+/// Follow the link the keyboard is on, if it's on one.
+pub fn follow_focused_link(app: &mut App) -> bool {
+    let target = app.selected_link.take()
+        .and_then(|index| app.note_link_positions.get(index))
+        .map(|(note_id, ..)| note_id.clone());
+
+    match target {
+        Some(note_id) => {
+            follow_link(app, note_id);
+            true
+        }
+        None => false,
+    }
+}
+
+/// What a terminal will reliably take through OSC 52, in bytes of text.
+const MAX_CLIPBOARD_BYTES: usize = 100_000;
+
+/// The escape sequence that asks the terminal to put `text` on the clipboard. It goes
+/// through the terminal rather than a local clipboard, so it also works over SSH.
+fn clipboard_sequence(text: &str) -> String {
+    use base64::Engine as _;
+    format!("\x1b]52;c;{}\x07", base64::engine::general_purpose::STANDARD.encode(text))
+}
+
+/// The note the list has highlighted.
+fn highlighted_note(app: &App) -> Option<&Note> {
+    app.filtered_notes().get(app.selected_note).copied()
+}
+
+/// Copy the highlighted note's text to the clipboard.
+pub fn copy_selected(app: &mut App) -> Result<()> {
+    use std::io::Write as _;
+
+    let Some(note) = highlighted_note(app) else {
+        return Ok(());
+    };
+
+    if note.content.len() > MAX_CLIPBOARD_BYTES {
+        app.notify(t!("note.copy_too_large").to_string());
+        return Ok(());
+    }
+
+    let sequence = clipboard_sequence(&note.content);
+    let mut stdout = std::io::stdout();
+    stdout.write_all(sequence.as_bytes())?;
+    stdout.flush()?;
+
+    app.notify(t!("note.copied").to_string());
+    Ok(())
+}
+
+/// Turn word wrap on or off for the highlighted note.
+pub fn toggle_word_wrap(app: &mut App) -> Result<()> {
+    let Some(note_id) = highlighted_note(app).map(|note| note.id.clone()) else {
+        return Ok(());
+    };
+
+    let db = app.db.as_ref().context("Database not available")?;
+    let key = app.key.as_ref().context("Key not available")?;
+    let note = app.notes.iter_mut()
+        .find(|note| note.id == note_id)
+        .context("Note not found in memory")?;
+
+    if note.locked {
+        anyhow::bail!("{}", t!("note.locked_cannot_edit"));
+    }
+
+    note.word_wrap = !note.word_wrap;
+    let wrapped = note.word_wrap;
+    NoteRepository::new(db.connection()).update(note, key)?;
+
+    app.notify(if wrapped { t!("note.word_wrap_on") } else { t!("note.word_wrap_off") }.to_string());
+    if app.settings.sync_enabled {
+        app.trigger_sync();
+    }
+    Ok(())
+}
+
+/// Make a new note out of the highlighted one, with everything but its history. The two
+/// share attachments, as notes can. A locked original gives an unlocked copy, which is
+/// the way to change what it says.
+pub fn duplicate_selected(app: &mut App) -> Result<()> {
+    let Some(original) = highlighted_note(app).cloned() else {
+        return Ok(());
+    };
+
+    let mut copy = Note::new(original.content.clone());
+    copy.tags = original.tags.clone();
+    copy.attachments = original.attachments.clone();
+    copy.attachments_complete = true;
+    copy.pinned = original.pinned;
+    copy.word_wrap = original.word_wrap;
+    copy.show_preview = original.show_preview;
+    copy.syntax_language = original.syntax_language;
+    copy.syntax_unknown = original.syntax_unknown.clone();
+    copy.color = original.color.clone();
+
+    let db = app.db.as_ref().context("Database not available")?;
+    let key = app.key.as_ref().context("Key not available")?;
+    NoteRepository::new(db.connection()).create(&copy, key)?;
+
+    app.selected_note_id = Some(copy.id.clone());
+    app.notes.push(copy);
+    app.invalidate_filter_cache();
+    app.keep_selection_on_note();
+
+    app.notify(t!("note.duplicated").to_string());
+    if app.settings.sync_enabled {
+        app.trigger_sync();
     }
     Ok(())
 }
@@ -394,6 +560,132 @@ mod tests {
         let stored = stored_note(&app, &id);
         assert!(!stored.archived);
         assert!(stored.archived_at.is_none());
+    }
+
+    /// Clearing a note used to look like success while the old text stayed and synced.
+    #[test]
+    fn clearing_a_note_saves_it_empty_and_keeps_a_version() {
+        let mut app = unlocked_app();
+        let id = app.notes[0].id.clone();
+        let before = app.notes[0].content.clone();
+        app.editing_note_id = Some(id.clone());
+        app.current_tags = app.notes[0].tags.clone();
+        app.note_input.clear();
+
+        save_note(&mut app).unwrap();
+
+        assert_eq!(stored_note(&app, &id).content, "");
+        let db = app.db.as_ref().unwrap();
+        let versions = NoteVersionRepository::new(db.connection())
+            .get_versions_for_note(&id, app.key.as_ref().unwrap())
+            .unwrap();
+        assert!(versions.iter().any(|version| version.content == before));
+    }
+
+    #[test]
+    fn a_new_note_with_nothing_in_it_is_not_a_note() {
+        let mut app = unlocked_app();
+        let count = app.notes.len();
+        app.editing_note_id = None;
+        app.note_input.clear();
+
+        save_note(&mut app).unwrap();
+
+        assert_eq!(app.notes.len(), count);
+    }
+
+    #[test]
+    fn a_locked_note_refuses_a_save_and_keeps_its_text() {
+        let mut app = unlocked_app();
+        let id = app.notes[0].id.clone();
+        let before = app.notes[0].content.clone();
+        app.notes[0].locked = true;
+        app.editing_note_id = Some(id.clone());
+        app.current_tags = app.notes[0].tags.clone();
+        app.note_input = "Changed through a side door".to_string();
+
+        assert!(save_note(&mut app).is_err());
+
+        assert_eq!(stored_note(&app, &id).content, before);
+    }
+
+    #[test]
+    fn the_keyboard_can_reach_and_follow_a_link() {
+        let mut app = unlocked_app();
+        let target = Note::new("The target".to_string());
+        app.notes.push(target.clone());
+        app.invalidate_filter_cache();
+        app.note_link_positions = vec![
+            ("elsewhere".to_string(), 2, 1, 5),
+            (target.id.clone(), 3, 1, 5),
+        ];
+
+        focus_next_link(&mut app);
+        assert_eq!(app.selected_link, Some(0));
+        focus_next_link(&mut app);
+        assert_eq!(app.selected_link, Some(1));
+
+        assert!(follow_focused_link(&mut app));
+        assert_eq!(app.selected_note_id.as_deref(), Some(target.id.as_str()));
+        assert_eq!(app.selected_link, None);
+
+        // Round again, then nothing to follow once it's been cleared
+        assert!(!follow_focused_link(&mut app));
+    }
+
+    #[test]
+    fn the_clipboard_sequence_is_what_terminals_expect() {
+        assert_eq!(clipboard_sequence("hi"), "\x1b]52;c;aGk=\x07");
+    }
+
+    #[test]
+    fn a_duplicate_keeps_everything_but_its_identity() {
+        let mut app = unlocked_app();
+        let original_id = app.notes[0].id.clone();
+        app.notes[0].tags = vec!["kept".to_string()];
+        app.notes[0].set_syntax(crate::models::SyntaxLanguage::Python);
+        app.notes[0].color = Some("red".to_string());
+        app.notes[0].word_wrap = false;
+        app.notes[0].locked = true;
+
+        duplicate_selected(&mut app).unwrap();
+
+        assert_eq!(app.notes.len(), 2);
+        let copy = app.notes.iter().find(|note| note.id != original_id).unwrap().clone();
+        assert_eq!(app.selected_note_id.as_deref(), Some(copy.id.as_str()));
+        let stored = stored_note(&app, &copy.id);
+        assert_eq!(stored.content, app.notes.iter().find(|n| n.id == original_id).unwrap().content);
+        assert_eq!(stored.tags, ["kept"]);
+        assert_eq!(stored.syntax_language, crate::models::SyntaxLanguage::Python);
+        assert_eq!(stored.color.as_deref(), Some("red"));
+        assert!(!stored.word_wrap);
+        assert!(!stored.locked);
+    }
+
+    #[test]
+    fn word_wrap_turns_off_and_on_again() {
+        let mut app = unlocked_app();
+        let id = app.notes[0].id.clone();
+        assert!(app.notes[0].word_wrap);
+
+        toggle_word_wrap(&mut app).unwrap();
+        assert!(!stored_note(&app, &id).word_wrap);
+
+        toggle_word_wrap(&mut app).unwrap();
+        assert!(stored_note(&app, &id).word_wrap);
+    }
+
+    #[test]
+    fn a_new_note_starts_as_the_default_type() {
+        let mut app = unlocked_app();
+        app.settings.default_note_type = crate::models::SyntaxLanguage::Python;
+        app.editing_note_id = None;
+        app.note_input = "print('hello')".to_string();
+        app.current_tags.clear();
+
+        save_note(&mut app).unwrap();
+
+        assert_eq!(app.notes[0].syntax_language, crate::models::SyntaxLanguage::Python);
     }
 
     #[test]

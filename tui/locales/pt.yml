@@ -50,6 +50,7 @@ password:
   same_as_account: "Utilize palavras-passe diferentes. O servidor vê a palavra-passe da conta, por isso esta não pode também abrir as suas notas."
   same_as_account_warning: "A palavra-passe da conta é igual à das notas, por isso o servidor poderia lê-las. Altere a palavra-passe das notas nas Definições."
   no_file_encryption: "Esta compilação não encripta o ficheiro da base de dados. As notas e etiquetas continuam encriptadas, mas o seu e-mail, o endereço do servidor, os nomes dos anexos e as datas não."
+  change_keeps_key: "A sua chave de cifra não muda: as cópias de segurança antigas continuam a abrir com a palavra-passe antiga."
 menu:
   notes: Notas
   new_note: Nova nota
@@ -89,6 +90,12 @@ note:
   bin_emptied: "%{count} notas eliminadas definitivamente"
   locked_cannot_archive: "Não é possível arquivar uma nota bloqueada"
   unreadable: "%{count} notas deste cofre não podem ser lidas"
+  duplicated: "Nota duplicada"
+  copied: "Copiado para a área de transferência"
+  copy_too_large: "Esta nota é demasiado longa para um terminal a copiar de forma fiável"
+  word_wrap_on: "Quebra de linha ativada"
+  word_wrap_off: "Quebra de linha desativada"
+  no_links: "Sem ligações no ecrã"
 archive:
   view: "Ver arquivo"
   title: "Arquivo"
@@ -179,6 +186,7 @@ settings:
   disabled: desativado
   sort_order: "Ordenação"
   language_auto: "Igual ao sistema"
+  default_note_type: "Tipo de nota predefinido"
 sync:
   push: Enviar para o servidor
   pull: Receber do servidor
@@ -235,6 +243,8 @@ sync:
   device_still_registered: "Desligado aqui, mas não foi possível avisar o servidor, por isso a chave deste dispositivo ainda funciona. Revogue-a no portal do utilizador."
 
 # Caixa de entrada
+  stopped_unexpectedly: "A sincronização parou inesperadamente. Nada se perdeu e será tentada de novo."
+  clock_ahead: "O relógio deste dispositivo pode estar errado: algumas alterações têm uma data mais de um dia à frente do servidor, por isso não foram enviadas. Serão enviadas quando o relógio estiver certo."
 inbox:
   title: "Caixa de entrada"
   empty: "A caixa de entrada está vazia. Notas enviadas via API da caixa de entrada aparecerão aqui."
@@ -348,7 +358,6 @@ help:
   attachments: ANEXOS
   global: GLOBAL
   press_esc_or_enter: Pressione Esc ou Enter para fechar
-  press_enter_paste: Pressione Enter para colar | Esc para cancelar
   tab_switch: "Tab: alternar campos | Enter: criar"
   enter_unlock: "Enter: desbloquear | Ctrl+Q: sair"
   type_password_key: Digite
@@ -527,6 +536,21 @@ help:
   multi_remove_tags_desc: "Remover etiquetas das notas selecionadas"
   multi_colour_key: "C"
   multi_colour_desc: "Definir a cor das notas selecionadas"
+  g_saved_key: "g"
+  g_saved_desc: "Pesquisas guardadas"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "Guardar esta pesquisa"
+  enter_confirm_esc_cancel: "Enter: confirmar | Esc: cancelar"
+  D_duplicate_key: "Shift+D"
+  D_duplicate_desc: "Duplicar nota"
+  o_copy_key: "o"
+  o_copy_desc: "Copiar o texto da nota para a área de transferência"
+  w_wrap_key: "w"
+  w_wrap_desc: "Ativar ou desativar a quebra de linha"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "Pesquisas anteriores e seguintes"
+  l_link_key: "l, Enter"
+  l_link_desc: "Percorrer as ligações e seguir uma"
 cli:
   # Alternativo (usado em alguns lugares)
   list: Listar notas
@@ -605,6 +629,16 @@ cli:
   allow_insecure_http_help: "Permitir enviar uma palavra-passe por HTTP sem cifra para um anfitrião público"
   password_flag_deprecated: "Uma palavra-passe na linha de comandos é visível no ps e no histórico da shell. Use --password-stdin ou JOTTERY_PASSWORD."
   password_stdin_help: "Ler palavras-passe do stdin, uma por linha, em vez de perguntar"
+  reset_yes_help: "Não perguntar antes de --reset eliminar alguma coisa"
+  reset_confirm: "Isto elimina definitivamente %{path} e qualquer palavra-passe memorizada. Escreva %{word} para continuar:"
+  reset_cancelled: "Nada foi eliminado"
+  reset_done: "O cofre e qualquer palavra-passe memorizada foram eliminados"
+  reset_keychain_failed: "Não foi possível remover a palavra-passe do porta-chaves"
+  export_force_help: "Substituir o ficheiro se já existir"
+  account_about: "Ver ou eliminar o que o servidor guarda da sua conta"
+  colours_about: "Dar nome às cores e atribuir uma cor às etiquetas"
+  doctor_about: "Verificar o cofre em busca de notas que não abrem e anexos em falta"
+  doctor_repair_help: "Obter do servidor os anexos em falta"
 status:
   locked: Bloqueado
   unlocked: Desbloqueado
@@ -633,6 +667,8 @@ bulk:
   colour_of: "Definir a cor de %{count} notas"
   colour_set: "Cor alterada em %{count} notas"
   unknown_colour: "Não existe nenhuma cor chamada %{colour}"
+  overwrite_title: "Substituir este ficheiro?"
+  overwrite_message: "%{path} já existe. A substituição não pode ser anulada."
 time:
   just_now: agora mesmo
   minutes_ago: "%{count} minutos atrás"
@@ -768,3 +804,44 @@ envelope:
   password_changed_elsewhere: "A sua palavra-passe das notas foi alterada noutro dispositivo, por isso nada foi substituído. Este dispositivo ainda desbloqueia com a palavra-passe antiga. Altere-a aqui para que novos dispositivos possam ligar-se."
   server_update_pending: "A sua palavra-passe foi alterada neste dispositivo, mas não foi possível atualizar a cópia da chave no servidor. O Jottery tentará novamente. Até lá, um novo dispositivo não poderá ligar-se com a nova palavra-passe."
   key_keeps_changing: "A chave da conta continua a mudar no servidor, por isso este dispositivo não lhe tocou. Tente novamente daqui a pouco."
+
+saved_search:
+  title: "Pesquisas guardadas"
+  empty: "Ainda não há pesquisas guardadas. Pesquise com / e prima Ctrl+S para guardar."
+  name_prompt: "Dê um nome a esta pesquisa"
+  nothing_to_save: "Escreva primeiro uma pesquisa"
+  saved: "Pesquisa guardada: %{name}"
+  deleted: "Pesquisa guardada eliminada"
+  delete_confirm: "Eliminar '%{name}' em todos os dispositivos? (y/n)"
+  not_found: "Não há nenhuma pesquisa guardada chamada %{name}"
+  failed: "Falha na pesquisa guardada: %{error}"
+
+export:
+  file_exists: "Esse ficheiro já existe. Escolha outro nome ou use --force para o substituir."
+
+account:
+  email: "Conta: %{email}"
+  usage: "Notas: %{notes}, anexos: %{attachments}"
+  storage: "Armazenamento: %{used} MB de %{quota} MB"
+  last_sync: "Última sincronização: %{time}"
+  confirm_delete_notes: "Isto elimina todas as notas do servidor, para todos os dispositivos, e não pode ser anulado. Escreva o seu endereço de e-mail para continuar:"
+  confirm_delete: "Isto elimina a sua conta e tudo o que está no servidor, e não pode ser anulado. Este dispositivo mantém as suas notas. Escreva o seu endereço de e-mail para continuar:"
+  cancelled: "Nada foi eliminado"
+  notes_deleted: "Todas as notas do servidor foram eliminadas"
+  deleted: "A conta foi eliminada"
+
+colours:
+  unknown: "Não há nenhuma cor chamada %{colour}"
+  named: "Cor atualizada: %{colour}"
+  tag_set: "Etiqueta atualizada: %{tag}"
+
+doctor:
+  notes: "Notas: %{count}, ilegíveis: %{unreadable}"
+  versions: "Versões: %{count}, ilegíveis: %{unreadable}"
+  attachments: "Anexos: %{count}, ilegíveis: %{unreadable}, em falta: %{missing}"
+  saved_searches: "Pesquisas guardadas: %{count}, ilegíveis: %{unreadable}"
+  conflicts: "Conflitos à sua espera: %{count}"
+  problems: "Problemas encontrados: %{count}"
+  repaired: "Anexos obtidos: %{count}"
+  repair_needs_sync: "Este cofre não está ligado a um servidor, por isso não é possível obter os anexos em falta"
+  healthy: "Não foram encontrados problemas"

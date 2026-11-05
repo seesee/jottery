@@ -65,7 +65,42 @@ fn rekey_attachments(
     Ok(rows.len())
 }
 
-/// Re-encrypt notes, versions and attachments from `old_key` to `new_key`.
+/// Re-encrypt every saved search. A deleted row isn't shown, and can hold plaintext from
+/// an older client, so one that won't open stays as it is.
+fn rekey_saved_searches(
+    conn: &Connection,
+    crypto: &CryptoService,
+    old_key: &[u8; 32],
+    new_key: &[u8; 32],
+) -> Result<usize> {
+    let mut read = conn.prepare("SELECT id, name, query, deleted FROM saved_searches")?;
+    let rows: Vec<(String, String, String, bool)> = read
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get::<_, i32>(3)? != 0)))?
+        .collect::<rusqlite::Result<_>>()?;
+
+    let rekeyed = |stored: &str| -> Result<String> {
+        let encrypted: EncryptedData = serde_json::from_str(stored)?;
+        let plain = crypto.decrypt_text(&encrypted, old_key)?;
+        Ok(serde_json::to_string(&crypto.encrypt_text(&plain, new_key)?)?)
+    };
+
+    let mut write = conn.prepare("UPDATE saved_searches SET name = ?1, query = ?2 WHERE id = ?3")?;
+    let mut changed = 0;
+    for (id, name, query, deleted) in &rows {
+        match (rekeyed(name), rekeyed(query)) {
+            (Ok(name), Ok(query)) => {
+                write.execute(params![name, query, id])?;
+                changed += 1;
+            }
+            _ if *deleted => {}
+            (Err(e), _) | (_, Err(e)) => return Err(e).with_context(|| format!("saved search {id}")),
+        }
+    }
+
+    Ok(changed)
+}
+
+/// Re-encrypt notes, versions, attachments and saved searches from `old_key` to `new_key`.
 ///
 /// Stops at the first row that won't decrypt. Run this in a transaction so that
 /// leaves everything as it was, because a half-moved vault loses the other half.
@@ -78,7 +113,8 @@ pub fn rekey_vault(
     let notes = rekey_text_columns(conn, crypto, "notes", "id", old_key, new_key)?;
     let versions = rekey_text_columns(conn, crypto, "note_versions", "version_key", old_key, new_key)?;
     let attachments = rekey_attachments(conn, crypto, old_key, new_key)?;
-    Ok(notes + versions + attachments)
+    let saved_searches = rekey_saved_searches(conn, crypto, old_key, new_key)?;
+    Ok(notes + versions + attachments + saved_searches)
 }
 
 #[cfg(test)]
@@ -146,5 +182,38 @@ mod tests {
 
         let note = NoteRepository::new(conn).get(&vault.note.id, &vault.old_key).unwrap().unwrap();
         assert_eq!(note.content, "Local note");
+    }
+
+    #[test]
+    fn saved_searches_move_with_the_vault() {
+        use crate::repository::SavedSearchRepository;
+
+        let vault = vault();
+        let crypto = CryptoService::new();
+        let repo = SavedSearchRepository::new(vault.db.connection());
+        repo.create("Work", "#work", &vault.old_key).unwrap();
+
+        rekey_vault(vault.db.connection(), &crypto, &vault.old_key, &vault.new_key).unwrap();
+
+        let listed = repo.list(&vault.new_key).unwrap();
+        assert_eq!(listed[0].query, "#work");
+        assert!(repo.list(&vault.old_key).unwrap().is_empty());
+    }
+
+    /// Older clients pushed deleted rows as plaintext, and nothing reads those.
+    #[test]
+    fn a_deleted_saved_search_that_will_not_open_does_not_stop_the_move() {
+        use crate::repository::SavedSearchRepository;
+
+        let vault = vault();
+        let crypto = CryptoService::new();
+        vault.db.connection().execute(
+            "INSERT INTO saved_searches (id, name, query, created_at, modified_at, deleted)
+             VALUES ('gone', 'plaintext', 'plaintext', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z', 1)",
+            [],
+        ).unwrap();
+        SavedSearchRepository::new(vault.db.connection()).create("Live", "x", &vault.old_key).unwrap();
+
+        rekey_vault(vault.db.connection(), &crypto, &vault.old_key, &vault.new_key).unwrap();
     }
 }

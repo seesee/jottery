@@ -2,6 +2,7 @@ mod api;
 mod backup;
 mod crypto;
 mod db;
+mod doctor;
 mod export;
 mod models;
 mod password_storage;
@@ -10,6 +11,8 @@ mod search;
 mod secure_temp;
 mod sse;
 mod terminal_text;
+#[cfg(test)]
+mod test_support;
 mod ui;
 mod vault;
 
@@ -55,6 +58,7 @@ fn build_translated_cli() -> clap::Command {
     cmd = cmd.mut_arg("debug", |a| a.help(t!("cli.debug_help").to_string()));
     cmd = cmd.mut_arg("debug_log", |a| a.help(t!("cli.debug_log_help").to_string()));
     cmd = cmd.mut_arg("reset", |a| a.help(t!("cli.reset_help").to_string()));
+    cmd = cmd.mut_arg("yes", |a| a.help(t!("cli.reset_yes_help").to_string()));
     cmd = cmd.mut_arg("allow_insecure_http", |a| a.help(t!("cli.allow_insecure_http_help").to_string()));
     cmd = cmd.mut_arg("password_stdin", |a| a.help(t!("cli.password_stdin_help").to_string()));
 
@@ -132,10 +136,19 @@ fn build_translated_cli() -> clap::Command {
             .mut_arg("key_password", |a| a.help(t!("cli.key_password_help").to_string()))
     });
 
+    cmd = cmd.mut_subcommand("account", |sub| sub.about(t!("cli.account_about").to_string()));
+    cmd = cmd.mut_subcommand("colours", |sub| sub.about(t!("cli.colours_about").to_string()));
+    cmd = cmd.mut_subcommand("doctor", |sub| {
+        sub.about(t!("cli.doctor_about").to_string())
+            .mut_arg("repair", |a| a.help(t!("cli.doctor_repair_help").to_string()))
+            .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
+    });
+
     cmd = cmd.mut_subcommand("export", |sub| {
         sub.about(t!("cli.export_about").to_string())
             .mut_arg("output", |a| a.help(t!("cli.output_help").to_string()))
             .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
+            .mut_arg("force", |a| a.help(t!("cli.export_force_help").to_string()))
     });
 
     cmd = cmd.mut_subcommand("import", |sub| {
@@ -212,6 +225,10 @@ struct Cli {
     #[arg(long)]
     reset: bool,
 
+    /// Don't ask before --reset deletes anything
+    #[arg(long, requires = "reset")]
+    yes: bool,
+
     /// Allow sending a password over plain HTTP to a public host
     #[arg(long, global = true)]
     allow_insecure_http: bool,
@@ -257,7 +274,12 @@ enum Commands {
     /// Search notes
     Search {
         /// Search query
-        query: String,
+        #[arg(required_unless_present = "saved")]
+        query: Option<String>,
+
+        /// Run the saved search with this name instead
+        #[arg(long, conflicts_with = "query", value_name = "NAME")]
+        saved: Option<String>,
 
         /// Password for decryption (will prompt if not provided)
         #[arg(short, long)]
@@ -374,6 +396,10 @@ enum Commands {
         /// Password for decryption (will prompt if not provided)
         #[arg(short, long)]
         password: Option<String>,
+
+        /// Replace the file if it's already there
+        #[arg(long)]
+        force: bool,
     },
     /// Import notes from JSON file
     Import {
@@ -399,6 +425,26 @@ enum Commands {
     InboxToken {
         #[command(subcommand)]
         action: InboxTokenAction,
+    },
+    /// See or delete what the server holds for your account
+    Account {
+        #[command(subcommand)]
+        action: AccountAction,
+    },
+    /// Name colours and give tags a colour
+    Colours {
+        #[command(subcommand)]
+        action: ColoursAction,
+    },
+    /// Check the vault for notes that won't open and missing attachments
+    Doctor {
+        /// Fetch missing attachments from the server
+        #[arg(long)]
+        repair: bool,
+
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
     },
     /// Restore from encrypted backup
     RestoreBackup {
@@ -652,6 +698,300 @@ fn open_editor(initial_content: &str) -> Result<String> {
     Ok(content)
 }
 
+/// Which server, user and password an account command is for.
+#[derive(clap::Args)]
+struct AccountLogin {
+    /// Server endpoint URL (defaults to the one this vault syncs with)
+    #[arg(short, long)]
+    server: Option<String>,
+
+    /// User email
+    #[arg(short, long)]
+    email: String,
+
+    /// Account password (will prompt if not provided)
+    #[arg(short, long)]
+    password: Option<String>,
+}
+
+#[derive(Subcommand)]
+enum AccountAction {
+    /// Show what the server holds, and how much of the quota it uses
+    Info {
+        #[command(flatten)]
+        login: AccountLogin,
+    },
+    /// Delete every note on the server, for every device
+    DeleteNotes {
+        #[command(flatten)]
+        login: AccountLogin,
+    },
+    /// Delete the account and everything on the server
+    Delete {
+        #[command(flatten)]
+        login: AccountLogin,
+    },
+}
+
+#[derive(Subcommand)]
+enum ColoursAction {
+    /// Show the colours, what they're called, and which tags have one
+    List {
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+    /// Give a colour a name of your own, or take it away with an empty one
+    Name {
+        /// The colour, by its key or its current name
+        colour: String,
+
+        /// What to call it
+        name: String,
+
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+    /// Give a tag a colour, or "none" to take it away
+    Tag {
+        /// The tag
+        tag: String,
+
+        /// The colour, by its key or its current name
+        colour: String,
+
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+}
+
+/// Sign in for an account command.
+fn account_session(
+    login: AccountLogin,
+    db_path: &Path,
+    allow_insecure_http: bool,
+) -> Result<(api::SessionClient, String, String)> {
+    let server = match login.server {
+        Some(server) => server,
+        None => {
+            let password = get_password(None, db_path)?;
+            let db = Database::open(db_path, &password).context("Failed to open database")?;
+            match SyncRepository::new(db.connection()).get_metadata()? {
+                Some(metadata) if !metadata.sync_endpoint.is_empty() => metadata.sync_endpoint,
+                _ => anyhow::bail!("No server specified and no sync endpoint configured. Use --server."),
+            }
+        }
+    };
+    api::require_safe_endpoint(&server, allow_insecure_http)?;
+
+    let password = account_password(login.password)?;
+    let session = api::SessionClient::login(&server, &login.email, &password)
+        .context("Failed to login to server")?;
+
+    Ok((session, login.email, password))
+}
+
+/// Ask for the account's email address before something that can't be undone. It isn't
+/// a word to copy from the instructions, so it can only be typed on purpose.
+fn confirm_with_email(question: &str, email: &str) -> Result<()> {
+    errln!("{question}");
+    let mut answer = String::new();
+    std::io::stdin().read_line(&mut answer).context("Failed to read the answer")?;
+
+    if answer.trim() != email {
+        anyhow::bail!("{}", t!("account.cancelled"));
+    }
+    Ok(())
+}
+
+/// Run `jottery account`.
+fn run_account_command(action: AccountAction, db_path: &Path, allow_insecure_http: bool) -> Result<()> {
+    match action {
+        AccountAction::Info { login } => {
+            let (session, _, _) = account_session(login, db_path, allow_insecure_http)?;
+            let info = session.account_info()?;
+
+            let used_mb = format!("{:.1}", info.storage_used_bytes as f64 / (1024.0 * 1024.0));
+            outln!("{}", t!("account.email", email = info.email));
+            outln!("{}", t!("account.usage", notes = info.note_count, attachments = info.attachment_count));
+            outln!("{}", t!("account.storage", used = used_mb, quota = info.storage_quota_mb));
+            if let Some(last_sync_at) = info.last_sync_at {
+                outln!("{}", t!("account.last_sync", time = last_sync_at));
+            }
+        }
+        AccountAction::DeleteNotes { login } => {
+            let (session, email, password) = account_session(login, db_path, allow_insecure_http)?;
+            confirm_with_email(&t!("account.confirm_delete_notes"), &email)?;
+            session.delete_all_notes(&password)?;
+            outln!("✓ {}", t!("account.notes_deleted"));
+        }
+        AccountAction::Delete { login } => {
+            let (session, email, password) = account_session(login, db_path, allow_insecure_http)?;
+            confirm_with_email(&t!("account.confirm_delete"), &email)?;
+            session.delete_account(&password)?;
+            outln!("✓ {}", t!("account.deleted"));
+        }
+    }
+    Ok(())
+}
+
+/// Find a colour by its key or the name it goes by.
+fn find_colour(settings: &models::UserSettings, colour: &str) -> Result<String> {
+    let palette = settings.get_color_palette();
+    if palette.contains_key(colour) {
+        return Ok(colour.to_string());
+    }
+    settings.get_color_key_by_display_name(colour)
+        .with_context(|| t!("colours.unknown", colour = colour).to_string())
+}
+
+/// Run `jottery colours`.
+fn run_colours_command(action: ColoursAction, db_path: &Path) -> Result<()> {
+    let (ColoursAction::List { password } | ColoursAction::Name { password, .. } | ColoursAction::Tag { password, .. }) = &action;
+    let password = get_password(password.clone(), db_path)?;
+    let db = Database::open(db_path, &password).context("Failed to open database. Check your password.")?;
+    let key = derive_key_from_db(&db, &password)?;
+
+    let repo = repository::SettingsRepository::new(db.connection());
+    let mut settings = repo.get_with_key(Some(&key))?;
+
+    match action {
+        ColoursAction::List { .. } => {
+            let palette = settings.get_color_palette();
+            let mut colours: Vec<_> = palette.iter().collect();
+            colours.sort_by_key(|(colour, _)| colour.as_str());
+            for (colour, definition) in colours {
+                match &definition.display_name {
+                    Some(name) => outln!("{colour}: {name}"),
+                    None => outln!("{colour}"),
+                }
+            }
+
+            let mut tags: Vec<_> = settings.tag_colors.iter().flatten().collect();
+            tags.sort();
+            for (tag, colour) in tags {
+                outln!("#{tag}: {colour}");
+            }
+        }
+        ColoursAction::Name { colour, name, .. } => {
+            let colour = find_colour(&settings, &colour)?;
+            let mut palette = settings.get_color_palette();
+            if let Some(definition) = palette.get_mut(&colour) {
+                definition.display_name = (!name.trim().is_empty()).then(|| name.trim().to_string());
+            }
+            settings.color_palette = Some(palette);
+            repo.update_with_key(&settings, Some(&key))?;
+            outln!("✓ {}", t!("colours.named", colour = colour));
+        }
+        ColoursAction::Tag { tag, colour, .. } => {
+            let tag = tag.trim_start_matches('#').to_lowercase();
+            let mut tags = settings.tag_colors.take().unwrap_or_default();
+            if colour.eq_ignore_ascii_case("none") {
+                tags.remove(&tag);
+            } else {
+                tags.insert(tag.clone(), find_colour(&settings, &colour)?);
+            }
+            settings.tag_colors = (!tags.is_empty()).then_some(tags);
+            repo.update_with_key(&settings, Some(&key))?;
+            outln!("✓ {}", t!("colours.tag_set", tag = tag));
+        }
+    }
+    Ok(())
+}
+
+/// Run `jottery doctor`. Finding a problem is an error, so a script can tell.
+fn run_doctor_command(db_path: &Path, password: Option<String>, repair: bool) -> Result<()> {
+    let password = get_password(password, db_path)?;
+    let db = Database::open(db_path, &password).context("Failed to open database. Check your password.")?;
+    let key = derive_key_from_db(&db, &password)?;
+
+    let mut report = doctor::check(db.connection(), &key)?;
+
+    if repair && report.missing_attachments > 0 {
+        let connected = SyncRepository::new(db.connection()).get_metadata()?
+            .is_some_and(|metadata| metadata.api_key.is_some());
+        if connected {
+            let app = App::headless(db_path.to_path_buf(), db, key)?;
+            let fetched = ui::operations::sync::fetch_all_missing_blobs(&app)?;
+            outln!("✓ {}", t!("doctor.repaired", count = fetched));
+            let db = app.into_database().context("Database not available")?;
+            report = doctor::check(db.connection(), &key)?;
+        } else {
+            errln!("⚠ {}", t!("doctor.repair_needs_sync"));
+        }
+    }
+
+    outln!("{}", t!("doctor.notes", count = report.notes, unreadable = report.unreadable_notes));
+    outln!("{}", t!("doctor.versions", count = report.versions, unreadable = report.unreadable_versions));
+    outln!("{}", t!("doctor.attachments", count = report.attachments, unreadable = report.unreadable_attachments, missing = report.missing_attachments));
+    outln!("{}", t!("doctor.saved_searches", count = report.saved_searches, unreadable = report.unreadable_saved_searches));
+    if report.conflicts > 0 {
+        outln!("{}", t!("doctor.conflicts", count = report.conflicts));
+    }
+
+    if report.problems() > 0 {
+        anyhow::bail!("{}", t!("doctor.problems", count = report.problems()));
+    }
+
+    outln!("✓ {}", t!("doctor.healthy"));
+    Ok(())
+}
+
+/// What has to be typed before --reset goes ahead. It isn't translated, so a script or
+/// a set of instructions works in every language.
+const RESET_CONFIRMATION: &str = "DELETE";
+
+/// Delete the vault and everything that could open it.
+///
+/// People run this to erase their data, so the remembered password goes too. Left behind,
+/// it could be decrypted with the key file beside it, and the next run would try it on a
+/// new vault.
+fn reset_vault(db_path: &Path, confirmed: bool) -> Result<()> {
+    if !confirmed {
+        errln!("{}", t!("cli.reset_confirm", path = db_path.display().to_string(), word = RESET_CONFIRMATION));
+        let mut answer = String::new();
+        std::io::stdin().read_line(&mut answer).context("Failed to read the answer")?;
+        if answer.trim() != RESET_CONFIRMATION {
+            anyhow::bail!("{}", t!("cli.reset_cancelled"));
+        }
+    }
+
+    let existed = db_path.exists();
+
+    // Sidecars are named by adding to the whole path, whatever the file is called
+    let mut paths = vec![db_path.to_path_buf()];
+    for suffix in ["-wal", "-shm", "-journal"] {
+        let mut sidecar = db_path.as_os_str().to_owned();
+        sidecar.push(suffix);
+        paths.push(PathBuf::from(sidecar));
+    }
+    for path in &paths {
+        match std::fs::remove_file(path) {
+            Ok(()) => info!("Deleted {}", path.display()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => return Err(e).with_context(|| format!("Failed to delete {}", path.display())),
+        }
+    }
+
+    let config_dir = db_path.parent().ok_or_else(|| anyhow::anyhow!("Invalid db path"))?;
+    password_storage::create_file_storage(config_dir).delete()?;
+
+    // With the file gone this is the keychain, where there is one. It may be out of reach
+    // from here, and that's no reason to stop: the vault itself has gone.
+    if let Err(e) = password_storage::create_storage(config_dir, false).delete() {
+        errln!("⚠ {}: {e}", t!("cli.reset_keychain_failed"));
+    }
+
+    if existed {
+        outln!("✓ {}: {}", t!("cli.reset_done"), db_path.display());
+    } else {
+        outln!("{}: {}", t!("error.file_not_found"), db_path.display());
+    }
+    Ok(())
+}
+
 /// Sync from the CLI, the same way the TUI does: a push and a full pull.
 fn perform_cli_sync(db_path: &Path, db: Database, key: [u8; 32]) -> Result<ui::operations::sync::SyncOutcome> {
     let mut app = App::headless(db_path.to_path_buf(), db, key)?;
@@ -720,6 +1060,9 @@ fn report_sync(outcome: &ui::operations::sync::SyncOutcome) {
     }
     if outcome.deletions_held > 0 {
         errln!("⚠ {}", t!("sync.deletions_held_cli", count = outcome.deletions_held));
+    }
+    if outcome.clock_ahead {
+        errln!("⚠ {}", t!("sync.clock_ahead"));
     }
 }
 
@@ -828,22 +1171,7 @@ fn run() -> Result<()> {
 
     // Handle reset flag
     if cli.reset {
-        if db_path.exists() {
-            info!("Deleting database: {}", db_path.display());
-            std::fs::remove_file(&db_path)?;
-
-            // Also remove SQLite WAL and SHM files if they exist
-            let wal_path = db_path.with_extension("db-wal");
-            let shm_path = db_path.with_extension("db-shm");
-            let _ = std::fs::remove_file(&wal_path);
-            let _ = std::fs::remove_file(&shm_path);
-
-            outln!("✓ {}: {}", t!("note.deleted"), db_path.display());
-            outln!("{}", t!("password.change_success"));
-        } else {
-            outln!("{}: {}", t!("error.file_not_found"), db_path.display());
-        }
-        return Ok(());
+        return reset_vault(&db_path, cli.yes);
     }
 
     // Whatever a killed run left behind goes first. A command only needs the handler
@@ -896,6 +1224,7 @@ fn run() -> Result<()> {
             // Create note struct
             let mut note = Note::new(content);
             note.tags = note_tags;
+            note.set_syntax(repository::SettingsRepository::new(db.connection()).get()?.default_note_type);
 
             // Save to database
             let note_repo = NoteRepository::new(db.connection());
@@ -955,7 +1284,7 @@ fn run() -> Result<()> {
 
             return Ok(());
         }
-        Some(Commands::Search { query, password, limit }) => {
+        Some(Commands::Search { query, saved, password, limit }) => {
             let password = get_password(password, &db_path)?;
             let db = Database::open(&db_path, &password)
                 .context("Failed to open database. Check your password.")?;
@@ -966,6 +1295,15 @@ fn run() -> Result<()> {
             let note_repo = NoteRepository::new(db.connection());
             let notes = note_repo.list_not_deleted(&key)?.notes;
             let settings = repository::SettingsRepository::new(db.connection()).get()?;
+
+            let query = match saved {
+                Some(name) => repository::SavedSearchRepository::new(db.connection()).list(&key)?
+                    .into_iter()
+                    .find(|search| search.name.eq_ignore_ascii_case(&name))
+                    .map(|search| search.query)
+                    .with_context(|| t!("saved_search.not_found", name = name).to_string())?,
+                None => query.unwrap_or_default(),
+            };
 
             // The same query language as the TUI, with the same answer about the archive
             let parsed = search::SearchQuery::parse(&query, &settings);
@@ -1205,6 +1543,15 @@ fn run() -> Result<()> {
 
             return Ok(());
         }
+        Some(Commands::Account { action }) => {
+            return run_account_command(action, &db_path, allow_insecure_http);
+        }
+        Some(Commands::Colours { action }) => {
+            return run_colours_command(action, &db_path);
+        }
+        Some(Commands::Doctor { repair, password }) => {
+            return run_doctor_command(&db_path, password, repair);
+        }
         Some(Commands::InboxToken { action }) => {
             use api::SessionClient;
 
@@ -1307,7 +1654,7 @@ fn run() -> Result<()> {
 
             return Ok(());
         }
-        Some(Commands::Export { output, password }) => {
+        Some(Commands::Export { output, password, force }) => {
             info!("{}: {}", t!("cli.export"), output.display());
             let password = get_password(password, &db_path)?;
             let db = Database::open(&db_path, &password)
@@ -1316,7 +1663,7 @@ fn run() -> Result<()> {
             // Derive key using stored salt
             let key = derive_key_from_db(&db, &password)?;
 
-            let count = export::export_notes(&db, &key, &output)?;
+            let count = export::export_notes(&db, &key, &output, force)?;
             outln!("✓ {}: {} {}", t!("cli.export"), count, output.display());
             return Ok(());
         }
@@ -1464,6 +1811,7 @@ fn run() -> Result<()> {
 
     // Create app
     let mut app = App::new(db_path, debug_log)?;
+    app.enable_background_sync();
 
     // Try auto-unlock if password is stored
     if let Ok(true) = app.try_auto_unlock() {
@@ -1525,144 +1873,16 @@ fn run() -> Result<()> {
                 needs_draw = app.on_tick();
             }
             ui::Event::Mouse(mouse) => {
-                use crossterm::event::{MouseEventKind, MouseButton};
-                use ui::state::{AppState, ViewMode, InputMode, FocusedPanel};
-
                 needs_draw = true;
                 app.register_activity();
-
-                match mouse.kind {
-                    MouseEventKind::ScrollUp => {
-                        // Scroll preview up 3 lines
-                        app.preview_scroll_offset = app.preview_scroll_offset.saturating_sub(3);
-                    }
-                    MouseEventKind::ScrollDown => {
-                        // Scroll preview down 3 lines
-                        app.preview_scroll_offset = app.preview_scroll_offset.saturating_add(3);
-                    }
-                    MouseEventKind::Down(MouseButton::Left) => {
-                        // Only handle clicks in NoteList state
-                        if !matches!(app.state, AppState::NoteList) {
-                            continue;
-                        }
-                        if !matches!(app.view_mode, ViewMode::NoteList) {
-                            continue;
-                        }
-                        if app.search_active {
-                            // Clicking outside search exits search mode
-                            app.search_active = false;
-                        }
-
-                        let x = mouse.column;
-                        let y = mouse.row;
-
-                        // Check if click is in note list area
-                        if let Some(area) = app.note_list_area {
-                            if x >= area.x && x < area.x + area.width
-                                && y >= area.y && y < area.y + area.height
-                            {
-                                // Notes are several rows tall and the list scrolls, so
-                                // the row alone doesn't say which note this is
-                                if let Some(clicked_index) = app.note_at_row(y - area.y) {
-                                    if app.is_multi_select_mode {
-                                        // In multi-select mode, toggle selection
-                                        app.toggle_note_selection(clicked_index);
-                                    } else {
-                                        // Normal mode: select the note
-                                        app.selected_note = clicked_index;
-                                        app.selected_note_id = app.filtered_notes().get(clicked_index).map(|n| n.id.clone());
-                                        app.preview_scroll_offset = 0;
-                                        app.focused_panel = FocusedPanel::NoteContent;
-                                    }
-                                }
-                                continue;
-                            }
-                        }
-
-                        // Check if click is on tags line (for entering tag mode)
-                        if let Some(area) = app.tags_line_area {
-                            if y == area.y && x >= area.x && x < area.x + area.width {
-                                // Check if click is on a specific tag (for search)
-                                let mut found_tag = None;
-                                for (tag_name, tag_start, tag_end) in &app.tag_positions {
-                                    if x >= *tag_start && x < *tag_end {
-                                        found_tag = Some(tag_name.clone());
-                                        break;
-                                    }
-                                }
-
-                                if let Some(tag) = found_tag {
-                                    // Click on a tag: search for it
-                                    app.search_input = format!("#{}", tag);
-                                    app.invalidate_filter_cache();
-                                    app.search_active = true;
-                                    app.select_note_at(0);
-                                } else {
-                                    // Click on "Tags:" label or empty area: enter tag mode
-                                    let filtered = app.filtered_notes();
-                                    if !filtered.is_empty() && app.selected_note < filtered.len() {
-                                        let note = &filtered[app.selected_note];
-                                        let note_id = note.id.clone();
-                                        let content = note.content.clone();
-                                        let syntax_lang = note.syntax_language;
-                                        let tags = note.tags.clone();
-
-                                        app.note_input = content;
-                                        app.note_syntax = syntax_lang;
-                                        app.current_tags = tags;
-                                        app.editing_note_id = Some(note_id);
-                                        app.state = AppState::NoteView;
-                                        app.input_mode = InputMode::Tag;
-                                        app.tag_input.clear();
-                                    }
-                                }
-                                continue;
-                            }
-                        }
-
-                        // Check if click is on a note link in the preview area
-                        if let Some(_preview_area) = app.preview_area {
-                            let mut found_link = None;
-                            for (note_id, link_y, link_x_start, link_x_end) in &app.note_link_positions {
-                                if y == *link_y && x >= *link_x_start && x < *link_x_end {
-                                    found_link = Some(note_id.clone());
-                                    break;
-                                }
-                            }
-
-                            if let Some(target_note_id) = found_link {
-                                // Navigate to the linked note
-                                // Find the note in the full notes list and update selection
-                                let notes = app.filtered_notes();
-                                if let Some(idx) = notes.iter().position(|n| n.id == target_note_id) {
-                                    app.selected_note = idx;
-                                    app.selected_note_id = Some(target_note_id);
-                                    app.preview_scroll_offset = 0;
-                                    app.focused_panel = FocusedPanel::NoteContent;
-                                } else {
-                                    // Note not in current filter, clear search and try again
-                                    app.search_input.clear();
-                                    app.invalidate_filter_cache();
-                                    app.search_active = false;
-                                    let all_notes = app.filtered_notes();
-                                    if let Some(idx) = all_notes.iter().position(|n| n.id == target_note_id) {
-                                        app.selected_note = idx;
-                                        app.selected_note_id = Some(target_note_id);
-                                        app.preview_scroll_offset = 0;
-                                        app.focused_panel = FocusedPanel::NoteContent;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    _ => {}
-                }
+                app.handle_mouse(mouse);
             }
         }
     }
 
     // Clean exit
     tui.exit()?;
+    app.wait_for_sync(std::time::Duration::from_secs(5));
 
     Ok(())
 }

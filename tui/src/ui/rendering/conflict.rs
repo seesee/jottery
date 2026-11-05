@@ -268,15 +268,15 @@ fn render_content_pane(
     }
 
     // Content lines
-    for line in content.lines() {
-        lines.push(Line::raw(line));
+    for line in crate::ui::helpers::expand_tabs(content).lines() {
+        lines.push(Line::raw(line.to_string()));
     }
 
     let content_paragraph = Paragraph::new(lines)
-        .wrap(Wrap { trim: false })
-        .scroll((scroll_offset as u16, 0));
+        .wrap(Wrap { trim: false });
+    let scroll = scroll_offset.min(super::furthest_scroll(&content_paragraph, inner));
 
-    frame.render_widget(content_paragraph, inner);
+    frame.render_widget(content_paragraph.scroll((super::scroll_rows(scroll), 0)), inner);
 }
 
 /// Render the footer with action keys

@@ -57,6 +57,7 @@ password:
   no_file_encryption: "This build does not encrypt the database file. Notes and tags stay encrypted, but your email, server address, attachment names and dates do not."
 
 # Main menu / Navigation
+  change_keeps_key: "This doesn't change your encryption key: old backups still open with the old password."
 menu:
   notes: "Notes"
   new_note: "New Note"
@@ -100,6 +101,12 @@ note:
   unreadable: "%{count} notes in this vault can't be read"
 
 # Archive operations
+  duplicated: "Note duplicated"
+  copied: "Copied to the clipboard"
+  copy_too_large: "This note is too long for a terminal to copy reliably"
+  word_wrap_on: "Word wrap on"
+  word_wrap_off: "Word wrap off"
+  no_links: "No links on screen"
 archive:
   view: "View archive"
   title: "Archive"
@@ -201,6 +208,7 @@ settings:
   language_auto: "Same as system"
 
 # Sync operations
+  default_note_type: "Default note type"
 sync:
   push: "Push to server"
   pull: "Pull from server"
@@ -257,6 +265,8 @@ sync:
   device_still_registered: "Disconnected here, but the server couldn't be told, so this device's key still works. Revoke it in the user portal."
 
 # Inbox
+  stopped_unexpectedly: "The sync stopped unexpectedly. Nothing was lost, and it will try again."
+  clock_ahead: "This device's clock may be wrong: some changes are dated more than a day ahead of the server, so they weren't sent. They'll go once the clock is right."
 inbox:
   title: "Inbox"
   empty: "Inbox is empty. Notes submitted via the Inbox API will appear here."
@@ -395,7 +405,6 @@ help:
   attachments: "ATTACHMENTS"
   global: "GLOBAL"
   press_esc_or_enter: "Press Esc or Enter to close"
-  press_enter_paste: "Press Enter to paste | Esc to cancel"
   tab_switch: "Tab: switch fields | Enter: create"
   enter_unlock: "Enter: unlock | Ctrl+Q: quit"
   type_password_key: "Type"
@@ -576,6 +585,21 @@ help:
   multi_colour_desc: "Set the colour of selected notes"
 
 # CLI commands and help text
+  g_saved_key: "g"
+  g_saved_desc: "Saved searches"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "Save this search"
+  enter_confirm_esc_cancel: "Enter: confirm | Esc: cancel"
+  D_duplicate_key: "Shift+D"
+  D_duplicate_desc: "Duplicate note"
+  o_copy_key: "o"
+  o_copy_desc: "Copy note text to the clipboard"
+  w_wrap_key: "w"
+  w_wrap_desc: "Turn word wrap on or off"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "Earlier and later searches"
+  l_link_key: "l, Enter"
+  l_link_desc: "Move through links, and follow one"
 cli:
   # Legacy (used in some places)
   list: "List notes"
@@ -656,6 +680,16 @@ cli:
   password_stdin_help: "Read passwords from stdin, one per line, instead of prompting"
 
 # Status messages
+  reset_yes_help: "Don't ask before --reset deletes anything"
+  reset_confirm: "This permanently deletes %{path} and any remembered password. Type %{word} to go ahead:"
+  reset_cancelled: "Nothing was deleted"
+  reset_done: "Deleted the vault and any remembered password"
+  reset_keychain_failed: "Could not remove the password from the keychain"
+  export_force_help: "Replace the file if it's already there"
+  account_about: "See or delete what the server holds for your account"
+  colours_about: "Name colours and give tags a colour"
+  doctor_about: "Check the vault for notes that won't open and missing attachments"
+  doctor_repair_help: "Fetch missing attachments from the server"
 status:
   locked: "Locked"
   unlocked: "Unlocked"
@@ -688,6 +722,8 @@ bulk:
   unknown_colour: "There's no colour called %{colour}"
 
 # Date and time formatting
+  overwrite_title: "Replace this file?"
+  overwrite_message: "%{path} already exists. Replacing it can't be undone."
 time:
   just_now: "just now"
   minutes_ago: "%{count} minutes ago"
@@ -809,3 +845,44 @@ envelope:
   password_changed_elsewhere: "Your notes password was changed on another device, so nothing was overwritten. This device still unlocks with its old password. Change it here to match, so that new devices can join."
   server_update_pending: "Your password changed on this device, but the server's copy of your key couldn't be updated. Jottery will try again. Until then, a new device can't join with the new password."
   key_keeps_changing: "The account's key keeps changing on the server, so this device has left it alone. Try again in a moment."
+
+saved_search:
+  title: "Saved searches"
+  empty: "No saved searches yet. Search with /, then press Ctrl+S to save it."
+  name_prompt: "Name this search"
+  nothing_to_save: "Type a search first"
+  saved: "Saved search: %{name}"
+  deleted: "Saved search deleted"
+  delete_confirm: "Delete '%{name}' on every device? (y/n)"
+  not_found: "No saved search called %{name}"
+  failed: "Saved search failed: %{error}"
+
+export:
+  file_exists: "That file already exists. Choose another name, or use --force to replace it."
+
+account:
+  email: "Account: %{email}"
+  usage: "Notes: %{notes}, attachments: %{attachments}"
+  storage: "Storage: %{used} MB of %{quota} MB"
+  last_sync: "Last sync: %{time}"
+  confirm_delete_notes: "This deletes every note on the server, for every device, and can't be undone. Type your email address to go ahead:"
+  confirm_delete: "This deletes your account and everything on the server, and can't be undone. This device keeps its notes. Type your email address to go ahead:"
+  cancelled: "Nothing was deleted"
+  notes_deleted: "Every note on the server has been deleted"
+  deleted: "The account has been deleted"
+
+colours:
+  unknown: "No colour called %{colour}"
+  named: "Colour updated: %{colour}"
+  tag_set: "Tag updated: %{tag}"
+
+doctor:
+  notes: "Notes: %{count}, unreadable: %{unreadable}"
+  versions: "Versions: %{count}, unreadable: %{unreadable}"
+  attachments: "Attachments: %{count}, unreadable: %{unreadable}, missing: %{missing}"
+  saved_searches: "Saved searches: %{count}, unreadable: %{unreadable}"
+  conflicts: "Conflicts waiting for you: %{count}"
+  problems: "Problems found: %{count}"
+  repaired: "Attachments fetched: %{count}"
+  repair_needs_sync: "This vault isn't connected to a server, so missing attachments can't be fetched"
+  healthy: "No problems found"

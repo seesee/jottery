@@ -50,6 +50,7 @@ password:
   same_as_account: "別のパスワードを使用してください。サーバーはアカウントのパスワードを見ることができるため、ノートを開くパスワードと同じにしてはいけません。"
   same_as_account_warning: "アカウントのパスワードがノートのパスワードと同じため、サーバーがノートを読める状態です。設定でノートのパスワードを変更してください。"
   no_file_encryption: "このビルドはデータベースファイルを暗号化しません。ノートとタグは暗号化されたままですが、メールアドレス、サーバーアドレス、添付ファイル名、日付は暗号化されません。"
+  change_keeps_key: "暗号化キーは変わりません。古いバックアップは古いパスワードで開くことができます。"
 menu:
   notes: ノート
   new_note: 新しいノート
@@ -89,6 +90,12 @@ note:
   bin_emptied: "%{count} 件のノートを完全に削除しました"
   locked_cannot_archive: "ロックされたノートはアーカイブできません"
   unreadable: "この保管庫の %{count} 件のノートを読み取れません"
+  duplicated: "ノートを複製しました"
+  copied: "クリップボードにコピーしました"
+  copy_too_large: "このノートは長すぎるため、端末で確実にコピーできません"
+  word_wrap_on: "折り返しオン"
+  word_wrap_off: "折り返しオフ"
+  no_links: "画面にリンクはありません"
 archive:
   view: "アーカイブを表示"
   title: "アーカイブ"
@@ -179,6 +186,7 @@ settings:
   disabled: 無効
   sort_order: "並び順"
   language_auto: "システムと同じ"
+  default_note_type: "既定のノートの種類"
 sync:
   push: サーバーにプッシュ
   pull: サーバーからプル
@@ -235,6 +243,8 @@ sync:
   device_still_registered: "ここでは切断しましたが、サーバーに通知できなかったため、このデバイスのキーはまだ有効です。ユーザーポータルで失効させてください。"
 
 # 受信トレイ
+  stopped_unexpectedly: "同期が予期せず停止しました。失われたものはありません。再試行します。"
+  clock_ahead: "このデバイスの時計が間違っている可能性があります。一部の変更の日時がサーバーより 1 日以上先になっているため、送信されませんでした。時計が正しくなると送信されます。"
 inbox:
   title: "受信トレイ"
   empty: "受信トレイは空です。受信トレイAPIから送信されたノートはここに表示されます。"
@@ -348,7 +358,6 @@ help:
   attachments: 添付ファイル
   global: グローバル
   press_esc_or_enter: EscまたはEnterで閉じる
-  press_enter_paste: Enterで貼り付け | Escでキャンセル
   tab_switch: "Tab: フィールド切替 | Enter: 作成"
   enter_unlock: "Enter: ロック解除 | Ctrl+Q: 終了"
   type_password_key: 入力
@@ -527,6 +536,21 @@ help:
   multi_remove_tags_desc: "選択したノートからタグを削除"
   multi_colour_key: "C"
   multi_colour_desc: "選択したノートの色を設定"
+  g_saved_key: "g"
+  g_saved_desc: "保存した検索"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "この検索を保存"
+  enter_confirm_esc_cancel: "Enter: 確定 | Esc: キャンセル"
+  D_duplicate_key: "Shift+D"
+  D_duplicate_desc: "ノートを複製"
+  o_copy_key: "o"
+  o_copy_desc: "ノートの本文をクリップボードにコピー"
+  w_wrap_key: "w"
+  w_wrap_desc: "折り返しのオン・オフ"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "前後の検索"
+  l_link_key: "l, Enter"
+  l_link_desc: "リンクを移動し、開く"
 cli:
   # 代替 (一部で使用)
   list: ノートを一覧表示
@@ -605,6 +629,16 @@ cli:
   allow_insecure_http_help: "パスワードを暗号化されていない HTTP で公開ホストに送信することを許可"
   password_flag_deprecated: "コマンドラインのパスワードは ps やシェル履歴に表示されます。代わりに --password-stdin か JOTTERY_PASSWORD を使ってください。"
   password_stdin_help: "パスワードを尋ねずに stdin から 1 行ずつ読み取る"
+  reset_yes_help: "--reset で削除する前に確認しない"
+  reset_confirm: "%{path} と記憶されたパスワードを完全に削除します。続行するには %{word} と入力してください:"
+  reset_cancelled: "何も削除されませんでした"
+  reset_done: "保管庫と記憶されたパスワードを削除しました"
+  reset_keychain_failed: "キーチェーンからパスワードを削除できませんでした"
+  export_force_help: "ファイルが既にある場合は置き換える"
+  account_about: "サーバーがアカウントについて保持している内容を表示または削除"
+  colours_about: "色に名前を付け、タグに色を割り当てる"
+  doctor_about: "開けないノートや欠けている添付ファイルがないか保管庫を確認"
+  doctor_repair_help: "欠けている添付ファイルをサーバーから取得"
 status:
   locked: ロック中
   unlocked: ロック解除
@@ -633,6 +667,8 @@ bulk:
   colour_of: "%{count} 件のノートの色を設定"
   colour_set: "%{count} 件のノートの色を変更しました"
   unknown_colour: "%{colour} という色はありません"
+  overwrite_title: "このファイルを置き換えますか?"
+  overwrite_message: "%{path} は既に存在します。置き換えると元に戻せません。"
 time:
   just_now: たった今
   minutes_ago: "%{count} 分前"
@@ -768,3 +804,44 @@ envelope:
   password_changed_elsewhere: "ノートのパスワードが別のデバイスで変更されたため、何も上書きしていません。このデバイスは今も古いパスワードでロック解除されます。新しいデバイスを接続できるよう、ここでも同じパスワードに変更してください。"
   server_update_pending: "このデバイスのパスワードは変更されましたが、サーバー上のキーのコピーを更新できませんでした。Jottery が再試行します。それまで新しいデバイスは新しいパスワードで接続できません。"
   key_keeps_changing: "サーバー上のアカウントのキーが変更され続けているため、このデバイスは変更を行いませんでした。しばらくしてからもう一度お試しください。"
+
+saved_search:
+  title: "保存した検索"
+  empty: "保存した検索はまだありません。/ で検索し、Ctrl+S で保存します。"
+  name_prompt: "この検索に名前を付ける"
+  nothing_to_save: "先に検索を入力してください"
+  saved: "検索を保存しました: %{name}"
+  deleted: "保存した検索を削除しました"
+  delete_confirm: "すべてのデバイスで「%{name}」を削除しますか? (y/n)"
+  not_found: "%{name} という保存した検索はありません"
+  failed: "保存した検索に失敗しました: %{error}"
+
+export:
+  file_exists: "そのファイルは既に存在します。別の名前を選ぶか、--force で置き換えてください。"
+
+account:
+  email: "アカウント: %{email}"
+  usage: "ノート: %{notes}、添付ファイル: %{attachments}"
+  storage: "ストレージ: %{quota} MB 中 %{used} MB"
+  last_sync: "最終同期: %{time}"
+  confirm_delete_notes: "サーバー上のすべてのノートがすべてのデバイスで削除され、元に戻せません。続行するにはメールアドレスを入力してください:"
+  confirm_delete: "アカウントとサーバー上のすべてが削除され、元に戻せません。このデバイスのノートは残ります。続行するにはメールアドレスを入力してください:"
+  cancelled: "何も削除されませんでした"
+  notes_deleted: "サーバー上のすべてのノートを削除しました"
+  deleted: "アカウントを削除しました"
+
+colours:
+  unknown: "%{colour} という色はありません"
+  named: "色を更新しました: %{colour}"
+  tag_set: "タグを更新しました: %{tag}"
+
+doctor:
+  notes: "ノート: %{count}、読み取り不可: %{unreadable}"
+  versions: "バージョン: %{count}、読み取り不可: %{unreadable}"
+  attachments: "添付ファイル: %{count}、読み取り不可: %{unreadable}、欠損: %{missing}"
+  saved_searches: "保存した検索: %{count}、読み取り不可: %{unreadable}"
+  conflicts: "解決待ちの競合: %{count}"
+  problems: "見つかった問題: %{count}"
+  repaired: "取得した添付ファイル: %{count}"
+  repair_needs_sync: "この保管庫はサーバーに接続されていないため、欠けている添付ファイルを取得できません"
+  healthy: "問題は見つかりませんでした"

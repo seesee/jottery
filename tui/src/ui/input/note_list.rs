@@ -4,7 +4,6 @@ use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use rust_i18n::t;
 
-use crate::models::SyntaxLanguage;
 use crate::repository::NoteRepository;
 use crate::ui::app::App;
 use crate::ui::input::text_input::{handle_text_input, TextInputResult};
@@ -79,6 +78,18 @@ fn cycle_color_backward(current_color: Option<&String>, app: &App) -> Option<Str
     cycle_color(current_color, app, false)
 }
 
+/// Export the selection, stopping to ask if that would replace a file.
+fn export_selection(app: &mut App, path: std::path::PathBuf, overwrite: bool) {
+    match operations::bulk::export_selected(app, &path, overwrite) {
+        Ok(count) => {
+            app.sync_status = Some(t!("bulk.exported", count = count, path = path.display().to_string()).to_string());
+            app.clear_multi_selection();
+        }
+        Err(e) if e.is::<crate::export::ExportFileExists>() => app.export_overwrite_path = Some(path),
+        Err(e) => app.error = Some(t!("bulk.operation_failed", error = e.to_string()).to_string()),
+    }
+}
+
 /// Handle key events in note list state
 pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
     // Clear sync status on any key (except 'y' which sets it)
@@ -88,6 +99,30 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
 
     // An error stays on screen until the next key
     app.error = None;
+
+    // The keyboard's place among the links lasts until it's used or another key is pressed
+    if !matches!(key.code, KeyCode::Char('l') | KeyCode::Enter) {
+        app.selected_link = None;
+    }
+
+    // Naming a search, whichever list is underneath
+    if matches!(app.input_mode, InputMode::SaveSearchName) {
+        match handle_text_input(&key, &mut app.saved_search_name_input) {
+            TextInputResult::Submit => {
+                if let Err(e) = operations::saved_searches::save_current(app) {
+                    app.error = Some(t!("saved_search.failed", error = e.to_string()).to_string());
+                }
+            }
+            TextInputResult::Cancel => app.input_mode = InputMode::Normal,
+            TextInputResult::Continue | TextInputResult::Unhandled => {}
+        }
+        return Ok(());
+    }
+
+    if matches!(app.view_mode, ViewMode::SavedSearches) {
+        super::saved_searches::handle_saved_searches_key(app, key);
+        return Ok(());
+    }
 
     // Handle inbox view mode
     if matches!(app.view_mode, ViewMode::Inbox) {
@@ -232,6 +267,14 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
         return Ok(());
     }
 
+    // An export would replace a file, which can't be undone
+    if let Some(path) = app.export_overwrite_path.take() {
+        if matches!(key.code, KeyCode::Char('y') | KeyCode::Char('Y')) {
+            export_selection(app, path, true);
+        }
+        return Ok(());
+    }
+
     // Handle bulk export path input mode
     if matches!(app.input_mode, InputMode::BulkExportPath) {
         match handle_text_input(&key, &mut app.bulk_export_path_input) {
@@ -239,15 +282,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 // Export selected notes to file
                 if !app.bulk_export_path_input.is_empty() {
                     let path = std::path::PathBuf::from(&app.bulk_export_path_input);
-                    match operations::bulk::export_selected(app, &path) {
-                        Ok(count) => {
-                            app.sync_status = Some(t!("bulk.exported", count = count, path = app.bulk_export_path_input.clone()).to_string());
-                            app.clear_multi_selection();
-                        }
-                        Err(e) => {
-                            app.error = Some(t!("bulk.operation_failed", error = e.to_string()).to_string());
-                        }
-                    }
+                    export_selection(app, path, false);
                 }
                 app.bulk_export_path_input.clear();
                 app.input_mode = InputMode::Normal;
@@ -312,7 +347,8 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                                 app.error = Some(format!("Failed to reload notes: {}", e));
                             }
                         }
-                        ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution | ViewMode::Inbox => {
+                        ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution
+                        | ViewMode::Inbox | ViewMode::SavedSearches => {
                             app.view_mode = ViewMode::NoteList;
                         }
                     }
@@ -408,7 +444,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     } else {
                         // Create new note - clear inputs
                         app.note_input.clear();
-                        app.note_syntax = SyntaxLanguage::default();
+                        app.note_syntax = app.settings.default_note_type;
                         app.current_tags.clear();
                         app.editing_note_id = None;
                     }
@@ -417,6 +453,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     operations::notes::edit_and_save(app);
                 }
             }
+            KeyCode::Enter if app.selected_link.is_some() && operations::notes::follow_focused_link(app) => {}
             KeyCode::Char('i') | KeyCode::Enter => {
                 // In version history: restore selected version
                 if matches!(app.view_mode, ViewMode::VersionHistory) {
@@ -776,7 +813,8 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                             app.error = Some(t!("note.reload_failed", error = e.to_string()).to_string());
                         }
                     }
-                    ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution | ViewMode::Inbox => {
+                    ViewMode::AttachmentViewer | ViewMode::VersionHistory | ViewMode::ConflictResolution
+                    | ViewMode::Inbox | ViewMode::SavedSearches => {
                         // 'r' does nothing in these views
                     }
                 }
@@ -878,6 +916,29 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     } else if !app.filtered_notes().is_empty() {
                         app.show_note_info = true;
                     }
+                }
+            }
+            KeyCode::Char('D') if matches!(app.view_mode, ViewMode::NoteList) => {
+                if let Err(e) = operations::notes::duplicate_selected(app) {
+                    app.error = Some(e.to_string());
+                }
+            }
+            KeyCode::Char('o') if matches!(app.view_mode, ViewMode::NoteList) => {
+                if let Err(e) = operations::notes::copy_selected(app) {
+                    app.error = Some(e.to_string());
+                }
+            }
+            KeyCode::Char('w') if matches!(app.view_mode, ViewMode::NoteList) => {
+                if let Err(e) = operations::notes::toggle_word_wrap(app) {
+                    app.error = Some(e.to_string());
+                }
+            }
+            KeyCode::Char('l') if matches!(app.view_mode, ViewMode::NoteList) => {
+                operations::notes::focus_next_link(app);
+            }
+            KeyCode::Char('g') if matches!(app.view_mode, ViewMode::NoteList) => {
+                if let Err(e) = operations::saved_searches::open_picker(app) {
+                    app.error = Some(t!("saved_search.failed", error = e.to_string()).to_string());
                 }
             }
             KeyCode::Char('b') if !key.modifiers.contains(KeyModifiers::CONTROL) => {
@@ -1781,6 +1842,33 @@ mod tests {
         let _ = handle_note_list_key(&mut app, key(KeyCode::Esc));
 
         assert!(matches!(app.input_mode, InputMode::Normal));
+    }
+
+    #[test]
+    fn an_export_asks_before_replacing_a_file() {
+        let mut app = app_with_notes(&["Selected"]);
+        let id = app.notes[0].id.clone();
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("export.json");
+        std::fs::write(&path, "already here").unwrap();
+
+        let export = |app: &mut App| {
+            app.is_multi_select_mode = true;
+            app.selected_note_ids.insert(id.clone());
+            app.input_mode = InputMode::BulkExportPath;
+            app.bulk_export_path_input = path.to_str().unwrap().to_string();
+            handle_note_list_key(app, key(KeyCode::Enter)).unwrap();
+        };
+
+        export(&mut app);
+        assert!(app.export_overwrite_path.is_some());
+        handle_note_list_key(&mut app, key(KeyCode::Char('n'))).unwrap();
+        assert!(app.export_overwrite_path.is_none());
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "already here");
+
+        export(&mut app);
+        handle_note_list_key(&mut app, key(KeyCode::Char('y'))).unwrap();
+        assert!(std::fs::read_to_string(&path).unwrap().contains("Selected"));
     }
 
     // ==================== Navigation Tests ====================

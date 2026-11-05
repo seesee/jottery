@@ -144,8 +144,32 @@ jottery show <note-id> --password yourpassword
 jottery delete <note-id> --password yourpassword
 
 # Reset database (deletes all data)
-jottery --reset
+jottery --reset        # asks first; --yes skips that
 ```
+
+Other commands:
+
+```bash
+# Run a saved search
+jottery search --saved "Work"
+
+# See what the server holds, or delete it (the destructive ones ask for your email)
+jottery account info -e you@example.com
+jottery account delete-notes -e you@example.com
+jottery account delete -e you@example.com
+
+# Name a colour, and give a tag one
+jottery colours name red Urgent
+jottery colours tag work Urgent
+jottery colours list
+
+# Check the vault. Exits non-zero if something's wrong
+jottery doctor
+jottery doctor --repair     # also fetches missing attachments from the server
+```
+
+Exports are decrypted, so they're readable by you alone, and `export` won't replace a
+file unless you add `--force`.
 
 ### First Run
 
@@ -269,6 +293,14 @@ jottery
 - Sync will happen automatically every 5 minutes (configurable)
 - Manual sync: Press `s` → navigate to "Sync Now" → press `Enter`
 - Sync settings available in the settings panel (`s` key)
+
+Sync runs in the background, so a slow server doesn't hold up the screen. Automatic
+syncs wait while a note is open, and a sync that's already running won't replace it:
+if the note changed elsewhere, that shows as a conflict.
+
+If your server uses a private certificate authority, such as Caddy's internal CA or
+mkcert, install it in your system's trust store, or point `SSL_CERT_FILE` at it. The
+bundled roots are trusted too.
 
 ## Passwords on the Command Line
 
@@ -405,11 +437,16 @@ The preview pane renders markdown with full formatting support:
 | `I` | Show note info |
 | `x` | Resolve a sync conflict on the selected note |
 | `b` | Open the inbox |
+| `g` | Open your saved searches |
+| `Shift+D` | Duplicate selected note |
+| `o` | Copy the note's text to the clipboard (through the terminal, so it also works over SSH) |
+| `w` | Turn word wrap on or off for selected note |
+| `l` | Move through the links in the preview (`Enter` follows one) |
 | `j`/`↓` | Move down |
 | `k`/`↑` | Move up |
 | `]`/`[` | Cycle syntax language forward/backward |
 | `C`/`c` | Cycle note colour forward/backward |
-| `/` | Search |
+| `/` | Search (`Ctrl+S` saves the query, `Ctrl+P`/`Ctrl+N` go through earlier searches) |
 | `y` | Sync now |
 | `Y` | Force a full resync |
 | `s` | Open settings |
@@ -459,7 +496,6 @@ Images, PDFs and plain text open in a viewer. Anything else could run code from 
 | `k`/`↑` | Move to previous setting |
 | `Enter`/`i`/`Space` | Edit setting (cycle for theme/sort order) |
 | `I`/`Shift+Enter` | Cycle backward (theme/sort order) |
-| `p` | Paste sync credentials from clipboard |
 | `Esc`/`q` | Close settings |
 
 ### Version History

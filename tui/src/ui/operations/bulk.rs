@@ -3,7 +3,6 @@
 use anyhow::{Context, Result};
 use chrono::Utc;
 use rust_i18n::t;
-use std::fs;
 use std::path::Path;
 
 use crate::{
@@ -134,7 +133,7 @@ pub fn archive_selected(app: &mut App) -> Result<usize> {
 }
 
 /// Export selected notes to a JSON file
-pub fn export_selected(app: &App, path: &Path) -> Result<usize> {
+pub fn export_selected(app: &App, path: &Path, overwrite: bool) -> Result<usize> {
     if app.selected_note_ids.is_empty() {
         return Ok(0);
     }
@@ -154,8 +153,8 @@ pub fn export_selected(app: &App, path: &Path) -> Result<usize> {
     };
 
     let count = export_data.notes.len();
-    let json = serde_json::to_string_pretty(&export_data)?;
-    fs::write(path, json)?;
+    let json = serde_json::to_vec_pretty(&export_data)?;
+    crate::export::write_private(path, &json, overwrite)?;
 
     Ok(count)
 }

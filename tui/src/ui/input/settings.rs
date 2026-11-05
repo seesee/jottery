@@ -44,7 +44,7 @@ pub fn handle_settings_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 }
                 KeyCode::Down | KeyCode::Char('j') => {
                     // Move down through settings fields
-                    if app.selected_setting < 7 {
+                    if app.selected_setting < 8 {
                         app.selected_setting += 1;
                     }
                 }

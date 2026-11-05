@@ -69,7 +69,17 @@ pub fn start_editing_setting(app: &mut App) {
                 app.sync_status_set_at = Some(Instant::now());
             }
         }
+        8 => cycle_default_note_type(app, true),
         _ => {}
+    }
+}
+
+/// Move on to the next or previous type for new notes, and save it.
+fn cycle_default_note_type(app: &mut App, forward: bool) {
+    let current = app.settings.default_note_type;
+    app.settings.default_note_type = if forward { current.next() } else { current.prev() };
+    if let Err(e) = save_settings(app) {
+        app.error = Some(format!("Failed to save settings: {}", e));
     }
 }
 
@@ -129,6 +139,7 @@ pub fn start_editing_setting_backward(app: &mut App) {
                 app.sync_status_set_at = Some(Instant::now());
             }
         }
+        8 => cycle_default_note_type(app, false),
         _ => {}
     }
 }
@@ -204,6 +215,13 @@ fn point_sync_at(app: &mut App, endpoint: &str) -> Result<()> {
     let sync_repo = SyncRepository::new(db.connection());
     if let Some(mut metadata) = sync_repo.get_metadata()? {
         if metadata.sync_endpoint != endpoint {
+            // What it's fetching belongs to the old address
+            super::sync::cancel_background_sync(app);
+            let Some(db) = &app.db else {
+                return Ok(());
+            };
+            let sync_repo = SyncRepository::new(db.connection());
+
             metadata.sync_endpoint = endpoint.to_string();
             metadata.pull_cursor = None;
             metadata.last_pull_at = None;
@@ -307,6 +325,7 @@ pub fn disconnect_from_sync(app: &mut App) -> Result<()> {
 
     // Stop SSE connection since we're disabling sync
     app.stop_sse();
+    super::sync::cancel_background_sync(app);
 
     let revoked = revoke_this_device(app);
     if let Err(e) = &revoked {
@@ -429,6 +448,9 @@ pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &st
     let local_key = app.key.ok_or_else(|| anyhow::anyhow!("No encryption key"))?;
 
     let client = crate::api::AuthClient::new(endpoint.to_string());
+
+    // A sync still running belongs to whatever this device was connected to before
+    super::sync::cancel_background_sync(app);
 
     app.debug_log("[Register] Starting device registration");
 
@@ -640,7 +662,7 @@ mod tests {
 
     /// The server's answer to a device being revoked, and how many times it was asked.
     fn revoke_server(status: &'static str) -> (String, std::sync::Arc<std::sync::atomic::AtomicUsize>) {
-        use std::io::{Read, Write};
+        use std::io::Write;
         use std::sync::atomic::{AtomicUsize, Ordering};
 
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
@@ -651,9 +673,10 @@ mod tests {
         std::thread::spawn(move || {
             for stream in listener.incoming() {
                 let mut stream = stream.unwrap();
-                let mut request = [0u8; 4096];
-                let read = stream.read(&mut request).unwrap();
-                if String::from_utf8_lossy(&request[..read]).starts_with("DELETE /api/v1/sync/device ") {
+                let Some(request) = crate::test_support::read_request(&mut stream) else {
+                    continue;
+                };
+                if request.method == "DELETE" && request.path == "/api/v1/sync/device" {
                     counted.fetch_add(1, Ordering::SeqCst);
                 }
                 let response = format!("HTTP/1.1 {status}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");

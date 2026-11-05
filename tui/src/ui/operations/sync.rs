@@ -12,19 +12,27 @@ use rusqlite::Connection;
 use rust_i18n::t;
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{self, Receiver, TryRecvError};
+use std::sync::{Arc, Mutex, MutexGuard, TryLockError};
 use std::time::{Duration, Instant};
+use zeroize::Zeroizing;
 
 use crate::{
     crypto::{update_hash_chain, CryptoService, EncryptedData},
+    db::Database,
     models::{
         char_prefix, Attachment, Note,
         sync::{
             AttachmentRef, AttachmentWarning, ConflictData, InboxItem, SyncAttachment, SyncDeletion, SyncMetadata,
             SyncNote, SyncNoteVersion, SyncPullRequest, SyncPullResponse, SyncPushRequest,
-            SyncPushResponse,
+            SyncPushResponse, SyncSavedSearch,
         },
     },
-    repository::{attachment::AttachmentRepository, NoteRepository, NoteVersionRepository, VersionReason, sync::SyncRepository},
+    repository::{
+        attachment::AttachmentRepository, sync::SyncRepository, NoteRepository, NoteVersionRepository,
+        SavedSearchRepository, VersionReason,
+    },
 };
 
 use super::super::app::App;
@@ -53,8 +61,21 @@ const MAX_RETRY_AFTER_SECONDS: u64 = 3600;
 /// A sync that would remove this many notes asks first.
 const MASS_DELETION_THRESHOLD: usize = 10;
 
+/// How far back notes that reached the bin from elsewhere count towards that.
+const MASS_DELETION_WINDOW_HOURS: i64 = 24;
+
 /// How long a note deleted elsewhere stays restorable in the bin here.
 const REMOTE_DELETION_RETENTION_DAYS: i64 = 30;
+
+/// How far ahead of its own clock the server accepts a date.
+const SERVER_CLOCK_TOLERANCE_HOURS: i64 = 24;
+
+/// How often the list on screen catches up with a sync that's still running.
+const SYNC_REFRESH_INTERVAL: Duration = Duration::from_secs(2);
+
+/// How many missing files one sync goes looking for, so that files the server has lost
+/// don't cost a request each on every sync.
+const MAX_BLOB_FETCHES_PER_SYNC: usize = 50;
 
 /// What a sync achieved.
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -69,6 +90,12 @@ pub struct SyncOutcome {
     pub quota_exceeded: bool,
     /// Notes the server says to delete, waiting for the user to confirm
     pub deletions_held: usize,
+    /// Changes dated too far ahead of the server's clock for it to take. They stay here,
+    /// and go once this device's clock is right.
+    pub clock_ahead: bool,
+    /// The latest date on any note the server said nothing about. A server skips what's
+    /// dated too far ahead without saying so, and only a pull says what time it is there.
+    unanswered_until: Option<DateTime<Utc>>,
 }
 
 /// The server turned this device away, and retrying at once won't help.
@@ -84,6 +111,91 @@ pub enum SyncRefused {
     /// Nothing was written. Pushes that only delete still work.
     #[error("{0}")]
     QuotaExceeded(String),
+}
+
+/// A background sync was told to stop, because the vault locked or the account changed.
+#[derive(Debug, thiserror::Error)]
+#[error("Sync was cancelled")]
+pub struct SyncCancelled;
+
+/// How a background sync and the UI thread stay out of each other's way.
+///
+/// Each has its own database connection, and only the holder of the gate may change the
+/// vault. The UI thread holds it for the whole of a key press, so what a handler reads
+/// from memory is still true when it writes. A sync holds it to apply a page, and never
+/// across a request to the server, so the wait is short.
+#[derive(Clone, Default)]
+pub struct VaultGate {
+    gate: Arc<Mutex<()>>,
+    /// A sync has changed the vault since the UI last looked
+    changed: Arc<AtomicBool>,
+    /// The note the user has open. Its text is in an input buffer, so a pull that
+    /// replaced the note would be overwritten by the next save.
+    open_note: Arc<Mutex<Option<String>>>,
+}
+
+impl VaultGate {
+    /// Wait for the gate. A panic while it was held can't have left anything to protect
+    /// but the database, whose transactions look after themselves.
+    pub fn hold(&self) -> MutexGuard<'_, ()> {
+        self.gate.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    /// Take the gate if it's free.
+    pub fn try_hold(&self) -> Option<MutexGuard<'_, ()>> {
+        match self.gate.try_lock() {
+            Ok(held) => Some(held),
+            Err(TryLockError::Poisoned(poisoned)) => Some(poisoned.into_inner()),
+            Err(TryLockError::WouldBlock) => None,
+        }
+    }
+
+    /// Say which note is open. Only call this holding the gate.
+    pub fn set_open_note(&self, note_id: Option<&str>) {
+        *self.open_note.lock().unwrap_or_else(|poisoned| poisoned.into_inner()) = note_id.map(String::from);
+    }
+
+    fn note_is_open(&self, note_id: &str) -> bool {
+        self.open_note.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).as_deref() == Some(note_id)
+    }
+
+    fn mark_changed(&self) {
+        self.changed.store(true, Ordering::SeqCst);
+    }
+
+    /// Whether a sync has changed the vault since this was last asked.
+    pub fn take_changed(&self) -> bool {
+        self.changed.swap(false, Ordering::SeqCst)
+    }
+}
+
+/// One sync's link to the UI thread.
+#[derive(Clone, Default)]
+pub(crate) struct SyncLink {
+    gate: VaultGate,
+    cancelled: Arc<AtomicBool>,
+}
+
+impl SyncLink {
+    fn is_cancelled(&self) -> bool {
+        self.cancelled.load(Ordering::SeqCst)
+    }
+
+    /// Change the vault, unless this sync has been cancelled.
+    ///
+    /// Cancelling happens with the gate held, so after it this runs nothing. That's what
+    /// lets the UI thread lock the vault, or change the account, without waiting for a
+    /// sync that may be stuck on a slow server.
+    pub(crate) fn write<T>(&self, change: impl FnOnce() -> Result<T>) -> Result<T> {
+        let _held = self.gate.hold();
+        if self.is_cancelled() {
+            return Err(SyncCancelled.into());
+        }
+
+        let result = change();
+        self.gate.mark_changed();
+        result
+    }
 }
 
 /// A filename as it goes to the server: encrypted, like everything else in a note.
@@ -176,6 +288,7 @@ struct Run<'a> {
     endpoint: String,
     api_key: String,
     log: &'a dyn Fn(&str),
+    link: &'a SyncLink,
 }
 
 impl Run<'_> {
@@ -193,6 +306,10 @@ impl Run<'_> {
 
     fn sync_repo(&self) -> SyncRepository<'_> {
         SyncRepository::new(self.conn)
+    }
+
+    fn saved_search_repo(&self) -> SavedSearchRepository<'_> {
+        SavedSearchRepository::new(self.conn)
     }
 
     /// POST to a device endpoint and return the body, turning a refusal into an error
@@ -244,6 +361,7 @@ fn open_run<'a>(
     key: &'a [u8; 32],
     metadata: &SyncMetadata,
     log: &'a dyn Fn(&str),
+    link: &'a SyncLink,
 ) -> Result<Run<'a>> {
     let encrypted_api_key = metadata.api_key.as_ref()
         .ok_or_else(|| anyhow::anyhow!("No API key configured"))?;
@@ -257,7 +375,7 @@ fn open_run<'a>(
         .build()
         .context("Failed to set up the HTTP client")?;
 
-    Ok(Run { conn, crypto, key, client, endpoint: metadata.sync_endpoint.clone(), api_key, log })
+    Ok(Run { conn, crypto, key, client, endpoint: metadata.sync_endpoint.clone(), api_key, log, link })
 }
 
 /// A blob as it goes to the server: encrypted, wrapped in JSON, in base64.
@@ -326,9 +444,10 @@ fn version_for_sync(run: &Run<'_>, version: &crate::repository::NoteVersion) -> 
 fn with_hash(run: &Run<'_>, mut note: Note) -> Result<Note> {
     if note.content_hash.is_none() {
         let hash = run.crypto.compute_content_hash(&note, run.key);
-        note.hash_chain = Some(update_hash_chain(&hash, note.hash_chain.as_deref()));
+        let chain = update_hash_chain(&hash, note.hash_chain.as_deref());
+        run.link.write(|| run.note_repo().set_first_hash(&note.id, &hash, &chain))?;
+        note.hash_chain = Some(chain);
         note.content_hash = Some(hash);
-        run.note_repo().store(&note, run.key)?;
     }
     Ok(note)
 }
@@ -451,8 +570,17 @@ fn push_batch(run: &Run<'_>, mut batch: PushBatch, deletions: Vec<SyncDeletion>,
     batch.request.attachments_authoritative = authoritative;
 
     let body = run.post("/api/v1/sync/push", &batch.request)?;
-    let response = SyncPushResponse::parse(&body).context("Failed to parse push response")?;
+    let mut response = SyncPushResponse::parse(&body).context("Failed to parse push response")?;
 
+    let attachment_warnings = std::mem::take(&mut response.attachment_warnings);
+    run.link.write(|| record_push(run, &batch, response, outcome))?;
+
+    repair_missing_blobs(run, &attachment_warnings);
+    Ok(())
+}
+
+/// Record what the server made of a batch, all of it or none.
+fn record_push(run: &Run<'_>, batch: &PushBatch, response: SyncPushResponse, outcome: &mut SyncOutcome) -> Result<()> {
     let note_repo = run.note_repo();
     let version_repo = run.version_repo();
     let attachment_repo = run.attachment_repo();
@@ -462,6 +590,9 @@ fn push_batch(run: &Run<'_>, mut batch: PushBatch, deletions: Vec<SyncDeletion>,
     let pushed: HashMap<&str, &Note> = batch.notes.iter().map(|note| (note.id.as_str(), note)).collect();
     let sent_blobs: HashSet<&str> = batch.request.attachments.iter().map(|blob| blob.id.as_str()).collect();
 
+    let accepted_ids: Vec<String> = response.accepted.iter().map(|note| note.id.clone()).collect();
+    let rejected_ids: Vec<String> = response.rejected.iter().map(|note| note.id.clone()).collect();
+
     let transaction = run.conn.unchecked_transaction()?;
 
     for accepted in &response.accepted {
@@ -469,7 +600,7 @@ fn push_batch(run: &Run<'_>, mut batch: PushBatch, deletions: Vec<SyncDeletion>,
             continue;
         };
         outcome.synced += 1;
-        note_repo.mark_pushed(&note.id, note.modified_at, accepted.synced_at)?;
+        note_repo.mark_pushed(note, accepted.synced_at)?;
 
         for attachment in note.attachments.iter().filter(|a| sent_blobs.contains(a.id.as_str())) {
             attachment_repo.mark_pushed(&attachment.id)?;
@@ -491,6 +622,21 @@ fn push_batch(run: &Run<'_>, mut batch: PushBatch, deletions: Vec<SyncDeletion>,
         sync_repo.set_conflict(&note_id, &conflict_from_rejection(rejected))?;
     }
 
+    // Deleted for good after this edit. The ids only count for what this batch sent.
+    for id in &response.skipped_deleted {
+        if let Some(note) = pushed.get(id.as_str()) {
+            (run.log)(&format!("Sync - Note {id} was deleted for good, so it stops being sent"));
+            note_repo.hold_skipped_note(note)?;
+        }
+    }
+
+    let answered: HashSet<&str> = accepted_ids.iter().chain(&rejected_ids).chain(&response.skipped_deleted)
+        .map(String::as_str)
+        .collect();
+    for note in batch.notes.iter().filter(|note| !answered.contains(note.id.as_str())) {
+        outcome.unanswered_until = outcome.unanswered_until.max(Some(latest_date(note)));
+    }
+
     // A deletion the server refused stops being sent, or the note would be announced
     // to every device on each push. The note itself comes back through the pull.
     let refused: HashSet<&String> = response.rejected_deletions.iter().collect();
@@ -501,9 +647,21 @@ fn push_batch(run: &Run<'_>, mut batch: PushBatch, deletions: Vec<SyncDeletion>,
     note_repo.mark_deletions_synced(&delivered)?;
 
     transaction.commit()?;
-
-    repair_missing_blobs(run, &response.attachment_warnings);
     Ok(())
+}
+
+/// The furthest date a note carries, any of which the server checks.
+fn latest_date(note: &Note) -> DateTime<Utc> {
+    [Some(note.created_at), Some(note.modified_at), note.deleted_at, note.archived_at, note.locked_at]
+        .into_iter()
+        .flatten()
+        .max()
+        .unwrap_or(note.modified_at)
+}
+
+/// Whether a server whose clock says `server_now` will have refused this date.
+fn beyond_server_clock(date: DateTime<Utc>, server_now: DateTime<Utc>) -> bool {
+    date > server_now + chrono::Duration::hours(SERVER_CLOCK_TOLERANCE_HOURS)
 }
 
 /// Re-push blobs the server says it's missing, in one attachments-only push. Failing
@@ -533,10 +691,11 @@ fn repair_missing_blobs(run: &Run<'_>, warnings: &[AttachmentWarning]) {
     match run.post("/api/v1/sync/push", &repairs) {
         Ok(_) => {
             (run.log)("[Sync] Re-uploaded attachments the server was missing");
-            for blob in &repairs.attachments {
-                if let Err(e) = run.attachment_repo().mark_pushed(&blob.id) {
-                    tracing::warn!("Could not record attachment {}: {e}", blob.id);
-                }
+            let recorded = run.link.write(|| {
+                repairs.attachments.iter().try_for_each(|blob| run.attachment_repo().mark_pushed(&blob.id))
+            });
+            if let Err(e) = recorded {
+                tracing::warn!("Could not record the re-uploaded attachments: {e}");
             }
         }
         Err(e) => tracing::warn!("Attachment repair push failed: {e}"),
@@ -553,7 +712,10 @@ fn push_changes(run: &Run<'_>, metadata: &mut SyncMetadata, outcome: &mut SyncOu
 
     // The first sync with an account pushes the whole vault
     if metadata.last_sync_at.is_none() {
-        note_repo.mark_all_pending()?;
+        run.link.write(|| {
+            note_repo.mark_all_pending()?;
+            run.saved_search_repo().mark_all_pending()
+        })?;
     }
 
     let (vouched, unproven): (Vec<Note>, Vec<Note>) = note_repo.get_pending(run.key)?.notes
@@ -801,7 +963,11 @@ fn take_remote_note(
     local_note.hash_chain = remote_note.hash_chain.clone();
     local_note.needs_sync = false;
 
-    run.note_repo().store(&local_note, run.key)
+    run.note_repo().store(&local_note, run.key)?;
+    if remote_note.deleted {
+        run.note_repo().mark_arrived_in_bin(&remote_note.id)?;
+    }
+    Ok(())
 }
 
 /// Add a note this device hasn't seen.
@@ -838,7 +1004,11 @@ fn create_remote_note(page: &PullPage<'_>, remote_note: &SyncNote, attachments: 
     new_note.hash_chain = remote_note.hash_chain.clone();
     new_note.needs_sync = false;
 
-    run.note_repo().create(&new_note, run.key)
+    run.note_repo().create(&new_note, run.key)?;
+    if remote_note.deleted {
+        run.note_repo().mark_arrived_in_bin(&remote_note.id)?;
+    }
+    Ok(())
 }
 
 /// Apply one pulled note.
@@ -859,7 +1029,17 @@ fn apply_remote_note(page: &PullPage<'_>, remote_note: SyncNote) -> Result<Appli
     let sync_repo = run.sync_repo();
     if let Some(conflict) = sync_repo.get_note_sync(&remote_note.id)?.and_then(|sync| sync.conflict_data) {
         if conflict.server_modified_at < remote_note.modified_at {
-            sync_repo.set_conflict(&remote_note.id, &conflict_from_pull(&local_note, &remote_note))?;
+            let mut newer = conflict_from_pull(&local_note, &remote_note);
+
+            // A pull has no ancestor's text to offer, and the one a refused push brought
+            // is still a common ancestor, which is what a three-way merge needs
+            if newer.ancestor_hash.is_none() || newer.ancestor_hash == conflict.ancestor_hash {
+                newer.ancestor_hash = conflict.ancestor_hash;
+                newer.ancestor_content = conflict.ancestor_content;
+                newer.ancestor_tags = conflict.ancestor_tags;
+            }
+
+            sync_repo.set_conflict(&remote_note.id, &newer)?;
         }
         return Ok(applied);
     }
@@ -876,6 +1056,12 @@ fn apply_remote_note(page: &PullPage<'_>, remote_note: SyncNote) -> Result<Appli
         }
         PullAction::KeepLocal => {}
         PullAction::Conflict => {
+            sync_repo.set_conflict(&remote_note.id, &conflict_from_pull(&local_note, &remote_note))?;
+            applied.conflict = true;
+        }
+        // Its text is in an input buffer, and saving that would quietly undo this. It's
+        // a conflict the moment the user types, so it's one now.
+        PullAction::Take if run.link.gate.note_is_open(&remote_note.id) => {
             sync_repo.set_conflict(&remote_note.id, &conflict_from_pull(&local_note, &remote_note))?;
             applied.conflict = true;
         }
@@ -987,16 +1173,79 @@ fn hold_remote_deletions(run: &Run<'_>, deletions: Vec<SyncDeletion>) -> Result<
 /// waits for the user to say whether that's expected.
 fn settle_remote_deletions(run: &Run<'_>, outcome: &mut SyncOutcome) -> Result<()> {
     let note_repo = run.note_repo();
+    let transaction = run.conn.unchecked_transaction()?;
 
+    // What's gone lately counts, or a server could stay under the limit on every sync.
+    // What's been asked about stays asked, or taking some of it away would free the rest.
     let held = note_repo.count_held_deletions()?;
-    if held >= MASS_DELETION_THRESHOLD {
+    let window_start = Utc::now() - chrono::Duration::hours(MASS_DELETION_WINDOW_HOURS);
+    let lately = note_repo.count_arrived_in_bin_since(window_start)?;
+
+    if held > 0 && (note_repo.has_unanswered_deletions()? || held + lately >= MASS_DELETION_THRESHOLD) {
+        note_repo.mark_held_deletions_asked()?;
         outcome.deletions_held = held;
     } else {
         outcome.synced += note_repo.apply_held_deletions()?;
     }
 
     note_repo.purge_remote_deletions(Utc::now() - chrono::Duration::days(REMOTE_DELETION_RETENTION_DAYS))?;
+    transaction.commit()?;
     Ok(())
+}
+
+/// Store the saved searches of a pull. A live row has to open with this vault's key, as
+/// one that doesn't came from something without it. A deleted row is never shown, and
+/// older clients pushed some as plaintext, so a deletion applies whatever the row holds.
+fn apply_remote_saved_searches(
+    run: &Run<'_>,
+    searches: Vec<SyncSavedSearch>,
+    synced_at: DateTime<Utc>,
+    outcome: &mut SyncOutcome,
+) -> Result<()> {
+    let repo = run.saved_search_repo();
+
+    for search in searches {
+        if !search.deleted && !repo.is_readable(&search, run.key) {
+            (run.log)(&format!("Pull - Skipping saved search {}: it won't open", search.id));
+            outcome.skipped += 1;
+            continue;
+        }
+
+        repo.apply(&search, false, Some(synced_at))?;
+    }
+
+    Ok(())
+}
+
+/// Send the saved searches the server hasn't got. These go after the pull, so a newer
+/// copy from another device has already won, and the server's clock is known.
+fn push_saved_searches(run: &Run<'_>, server_now: Option<DateTime<Utc>>, outcome: &mut SyncOutcome) -> Result<()> {
+    // The server skips these without saying so, and they'd look pushed
+    let (ahead, searches): (Vec<_>, Vec<_>) = run.saved_search_repo().pending()?
+        .into_iter()
+        .partition(|search| server_now.is_some_and(|now| beyond_server_clock(search.modified_at, now)));
+    outcome.clock_ahead |= !ahead.is_empty();
+
+    if searches.is_empty() {
+        return Ok(());
+    }
+
+    let request = SyncPushRequest { saved_searches: searches, ..Default::default() };
+
+    match run.post("/api/v1/sync/push", &request) {
+        Ok(_) => {}
+        Err(e) if matches!(e.downcast_ref::<SyncRefused>(), Some(SyncRefused::QuotaExceeded(_))) => {
+            outcome.quota_exceeded = true;
+            return Ok(());
+        }
+        Err(e) => return Err(e),
+    }
+
+    let now = Utc::now();
+    run.link.write(|| {
+        let repo = run.saved_search_repo();
+        request.saved_searches.iter().try_for_each(|search| repo.mark_pushed(search, now))
+    })
 }
 
 /// Decrypt the blobs of a pull. One that fails is left out.
@@ -1009,6 +1258,68 @@ fn read_blobs(run: &Run<'_>, attachments: &[SyncAttachment]) -> HashMap<String, 
             Some((attachment.id.clone(), data))
         })
         .collect()
+}
+
+/// Fetch the files of attachments this device has only heard of.
+///
+/// A pull only sends the blobs of the notes in that page, so a page cut off part-way, an
+/// older pull or a conflict's server copy can leave a note naming a file that isn't here.
+/// Each sync fetches a few. One that can't be fetched stays listed, viewing it says so,
+/// and the next sync tries again.
+fn fetch_missing_blobs(run: &Run<'_>, limit: usize) {
+    let missing = match run.attachment_repo().list_missing_blobs() {
+        Ok(missing) => missing,
+        Err(e) => {
+            tracing::warn!("Could not list missing attachments: {e}");
+            return;
+        }
+    };
+
+    for attachment in missing.iter().take(limit) {
+        // Nothing else stops this loop, and the key is in memory until the thread ends
+        if run.link.is_cancelled() {
+            return;
+        }
+
+        match fetch_blob(run, &attachment.id) {
+            Ok(Some(data)) => {
+                let stored = run.link.write(|| {
+                    let attachment_repo = run.attachment_repo();
+                    attachment_repo.store(&attachment.id, &attachment.filename, &attachment.mime_type, attachment.size, &data, run.key)?;
+                    attachment_repo.mark_pushed(&attachment.id)
+                });
+                if let Err(e) = stored {
+                    tracing::warn!("Could not store attachment {}: {e}", attachment.id);
+                }
+            }
+            Ok(None) => tracing::warn!("The server has no usable file for attachment {}", attachment.id),
+            // A server that isn't answering won't answer the next one either, and each
+            // try could take as long as a request is allowed
+            Err(e) => {
+                tracing::warn!("Could not fetch attachment {}: {e}", attachment.id);
+                break;
+            }
+        }
+    }
+}
+
+/// One attachment's file from the server, if it has one that opens.
+fn fetch_blob(run: &Run<'_>, id: &str) -> Result<Option<Vec<u8>>> {
+    let response = run.client
+        .get(format!("{}/api/v1/sync/attachments/{id}", run.endpoint))
+        .header("Authorization", format!("Bearer {}", run.api_key))
+        .send()?;
+
+    if response.status() == reqwest::StatusCode::NOT_FOUND {
+        return Ok(None);
+    }
+
+    let blob = response.error_for_status()?.json::<SyncAttachment>()?;
+    if blob.id != id {
+        return Ok(None);
+    }
+
+    Ok(read_blobs(run, std::slice::from_ref(&blob)).remove(id))
 }
 
 /// What a pull found that belongs to the running app, rather than the database.
@@ -1059,62 +1370,70 @@ fn pull_changes(run: &Run<'_>, metadata: &mut SyncMetadata, force: bool, outcome
         let attachment_data = read_blobs(run, &response.attachments);
         let page = PullPage { run, attachment_data: &attachment_data, synced_at: response.synced_at, force };
 
-        // A page applies whole or not at all, along with the position it moves to
-        let transaction = run.conn.unchecked_transaction()?;
+        let restarting = run.link.write(|| {
+            // A page applies whole or not at all, along with the position it moves to
+            let transaction = run.conn.unchecked_transaction()?;
 
-        // A note that can't be read costs that note, not the sync. Stopping here
-        // would hold the cursor back and block every later change for good.
-        for remote_note in response.notes {
-            let note_id = remote_note.id.clone();
-            match apply_remote_note(&page, remote_note) {
-                Ok(applied) => {
-                    outcome.synced += applied.changed as usize;
-                    outcome.rejected += applied.conflict as usize;
-                    outcome.skipped += applied.unreadable_attachments;
-                }
-                Err(e) => {
-                    tracing::warn!("Skipping note {note_id} from the server: {e}");
-                    (run.log)(&format!("Pull - Skipping note {note_id}: {e}"));
-                    outcome.skipped += 1;
+            // A note that can't be read costs that note, not the sync. Stopping here
+            // would hold the cursor back and block every later change for good.
+            for remote_note in response.notes {
+                let note_id = remote_note.id.clone();
+                match apply_remote_note(&page, remote_note) {
+                    Ok(applied) => {
+                        outcome.synced += applied.changed as usize;
+                        outcome.rejected += applied.conflict as usize;
+                        outcome.skipped += applied.unreadable_attachments;
+                    }
+                    Err(e) => {
+                        tracing::warn!("Skipping note {note_id} from the server: {e}");
+                        (run.log)(&format!("Pull - Skipping note {note_id}: {e}"));
+                        outcome.skipped += 1;
+                    }
                 }
             }
-        }
 
-        // In cursor mode each page has its own share of these. An older server sends
-        // them whole with every page, so they're applied once, when every note is in.
-        if cursor_mode || is_last_page {
-            versions_waiting.extend(response.versions);
-            versions_waiting = apply_remote_versions(run, versions_waiting)?;
-            hold_remote_deletions(run, response.deletions)?;
-        }
+            // In cursor mode each page has its own share of these. An older server sends
+            // them whole with every page, so they're applied once, when every note is in.
+            if cursor_mode || is_last_page {
+                versions_waiting.extend(response.versions);
+                versions_waiting = apply_remote_versions(run, std::mem::take(&mut versions_waiting))?;
+                hold_remote_deletions(run, response.deletions)?;
+                apply_remote_saved_searches(run, response.saved_searches, response.synced_at, outcome)?;
+            }
 
-        if is_last_page {
-            inbox_items = response.inbox_items.unwrap_or_default();
-        }
+            if is_last_page {
+                inbox_items = response.inbox_items.unwrap_or_default();
+            }
 
-        let restarting = cursor_mode && std::mem::take(&mut full_pull_owed);
+            let restarting = cursor_mode && std::mem::take(&mut full_pull_owed);
+
+            if restarting {
+                transaction.commit()?;
+                return Ok(true);
+            }
+
+            if cursor_mode {
+                // Versions still waiting for their note only exist in memory, so the saved
+                // position stays behind them until they've gone in
+                if versions_waiting.is_empty() {
+                    run.sync_repo().set_pull_cursor(response.next_cursor.as_deref())?;
+                }
+                metadata.pull_cursor = response.next_cursor.clone();
+                request.cursor = response.next_cursor;
+            } else {
+                metadata.pull_cursor = None;
+                request.offset = Some(request.offset.unwrap_or(0) + page_note_count);
+            }
+
+            transaction.commit()?;
+            Ok(false)
+        })?;
 
         if restarting {
-            transaction.commit()?;
             request.cursor = Some(String::new());
             request.last_sync_at = None;
             continue;
         }
-
-        if cursor_mode {
-            // Versions still waiting for their note only exist in memory, so the saved
-            // position stays behind them until they've gone in
-            if versions_waiting.is_empty() {
-                run.sync_repo().set_pull_cursor(response.next_cursor.as_deref())?;
-            }
-            metadata.pull_cursor = response.next_cursor.clone();
-            request.cursor = response.next_cursor;
-        } else {
-            metadata.pull_cursor = None;
-            request.offset = Some(request.offset.unwrap_or(0) + page_note_count);
-        }
-
-        transaction.commit()?;
 
         if is_last_page {
             break;
@@ -1134,6 +1453,8 @@ pub struct SyncReport {
     pub inbox_items: Vec<InboxItem>,
     /// A password change still owes the server a new wrapping of the key
     pub server_key_stale: bool,
+    /// What the user needs to hear about the server's copy of the key, if anything
+    pub server_key_notice: Option<String>,
 }
 
 /// Push and pull everything, working only with the database.
@@ -1143,23 +1464,195 @@ fn sync_vault(
     key: &[u8; 32],
     force: bool,
     log: &dyn Fn(&str),
+    link: &SyncLink,
 ) -> Result<SyncReport> {
     let sync_repo = SyncRepository::new(conn);
     let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
-    let run = open_run(conn, crypto, key, &metadata, log)?;
+    let run = open_run(conn, crypto, key, &metadata, log, link)?;
 
     let mut outcome = SyncOutcome::default();
 
     push_changes(&run, &mut metadata, &mut outcome)?;
     let pulled = pull_changes(&run, &mut metadata, force, &mut outcome)?;
-    settle_remote_deletions(&run, &mut outcome)?;
+    link.write(|| settle_remote_deletions(&run, &mut outcome))?;
+
+    // The server's time at the start of the pull
+    let server_now = metadata.last_pull_at;
+    outcome.clock_ahead = outcome.unanswered_until.zip(server_now)
+        .is_some_and(|(date, now)| beyond_server_clock(date, now));
+
+    push_saved_searches(&run, server_now, &mut outcome)?;
+    fetch_missing_blobs(&run, MAX_BLOB_FETCHES_PER_SYNC);
 
     // last_sync_at stays on this device's clock. The pull position in last_pull_at
     // is the server's.
     metadata.last_sync_at = Some(Utc::now());
-    sync_repo.update_metadata(&metadata)?;
+    link.write(|| sync_repo.record_finished_sync(&metadata))?;
 
-    Ok(SyncReport { outcome, inbox_items: pulled.inbox_items, server_key_stale: metadata.server_key_stale })
+    Ok(SyncReport {
+        outcome,
+        inbox_items: pulled.inbox_items,
+        server_key_stale: metadata.server_key_stale,
+        server_key_notice: None,
+    })
+}
+
+/// A sync for a background thread to run.
+struct SyncJob {
+    db_path: std::path::PathBuf,
+    password: Zeroizing<String>,
+    key: Zeroizing<[u8; 32]>,
+    force: bool,
+    /// Look at the server's copy of the key once the sync is done
+    check_server_key: bool,
+    link: SyncLink,
+    debug_log: Option<Arc<Mutex<std::fs::File>>>,
+}
+
+impl SyncJob {
+    /// Do the work, on a database connection of this thread's own.
+    fn run(self) -> Result<SyncReport> {
+        let db = Database::open_another(&self.db_path, &self.password)?;
+        let crypto = CryptoService::new();
+        let log = |message: &str| crate::ui::app::write_debug_log(&self.debug_log, message);
+
+        let mut report = sync_vault(db.connection(), &crypto, &self.key, self.force, &log, &self.link)?;
+
+        if self.check_server_key || report.server_key_stale {
+            match super::envelope::check_server_key(db.connection(), &crypto, &self.key, &self.password, &self.link, &log) {
+                Ok(notice) => report.server_key_notice = notice,
+                Err(e) if e.is::<SyncCancelled>() => return Err(e),
+                Err(e) => log(&format!("[Sync] Could not check the server's wrapped key: {e}")),
+            }
+        }
+
+        Ok(report)
+    }
+}
+
+/// A sync running on its own thread.
+pub struct BackgroundSync {
+    receiver: Receiver<Result<SyncReport>>,
+    cancelled: Arc<AtomicBool>,
+    force: bool,
+    #[cfg(test)]
+    thread: Option<std::thread::JoinHandle<()>>,
+}
+
+impl BackgroundSync {
+    /// Wait up to `patience` for it to finish, dropping the result.
+    pub fn wait(&self, patience: Duration) {
+        let _ = self.receiver.recv_timeout(patience);
+    }
+}
+
+/// Start a sync on its own thread, so a slow server can't hold up the screen.
+fn start_background_sync(
+    app: &mut App,
+    force: bool,
+    key: [u8; 32],
+    password: Zeroizing<String>,
+) -> Result<()> {
+    let link = SyncLink { gate: app.sync_gate.clone(), cancelled: Arc::default() };
+    let cancelled = link.cancelled.clone();
+    let (sender, receiver) = mpsc::channel();
+
+    let job = SyncJob {
+        db_path: app.db_path.clone(),
+        password,
+        key: Zeroizing::new(key),
+        force,
+        check_server_key: app.server_key_check_owed,
+        link,
+        debug_log: app.debug_log.clone(),
+    };
+
+    let thread = std::thread::Builder::new()
+        .name("sync".to_string())
+        .spawn(move || {
+            let _ = sender.send(job.run());
+        })
+        .context("Failed to start the sync thread")?;
+    #[cfg(not(test))]
+    drop(thread);
+
+    app.sync_job = Some(BackgroundSync {
+        receiver,
+        cancelled,
+        force,
+        #[cfg(test)]
+        thread: Some(thread),
+    });
+    Ok(())
+}
+
+/// Stop a running sync from touching the vault again, without waiting for it.
+///
+/// Call this with the gate held, so that it can't be part-way through a page. A request
+/// it has in flight may still arrive, which is harmless: sending a push twice is safe.
+pub fn cancel_background_sync(app: &mut App) {
+    app.sync_requested = None;
+    if let Some(job) = app.sync_job.take() {
+        job.cancelled.store(true, Ordering::SeqCst);
+    }
+}
+
+/// Bring what a background sync has done so far onto the screen. A key press works on
+/// the list in memory, and holding the gate keeps this true until it's finished with it.
+pub fn absorb_sync_changes(app: &mut App) {
+    if app.sync_gate.take_changed() {
+        reload_current_view(app);
+        app.last_sync_absorb = Some(Instant::now());
+    }
+}
+
+/// Deal with a background sync that's finished. Until then the list is refreshed every
+/// now and then: reloading decrypts the vault, and a long sync has plenty of pages.
+pub fn poll_background_sync(app: &mut App) {
+    let refreshed_lately = app.last_sync_absorb.is_some_and(|at| at.elapsed() < SYNC_REFRESH_INTERVAL);
+    if !refreshed_lately {
+        absorb_sync_changes(app);
+    }
+
+    let Some(job) = app.sync_job.as_ref() else {
+        return;
+    };
+    let force = job.force;
+
+    let result = match job.receiver.try_recv() {
+        Ok(result) => result,
+        Err(TryRecvError::Empty) => return,
+        Err(TryRecvError::Disconnected) => Err(anyhow::anyhow!("{}", t!("sync.stopped_unexpectedly"))),
+    };
+
+    app.sync_job = None;
+    finish_background_sync(app, result, force);
+}
+
+/// Show what a background sync did, as a sync on this thread would have.
+fn finish_background_sync(app: &mut App, result: Result<SyncReport>, force: bool) {
+    match result {
+        Ok(report) => {
+            app.inbox_items = report.inbox_items;
+            app.server_key_check_owed = false;
+            report_finished_sync(app, &report.outcome, force);
+            if let Some(notice) = report.server_key_notice {
+                app.error = Some(notice);
+            }
+        }
+        Err(e) if e.is::<SyncCancelled>() => {}
+        Err(e) => report_failed_sync(app, &e, force),
+    }
+}
+
+/// Start the sync that's been asked for, if nothing stands in its way.
+pub fn start_requested_sync(app: &mut App) {
+    if app.sync_job.is_some() || app.is_editing() {
+        return;
+    }
+    if let Some(force) = app.sync_requested.take() {
+        run_sync_from_ui(app, force);
+    }
 }
 
 /// Trigger manual sync
@@ -1185,7 +1678,20 @@ fn run_sync_from_ui(app: &mut App, force: bool) {
         return;
     }
 
+    // One at a time. What this was asked to send goes when the running one finishes.
+    if app.sync_job.is_some() {
+        app.sync_requested = Some(force || app.sync_requested.unwrap_or(false));
+        return;
+    }
+
     app.notify(if force { t!("sync.force_syncing") } else { t!("status.syncing") }.to_string());
+
+    if let (true, Some(key), Some(password)) = (app.sync_in_background, app.key, app.unlock_password.clone()) {
+        if let Err(e) = start_background_sync(app, force, key, password) {
+            report_failed_sync(app, &e, force);
+        }
+        return;
+    }
 
     match perform_sync(app, force) {
         Ok(outcome) => report_finished_sync(app, &outcome, force),
@@ -1196,7 +1702,7 @@ fn run_sync_from_ui(app: &mut App, force: bool) {
 /// Show what a finished sync did.
 fn report_finished_sync(app: &mut App, outcome: &SyncOutcome, force: bool) {
     // Reload notes from database to pick up sync changes
-    if let Err(e) = super::notes::load_notes(app) {
+    if let Err(e) = super::notes::load_current_view(app) {
         app.error = Some(format!("Sync succeeded but failed to reload notes: {}", e));
     }
     // Refresh conflict cache after sync
@@ -1223,6 +1729,11 @@ fn report_finished_sync(app: &mut App, outcome: &SyncOutcome, force: bool) {
     };
     app.notify(status_msg);
     report_skipped(app, outcome);
+
+    // A disabled account gets its stream back when it's turned on again
+    if app.sse_gave_up {
+        app.start_sse_if_enabled();
+    }
 }
 
 /// Show why a sync failed, and hold off automatic syncs if the server asked for that.
@@ -1257,6 +1768,9 @@ fn report_skipped(app: &mut App, outcome: &SyncOutcome) {
     if outcome.quota_exceeded {
         app.error = Some(t!("sync.quota_exceeded").to_string());
     }
+    if outcome.clock_ahead {
+        app.error = Some(t!("sync.clock_ahead").to_string());
+    }
     app.held_deletions = outcome.deletions_held;
 }
 
@@ -1285,8 +1799,12 @@ pub fn refuse_held_deletions(app: &mut App) -> Result<()> {
 
 /// A failed pull rolls back its database changes but not the list in memory.
 fn reload_after_failed_sync(app: &mut App) {
-    if let Err(e) = super::notes::load_notes(app) {
-        app.debug_log(&format!("Could not reload notes after a failed sync: {}", e));
+    reload_current_view(app);
+}
+
+fn reload_current_view(app: &mut App) {
+    if let Err(e) = super::notes::load_current_view(app) {
+        app.debug_log(&format!("Could not reload notes after a sync: {}", e));
     }
 }
 
@@ -1299,14 +1817,15 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<SyncOutcome> {
     let debug_log = app.debug_log.clone();
     let log = move |message: &str| crate::ui::app::write_debug_log(&debug_log, message);
 
-    let report = sync_vault(db.connection(), &app.crypto, key, force, &log)?;
+    let report = sync_vault(db.connection(), &app.crypto, key, force, &log, &SyncLink::default())?;
     app.inbox_items = report.inbox_items;
 
     // Reload notes to ensure UI is up to date
     super::notes::load_notes(app)?;
 
-    // The server is reachable, so a re-wrap a password change couldn't deliver can go now
-    if report.server_key_stale {
+    // The server is reachable, so a re-wrap a password change couldn't deliver can go now,
+    // and the device has a sync behind it, so it can repair the server's copy of the key
+    if report.server_key_stale || std::mem::take(&mut app.server_key_check_owed) {
         if let Some(password) = app.unlock_password.clone() {
             if let Err(e) = super::envelope::repair_server_key(app, &password) {
                 app.debug_log(&format!("[Sync] Could not update the server's wrapped key: {}", e));
@@ -1315,6 +1834,21 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<SyncOutcome> {
     }
 
     Ok(report.outcome)
+}
+
+/// Fetch every attachment file this vault is missing, returning how many arrived.
+pub fn fetch_all_missing_blobs(app: &App) -> Result<usize> {
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not available"))?;
+    let key = app.key.as_ref().ok_or_else(|| anyhow::anyhow!("Encryption key not available"))?;
+
+    let metadata = SyncRepository::new(db.connection()).get_metadata()?.unwrap_or_default();
+    let link = SyncLink::default();
+    let log = |_: &str| {};
+    let run = open_run(db.connection(), &app.crypto, key, &metadata, &log, &link)?;
+
+    let before = run.attachment_repo().list_missing_blobs()?.len();
+    fetch_missing_blobs(&run, usize::MAX);
+    Ok(before - run.attachment_repo().list_missing_blobs()?.len())
 }
 
 /// Open conflict resolution for a note
@@ -1414,49 +1948,6 @@ fn server_attachments(crypto: &CryptoService, key: &[u8; 32], conflict: &Conflic
     (attachments, complete)
 }
 
-/// Fetch the files of attachments this device has only heard of. A conflict's server
-/// copy names attachments the pull never sent, so this is how they arrive. One that
-/// can't be fetched stays listed, and viewing it will say so.
-fn fetch_missing_blobs(app: &App, attachments: &[Attachment]) -> Result<()> {
-    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not available"))?;
-    let key = app.key.as_ref().ok_or_else(|| anyhow::anyhow!("Encryption key not available"))?;
-
-    let attachment_repo = AttachmentRepository::new(db.connection());
-    let known: HashSet<String> = attachment_repo.list_ids()?.into_iter().collect();
-    let missing: Vec<&Attachment> = attachments.iter().filter(|a| !known.contains(&a.id)).collect();
-    if missing.is_empty() {
-        return Ok(());
-    }
-
-    let Some(metadata) = SyncRepository::new(db.connection()).get_metadata()? else {
-        return Ok(());
-    };
-    let log = |_: &str| {};
-    let run = open_run(db.connection(), &app.crypto, key, &metadata, &log)?;
-
-    for attachment in missing {
-        let fetched = run.client
-            .get(format!("{}/api/v1/sync/attachments/{}", run.endpoint, attachment.id))
-            .header("Authorization", format!("Bearer {}", run.api_key))
-            .send()
-            .and_then(|response| response.error_for_status())
-            .and_then(|response| response.json::<SyncAttachment>());
-
-        match fetched {
-            Ok(blob) if blob.id == attachment.id => {
-                if let Some(data) = read_blobs(&run, std::slice::from_ref(&blob)).get(&attachment.id) {
-                    attachment_repo.store(&attachment.id, &attachment.filename, &attachment.mime_type, attachment.size, data, key)?;
-                    attachment_repo.mark_pushed(&attachment.id)?;
-                }
-            }
-            Ok(_) => tracing::warn!("The server sent the wrong file for attachment {}", attachment.id),
-            Err(e) => tracing::warn!("Could not fetch attachment {}: {e}", attachment.id),
-        }
-    }
-
-    Ok(())
-}
-
 /// Resolve conflict by keeping local version
 /// Clears conflict status and marks note for sync
 pub fn resolve_keep_local(app: &mut App) -> Result<()> {
@@ -1547,10 +2038,6 @@ pub fn resolve_keep_server(app: &mut App) -> Result<()> {
     sync_repo.clear_conflict(&note_id)?;
     transaction.commit()?;
 
-    if let Err(e) = fetch_missing_blobs(app, &attachments) {
-        app.debug_log(&format!("Could not fetch the server's attachments: {}", e));
-    }
-
     // Clear conflict state in app and reload notes
     clear_conflict_state(app);
     super::notes::load_notes(app)?;
@@ -1610,10 +2097,6 @@ pub fn resolve_keep_both(app: &mut App) -> Result<String> {
     sync_repo.clear_conflict(&note_id)?;
     transaction.commit()?;
 
-    if let Err(e) = fetch_missing_blobs(app, &attachments) {
-        app.debug_log(&format!("Could not fetch the server's attachments: {}", e));
-    }
-
     // Clear conflict state in app and reload notes
     clear_conflict_state(app);
     super::notes::load_notes(app)?;
@@ -1646,8 +2129,9 @@ mod tests {
     use crate::db::Database;
     use crate::models::sync::SyncMetadata;
     use chrono::{DateTime, TimeZone, Utc};
+    use crate::test_support::{read_request, Request};
     use serde_json::{json, Value};
-    use std::io::{Read, Write};
+    use std::io::Write;
     use std::net::TcpListener;
     use std::sync::{Arc, Mutex, OnceLock};
 
@@ -1662,6 +2146,38 @@ mod tests {
         Utc.with_ymd_and_hms(2031, 1, 1, 12, 0, 0).unwrap() + chrono::Duration::minutes(page)
     }
 
+    /// What a scripted pull gets. A failure sits in the sequence with the pages, so it
+    /// lands on an exact request with nothing having to win a race to set it up.
+    enum Scripted {
+        Page(Value),
+        Failure(&'static str),
+    }
+
+    /// A request a test wants the stub to sit on, as a slow server would.
+    struct Held {
+        path: &'static str,
+        reached: std::sync::mpsc::Sender<()>,
+        release: std::sync::mpsc::Receiver<()>,
+    }
+
+    /// The test's end of a held request.
+    struct HeldRequest {
+        reached: std::sync::mpsc::Receiver<()>,
+        release: std::sync::mpsc::Sender<()>,
+    }
+
+    impl HeldRequest {
+        /// Wait until the request is at the server.
+        fn wait_until_reached(&self) {
+            self.reached.recv().unwrap();
+        }
+
+        /// Let the server answer.
+        fn release(&self) {
+            self.release.send(()).unwrap();
+        }
+    }
+
     /// Answers pull requests the way the sync server does, one page at a time,
     /// and records what it was asked for.
     struct StubServer {
@@ -1670,7 +2186,7 @@ mod tests {
         pushes: Arc<Mutex<Vec<Value>>>,
         refuse: Arc<Mutex<std::collections::HashSet<String>>>,
         /// Responses to give to the next pulls, in order, instead of the usual pages
-        script: Arc<Mutex<std::collections::VecDeque<Value>>>,
+        script: Arc<Mutex<std::collections::VecDeque<Scripted>>>,
         /// Merged into every push response
         push_reply: Arc<Mutex<Value>>,
         /// The next response's status line and extra headers, instead of 200
@@ -1679,6 +2195,12 @@ mod tests {
         wrapped_key: Arc<Mutex<Option<String>>>,
         /// Refuse any push with notes in it, as a full account does
         quota_full: Arc<Mutex<bool>>,
+        /// The next request to this path doesn't get an answer until the test says
+        held: Arc<Mutex<Option<Held>>>,
+        /// Note ids that are neither accepted nor rejected, as a server skips a note
+        passed_over: Arc<Mutex<std::collections::HashSet<String>>>,
+        /// How many attachment files it's been asked for
+        blob_requests: Arc<Mutex<usize>>,
     }
 
     fn reply(stream: &mut std::net::TcpStream, body: &str) {
@@ -1713,7 +2235,7 @@ mod tests {
             let refuse = Arc::new(Mutex::new(std::collections::HashSet::new()));
             let rejecting = refuse.clone();
             let script = Arc::new(Mutex::new(std::collections::VecDeque::new()));
-            let scripted: Arc<Mutex<std::collections::VecDeque<Value>>> = script.clone();
+            let scripted: Arc<Mutex<std::collections::VecDeque<Scripted>>> = script.clone();
             let push_reply = Arc::new(Mutex::new(json!({})));
             let push_extras = push_reply.clone();
             let fail_next: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
@@ -1722,11 +2244,31 @@ mod tests {
             let held_key = wrapped_key.clone();
             let quota_full = Arc::new(Mutex::new(false));
             let over_quota = quota_full.clone();
+            let held: Arc<Mutex<Option<Held>>> = Arc::new(Mutex::new(None));
+            let holding = held.clone();
+            let blobs = attachments.clone();
+            let passed_over = Arc::new(Mutex::new(std::collections::HashSet::new()));
+            let passing_over: Arc<Mutex<std::collections::HashSet<String>>> = passed_over.clone();
+            let blob_requests = Arc::new(Mutex::new(0));
+            let counting_blobs = blob_requests.clone();
 
             std::thread::spawn(move || {
                 for stream in listener.incoming() {
                     let mut stream = stream.unwrap();
-                    let (method, path, body) = read_request(&mut stream);
+                    let Some(Request { method, path, body, .. }) = read_request(&mut stream) else {
+                        continue;
+                    };
+
+                    let hold = {
+                        let mut holding = holding.lock().unwrap();
+                        if holding.as_ref().is_some_and(|hold| path.ends_with(hold.path)) { holding.take() } else { None }
+                    };
+                    if let Some(hold) = hold {
+                        hold.reached.send(()).unwrap();
+                        // Long enough never to matter, and a sync on the test's own
+                        // thread would otherwise wait here for good
+                        let _ = hold.release.recv_timeout(std::time::Duration::from_secs(120));
+                    }
 
                     if let Some(status) = failing.lock().unwrap().take() {
                         reply_with(&mut stream, &status, r#"{"error":"refused"}"#);
@@ -1750,7 +2292,12 @@ mod tests {
                     }
 
                     if method == "GET" {
-                        reply_with(&mut stream, "404 Not Found", "{}");
+                        *counting_blobs.lock().unwrap() += 1;
+                        let id = path.rsplit('/').next().unwrap_or("");
+                        match blobs.iter().find(|blob| blob["id"] == id) {
+                            Some(blob) => reply(&mut stream, &blob.to_string()),
+                            None => reply_with(&mut stream, "404 Not Found", "{}"),
+                        }
                         continue;
                     }
 
@@ -1765,6 +2312,7 @@ mod tests {
                         }
 
                         let (rejected, accepted): (Vec<Value>, Vec<Value>) = pushed.iter()
+                            .filter(|note| !passing_over.lock().unwrap().contains(note["id"].as_str().unwrap_or("")))
                             .cloned()
                             .partition(|note| rejecting.lock().unwrap().contains(note["id"].as_str().unwrap_or("")));
                         let mut response = json!({
@@ -1797,9 +2345,13 @@ mod tests {
                         continue;
                     }
 
-                    if let Some(page) = scripted.lock().unwrap().pop_front() {
+                    let next = scripted.lock().unwrap().pop_front();
+                    if let Some(next) = next {
                         recorded.lock().unwrap().push(request);
-                        reply(&mut stream, &page.to_string());
+                        match next {
+                            Scripted::Page(page) => reply(&mut stream, &page.to_string()),
+                            Scripted::Failure(status) => reply_with(&mut stream, status, r#"{"error":"refused"}"#),
+                        }
                         continue;
                     }
 
@@ -1824,12 +2376,34 @@ mod tests {
                 }
             });
 
-            Self { endpoint, pulls, pushes, refuse, script, push_reply, fail_next, wrapped_key, quota_full }
+            Self { endpoint, pulls, pushes, refuse, script, push_reply, fail_next, wrapped_key, quota_full, held, passed_over, blob_requests }
+        }
+
+        fn blob_requests(&self) -> usize {
+            *self.blob_requests.lock().unwrap()
+        }
+
+        /// Leave this note out of every push response from now on.
+        fn pass_over(&self, id: &str) {
+            self.passed_over.lock().unwrap().insert(id.to_string());
+        }
+
+        /// Sit on the next request to a path ending in `path`.
+        fn hold_next(&self, path: &'static str) -> HeldRequest {
+            let (reached_sender, reached) = std::sync::mpsc::channel();
+            let (release, release_receiver) = std::sync::mpsc::channel();
+            *self.held.lock().unwrap() = Some(Held { path, reached: reached_sender, release: release_receiver });
+            HeldRequest { reached, release }
         }
 
         /// Give these pull responses next, in order.
         fn script(&self, pages: Vec<Value>) {
-            self.script.lock().unwrap().extend(pages);
+            self.script.lock().unwrap().extend(pages.into_iter().map(Scripted::Page));
+        }
+
+        /// Fail the pull after those already scripted, with this status line.
+        fn script_failure(&self, status: &'static str) {
+            self.script.lock().unwrap().push_back(Scripted::Failure(status));
         }
 
         /// Add these fields to every push response from now on.
@@ -1868,31 +2442,6 @@ mod tests {
         }
     }
 
-    /// A request's method, path and body.
-    fn read_request(stream: &mut std::net::TcpStream) -> (String, String, Vec<u8>) {
-        let mut received = Vec::new();
-        let mut buffer = [0u8; 8192];
-        loop {
-            let read = stream.read(&mut buffer).unwrap();
-            received.extend_from_slice(&buffer[..read]);
-            let Some(header_end) = received.windows(4).position(|w| w == b"\r\n\r\n") else {
-                continue;
-            };
-            let headers = String::from_utf8_lossy(&received[..header_end]).to_string();
-            let length: usize = headers
-                .to_lowercase()
-                .lines()
-                .find_map(|line| line.strip_prefix("content-length:").map(|value| value.trim().parse().unwrap()))
-                .unwrap_or(0);
-            if received.len() >= header_end + 4 + length {
-                let mut request_line = headers.split_whitespace();
-                let method = request_line.next().unwrap_or("").to_string();
-                let path = request_line.next().unwrap_or("").to_string();
-                return (method, path, received[header_end + 4..header_end + 4 + length].to_vec());
-            }
-        }
-    }
-
     /// An unlocked app whose sync settings point at `endpoint`.
     fn app_connected_to(endpoint: &str) -> App {
         let dir = std::env::temp_dir().join(format!("jottery-sync-test-{}", uuid::Uuid::new_v4()));
@@ -1912,6 +2461,41 @@ mod tests {
         app.db = Some(db);
         app.key = Some(*key());
         app
+    }
+
+    /// An unlocked app syncing in the background, as the terminal app does. A second
+    /// connection needs a database on disk.
+    fn app_syncing_in_background(endpoint: &str) -> App {
+        let dir = std::env::temp_dir().join(format!("jottery-sync-test-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("test.db");
+        let password = uuid::Uuid::new_v4().to_string();
+
+        let mut app = App::new(path.clone(), None).unwrap();
+        let db = Database::open(&path, &password).unwrap();
+        let api_key = app.crypto.encrypt_text("device-api-key", key()).unwrap();
+        SyncRepository::new(db.connection()).update_metadata(&SyncMetadata {
+            api_key: Some(serde_json::to_string(&api_key).unwrap()),
+            sync_enabled: true,
+            sync_endpoint: endpoint.to_string(),
+            ..Default::default()
+        }).unwrap();
+
+        app.db = Some(db);
+        app.key = Some(*key());
+        app.unlock_password = Some(Zeroizing::new(password));
+        app.settings.sync_enabled = true;
+        app.settings.sync_endpoint = Some(endpoint.to_string());
+        app.state = crate::ui::state::AppState::NoteList;
+        app.enable_background_sync();
+        app
+    }
+
+    /// Wait for the thread to end, and deal with its result as a tick would.
+    fn finish_background_sync_now(app: &mut App) {
+        let job = app.sync_job.as_mut().expect("a sync is running");
+        job.thread.take().unwrap().join().unwrap();
+        poll_background_sync(app);
     }
 
     fn encrypted(text: &str) -> String {
@@ -2343,28 +2927,701 @@ mod tests {
     fn a_failed_page_leaves_the_cursor_on_the_last_page_applied() {
         let server = StubServer::start(vec![], vec![]);
         server.script(vec![cursor_page(remote_notes(1), "c1", true)]);
+        server.script_failure("500 Internal Server Error");
         let mut app = app_connected_to(&server.endpoint);
 
-        // The stub's next unscripted pull has no cursor, so make it fail instead
         let db = app.db.as_ref().unwrap();
         NoteRepository::new(db.connection()).create(&Note::new("Local".to_string()), key()).unwrap();
 
-        let outcome = {
-            let failing = server.fail_next.clone();
-            let observed = server.script.clone();
-            std::thread::spawn(move || {
-                // Once the first page has been taken, the next request fails
-                while !observed.lock().unwrap().is_empty() {
-                    std::thread::yield_now();
-                }
-                *failing.lock().unwrap() = Some("500 Internal Server Error".to_string());
-            });
-            perform_sync(&mut app, false)
-        };
+        let outcome = perform_sync(&mut app, false);
 
         assert!(outcome.is_err());
         assert_eq!(sync_metadata(&app).pull_cursor.as_deref(), Some("c1"));
         assert_eq!(stored_note_count(&app), 2);
+    }
+
+    #[test]
+    fn a_slow_server_leaves_the_screen_free() {
+        let server = StubServer::start(remote_notes(1), vec![]);
+        let held = server.hold_next("/sync/pull");
+        let mut app = app_syncing_in_background(&server.endpoint);
+
+        trigger_sync(&mut app);
+        held.wait_until_reached();
+
+        // The server hasn't answered, and this thread is still here
+        assert!(app.sync_job.is_some());
+        app.on_tick();
+        assert_eq!(stored_note_count(&app), 0);
+
+        held.release();
+        finish_background_sync_now(&mut app);
+
+        assert_eq!(stored_note_count(&app), 1);
+        assert_eq!(app.notes.len(), 1);
+        assert!(app.sync_job.is_none());
+    }
+
+    /// The list on screen is what the next key press works on, so it can't wait for the
+    /// end of a long sync.
+    #[test]
+    fn notes_show_as_their_pages_arrive() {
+        let server = StubServer::start(vec![], vec![]);
+        server.script(vec![cursor_page(remote_notes(1), "c1", true), cursor_page(vec![], "c2", false)]);
+        let mut app = app_syncing_in_background(&server.endpoint);
+        let held = server.hold_next("/sync/pull");
+
+        // The second pull only goes once the first page is in
+        trigger_sync(&mut app);
+        held.wait_until_reached();
+        let second = server.hold_next("/sync/pull");
+        held.release();
+        second.wait_until_reached();
+
+        absorb_sync_changes(&mut app);
+        assert_eq!(app.notes.len(), 1);
+
+        second.release();
+        finish_background_sync_now(&mut app);
+    }
+
+    #[test]
+    fn a_pin_made_during_a_background_push_still_goes() {
+        let server = StubServer::start(vec![], vec![]);
+        let held = server.hold_next("/sync/push");
+        let mut app = app_syncing_in_background(&server.endpoint);
+        let note = Note::new("Pinned while the push was out".to_string());
+        NoteRepository::new(app.db.as_ref().unwrap().connection()).create(&note, key()).unwrap();
+
+        trigger_sync(&mut app);
+        held.wait_until_reached();
+
+        let repo_conn = app.db.as_ref().unwrap();
+        let repo = NoteRepository::new(repo_conn.connection());
+        let mut pinned = repo.get(&note.id, key()).unwrap().unwrap();
+        pinned.pinned = true;
+        repo.update(&pinned, key()).unwrap();
+
+        held.release();
+        finish_background_sync_now(&mut app);
+
+        let db = app.db.as_ref().unwrap();
+        let stored = NoteRepository::new(db.connection()).get(&note.id, key()).unwrap().unwrap();
+        assert!(stored.pinned);
+        assert!(stored.needs_sync);
+    }
+
+    /// A note from an older build gets its hash during a push, and that used to write the
+    /// whole note back, undoing whatever had just been saved.
+    #[test]
+    fn hashing_a_note_for_a_push_leaves_the_rest_of_it_alone() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        let note = Note::new("From before hashes".to_string());
+        let repo = NoteRepository::new(db.connection());
+        repo.create(&note, key()).unwrap();
+        db.connection().execute("UPDATE notes SET content_hash = NULL, hash_chain = NULL", []).unwrap();
+        let stale = repo.get(&note.id, key()).unwrap().unwrap();
+
+        let mut edited = stale.clone();
+        edited.content = "Saved after the push read it".to_string();
+        repo.store(&edited, key()).unwrap();
+
+        let link = SyncLink::default();
+        let log = |_: &str| {};
+        let metadata = sync_metadata(&app);
+        let crypto = CryptoService::new();
+        let db = app.db.as_mut().unwrap();
+        let run = open_run(db.connection(), &crypto, key(), &metadata, &log, &link).unwrap();
+        with_hash(&run, stale).unwrap();
+
+        let stored = NoteRepository::new(db.connection()).get(&note.id, key()).unwrap().unwrap();
+        assert_eq!(stored.content, "Saved after the push read it");
+        assert!(stored.content_hash.is_some());
+    }
+
+    /// Its text is in a buffer, so saving that would take the pulled edit away.
+    #[test]
+    fn a_pull_leaves_an_open_note_alone_and_says_so() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_syncing_in_background(&server.endpoint);
+        let mut note = Note::new("As opened".to_string());
+        note.id = note_id(0);
+        note.needs_sync = false;
+        note.content_hash = Some("local-hash".to_string());
+        let db = app.db.as_ref().unwrap();
+        let repo = NoteRepository::new(db.connection());
+        repo.create(&note, key()).unwrap();
+        repo.store(&note, key()).unwrap();
+
+        let mut remote = remote_notes(1).remove(0);
+        remote["content"] = json!(encrypted("Changed elsewhere"));
+        remote["contentHash"] = json!("remote-hash");
+        remote["hashChain"] = json!(["remote-hash", "local-hash"]);
+        server.script(vec![cursor_page(vec![remote], "c1", false)]);
+
+        app.sync_gate.set_open_note(Some(&note.id));
+        trigger_sync(&mut app);
+        finish_background_sync_now(&mut app);
+
+        let db = app.db.as_ref().unwrap();
+        let stored = NoteRepository::new(db.connection()).get(&note.id, key()).unwrap().unwrap();
+        assert_eq!(stored.content, "As opened");
+        let sync = SyncRepository::new(db.connection()).get_note_sync(&note.id).unwrap().unwrap();
+        assert!(sync.conflict_data.is_some());
+    }
+
+    #[test]
+    fn automatic_syncs_wait_for_an_edit_to_finish() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_syncing_in_background(&server.endpoint);
+        app.settings.auto_sync_interval_minutes = 5;
+
+        app.state = crate::ui::state::AppState::NoteView;
+        app.check_auto_sync();
+        assert!(app.sync_job.is_none());
+
+        app.state = crate::ui::state::AppState::NoteList;
+        app.check_auto_sync();
+        assert!(app.sync_job.is_some());
+
+        finish_background_sync_now(&mut app);
+    }
+
+    #[test]
+    fn a_notification_during_an_edit_syncs_when_it_is_over() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_syncing_in_background(&server.endpoint);
+        app.sse_handle = Some(crate::sse::SseHandle::holding(vec![crate::sse::SseMessage::SyncNotification]));
+
+        app.editing_note_id = Some(note_id(0));
+        app.check_auto_sync();
+        assert!(app.sync_job.is_none());
+
+        app.editing_note_id = None;
+        app.check_auto_sync();
+        assert!(app.sync_job.is_some());
+
+        finish_background_sync_now(&mut app);
+    }
+
+    /// A save during a sync has to go somewhere, as the running one has read its notes.
+    #[test]
+    fn a_sync_asked_for_during_one_runs_after_it() {
+        let server = StubServer::start(vec![], vec![]);
+        let held = server.hold_next("/sync/pull");
+        let mut app = app_syncing_in_background(&server.endpoint);
+
+        trigger_sync(&mut app);
+        held.wait_until_reached();
+        trigger_sync(&mut app);
+        assert_eq!(app.sync_requested, Some(false));
+
+        held.release();
+        finish_background_sync_now(&mut app);
+        assert!(app.sync_job.is_none());
+
+        app.check_auto_sync();
+        finish_background_sync_now(&mut app);
+
+        assert_eq!(server.all_pulls().len(), 2);
+        assert_eq!(app.sync_requested, None);
+    }
+
+    /// Locking can't wait for a slow server, so the sync has to stop by itself.
+    #[test]
+    fn a_sync_stops_changing_the_vault_once_it_is_locked() {
+        let server = StubServer::start(remote_notes(1), vec![]);
+        let held = server.hold_next("/sync/pull");
+        let mut app = app_syncing_in_background(&server.endpoint);
+        let path = app.db_path.clone();
+        let password = app.unlock_password.clone().unwrap();
+
+        trigger_sync(&mut app);
+        held.wait_until_reached();
+
+        let thread = app.sync_job.as_mut().unwrap().thread.take().unwrap();
+        app.lock();
+        assert!(app.sync_job.is_none());
+
+        held.release();
+        thread.join().unwrap();
+
+        let db = Database::open(&path, &password).unwrap();
+        assert_eq!(NoteRepository::new(db.connection()).list(true, key()).unwrap().len(), 0);
+        let metadata = SyncRepository::new(db.connection()).get_metadata().unwrap().unwrap();
+        assert_eq!(metadata.last_sync_at, None);
+    }
+
+    /// The thread holds a copy of the key until it ends, so it can't go on fetching.
+    #[test]
+    fn a_locked_vault_stops_a_sync_fetching_files() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_syncing_in_background(&server.endpoint);
+
+        let db = app.db.as_ref().unwrap();
+        let mut note = Note::new("Names two files it hasn't got".to_string());
+        for id in [note_id(1), note_id(2)] {
+            note.attachments.push(Attachment {
+                id: id.clone(),
+                filename: "a.txt".to_string(),
+                mime_type: "text/plain".to_string(),
+                size: 1,
+                data: id,
+                thumbnail_data: None,
+            });
+        }
+        NoteRepository::new(db.connection()).create(&note, key()).unwrap();
+
+        let held = server.hold_next(Box::leak(note_id(1).into_boxed_str()));
+        trigger_sync(&mut app);
+        held.wait_until_reached();
+
+        let thread = app.sync_job.as_mut().unwrap().thread.take().unwrap();
+        app.lock();
+        held.release();
+        thread.join().unwrap();
+
+        assert_eq!(server.blob_requests(), 1);
+    }
+
+    /// The sync read these before it started, so writing them back would undo the change.
+    #[test]
+    fn what_changes_during_a_sync_survives_the_end_of_it() {
+        let server = StubServer::start(vec![], vec![]);
+        let held = server.hold_next("/sync/pull");
+        let mut app = app_syncing_in_background(&server.endpoint);
+
+        trigger_sync(&mut app);
+        held.wait_until_reached();
+
+        let mut metadata = sync_metadata(&app);
+        metadata.server_key_stale = true;
+        metadata.user_email = Some("changed@example.com".to_string());
+        SyncRepository::new(app.db.as_ref().unwrap().connection()).update_metadata(&metadata).unwrap();
+
+        held.release();
+        finish_background_sync_now(&mut app);
+
+        let metadata = sync_metadata(&app);
+        assert!(metadata.server_key_stale);
+        assert_eq!(metadata.user_email.as_deref(), Some("changed@example.com"));
+        assert!(metadata.last_sync_at.is_some());
+    }
+
+    #[test]
+    fn a_sync_that_fails_in_the_background_says_why() {
+        let server = StubServer::start(vec![], vec![]);
+        server.fail_next("500 Internal Server Error");
+        let mut app = app_syncing_in_background(&server.endpoint);
+        NoteRepository::new(app.db.as_ref().unwrap().connection())
+            .create(&Note::new("Stays pending".to_string()), key())
+            .unwrap();
+
+        trigger_sync(&mut app);
+        finish_background_sync_now(&mut app);
+
+        assert!(app.error.as_deref().is_some_and(|error| error.contains("500")));
+        assert!(app.sync_job.is_none());
+    }
+
+    /// What was missing a blob when it arrived gets it from a later sync, without anything
+    /// on the screen waiting for the download.
+    #[test]
+    fn a_blob_this_device_only_has_a_reference_to_is_fetched() {
+        use base64::Engine as _;
+        let crypto = CryptoService::new();
+        let payload = serde_json::to_vec(&crypto.encrypt_binary(b"abc", key()).unwrap()).unwrap();
+        let server = StubServer::with_attachments(vec![], vec![json!({
+            "id": ATTACHMENT_ID,
+            "data": base64::engine::general_purpose::STANDARD.encode(payload),
+        })]);
+        let mut app = app_connected_to(&server.endpoint);
+        add_note_with_attachment(&app, "reference-only.txt");
+        let db = app.db.as_ref().unwrap();
+        AttachmentRepository::new(db.connection()).delete(ATTACHMENT_ID).unwrap();
+
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let (_, _, _, data) = AttachmentRepository::new(db.connection()).get(ATTACHMENT_ID, key()).unwrap().unwrap();
+        assert_eq!(data, b"abc");
+    }
+
+    fn wire_saved_search(id: usize, name: &str, query: &str) -> Value {
+        json!({
+            "id": note_id(id),
+            "name": encrypted(name),
+            "query": encrypted(query),
+            "order": id,
+            "createdAt": "2026-01-01T00:00:00Z",
+            "modifiedAt": "2026-01-01T00:00:00Z",
+            "deleted": false,
+            "version": 1,
+        })
+    }
+
+    fn saved_search_names(app: &App) -> Vec<String> {
+        let db = app.db.as_ref().unwrap();
+        SavedSearchRepository::new(db.connection()).list(key()).unwrap()
+            .into_iter().map(|search| search.name).collect()
+    }
+
+    #[test]
+    fn saved_searches_arrive_from_the_server() {
+        let mut page = cursor_page(vec![], "c1", false);
+        page["savedSearches"] = json!([wire_saved_search(1, "Work", "#work -done")]);
+        let server = StubServer::start(vec![], vec![]);
+        server.script(vec![page]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(saved_search_names(&app), ["Work"]);
+    }
+
+    #[test]
+    fn a_saved_search_this_vault_cannot_open_is_left_out_and_counted() {
+        let crypto = CryptoService::new();
+        let foreign = serde_json::to_string(&crypto.encrypt_text("Planted", &crypto.generate_master_key()).unwrap()).unwrap();
+        let mut planted = wire_saved_search(2, "x", "y");
+        planted["name"] = json!(foreign);
+        planted["query"] = json!("not even ciphertext");
+
+        let mut page = cursor_page(vec![], "c1", false);
+        page["savedSearches"] = json!([planted, wire_saved_search(1, "Work", "#work")]);
+        let server = StubServer::start(vec![], vec![]);
+        server.script(vec![page]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(outcome.skipped, 1);
+        assert_eq!(saved_search_names(&app), ["Work"]);
+    }
+
+    #[test]
+    fn a_saved_search_deleted_elsewhere_goes_here_whatever_the_row_holds() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        let repo = SavedSearchRepository::new(db.connection());
+        repo.apply(
+            &serde_json::from_value(wire_saved_search(1, "Going", "x")).unwrap(),
+            false,
+            None,
+        ).unwrap();
+
+        let mut gone = wire_saved_search(1, "", "");
+        gone["name"] = json!("plaintext from an older client");
+        gone["modifiedAt"] = json!("2026-06-01T00:00:00Z");
+        gone["deleted"] = json!(true);
+        let mut page = cursor_page(vec![], "c1", false);
+        page["savedSearches"] = json!([gone]);
+        server.script(vec![page]);
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert!(saved_search_names(&app).is_empty());
+    }
+
+    #[test]
+    fn a_saved_search_goes_up_encrypted_and_then_stops_going() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        SavedSearchRepository::new(db.connection()).create("Private name", "#private", key()).unwrap();
+
+        perform_sync(&mut app, false).unwrap();
+
+        let pushed = server.all_pushes().into_iter().find(|push| push.get("savedSearches").is_some()).unwrap();
+        let sent = pushed["savedSearches"][0].clone();
+        assert!(!sent["name"].as_str().unwrap().contains("Private"));
+        assert!(!sent["query"].as_str().unwrap().contains("private"));
+
+        let pushes = server.all_pushes().len();
+        perform_sync(&mut app, false).unwrap();
+        assert_eq!(server.all_pushes().len(), pushes);
+    }
+
+    /// An older server sends them whole on every page, so they're read once.
+    #[test]
+    fn saved_searches_from_an_older_server_are_read_from_the_last_page() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut first = json!({
+            "notes": remote_notes(1), "deletions": [], "attachments": [], "versions": [],
+            "savedSearches": [wire_saved_search(1, "Work", "#work")],
+            "syncedAt": server_time(0), "hasMore": true,
+        });
+        let mut last = first.clone();
+        last["notes"] = json!([]);
+        last["hasMore"] = json!(false);
+        first["savedSearches"] = json!([]);
+        server.script(vec![first, last]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(saved_search_names(&app), ["Work"]);
+    }
+
+    /// A note held for a conflict can be clean: a pull raises one on a note that's open.
+    /// Its local side is the only copy, so that has to count as an edit.
+    fn note_with_a_pending_conflict(app: &App, needs_sync: bool) -> Note {
+        let mut note = Note::new("The only copy of this side".to_string());
+        note.id = note_id(0);
+        note.needs_sync = needs_sync;
+        note.content_hash = Some("local-hash".to_string());
+        let db = app.db.as_ref().unwrap();
+        let repo = NoteRepository::new(db.connection());
+        repo.create(&note, key()).unwrap();
+        repo.store(&note, key()).unwrap();
+
+        let earlier = remote_notes(1).remove(0);
+        let mut conflict = conflict_from_pull(&note, &serde_json::from_value(earlier).unwrap());
+        conflict.ancestor_hash = Some("ancestor-hash".to_string());
+        conflict.ancestor_content = Some(encrypted("The ancestor"));
+        SyncRepository::new(db.connection()).set_conflict(&note.id, &conflict).unwrap();
+        note
+    }
+
+    fn newer_copy_of_note_zero() -> Value {
+        let mut remote = remote_notes(1).remove(0);
+        remote["content"] = json!(encrypted("Moved on again"));
+        remote["modifiedAt"] = json!("2026-06-01T00:00:00Z");
+        remote["contentHash"] = json!("remote-hash");
+        // A chain that holds the local hash would otherwise read as "includes the edit"
+        remote["hashChain"] = json!(["remote-hash", "local-hash"]);
+        remote
+    }
+
+    #[test]
+    fn a_pending_conflict_counts_as_an_unsent_edit() {
+        for needs_sync in [false, true] {
+            let server = StubServer::start(vec![], vec![]);
+            let mut app = app_connected_to(&server.endpoint);
+            let note = note_with_a_pending_conflict(&app, needs_sync);
+            server.script(vec![cursor_page(vec![newer_copy_of_note_zero()], "c1", false)]);
+
+            perform_sync(&mut app, false).unwrap();
+
+            assert_eq!(stored_note(&app, &note.id).content, "The only copy of this side");
+        }
+    }
+
+    /// The conflict screen should show where the server is now, and a three-way merge
+    /// still needs the ancestor that the refused push brought.
+    #[test]
+    fn a_pending_conflict_follows_the_server_and_keeps_its_ancestor() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let note = note_with_a_pending_conflict(&app, true);
+        server.script(vec![cursor_page(vec![newer_copy_of_note_zero()], "c1", false)]);
+
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let conflict = SyncRepository::new(db.connection()).get_note_sync(&note.id).unwrap().unwrap().conflict_data.unwrap();
+        assert_eq!(conflict.server_content_hash.as_deref(), Some("remote-hash"));
+        assert_eq!(conflict.ancestor_hash.as_deref(), Some("ancestor-hash"));
+        assert!(conflict.ancestor_content.is_some());
+    }
+
+    /// A compromised server could send every note deleted decades ago.
+    #[test]
+    fn a_note_pulled_into_the_bin_starts_its_time_there_now() {
+        let mut gone = remote_notes(1).remove(0);
+        gone["deleted"] = json!(true);
+        gone["deletedAt"] = json!("2001-01-01T00:00:00Z");
+        let server = StubServer::start(vec![gone], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let repo = NoteRepository::new(db.connection());
+        let thirty_days_ago = Utc::now() - chrono::Duration::days(30);
+        repo.purge_expired_bin(thirty_days_ago).unwrap();
+        repo.purge_remote_deletions(thirty_days_ago).unwrap();
+
+        assert!(repo.get(&note_id(0), key()).unwrap().is_some());
+    }
+
+    /// A pending note, as the server's skip list would name it.
+    fn pending_note(app: &App, text: &str) -> Note {
+        let note = Note::new(text.to_string());
+        NoteRepository::new(app.db.as_ref().unwrap().connection()).create(&note, key()).unwrap();
+        note
+    }
+
+    fn stored_note(app: &App, id: &str) -> Note {
+        NoteRepository::new(app.db.as_ref().unwrap().connection()).get(id, key()).unwrap().unwrap()
+    }
+
+    #[test]
+    fn a_note_deleted_for_good_stops_being_sent_and_goes_to_the_bin() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let note = pending_note(&app, "Deleted elsewhere after this edit");
+        server.pass_over(&note.id);
+        server.add_to_push_replies(json!({ "skippedDeleted": [note.id] }));
+
+        perform_sync(&mut app, false).unwrap();
+
+        let stored = stored_note(&app, &note.id);
+        assert!(stored.deleted);
+        assert!(!stored.needs_sync);
+
+        let pushes = server.all_pushes().len();
+        perform_sync(&mut app, false).unwrap();
+        assert_eq!(server.all_pushes().len(), pushes);
+    }
+
+    /// An edit later than the deletion beats it, so that one has to go.
+    #[test]
+    fn a_skipped_note_that_changed_since_stays_and_goes_again() {
+        let server = StubServer::start(vec![], vec![]);
+        let held = server.hold_next("/sync/push");
+        let mut app = app_syncing_in_background(&server.endpoint);
+        let note = pending_note(&app, "As sent");
+        server.pass_over(&note.id);
+        server.add_to_push_replies(json!({ "skippedDeleted": [note.id] }));
+
+        trigger_sync(&mut app);
+        held.wait_until_reached();
+
+        let mut edited = stored_note(&app, &note.id);
+        edited.content = "Edited while the push was out".to_string();
+        edited.touch();
+        NoteRepository::new(app.db.as_ref().unwrap().connection()).update(&edited, key()).unwrap();
+
+        held.release();
+        finish_background_sync_now(&mut app);
+
+        let stored = stored_note(&app, &note.id);
+        assert!(!stored.deleted);
+        assert!(stored.needs_sync);
+    }
+
+    /// The list comes from the server, so it can't reach a note this push didn't send.
+    #[test]
+    fn a_server_cannot_skip_a_note_it_was_not_sent() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let sent = pending_note(&app, "Sent");
+        let mut other = Note::new("Not sent".to_string());
+        other.needs_sync = false;
+        let db = app.db.as_ref().unwrap();
+        let repo = NoteRepository::new(db.connection());
+        repo.create(&other, key()).unwrap();
+        repo.store(&other, key()).unwrap();
+        SyncRepository::new(db.connection()).update_last_sync(Utc::now()).unwrap();
+        server.add_to_push_replies(json!({ "skippedDeleted": [other.id] }));
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert!(!stored_note(&app, &other.id).deleted);
+        assert!(!stored_note(&app, &sent.id).deleted);
+    }
+
+    /// An older server sends no such list, so a note it passes over stays pending.
+    #[test]
+    fn a_note_an_older_server_says_nothing_about_stays_pending() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let note = pending_note(&app, "Passed over");
+        server.pass_over(&note.id);
+
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        let stored = stored_note(&app, &note.id);
+        assert!(stored.needs_sync);
+        assert!(!stored.deleted);
+        assert!(!outcome.clock_ahead);
+    }
+
+    /// The stub's clock is `server_time`, so a device a few years behind it isn't ahead.
+    fn note_dated(app: &App, date: DateTime<Utc>) -> Note {
+        let mut note = Note::new("Dated".to_string());
+        note.modified_at = date;
+        note.created_at = date;
+        NoteRepository::new(app.db.as_ref().unwrap().connection()).create(&note, key()).unwrap();
+        note
+    }
+
+    #[test]
+    fn a_note_dated_past_the_servers_clock_says_the_clock_may_be_wrong() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        app.settings.sync_enabled = true;
+        app.settings.sync_endpoint = Some(server.endpoint.clone());
+        let note = note_dated(&app, server_time(0) + chrono::Duration::hours(25));
+        server.pass_over(&note.id);
+
+        trigger_sync(&mut app);
+
+        assert_eq!(app.error, Some(t!("sync.clock_ahead").to_string()));
+        assert!(stored_note(&app, &note.id).needs_sync);
+    }
+
+    #[test]
+    fn a_note_within_a_day_of_the_servers_clock_is_not_the_clocks_fault() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let note = note_dated(&app, server_time(0) + chrono::Duration::hours(23));
+        server.pass_over(&note.id);
+
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        assert!(!outcome.clock_ahead);
+    }
+
+    /// Dates on a note the server took don't matter, whatever they say.
+    #[test]
+    fn an_accepted_note_says_nothing_about_the_clock() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        note_dated(&app, server_time(0) + chrono::Duration::days(30));
+
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        assert!(!outcome.clock_ahead);
+    }
+
+    #[test]
+    fn a_saved_search_dated_past_the_servers_clock_stays_pending() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        let db = app.db.as_ref().unwrap();
+        let repo = SavedSearchRepository::new(db.connection());
+        let mut row: SyncSavedSearch = serde_json::from_value(wire_saved_search(1, "Ahead", "x")).unwrap();
+        row.modified_at = server_time(0) + chrono::Duration::hours(25);
+        repo.apply(&row, true, None).unwrap();
+
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        assert!(outcome.clock_ahead);
+        let db = app.db.as_ref().unwrap();
+        assert_eq!(SavedSearchRepository::new(db.connection()).pending().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn a_repair_fetches_what_the_server_has_and_counts_it() {
+        use base64::Engine as _;
+        let crypto = CryptoService::new();
+        let payload = serde_json::to_vec(&crypto.encrypt_binary(b"abc", key()).unwrap()).unwrap();
+        let server = StubServer::with_attachments(vec![], vec![json!({
+            "id": ATTACHMENT_ID,
+            "data": base64::engine::general_purpose::STANDARD.encode(payload),
+        })]);
+        let app = app_connected_to(&server.endpoint);
+        add_note_with_attachment(&app, "reference-only.txt");
+        let db = app.db.as_ref().unwrap();
+        AttachmentRepository::new(db.connection()).delete(ATTACHMENT_ID).unwrap();
+
+        assert_eq!(fetch_all_missing_blobs(&app).unwrap(), 1);
+        assert_eq!(fetch_all_missing_blobs(&app).unwrap(), 0);
     }
 
     /// Without this, a server that always says there's more would keep a sync running.
@@ -2434,17 +3691,9 @@ mod tests {
 
         let server = StubServer::start(vec![], vec![]);
         server.script(vec![first]);
-        let mut app = app_connected_to(&server.endpoint);
-
         // The note's page never arrives
-        let failing = server.fail_next.clone();
-        let observed = server.script.clone();
-        std::thread::spawn(move || {
-            while !observed.lock().unwrap().is_empty() {
-                std::thread::yield_now();
-            }
-            *failing.lock().unwrap() = Some("500 Internal Server Error".to_string());
-        });
+        server.script_failure("500 Internal Server Error");
+        let mut app = app_connected_to(&server.endpoint);
 
         assert!(perform_sync(&mut app, false).is_err());
 
@@ -3423,6 +4672,190 @@ mod tests {
 
         assert_eq!(note_repo.purge_remote_deletions(Utc::now() + chrono::Duration::days(1)).unwrap(), 1);
         assert!(note_repo.get(&notes[0].id, key()).unwrap().is_none());
+    }
+
+    /// A page naming these notes as deleted, as a server can send as often as it likes.
+    fn deletions_page(notes: &[Note], cursor: &str) -> Value {
+        let mut page = cursor_page(vec![], cursor, false);
+        page["deletions"] = json!(notes.iter()
+            .map(|note| json!({ "id": note.id, "deletedAt": "2031-01-01T00:00:00Z" }))
+            .collect::<Vec<_>>());
+        page
+    }
+
+    /// A pulled copy of `note`, newer than the one here, in the bin since long ago.
+    fn binned_long_ago(note: &Note) -> Value {
+        let mut pulled = remote_notes(1).remove(0);
+        pulled["id"] = json!(note.id);
+        pulled["modifiedAt"] = json!("2040-01-01T00:00:00Z");
+        pulled["deleted"] = json!(true);
+        pulled["deletedAt"] = json!("2001-01-01T00:00:00Z");
+        pulled
+    }
+
+    /// When this device says a note reached the bin from elsewhere.
+    fn bin_clock(app: &App, id: &str) -> Option<String> {
+        app.db.as_ref().unwrap().connection()
+            .query_row("SELECT remote_deleted_at FROM notes WHERE id = ?1", [id], |row| row.get(0))
+            .unwrap()
+    }
+
+    /// Synced notes on an app whose server has nothing queued for it.
+    fn app_with_synced_notes(count: usize) -> (App, StubServer, Vec<Note>) {
+        let (mut app, server, _) = app_with_deletions_from_the_server(0);
+        perform_sync(&mut app, false).unwrap();
+
+        let notes: Vec<Note> = (0..count).map(|i| {
+            let mut note = Note::new(format!("Note {i}"));
+            note.needs_sync = false;
+            note
+        }).collect();
+        let db = app.db.as_ref().unwrap();
+        for note in &notes {
+            NoteRepository::new(db.connection()).create(note, key()).unwrap();
+        }
+
+        (app, server, notes)
+    }
+
+    /// Web lost notes this way: the first pull could only reach the bin, and a second
+    /// naming the same notes found them there and took them out of it.
+    #[test]
+    fn a_server_repeating_a_deletion_cannot_take_a_note_out_of_the_bin() {
+        let (mut app, server, notes) = app_with_deletions_from_the_server(3);
+        perform_sync(&mut app, false).unwrap();
+        assert_eq!(bin_count(&app), 3);
+        let clock = bin_clock(&app, &notes[0].id);
+        assert!(clock.is_some());
+
+        for cursor in ["c2", "c3"] {
+            server.script(vec![deletions_page(&notes, cursor)]);
+            perform_sync(&mut app, false).unwrap();
+        }
+
+        assert_eq!(bin_count(&app), 3);
+        assert_eq!(bin_clock(&app, &notes[0].id), clock);
+
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        let thirty_days_ago = Utc::now() - chrono::Duration::days(30);
+        assert_eq!(note_repo.purge_remote_deletions(thirty_days_ago).unwrap(), 0);
+        assert_eq!(note_repo.purge_expired_bin(thirty_days_ago).unwrap(), 0);
+    }
+
+    #[test]
+    fn a_held_deletion_stays_held_however_often_the_server_repeats_it() {
+        let (mut app, server, notes) = app_with_deletions_from_the_server(MASS_DELETION_THRESHOLD);
+        assert_eq!(perform_sync(&mut app, false).unwrap().deletions_held, MASS_DELETION_THRESHOLD);
+
+        for cursor in ["c2", "c3"] {
+            server.script(vec![deletions_page(&notes, cursor)]);
+            let outcome = perform_sync(&mut app, false).unwrap();
+            assert_eq!(outcome.deletions_held, MASS_DELETION_THRESHOLD);
+        }
+
+        assert_eq!(bin_count(&app), 0);
+        assert_eq!(stored_note_count(&app), MASS_DELETION_THRESHOLD);
+    }
+
+    /// The limit would mean nothing if a server could stay under it on each sync.
+    #[test]
+    fn a_few_deletions_at_a_time_do_not_get_past_the_limit() {
+        let batch = MASS_DELETION_THRESHOLD - 1;
+        let (mut app, server, notes) = app_with_synced_notes(batch * 2);
+
+        server.script(vec![deletions_page(&notes[..batch], "c2")]);
+        assert_eq!(perform_sync(&mut app, false).unwrap().deletions_held, 0);
+        assert_eq!(bin_count(&app), batch);
+
+        server.script(vec![deletions_page(&notes[batch..], "c3")]);
+        assert_eq!(perform_sync(&mut app, false).unwrap().deletions_held, batch);
+        assert_eq!(bin_count(&app), batch);
+    }
+
+    /// Taking some of a held batch away another way mustn't drop what's left under the
+    /// limit, or the rest would go without the question ever being answered.
+    #[test]
+    fn a_held_deletion_stays_held_when_some_of_it_goes_another_way() {
+        let (mut app, server, notes) = app_with_deletions_from_the_server(MASS_DELETION_THRESHOLD);
+        perform_sync(&mut app, false).unwrap();
+
+        let pulled: Vec<Value> = notes[..2].iter().map(binned_long_ago).collect();
+        server.script(vec![cursor_page(pulled, "c2", false)]);
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(outcome.deletions_held, MASS_DELETION_THRESHOLD - 2);
+        assert_eq!(bin_count(&app), 2);
+    }
+
+    /// Deleting a few here doesn't answer the question about the rest. Nothing has reached
+    /// the bin from elsewhere, so only having been asked keeps these held.
+    #[test]
+    fn a_held_deletion_stays_held_when_the_user_deletes_some_of_it() {
+        let (mut app, _server, notes) = app_with_deletions_from_the_server(MASS_DELETION_THRESHOLD);
+        perform_sync(&mut app, false).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        note_repo.delete(&notes[0].id).unwrap();
+        note_repo.delete(&notes[1].id).unwrap();
+
+        let outcome = perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(outcome.deletions_held, MASS_DELETION_THRESHOLD - 2);
+        assert_eq!(bin_count(&app), 2);
+    }
+
+    /// Once it's been answered, it's over.
+    #[test]
+    fn an_answered_deletion_does_not_hold_up_the_next_one() {
+        let (mut app, server, notes) = app_with_deletions_from_the_server(MASS_DELETION_THRESHOLD);
+        perform_sync(&mut app, false).unwrap();
+        refuse_held_deletions(&mut app).unwrap();
+
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        assert_eq!(note_repo.count_held_deletions().unwrap(), 0);
+        assert!(!note_repo.has_unanswered_deletions().unwrap());
+
+        // One note on its own is under the limit, so it goes to the bin as usual
+        server.script(vec![deletions_page(&notes[..1], "c2")]);
+        let outcome = perform_sync(&mut app, false).unwrap();
+        assert_eq!(outcome.deletions_held, 0);
+    }
+
+    /// The first pull of a note can't be the only way in: one already here goes the same.
+    #[test]
+    fn a_note_here_that_a_pull_puts_in_the_bin_starts_its_time_now() {
+        let (mut app, server, notes) = app_with_synced_notes(1);
+        server.script(vec![cursor_page(vec![binned_long_ago(&notes[0])], "c2", false)]);
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(bin_count(&app), 1);
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        let thirty_days_ago = Utc::now() - chrono::Duration::days(30);
+        assert_eq!(note_repo.purge_expired_bin(thirty_days_ago).unwrap(), 0);
+        assert_eq!(note_repo.purge_remote_deletions(thirty_days_ago).unwrap(), 0);
+        assert!(note_repo.get_pending_deletions().unwrap().is_empty());
+    }
+
+    /// A live note can carry a date from a pull. It says nothing about when it was deleted.
+    #[test]
+    fn a_date_left_on_a_live_note_does_not_date_its_deletion() {
+        let (mut app, server, notes) = app_with_synced_notes(1);
+        let mut pulled = binned_long_ago(&notes[0]);
+        pulled["deleted"] = json!(false);
+        server.script(vec![cursor_page(vec![pulled], "c2", false)]);
+        perform_sync(&mut app, false).unwrap();
+
+        server.script(vec![deletions_page(&notes, "c3")]);
+        perform_sync(&mut app, false).unwrap();
+
+        let stored = stored_note(&app, &notes[0].id);
+        assert!(stored.deleted);
+        assert!(stored.deleted_at.unwrap() > Utc::now() - chrono::Duration::days(1));
     }
 
     /// A note restored from the bin isn't deleted any more, whatever the old mark said.

@@ -276,6 +276,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         ViewMode::VersionHistory => t!("ui.version_history").to_string(),
         ViewMode::ConflictResolution => t!("ui.conflict_resolution").to_string(),
         ViewMode::Inbox => format!("{} ({})", t!("inbox.title"), app.inbox_items.len()),
+        ViewMode::SavedSearches => t!("saved_search.title").to_string(),
         ViewMode::NoteList => {
             if app.archive_mode {
                 if app.search_active && !app.search_input.is_empty() {
@@ -406,6 +407,10 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
                     t!("status_bar.accept"), t!("status_bar.delete"), t!("status_bar.accept_all"),
                     t!("status_bar.delete_all"), t!("status_bar.navigate"), t!("status_bar.close"))
             }
+            ViewMode::SavedSearches => {
+                format!("Enter: {} | d: {} | ↑/↓: {} | Esc: {}",
+                    t!("status_bar.search"), t!("status_bar.delete"), t!("status_bar.navigate"), t!("status_bar.close"))
+            }
             ViewMode::NoteList => {
                 if app.archive_mode {
                     format!("a: {} | Shift+A: {} | ↑/↓: {} | /: {} | Esc: {}",
@@ -474,6 +479,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     let mut tags_line_area_local: Option<Rect> = None;
     let mut tag_positions_local: Vec<(String, u16, u16)> = Vec::new();
     let mut note_link_positions_local: Vec<(String, u16, u16, u16)> = Vec::new();
+    let mut preview_scroll = None;
     let mut preview_area_local: Option<Rect> = None;
 
     if !filtered.is_empty() && app.selected_note < filtered.len() {
@@ -573,6 +579,15 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         // Calculate the starting line index for content (after metadata + blank line)
         let content_start_line_index = lines.len();
 
+        // The terminal cell a tab lands on depends on where it is, and a paragraph drops them
+        let content = crate::ui::helpers::expand_tabs(&note.content);
+        let content = crate::ui::helpers::resolve_wiki_links(&content, &|reference: &str| {
+            app.notes.iter()
+                .find(|other| other.id == reference
+                    || crate::models::get_note_title(&other.content, &other.tags).eq_ignore_ascii_case(reference))
+                .map(|other| (other.id.clone(), crate::models::get_note_title(&other.content, &other.tags)))
+        }).into_owned();
+
         // For markdown, render it cleanly; for other types, use syntax highlighting
         if note.syntax_language == SyntaxLanguage::Markdown {
             // Create a lookup function for note titles (used for empty link text)
@@ -589,7 +604,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             };
 
             // Render markdown with inline formatting and code block highlighting
-            let render_result = render_markdown_for_terminal(&note.content, &app.syntax_highlighter, &app.debug_log, Some(note_title_lookup));
+            let render_result = render_markdown_for_terminal(&content, &app.syntax_highlighter, &app.debug_log, Some(note_title_lookup));
 
             // Convert link positions from render result to screen coordinates
             // The y coordinate is: preview_inner_y + content_start_line_index + link_line_index - scroll_offset
@@ -612,7 +627,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             lines.extend(render_result.lines);
         } else {
             // Apply syntax highlighting to code
-            let highlighted_content = app.syntax_highlighter.highlight(&note.content, note.syntax_language);
+            let highlighted_content = app.syntax_highlighter.highlight(&content, note.syntax_language);
             lines.extend(highlighted_content.lines);
         }
 
@@ -689,11 +704,17 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         // This prevents stray characters when switching notes or scrolling
         frame.render_widget(Clear, preview_area);
 
-        let preview = Paragraph::new(Text::from(lines))
-            .block(preview_block)
-            .wrap(Wrap { trim: false })
-            .scroll((app.preview_scroll_offset as u16, 0));
-        frame.render_widget(preview, preview_area);
+        let preview = Paragraph::new(Text::from(lines)).block(preview_block);
+        let preview = if note.word_wrap { preview.wrap(Wrap { trim: false }) } else { preview };
+        let scroll = app.preview_scroll_offset.min(super::furthest_scroll(&preview, preview_area));
+        preview_scroll = Some(scroll);
+        frame.render_widget(preview.scroll((super::scroll_rows(scroll), 0)), preview_area);
+
+        // The link the keyboard is on
+        if let Some((_, y, x_start, x_end)) = app.selected_link.and_then(|index| note_link_positions_local.get(index)) {
+            let area = Rect::new(*x_start, *y, x_end.saturating_sub(*x_start), 1).intersection(frame.area());
+            frame.buffer_mut().set_style(area, Style::default().add_modifier(Modifier::REVERSED));
+        }
 
         // Render footer with left-aligned Version + sync indicator and right-aligned Modified
         let modified_str = format_datetime_full(&note.modified_at);
@@ -1059,7 +1080,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             &t!("bulk.enter_tags"),
             &t!("bulk.remove_tags_from", count = app.selected_note_ids.len()),
             &app.bulk_tags_input,
-            "Enter: confirm | Esc: cancel",
+            &t!("help.enter_confirm_esc_cancel"),
             &app.color_scheme,
             60,
             6,
@@ -1073,7 +1094,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             &t!("bulk.enter_colour"),
             &t!("bulk.colour_of", count = app.selected_note_ids.len()),
             &app.bulk_tags_input,
-            "Enter: confirm | Esc: cancel",
+            &t!("help.enter_confirm_esc_cancel"),
             &app.color_scheme,
             60,
             6,
@@ -1094,10 +1115,33 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             &t!("bulk.enter_tags"),
             &description,
             &app.bulk_tags_input,
-            "Enter: confirm | Esc: cancel",
+            &t!("help.enter_confirm_esc_cancel"),
             &app.color_scheme,
             60,
             6,
+        );
+    }
+
+    if matches!(app.input_mode, InputMode::SaveSearchName) {
+        render_input_modal(
+            frame,
+            size,
+            &t!("saved_search.name_prompt"),
+            &app.search_input,
+            &app.saved_search_name_input,
+            &t!("help.enter_confirm_esc_cancel"),
+            &app.color_scheme,
+            60,
+            6,
+        );
+    }
+
+    if let Some(path) = &app.export_overwrite_path {
+        super::inbox::render_confirm_modal(
+            frame,
+            size,
+            &t!("bulk.overwrite_title"),
+            &t!("bulk.overwrite_message", path = path.display().to_string()),
         );
     }
 
@@ -1116,7 +1160,7 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
             &t!("bulk.enter_export_path"),
             &description,
             &app.bulk_export_path_input,
-            "Enter: confirm | Esc: cancel",
+            &t!("help.enter_confirm_esc_cancel"),
             &app.color_scheme,
             70,
             6,
@@ -1131,6 +1175,10 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     // Render note info modal if showing
     super::note_info::render_note_info(app, frame, size);
 
+    if matches!(app.view_mode, ViewMode::SavedSearches) {
+        super::saved_searches::render_saved_searches(app, frame, size);
+    }
+
     // Render inbox modal if showing
     if matches!(app.view_mode, ViewMode::Inbox) {
         super::inbox::render_inbox(app, frame, size);
@@ -1143,6 +1191,11 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
     app.tags_line_area = tags_line_area_local;
     app.tag_positions = tag_positions_local;
     app.note_link_positions = note_link_positions_local;
+
+    // Where the text really stopped, so the way back up starts from there
+    if let Some(scroll) = preview_scroll {
+        app.preview_scroll_offset = scroll;
+    }
     app.preview_area = preview_area_local;
 }
 
@@ -1170,6 +1223,92 @@ mod tests {
             })
             .collect::<Vec<_>>()
             .join("\n")
+    }
+
+    fn app_showing(content: &str) -> App {
+        let mut app = test_app();
+        app.notes.push(Note::new(content.to_string()));
+        app.invalidate_filter_cache();
+        app
+    }
+
+    #[test]
+    fn a_preview_stops_scrolling_at_the_end_of_its_text() {
+        let mut app = app_showing(&(0..100).map(|i| format!("Line {i}")).collect::<Vec<_>>().join("\n"));
+        app.preview_scroll_offset = 100_000;
+
+        let shown = screen(&mut app);
+
+        assert!(app.preview_scroll_offset < 100, "{}", app.preview_scroll_offset);
+        assert!(shown.contains("Line 99"), "{shown}");
+    }
+
+    #[test]
+    fn a_short_preview_does_not_scroll_at_all() {
+        let mut app = app_showing("Short");
+        app.preview_scroll_offset = 50;
+
+        let shown = screen(&mut app);
+
+        assert_eq!(app.preview_scroll_offset, 0);
+        assert!(shown.contains("Short"), "{shown}");
+    }
+
+    #[test]
+    fn a_note_with_word_wrap_off_runs_off_the_edge_of_the_preview() {
+        let long = format!("{}END", "word ".repeat(100));
+
+        let mut app = app_showing(&long);
+        app.notes[0].set_syntax(SyntaxLanguage::Plain);
+        assert!(screen(&mut app).contains("END"));
+
+        app.notes[0].word_wrap = false;
+        assert!(!screen(&mut app).contains("END"));
+    }
+
+    #[test]
+    fn the_link_the_keyboard_is_on_stands_out() {
+        let target = Note::new("Target".to_string());
+        let mut app = app_showing(&format!("[other note](link:{})", target.id));
+        app.notes.push(target);
+        app.invalidate_filter_cache();
+        app.selected_note = app.filtered_notes().iter().position(|note| note.content.contains("link:")).unwrap();
+
+        let mut terminal = Terminal::new(TestBackend::new(120, 30)).unwrap();
+        terminal.draw(|frame| render_note_list(&mut app, frame)).unwrap();
+        let (_, y, x, _) = app.note_link_positions[0].clone();
+        let reversed = |terminal: &Terminal<TestBackend>| {
+            terminal.backend().buffer()[(x, y)].modifier.contains(Modifier::REVERSED)
+        };
+        assert!(!reversed(&terminal));
+
+        app.selected_link = Some(0);
+        terminal.draw(|frame| render_note_list(&mut app, frame)).unwrap();
+        assert!(reversed(&terminal));
+    }
+
+    #[test]
+    fn a_wiki_link_shows_as_the_note_it_points_at() {
+        let target = Note::new("Project Plan".to_string());
+        let mut app = app_showing("See [[project plan]] for more");
+        app.notes.push(target.clone());
+        app.invalidate_filter_cache();
+        app.selected_note = app.filtered_notes().iter().position(|note| note.content.contains("[[")).unwrap();
+
+        let shown = screen(&mut app);
+
+        assert!(!shown.contains("[[project plan]]"), "{shown}");
+        assert_eq!(app.note_link_positions[0].0, target.id);
+    }
+
+    #[test]
+    fn tab_indented_text_keeps_its_columns_in_a_preview() {
+        let mut app = app_showing("First\n\t\tIndented");
+        app.notes[0].set_syntax(SyntaxLanguage::Plain);
+
+        let shown = screen(&mut app);
+
+        assert!(shown.contains("        Indented"), "{shown}");
     }
 
     /// `count` notes with titles Note 0, Note 1 and so on, in display order, and

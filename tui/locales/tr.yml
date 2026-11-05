@@ -50,6 +50,7 @@ password:
   same_as_account: "Farklı parolalar kullanın. Sunucu hesap parolanızı görür, bu yüzden aynı parola notlarınızı da açmamalıdır."
   same_as_account_warning: "Hesap parolanız not parolanızla aynı, bu yüzden sunucu notlarınızı okuyabilir. Ayarlar bölümünden not parolanızı değiştirin."
   no_file_encryption: "Bu derleme veritabanı dosyasını şifrelemez. Notlar ve etiketler şifreli kalır, ancak e-posta adresiniz, sunucu adresi, ek adları ve tarihler şifrelenmez."
+  change_keeps_key: "Şifreleme anahtarınız değişmez: eski yedekler eski parolayla açılmaya devam eder."
 menu:
   notes: Notlar
   new_note: Yeni not
@@ -89,6 +90,12 @@ note:
   bin_emptied: "%{count} not kalıcı olarak silindi"
   locked_cannot_archive: "Kilitli not arşivlenemez"
   unreadable: "Bu kasadaki %{count} not okunamıyor"
+  duplicated: "Not çoğaltıldı"
+  copied: "Panoya kopyalandı"
+  copy_too_large: "Bu not, terminalin güvenilir biçimde kopyalaması için çok uzun"
+  word_wrap_on: "Sözcük kaydırma açık"
+  word_wrap_off: "Sözcük kaydırma kapalı"
+  no_links: "Ekranda bağlantı yok"
 archive:
   view: "Arşivi görüntüle"
   title: "Arşiv"
@@ -179,6 +186,7 @@ settings:
   disabled: devre dışı
   sort_order: "Sıralama"
   language_auto: "Sistemle aynı"
+  default_note_type: "Varsayılan not türü"
 sync:
   push: Sunucuya gönder
   pull: Sunucudan çek
@@ -235,6 +243,8 @@ sync:
   device_still_registered: "Burada bağlantı kesildi, ancak sunucuya bildirilemedi, bu yüzden bu cihazın anahtarı hâlâ çalışıyor. Kullanıcı portalından iptal edin."
 
 # Gelen Kutusu
+  stopped_unexpectedly: "Eşitleme beklenmedik şekilde durdu. Hiçbir şey kaybolmadı, yeniden denenecek."
+  clock_ahead: "Bu cihazın saati yanlış olabilir: bazı değişikliklerin tarihi sunucudan bir günden fazla ileride olduğu için gönderilmedi. Saat düzeltildiğinde gönderilecekler."
 inbox:
   title: "Gelen Kutusu"
   empty: "Gelen kutusu boş. Gelen Kutusu API'si üzerinden gönderilen notlar burada görünecek."
@@ -348,7 +358,6 @@ help:
   attachments: EKLER
   global: GENEL
   press_esc_or_enter: Kapatmak için Esc veya Enter tuşuna basın
-  press_enter_paste: Yapıştırmak için Enter | İptal etmek için Esc
   tab_switch: "Tab: alanları değiştir | Enter: oluştur"
   enter_unlock: "Enter: kilidi aç | Ctrl+Q: çık"
   type_password_key: Yaz
@@ -527,6 +536,21 @@ help:
   multi_remove_tags_desc: "Seçili notlardan etiket kaldır"
   multi_colour_key: "C"
   multi_colour_desc: "Seçili notların rengini ayarla"
+  g_saved_key: "g"
+  g_saved_desc: "Kayıtlı aramalar"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "Bu aramayı kaydet"
+  enter_confirm_esc_cancel: "Enter: onayla | Esc: iptal"
+  D_duplicate_key: "Shift+D"
+  D_duplicate_desc: "Notu çoğalt"
+  o_copy_key: "o"
+  o_copy_desc: "Not metnini panoya kopyala"
+  w_wrap_key: "w"
+  w_wrap_desc: "Sözcük kaydırmayı aç veya kapat"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "Önceki ve sonraki aramalar"
+  l_link_key: "l, Enter"
+  l_link_desc: "Bağlantılar arasında gez ve birini aç"
 cli:
   # Eski (bazı yerlerde kullanılıyor)
   list: Notları listele
@@ -605,6 +629,16 @@ cli:
   allow_insecure_http_help: "Parolanın şifresiz HTTP ile herkese açık bir sunucuya gönderilmesine izin ver"
   password_flag_deprecated: "Komut satırındaki parola ps ve kabuk geçmişinde görünür. Bunun yerine --password-stdin veya JOTTERY_PASSWORD kullanın."
   password_stdin_help: "Sormak yerine parolaları stdin'den satır satır oku"
+  reset_yes_help: "--reset bir şey silmeden önce sorma"
+  reset_confirm: "Bu işlem %{path} dosyasını ve hatırlanan parolayı kalıcı olarak siler. Devam etmek için %{word} yazın:"
+  reset_cancelled: "Hiçbir şey silinmedi"
+  reset_done: "Kasa ve hatırlanan parola silindi"
+  reset_keychain_failed: "Parola anahtar zincirinden kaldırılamadı"
+  export_force_help: "Dosya zaten varsa değiştir"
+  account_about: "Sunucunun hesabınız için tuttuklarını görün veya silin"
+  colours_about: "Renklere ad verin ve etiketlere renk atayın"
+  doctor_about: "Kasada açılmayan notları ve eksik ekleri denetle"
+  doctor_repair_help: "Eksik ekleri sunucudan al"
 status:
   locked: Kilitli
   unlocked: Kilitsiz
@@ -633,6 +667,8 @@ bulk:
   colour_of: "%{count} notun rengini ayarla"
   colour_set: "%{count} notun rengi değişti"
   unknown_colour: "%{colour} adında bir renk yok"
+  overwrite_title: "Bu dosya değiştirilsin mi?"
+  overwrite_message: "%{path} zaten var. Değiştirme işlemi geri alınamaz."
 time:
   just_now: az önce
   minutes_ago: "%{count} dakika önce"
@@ -768,3 +804,44 @@ envelope:
   password_changed_elsewhere: "Not parolanız başka bir cihazda değiştirildi, bu yüzden hiçbir şeyin üzerine yazılmadı. Bu cihazın kilidi hâlâ eski parolayla açılıyor. Yeni cihazların bağlanabilmesi için parolayı burada da değiştirin."
   server_update_pending: "Parolanız bu cihazda değişti, ancak anahtarınızın sunucudaki kopyası güncellenemedi. Jottery yeniden deneyecek. O zamana kadar yeni bir cihaz yeni parolayla bağlanamaz."
   key_keeps_changing: "Hesabın anahtarı sunucuda sürekli değişiyor, bu yüzden bu cihaz ona dokunmadı. Birazdan yeniden deneyin."
+
+saved_search:
+  title: "Kayıtlı aramalar"
+  empty: "Henüz kayıtlı arama yok. / ile arayın, ardından kaydetmek için Ctrl+S tuşuna basın."
+  name_prompt: "Bu aramaya bir ad verin"
+  nothing_to_save: "Önce bir arama yazın"
+  saved: "Arama kaydedildi: %{name}"
+  deleted: "Kayıtlı arama silindi"
+  delete_confirm: "'%{name}' tüm cihazlarda silinsin mi? (y/n)"
+  not_found: "%{name} adında kayıtlı arama yok"
+  failed: "Kayıtlı arama başarısız: %{error}"
+
+export:
+  file_exists: "Bu dosya zaten var. Başka bir ad seçin ya da değiştirmek için --force kullanın."
+
+account:
+  email: "Hesap: %{email}"
+  usage: "Notlar: %{notes}, ekler: %{attachments}"
+  storage: "Depolama: %{used} MB / %{quota} MB"
+  last_sync: "Son eşitleme: %{time}"
+  confirm_delete_notes: "Bu işlem sunucudaki tüm notları tüm cihazlar için siler ve geri alınamaz. Devam etmek için e-posta adresinizi yazın:"
+  confirm_delete: "Bu işlem hesabınızı ve sunucudaki her şeyi siler ve geri alınamaz. Bu cihaz notlarını korur. Devam etmek için e-posta adresinizi yazın:"
+  cancelled: "Hiçbir şey silinmedi"
+  notes_deleted: "Sunucudaki tüm notlar silindi"
+  deleted: "Hesap silindi"
+
+colours:
+  unknown: "%{colour} adında renk yok"
+  named: "Renk güncellendi: %{colour}"
+  tag_set: "Etiket güncellendi: %{tag}"
+
+doctor:
+  notes: "Notlar: %{count}, okunamayan: %{unreadable}"
+  versions: "Sürümler: %{count}, okunamayan: %{unreadable}"
+  attachments: "Ekler: %{count}, okunamayan: %{unreadable}, eksik: %{missing}"
+  saved_searches: "Kayıtlı aramalar: %{count}, okunamayan: %{unreadable}"
+  conflicts: "Sizi bekleyen çakışmalar: %{count}"
+  problems: "Bulunan sorunlar: %{count}"
+  repaired: "Alınan ekler: %{count}"
+  repair_needs_sync: "Bu kasa bir sunucuya bağlı değil, bu yüzden eksik ekler alınamıyor"
+  healthy: "Sorun bulunamadı"

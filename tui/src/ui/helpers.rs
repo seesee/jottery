@@ -11,6 +11,117 @@ use chrono::{DateTime, Local, TimeZone};
 use ratatui::text::Line;
 use unicode_width::UnicodeWidthStr;
 
+/// The longest `[[reference]]` looked at, so an unclosed run of brackets can't make each
+/// one scan the whole note. The web app has the same limit.
+const MAX_WIKI_LINK_CHARS: usize = 500;
+
+/// Turn `[[Title]]`, `[[id]]` and `[[reference|Text]]` into note links, as the web app
+/// does. `find` takes a reference and returns the note's id and title. One that finds
+/// nothing stays as it was typed, and code, fenced or inline, is left alone.
+pub fn resolve_wiki_links<'a>(
+    content: &'a str,
+    find: &dyn Fn(&str) -> Option<(String, String)>,
+) -> std::borrow::Cow<'a, str> {
+    if !content.contains("[[") {
+        return std::borrow::Cow::Borrowed(content);
+    }
+
+    let mut resolved = String::with_capacity(content.len());
+    let mut in_fence = false;
+
+    for line in content.split_inclusive('\n') {
+        if line.trim_start().starts_with("```") {
+            in_fence = !in_fence;
+        }
+
+        if in_fence {
+            resolved.push_str(line);
+        } else {
+            resolve_wiki_links_in_line(line, find, &mut resolved);
+        }
+    }
+
+    std::borrow::Cow::Owned(resolved)
+}
+
+fn resolve_wiki_links_in_line(line: &str, find: &dyn Fn(&str) -> Option<(String, String)>, resolved: &mut String) {
+    let mut rest = line;
+    let mut in_code = false;
+
+    while let Some(position) = rest.find(['`', '[']) {
+        let (before, from_here) = rest.split_at(position);
+        resolved.push_str(before);
+
+        if from_here.starts_with('`') {
+            in_code = !in_code;
+            resolved.push('`');
+            rest = &from_here[1..];
+            continue;
+        }
+
+        let link = (!in_code)
+            .then(|| from_here.strip_prefix("[["))
+            .flatten()
+            .and_then(|inner| inner.find("]]").map(|end| &inner[..end]))
+            .filter(|inner| !inner.is_empty() && inner.chars().count() <= MAX_WIKI_LINK_CHARS && !inner.contains(']'));
+
+        let replacement = link.and_then(|inner| {
+            let (reference, text) = match inner.split_once('|') {
+                Some((reference, text)) => (reference.trim(), Some(text.trim())),
+                None => (inner.trim(), None),
+            };
+            let (id, title) = find(reference)?;
+            Some((format!("[{}](link:{id})", text.unwrap_or(&title)), inner.len() + 4))
+        });
+
+        match replacement {
+            Some((text, consumed)) => {
+                resolved.push_str(&text);
+                rest = &from_here[consumed..];
+            }
+            None => {
+                resolved.push('[');
+                rest = &from_here[1..];
+            }
+        }
+    }
+
+    resolved.push_str(rest);
+}
+
+/// Columns between tab stops in a preview.
+const TAB_WIDTH: usize = 4;
+
+/// Replace tabs with the spaces that reach the next tab stop, because a terminal widget
+/// drops them, and tab-indented text would lose its columns.
+pub fn expand_tabs(text: &str) -> std::borrow::Cow<'_, str> {
+    if !text.contains('\t') {
+        return std::borrow::Cow::Borrowed(text);
+    }
+
+    let mut expanded = String::with_capacity(text.len() + TAB_WIDTH);
+    let mut column = 0;
+    for character in text.chars() {
+        match character {
+            '\t' => {
+                let spaces = TAB_WIDTH - column % TAB_WIDTH;
+                expanded.extend(std::iter::repeat_n(' ', spaces));
+                column += spaces;
+            }
+            '\n' => {
+                expanded.push(character);
+                column = 0;
+            }
+            _ => {
+                expanded.push(character);
+                column += 1;
+            }
+        }
+    }
+
+    std::borrow::Cow::Owned(expanded)
+}
+
 /// Get the current locale as a string reference for matching.
 fn get_locale() -> String {
     rust_i18n::locale().to_string()
@@ -757,5 +868,52 @@ mod tests {
     #[test]
     fn a_link_to_a_short_id_does_not_panic() {
         assert_eq!(render_links("[](link:ab)").note_links.len(), 1);
+    }
+
+    #[test]
+    fn tabs_reach_the_next_stop_from_wherever_they_are() {
+        assert_eq!(expand_tabs("\tindented"), "    indented");
+        assert_eq!(expand_tabs("ab\tc"), "ab  c");
+        assert_eq!(expand_tabs("abcd\te"), "abcd    e");
+        assert_eq!(expand_tabs("a\n\tb"), "a\n    b");
+    }
+
+    #[test]
+    fn text_without_tabs_is_left_as_it_is() {
+        assert!(matches!(expand_tabs("plain"), std::borrow::Cow::Borrowed("plain")));
+    }
+
+    fn find_project_plan(reference: &str) -> Option<(String, String)> {
+        ["Project Plan", "note-id"].iter().any(|known| known.eq_ignore_ascii_case(reference))
+            .then(|| ("note-id".to_string(), "Project Plan".to_string()))
+    }
+
+    #[test]
+    fn a_wiki_link_finds_its_note_by_title_or_id() {
+        assert_eq!(resolve_wiki_links("See [[project plan]].", &find_project_plan), "See [Project Plan](link:note-id).");
+        assert_eq!(resolve_wiki_links("See [[note-id]]", &find_project_plan), "See [Project Plan](link:note-id)");
+    }
+
+    #[test]
+    fn a_wiki_link_can_say_what_it_shows() {
+        assert_eq!(resolve_wiki_links("[[note-id|the plan]]", &find_project_plan), "[the plan](link:note-id)");
+    }
+
+    #[test]
+    fn a_wiki_link_to_nothing_stays_as_typed() {
+        assert_eq!(resolve_wiki_links("[[No Such Note]]", &find_project_plan), "[[No Such Note]]");
+    }
+
+    #[test]
+    fn code_is_left_alone() {
+        let fenced = "```\n[[Project Plan]]\n```\n";
+        assert_eq!(resolve_wiki_links(fenced, &find_project_plan), fenced);
+        assert_eq!(resolve_wiki_links("`[[Project Plan]]`", &find_project_plan), "`[[Project Plan]]`");
+    }
+
+    #[test]
+    fn an_unclosed_run_of_brackets_is_just_text() {
+        let text = "[[".repeat(2000);
+        assert_eq!(resolve_wiki_links(&text, &find_project_plan), text);
     }
 }

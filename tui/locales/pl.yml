@@ -50,6 +50,7 @@ password:
   same_as_account: "Użyj różnych haseł. Serwer widzi hasło konta, więc nie może ono również otwierać notatek."
   same_as_account_warning: "Hasło konta jest takie samo jak hasło notatek, więc serwer mógłby je odczytać. Zmień hasło notatek w Ustawieniach."
   no_file_encryption: "Ta kompilacja nie szyfruje pliku bazy danych. Notatki i tagi pozostają zaszyfrowane, ale adres e-mail, adres serwera, nazwy załączników i daty już nie."
+  change_keeps_key: "Klucz szyfrowania się nie zmienia: stare kopie zapasowe nadal otworzysz starym hasłem."
 menu:
   notes: Notatki
   new_note: Nowa notatka
@@ -89,6 +90,12 @@ note:
   bin_emptied: "Trwale usunięte notatki: %{count}"
   locked_cannot_archive: "Nie można zarchiwizować zablokowanej notatki"
   unreadable: "Nie można odczytać notatek w tym sejfie: %{count}"
+  duplicated: "Zduplikowano notatkę"
+  copied: "Skopiowano do schowka"
+  copy_too_large: "Ta notatka jest zbyt długa, by terminal mógł ją niezawodnie skopiować"
+  word_wrap_on: "Zawijanie wierszy włączone"
+  word_wrap_off: "Zawijanie wierszy wyłączone"
+  no_links: "Brak linków na ekranie"
 archive:
   view: "Wyświetl archiwum"
   title: "Archiwum"
@@ -179,6 +186,7 @@ settings:
   disabled: wyłączone
   sort_order: "Sortowanie"
   language_auto: "Jak w systemie"
+  default_note_type: "Domyślny typ notatki"
 sync:
   push: Wyślij na serwer
   pull: Pobierz z serwera
@@ -235,6 +243,8 @@ sync:
   device_still_registered: "Odłączono tutaj, ale nie udało się powiadomić serwera, więc klucz tego urządzenia nadal działa. Unieważnij go w portalu użytkownika."
 
 # Skrzynka odbiorcza
+  stopped_unexpectedly: "Synchronizacja nieoczekiwanie się zatrzymała. Nic nie zostało utracone, a próba zostanie ponowiona."
+  clock_ahead: "Zegar tego urządzenia może być nieprawidłowy: niektóre zmiany mają datę o ponad dzień późniejszą niż serwer, więc nie zostały wysłane. Zostaną wysłane, gdy zegar będzie poprawny."
 inbox:
   title: "Skrzynka odbiorcza"
   empty: "Skrzynka odbiorcza jest pusta. Notatki przesłane przez API skrzynki odbiorczej pojawią się tutaj."
@@ -348,7 +358,6 @@ help:
   attachments: ZAŁĄCZNIKI
   global: GLOBALNE
   press_esc_or_enter: Naciśnij Esc lub Enter, aby zamknąć
-  press_enter_paste: Naciśnij Enter, aby wkleić | Esc, aby anulować
   tab_switch: "Tab: przełącz pola | Enter: utwórz"
   enter_unlock: "Enter: odblokuj | Ctrl+Q: wyjdź"
   type_password_key: Wpisz
@@ -527,6 +536,21 @@ help:
   multi_remove_tags_desc: "Usuń tagi z wybranych notatek"
   multi_colour_key: "C"
   multi_colour_desc: "Ustaw kolor wybranych notatek"
+  g_saved_key: "g"
+  g_saved_desc: "Zapisane wyszukiwania"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "Zapisz to wyszukiwanie"
+  enter_confirm_esc_cancel: "Enter: potwierdź | Esc: anuluj"
+  D_duplicate_key: "Shift+D"
+  D_duplicate_desc: "Duplikuj notatkę"
+  o_copy_key: "o"
+  o_copy_desc: "Kopiuj tekst notatki do schowka"
+  w_wrap_key: "w"
+  w_wrap_desc: "Włącz lub wyłącz zawijanie wierszy"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "Wcześniejsze i późniejsze wyszukiwania"
+  l_link_key: "l, Enter"
+  l_link_desc: "Przechodź przez linki i otwórz jeden"
 cli:
   # Alternatywne (używane w niektórych miejscach)
   list: Wyświetl notatki
@@ -605,6 +629,16 @@ cli:
   allow_insecure_http_help: "Zezwól na wysłanie hasła przez niezaszyfrowane HTTP do publicznego hosta"
   password_flag_deprecated: "Hasło w wierszu poleceń jest widoczne w ps i historii powłoki. Użyj zamiast tego --password-stdin lub JOTTERY_PASSWORD."
   password_stdin_help: "Czytaj hasła ze stdin, po jednym w wierszu, zamiast pytać"
+  reset_yes_help: "Nie pytaj, zanim --reset cokolwiek usunie"
+  reset_confirm: "Spowoduje to trwałe usunięcie %{path} i zapamiętanego hasła. Wpisz %{word}, aby kontynuować:"
+  reset_cancelled: "Nic nie zostało usunięte"
+  reset_done: "Usunięto sejf i zapamiętane hasło"
+  reset_keychain_failed: "Nie udało się usunąć hasła z pęku kluczy"
+  export_force_help: "Zastąp plik, jeśli już istnieje"
+  account_about: "Zobacz lub usuń to, co serwer przechowuje dla Twojego konta"
+  colours_about: "Nazywaj kolory i przypisuj kolory do tagów"
+  doctor_about: "Sprawdź sejf pod kątem notatek, których nie da się otworzyć, i brakujących załączników"
+  doctor_repair_help: "Pobierz brakujące załączniki z serwera"
 status:
   locked: Zablokowane
   unlocked: Odblokowane
@@ -633,6 +667,8 @@ bulk:
   colour_of: "Ustaw kolor notatek (%{count})"
   colour_set: "Zmieniono kolor notatek: %{count}"
   unknown_colour: "Nie ma koloru o nazwie %{colour}"
+  overwrite_title: "Zastąpić ten plik?"
+  overwrite_message: "%{path} już istnieje. Zastąpienia nie można cofnąć."
 time:
   just_now: przed chwilą
   minutes_ago: "%{count} minut temu"
@@ -768,3 +804,44 @@ envelope:
   password_changed_elsewhere: "Hasło do notatek zmieniono na innym urządzeniu, więc niczego nie nadpisano. To urządzenie nadal odblokowuje się starym hasłem. Zmień je tutaj, aby mogły dołączać nowe urządzenia."
   server_update_pending: "Hasło zmieniono na tym urządzeniu, ale nie udało się zaktualizować kopii klucza na serwerze. Jottery spróbuje ponownie. Do tego czasu nowe urządzenie nie dołączy z nowym hasłem."
   key_keeps_changing: "Klucz konta ciągle zmienia się na serwerze, więc to urządzenie go nie ruszyło. Spróbuj ponownie za chwilę."
+
+saved_search:
+  title: "Zapisane wyszukiwania"
+  empty: "Brak zapisanych wyszukiwań. Wyszukaj za pomocą /, a następnie naciśnij Ctrl+S, aby zapisać."
+  name_prompt: "Nazwij to wyszukiwanie"
+  nothing_to_save: "Najpierw wpisz wyszukiwanie"
+  saved: "Zapisano wyszukiwanie: %{name}"
+  deleted: "Usunięto zapisane wyszukiwanie"
+  delete_confirm: "Usunąć '%{name}' na wszystkich urządzeniach? (y/n)"
+  not_found: "Brak zapisanego wyszukiwania o nazwie %{name}"
+  failed: "Błąd zapisanego wyszukiwania: %{error}"
+
+export:
+  file_exists: "Ten plik już istnieje. Wybierz inną nazwę lub użyj --force, aby go zastąpić."
+
+account:
+  email: "Konto: %{email}"
+  usage: "Notatki: %{notes}, załączniki: %{attachments}"
+  storage: "Miejsce: %{used} MB z %{quota} MB"
+  last_sync: "Ostatnia synchronizacja: %{time}"
+  confirm_delete_notes: "Spowoduje to usunięcie wszystkich notatek na serwerze, dla wszystkich urządzeń, i nie można tego cofnąć. Wpisz swój adres e-mail, aby kontynuować:"
+  confirm_delete: "Spowoduje to usunięcie konta i wszystkiego na serwerze, i nie można tego cofnąć. To urządzenie zachowa swoje notatki. Wpisz swój adres e-mail, aby kontynuować:"
+  cancelled: "Nic nie zostało usunięte"
+  notes_deleted: "Usunięto wszystkie notatki na serwerze"
+  deleted: "Konto zostało usunięte"
+
+colours:
+  unknown: "Brak koloru o nazwie %{colour}"
+  named: "Zaktualizowano kolor: %{colour}"
+  tag_set: "Zaktualizowano tag: %{tag}"
+
+doctor:
+  notes: "Notatki: %{count}, nieczytelne: %{unreadable}"
+  versions: "Wersje: %{count}, nieczytelne: %{unreadable}"
+  attachments: "Załączniki: %{count}, nieczytelne: %{unreadable}, brakujące: %{missing}"
+  saved_searches: "Zapisane wyszukiwania: %{count}, nieczytelne: %{unreadable}"
+  conflicts: "Konflikty czekające na Ciebie: %{count}"
+  problems: "Znalezione problemy: %{count}"
+  repaired: "Pobrane załączniki: %{count}"
+  repair_needs_sync: "Ten sejf nie jest połączony z serwerem, więc nie można pobrać brakujących załączników"
+  healthy: "Nie znaleziono problemów"

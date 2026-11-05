@@ -18,6 +18,7 @@ pub mod external;
 pub mod inbox;
 pub mod notes;
 pub mod pager;
+pub mod saved_searches;
 pub mod attachments;
 pub mod settings;
 pub mod sync;

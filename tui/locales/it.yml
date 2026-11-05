@@ -50,6 +50,7 @@ password:
   same_as_account: "Usa password diverse. Il server vede la password dell'account, quindi non deve aprire anche le note."
   same_as_account_warning: "La password dell'account è uguale a quella delle note, quindi il server potrebbe leggerle. Cambia la password delle note nelle Impostazioni."
   no_file_encryption: "Questa build non cifra il file del database. Note e tag restano cifrati, ma non l'email, l'indirizzo del server, i nomi degli allegati e le date."
+  change_keeps_key: "La chiave di cifratura non cambia: i vecchi backup si aprono ancora con la vecchia password."
 menu:
   notes: Note
   new_note: Nuova nota
@@ -89,6 +90,12 @@ note:
   bin_emptied: "%{count} note eliminate definitivamente"
   locked_cannot_archive: "Impossibile archiviare una nota bloccata"
   unreadable: "%{count} note di questo archivio non sono leggibili"
+  duplicated: "Nota duplicata"
+  copied: "Copiato negli appunti"
+  copy_too_large: "Questa nota è troppo lunga perché un terminale la copi in modo affidabile"
+  word_wrap_on: "A capo automatico attivo"
+  word_wrap_off: "A capo automatico disattivo"
+  no_links: "Nessun link sullo schermo"
 archive:
   view: "Visualizza archivio"
   title: "Archivio"
@@ -179,6 +186,7 @@ settings:
   disabled: disabilitato
   sort_order: "Ordinamento"
   language_auto: "Come il sistema"
+  default_note_type: "Tipo di nota predefinito"
 sync:
   push: Invia al server
   pull: Ricevi dal server
@@ -235,6 +243,8 @@ sync:
   device_still_registered: "Disconnesso qui, ma non è stato possibile avvisare il server, quindi la chiave di questo dispositivo funziona ancora. Revocala nel portale utente."
 
 # Posta in arrivo
+  stopped_unexpectedly: "La sincronizzazione si è interrotta inaspettatamente. Non è andato perso nulla e verrà ritentata."
+  clock_ahead: "L'orologio di questo dispositivo potrebbe essere sbagliato: alcune modifiche hanno una data di oltre un giorno successiva a quella del server e non sono state inviate. Verranno inviate quando l'orologio sarà corretto."
 inbox:
   title: "Posta in arrivo"
   empty: "La posta in arrivo è vuota. Le note inviate tramite l'API Inbox appariranno qui."
@@ -348,7 +358,6 @@ help:
   attachments: ALLEGATI
   global: GLOBALE
   press_esc_or_enter: Premi Esc o Invio per chiudere
-  press_enter_paste: Premi Invio per incollare | Esc per annullare
   tab_switch: "Tab: cambia campi | Invio: crea"
   enter_unlock: "Invio: sblocca | Ctrl+Q: esci"
   type_password_key: Digita
@@ -527,6 +536,21 @@ help:
   multi_remove_tags_desc: "Rimuovi tag dalle note selezionate"
   multi_colour_key: "C"
   multi_colour_desc: "Imposta il colore delle note selezionate"
+  g_saved_key: "g"
+  g_saved_desc: "Ricerche salvate"
+  ctrl_s_save_search_key: "Ctrl+S"
+  ctrl_s_save_search_desc: "Salva questa ricerca"
+  enter_confirm_esc_cancel: "Invio: conferma | Esc: annulla"
+  D_duplicate_key: "Maiusc+D"
+  D_duplicate_desc: "Duplica nota"
+  o_copy_key: "o"
+  o_copy_desc: "Copia il testo della nota negli appunti"
+  w_wrap_key: "w"
+  w_wrap_desc: "Attiva o disattiva l'a capo automatico"
+  ctrl_p_history_key: "Ctrl+P/N"
+  ctrl_p_history_desc: "Ricerche precedenti e successive"
+  l_link_key: "l, Invio"
+  l_link_desc: "Scorri i link e seguine uno"
 cli:
   # Alt (usato in alcuni contesti)
   list: Elenca note
@@ -605,6 +629,16 @@ cli:
   allow_insecure_http_help: "Consenti l'invio di una password via HTTP non cifrato a un host pubblico"
   password_flag_deprecated: "Una password sulla riga di comando è visibile in ps e nella cronologia della shell. Usa invece --password-stdin o JOTTERY_PASSWORD."
   password_stdin_help: "Leggi le password da stdin, una per riga, invece di chiederle"
+  reset_yes_help: "Non chiedere conferma prima che --reset elimini qualcosa"
+  reset_confirm: "Questo elimina definitivamente %{path} e l'eventuale password memorizzata. Digita %{word} per procedere:"
+  reset_cancelled: "Non è stato eliminato nulla"
+  reset_done: "Archivio e password memorizzata eliminati"
+  reset_keychain_failed: "Impossibile rimuovere la password dal portachiavi"
+  export_force_help: "Sostituisci il file se esiste già"
+  account_about: "Vedi o elimina ciò che il server conserva per il tuo account"
+  colours_about: "Assegna nomi ai colori e un colore ai tag"
+  doctor_about: "Controlla l'archivio per note non leggibili e allegati mancanti"
+  doctor_repair_help: "Recupera dal server gli allegati mancanti"
 status:
   locked: Bloccato
   unlocked: Sbloccato
@@ -633,6 +667,8 @@ bulk:
   colour_of: "Imposta il colore di %{count} note"
   colour_set: "Colore cambiato su %{count} note"
   unknown_colour: "Non esiste un colore chiamato %{colour}"
+  overwrite_title: "Sostituire questo file?"
+  overwrite_message: "%{path} esiste già. La sostituzione non può essere annullata."
 time:
   just_now: proprio ora
   minutes_ago: "%{count} minuti fa"
@@ -768,3 +804,44 @@ envelope:
   password_changed_elsewhere: "La password delle note è stata cambiata su un altro dispositivo, quindi non è stato sovrascritto nulla. Questo dispositivo si sblocca ancora con la vecchia password. Cambiala anche qui perché nuovi dispositivi possano collegarsi."
   server_update_pending: "La password è stata cambiata su questo dispositivo, ma non è stato possibile aggiornare la copia della chiave sul server. Jottery riproverà. Fino ad allora, un nuovo dispositivo non potrà collegarsi con la nuova password."
   key_keeps_changing: "La chiave dell'account continua a cambiare sul server, quindi questo dispositivo non l'ha toccata. Riprova tra poco."
+
+saved_search:
+  title: "Ricerche salvate"
+  empty: "Nessuna ricerca salvata. Cerca con /, poi premi Ctrl+S per salvarla."
+  name_prompt: "Assegna un nome a questa ricerca"
+  nothing_to_save: "Digita prima una ricerca"
+  saved: "Ricerca salvata: %{name}"
+  deleted: "Ricerca salvata eliminata"
+  delete_confirm: "Eliminare '%{name}' su tutti i dispositivi? (y/n)"
+  not_found: "Nessuna ricerca salvata chiamata %{name}"
+  failed: "Ricerca salvata non riuscita: %{error}"
+
+export:
+  file_exists: "Il file esiste già. Scegli un altro nome oppure usa --force per sostituirlo."
+
+account:
+  email: "Account: %{email}"
+  usage: "Note: %{notes}, allegati: %{attachments}"
+  storage: "Spazio: %{used} MB su %{quota} MB"
+  last_sync: "Ultima sincronizzazione: %{time}"
+  confirm_delete_notes: "Questo elimina tutte le note sul server, per tutti i dispositivi, e non può essere annullato. Digita il tuo indirizzo email per procedere:"
+  confirm_delete: "Questo elimina il tuo account e tutto ciò che si trova sul server, e non può essere annullato. Questo dispositivo conserva le sue note. Digita il tuo indirizzo email per procedere:"
+  cancelled: "Non è stato eliminato nulla"
+  notes_deleted: "Tutte le note sul server sono state eliminate"
+  deleted: "L'account è stato eliminato"
+
+colours:
+  unknown: "Nessun colore chiamato %{colour}"
+  named: "Colore aggiornato: %{colour}"
+  tag_set: "Tag aggiornato: %{tag}"
+
+doctor:
+  notes: "Note: %{count}, illeggibili: %{unreadable}"
+  versions: "Versioni: %{count}, illeggibili: %{unreadable}"
+  attachments: "Allegati: %{count}, illeggibili: %{unreadable}, mancanti: %{missing}"
+  saved_searches: "Ricerche salvate: %{count}, illeggibili: %{unreadable}"
+  conflicts: "Conflitti in attesa: %{count}"
+  problems: "Problemi trovati: %{count}"
+  repaired: "Allegati recuperati: %{count}"
+  repair_needs_sync: "Questo archivio non è collegato a un server, quindi gli allegati mancanti non possono essere recuperati"
+  healthy: "Nessun problema trovato"

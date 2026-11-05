@@ -99,12 +99,21 @@ fn key_for_password(
     }
 }
 
-/// Whether `key` opens what's in the vault.
+/// What a vault's contents say about a key.
+#[derive(Debug, PartialEq, Eq)]
+enum ContentsCheck {
+    Opens,
+    Refuses,
+    /// Nothing here is encrypted, so any key would do
+    NothingToTry,
+}
+
+/// Try `key` on what's in the vault.
 ///
 /// A legacy vault stores no verifier, as its key comes straight from the password,
 /// so the only test is its contents. One readable row is enough, since a vault can
-/// hold a row that's damaged. An empty vault has nothing to get wrong.
-fn key_opens_contents(conn: &Connection, crypto: &CryptoService, key: &[u8; 32]) -> Result<bool> {
+/// hold a row that's damaged.
+fn check_contents(conn: &Connection, crypto: &CryptoService, key: &[u8; 32]) -> Result<ContentsCheck> {
     let opens = |stored: &str| {
         serde_json::from_str::<EncryptedData>(stored)
             .is_ok_and(|encrypted| crypto.decrypt_text(&encrypted, key).is_ok())
@@ -116,19 +125,21 @@ fn key_opens_contents(conn: &Connection, crypto: &CryptoService, key: &[u8; 32])
     while let Some(row) = rows.next()? {
         has_notes = true;
         if opens(&row.get::<_, String>(0)?) {
-            return Ok(true);
+            return Ok(ContentsCheck::Opens);
         }
     }
     if has_notes {
-        return Ok(false);
+        return Ok(ContentsCheck::Refuses);
     }
 
     // No notes, but a stored API key is encrypted with the same key. The prefixed
     // forms are credentials waiting to be processed, which aren't under this key.
     let api_key = SyncRepository::new(conn).get_metadata()?.and_then(|metadata| metadata.api_key);
     Ok(match api_key {
-        Some(api_key) if serde_json::from_str::<EncryptedData>(&api_key).is_ok() => opens(&api_key),
-        _ => true,
+        Some(api_key) if serde_json::from_str::<EncryptedData>(&api_key).is_ok() => {
+            if opens(&api_key) { ContentsCheck::Opens } else { ContentsCheck::Refuses }
+        }
+        _ => ContentsCheck::NothingToTry,
     })
 }
 
@@ -151,11 +162,32 @@ pub fn unlock(conn: &Connection, crypto: &CryptoService, password: &str) -> Resu
 
     let key = key_for_password(crypto, &metadata, password)?;
 
-    if metadata.envelope_version.is_none() && !key_opens_contents(conn, crypto, &key)? {
-        return Err(WrongPassword.into());
+    if metadata.envelope_version.is_some() {
+        return Ok(key);
     }
 
-    Ok(key)
+    match check_contents(conn, crypto, &key)? {
+        ContentsCheck::Refuses => Err(WrongPassword.into()),
+        ContentsCheck::Opens => {
+            upgrade_legacy_vault(conn, crypto, password, &key);
+            Ok(key)
+        }
+        // Any password opens an empty legacy vault, so this one proves nothing, and
+        // making it the vault's password could lock its owner out
+        ContentsCheck::NothingToTry => Ok(key),
+    }
+}
+
+/// Wrap a legacy vault's key now the password is known to be right.
+///
+/// Its key stays, so nothing needs re-encrypting and every backup still opens. The salt
+/// goes, so the file no longer offers a way to test passwords at the old iteration count,
+/// and a wrong password can be told from a right one even if the vault is ever empty.
+/// A vault that can't be upgraded still opens, and tries again next time.
+fn upgrade_legacy_vault(conn: &Connection, crypto: &CryptoService, password: &str, key: &[u8; 32]) {
+    if let Err(e) = store_local_envelope(conn, crypto, password, key) {
+        tracing::warn!("Could not upgrade this vault's key wrapping: {e}");
+    }
 }
 
 /// Whether `password` is the password of the open vault whose key is `key`.
@@ -233,6 +265,51 @@ mod tests {
         let crypto = CryptoService::new();
         assert_eq!(unlock(db.connection(), &crypto, &right).unwrap(), key);
         assert!(unlock(db.connection(), &crypto, &password()).is_err());
+    }
+
+    #[test]
+    fn a_legacy_vault_is_wrapped_at_the_next_unlock() {
+        let right = password();
+        let (db, key) = legacy_vault(&right);
+        let notes = NoteRepository::new(db.connection());
+        notes.create(&Note::new("Secret".to_string()), &key).unwrap();
+        let crypto = CryptoService::new();
+
+        assert_eq!(unlock(db.connection(), &crypto, &right).unwrap(), key);
+
+        let metadata = EncryptionRepository::new(db.connection()).get().unwrap().unwrap();
+        assert_eq!(metadata.envelope_version, Some(1));
+        assert_eq!(metadata.salt, None);
+        assert_eq!(metadata.iterations, None);
+
+        // The same key, so the notes still open, and the password is still the password
+        assert_eq!(unlock(db.connection(), &crypto, &right).unwrap(), key);
+        assert_eq!(notes.list(false, &key).unwrap().len(), 1);
+        assert!(unlock(db.connection(), &crypto, &password()).is_err());
+    }
+
+    #[test]
+    fn the_wrong_password_never_upgrades_a_legacy_vault() {
+        let right = password();
+        let (db, key) = legacy_vault(&right);
+        NoteRepository::new(db.connection()).create(&Note::new("Secret".to_string()), &key).unwrap();
+
+        assert!(unlock(db.connection(), &CryptoService::new(), &password()).is_err());
+
+        let metadata = EncryptionRepository::new(db.connection()).get().unwrap().unwrap();
+        assert_eq!(metadata.envelope_version, None);
+    }
+
+    /// Any password opens an empty legacy vault. Wrapping would make a typo the password.
+    #[test]
+    fn an_empty_legacy_vault_waits_for_something_to_prove_the_password() {
+        let right = password();
+        let (db, _) = legacy_vault(&right);
+
+        unlock(db.connection(), &CryptoService::new(), &password()).unwrap();
+
+        let metadata = EncryptionRepository::new(db.connection()).get().unwrap().unwrap();
+        assert_eq!(metadata.envelope_version, None);
     }
 
     #[test]

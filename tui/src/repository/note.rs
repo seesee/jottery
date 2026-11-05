@@ -414,12 +414,46 @@ impl<'a> NoteRepository<'a> {
         )
     }
 
-    /// The server has this note. If it changed again since being read for the push,
-    /// that later change still counts as pending.
-    pub fn mark_pushed(&self, id: &str, modified_at: DateTime<Utc>, synced_at: DateTime<Utc>) -> Result<()> {
+    /// The server has this note as `pushed`. If it changed again since being read for
+    /// the push, that later change still counts as pending. A pin or a colour leaves
+    /// modified_at alone, so the hash has to match too, and nobody's hash covers deleted.
+    pub fn mark_pushed(&self, pushed: &Note, synced_at: DateTime<Utc>) -> Result<()> {
         self.conn.execute(
-            "UPDATE notes SET needs_sync = 0, synced_at = ?1 WHERE id = ?2 AND modified_at = ?3",
-            params![synced_at.to_rfc3339(), id, modified_at.to_rfc3339()],
+            "UPDATE notes SET needs_sync = 0, synced_at = ?1
+             WHERE id = ?2 AND modified_at = ?3 AND content_hash IS ?4 AND deleted = ?5",
+            params![
+                synced_at.to_rfc3339(),
+                &pushed.id,
+                pushed.modified_at.to_rfc3339(),
+                &pushed.content_hash,
+                pushed.deleted as i32,
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// The server won't take this note because it was permanently deleted after this
+    /// edit. Stop sending it, and treat it as any other deletion from the server, unless
+    /// it's changed since it was read for the push: an edit later than the deletion beats
+    /// the deletion, so that one goes on the next push.
+    pub fn hold_skipped_note(&self, pushed: &Note) -> Result<()> {
+        let unchanged = self.conn.execute(
+            "UPDATE notes SET needs_sync = 0
+             WHERE id = ?1 AND modified_at = ?2 AND content_hash IS ?3 AND deleted = ?4",
+            params![&pushed.id, pushed.modified_at.to_rfc3339(), &pushed.content_hash, pushed.deleted as i32],
+        )?;
+
+        if unchanged > 0 {
+            self.hold_deletion(&pushed.id)?;
+        }
+        Ok(())
+    }
+
+    /// Give a note from an older build its first hash, unless it's changed and got one.
+    pub fn set_first_hash(&self, id: &str, hash: &str, chain: &[String]) -> Result<()> {
+        self.conn.execute(
+            "UPDATE notes SET content_hash = ?1, hash_chain = ?2 WHERE id = ?3 AND content_hash IS NULL",
+            params![hash, serde_json::to_string(chain)?, id],
         )?;
         Ok(())
     }
@@ -515,10 +549,7 @@ impl<'a> NoteRepository<'a> {
         )?;
 
         // Then delete the notes
-        let count = self
-            .conn
-            .execute("DELETE FROM notes WHERE deleted = 1", [])?;
-        Ok(count)
+        self.remove_for_good("deleted = 1", params![])
     }
 
     /// Get pending deletions that need to be synced to server
@@ -581,6 +612,33 @@ impl<'a> NoteRepository<'a> {
         Ok(count as usize)
     }
 
+    /// Whether the user has been asked about deletions and hasn't answered yet.
+    pub fn has_unanswered_deletions(&self) -> Result<bool> {
+        Ok(self.conn.query_row(
+            "SELECT EXISTS (SELECT 1 FROM held_deletions WHERE asked = 1)",
+            [],
+            |row| row.get(0),
+        )?)
+    }
+
+    /// Note that the user is being asked about everything held. It stays held until
+    /// they answer, whatever happens to some of it in the meantime.
+    pub fn mark_held_deletions_asked(&self) -> Result<()> {
+        self.conn.execute("UPDATE held_deletions SET asked = 1", [])?;
+        Ok(())
+    }
+
+    /// How many notes have reached the bin from elsewhere since `since`, by this device's
+    /// clock. A server staying under the limit on each sync adds up here.
+    pub fn count_arrived_in_bin_since(&self, since: DateTime<Utc>) -> Result<usize> {
+        let count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM notes WHERE deleted = 1 AND remote_deleted_at >= ?1",
+            params![since.to_rfc3339()],
+            |row| row.get(0),
+        )?;
+        Ok(count as usize)
+    }
+
     /// Move held deletions into the bin, returning how many notes went there.
     ///
     /// The server's word isn't proof that one of this user's devices asked for this, so
@@ -590,7 +648,7 @@ impl<'a> NoteRepository<'a> {
         let now = Utc::now().to_rfc3339();
 
         let moved = self.conn.execute(
-            "UPDATE notes SET deleted = 1, deleted_at = COALESCE(deleted_at, ?1), needs_sync = 0
+            "UPDATE notes SET deleted = 1, deleted_at = ?1, needs_sync = 0
              WHERE deleted = 0 AND id IN (SELECT id FROM held_deletions)",
             params![now],
         )?;
@@ -618,17 +676,79 @@ impl<'a> NoteRepository<'a> {
     }
 
     /// Permanently remove notes deleted elsewhere that have been in the bin long enough.
-    /// Their versions go too, as a database without foreign keys wouldn't take them.
     pub fn purge_remote_deletions(&self, older_than: DateTime<Utc>) -> Result<usize> {
+        self.remove_for_good("remote_deleted_at < ?1", params![older_than.to_rfc3339()])
+    }
+
+    /// Permanently remove what was deleted here and has been in the bin since before
+    /// `older_than`, telling the server. The date is this device's own. A note that came
+    /// here deleted has `remote_deleted_at` instead, and doesn't get this far, because a
+    /// date from the server shouldn't be able to empty the bin.
+    pub fn purge_expired_bin(&self, older_than: DateTime<Utc>) -> Result<usize> {
+        const EXPIRED: &str = "deleted = 1 AND remote_deleted_at IS NULL AND deleted_at < ?1";
         let cutoff = older_than.to_rfc3339();
 
         self.conn.execute(
-            "DELETE FROM note_versions WHERE note_id IN (
-                SELECT id FROM notes WHERE remote_deleted_at < ?1
-             )",
-            params![&cutoff],
+            &format!(
+                "INSERT OR REPLACE INTO note_deletions (id, deleted_at, synced)
+                 SELECT id, ?2, 0 FROM notes WHERE {EXPIRED}"
+            ),
+            params![&cutoff, Utc::now().to_rfc3339()],
         )?;
-        Ok(self.conn.execute("DELETE FROM notes WHERE remote_deleted_at < ?1", params![&cutoff])?)
+
+        self.remove_for_good(EXPIRED, params![&cutoff])
+    }
+
+    /// Note that a note arrived in the bin from elsewhere, which starts its 30 days now.
+    pub fn mark_arrived_in_bin(&self, id: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE notes SET remote_deleted_at = COALESCE(remote_deleted_at, ?1) WHERE id = ?2 AND deleted = 1",
+            params![Utc::now().to_rfc3339(), id],
+        )?;
+        Ok(())
+    }
+
+    /// Remove the notes matching `condition`, and everything that only they needed: their
+    /// versions, their sync state, and any file nothing else refers to. Nothing else does
+    /// this, as the database has no foreign keys.
+    fn remove_for_good(&self, condition: &str, parameters: &[&dyn rusqlite::ToSql]) -> Result<usize> {
+        let mut stmt = self.conn.prepare(&format!("SELECT id FROM notes WHERE {condition}"))?;
+        let ids: Vec<String> = stmt.query_map(parameters, |row| row.get(0))?.collect::<rusqlite::Result<_>>()?;
+
+        let mut attachment_ids = std::collections::HashSet::new();
+        for id in &ids {
+            let mut lists = self.conn.prepare(
+                "SELECT attachments FROM notes WHERE id = ?1
+                 UNION ALL SELECT attachments FROM note_versions WHERE note_id = ?1",
+            )?;
+            for list in lists.query_map(params![id], |row| row.get::<_, String>(0))? {
+                let attachments: Vec<crate::models::Attachment> = serde_json::from_str(&list?).unwrap_or_default();
+                attachment_ids.extend(attachments.into_iter().map(|attachment| attachment.id));
+            }
+
+            self.conn.execute("DELETE FROM note_versions WHERE note_id = ?1", params![id])?;
+            self.conn.execute("DELETE FROM note_sync_metadata WHERE note_id = ?1", params![id])?;
+            self.conn.execute("DELETE FROM notes WHERE id = ?1", params![id])?;
+        }
+
+        for attachment_id in attachment_ids {
+            if !self.attachment_in_use(&attachment_id)? {
+                self.conn.execute("DELETE FROM attachments WHERE id = ?1", params![&attachment_id])?;
+            }
+        }
+
+        Ok(ids.len())
+    }
+
+    /// Whether any note or version still refers to this attachment. Notes can share one,
+    /// and restoring a version needs what it had.
+    pub fn attachment_in_use(&self, attachment_id: &str) -> Result<bool> {
+        Ok(self.conn.query_row(
+            "SELECT EXISTS (SELECT 1 FROM notes WHERE instr(attachments, ?1) > 0)
+                 OR EXISTS (SELECT 1 FROM note_versions WHERE instr(attachments, ?1) > 0)",
+            params![attachment_id],
+            |row| row.get(0),
+        )?)
     }
 
     /// Clean up old synced deletions (older than 30 days)
@@ -788,9 +908,115 @@ mod tests {
         later.touch();
         repo.update(&later, &key).unwrap();
 
-        repo.mark_pushed(&note.id, note.modified_at, Utc::now()).unwrap();
+        repo.mark_pushed(&note, Utc::now()).unwrap();
 
         assert!(repo.get(&note.id, &key).unwrap().unwrap().needs_sync);
+    }
+
+    /// A pin leaves modified_at alone, so that can't be what tells the two apart.
+    #[test]
+    fn a_pin_made_while_pushing_stays_pending() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+        repo.create(&Note::new("Sent".to_string()), &key).unwrap();
+        let sent = repo.get_pending(&key).unwrap().notes.remove(0);
+
+        let mut pinned = sent.clone();
+        pinned.pinned = true;
+        repo.update(&pinned, &key).unwrap();
+
+        repo.mark_pushed(&sent, Utc::now()).unwrap();
+
+        assert!(repo.get(&sent.id, &key).unwrap().unwrap().needs_sync);
+    }
+
+    #[test]
+    fn a_note_unchanged_since_the_push_is_no_longer_pending() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+        repo.create(&Note::new("Sent".to_string()), &key).unwrap();
+        let sent = repo.get_pending(&key).unwrap().notes.remove(0);
+
+        repo.mark_pushed(&sent, Utc::now()).unwrap();
+
+        assert!(!repo.get(&sent.id, &key).unwrap().unwrap().needs_sync);
+    }
+
+    fn binned_note(repo: &NoteRepository<'_>, key: &[u8; 32], deleted_at: DateTime<Utc>) -> Note {
+        let mut note = Note::new("In the bin".to_string());
+        note.deleted = true;
+        note.deleted_at = Some(deleted_at);
+        repo.create(&note, key).unwrap();
+        repo.store(&note, key).unwrap();
+        note
+    }
+
+    #[test]
+    fn a_note_past_its_time_in_the_bin_goes_and_the_server_hears() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+        let now = Utc::now();
+        let old = binned_note(&repo, &key, now - chrono::Duration::days(31));
+        let recent = binned_note(&repo, &key, now - chrono::Duration::days(29));
+
+        let purged = repo.purge_expired_bin(now - chrono::Duration::days(30)).unwrap();
+
+        assert_eq!(purged, 1);
+        assert!(repo.get(&old.id, &key).unwrap().is_none());
+        assert!(repo.get(&recent.id, &key).unwrap().is_some());
+        let pending: Vec<String> = repo.get_pending_deletions().unwrap().into_iter().map(|(id, _)| id).collect();
+        assert_eq!(pending, [old.id]);
+    }
+
+    /// A compromised server could date a note decades ago. That must not empty the bin.
+    #[test]
+    fn a_date_from_a_server_cannot_empty_the_bin() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+        let now = Utc::now();
+        let arrived = binned_note(&repo, &key, now - chrono::Duration::days(3650));
+        repo.mark_arrived_in_bin(&arrived.id).unwrap();
+
+        repo.purge_expired_bin(now - chrono::Duration::days(30)).unwrap();
+        repo.purge_remote_deletions(now - chrono::Duration::days(30)).unwrap();
+
+        assert!(repo.get(&arrived.id, &key).unwrap().is_some());
+        assert!(repo.get_pending_deletions().unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_note_removed_for_good_takes_its_versions_and_only_its_own_files() {
+        use crate::repository::{attachment::AttachmentRepository, NoteVersionRepository, VersionReason};
+        use crate::models::Attachment;
+
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+        let attachments = AttachmentRepository::new(db.connection());
+        let reference = |id: &str| Attachment {
+            id: id.to_string(),
+            filename: "file.txt".to_string(),
+            mime_type: "text/plain".to_string(),
+            size: 1,
+            data: id.to_string(),
+            thumbnail_data: None,
+        };
+        attachments.store("only-here", "file.txt", "text/plain", 1, b"a", &key).unwrap();
+        attachments.store("shared", "file.txt", "text/plain", 1, b"b", &key).unwrap();
+
+        let mut doomed = binned_note(&repo, &key, Utc::now() - chrono::Duration::days(31));
+        doomed.attachments = vec![reference("only-here"), reference("shared")];
+        repo.store(&doomed, &key).unwrap();
+        NoteVersionRepository::new(db.connection()).create_version(&doomed, Utc::now(), VersionReason::Sync, &key).unwrap();
+
+        let mut kept = Note::new("Keeps its file".to_string());
+        kept.attachments = vec![reference("shared")];
+        repo.create(&kept, &key).unwrap();
+
+        repo.empty_trash().unwrap();
+
+        let versions = NoteVersionRepository::new(db.connection()).get_versions_for_note(&doomed.id, &key).unwrap();
+        assert!(versions.is_empty());
+        assert_eq!(attachments.list_ids().unwrap(), ["shared"]);
     }
 
     #[test]

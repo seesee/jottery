@@ -35,6 +35,16 @@ pub struct SseHandle {
 }
 
 impl SseHandle {
+    /// A handle with these messages waiting, and no thread behind it.
+    #[cfg(test)]
+    pub fn holding(messages: Vec<SseMessage>) -> Self {
+        let (sender, receiver) = mpsc::channel();
+        for message in messages {
+            sender.send(message).unwrap();
+        }
+        Self { receiver, stop_flag: Arc::default(), thread_handle: None }
+    }
+
     /// Check for pending messages without blocking
     pub fn try_recv(&self) -> Option<SseMessage> {
         self.receiver.try_recv().ok()
@@ -81,12 +91,48 @@ pub fn start_sse_thread(config: SseConfig) -> SseHandle {
     }
 }
 
+/// How long the server gets to hand over a token.
+const TOKEN_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// An HTTP client with the same trust settings as the rest of sync.
+fn client(connect: Duration, read: Duration) -> Result<reqwest::blocking::Client, SseError> {
+    reqwest::blocking::Client::builder()
+        .connect_timeout(connect)
+        .timeout(read)
+        .build()
+        .map_err(|e| SseError::Unreachable(format!("Failed to set up the HTTP client: {e}")))
+}
+
+/// Why a connection to the event stream ended.
+#[derive(Debug, PartialEq, Eq)]
+enum SseError {
+    /// The server turned this device away when it asked for a token. Trying again won't
+    /// help, and the next sync will say why.
+    Refused(String),
+    /// The stream refused the token, which can have run out. A new one says why.
+    TokenRefused,
+    /// Never got as far as a stream
+    Unreachable(String),
+    /// A stream that was working ended
+    Lost(String),
+}
+
+impl std::fmt::Display for SseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Refused(reason) | Self::Unreachable(reason) | Self::Lost(reason) => f.write_str(reason),
+            Self::TokenRefused => f.write_str("The event stream refused its token"),
+        }
+    }
+}
+
 /// Main function for the SSE background thread
 fn sse_thread_main(config: SseConfig, sender: Sender<SseMessage>, stop_flag: Arc<AtomicBool>) {
     let mut reconnect_delay = Duration::from_secs(1);
     let max_reconnect_delay = Duration::from_secs(30);
     let mut consecutive_failures = 0;
     let max_failures = 10;
+    let mut new_token_just_tried = false;
 
     debug!("SSE thread started for endpoint: {}", config.endpoint);
 
@@ -97,16 +143,28 @@ fn sse_thread_main(config: SseConfig, sender: Sender<SseMessage>, stop_flag: Arc
                 debug!("SSE connection closed cleanly");
                 break;
             }
+            Err(SseError::Refused(reason)) => {
+                warn!("SSE refused: {reason}");
+                let _ = sender.send(SseMessage::Failed(reason));
+                break;
+            }
+            // Once at once. Asking for the token is what finds out why this happened,
+            // and a server that refuses a new token too gets the usual wait.
+            Err(SseError::TokenRefused) if !new_token_just_tried => {
+                debug!("SSE token refused, asking for a new one");
+                new_token_just_tried = true;
+            }
             Err(e) => {
                 // Only count as a failure if we never connected (immediate error).
                 // Read timeouts after a successful connection are expected and
                 // should not count towards the failure budget.
-                if e.contains("Failed to connect") || e.contains("Failed to get SSE token") {
-                    consecutive_failures += 1;
-                } else {
+                if matches!(e, SseError::Lost(_)) {
                     // Read timeout or stream end — reset failures since the connection was alive
                     consecutive_failures = 0;
                     reconnect_delay = Duration::from_secs(1);
+                    new_token_just_tried = false;
+                } else {
+                    consecutive_failures += 1;
                 }
                 warn!(
                     "SSE connection error (attempt {}/{}): {}",
@@ -148,7 +206,7 @@ fn sse_thread_main(config: SseConfig, sender: Sender<SseMessage>, stop_flag: Arc
 ///
 /// This exchanges the API key for a temporary token that can be safely used in URLs.
 /// The token expires after 5 minutes but the SSE connection will remain open.
-fn get_sse_token(endpoint: &str, api_key: &str) -> Result<String, String> {
+fn get_sse_token(endpoint: &str, api_key: &str) -> Result<String, SseError> {
     let url = format!(
         "{}/api/v1/sync/events/token",
         endpoint.trim_end_matches('/')
@@ -156,31 +214,28 @@ fn get_sse_token(endpoint: &str, api_key: &str) -> Result<String, String> {
 
     debug!("Fetching SSE token from: {}", url);
 
-    let response = ureq::get(&url)
-        .set("Authorization", &format!("Bearer {}", api_key))
-        .timeout(Duration::from_secs(10))
-        .call()
-        .map_err(|e| format!("Failed to get SSE token: {}", e))?;
+    let response = client(TOKEN_TIMEOUT, TOKEN_TIMEOUT)?
+        .get(&url)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .send()
+        .map_err(|e| SseError::Unreachable(format!("Failed to get SSE token: {}", e.without_url())))?;
 
-    if response.status() != 200 {
-        return Err(format!(
-            "Failed to get SSE token: HTTP {} {}",
-            response.status(),
-            response.status_text()
-        ));
+    let status = response.status();
+    if matches!(status.as_u16(), 401 | 403) {
+        return Err(SseError::Refused(format!("Failed to get SSE token: HTTP {status}")));
+    }
+    if !status.is_success() {
+        return Err(SseError::Unreachable(format!("Failed to get SSE token: HTTP {status}")));
     }
 
-    let body_str = response
-        .into_string()
-        .map_err(|e| format!("Failed to read SSE token response: {}", e))?;
-
-    let body: serde_json::Value = serde_json::from_str(&body_str)
-        .map_err(|e| format!("Failed to parse SSE token response: {}", e))?;
+    let body: serde_json::Value = response
+        .json()
+        .map_err(|e| SseError::Unreachable(format!("Failed to read SSE token response: {}", e.without_url())))?;
 
     body.get("token")
         .and_then(|t| t.as_str())
         .map(String::from)
-        .ok_or_else(|| "SSE token response missing 'token' field".to_string())
+        .ok_or_else(|| SseError::Unreachable("SSE token response missing 'token' field".to_string()))
 }
 
 /// Connect to SSE endpoint and listen for events
@@ -191,7 +246,7 @@ fn connect_and_listen(
     config: &SseConfig,
     sender: &Sender<SseMessage>,
     stop_flag: &Arc<AtomicBool>,
-) -> Result<(), String> {
+) -> Result<(), SseError> {
     use std::io::{BufRead, BufReader};
 
     // First, exchange the API key for a short-lived SSE token
@@ -206,30 +261,29 @@ fn connect_and_listen(
 
     debug!("Connecting to SSE endpoint: {}", config.endpoint);
 
-    // Build an agent with appropriate timeouts for SSE:
-    // - Short connect timeout (30s) to fail fast if server is unreachable
-    // - 45s read timeout: Server sends heartbeats every 30s, so 45s allows for
-    //   some jitter while still enabling the thread to check stop flag frequently.
-    //   On timeout, the thread will reconnect (after checking stop flag).
-    let agent = ureq::AgentBuilder::new()
-        .timeout_connect(Duration::from_secs(30))
-        .timeout_read(Duration::from_secs(45))
-        .build();
-
-    let response = agent
+    // Connecting gets 30s, to fail fast if the server is unreachable. The other timeout
+    // applies to each read, and the server sends heartbeats every 30s, so 45s allows for
+    // some jitter while still letting the thread check its stop flag. On a timeout the
+    // thread reconnects, after checking the flag. The URL holds the token, so it stays
+    // out of the error.
+    let response = client(Duration::from_secs(30), Duration::from_secs(45))?
         .get(&url)
-        .call()
-        .map_err(|e| format!("Failed to connect: {}", e))?;
+        .send()
+        .map_err(|e| SseError::Unreachable(format!("Failed to connect: {}", e.without_url())))?;
 
-    if response.status() != 200 {
-        return Err(format!("HTTP {}: {}", response.status(), response.status_text()));
+    let status = response.status();
+    if status.as_u16() == 401 {
+        return Err(SseError::TokenRefused);
+    }
+    if !status.is_success() {
+        return Err(SseError::Unreachable(format!("Failed to connect: HTTP {status}")));
     }
 
     debug!("SSE connection established");
     let _ = sender.send(SseMessage::Connected);
 
     // Read the streaming response line by line
-    let reader = BufReader::new(response.into_reader());
+    let reader = BufReader::new(response);
     let mut current_event = String::new();
 
     for line in reader.lines() {
@@ -238,7 +292,7 @@ fn connect_and_listen(
             return Ok(());
         }
 
-        let line = line.map_err(|e| format!("Read error: {}", e))?;
+        let line = line.map_err(|e| SseError::Lost(format!("Read error: {e}")))?;
 
         // SSE format: lines starting with "event:", "data:", or empty line (end of event)
         //
@@ -271,12 +325,78 @@ fn connect_and_listen(
     }
 
     // Stream ended unexpectedly
-    Err("SSE stream ended".to_string())
+    Err(SseError::Lost("SSE stream ended".to_string()))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
+    use std::sync::atomic::AtomicUsize;
+
+    /// A stub of the two endpoints, answering the stream with each status in turn, and
+    /// counting what it's asked for tokens.
+    fn serve_events(token_status: &'static str, stream_statuses: Vec<&'static str>) -> (String, Arc<AtomicUsize>) {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let endpoint = format!("http://{}", listener.local_addr().unwrap());
+        let tokens = Arc::new(AtomicUsize::new(0));
+        let asked = tokens.clone();
+
+        thread::spawn(move || {
+            let mut statuses = stream_statuses.into_iter();
+            for stream in listener.incoming() {
+                let mut stream = stream.unwrap();
+                let Some(request) = crate::test_support::read_request(&mut stream) else {
+                    continue;
+                };
+
+                let (status, body) = if request.path.ends_with("/events/token") {
+                    asked.fetch_add(1, Ordering::SeqCst);
+                    (token_status, r#"{"token":"short-lived","expires_in":300}"#)
+                } else {
+                    (statuses.next().unwrap_or("401 Unauthorized"), ": hello\n\n")
+                };
+
+                let response = format!(
+                    "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len(),
+                );
+                let _ = stream.write_all(response.as_bytes());
+            }
+        });
+
+        (endpoint, tokens)
+    }
+
+    fn config(endpoint: String) -> SseConfig {
+        SseConfig { endpoint, api_key: uuid::Uuid::new_v4().to_string() }
+    }
+
+    /// A token runs out after five minutes, so a reconnect can find it refused.
+    #[test]
+    fn a_refused_stream_gets_a_new_token_at_once() {
+        let (endpoint, tokens) = serve_events("200 OK", vec!["401 Unauthorized", "200 OK"]);
+
+        let mut handle = start_sse_thread(config(endpoint));
+
+        assert!(matches!(handle.receiver.recv().unwrap(), SseMessage::Connected));
+        assert_eq!(tokens.load(Ordering::SeqCst), 2);
+        handle.stop();
+    }
+
+    /// A revoked device can't get a token, so asking again helps nobody.
+    #[test]
+    fn a_refused_token_stops_the_stream_for_good() {
+        for status in ["401 Unauthorized", "403 Forbidden"] {
+            let (endpoint, tokens) = serve_events(status, vec![]);
+
+            let handle = start_sse_thread(config(endpoint));
+
+            assert!(matches!(handle.receiver.recv().unwrap(), SseMessage::Failed(_)));
+            assert!(handle.receiver.recv().is_err(), "the thread should have ended");
+            assert_eq!(tokens.load(Ordering::SeqCst), 1);
+        }
+    }
 
     /// A quiet stream can keep its thread blocked for half a minute. The thread here only
     /// finishes after `stop` has returned, so waiting for it would never end.
@@ -299,7 +419,8 @@ mod tests {
             stopped.send(()).unwrap();
         });
 
-        assert!(finished.recv_timeout(Duration::from_secs(10)).is_ok());
+        // Only a stop that waits for the thread runs into this, so it can be generous
+        assert!(finished.recv_timeout(Duration::from_secs(120)).is_ok());
         assert!(stop_flag.load(Ordering::SeqCst));
         release.send(()).unwrap();
     }

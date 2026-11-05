@@ -7,12 +7,15 @@ use zeroize::{Zeroize, Zeroizing};
 
 use crate::{
     db::Database,
-    repository::{SettingsRepository, sync::SyncRepository},
+    repository::{NoteRepository, SettingsRepository, sync::SyncRepository},
     vault,
 };
 
 use super::super::app::App;
 use super::super::state::AppState;
+
+/// How long a note stays in the bin.
+const BIN_RETENTION_DAYS: i64 = 30;
 
 /// Unlock the database with the password stored in app.password_input
 pub fn unlock(app: &mut App) -> Result<()> {
@@ -184,6 +187,15 @@ pub fn unlock(app: &mut App) -> Result<()> {
         }
     }
 
+    // What's been in the bin long enough goes now, on every client. Not being able to
+    // doesn't stop the unlock, and the next one tries again.
+    if let Some(db) = &app.db {
+        let cutoff = chrono::Utc::now() - chrono::Duration::days(BIN_RETENTION_DAYS);
+        if let Err(e) = NoteRepository::new(db.connection()).purge_expired_bin(cutoff) {
+            app.debug_log(&format!("Unlock - Could not empty the old part of the bin: {e}"));
+        }
+    }
+
     // Load notes
     super::notes::load_notes(app)?;
 
@@ -205,7 +217,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
     // Store password if remember checkbox was enabled
     if app.remember_password_checkbox {
         // The password is still in app.password_input at this point
-        let password_to_store = app.password_input.clone();
+        let password_to_store = Zeroizing::new(app.password_input.clone());
         if let Err(e) = store_password_for_autounlock(app, &password_to_store) {
             app.error = Some(format!("Failed to store password: {}", e));
         } else {
@@ -234,16 +246,12 @@ pub fn unlock(app: &mut App) -> Result<()> {
     // Start SSE connection for real-time sync notifications
     app.start_sse_if_enabled();
 
+    // Once the device has the password and a sync behind it, it can repair the server's
+    // copy of the key if an older client left it unreadable
+    app.server_key_check_owed = true;
+
     // Trigger an immediate sync to fetch inbox items and any pending changes
     app.trigger_sync();
-
-    // Now the device has the password and a sync behind it, it can repair the
-    // server's copy of the key if an older client left it unreadable
-    if let Some(password) = app.unlock_password.clone() {
-        if let Err(e) = super::envelope::repair_server_key(app, &password) {
-            app.debug_log(&format!("Unlock - Could not check the server's wrapped key: {}", e));
-        }
-    }
 
     Ok(())
 }
@@ -255,7 +263,6 @@ pub fn toggle_remember_password(app: &mut App) -> Result<()> {
     if app.settings.remember_password {
         // Disable: clear stored password using the storage backend
         app.settings.remember_password = false;
-        app.settings.stored_password = None;
 
         // Delete stored password
         let _ = app.password_storage.delete();
@@ -299,7 +306,6 @@ pub fn store_password_for_autounlock(app: &mut App, password: &str) -> Result<()
 
     // Update settings (note: we no longer store encrypted password in settings)
     app.settings.remember_password = true;
-    app.settings.stored_password = None; // No longer needed in settings
 
     if let Some(db) = &app.db {
         let settings_repo = SettingsRepository::new(db.connection());
@@ -316,7 +322,6 @@ pub fn forget_stored_password(app: &mut App) -> Result<()> {
 
     // Update settings
     app.settings.remember_password = false;
-    app.settings.stored_password = None;
 
     if let Some(db) = &app.db {
         let settings_repo = SettingsRepository::new(db.connection());
