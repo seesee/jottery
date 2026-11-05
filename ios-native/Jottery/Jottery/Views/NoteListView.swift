@@ -1,6 +1,10 @@
 import SwiftUI
 
 struct NoteListView: View {
+    /// Whether the tags go at the top of this list. Otherwise they're a sheet.
+    /// Decided by `MainView`, as a split view's column can be told it's compact.
+    let showsTagsInList: Bool
+
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var colorScheme
     @State private var isSelectMode = false
@@ -16,6 +20,7 @@ struct NoteListView: View {
     @State private var showSavedSearches = false
     @State private var showConflicts = false
     @State private var showInbox = false
+    @State private var showTags = false
     @State private var searchIsActive = false
 
     var body: some View {
@@ -91,6 +96,14 @@ struct NoteListView: View {
                     }
                 }
 
+                if !isSelectMode && !showsTagsInList {
+                    Button {
+                        showTags = true
+                    } label: {
+                        Label(L.tagsTitle, systemImage: "tag")
+                    }
+                }
+
                 Button {
                     toggleArchiveView()
                 } label: {
@@ -145,6 +158,9 @@ struct NoteListView: View {
         }
         .sheet(isPresented: $showSavedSearches) {
             SavedSearchesView()
+        }
+        .sheet(isPresented: $showTags) {
+            TagBrowserSheet()
         }
         .sheet(isPresented: $showBulkTagSheet) {
             BulkAddTagsSheet(noteIds: selectedIds) {
@@ -303,6 +319,9 @@ struct NoteListView: View {
     private var singleSelectList: some View {
         @Bindable var state = appState
         return List(selection: $state.selectedNoteId) {
+            if showsTagsInList {
+                TagSidebarSection()
+            }
             noteRows
         }
     }

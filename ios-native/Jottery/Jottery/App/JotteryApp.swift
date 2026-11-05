@@ -195,7 +195,7 @@ struct MainView: View {
         @Bindable var state = appState
 
         NavigationSplitView(columnVisibility: $columnVisibility) {
-            NoteListView()
+            NoteListView(showsTagsInList: horizontalSizeClass == .regular)
                 .modifier(FoldAlignedColumn(width: foldListWidth))
         } detail: {
             if let noteId = appState.selectedNoteId {

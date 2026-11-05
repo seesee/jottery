@@ -55,4 +55,13 @@ extension L {
 
     static var commandsNoteMenu: String { String(localized: "commands.noteMenu") }
     static var commandsSearch: String { String(localized: "commands.search") }
+
+    // MARK: - Tags and Counts
+
+    static var tagsTitle: String { String(localized: "tags.title") }
+    static var tagsEmpty: String { String(localized: "tags.empty") }
+    static var tagsEmptyDescription: String { String(localized: "tags.emptyDescription") }
+    static var aboutPinned: String { String(localized: "about.pinned") }
+    static var aboutArchived: String { String(localized: "about.archived") }
+    static var aboutInBin: String { String(localized: "about.inBin") }
 }

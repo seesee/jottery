@@ -129,9 +129,11 @@ struct SettingsView: View {
                     HStack {
                         Text(L.settingsNotes)
                         Spacer()
-                        Text("\(appState.noteCount)")
+                        Text("\(appState.notes.count)")
                             .foregroundStyle(.secondary)
                     }
+
+                    VaultCountRows()
 
                     HStack {
                         Text(L.settingsVersion)

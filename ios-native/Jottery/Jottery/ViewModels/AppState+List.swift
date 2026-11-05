@@ -75,6 +75,11 @@ extension AppState {
         recentSearches.record(searchQuery)
     }
 
+    /// Show the notes with this tag, in whichever view is showing.
+    func browse(tag: String) {
+        searchQuery = SearchSuggestions.query(forTag: tag)
+    }
+
     /// Change between the notes and the archive, leaving the search as it is.
     func toggleArchiveView() {
         showArchive.toggle()
