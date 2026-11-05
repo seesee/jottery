@@ -99,6 +99,7 @@ You can configure the server using environment variables:
 | `DEFAULT_STORAGE_QUOTA_MB` | `1000` | Default user storage quota in MB |
 | `MAX_PAYLOAD_SIZE` | `5242880` | Max upload size in bytes (5MB) |
 | `CORS_ALLOWED_ORIGINS` | *(none)* | Comma-separated list of allowed CORS origins |
+| `TRUSTED_PROXY_HOPS` | `1` in the Docker image, otherwise `0` | Proxies that append to `X-Forwarded-For`, used for rate limiting. See the [server README](server/README.md#rate-limiting) |
 
 Example with custom admin credentials:
 

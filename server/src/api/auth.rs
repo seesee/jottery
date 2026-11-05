@@ -1,6 +1,10 @@
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{
+    extract::{ConnectInfo, State},
+    http::StatusCode,
+    Json,
+};
 use rand::Rng;
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 use uuid::Uuid;
 
 use crate::{
@@ -95,11 +99,14 @@ pub async fn register_device(
     // Validate device name
     validation::validate_device_name(&req.device_name, &state.config)?;
 
+    state.login_throttle.check(&req.email)?;
+
     // Get user by email
     let user = UserRepository::get_by_email(&state.pool, &req.email)
         .await
         .map_err(|_| {
             tracing::warn!("Device registration failed: user not found: {}", req.email);
+            state.login_throttle.record_failure(&req.email);
             crate::error::AppError::Unauthorized
         })?;
 
@@ -111,8 +118,10 @@ pub async fn register_device(
 
     if !password_valid {
         tracing::warn!("Device registration failed: invalid password for {}", req.email);
+        state.login_throttle.record_failure(&req.email);
         return Err(crate::error::AppError::Unauthorized);
     }
+    state.login_throttle.record_success(&req.email);
 
     // Check if user is approved
     if user.approved == 0 {
@@ -307,6 +316,7 @@ pub async fn clone_device(
 /// Creates a session for admin dashboard access
 pub async fn login(
     State(state): State<Arc<AppState>>,
+    peer: Option<ConnectInfo<SocketAddr>>,
     headers: axum::http::HeaderMap,
     Json(req): Json<LoginRequest>,
 ) -> AppResult<(StatusCode, Json<LoginResponse>)> {
@@ -318,24 +328,22 @@ pub async fn login(
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string());
 
-    // Extract IP from X-Forwarded-For (first IP in chain) or X-Real-IP
-    let ip_address = headers
-        .get("X-Forwarded-For")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.split(',').next())
-        .map(|s| s.trim().to_string())
-        .or_else(|| {
-            headers
-                .get("X-Real-IP")
-                .and_then(|v| v.to_str().ok())
-                .map(|s| s.to_string())
-        });
+    // Only as far as the trusted proxies allow: anything else is client input
+    let ip_address = crate::rate_limit::client_ip(
+        &headers,
+        peer.map(|ConnectInfo(address)| address.ip()),
+        state.config.rate_limit.trusted_proxy_hops,
+    )
+    .map(|address| address.to_string());
+
+    state.login_throttle.check(&req.email)?;
 
     // Get user by email
     let user = UserRepository::get_by_email(&state.pool, &req.email)
         .await
         .map_err(|_| {
             tracing::warn!("Login failed: user not found: {}", req.email);
+            state.login_throttle.record_failure(&req.email);
             crate::error::AppError::Unauthorized
         })?;
 
@@ -347,8 +355,10 @@ pub async fn login(
 
     if !password_valid {
         tracing::warn!("Login failed: invalid password for {}", req.email);
+        state.login_throttle.record_failure(&req.email);
         return Err(crate::error::AppError::Unauthorized);
     }
+    state.login_throttle.record_success(&req.email);
 
     // Check if user is admin
     if user.is_admin == 0 {

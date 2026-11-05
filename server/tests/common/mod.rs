@@ -74,6 +74,7 @@ pub fn test_config() -> Config {
         default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
@@ -89,6 +90,7 @@ pub fn app_with(pool: &SqlitePool, config: Config) -> Router {
         config,
         sync_broadcast,
         sse_tokens: api::sse::create_token_store(),
+        login_throttle: Default::default(),
     }))
 }
 
@@ -313,4 +315,35 @@ pub fn ids(items: &Value) -> Vec<String> {
 /// A fresh id, so tests can't collide.
 pub fn new_id() -> String {
     Uuid::new_v4().to_string()
+}
+
+/// As `call`, arriving from a TCP peer as the real listener would report it.
+pub async fn call_from(
+    app: &Router,
+    peer: &str,
+    method: &str,
+    uri: &str,
+    body: Option<Value>,
+    headers: &[(&str, &str)],
+) -> (StatusCode, HeaderMap, Value) {
+    let address: std::net::SocketAddr = format!("{peer}:40000").parse().unwrap();
+    let mut request = Request::builder()
+        .method(method)
+        .uri(uri)
+        .header("content-type", "application/json");
+    for (name, value) in headers {
+        request = request.header(*name, *value);
+    }
+    let mut request = request
+        .body(body.map(|v| Body::from(v.to_string())).unwrap_or_else(Body::empty))
+        .unwrap();
+    request
+        .extensions_mut()
+        .insert(axum::extract::ConnectInfo(address));
+
+    let response = app.clone().oneshot(request).await.unwrap();
+    let status = response.status();
+    let response_headers = response.headers().clone();
+    let bytes = response.into_body().collect().await.unwrap().to_bytes();
+    (status, response_headers, serde_json::from_slice(&bytes).unwrap_or(Value::Null))
 }

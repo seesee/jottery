@@ -1,9 +1,11 @@
+use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
 use jottery_server::api::sse::{create_token_store, SyncNotification};
 use jottery_server::app::build_app;
 use jottery_server::config::Config;
+use jottery_server::rate_limit::LoginThrottle;
 use jottery_server::{db, AppState};
 
 #[tokio::main]
@@ -57,6 +59,7 @@ async fn main() {
         config: config.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Arc::new(LoginThrottle::new(config.rate_limit.enabled)),
     });
 
     let app = build_app(app_state);
@@ -79,7 +82,8 @@ async fn main() {
         }
     };
 
-    axum::serve(listener, app)
+    // Rate limiting needs the peer address of each connection
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>())
         .await
         .expect("Server failed");
 }

@@ -72,6 +72,8 @@ pub async fn login(
 ) -> AppResult<(StatusCode, Json<LoginResponse>)> {
     tracing::info!("User login request: email={}", req.email);
 
+    state.login_throttle.check(&req.email)?;
+
     // Get user by email
     let user = sqlx::query!(
         "SELECT id, email, password_hash, is_admin, approved, is_active, must_change_password FROM users WHERE email = ?",
@@ -85,6 +87,7 @@ pub async fn login(
     })?
     .ok_or_else(|| {
         tracing::warn!("Login failed: user not found: {}", req.email);
+        state.login_throttle.record_failure(&req.email);
         AppError::Unauthorized
     })?;
 
@@ -97,8 +100,10 @@ pub async fn login(
 
     if !password_valid {
         tracing::warn!("Login failed: invalid password for {}", req.email);
+        state.login_throttle.record_failure(&req.email);
         return Err(AppError::Unauthorized);
     }
+    state.login_throttle.record_success(&req.email);
 
     // Registration is open, so a session must wait for an admin's approval.
     // These come after the password check so they reveal nothing to strangers.

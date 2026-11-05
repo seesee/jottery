@@ -18,6 +18,8 @@ pub enum AppError {
     TooManyRequests(String),
     /// The account must set a new password before it can do anything else.
     PasswordChangeRequired,
+    /// Too many attempts: the client should wait this long before trying again.
+    RateLimited { retry_after_secs: u64 },
     InternalError(String),
     InternalServerError,
 }
@@ -34,6 +36,9 @@ impl std::fmt::Display for AppError {
             AppError::PayloadTooLarge(msg) => write!(f, "Payload too large: {}", msg),
             AppError::TooManyRequests(msg) => write!(f, "Too many requests: {}", msg),
             AppError::PasswordChangeRequired => write!(f, "Password change required"),
+            AppError::RateLimited { retry_after_secs } => {
+                write!(f, "Rate limited for {} seconds", retry_after_secs)
+            }
             AppError::InternalError(msg) => write!(f, "Internal error: {}", msg),
             AppError::InternalServerError => write!(f, "Internal server error"),
         }
@@ -58,6 +63,16 @@ impl IntoResponse for AppError {
             return (StatusCode::FORBIDDEN, body).into_response();
         }
 
+        if let AppError::RateLimited { retry_after_secs } = self {
+            let body = Json(json!({
+                "error": format!("Too many attempts. Try again in {} seconds.", retry_after_secs),
+                "code": "rate_limited",
+                "retryAfter": retry_after_secs
+            }));
+            let headers = [(axum::http::header::RETRY_AFTER, retry_after_secs.to_string())];
+            return (StatusCode::TOO_MANY_REQUESTS, headers, body).into_response();
+        }
+
         let (status, error_message) = match self {
             AppError::DatabaseError(e) => {
                 tracing::error!("Database error: {}", e);
@@ -70,7 +85,9 @@ impl IntoResponse for AppError {
             AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
             AppError::PayloadTooLarge(msg) => (StatusCode::PAYLOAD_TOO_LARGE, msg),
             AppError::TooManyRequests(msg) => (StatusCode::TOO_MANY_REQUESTS, msg),
-            AppError::PasswordChangeRequired => unreachable!("handled above"),
+            AppError::PasswordChangeRequired | AppError::RateLimited { .. } => {
+                unreachable!("handled above")
+            }
             AppError::InternalError(msg) => {
                 tracing::error!("Internal error: {}", msg);
                 (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())

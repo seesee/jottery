@@ -56,6 +56,7 @@ async fn create_test_app() -> (Router, SqlitePool) {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
@@ -69,6 +70,7 @@ async fn create_test_app() -> (Router, SqlitePool) {
         pool: pool.clone(),
         sync_broadcast,
         sse_tokens,
+        login_throttle: Default::default(),
         config,
     });
 

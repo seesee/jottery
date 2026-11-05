@@ -7,6 +7,7 @@ pub mod db;
 pub mod error;
 pub mod maintenance;
 pub mod models;
+pub mod rate_limit;
 pub mod services;
 pub mod utils;
 
@@ -21,4 +22,5 @@ pub struct AppState {
     pub config: config::Config,
     pub sync_broadcast: SyncBroadcast,
     pub sse_tokens: SseTokenStore,
+    pub login_throttle: std::sync::Arc<rate_limit::LoginThrottle>,
 }

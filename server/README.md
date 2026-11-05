@@ -129,7 +129,7 @@ The admin dashboard provides comprehensive user and system management:
 3. **HTTPS Only:** Always use HTTPS in production (configure with reverse proxy like Nginx/Caddy)
 4. **Strong Password Hashing:** Adjust `ARGON2_M_COST`, `ARGON2_T_COST`, `ARGON2_P_COST` for your security requirements
 5. **Session Security:** Configure `SESSION_EXPIRY_DAYS` based on your security needs (shorter = more secure)
-6. **Rate Limiting:** Configure rate limiting at the reverse proxy level (see `.env.example` for examples)
+6. **Rate Limiting:** Built in, but set `TRUSTED_PROXY_HOPS` if you run behind a reverse proxy (see [Rate Limiting](#rate-limiting))
 7. **Review Users:** Regularly review pending registrations and active users
 8. **Monitor Audit Log:** Check for suspicious sync activity
 9. **Backup Database:** Regular backups include all user data and credentials (passwords are hashed)
@@ -717,7 +717,7 @@ sqlite3 /opt/jottery/jottery.db "PRAGMA integrity_check; VACUUM;"
 1. **API Keys**: Generated with cryptographically secure random bytes, hashed with SHA-256 before storage
 2. **HTTPS Required**: Always use HTTPS in production (configure via Nginx)
 3. **CORS**: Configured to allow all origins by default - restrict in production if needed
-4. **Rate Limiting**: Not implemented - consider adding Nginx rate limiting
+4. **Rate Limiting**: Built in (see [Rate Limiting](#rate-limiting)). Set `TRUSTED_PROXY_HOPS` behind a proxy
 5. **Firewall**: Only expose port 443 (HTTPS) publicly, keep 3030 internal
 6. **Updates**: Keep Rust dependencies updated with `cargo update`
 
@@ -757,6 +757,23 @@ SQLite connection pool can be tuned in `src/db.rs`:
 // Reduce max connections
 .max_connections(5)  // Default is 10
 ```
+
+### Rate Limiting
+
+The server throttles anonymous routes itself, so every deployment gets this without extra configuration:
+
+| What | Limit | Setting |
+|------|-------|---------|
+| Sign-in, device registration, device cloning | 20 a minute per address | `RATE_LIMIT_AUTH_PER_MINUTE` |
+| Account registration | 20 an hour per address | `RATE_LIMIT_REGISTER_PER_HOUR` |
+| Approval status check | 60 a minute per address | `RATE_LIMIT_STATUS_PER_MINUTE` |
+| Wrong passwords for one email, across all three password routes | 5 free, then waits doubling from 1 second up to 15 minutes | |
+
+A refused request gets a 429 with a `Retry-After` header. A correct password during a wait is refused too, so a wait tells a guesser nothing. Waits end by themselves, a successful sign-in clears the count, and a lock never affects device sync, which uses API keys rather than passwords. `RATE_LIMIT_ENABLED=false` turns all of this off.
+
+**Behind a reverse proxy, set `TRUSTED_PROXY_HOPS`.** The default of 0 ignores `X-Forwarded-For`, because any client can send one, and uses the connection's address. Behind a proxy that address is the proxy's, so every client shares one limit. Set it to the number of proxies in front of the server, and the server takes the entry that many from the right, which is the one your outermost proxy wrote. Don't set it higher than the proxies you really have, or clients can forge their address. A warning appears in the log if the header arrives while the setting is 0.
+
+The Docker image sets `TRUSTED_PROXY_HOPS=1` for its bundled Caddy, which replaces any `X-Forwarded-For` a client sends. If you run another proxy in front of the container, Caddy replaces that proxy's header too, so all clients appear as that proxy and share a limit. That's safe, but to separate them, add [`trusted_proxies`](https://caddyserver.com/docs/caddyfile/options#trusted-proxies) to the Caddyfile and set `TRUSTED_PROXY_HOPS=2`.
 
 ### Upgrading
 

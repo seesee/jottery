@@ -16,7 +16,7 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
 use tower_http::set_header::SetResponseHeaderLayer;
 
-use crate::{api, config::Config, AppState};
+use crate::{api, config::Config, rate_limit, AppState};
 
 /// Body limit for routes that take small JSON, including every route open to
 /// anonymous callers. Only `/sync/push` needs the large global limit.
@@ -158,29 +158,40 @@ pub fn build_app(state: Arc<AppState>) -> Router {
             api::middleware::auth_middleware,
         ));
 
-    // Auth routes (rate limiting disabled - requires proxy-aware key extractor)
-    // TODO: Re-enable with SmartIpKeyExtractor when running behind reverse proxy
-    let auth_routes = Router::new()
-        .route("/api/v1/auth/login", post(api::auth::login))
-        .route("/api/v1/user/login", post(api::user::login))
-        .layer(DefaultBodyLimit::max(SMALL_BODY_LIMIT));
+    // Routes that take a credential. Password guessing is also throttled per
+    // email address inside the handlers.
+    let credential_routes = rate_limit::limit_credentials(
+        Router::new()
+            .route("/api/v1/auth/login", post(api::auth::login))
+            .route("/api/v1/user/login", post(api::user::login))
+            .route("/api/v1/auth/register-device", post(api::auth::register_device))
+            .route("/api/v1/auth/clone-device", post(api::auth::clone_device))
+            .layer(DefaultBodyLimit::max(SMALL_BODY_LIMIT)),
+        &config.rate_limit,
+    );
 
-    // Registration routes (rate limiting disabled - requires proxy-aware key extractor)
-    let registration_routes = Router::new()
-        .route("/api/v1/auth/register-user", post(api::auth::register_user))
-        .route("/api/v1/auth/register-device", post(api::auth::register_device))
-        .route("/api/v1/auth/clone-device", post(api::auth::clone_device))
-        .layer(DefaultBodyLimit::max(SMALL_BODY_LIMIT));
+    // Account creation, which lands in the admin's pending list
+    let registration_routes = rate_limit::limit_registration(
+        Router::new()
+            .route("/api/v1/auth/register-user", post(api::auth::register_user))
+            .layer(DefaultBodyLimit::max(SMALL_BODY_LIMIT)),
+        &config.rate_limit,
+    );
+
+    // Approval status, which clients poll while they wait
+    let status_routes = rate_limit::limit_status(
+        Router::new().route("/api/v1/user/status", get(api::user::check_status)),
+        &config.rate_limit,
+    );
 
     // Build main router
     let app = Router::new()
         // Health check (no auth required)
         .route("/health", get(health_check))
-        // Rate-limited auth and registration routes
-        .merge(auth_routes)
+        // Rate-limited anonymous routes
+        .merge(credential_routes)
         .merge(registration_routes)
-        // Status check (no rate limiting needed - it's read-only)
-        .route("/api/v1/user/status", get(api::user::check_status))
+        .merge(status_routes)
         // Merge protected routes
         .merge(sync_routes)
         .merge(sse_routes)
