@@ -362,6 +362,18 @@ Download the standalone web application for local use from the [Releases](https:
 
 Pre-compiled binaries for the TUI client (Linux, macOS, Windows) are available from the [Releases](https://github.com/seesee/jottery/releases) page.
 
+### Verifying a Download
+
+Each release includes a `SHA256SUMS` file. Download it alongside the files you want, then check them:
+
+```bash
+sha256sum --check --ignore-missing SHA256SUMS
+```
+
+On macOS, use `shasum -a 256 --check --ignore-missing SHA256SUMS`.
+
+The checksums come from the same release as the files, so they detect a corrupted or incomplete download. They don't prove who published the release.
+
 ## Import/Export Format
 
 Jottery uses a JSON-based format for importing and exporting notes. All data is **decrypted** during export and **re-encrypted** during import using your master password.

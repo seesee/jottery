@@ -345,6 +345,13 @@ jobs:
           done
           ls -la
 
+      - name: Generate checksums
+        run: |
+          for dir in tui-release-zip all-tui web-app; do
+            (cd "release-assets/$dir" && sha256sum -- *)
+          done | sort -k2 > release-assets/SHA256SUMS
+          cat release-assets/SHA256SUMS
+
       - name: Create Release
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
@@ -356,5 +363,6 @@ jobs:
             release-assets/tui-release-zip/*
             release-assets/all-tui/*
             release-assets/web-app/*
+            release-assets/SHA256SUMS
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
