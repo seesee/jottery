@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'android-native/**'
+      - 'package.json'  # Android reads its version from here
       - '.github/workflows/android-tests.yml'
   workflow_call:  # Run before publishing, from build-multiarch.yml
   workflow_dispatch:  # Manual trigger
@@ -36,3 +37,19 @@ jobs:
           name: android-test-report
           path: android-native/app/build/reports/tests/
           retention-days: 7
+
+  # R8 only runs on a release build, so a broken one can't show up in the debug
+  # unit tests. It needs no secrets: unsigned, it gives app-release-unsigned.apk.
+  android-release-build:
+    name: Android Release Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Build the minified release
+        working-directory: android-native
+        run: JAVA_HOME="$JAVA_HOME_21_X64" ./gradlew :app:assembleRelease --console=plain
