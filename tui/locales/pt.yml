@@ -635,6 +635,10 @@ cli:
   reset_done: "O cofre e qualquer palavra-passe memorizada foram eliminados"
   reset_keychain_failed: "Não foi possível remover a palavra-passe do porta-chaves"
   export_force_help: "Substituir o ficheiro se já existir"
+  account_about: "Ver ou eliminar o que o servidor guarda da sua conta"
+  colours_about: "Dar nome às cores e atribuir uma cor às etiquetas"
+  doctor_about: "Verificar o cofre em busca de notas que não abrem e anexos em falta"
+  doctor_repair_help: "Obter do servidor os anexos em falta"
 status:
   locked: Bloqueado
   unlocked: Desbloqueado
@@ -814,3 +818,30 @@ saved_search:
 
 export:
   file_exists: "Esse ficheiro já existe. Escolha outro nome ou use --force para o substituir."
+
+account:
+  email: "Conta: %{email}"
+  usage: "Notas: %{notes}, anexos: %{attachments}"
+  storage: "Armazenamento: %{used} MB de %{quota} MB"
+  last_sync: "Última sincronização: %{time}"
+  confirm_delete_notes: "Isto elimina todas as notas do servidor, para todos os dispositivos, e não pode ser anulado. Escreva o seu endereço de e-mail para continuar:"
+  confirm_delete: "Isto elimina a sua conta e tudo o que está no servidor, e não pode ser anulado. Este dispositivo mantém as suas notas. Escreva o seu endereço de e-mail para continuar:"
+  cancelled: "Nada foi eliminado"
+  notes_deleted: "Todas as notas do servidor foram eliminadas"
+  deleted: "A conta foi eliminada"
+
+colours:
+  unknown: "Não há nenhuma cor chamada %{colour}"
+  named: "Cor atualizada: %{colour}"
+  tag_set: "Etiqueta atualizada: %{tag}"
+
+doctor:
+  notes: "Notas: %{count}, ilegíveis: %{unreadable}"
+  versions: "Versões: %{count}, ilegíveis: %{unreadable}"
+  attachments: "Anexos: %{count}, ilegíveis: %{unreadable}, em falta: %{missing}"
+  saved_searches: "Pesquisas guardadas: %{count}, ilegíveis: %{unreadable}"
+  conflicts: "Conflitos à sua espera: %{count}"
+  problems: "Problemas encontrados: %{count}"
+  repaired: "Anexos obtidos: %{count}"
+  repair_needs_sync: "Este cofre não está ligado a um servidor, por isso não é possível obter os anexos em falta"
+  healthy: "Não foram encontrados problemas"

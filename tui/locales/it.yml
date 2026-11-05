@@ -635,6 +635,10 @@ cli:
   reset_done: "Archivio e password memorizzata eliminati"
   reset_keychain_failed: "Impossibile rimuovere la password dal portachiavi"
   export_force_help: "Sostituisci il file se esiste già"
+  account_about: "Vedi o elimina ciò che il server conserva per il tuo account"
+  colours_about: "Assegna nomi ai colori e un colore ai tag"
+  doctor_about: "Controlla l'archivio per note non leggibili e allegati mancanti"
+  doctor_repair_help: "Recupera dal server gli allegati mancanti"
 status:
   locked: Bloccato
   unlocked: Sbloccato
@@ -814,3 +818,30 @@ saved_search:
 
 export:
   file_exists: "Il file esiste già. Scegli un altro nome oppure usa --force per sostituirlo."
+
+account:
+  email: "Account: %{email}"
+  usage: "Note: %{notes}, allegati: %{attachments}"
+  storage: "Spazio: %{used} MB su %{quota} MB"
+  last_sync: "Ultima sincronizzazione: %{time}"
+  confirm_delete_notes: "Questo elimina tutte le note sul server, per tutti i dispositivi, e non può essere annullato. Digita il tuo indirizzo email per procedere:"
+  confirm_delete: "Questo elimina il tuo account e tutto ciò che si trova sul server, e non può essere annullato. Questo dispositivo conserva le sue note. Digita il tuo indirizzo email per procedere:"
+  cancelled: "Non è stato eliminato nulla"
+  notes_deleted: "Tutte le note sul server sono state eliminate"
+  deleted: "L'account è stato eliminato"
+
+colours:
+  unknown: "Nessun colore chiamato %{colour}"
+  named: "Colore aggiornato: %{colour}"
+  tag_set: "Tag aggiornato: %{tag}"
+
+doctor:
+  notes: "Note: %{count}, illeggibili: %{unreadable}"
+  versions: "Versioni: %{count}, illeggibili: %{unreadable}"
+  attachments: "Allegati: %{count}, illeggibili: %{unreadable}, mancanti: %{missing}"
+  saved_searches: "Ricerche salvate: %{count}, illeggibili: %{unreadable}"
+  conflicts: "Conflitti in attesa: %{count}"
+  problems: "Problemi trovati: %{count}"
+  repaired: "Allegati recuperati: %{count}"
+  repair_needs_sync: "Questo archivio non è collegato a un server, quindi gli allegati mancanti non possono essere recuperati"
+  healthy: "Nessun problema trovato"

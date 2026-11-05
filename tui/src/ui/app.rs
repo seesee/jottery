@@ -479,6 +479,11 @@ impl App {
         &self.notes
     }
 
+    /// Give the database back to a CLI command that's finished with the app.
+    pub fn into_database(mut self) -> Option<Database> {
+        self.db.take()
+    }
+
     /// The stored sync settings, if the vault is open and has any
     pub fn sync_metadata(&self) -> Option<crate::models::sync::SyncMetadata> {
         let db = self.db.as_ref()?;

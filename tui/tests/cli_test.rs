@@ -504,6 +504,141 @@ fn an_export_is_private_and_does_not_replace_a_file_unasked() {
     assert!(fs::read_to_string(&output).unwrap().contains("Decrypted in the export"));
 }
 
+/// A request as `account_server` saw it: its first line and its body.
+type Seen = std::sync::Arc<std::sync::Mutex<Vec<(String, String)>>>;
+
+/// Stands in for the account routes on a loopback address, and records what it's asked.
+fn account_server() -> (String, Seen) {
+    use std::io::Read;
+
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let endpoint = format!("http://{}", listener.local_addr().unwrap());
+    let seen: Seen = Default::default();
+    let recorded = seen.clone();
+
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            let mut stream = stream.unwrap();
+
+            let mut received = Vec::new();
+            let mut buffer = [0u8; 4096];
+            let (line, body) = loop {
+                let read = stream.read(&mut buffer).unwrap_or(0);
+                if read == 0 {
+                    break (String::new(), String::new());
+                }
+                received.extend_from_slice(&buffer[..read]);
+
+                let text = String::from_utf8_lossy(&received).to_string();
+                let Some((head, body)) = text.split_once("\r\n\r\n") else {
+                    continue;
+                };
+                let length: usize = head.to_lowercase().lines()
+                    .find_map(|line| line.strip_prefix("content-length:").map(|value| value.trim().parse().unwrap()))
+                    .unwrap_or(0);
+                if body.len() >= length {
+                    break (head.lines().next().unwrap_or("").to_string(), body.to_string());
+                }
+            };
+
+            let reply = if line.starts_with("POST /api/v1/user/login") {
+                r#"{"sessionId":"session","expiresAt":"2031-01-01T00:00:00Z"}"#
+            } else if line.starts_with("GET /api/v1/user/account") {
+                r#"{"email":"someone@example.com","noteCount":12,"attachmentCount":3,"storageUsedBytes":2097152,"storageQuotaMb":1000}"#
+            } else {
+                "{}"
+            };
+            recorded.lock().unwrap().push((line, body));
+
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{reply}",
+                reply.len(),
+            );
+            let _ = stream.write_all(response.as_bytes());
+        }
+    });
+
+    (endpoint, seen)
+}
+
+#[test]
+fn account_info_shows_what_the_server_holds() {
+    let (_dir, db) = create_test_env();
+    let (endpoint, _) = account_server();
+    let password = uuid::Uuid::new_v4().to_string();
+
+    let (ok, stdout, stderr) = run_on(&db, &[
+        "account", "info", "-s", &endpoint, "-e", "someone@example.com", "-p", &password,
+    ]);
+
+    assert!(ok, "{stderr}");
+    assert!(stdout.contains("someone@example.com"), "{stdout}");
+    assert!(stdout.contains("12"), "{stdout}");
+    assert!(stdout.contains("2.0"), "{stdout}");
+    assert!(stdout.contains("1000"), "{stdout}");
+}
+
+#[test]
+fn deleting_from_the_server_needs_the_email_typed() {
+    for (command, path) in [("delete-notes", "/api/v1/user/notes"), ("delete", "/api/v1/user/account")] {
+        let (_dir, db) = create_test_env();
+        let (endpoint, seen) = account_server();
+        let password = uuid::Uuid::new_v4().to_string();
+        let args = ["account", command, "-s", &endpoint, "-e", "someone@example.com", "-p", &password];
+        let deletions = || seen.lock().unwrap().iter().filter(|(line, _)| line.starts_with("DELETE")).cloned().collect::<Vec<_>>();
+
+        let (ok, _, _) = run_with_input(&db, &args, "yes\n");
+        assert!(!ok);
+        assert!(deletions().is_empty());
+
+        let (ok, _, stderr) = run_with_input(&db, &args, "someone@example.com\n");
+        assert!(ok, "{stderr}");
+        let sent = deletions();
+        assert!(sent[0].0.starts_with(&format!("DELETE {path} ")), "{:?}", sent[0]);
+        assert!(sent[0].1.contains(&password), "the server asks for the password again");
+    }
+}
+
+#[test]
+fn colours_can_be_named_and_given_to_tags() {
+    let (_dir, db) = create_test_env();
+    let password = uuid::Uuid::new_v4().to_string();
+    vault_with_note(&db, &password, "Colourful");
+
+    let (ok, _, stderr) = run_on(&db, &["colours", "name", "red", "Urgent", "-p", &password]);
+    assert!(ok, "{stderr}");
+
+    // A colour can go by its new name
+    let (ok, _, stderr) = run_on(&db, &["colours", "tag", "#Work", "urgent", "-p", &password]);
+    assert!(ok, "{stderr}");
+
+    let (ok, stdout, stderr) = run_on(&db, &["colours", "list", "-p", &password]);
+    assert!(ok, "{stderr}");
+    assert!(stdout.contains("red: Urgent"), "{stdout}");
+    assert!(stdout.contains("#work: red"), "{stdout}");
+
+    let (ok, _, stderr) = run_on(&db, &["colours", "tag", "work", "no-such-colour", "-p", &password]);
+    assert!(!ok);
+    assert!(stderr.contains("no-such-colour"), "{stderr}");
+
+    let (ok, _, stderr) = run_on(&db, &["colours", "tag", "work", "none", "-p", &password]);
+    assert!(ok, "{stderr}");
+    let (_, stdout, _) = run_on(&db, &["colours", "list", "-p", &password]);
+    assert!(!stdout.contains("#work"), "{stdout}");
+}
+
+#[test]
+fn doctor_passes_a_healthy_vault() {
+    let (_dir, db) = create_test_env();
+    let password = uuid::Uuid::new_v4().to_string();
+    vault_with_note(&db, &password, "Fine");
+
+    let (ok, stdout, stderr) = run_on(&db, &["doctor", "-p", &password]);
+
+    assert!(ok, "{stderr}");
+    assert!(stdout.contains('1'), "{stdout}");
+}
+
 #[test]
 fn debug_goes_to_stderr_and_leaves_the_output_alone() {
     let (_temp_dir, db) = create_test_env();

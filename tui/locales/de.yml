@@ -635,6 +635,10 @@ cli:
   reset_done: "Tresor und gespeichertes Passwort gelöscht"
   reset_keychain_failed: "Das Passwort konnte nicht aus dem Schlüsselbund entfernt werden"
   export_force_help: "Die Datei ersetzen, falls sie bereits existiert"
+  account_about: "Ansehen oder löschen, was der Server für Ihr Konto speichert"
+  colours_about: "Farben benennen und Tags eine Farbe geben"
+  doctor_about: "Den Tresor auf nicht lesbare Notizen und fehlende Anhänge prüfen"
+  doctor_repair_help: "Fehlende Anhänge vom Server abrufen"
 status:
   locked: Gesperrt
   unlocked: Entsperrt
@@ -814,3 +818,30 @@ saved_search:
 
 export:
   file_exists: "Diese Datei existiert bereits. Wählen Sie einen anderen Namen oder ersetzen Sie sie mit --force."
+
+account:
+  email: "Konto: %{email}"
+  usage: "Notizen: %{notes}, Anhänge: %{attachments}"
+  storage: "Speicher: %{used} MB von %{quota} MB"
+  last_sync: "Letzte Synchronisierung: %{time}"
+  confirm_delete_notes: "Dies löscht alle Notizen auf dem Server für alle Geräte und kann nicht rückgängig gemacht werden. Geben Sie Ihre E-Mail-Adresse ein, um fortzufahren:"
+  confirm_delete: "Dies löscht Ihr Konto und alles auf dem Server und kann nicht rückgängig gemacht werden. Dieses Gerät behält seine Notizen. Geben Sie Ihre E-Mail-Adresse ein, um fortzufahren:"
+  cancelled: "Es wurde nichts gelöscht"
+  notes_deleted: "Alle Notizen auf dem Server wurden gelöscht"
+  deleted: "Das Konto wurde gelöscht"
+
+colours:
+  unknown: "Keine Farbe namens %{colour}"
+  named: "Farbe aktualisiert: %{colour}"
+  tag_set: "Tag aktualisiert: %{tag}"
+
+doctor:
+  notes: "Notizen: %{count}, nicht lesbar: %{unreadable}"
+  versions: "Versionen: %{count}, nicht lesbar: %{unreadable}"
+  attachments: "Anhänge: %{count}, nicht lesbar: %{unreadable}, fehlend: %{missing}"
+  saved_searches: "Gespeicherte Suchen: %{count}, nicht lesbar: %{unreadable}"
+  conflicts: "Konflikte, die auf Sie warten: %{count}"
+  problems: "Gefundene Probleme: %{count}"
+  repaired: "Abgerufene Anhänge: %{count}"
+  repair_needs_sync: "Dieser Tresor ist mit keinem Server verbunden, daher können fehlende Anhänge nicht abgerufen werden"
+  healthy: "Keine Probleme gefunden"

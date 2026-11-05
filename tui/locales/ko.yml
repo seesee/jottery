@@ -635,6 +635,10 @@ cli:
   reset_done: "보관함과 기억된 비밀번호를 삭제했습니다"
   reset_keychain_failed: "키체인에서 비밀번호를 제거할 수 없습니다"
   export_force_help: "파일이 이미 있으면 바꾸기"
+  account_about: "서버가 계정에 대해 보관한 내용을 보거나 삭제"
+  colours_about: "색상 이름을 지정하고 태그에 색상 지정"
+  doctor_about: "열리지 않는 노트와 누락된 첨부 파일이 있는지 보관함 검사"
+  doctor_repair_help: "누락된 첨부 파일을 서버에서 가져오기"
 status:
   locked: "잠김"
   unlocked: "잠금 해제됨"
@@ -814,3 +818,30 @@ saved_search:
 
 export:
   file_exists: "이미 있는 파일입니다. 다른 이름을 선택하거나 --force로 바꾸세요."
+
+account:
+  email: "계정: %{email}"
+  usage: "노트: %{notes}, 첨부 파일: %{attachments}"
+  storage: "저장 공간: %{quota} MB 중 %{used} MB"
+  last_sync: "마지막 동기화: %{time}"
+  confirm_delete_notes: "서버의 모든 노트가 모든 기기에서 삭제되며 되돌릴 수 없습니다. 계속하려면 이메일 주소를 입력하세요:"
+  confirm_delete: "계정과 서버의 모든 내용이 삭제되며 되돌릴 수 없습니다. 이 기기의 노트는 유지됩니다. 계속하려면 이메일 주소를 입력하세요:"
+  cancelled: "아무것도 삭제되지 않았습니다"
+  notes_deleted: "서버의 모든 노트를 삭제했습니다"
+  deleted: "계정을 삭제했습니다"
+
+colours:
+  unknown: "%{colour}(이)라는 색상이 없습니다"
+  named: "색상을 업데이트했습니다: %{colour}"
+  tag_set: "태그를 업데이트했습니다: %{tag}"
+
+doctor:
+  notes: "노트: %{count}, 읽을 수 없음: %{unreadable}"
+  versions: "버전: %{count}, 읽을 수 없음: %{unreadable}"
+  attachments: "첨부 파일: %{count}, 읽을 수 없음: %{unreadable}, 누락: %{missing}"
+  saved_searches: "저장된 검색: %{count}, 읽을 수 없음: %{unreadable}"
+  conflicts: "대기 중인 충돌: %{count}"
+  problems: "발견된 문제: %{count}"
+  repaired: "가져온 첨부 파일: %{count}"
+  repair_needs_sync: "이 보관함은 서버에 연결되어 있지 않아 누락된 첨부 파일을 가져올 수 없습니다"
+  healthy: "문제가 없습니다"

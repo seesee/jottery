@@ -635,6 +635,10 @@ cli:
   reset_done: "已删除保险库和已记住的密码"
   reset_keychain_failed: "无法从钥匙串中移除密码"
   export_force_help: "如果文件已存在则替换"
+  account_about: "查看或删除服务器为您的账户保存的内容"
+  colours_about: "为颜色命名并为标签指定颜色"
+  doctor_about: "检查保险库中无法打开的笔记和缺失的附件"
+  doctor_repair_help: "从服务器获取缺失的附件"
 status:
   locked: 已锁定
   unlocked: 已解锁
@@ -814,3 +818,30 @@ saved_search:
 
 export:
   file_exists: "该文件已存在。请换一个名称,或使用 --force 替换它。"
+
+account:
+  email: "账户:%{email}"
+  usage: "笔记:%{notes},附件:%{attachments}"
+  storage: "存储空间:%{used} MB / %{quota} MB"
+  last_sync: "上次同步:%{time}"
+  confirm_delete_notes: "这将删除服务器上所有设备的全部笔记,且无法撤销。输入您的电子邮件地址以继续:"
+  confirm_delete: "这将删除您的账户和服务器上的所有内容,且无法撤销。此设备会保留其笔记。输入您的电子邮件地址以继续:"
+  cancelled: "未删除任何内容"
+  notes_deleted: "服务器上的所有笔记已删除"
+  deleted: "账户已删除"
+
+colours:
+  unknown: "没有名为 %{colour} 的颜色"
+  named: "颜色已更新:%{colour}"
+  tag_set: "标签已更新:%{tag}"
+
+doctor:
+  notes: "笔记:%{count},无法读取:%{unreadable}"
+  versions: "版本:%{count},无法读取:%{unreadable}"
+  attachments: "附件:%{count},无法读取:%{unreadable},缺失:%{missing}"
+  saved_searches: "已保存的搜索:%{count},无法读取:%{unreadable}"
+  conflicts: "等待处理的冲突:%{count}"
+  problems: "发现的问题:%{count}"
+  repaired: "已获取的附件:%{count}"
+  repair_needs_sync: "此保险库未连接到服务器,因此无法获取缺失的附件"
+  healthy: "未发现问题"

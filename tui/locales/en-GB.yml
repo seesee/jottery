@@ -686,6 +686,10 @@ cli:
   reset_done: "Deleted the vault and any remembered password"
   reset_keychain_failed: "Could not remove the password from the keychain"
   export_force_help: "Replace the file if it's already there"
+  account_about: "See or delete what the server holds for your account"
+  colours_about: "Name colours and give tags a colour"
+  doctor_about: "Check the vault for notes that won't open and missing attachments"
+  doctor_repair_help: "Fetch missing attachments from the server"
 status:
   locked: "Locked"
   unlocked: "Unlocked"
@@ -855,3 +859,30 @@ saved_search:
 
 export:
   file_exists: "That file already exists. Choose another name, or use --force to replace it."
+
+account:
+  email: "Account: %{email}"
+  usage: "Notes: %{notes}, attachments: %{attachments}"
+  storage: "Storage: %{used} MB of %{quota} MB"
+  last_sync: "Last sync: %{time}"
+  confirm_delete_notes: "This deletes every note on the server, for every device, and can't be undone. Type your email address to go ahead:"
+  confirm_delete: "This deletes your account and everything on the server, and can't be undone. This device keeps its notes. Type your email address to go ahead:"
+  cancelled: "Nothing was deleted"
+  notes_deleted: "Every note on the server has been deleted"
+  deleted: "The account has been deleted"
+
+colours:
+  unknown: "No colour called %{colour}"
+  named: "Colour updated: %{colour}"
+  tag_set: "Tag updated: %{tag}"
+
+doctor:
+  notes: "Notes: %{count}, unreadable: %{unreadable}"
+  versions: "Versions: %{count}, unreadable: %{unreadable}"
+  attachments: "Attachments: %{count}, unreadable: %{unreadable}, missing: %{missing}"
+  saved_searches: "Saved searches: %{count}, unreadable: %{unreadable}"
+  conflicts: "Conflicts waiting for you: %{count}"
+  problems: "Problems found: %{count}"
+  repaired: "Attachments fetched: %{count}"
+  repair_needs_sync: "This vault isn't connected to a server, so missing attachments can't be fetched"
+  healthy: "No problems found"

@@ -635,6 +635,10 @@ cli:
   reset_done: "Se han eliminado la bóveda y cualquier contraseña recordada"
   reset_keychain_failed: "No se ha podido quitar la contraseña del llavero"
   export_force_help: "Reemplazar el archivo si ya existe"
+  account_about: "Ver o eliminar lo que el servidor guarda de tu cuenta"
+  colours_about: "Poner nombre a los colores y asignar un color a las etiquetas"
+  doctor_about: "Comprobar la bóveda en busca de notas que no se abren y adjuntos que faltan"
+  doctor_repair_help: "Obtener del servidor los adjuntos que faltan"
 status:
   locked: Bloqueado
   unlocked: Desbloqueado
@@ -814,3 +818,30 @@ saved_search:
 
 export:
   file_exists: "Ese archivo ya existe. Elige otro nombre o usa --force para reemplazarlo."
+
+account:
+  email: "Cuenta: %{email}"
+  usage: "Notas: %{notes}, adjuntos: %{attachments}"
+  storage: "Almacenamiento: %{used} MB de %{quota} MB"
+  last_sync: "Última sincronización: %{time}"
+  confirm_delete_notes: "Esto elimina todas las notas del servidor, para todos los dispositivos, y no se puede deshacer. Escribe tu correo electrónico para continuar:"
+  confirm_delete: "Esto elimina tu cuenta y todo lo que hay en el servidor, y no se puede deshacer. Este dispositivo conserva sus notas. Escribe tu correo electrónico para continuar:"
+  cancelled: "No se ha eliminado nada"
+  notes_deleted: "Se han eliminado todas las notas del servidor"
+  deleted: "Se ha eliminado la cuenta"
+
+colours:
+  unknown: "No hay ningún color llamado %{colour}"
+  named: "Color actualizado: %{colour}"
+  tag_set: "Etiqueta actualizada: %{tag}"
+
+doctor:
+  notes: "Notas: %{count}, ilegibles: %{unreadable}"
+  versions: "Versiones: %{count}, ilegibles: %{unreadable}"
+  attachments: "Adjuntos: %{count}, ilegibles: %{unreadable}, faltan: %{missing}"
+  saved_searches: "Búsquedas guardadas: %{count}, ilegibles: %{unreadable}"
+  conflicts: "Conflictos pendientes: %{count}"
+  problems: "Problemas encontrados: %{count}"
+  repaired: "Adjuntos obtenidos: %{count}"
+  repair_needs_sync: "Esta bóveda no está conectada a un servidor, así que no se pueden obtener los adjuntos que faltan"
+  healthy: "No se han encontrado problemas"

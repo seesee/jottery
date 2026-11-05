@@ -467,6 +467,23 @@ pub struct InboxTokenStatusResponse {
     pub has_token: bool,
 }
 
+/// What the server says about an account. It's shown to the user, and acted on no further.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AccountInfo {
+    pub email: String,
+    #[serde(default)]
+    pub note_count: i64,
+    #[serde(default)]
+    pub attachment_count: i64,
+    #[serde(default)]
+    pub storage_used_bytes: i64,
+    #[serde(default)]
+    pub storage_quota_mb: i64,
+    #[serde(default)]
+    pub last_sync_at: Option<String>,
+}
+
 /// Session-based API client (for user operations requiring login)
 pub struct SessionClient {
     base_url: String,
@@ -509,6 +526,46 @@ impl SessionClient {
             session_token: login_response.session_id,
             client,
         })
+    }
+
+    /// What the server holds for this account
+    pub fn account_info(&self) -> Result<AccountInfo> {
+        let response = self.client
+            .get(format!("{}/api/v1/user/account", self.base_url))
+            .header("Authorization", format!("Bearer {}", self.session_token))
+            .send()
+            .context("Failed to reach the server")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!("{}", response.status());
+        }
+
+        response.json().context("Failed to read the account details")
+    }
+
+    /// Delete something of the account's, with the password that confirms it.
+    fn delete_with_password(&self, path: &str, password: &str) -> Result<()> {
+        let response = self.client
+            .delete(format!("{}{path}", self.base_url))
+            .header("Authorization", format!("Bearer {}", self.session_token))
+            .json(&serde_json::json!({ "currentPassword": password }))
+            .send()
+            .context("Failed to reach the server")?;
+
+        if !response.status().is_success() {
+            anyhow::bail!("{}", response.status());
+        }
+        Ok(())
+    }
+
+    /// Delete every note the server holds for this account
+    pub fn delete_all_notes(&self, password: &str) -> Result<()> {
+        self.delete_with_password("/api/v1/user/notes", password)
+    }
+
+    /// Delete the account and everything the server holds for it
+    pub fn delete_account(&self, password: &str) -> Result<()> {
+        self.delete_with_password("/api/v1/user/account", password)
     }
 
     /// Generate a new inbox token

@@ -635,6 +635,10 @@ cli:
   reset_done: "De kluis en elk onthouden wachtwoord zijn verwijderd"
   reset_keychain_failed: "Het wachtwoord kon niet uit de sleutelhanger worden verwijderd"
   export_force_help: "Het bestand vervangen als het al bestaat"
+  account_about: "Bekijken of verwijderen wat de server voor uw account bewaart"
+  colours_about: "Kleuren een naam geven en tags een kleur geven"
+  doctor_about: "De kluis controleren op notities die niet openen en ontbrekende bijlagen"
+  doctor_repair_help: "Ontbrekende bijlagen van de server ophalen"
 status:
   locked: Vergrendeld
   unlocked: Ontgrendeld
@@ -814,3 +818,30 @@ saved_search:
 
 export:
   file_exists: "Dat bestand bestaat al. Kies een andere naam of gebruik --force om het te vervangen."
+
+account:
+  email: "Account: %{email}"
+  usage: "Notities: %{notes}, bijlagen: %{attachments}"
+  storage: "Opslag: %{used} MB van %{quota} MB"
+  last_sync: "Laatste synchronisatie: %{time}"
+  confirm_delete_notes: "Dit verwijdert alle notities op de server, voor alle apparaten, en kan niet ongedaan worden gemaakt. Typ uw e-mailadres om door te gaan:"
+  confirm_delete: "Dit verwijdert uw account en alles op de server, en kan niet ongedaan worden gemaakt. Dit apparaat houdt zijn notities. Typ uw e-mailadres om door te gaan:"
+  cancelled: "Er is niets verwijderd"
+  notes_deleted: "Alle notities op de server zijn verwijderd"
+  deleted: "Het account is verwijderd"
+
+colours:
+  unknown: "Geen kleur met de naam %{colour}"
+  named: "Kleur bijgewerkt: %{colour}"
+  tag_set: "Tag bijgewerkt: %{tag}"
+
+doctor:
+  notes: "Notities: %{count}, onleesbaar: %{unreadable}"
+  versions: "Versies: %{count}, onleesbaar: %{unreadable}"
+  attachments: "Bijlagen: %{count}, onleesbaar: %{unreadable}, ontbrekend: %{missing}"
+  saved_searches: "Opgeslagen zoekopdrachten: %{count}, onleesbaar: %{unreadable}"
+  conflicts: "Conflicten die op u wachten: %{count}"
+  problems: "Gevonden problemen: %{count}"
+  repaired: "Opgehaalde bijlagen: %{count}"
+  repair_needs_sync: "Deze kluis is niet met een server verbonden, dus ontbrekende bijlagen kunnen niet worden opgehaald"
+  healthy: "Geen problemen gevonden"

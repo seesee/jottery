@@ -2,6 +2,7 @@ mod api;
 mod backup;
 mod crypto;
 mod db;
+mod doctor;
 mod export;
 mod models;
 mod password_storage;
@@ -133,6 +134,14 @@ fn build_translated_cli() -> clap::Command {
             .mut_arg("password", |a| a.help(t!("cli.password_help").to_string()))
             .mut_arg("device_name", |a| a.help(t!("cli.device_name_help").to_string()))
             .mut_arg("key_password", |a| a.help(t!("cli.key_password_help").to_string()))
+    });
+
+    cmd = cmd.mut_subcommand("account", |sub| sub.about(t!("cli.account_about").to_string()));
+    cmd = cmd.mut_subcommand("colours", |sub| sub.about(t!("cli.colours_about").to_string()));
+    cmd = cmd.mut_subcommand("doctor", |sub| {
+        sub.about(t!("cli.doctor_about").to_string())
+            .mut_arg("repair", |a| a.help(t!("cli.doctor_repair_help").to_string()))
+            .mut_arg("password", |a| a.help(t!("cli.password_decrypt_help").to_string()))
     });
 
     cmd = cmd.mut_subcommand("export", |sub| {
@@ -417,6 +426,26 @@ enum Commands {
         #[command(subcommand)]
         action: InboxTokenAction,
     },
+    /// See or delete what the server holds for your account
+    Account {
+        #[command(subcommand)]
+        action: AccountAction,
+    },
+    /// Name colours and give tags a colour
+    Colours {
+        #[command(subcommand)]
+        action: ColoursAction,
+    },
+    /// Check the vault for notes that won't open and missing attachments
+    Doctor {
+        /// Fetch missing attachments from the server
+        #[arg(long)]
+        repair: bool,
+
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
     /// Restore from encrypted backup
     RestoreBackup {
         /// Input file path
@@ -667,6 +696,247 @@ fn open_editor(initial_content: &str) -> Result<String> {
         .context(t!("editor.temp_read_error"))?;
 
     Ok(content)
+}
+
+/// Which server, user and password an account command is for.
+#[derive(clap::Args)]
+struct AccountLogin {
+    /// Server endpoint URL (defaults to the one this vault syncs with)
+    #[arg(short, long)]
+    server: Option<String>,
+
+    /// User email
+    #[arg(short, long)]
+    email: String,
+
+    /// Account password (will prompt if not provided)
+    #[arg(short, long)]
+    password: Option<String>,
+}
+
+#[derive(Subcommand)]
+enum AccountAction {
+    /// Show what the server holds, and how much of the quota it uses
+    Info {
+        #[command(flatten)]
+        login: AccountLogin,
+    },
+    /// Delete every note on the server, for every device
+    DeleteNotes {
+        #[command(flatten)]
+        login: AccountLogin,
+    },
+    /// Delete the account and everything on the server
+    Delete {
+        #[command(flatten)]
+        login: AccountLogin,
+    },
+}
+
+#[derive(Subcommand)]
+enum ColoursAction {
+    /// Show the colours, what they're called, and which tags have one
+    List {
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+    /// Give a colour a name of your own, or take it away with an empty one
+    Name {
+        /// The colour, by its key or its current name
+        colour: String,
+
+        /// What to call it
+        name: String,
+
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+    /// Give a tag a colour, or "none" to take it away
+    Tag {
+        /// The tag
+        tag: String,
+
+        /// The colour, by its key or its current name
+        colour: String,
+
+        /// Password for decryption (will prompt if not provided)
+        #[arg(short, long)]
+        password: Option<String>,
+    },
+}
+
+/// Sign in for an account command.
+fn account_session(
+    login: AccountLogin,
+    db_path: &Path,
+    allow_insecure_http: bool,
+) -> Result<(api::SessionClient, String, String)> {
+    let server = match login.server {
+        Some(server) => server,
+        None => {
+            let password = get_password(None, db_path)?;
+            let db = Database::open(db_path, &password).context("Failed to open database")?;
+            match SyncRepository::new(db.connection()).get_metadata()? {
+                Some(metadata) if !metadata.sync_endpoint.is_empty() => metadata.sync_endpoint,
+                _ => anyhow::bail!("No server specified and no sync endpoint configured. Use --server."),
+            }
+        }
+    };
+    api::require_safe_endpoint(&server, allow_insecure_http)?;
+
+    let password = account_password(login.password)?;
+    let session = api::SessionClient::login(&server, &login.email, &password)
+        .context("Failed to login to server")?;
+
+    Ok((session, login.email, password))
+}
+
+/// Ask for the account's email address before something that can't be undone. It isn't
+/// a word to copy from the instructions, so it can only be typed on purpose.
+fn confirm_with_email(question: &str, email: &str) -> Result<()> {
+    errln!("{question}");
+    let mut answer = String::new();
+    std::io::stdin().read_line(&mut answer).context("Failed to read the answer")?;
+
+    if answer.trim() != email {
+        anyhow::bail!("{}", t!("account.cancelled"));
+    }
+    Ok(())
+}
+
+/// Run `jottery account`.
+fn run_account_command(action: AccountAction, db_path: &Path, allow_insecure_http: bool) -> Result<()> {
+    match action {
+        AccountAction::Info { login } => {
+            let (session, _, _) = account_session(login, db_path, allow_insecure_http)?;
+            let info = session.account_info()?;
+
+            let used_mb = format!("{:.1}", info.storage_used_bytes as f64 / (1024.0 * 1024.0));
+            outln!("{}", t!("account.email", email = info.email));
+            outln!("{}", t!("account.usage", notes = info.note_count, attachments = info.attachment_count));
+            outln!("{}", t!("account.storage", used = used_mb, quota = info.storage_quota_mb));
+            if let Some(last_sync_at) = info.last_sync_at {
+                outln!("{}", t!("account.last_sync", time = last_sync_at));
+            }
+        }
+        AccountAction::DeleteNotes { login } => {
+            let (session, email, password) = account_session(login, db_path, allow_insecure_http)?;
+            confirm_with_email(&t!("account.confirm_delete_notes"), &email)?;
+            session.delete_all_notes(&password)?;
+            outln!("✓ {}", t!("account.notes_deleted"));
+        }
+        AccountAction::Delete { login } => {
+            let (session, email, password) = account_session(login, db_path, allow_insecure_http)?;
+            confirm_with_email(&t!("account.confirm_delete"), &email)?;
+            session.delete_account(&password)?;
+            outln!("✓ {}", t!("account.deleted"));
+        }
+    }
+    Ok(())
+}
+
+/// Find a colour by its key or the name it goes by.
+fn find_colour(settings: &models::UserSettings, colour: &str) -> Result<String> {
+    let palette = settings.get_color_palette();
+    if palette.contains_key(colour) {
+        return Ok(colour.to_string());
+    }
+    settings.get_color_key_by_display_name(colour)
+        .with_context(|| t!("colours.unknown", colour = colour).to_string())
+}
+
+/// Run `jottery colours`.
+fn run_colours_command(action: ColoursAction, db_path: &Path) -> Result<()> {
+    let (ColoursAction::List { password } | ColoursAction::Name { password, .. } | ColoursAction::Tag { password, .. }) = &action;
+    let password = get_password(password.clone(), db_path)?;
+    let db = Database::open(db_path, &password).context("Failed to open database. Check your password.")?;
+    let key = derive_key_from_db(&db, &password)?;
+
+    let repo = repository::SettingsRepository::new(db.connection());
+    let mut settings = repo.get_with_key(Some(&key))?;
+
+    match action {
+        ColoursAction::List { .. } => {
+            let palette = settings.get_color_palette();
+            let mut colours: Vec<_> = palette.iter().collect();
+            colours.sort_by_key(|(colour, _)| colour.as_str());
+            for (colour, definition) in colours {
+                match &definition.display_name {
+                    Some(name) => outln!("{colour}: {name}"),
+                    None => outln!("{colour}"),
+                }
+            }
+
+            let mut tags: Vec<_> = settings.tag_colors.iter().flatten().collect();
+            tags.sort();
+            for (tag, colour) in tags {
+                outln!("#{tag}: {colour}");
+            }
+        }
+        ColoursAction::Name { colour, name, .. } => {
+            let colour = find_colour(&settings, &colour)?;
+            let mut palette = settings.get_color_palette();
+            if let Some(definition) = palette.get_mut(&colour) {
+                definition.display_name = (!name.trim().is_empty()).then(|| name.trim().to_string());
+            }
+            settings.color_palette = Some(palette);
+            repo.update_with_key(&settings, Some(&key))?;
+            outln!("✓ {}", t!("colours.named", colour = colour));
+        }
+        ColoursAction::Tag { tag, colour, .. } => {
+            let tag = tag.trim_start_matches('#').to_lowercase();
+            let mut tags = settings.tag_colors.take().unwrap_or_default();
+            if colour.eq_ignore_ascii_case("none") {
+                tags.remove(&tag);
+            } else {
+                tags.insert(tag.clone(), find_colour(&settings, &colour)?);
+            }
+            settings.tag_colors = (!tags.is_empty()).then_some(tags);
+            repo.update_with_key(&settings, Some(&key))?;
+            outln!("✓ {}", t!("colours.tag_set", tag = tag));
+        }
+    }
+    Ok(())
+}
+
+/// Run `jottery doctor`. Finding a problem is an error, so a script can tell.
+fn run_doctor_command(db_path: &Path, password: Option<String>, repair: bool) -> Result<()> {
+    let password = get_password(password, db_path)?;
+    let db = Database::open(db_path, &password).context("Failed to open database. Check your password.")?;
+    let key = derive_key_from_db(&db, &password)?;
+
+    let mut report = doctor::check(db.connection(), &key)?;
+
+    if repair && report.missing_attachments > 0 {
+        let connected = SyncRepository::new(db.connection()).get_metadata()?
+            .is_some_and(|metadata| metadata.api_key.is_some());
+        if connected {
+            let app = App::headless(db_path.to_path_buf(), db, key)?;
+            let fetched = ui::operations::sync::fetch_all_missing_blobs(&app)?;
+            outln!("✓ {}", t!("doctor.repaired", count = fetched));
+            let db = app.into_database().context("Database not available")?;
+            report = doctor::check(db.connection(), &key)?;
+        } else {
+            errln!("⚠ {}", t!("doctor.repair_needs_sync"));
+        }
+    }
+
+    outln!("{}", t!("doctor.notes", count = report.notes, unreadable = report.unreadable_notes));
+    outln!("{}", t!("doctor.versions", count = report.versions, unreadable = report.unreadable_versions));
+    outln!("{}", t!("doctor.attachments", count = report.attachments, unreadable = report.unreadable_attachments, missing = report.missing_attachments));
+    outln!("{}", t!("doctor.saved_searches", count = report.saved_searches, unreadable = report.unreadable_saved_searches));
+    if report.conflicts > 0 {
+        outln!("{}", t!("doctor.conflicts", count = report.conflicts));
+    }
+
+    if report.problems() > 0 {
+        anyhow::bail!("{}", t!("doctor.problems", count = report.problems()));
+    }
+
+    outln!("✓ {}", t!("doctor.healthy"));
+    Ok(())
 }
 
 /// What has to be typed before --reset goes ahead. It isn't translated, so a script or
@@ -1272,6 +1542,15 @@ fn run() -> Result<()> {
             outln!("3. {}: jottery", t!("menu.notes"));
 
             return Ok(());
+        }
+        Some(Commands::Account { action }) => {
+            return run_account_command(action, &db_path, allow_insecure_http);
+        }
+        Some(Commands::Colours { action }) => {
+            return run_colours_command(action, &db_path);
+        }
+        Some(Commands::Doctor { repair, password }) => {
+            return run_doctor_command(&db_path, password, repair);
         }
         Some(Commands::InboxToken { action }) => {
             use api::SessionClient;

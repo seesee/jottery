@@ -635,6 +635,10 @@ cli:
   reset_done: "Usunięto sejf i zapamiętane hasło"
   reset_keychain_failed: "Nie udało się usunąć hasła z pęku kluczy"
   export_force_help: "Zastąp plik, jeśli już istnieje"
+  account_about: "Zobacz lub usuń to, co serwer przechowuje dla Twojego konta"
+  colours_about: "Nazywaj kolory i przypisuj kolory do tagów"
+  doctor_about: "Sprawdź sejf pod kątem notatek, których nie da się otworzyć, i brakujących załączników"
+  doctor_repair_help: "Pobierz brakujące załączniki z serwera"
 status:
   locked: Zablokowane
   unlocked: Odblokowane
@@ -814,3 +818,30 @@ saved_search:
 
 export:
   file_exists: "Ten plik już istnieje. Wybierz inną nazwę lub użyj --force, aby go zastąpić."
+
+account:
+  email: "Konto: %{email}"
+  usage: "Notatki: %{notes}, załączniki: %{attachments}"
+  storage: "Miejsce: %{used} MB z %{quota} MB"
+  last_sync: "Ostatnia synchronizacja: %{time}"
+  confirm_delete_notes: "Spowoduje to usunięcie wszystkich notatek na serwerze, dla wszystkich urządzeń, i nie można tego cofnąć. Wpisz swój adres e-mail, aby kontynuować:"
+  confirm_delete: "Spowoduje to usunięcie konta i wszystkiego na serwerze, i nie można tego cofnąć. To urządzenie zachowa swoje notatki. Wpisz swój adres e-mail, aby kontynuować:"
+  cancelled: "Nic nie zostało usunięte"
+  notes_deleted: "Usunięto wszystkie notatki na serwerze"
+  deleted: "Konto zostało usunięte"
+
+colours:
+  unknown: "Brak koloru o nazwie %{colour}"
+  named: "Zaktualizowano kolor: %{colour}"
+  tag_set: "Zaktualizowano tag: %{tag}"
+
+doctor:
+  notes: "Notatki: %{count}, nieczytelne: %{unreadable}"
+  versions: "Wersje: %{count}, nieczytelne: %{unreadable}"
+  attachments: "Załączniki: %{count}, nieczytelne: %{unreadable}, brakujące: %{missing}"
+  saved_searches: "Zapisane wyszukiwania: %{count}, nieczytelne: %{unreadable}"
+  conflicts: "Konflikty czekające na Ciebie: %{count}"
+  problems: "Znalezione problemy: %{count}"
+  repaired: "Pobrane załączniki: %{count}"
+  repair_needs_sync: "Ten sejf nie jest połączony z serwerem, więc nie można pobrać brakujących załączników"
+  healthy: "Nie znaleziono problemów"

@@ -1253,7 +1253,7 @@ fn read_blobs(run: &Run<'_>, attachments: &[SyncAttachment]) -> HashMap<String, 
 /// older pull or a conflict's server copy can leave a note naming a file that isn't here.
 /// Each sync fetches a few. One that can't be fetched stays listed, viewing it says so,
 /// and the next sync tries again.
-fn fetch_missing_blobs(run: &Run<'_>) {
+fn fetch_missing_blobs(run: &Run<'_>, limit: usize) {
     let missing = match run.attachment_repo().list_missing_blobs() {
         Ok(missing) => missing,
         Err(e) => {
@@ -1262,7 +1262,7 @@ fn fetch_missing_blobs(run: &Run<'_>) {
         }
     };
 
-    for attachment in missing.iter().take(MAX_BLOB_FETCHES_PER_SYNC) {
+    for attachment in missing.iter().take(limit) {
         match fetch_blob(run, &attachment.id) {
             Ok(Some(data)) => {
                 let stored = run.link.write(|| {
@@ -1459,7 +1459,7 @@ fn sync_vault(
         .is_some_and(|(date, now)| beyond_server_clock(date, now));
 
     push_saved_searches(&run, server_now, &mut outcome)?;
-    fetch_missing_blobs(&run);
+    fetch_missing_blobs(&run, MAX_BLOB_FETCHES_PER_SYNC);
 
     // last_sync_at stays on this device's clock. The pull position in last_pull_at
     // is the server's.
@@ -1811,6 +1811,21 @@ pub fn perform_sync(app: &mut App, force: bool) -> Result<SyncOutcome> {
     }
 
     Ok(report.outcome)
+}
+
+/// Fetch every attachment file this vault is missing, returning how many arrived.
+pub fn fetch_all_missing_blobs(app: &App) -> Result<usize> {
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not available"))?;
+    let key = app.key.as_ref().ok_or_else(|| anyhow::anyhow!("Encryption key not available"))?;
+
+    let metadata = SyncRepository::new(db.connection()).get_metadata()?.unwrap_or_default();
+    let link = SyncLink::default();
+    let log = |_: &str| {};
+    let run = open_run(db.connection(), &app.crypto, key, &metadata, &log, &link)?;
+
+    let before = run.attachment_repo().list_missing_blobs()?.len();
+    fetch_missing_blobs(&run, usize::MAX);
+    Ok(before - run.attachment_repo().list_missing_blobs()?.len())
 }
 
 /// Open conflict resolution for a note
@@ -3525,6 +3540,24 @@ mod tests {
         assert!(outcome.clock_ahead);
         let db = app.db.as_ref().unwrap();
         assert_eq!(SavedSearchRepository::new(db.connection()).pending().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn a_repair_fetches_what_the_server_has_and_counts_it() {
+        use base64::Engine as _;
+        let crypto = CryptoService::new();
+        let payload = serde_json::to_vec(&crypto.encrypt_binary(b"abc", key()).unwrap()).unwrap();
+        let server = StubServer::with_attachments(vec![], vec![json!({
+            "id": ATTACHMENT_ID,
+            "data": base64::engine::general_purpose::STANDARD.encode(payload),
+        })]);
+        let app = app_connected_to(&server.endpoint);
+        add_note_with_attachment(&app, "reference-only.txt");
+        let db = app.db.as_ref().unwrap();
+        AttachmentRepository::new(db.connection()).delete(ATTACHMENT_ID).unwrap();
+
+        assert_eq!(fetch_all_missing_blobs(&app).unwrap(), 1);
+        assert_eq!(fetch_all_missing_blobs(&app).unwrap(), 0);
     }
 
     /// Without this, a server that always says there's more would keep a sync running.

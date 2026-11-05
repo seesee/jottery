@@ -635,6 +635,10 @@ cli:
   reset_done: "Kasa ve hatırlanan parola silindi"
   reset_keychain_failed: "Parola anahtar zincirinden kaldırılamadı"
   export_force_help: "Dosya zaten varsa değiştir"
+  account_about: "Sunucunun hesabınız için tuttuklarını görün veya silin"
+  colours_about: "Renklere ad verin ve etiketlere renk atayın"
+  doctor_about: "Kasada açılmayan notları ve eksik ekleri denetle"
+  doctor_repair_help: "Eksik ekleri sunucudan al"
 status:
   locked: Kilitli
   unlocked: Kilitsiz
@@ -814,3 +818,30 @@ saved_search:
 
 export:
   file_exists: "Bu dosya zaten var. Başka bir ad seçin ya da değiştirmek için --force kullanın."
+
+account:
+  email: "Hesap: %{email}"
+  usage: "Notlar: %{notes}, ekler: %{attachments}"
+  storage: "Depolama: %{used} MB / %{quota} MB"
+  last_sync: "Son eşitleme: %{time}"
+  confirm_delete_notes: "Bu işlem sunucudaki tüm notları tüm cihazlar için siler ve geri alınamaz. Devam etmek için e-posta adresinizi yazın:"
+  confirm_delete: "Bu işlem hesabınızı ve sunucudaki her şeyi siler ve geri alınamaz. Bu cihaz notlarını korur. Devam etmek için e-posta adresinizi yazın:"
+  cancelled: "Hiçbir şey silinmedi"
+  notes_deleted: "Sunucudaki tüm notlar silindi"
+  deleted: "Hesap silindi"
+
+colours:
+  unknown: "%{colour} adında renk yok"
+  named: "Renk güncellendi: %{colour}"
+  tag_set: "Etiket güncellendi: %{tag}"
+
+doctor:
+  notes: "Notlar: %{count}, okunamayan: %{unreadable}"
+  versions: "Sürümler: %{count}, okunamayan: %{unreadable}"
+  attachments: "Ekler: %{count}, okunamayan: %{unreadable}, eksik: %{missing}"
+  saved_searches: "Kayıtlı aramalar: %{count}, okunamayan: %{unreadable}"
+  conflicts: "Sizi bekleyen çakışmalar: %{count}"
+  problems: "Bulunan sorunlar: %{count}"
+  repaired: "Alınan ekler: %{count}"
+  repair_needs_sync: "Bu kasa bir sunucuya bağlı değil, bu yüzden eksik ekler alınamıyor"
+  healthy: "Sorun bulunamadı"

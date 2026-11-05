@@ -635,6 +635,10 @@ cli:
   reset_done: "保管庫と記憶されたパスワードを削除しました"
   reset_keychain_failed: "キーチェーンからパスワードを削除できませんでした"
   export_force_help: "ファイルが既にある場合は置き換える"
+  account_about: "サーバーがアカウントについて保持している内容を表示または削除"
+  colours_about: "色に名前を付け、タグに色を割り当てる"
+  doctor_about: "開けないノートや欠けている添付ファイルがないか保管庫を確認"
+  doctor_repair_help: "欠けている添付ファイルをサーバーから取得"
 status:
   locked: ロック中
   unlocked: ロック解除
@@ -814,3 +818,30 @@ saved_search:
 
 export:
   file_exists: "そのファイルは既に存在します。別の名前を選ぶか、--force で置き換えてください。"
+
+account:
+  email: "アカウント: %{email}"
+  usage: "ノート: %{notes}、添付ファイル: %{attachments}"
+  storage: "ストレージ: %{quota} MB 中 %{used} MB"
+  last_sync: "最終同期: %{time}"
+  confirm_delete_notes: "サーバー上のすべてのノートがすべてのデバイスで削除され、元に戻せません。続行するにはメールアドレスを入力してください:"
+  confirm_delete: "アカウントとサーバー上のすべてが削除され、元に戻せません。このデバイスのノートは残ります。続行するにはメールアドレスを入力してください:"
+  cancelled: "何も削除されませんでした"
+  notes_deleted: "サーバー上のすべてのノートを削除しました"
+  deleted: "アカウントを削除しました"
+
+colours:
+  unknown: "%{colour} という色はありません"
+  named: "色を更新しました: %{colour}"
+  tag_set: "タグを更新しました: %{tag}"
+
+doctor:
+  notes: "ノート: %{count}、読み取り不可: %{unreadable}"
+  versions: "バージョン: %{count}、読み取り不可: %{unreadable}"
+  attachments: "添付ファイル: %{count}、読み取り不可: %{unreadable}、欠損: %{missing}"
+  saved_searches: "保存した検索: %{count}、読み取り不可: %{unreadable}"
+  conflicts: "解決待ちの競合: %{count}"
+  problems: "見つかった問題: %{count}"
+  repaired: "取得した添付ファイル: %{count}"
+  repair_needs_sync: "この保管庫はサーバーに接続されていないため、欠けている添付ファイルを取得できません"
+  healthy: "問題は見つかりませんでした"

@@ -635,6 +635,10 @@ cli:
   reset_done: "Coffre et mot de passe mémorisé supprimés"
   reset_keychain_failed: "Impossible de retirer le mot de passe du trousseau"
   export_force_help: "Remplacer le fichier s'il existe déjà"
+  account_about: "Voir ou supprimer ce que le serveur conserve pour votre compte"
+  colours_about: "Nommer les couleurs et attribuer une couleur aux étiquettes"
+  doctor_about: "Vérifier le coffre : notes illisibles et pièces jointes manquantes"
+  doctor_repair_help: "Récupérer les pièces jointes manquantes depuis le serveur"
 status:
   locked: Verrouillé
   unlocked: Déverrouillé
@@ -814,3 +818,30 @@ saved_search:
 
 export:
   file_exists: "Ce fichier existe déjà. Choisissez un autre nom, ou utilisez --force pour le remplacer."
+
+account:
+  email: "Compte : %{email}"
+  usage: "Notes : %{notes}, pièces jointes : %{attachments}"
+  storage: "Stockage : %{used} Mo sur %{quota} Mo"
+  last_sync: "Dernière synchronisation : %{time}"
+  confirm_delete_notes: "Ceci supprime toutes les notes du serveur, pour tous les appareils, de façon irréversible. Saisissez votre adresse e-mail pour continuer :"
+  confirm_delete: "Ceci supprime votre compte et tout ce qui se trouve sur le serveur, de façon irréversible. Cet appareil conserve ses notes. Saisissez votre adresse e-mail pour continuer :"
+  cancelled: "Rien n'a été supprimé"
+  notes_deleted: "Toutes les notes du serveur ont été supprimées"
+  deleted: "Le compte a été supprimé"
+
+colours:
+  unknown: "Aucune couleur nommée %{colour}"
+  named: "Couleur mise à jour : %{colour}"
+  tag_set: "Étiquette mise à jour : %{tag}"
+
+doctor:
+  notes: "Notes : %{count}, illisibles : %{unreadable}"
+  versions: "Versions : %{count}, illisibles : %{unreadable}"
+  attachments: "Pièces jointes : %{count}, illisibles : %{unreadable}, manquantes : %{missing}"
+  saved_searches: "Recherches enregistrées : %{count}, illisibles : %{unreadable}"
+  conflicts: "Conflits en attente : %{count}"
+  problems: "Problèmes trouvés : %{count}"
+  repaired: "Pièces jointes récupérées : %{count}"
+  repair_needs_sync: "Ce coffre n'est connecté à aucun serveur, les pièces jointes manquantes ne peuvent donc pas être récupérées"
+  healthy: "Aucun problème trouvé"
