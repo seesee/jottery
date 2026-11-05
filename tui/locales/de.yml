@@ -90,6 +90,11 @@ note:
   bin_emptied: "%{count} Notizen endgültig gelöscht"
   locked_cannot_archive: "Gesperrte Notiz kann nicht archiviert werden"
   unreadable: "%{count} Notizen in diesem Tresor können nicht gelesen werden"
+  duplicated: "Notiz dupliziert"
+  copied: "In die Zwischenablage kopiert"
+  copy_too_large: "Diese Notiz ist zu lang, um vom Terminal zuverlässig kopiert zu werden"
+  word_wrap_on: "Zeilenumbruch ein"
+  word_wrap_off: "Zeilenumbruch aus"
 archive:
   view: "Archiv anzeigen"
   title: "Archiv"
@@ -180,6 +185,7 @@ settings:
   disabled: disabled
   sort_order: "Sortierung"
   language_auto: "Wie im System"
+  default_note_type: "Standard-Notiztyp"
 sync:
   push: An Server senden
   pull: Vom Server abrufen
@@ -534,6 +540,12 @@ help:
   ctrl_s_save_search_key: "Strg+S"
   ctrl_s_save_search_desc: "Diese Suche speichern"
   enter_confirm_esc_cancel: "Enter: bestätigen | Esc: abbrechen"
+  D_duplicate_key: "Umschalt+D"
+  D_duplicate_desc: "Notiz duplizieren"
+  o_copy_key: "o"
+  o_copy_desc: "Notiztext in die Zwischenablage kopieren"
+  w_wrap_key: "w"
+  w_wrap_desc: "Zeilenumbruch ein- oder ausschalten"
 cli:
   # Alt (an einigen Stellen verwendet)
   list: Notizen auflisten

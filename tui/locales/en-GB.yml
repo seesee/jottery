@@ -101,6 +101,11 @@ note:
   unreadable: "%{count} notes in this vault can't be read"
 
 # Archive operations
+  duplicated: "Note duplicated"
+  copied: "Copied to the clipboard"
+  copy_too_large: "This note is too long for a terminal to copy reliably"
+  word_wrap_on: "Word wrap on"
+  word_wrap_off: "Word wrap off"
 archive:
   view: "View archive"
   title: "Archive"
@@ -202,6 +207,7 @@ settings:
   language_auto: "Same as system"
 
 # Sync operations
+  default_note_type: "Default note type"
 sync:
   push: "Push to server"
   pull: "Pull from server"
@@ -583,6 +589,12 @@ help:
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "Save this search"
   enter_confirm_esc_cancel: "Enter: confirm | Esc: cancel"
+  D_duplicate_key: "Shift+D"
+  D_duplicate_desc: "Duplicate note"
+  o_copy_key: "o"
+  o_copy_desc: "Copy note text to the clipboard"
+  w_wrap_key: "w"
+  w_wrap_desc: "Turn word wrap on or off"
 cli:
   # Legacy (used in some places)
   list: "List notes"

@@ -4,7 +4,6 @@ use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use rust_i18n::t;
 
-use crate::models::SyntaxLanguage;
 use crate::repository::NoteRepository;
 use crate::ui::app::App;
 use crate::ui::input::text_input::{handle_text_input, TextInputResult};
@@ -440,7 +439,7 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     } else {
                         // Create new note - clear inputs
                         app.note_input.clear();
-                        app.note_syntax = SyntaxLanguage::default();
+                        app.note_syntax = app.settings.default_note_type;
                         app.current_tags.clear();
                         app.editing_note_id = None;
                     }
@@ -911,6 +910,21 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     } else if !app.filtered_notes().is_empty() {
                         app.show_note_info = true;
                     }
+                }
+            }
+            KeyCode::Char('D') if matches!(app.view_mode, ViewMode::NoteList) => {
+                if let Err(e) = operations::notes::duplicate_selected(app) {
+                    app.error = Some(e.to_string());
+                }
+            }
+            KeyCode::Char('o') if matches!(app.view_mode, ViewMode::NoteList) => {
+                if let Err(e) = operations::notes::copy_selected(app) {
+                    app.error = Some(e.to_string());
+                }
+            }
+            KeyCode::Char('w') if matches!(app.view_mode, ViewMode::NoteList) => {
+                if let Err(e) = operations::notes::toggle_word_wrap(app) {
+                    app.error = Some(e.to_string());
                 }
             }
             KeyCode::Char('g') if matches!(app.view_mode, ViewMode::NoteList) => {

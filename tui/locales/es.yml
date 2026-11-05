@@ -90,6 +90,11 @@ note:
   bin_emptied: "%{count} notas eliminadas definitivamente"
   locked_cannot_archive: "No se puede archivar una nota bloqueada"
   unreadable: "%{count} notas de este almacén no se pueden leer"
+  duplicated: "Nota duplicada"
+  copied: "Copiado al portapapeles"
+  copy_too_large: "Esta nota es demasiado larga para que un terminal la copie de forma fiable"
+  word_wrap_on: "Ajuste de línea activado"
+  word_wrap_off: "Ajuste de línea desactivado"
 archive:
   view: "Ver archivo"
   title: "Archivo"
@@ -180,6 +185,7 @@ settings:
   disabled: deshabilitado
   sort_order: "Orden"
   language_auto: "Igual que el sistema"
+  default_note_type: "Tipo de nota predeterminado"
 sync:
   push: Enviar al servidor
   pull: Recibir del servidor
@@ -534,6 +540,12 @@ help:
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "Guardar esta búsqueda"
   enter_confirm_esc_cancel: "Intro: confirmar | Esc: cancelar"
+  D_duplicate_key: "Mayús+D"
+  D_duplicate_desc: "Duplicar nota"
+  o_copy_key: "o"
+  o_copy_desc: "Copiar el texto de la nota al portapapeles"
+  w_wrap_key: "w"
+  w_wrap_desc: "Activar o desactivar el ajuste de línea"
 cli:
   # Alt (usado en algunos lugares)
   list: Listar notas

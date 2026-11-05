@@ -954,6 +954,7 @@ fn run() -> Result<()> {
             // Create note struct
             let mut note = Note::new(content);
             note.tags = note_tags;
+            note.set_syntax(repository::SettingsRepository::new(db.connection()).get()?.default_note_type);
 
             // Save to database
             let note_repo = NoteRepository::new(db.connection());

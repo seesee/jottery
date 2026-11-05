@@ -90,6 +90,11 @@ note:
   bin_emptied: "Trwale usunięte notatki: %{count}"
   locked_cannot_archive: "Nie można zarchiwizować zablokowanej notatki"
   unreadable: "Nie można odczytać notatek w tym sejfie: %{count}"
+  duplicated: "Zduplikowano notatkę"
+  copied: "Skopiowano do schowka"
+  copy_too_large: "Ta notatka jest zbyt długa, by terminal mógł ją niezawodnie skopiować"
+  word_wrap_on: "Zawijanie wierszy włączone"
+  word_wrap_off: "Zawijanie wierszy wyłączone"
 archive:
   view: "Wyświetl archiwum"
   title: "Archiwum"
@@ -180,6 +185,7 @@ settings:
   disabled: wyłączone
   sort_order: "Sortowanie"
   language_auto: "Jak w systemie"
+  default_note_type: "Domyślny typ notatki"
 sync:
   push: Wyślij na serwer
   pull: Pobierz z serwera
@@ -534,6 +540,12 @@ help:
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "Zapisz to wyszukiwanie"
   enter_confirm_esc_cancel: "Enter: potwierdź | Esc: anuluj"
+  D_duplicate_key: "Shift+D"
+  D_duplicate_desc: "Duplikuj notatkę"
+  o_copy_key: "o"
+  o_copy_desc: "Kopiuj tekst notatki do schowka"
+  w_wrap_key: "w"
+  w_wrap_desc: "Włącz lub wyłącz zawijanie wierszy"
 cli:
   # Alternatywne (używane w niektórych miejscach)
   list: Wyświetl notatki

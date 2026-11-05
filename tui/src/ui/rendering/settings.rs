@@ -130,6 +130,7 @@ pub fn render_settings(app: &App, frame: &mut Frame) {
         } else {
             format!("{} ({})", t!("common.no"), t!("settings.press_enter_toggle"))
         }),
+        field_line(8, format!("{}:     ", t!("settings.default_note_type")), format!("{} ({})", app.settings.default_note_type, t!("settings.press_enter_cycle"))),
     ];
 
     // Add security warning when remember password is enabled (different based on backend)

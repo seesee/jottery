@@ -705,18 +705,23 @@ impl<'a> NoteRepository<'a> {
         }
 
         for attachment_id in attachment_ids {
-            let still_used: bool = self.conn.query_row(
-                "SELECT EXISTS (SELECT 1 FROM notes WHERE instr(attachments, ?1) > 0)
-                     OR EXISTS (SELECT 1 FROM note_versions WHERE instr(attachments, ?1) > 0)",
-                params![&attachment_id],
-                |row| row.get(0),
-            )?;
-            if !still_used {
+            if !self.attachment_in_use(&attachment_id)? {
                 self.conn.execute("DELETE FROM attachments WHERE id = ?1", params![&attachment_id])?;
             }
         }
 
         Ok(ids.len())
+    }
+
+    /// Whether any note or version still refers to this attachment. Notes can share one,
+    /// and restoring a version needs what it had.
+    pub fn attachment_in_use(&self, attachment_id: &str) -> Result<bool> {
+        Ok(self.conn.query_row(
+            "SELECT EXISTS (SELECT 1 FROM notes WHERE instr(attachments, ?1) > 0)
+                 OR EXISTS (SELECT 1 FROM note_versions WHERE instr(attachments, ?1) > 0)",
+            params![attachment_id],
+            |row| row.get(0),
+        )?)
     }
 
     /// Clean up old synced deletions (older than 30 days)

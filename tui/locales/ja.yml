@@ -90,6 +90,11 @@ note:
   bin_emptied: "%{count} 件のノートを完全に削除しました"
   locked_cannot_archive: "ロックされたノートはアーカイブできません"
   unreadable: "この保管庫の %{count} 件のノートを読み取れません"
+  duplicated: "ノートを複製しました"
+  copied: "クリップボードにコピーしました"
+  copy_too_large: "このノートは長すぎるため、端末で確実にコピーできません"
+  word_wrap_on: "折り返しオン"
+  word_wrap_off: "折り返しオフ"
 archive:
   view: "アーカイブを表示"
   title: "アーカイブ"
@@ -180,6 +185,7 @@ settings:
   disabled: 無効
   sort_order: "並び順"
   language_auto: "システムと同じ"
+  default_note_type: "既定のノートの種類"
 sync:
   push: サーバーにプッシュ
   pull: サーバーからプル
@@ -534,6 +540,12 @@ help:
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "この検索を保存"
   enter_confirm_esc_cancel: "Enter: 確定 | Esc: キャンセル"
+  D_duplicate_key: "Shift+D"
+  D_duplicate_desc: "ノートを複製"
+  o_copy_key: "o"
+  o_copy_desc: "ノートの本文をクリップボードにコピー"
+  w_wrap_key: "w"
+  w_wrap_desc: "折り返しのオン・オフ"
 cli:
   # 代替 (一部で使用)
   list: ノートを一覧表示

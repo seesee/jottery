@@ -412,9 +412,10 @@ pub fn delete_current_attachment(app: &mut App) -> Result<()> {
         let note_repo = NoteRepository::new(db.connection());
         note_repo.update(note_in_list, key)?;
 
-        // Delete attachment data from database
-        let attachment_repo = AttachmentRepository::new(db.connection());
-        attachment_repo.delete(&attachment_id)?;
+        // Delete attachment data from database, unless a duplicate of this note shares it
+        if !note_repo.attachment_in_use(&attachment_id)? {
+            AttachmentRepository::new(db.connection()).delete(&attachment_id)?;
+        }
 
         // Adjust selection
         if note_in_list.attachments.is_empty() {
@@ -581,15 +582,16 @@ pub fn remove_attachment_from_current_note(app: &mut App) -> Result<()> {
     // Get attachment to remove
     let attachment = note.attachments.remove(app.selected_attachment);
 
-    // Delete from database
-    let attachment_repo = AttachmentRepository::new(db.connection());
-    attachment_repo.delete(&attachment.id)?;
-
     // Update note
     note.modified_at = chrono::Utc::now();
     note.version += 1;
 
     note_repo.update(&note, key)?;
+
+    // Delete from database, unless a duplicate of this note shares it
+    if !note_repo.attachment_in_use(&attachment.id)? {
+        AttachmentRepository::new(db.connection()).delete(&attachment.id)?;
+    }
 
     // Adjust selected_attachment if needed
     if app.selected_attachment >= note.attachments.len() && !note.attachments.is_empty() {
@@ -830,6 +832,21 @@ mod tests {
         let stored = NoteRepository::new(db.connection()).get(&note_id, app.key.as_ref().unwrap()).unwrap().unwrap();
         assert_eq!(stored.attachments.len(), 1);
         assert_eq!(stored.attachments[0].id, attachment.id);
+    }
+
+    /// A duplicate shares its original's files, so removing one from either keeps it.
+    #[test]
+    fn a_file_a_duplicate_still_uses_stays() {
+        let (mut app, attachment) = app_with_attachment("text/plain", "first.txt", b"one");
+        let original_id = app.notes[0].id.clone();
+        crate::ui::operations::notes::duplicate_selected(&mut app).unwrap();
+
+        app.selected_note_id = Some(original_id);
+        app.keep_selection_on_note();
+        delete_current_attachment(&mut app).unwrap();
+
+        let conn = app.db.as_ref().unwrap().connection();
+        assert_eq!(AttachmentRepository::new(conn).list_ids().unwrap(), [attachment.id]);
     }
 
     #[test]

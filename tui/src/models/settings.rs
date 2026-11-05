@@ -71,6 +71,9 @@ pub struct UserSettings {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "tagColors")]
     pub tag_colors: Option<HashMap<String, String>>, // Tag name → color name mapping
+    /// What a new note starts as, on this device
+    #[serde(default)]
+    pub default_note_type: crate::models::SyntaxLanguage,
 }
 
 fn default_auto_sync_interval() -> i32 {
@@ -222,6 +225,7 @@ impl UserSettings {
             remember_password: false, // Disabled by default for security
             color_palette: None, // Will use default palette if None
             tag_colors: None,    // No tag colors by default
+            default_note_type: crate::models::SyntaxLanguage::default(),
         }
     }
 

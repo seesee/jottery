@@ -95,6 +95,7 @@ pub fn save_note(app: &mut App) -> Result<()> {
             // Create new note
             let mut note = Note::new(app.note_input.clone());
             note.tags = app.current_tags.clone();
+            note.set_syntax(app.settings.default_note_type);
             repo.create(&note, key)?;
             app.notes.insert(0, note);
         } else {
@@ -108,6 +109,105 @@ pub fn save_note(app: &mut App) -> Result<()> {
         if app.settings.sync_enabled {
             app.trigger_sync();
         }
+    }
+    Ok(())
+}
+
+/// What a terminal will reliably take through OSC 52, in bytes of text.
+const MAX_CLIPBOARD_BYTES: usize = 100_000;
+
+/// The escape sequence that asks the terminal to put `text` on the clipboard. It goes
+/// through the terminal rather than a local clipboard, so it also works over SSH.
+fn clipboard_sequence(text: &str) -> String {
+    use base64::Engine as _;
+    format!("\x1b]52;c;{}\x07", base64::engine::general_purpose::STANDARD.encode(text))
+}
+
+/// The note the list has highlighted.
+fn highlighted_note(app: &App) -> Option<&Note> {
+    app.filtered_notes().get(app.selected_note).copied()
+}
+
+/// Copy the highlighted note's text to the clipboard.
+pub fn copy_selected(app: &mut App) -> Result<()> {
+    use std::io::Write as _;
+
+    let Some(note) = highlighted_note(app) else {
+        return Ok(());
+    };
+
+    if note.content.len() > MAX_CLIPBOARD_BYTES {
+        app.notify(t!("note.copy_too_large").to_string());
+        return Ok(());
+    }
+
+    let sequence = clipboard_sequence(&note.content);
+    let mut stdout = std::io::stdout();
+    stdout.write_all(sequence.as_bytes())?;
+    stdout.flush()?;
+
+    app.notify(t!("note.copied").to_string());
+    Ok(())
+}
+
+/// Turn word wrap on or off for the highlighted note.
+pub fn toggle_word_wrap(app: &mut App) -> Result<()> {
+    let Some(note_id) = highlighted_note(app).map(|note| note.id.clone()) else {
+        return Ok(());
+    };
+
+    let db = app.db.as_ref().context("Database not available")?;
+    let key = app.key.as_ref().context("Key not available")?;
+    let note = app.notes.iter_mut()
+        .find(|note| note.id == note_id)
+        .context("Note not found in memory")?;
+
+    if note.locked {
+        anyhow::bail!("{}", t!("note.locked_cannot_edit"));
+    }
+
+    note.word_wrap = !note.word_wrap;
+    let wrapped = note.word_wrap;
+    NoteRepository::new(db.connection()).update(note, key)?;
+
+    app.notify(if wrapped { t!("note.word_wrap_on") } else { t!("note.word_wrap_off") }.to_string());
+    if app.settings.sync_enabled {
+        app.trigger_sync();
+    }
+    Ok(())
+}
+
+/// Make a new note out of the highlighted one, with everything but its history. The two
+/// share attachments, as notes can. A locked original gives an unlocked copy, which is
+/// the way to change what it says.
+pub fn duplicate_selected(app: &mut App) -> Result<()> {
+    let Some(original) = highlighted_note(app).cloned() else {
+        return Ok(());
+    };
+
+    let mut copy = Note::new(original.content.clone());
+    copy.tags = original.tags.clone();
+    copy.attachments = original.attachments.clone();
+    copy.attachments_complete = true;
+    copy.pinned = original.pinned;
+    copy.word_wrap = original.word_wrap;
+    copy.show_preview = original.show_preview;
+    copy.syntax_language = original.syntax_language;
+    copy.syntax_unknown = original.syntax_unknown.clone();
+    copy.color = original.color.clone();
+
+    let db = app.db.as_ref().context("Database not available")?;
+    let key = app.key.as_ref().context("Key not available")?;
+    NoteRepository::new(db.connection()).create(&copy, key)?;
+
+    app.selected_note_id = Some(copy.id.clone());
+    app.notes.push(copy);
+    app.invalidate_filter_cache();
+    app.keep_selection_on_note();
+
+    app.notify(t!("note.duplicated").to_string());
+    if app.settings.sync_enabled {
+        app.trigger_sync();
     }
     Ok(())
 }
@@ -463,6 +563,61 @@ mod tests {
         assert!(save_note(&mut app).is_err());
 
         assert_eq!(stored_note(&app, &id).content, before);
+    }
+
+    #[test]
+    fn the_clipboard_sequence_is_what_terminals_expect() {
+        assert_eq!(clipboard_sequence("hi"), "\x1b]52;c;aGk=\x07");
+    }
+
+    #[test]
+    fn a_duplicate_keeps_everything_but_its_identity() {
+        let mut app = unlocked_app();
+        let original_id = app.notes[0].id.clone();
+        app.notes[0].tags = vec!["kept".to_string()];
+        app.notes[0].set_syntax(crate::models::SyntaxLanguage::Python);
+        app.notes[0].color = Some("red".to_string());
+        app.notes[0].word_wrap = false;
+        app.notes[0].locked = true;
+
+        duplicate_selected(&mut app).unwrap();
+
+        assert_eq!(app.notes.len(), 2);
+        let copy = app.notes.iter().find(|note| note.id != original_id).unwrap().clone();
+        assert_eq!(app.selected_note_id.as_deref(), Some(copy.id.as_str()));
+        let stored = stored_note(&app, &copy.id);
+        assert_eq!(stored.content, app.notes.iter().find(|n| n.id == original_id).unwrap().content);
+        assert_eq!(stored.tags, ["kept"]);
+        assert_eq!(stored.syntax_language, crate::models::SyntaxLanguage::Python);
+        assert_eq!(stored.color.as_deref(), Some("red"));
+        assert!(!stored.word_wrap);
+        assert!(!stored.locked);
+    }
+
+    #[test]
+    fn word_wrap_turns_off_and_on_again() {
+        let mut app = unlocked_app();
+        let id = app.notes[0].id.clone();
+        assert!(app.notes[0].word_wrap);
+
+        toggle_word_wrap(&mut app).unwrap();
+        assert!(!stored_note(&app, &id).word_wrap);
+
+        toggle_word_wrap(&mut app).unwrap();
+        assert!(stored_note(&app, &id).word_wrap);
+    }
+
+    #[test]
+    fn a_new_note_starts_as_the_default_type() {
+        let mut app = unlocked_app();
+        app.settings.default_note_type = crate::models::SyntaxLanguage::Python;
+        app.editing_note_id = None;
+        app.note_input = "print('hello')".to_string();
+        app.current_tags.clear();
+
+        save_note(&mut app).unwrap();
+
+        assert_eq!(app.notes[0].syntax_language, crate::models::SyntaxLanguage::Python);
     }
 
     #[test]

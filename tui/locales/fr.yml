@@ -90,6 +90,11 @@ note:
   bin_emptied: "%{count} notes supprimées définitivement"
   locked_cannot_archive: "Impossible d'archiver une note verrouillée"
   unreadable: "%{count} notes de ce coffre sont illisibles"
+  duplicated: "Note dupliquée"
+  copied: "Copié dans le presse-papiers"
+  copy_too_large: "Cette note est trop longue pour qu'un terminal la copie de façon fiable"
+  word_wrap_on: "Retour à la ligne activé"
+  word_wrap_off: "Retour à la ligne désactivé"
 archive:
   view: "Voir les archives"
   title: "Archives"
@@ -180,6 +185,7 @@ settings:
   disabled: désactivé
   sort_order: "Tri"
   language_auto: "Comme le système"
+  default_note_type: "Type de note par défaut"
 sync:
   push: Pousser vers le serveur
   pull: Tirer du serveur
@@ -534,6 +540,12 @@ help:
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "Enregistrer cette recherche"
   enter_confirm_esc_cancel: "Entrée : confirmer | Échap : annuler"
+  D_duplicate_key: "Maj+D"
+  D_duplicate_desc: "Dupliquer la note"
+  o_copy_key: "o"
+  o_copy_desc: "Copier le texte de la note dans le presse-papiers"
+  w_wrap_key: "w"
+  w_wrap_desc: "Activer ou désactiver le retour à la ligne"
 cli:
   # Alt (utilisé à certains endroits)
   list: Lister les notes

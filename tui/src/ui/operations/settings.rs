@@ -69,7 +69,17 @@ pub fn start_editing_setting(app: &mut App) {
                 app.sync_status_set_at = Some(Instant::now());
             }
         }
+        8 => cycle_default_note_type(app, true),
         _ => {}
+    }
+}
+
+/// Move on to the next or previous type for new notes, and save it.
+fn cycle_default_note_type(app: &mut App, forward: bool) {
+    let current = app.settings.default_note_type;
+    app.settings.default_note_type = if forward { current.next() } else { current.prev() };
+    if let Err(e) = save_settings(app) {
+        app.error = Some(format!("Failed to save settings: {}", e));
     }
 }
 
@@ -129,6 +139,7 @@ pub fn start_editing_setting_backward(app: &mut App) {
                 app.sync_status_set_at = Some(Instant::now());
             }
         }
+        8 => cycle_default_note_type(app, false),
         _ => {}
     }
 }

@@ -59,7 +59,7 @@ impl<'a> SettingsRepository<'a> {
     pub fn get_with_key(&self, key: Option<&[u8; 32]>) -> Result<UserSettings> {
         let result = self.conn
             .query_row(
-                "SELECT language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint, auto_sync_interval_minutes, remember_password, color_palette, tag_colors
+                "SELECT language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint, auto_sync_interval_minutes, remember_password, color_palette, tag_colors, default_note_type
                  FROM settings WHERE id = 1",
                 [],
                 |row| {
@@ -84,6 +84,7 @@ impl<'a> SettingsRepository<'a> {
                         remember_password: row.get::<_, Option<i32>>(7)?.unwrap_or(0) != 0,
                         color_palette,
                         tag_colors,
+                        default_note_type: row.get::<_, String>(10)?.parse().unwrap_or_default(),
                     };
 
                     // Decrypt color palette displayNames if key is provided
@@ -132,8 +133,8 @@ impl<'a> SettingsRepository<'a> {
             .transpose()?;
 
         self.conn.execute(
-            "INSERT OR REPLACE INTO settings (id, language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint, auto_sync_interval_minutes, remember_password, color_palette, tag_colors)
-             VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            "INSERT OR REPLACE INTO settings (id, language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint, auto_sync_interval_minutes, remember_password, color_palette, tag_colors, default_note_type)
+             VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
             params![
                 &settings.language,
                 settings.theme.to_string(),
@@ -145,6 +146,7 @@ impl<'a> SettingsRepository<'a> {
                 settings.remember_password as i32,
                 &color_palette_json,
                 &tag_colors_json,
+                settings.default_note_type.to_string(),
             ],
         )?;
 

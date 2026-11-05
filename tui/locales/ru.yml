@@ -90,6 +90,11 @@ note:
   bin_emptied: "Удалено навсегда заметок: %{count}"
   locked_cannot_archive: "Нельзя архивировать заблокированную заметку"
   unreadable: "Не удаётся прочитать заметки в этом хранилище: %{count}"
+  duplicated: "Заметка продублирована"
+  copied: "Скопировано в буфер обмена"
+  copy_too_large: "Заметка слишком длинная, чтобы терминал надёжно её скопировал"
+  word_wrap_on: "Перенос строк включён"
+  word_wrap_off: "Перенос строк выключен"
 archive:
   view: "Просмотр архива"
   title: "Архив"
@@ -180,6 +185,7 @@ settings:
   disabled: отключено
   sort_order: "Сортировка"
   language_auto: "Как в системе"
+  default_note_type: "Тип заметки по умолчанию"
 sync:
   push: Отправить на сервер
   pull: Получить с сервера
@@ -534,6 +540,12 @@ help:
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "Сохранить этот поиск"
   enter_confirm_esc_cancel: "Enter: подтвердить | Esc: отмена"
+  D_duplicate_key: "Shift+D"
+  D_duplicate_desc: "Дублировать заметку"
+  o_copy_key: "o"
+  o_copy_desc: "Скопировать текст заметки в буфер обмена"
+  w_wrap_key: "w"
+  w_wrap_desc: "Включить или выключить перенос строк"
 cli:
   # Альтернативные (используются в некоторых местах)
   list: Список заметок

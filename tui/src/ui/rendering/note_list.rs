@@ -698,9 +698,8 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         // This prevents stray characters when switching notes or scrolling
         frame.render_widget(Clear, preview_area);
 
-        let preview = Paragraph::new(Text::from(lines))
-            .block(preview_block)
-            .wrap(Wrap { trim: false });
+        let preview = Paragraph::new(Text::from(lines)).block(preview_block);
+        let preview = if note.word_wrap { preview.wrap(Wrap { trim: false }) } else { preview };
         let scroll = app.preview_scroll_offset.min(super::furthest_scroll(&preview, preview_area));
         preview_scroll = Some(scroll);
         frame.render_widget(preview.scroll((super::scroll_rows(scroll), 0)), preview_area);
@@ -1241,6 +1240,18 @@ mod tests {
 
         assert_eq!(app.preview_scroll_offset, 0);
         assert!(shown.contains("Short"), "{shown}");
+    }
+
+    #[test]
+    fn a_note_with_word_wrap_off_runs_off_the_edge_of_the_preview() {
+        let long = format!("{}END", "word ".repeat(100));
+
+        let mut app = app_showing(&long);
+        app.notes[0].set_syntax(SyntaxLanguage::Plain);
+        assert!(screen(&mut app).contains("END"));
+
+        app.notes[0].word_wrap = false;
+        assert!(!screen(&mut app).contains("END"));
     }
 
     #[test]

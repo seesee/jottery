@@ -90,6 +90,11 @@ note:
   bin_emptied: "已永久删除 %{count} 条笔记"
   locked_cannot_archive: "无法归档已锁定的笔记"
   unreadable: "此保险库中有 %{count} 条笔记无法读取"
+  duplicated: "已复制笔记"
+  copied: "已复制到剪贴板"
+  copy_too_large: "此笔记过长,终端无法可靠地复制"
+  word_wrap_on: "自动换行已开启"
+  word_wrap_off: "自动换行已关闭"
 archive:
   view: "查看归档"
   title: "归档"
@@ -180,6 +185,7 @@ settings:
   disabled: 禁用
   sort_order: "排序"
   language_auto: "跟随系统"
+  default_note_type: "默认笔记类型"
 sync:
   push: 推送到服务器
   pull: 从服务器拉取
@@ -534,6 +540,12 @@ help:
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "保存此搜索"
   enter_confirm_esc_cancel: "Enter:确认 | Esc:取消"
+  D_duplicate_key: "Shift+D"
+  D_duplicate_desc: "复制笔记"
+  o_copy_key: "o"
+  o_copy_desc: "将笔记文本复制到剪贴板"
+  w_wrap_key: "w"
+  w_wrap_desc: "开启或关闭自动换行"
 cli:
   # 简短命令描述（用于旧版/备用）
   list: 列出笔记

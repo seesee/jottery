@@ -90,6 +90,11 @@ note:
   bin_emptied: "%{count} notities definitief verwijderd"
   locked_cannot_archive: "Vergrendelde notitie kan niet worden gearchiveerd"
   unreadable: "%{count} notities in deze kluis kunnen niet worden gelezen"
+  duplicated: "Notitie gedupliceerd"
+  copied: "Naar het klembord gekopieerd"
+  copy_too_large: "Deze notitie is te lang om betrouwbaar via een terminal te kopiëren"
+  word_wrap_on: "Regelafbreking aan"
+  word_wrap_off: "Regelafbreking uit"
 archive:
   view: "Archief bekijken"
   title: "Archief"
@@ -180,6 +185,7 @@ settings:
   disabled: uitgeschakeld
   sort_order: "Sortering"
   language_auto: "Zelfde als systeem"
+  default_note_type: "Standaard notitietype"
 sync:
   push: Naar server pushen
   pull: Van server pullen
@@ -534,6 +540,12 @@ help:
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "Deze zoekopdracht opslaan"
   enter_confirm_esc_cancel: "Enter: bevestigen | Esc: annuleren"
+  D_duplicate_key: "Shift+D"
+  D_duplicate_desc: "Notitie dupliceren"
+  o_copy_key: "o"
+  o_copy_desc: "Notitietekst naar het klembord kopiëren"
+  w_wrap_key: "w"
+  w_wrap_desc: "Regelafbreking aan- of uitzetten"
 cli:
   # Basis (op sommige plaatsen gebruikt)
   list: Notities weergeven

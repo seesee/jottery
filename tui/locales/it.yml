@@ -90,6 +90,11 @@ note:
   bin_emptied: "%{count} note eliminate definitivamente"
   locked_cannot_archive: "Impossibile archiviare una nota bloccata"
   unreadable: "%{count} note di questo archivio non sono leggibili"
+  duplicated: "Nota duplicata"
+  copied: "Copiato negli appunti"
+  copy_too_large: "Questa nota è troppo lunga perché un terminale la copi in modo affidabile"
+  word_wrap_on: "A capo automatico attivo"
+  word_wrap_off: "A capo automatico disattivo"
 archive:
   view: "Visualizza archivio"
   title: "Archivio"
@@ -180,6 +185,7 @@ settings:
   disabled: disabilitato
   sort_order: "Ordinamento"
   language_auto: "Come il sistema"
+  default_note_type: "Tipo di nota predefinito"
 sync:
   push: Invia al server
   pull: Ricevi dal server
@@ -534,6 +540,12 @@ help:
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "Salva questa ricerca"
   enter_confirm_esc_cancel: "Invio: conferma | Esc: annulla"
+  D_duplicate_key: "Maiusc+D"
+  D_duplicate_desc: "Duplica nota"
+  o_copy_key: "o"
+  o_copy_desc: "Copia il testo della nota negli appunti"
+  w_wrap_key: "w"
+  w_wrap_desc: "Attiva o disattiva l'a capo automatico"
 cli:
   # Alt (usato in alcuni contesti)
   list: Elenca note

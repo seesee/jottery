@@ -90,6 +90,11 @@ note:
   bin_emptied: "%{count} not kalıcı olarak silindi"
   locked_cannot_archive: "Kilitli not arşivlenemez"
   unreadable: "Bu kasadaki %{count} not okunamıyor"
+  duplicated: "Not çoğaltıldı"
+  copied: "Panoya kopyalandı"
+  copy_too_large: "Bu not, terminalin güvenilir biçimde kopyalaması için çok uzun"
+  word_wrap_on: "Sözcük kaydırma açık"
+  word_wrap_off: "Sözcük kaydırma kapalı"
 archive:
   view: "Arşivi görüntüle"
   title: "Arşiv"
@@ -180,6 +185,7 @@ settings:
   disabled: devre dışı
   sort_order: "Sıralama"
   language_auto: "Sistemle aynı"
+  default_note_type: "Varsayılan not türü"
 sync:
   push: Sunucuya gönder
   pull: Sunucudan çek
@@ -534,6 +540,12 @@ help:
   ctrl_s_save_search_key: "Ctrl+S"
   ctrl_s_save_search_desc: "Bu aramayı kaydet"
   enter_confirm_esc_cancel: "Enter: onayla | Esc: iptal"
+  D_duplicate_key: "Shift+D"
+  D_duplicate_desc: "Notu çoğalt"
+  o_copy_key: "o"
+  o_copy_desc: "Not metnini panoya kopyala"
+  w_wrap_key: "w"
+  w_wrap_desc: "Sözcük kaydırmayı aç veya kapat"
 cli:
   # Eski (bazı yerlerde kullanılıyor)
   list: Notları listele
