@@ -626,6 +626,7 @@
             <div>
               {#if loadingNotes}
                 <!-- Loading state with progress -->
+                <span class="sr-only" role="status">{$_('common.loading')}</span>
                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                 <p class="text-lg mb-2">{$_('common.loading')}</p>
                 {#if loadingProgress.total > 0}
@@ -753,6 +754,7 @@
           <div>
             {#if loadingNotes}
               <!-- Loading state with progress -->
+              <span class="sr-only" role="status">{$_('common.loading')}</span>
               <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
               <p class="text-lg mb-2">{$_('common.loading')}</p>
               {#if loadingProgress.total > 0}

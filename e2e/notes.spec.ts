@@ -257,3 +257,31 @@ test.describe('Locking', () => {
   });
 });
 
+test.describe('For screen readers', () => {
+  test('marks which note is open', async ({ page }) => {
+    const app = new JotteryPage(page);
+    await app.setup();
+    await app.createNote('First');
+    await app.createNote('Second');
+
+    await expect(page.locator('[data-testid="note-list-item"][aria-current="true"]')).toHaveCount(1);
+  });
+
+  test('names every control on the main screen, including a toast', async ({ page }) => {
+    const app = new JotteryPage(page);
+    await app.setup();
+    await app.createNote('A note');
+    await page.evaluate(async () => {
+      const { toast } = await import('/src/lib/utils/toast.svelte.ts' as string);
+      toast.info('something happened');
+    });
+    await expect(page.getByText('something happened')).toBeVisible();
+
+    const unnamed = await page.evaluate(() => Array.from(document.querySelectorAll('button, [role="button"], a[href]'))
+      .filter(el => !(el.getAttribute('aria-label') || el.getAttribute('title') || (el.textContent ?? '').trim() || el.getAttribute('aria-labelledby')))
+      .map(el => el.outerHTML.slice(0, 100)));
+
+    expect(unnamed).toEqual([]);
+  });
+});
+
