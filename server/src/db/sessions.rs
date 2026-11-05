@@ -135,7 +135,6 @@ impl SessionRepository {
     }
 
     /// Delete expired sessions (cleanup)
-    #[allow(dead_code)]
     pub async fn delete_expired(pool: &SqlitePool) -> Result<u64, sqlx::Error> {
         let now = chrono::Utc::now().to_rfc3339();
 

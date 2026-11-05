@@ -3,7 +3,7 @@
 use sqlx::SqlitePool;
 use std::time::Duration;
 
-use crate::db::AttachmentRepository;
+use crate::db::{AttachmentRepository, SessionRepository};
 
 /// How often housekeeping runs.
 const INTERVAL: Duration = Duration::from_secs(60 * 60);
@@ -39,6 +39,12 @@ pub async fn run_once(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .await?;
     if purged > 0 {
         tracing::info!("Purged {} attachments nothing references", purged);
+    }
+
+    // A session is otherwise only removed if its token is presented after it expires
+    let expired = SessionRepository::delete_expired(pool).await?;
+    if expired > 0 {
+        tracing::info!("Removed {} expired sessions", expired);
     }
 
     Ok(())
