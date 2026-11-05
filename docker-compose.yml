@@ -1,14 +1,41 @@
-version: "3.9"
-
 services:
   jottery:
-    image: ghcr.io/seesee/jottery:latest
+    # Pinned so that an upgrade, and its database migrations, happens when you choose
+    # and not on the next pull. See "Upgrading" in the README.
+    image: ghcr.io/seesee/jottery:v1.3.1
     container_name: jottery
     ports:
-      - "8088:8088"
+      # This port is plain HTTP, and Docker's published ports bypass host firewalls
+      # such as ufw, so it's only reachable from this machine. Put a TLS proxy in
+      # front of it for anything else. To reach it from a trusted LAN without one,
+      # use "8088:8088" or bind a specific address: "192.168.1.10:8088:8088".
+      - "127.0.0.1:8088:8088"
     volumes:
       - jottery_data:/app/data
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # Used only while the container starts, to take ownership of the data volume and
+    # switch to the jottery user. The services themselves run with no capabilities.
+    cap_add:
+      - CHOWN
+      - SETGID
+      - SETUID
+    # Everything is optional. The README lists every setting.
+    # environment:
+    #   DEFAULT_ADMIN_EMAIL: admin@example.com
+    #   # If unset, a random password is generated and printed once in the logs
+    #   DEFAULT_ADMIN_PASSWORD: choose-a-long-password
+    #   # Set only when clients reach this site over HTTPS
+    #   ENABLE_HSTS: "true"
+    #   # Needed only if another origin's web client talks to this server
+    #   CORS_ALLOWED_ORIGINS: https://notes.example.com
+    #   # Addresses allowed to reach /admin. Behind another proxy, restrict it there
+    #   ADMIN_ALLOWED_IPS: 203.0.113.7 192.168.0.0/16
+    #   # Add one for each proxy in front of the bundled Caddy
+    #   TRUSTED_PROXY_HOPS: "2"
 
 volumes:
   jottery_data:
