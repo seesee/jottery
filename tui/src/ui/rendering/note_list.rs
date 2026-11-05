@@ -822,6 +822,25 @@ pub fn render_note_list(app: &mut App, frame: &mut Frame) {
         );
     }
 
+    // Render empty bin confirmation modal if showing
+    if app.show_empty_bin_confirm {
+        render_confirmation_modal(
+            frame,
+            size,
+            &t!("note.empty_bin_title"),
+            vec![
+                Line::from(t!("note.empty_bin_confirm", count = app.notes.len()).to_string())
+                    .style(Style::default().fg(app.color_scheme.foreground)),
+                Line::from(t!("note.empty_bin_warning").to_string())
+                    .style(Style::default().fg(app.color_scheme.muted)),
+            ],
+            app.color_scheme.error,
+            &app.color_scheme,
+            96,
+            7,
+        );
+    }
+
     // Render attachment viewer modal if showing
     if matches!(app.view_mode, ViewMode::AttachmentViewer) {
         let filtered = app.filtered_notes();

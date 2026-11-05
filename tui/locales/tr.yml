@@ -79,6 +79,10 @@ note:
   info_title: Not Bilgileri
   untitled: "Başlıksız"
   save_retry_hint: "q: yeniden kaydetmeyi dene | e: düzenle | Esc: değişiklikleri at"
+  empty_bin_title: "Geri dönüşüm kutusunu boşalt"
+  empty_bin_confirm: "Çöp kutusundaki %{count} not kalıcı olarak silinsin mi?"
+  empty_bin_warning: "Sunucudan ve diğer cihazlarınızdan da silinirler. Bu geri alınamaz."
+  bin_emptied: "%{count} not kalıcı olarak silindi"
 archive:
   view: "Arşivi görüntüle"
   title: "Arşiv"

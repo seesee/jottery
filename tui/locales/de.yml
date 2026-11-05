@@ -79,6 +79,10 @@ note:
   info_title: Notizinformationen
   untitled: "Ohne Titel"
   save_retry_hint: "q: erneut speichern | e: bearbeiten | Esc: Änderungen verwerfen"
+  empty_bin_title: "Papierkorb leeren"
+  empty_bin_confirm: "%{count} Notizen im Papierkorb endgültig löschen?"
+  empty_bin_warning: "Sie werden auch vom Server und deinen anderen Geräten gelöscht. Das lässt sich nicht rückgängig machen."
+  bin_emptied: "%{count} Notizen endgültig gelöscht"
 archive:
   view: "Archiv anzeigen"
   title: "Archiv"

@@ -260,8 +260,12 @@ pub fn empty_trash(app: &mut App) -> Result<()> {
         app.selected_note = 0;
         app.invalidate_filter_cache();
 
-        // Set success message
-        app.sync_status = Some(format!("Permanently deleted {} note{}", count, if count == 1 { "" } else { "s" }));
+        app.notify(t!("note.bin_emptied", count = count).to_string());
+
+        // The deletions reach the server and other devices with the next sync
+        if app.settings.sync_enabled {
+            app.trigger_sync();
+        }
     }
     Ok(())
 }

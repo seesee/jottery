@@ -105,6 +105,23 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
         return super::conflict::handle_conflict_key(app, key);
     }
 
+    // Emptying the bin can't be undone, so nothing else gets through while it's asked
+    if app.show_empty_bin_confirm {
+        match key.code {
+            KeyCode::Char('y') => {
+                app.show_empty_bin_confirm = false;
+                if let Err(e) = operations::notes::empty_trash(app) {
+                    app.error = Some(t!("note.delete_failed", error = e.to_string()).to_string());
+                }
+            }
+            KeyCode::Char('n') | KeyCode::Char('q') | KeyCode::Esc => {
+                app.show_empty_bin_confirm = false;
+            }
+            _ => {}
+        }
+        return Ok(());
+    }
+
     // Handle bulk add tags input mode
     if matches!(app.input_mode, InputMode::BulkAddTags) {
         match handle_text_input(&key, &mut app.bulk_tags_input) {
@@ -781,11 +798,9 @@ pub fn handle_note_list_key(app: &mut App, key: KeyEvent) -> Result<()> {
                 }
             }
             KeyCode::Char('E') => {
-                // Empty recycle bin (only in recycle bin view)
-                if matches!(app.view_mode, ViewMode::RecycleBin) {
-                    if let Err(e) = operations::notes::empty_trash(app) {
-                        app.error = Some(t!("note.delete_failed", error = e.to_string()).to_string());
-                    }
+                // Empty recycle bin, once confirmed (only in recycle bin view)
+                if matches!(app.view_mode, ViewMode::RecycleBin) && !app.notes.is_empty() {
+                    app.show_empty_bin_confirm = true;
                 }
             }
             KeyCode::Esc => {
@@ -1549,5 +1564,85 @@ mod tests {
         let _ = handle_note_list_key(&mut app, key(KeyCode::Char('?')));
 
         assert!(matches!(app.state, AppState::Help { .. }));
+    }
+
+    // ==================== Emptying the Bin ====================
+
+    /// A connected-looking app in the bin, holding `count` deleted notes.
+    fn app_in_the_bin(count: usize) -> App {
+        let mut app = create_test_app();
+        let db = crate::db::Database::in_memory(&uuid::Uuid::new_v4().to_string()).unwrap();
+        let note_key = crate::crypto::CryptoService::new().generate_master_key();
+
+        for i in 0..count {
+            let mut note = Note::new(format!("Deleted {i}"));
+            note.deleted = true;
+            NoteRepository::new(db.connection()).create(&note, &note_key).unwrap();
+            app.notes.push(note);
+        }
+
+        app.db = Some(db);
+        app.key = Some(note_key);
+        app.view_mode = ViewMode::RecycleBin;
+        app
+    }
+
+    fn notes_in_database(app: &App) -> i64 {
+        app.db.as_ref().unwrap().count_notes(true).unwrap()
+    }
+
+    #[test]
+    fn shift_e_asks_before_emptying_the_bin() {
+        let mut app = app_in_the_bin(2);
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('E')));
+
+        assert!(app.show_empty_bin_confirm);
+        assert_eq!(notes_in_database(&app), 2);
+    }
+
+    #[test]
+    fn confirming_empties_the_bin() {
+        let mut app = app_in_the_bin(2);
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('E')));
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('y')));
+
+        assert!(!app.show_empty_bin_confirm);
+        assert_eq!(notes_in_database(&app), 0);
+    }
+
+    #[test]
+    fn declining_keeps_the_bin() {
+        for answer in [KeyCode::Char('n'), KeyCode::Char('q'), KeyCode::Esc] {
+            let mut app = app_in_the_bin(2);
+
+            let _ = handle_note_list_key(&mut app, key(KeyCode::Char('E')));
+            let _ = handle_note_list_key(&mut app, key(answer));
+
+            assert!(!app.show_empty_bin_confirm);
+            assert_eq!(notes_in_database(&app), 2);
+        }
+    }
+
+    #[test]
+    fn other_keys_do_not_answer_the_question() {
+        let mut app = app_in_the_bin(1);
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('E')));
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('E')));
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Enter));
+
+        assert!(app.show_empty_bin_confirm);
+        assert_eq!(notes_in_database(&app), 1);
+    }
+
+    #[test]
+    fn an_empty_bin_does_not_ask() {
+        let mut app = app_in_the_bin(0);
+
+        let _ = handle_note_list_key(&mut app, key(KeyCode::Char('E')));
+
+        assert!(!app.show_empty_bin_confirm);
     }
 }

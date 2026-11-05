@@ -88,6 +88,10 @@ note:
   info_title: "Note Information"
   untitled: "Untitled"
   save_retry_hint: "q: try saving again | e: edit | Esc: discard changes"
+  empty_bin_title: "Empty Recycle Bin"
+  empty_bin_confirm: "Permanently delete %{count} notes in the bin?"
+  empty_bin_warning: "This also deletes them from the server and your other devices. It cannot be undone."
+  bin_emptied: "Permanently deleted %{count} notes"
 
 # Archive operations
 archive:

@@ -79,6 +79,10 @@ note:
   info_title: Informações da nota
   untitled: "Sem título"
   save_retry_hint: "q: tentar guardar novamente | e: editar | Esc: descartar alterações"
+  empty_bin_title: "Esvaziar reciclagem"
+  empty_bin_confirm: "Eliminar definitivamente %{count} notas da reciclagem?"
+  empty_bin_warning: "Também serão eliminadas do servidor e dos seus outros dispositivos. Não é possível anular."
+  bin_emptied: "%{count} notas eliminadas definitivamente"
 archive:
   view: "Ver arquivo"
   title: "Arquivo"

@@ -79,6 +79,10 @@ note:
   info_title: Información de nota
   untitled: "Sin título"
   save_retry_hint: "q: volver a guardar | e: editar | Esc: descartar cambios"
+  empty_bin_title: "Vaciar papelera"
+  empty_bin_confirm: "¿Eliminar definitivamente %{count} notas de la papelera?"
+  empty_bin_warning: "También se eliminarán del servidor y de tus otros dispositivos. No se puede deshacer."
+  bin_emptied: "%{count} notas eliminadas definitivamente"
 archive:
   view: "Ver archivo"
   title: "Archivo"

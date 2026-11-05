@@ -79,6 +79,10 @@ note:
   info_title: Informazioni nota
   untitled: "Senza titolo"
   save_retry_hint: "q: riprova a salvare | e: modifica | Esc: scarta le modifiche"
+  empty_bin_title: "Svuota cestino"
+  empty_bin_confirm: "Eliminare definitivamente %{count} note nel cestino?"
+  empty_bin_warning: "Verranno eliminate anche dal server e dagli altri dispositivi. Non si può annullare."
+  bin_emptied: "%{count} note eliminate definitivamente"
 archive:
   view: "Visualizza archivio"
   title: "Archivio"

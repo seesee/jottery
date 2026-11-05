@@ -79,6 +79,10 @@ note:
   info_title: Informacje o notatce
   untitled: "Bez tytułu"
   save_retry_hint: "q: spróbuj zapisać ponownie | e: edytuj | Esc: odrzuć zmiany"
+  empty_bin_title: "Opróżnij kosz"
+  empty_bin_confirm: "Trwale usunąć notatki z kosza (%{count})?"
+  empty_bin_warning: "Zostaną też usunięte z serwera i innych urządzeń. Tego nie można cofnąć."
+  bin_emptied: "Trwale usunięte notatki: %{count}"
 archive:
   view: "Wyświetl archiwum"
   title: "Archiwum"

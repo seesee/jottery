@@ -79,6 +79,10 @@ note:
   info_title: Notitie-informatie
   untitled: "Zonder titel"
   save_retry_hint: "q: opnieuw opslaan | e: bewerken | Esc: wijzigingen verwerpen"
+  empty_bin_title: "Prullenbak legen"
+  empty_bin_confirm: "%{count} notities in de prullenbak definitief verwijderen?"
+  empty_bin_warning: "Ze worden ook van de server en je andere apparaten verwijderd. Dit kan niet ongedaan worden gemaakt."
+  bin_emptied: "%{count} notities definitief verwijderd"
 archive:
   view: "Archief bekijken"
   title: "Archief"

@@ -79,6 +79,10 @@ note:
   info_title: Informations sur la note
   untitled: "Sans titre"
   save_retry_hint: "q : réessayer d'enregistrer | e : modifier | Esc : abandonner les modifications"
+  empty_bin_title: "Vider la corbeille"
+  empty_bin_confirm: "Supprimer définitivement %{count} notes de la corbeille ?"
+  empty_bin_warning: "Elles seront aussi supprimées du serveur et de vos autres appareils. Cette action est irréversible."
+  bin_emptied: "%{count} notes supprimées définitivement"
 archive:
   view: "Voir les archives"
   title: "Archives"

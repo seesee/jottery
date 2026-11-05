@@ -79,6 +79,10 @@ note:
   info_title: ノート情報
   untitled: "無題"
   save_retry_hint: "q: 再度保存 | e: 編集 | Esc: 変更を破棄"
+  empty_bin_title: "ごみ箱を空にする"
+  empty_bin_confirm: "ごみ箱の %{count} 件のノートを完全に削除しますか？"
+  empty_bin_warning: "サーバーと他のデバイスからも削除されます。元に戻すことはできません。"
+  bin_emptied: "%{count} 件のノートを完全に削除しました"
 archive:
   view: "アーカイブを表示"
   title: "アーカイブ"
