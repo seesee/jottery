@@ -98,6 +98,8 @@ struct NoteCombineTests {
         let notes = try makeNotes(["one", "two"], in: state)
         try state.saveNote({ var note = notes[0]; note.tags = ["a"]; return note }())
         try state.saveNote({ var note = notes[1]; note.tags = ["b"]; return note }())
+        // Saving put back these copies, from before `makeNotes` set the dates.
+        try reload(state)
 
         let combined = try await combine(notes, in: state, mergeTags: false)
 

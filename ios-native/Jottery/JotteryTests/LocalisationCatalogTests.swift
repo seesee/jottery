@@ -66,6 +66,62 @@ struct LocalisationCatalogTests {
         #expect(wrong.isEmpty, "\(language) changes the placeholders of \(wrong.keys.sorted().prefix(10))")
     }
 
+    // MARK: - Plurals
+
+    /// Which forms each language needs. English has two, Russian and Polish four,
+    /// and Japanese, Korean and Chinese one (`other`).
+    private static func pluralCategories(for language: String) -> Set<String> {
+        switch language {
+        case "ru", "pl": ["one", "few", "many", "other"]
+        case "ja", "ko", "zh-Hans": ["other"]
+        default: ["one", "other"]
+        }
+    }
+
+    /// The forms for each plural key: `[key: [category: text]]`.
+    private static func plurals(language: String) -> [String: [String: String]] {
+        guard let url = Bundle.main.url(
+            forResource: "Localizable", withExtension: "stringsdict", subdirectory: nil, localization: language
+        ), let table = NSDictionary(contentsOf: url) as? [String: [String: Any]] else { return [:] }
+
+        return table.mapValues { entry in
+            // One argument per string, under a name the compiler chooses.
+            let argument = entry.values.compactMap { $0 as? [String: Any] }.first ?? [:]
+            return argument.compactMapValues { $0 as? String }.filter { !$0.key.hasPrefix("NSString") }
+        }
+    }
+
+    @Test(arguments: translated)
+    func everyPluralHasTheFormsItsLanguageNeeds(language: String) {
+        let english = Self.plurals(language: "en-GB")
+        let table = Self.plurals(language: language)
+        #expect(english.count >= 20, "the English plurals didn't load")
+
+        for key in english.keys {
+            #expect(table[key] != nil, "\(language) is missing \(key)")
+            guard let forms = table[key] else { continue }
+            #expect(Set(forms.keys) == Self.pluralCategories(for: language), "\(language): \(key)")
+            for (category, text) in forms {
+                #expect(text.contains("%"), "\(language): \(key) \(category) loses its number")
+            }
+        }
+    }
+
+    /// Takes the actual lookup, not just the table: the count picks the form.
+    @Test func aCountChoosesTheRightForm() throws {
+        let path = try #require(Bundle.main.path(forResource: "ru", ofType: "lproj"))
+        let russian = try #require(Bundle(path: path))
+        func banner(_ count: Int) -> String {
+            String(localized: "conflict.banner \(count)", bundle: russian, locale: Locale(identifier: "ru"))
+        }
+
+        #expect(banner(1).hasPrefix("1 "))
+        #expect(banner(2) != banner(5).replacingOccurrences(of: "5", with: "2"), "2 and 5 take different forms")
+        #expect(banner(5) == banner(11).replacingOccurrences(of: "11", with: "5"), "5 and 11 take the same form")
+        #expect(banner(1) != banner(5).replacingOccurrences(of: "5", with: "1"), "1 and 5 take different forms")
+    }
+
+    /// Short words like "OK" and "Face ID" are the same everywhere, but a language
     /// Short words like "OK" and "Face ID" are the same everywhere, but a language
     /// left mostly in English is a file that was merged wrongly.
     @Test(arguments: translated)
