@@ -6,9 +6,7 @@ import android.os.Looper
 import android.util.Log
 import android.view.ViewGroup
 import android.webkit.JavascriptInterface
-import android.webkit.WebResourceRequest
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -71,23 +69,14 @@ fun WebEditorView(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT,
                 )
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.allowFileAccess = true
+                configureForBundle()
 
                 addJavascriptInterface(bridge, "Android")
 
-                webViewClient = object : WebViewClient() {
-                    override fun shouldOverrideUrlLoading(
-                        view: WebView?,
-                        request: WebResourceRequest?,
-                    ): Boolean {
-                        request?.url?.toString()?.let { currentOnOpenLink(it) }
-                        return true
-                    }
-
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
+                webViewClient = BundleWebViewClient(
+                    context = context,
+                    onOpenLink = { currentOnOpenLink(it) },
+                    onPageLoaded = { view ->
                         // Set initial content after page loads using JSON string
                         // escaping (handles all special characters)
                         val text = currentContent
@@ -102,12 +91,13 @@ fun WebEditorView(
                         )
                         pageState.content = text
                         pageState.loaded = true
-                    }
-                }
+                    },
+                )
 
-                loadUrl("file:///android_asset/$htmlAsset")
+                loadUrl("$BUNDLE_ORIGIN$htmlAsset")
             }
         },
+        onRelease = { it.release() },
         update = { webView ->
             webView.evaluateJavascript("window.bridge.setTheme($isDark)", null)
             webView.evaluateJavascript("window.bridge.setFontSize($fontSize)", null)

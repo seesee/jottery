@@ -1,10 +1,10 @@
 package com.jottery.android.ui.webview
 
 import android.annotation.SuppressLint
+import android.os.SystemClock
+import android.view.MotionEvent
 import android.view.ViewGroup
-import android.webkit.WebResourceRequest
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -12,6 +12,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import com.jottery.android.ui.theme.LocalIsDarkTheme
+
+private const val LINK_TAP_WINDOW_MS = 1_500L
 
 /**
  * Markdown preview using the preview.html WebView bundle.
@@ -32,12 +34,19 @@ fun MarkdownPreviewView(
 
     // Keep a reference to the WebView so we can call resolveAttachment from the callback
     val webViewRef = remember { arrayOfNulls<WebView>(1) }
+    val lastTouch = remember { longArrayOf(0L) }
 
     val bridge = remember {
         WebBridge(
             onContentChanged = {},
             onReady = {},
-            onOpenLink = { currentOnOpenLink(it) },
+            // The page has no way to prove a tap, so the native side checks for one:
+            // a link can only open just after the reader touched the preview.
+            onOpenLink = { url ->
+                if (SystemClock.uptimeMillis() - lastTouch[0] < LINK_TAP_WINDOW_MS) {
+                    currentOnOpenLink(url)
+                }
+            },
             onRequestAttachment = { id ->
                 currentOnRequestAttachment(id) { dataUrl ->
                     val wv = webViewRef[0] ?: return@currentOnRequestAttachment
@@ -59,23 +68,20 @@ fun MarkdownPreviewView(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT,
                 )
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.allowFileAccess = true
+                configureForBundle()
 
                 addJavascriptInterface(bridge, "Android")
 
-                webViewClient = object : WebViewClient() {
-                    override fun shouldOverrideUrlLoading(
-                        view: WebView?,
-                        request: WebResourceRequest?,
-                    ): Boolean {
-                        request?.url?.toString()?.let { currentOnOpenLink(it) }
-                        return true
-                    }
+                setOnTouchListener { view, event ->
+                    lastTouch[0] = SystemClock.uptimeMillis()
+                    if (event.action == MotionEvent.ACTION_UP) view.performClick()
+                    false
+                }
 
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
+                webViewClient = BundleWebViewClient(
+                    context = context,
+                    onOpenLink = { currentOnOpenLink(it) },
+                    onPageLoaded = { view ->
                         val jsonContent = org.json.JSONObject.quote(content)
                         view?.evaluateJavascript(
                             "window.bridge.setContent($jsonContent, $isDark)",
@@ -85,12 +91,16 @@ fun MarkdownPreviewView(
                             "window.bridge.setFontSize($fontSize)",
                             null,
                         )
-                    }
-                }
+                    },
+                )
 
                 webViewRef[0] = this
-                loadUrl("file:///android_asset/preview.html")
+                loadUrl("${BUNDLE_ORIGIN}preview.html")
             }
+        },
+        onRelease = {
+            webViewRef[0] = null
+            it.release()
         },
         update = { webView ->
             webView.evaluateJavascript("window.bridge.setTheme($isDark)", null)

@@ -7,6 +7,7 @@
  */
 
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import hljs from 'highlight.js/lib/core';
 import { postToSwift } from '../bridge';
 
@@ -130,44 +131,89 @@ function renderMarkdown(content: string): string {
 
   // Custom image renderer to handle attachment: URLs
   renderer.image = function (token) {
-    const href = token.href;
-    const alt = token.text || '';
-    const title = token.title || '';
+    const href = token.href ?? '';
+    const alt = escapeAttribute(token.text || '');
+    const titleAttr = token.title ? ` title="${escapeAttribute(token.title)}"` : '';
 
-    if (href && href.startsWith('attachment:')) {
+    if (href.startsWith('attachment:')) {
       const attachmentId = href.substring('attachment:'.length);
-      const titleAttr = title ? ` title="${title}"` : '';
-      // Render a placeholder that will be resolved by Swift
+      if (!ATTACHMENT_ID.test(attachmentId)) return alt;
+      // Render a placeholder that will be resolved by the native side
       return `<img src="" data-attachment-id="${attachmentId}" alt="${alt}"${titleAttr} class="attachment-image" style="max-width:100%;height:auto;display:none;" />`;
     }
 
-    const titleAttr = title ? ` title="${title}"` : '';
-    return `<img src="${href}" alt="${alt}"${titleAttr} style="max-width:100%;height:auto;" />`;
+    if (href.startsWith('data:image/')) {
+      return `<img src="${escapeAttribute(href)}" alt="${alt}"${titleAttr} style="max-width:100%;height:auto;" />`;
+    }
+
+    // Loading a remote image would tell its host this device's address the moment
+    // a note is opened, so it stays a link the reader can choose to follow.
+    if (isSafeLink(href)) {
+      return `<a href="${escapeAttribute(href)}" class="external-link blocked-image">${alt || escapeAttribute(href)}</a>`;
+    }
+    return alt;
   };
 
   // Custom link renderer to handle attachment: and note: URLs
   renderer.link = function (token) {
-    const href = token.href;
-    const text = token.text || '';
+    const href = token.href ?? '';
+    const text = escapeAttribute(token.text || '');
 
     // Attachment download link
-    if (href && href.startsWith('attachment:')) {
+    if (href.startsWith('attachment:')) {
       const attachmentId = href.substring('attachment:'.length);
+      if (!ATTACHMENT_ID.test(attachmentId)) return text;
       return `<span class="attachment-link" data-attachment-id="${attachmentId}">${text || attachmentId}</span>`;
     }
 
     // Note link (from [[wiki-style]] conversion)
-    if (href && (href.startsWith('note:') || href.startsWith('link:'))) {
+    if (href.startsWith('note:') || href.startsWith('link:')) {
       return `<span class="note-link">${text}</span>`;
     }
 
-    // External link - delegate to Swift on click
-    const titleAttr = token.title ? ` title="${token.title}"` : '';
-    return `<a href="${href}"${titleAttr} class="external-link">${text}</a>`;
+    // In-page anchor
+    if (href.startsWith('#')) {
+      return `<a href="${escapeAttribute(href)}">${text}</a>`;
+    }
+
+    // Anything but http, https and mailto is shown as text, never made a link
+    if (!isSafeLink(href)) return text;
+
+    // External link - delegate to the native side on click
+    const titleAttr = token.title ? ` title="${escapeAttribute(token.title)}"` : '';
+    return `<a href="${escapeAttribute(href)}"${titleAttr} class="external-link">${text}</a>`;
   };
 
   marked.setOptions({ breaks: true, gfm: true });
-  return marked.parse(content, { renderer }) as string;
+  const html = marked.parse(content, { renderer }) as string;
+
+  // A note is untrusted input: it may have been pasted or imported, or come from
+  // the server. The result goes into innerHTML next to a bridge that can open
+  // links and read attachments, so nothing active may survive this.
+  return DOMPurify.sanitize(html, {
+    ADD_ATTR: ['data-attachment-id'],
+    FORBID_TAGS: ['style', 'form', 'input', 'button', 'textarea', 'select', 'iframe', 'object', 'embed', 'base', 'meta', 'link'],
+    FORBID_ATTR: ['srcset', 'ping', 'formaction', 'action'],
+    // `src=""` on an unresolved attachment placeholder must survive too
+    ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|data:image\/|#|$)/i,
+  });
+}
+
+// ---- Escaping ----
+
+const ATTACHMENT_ID = /^[0-9a-zA-Z-]{1,64}$/;
+
+function escapeAttribute(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function isSafeLink(href: string): boolean {
+  return /^(?:https?:|mailto:)/i.test(href);
 }
 
 // ---- Content rendering ----
