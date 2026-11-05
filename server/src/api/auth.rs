@@ -458,7 +458,7 @@ async fn get_wrapped_key_for_user(
     user_id: &str,
 ) -> AppResult<Json<crate::models::WrappedKeyResponse>> {
     let row = sqlx::query!(
-        "SELECT wrapped_blob, kdf_version, kdf_iterations FROM wrapped_keys WHERE user_id = ?",
+        "SELECT wrapped_blob, kdf_version, kdf_iterations, updated_at FROM wrapped_keys WHERE user_id = ?",
         user_id
     )
     .fetch_optional(&state.pool)
@@ -469,6 +469,7 @@ async fn get_wrapped_key_for_user(
             blob: row.wrapped_blob,
             kdf_version: row.kdf_version as i32,
             kdf_iterations: row.kdf_iterations as i32,
+            updated_at: row.updated_at,
         })),
         None => Err(crate::error::AppError::NotFound(
             "No wrapped key found".to_string(),
@@ -480,18 +481,20 @@ async fn get_wrapped_key_for_user(
 pub async fn put_wrapped_key(
     State(state): State<Arc<AppState>>,
     axum::Extension(client_info): axum::Extension<crate::api::middleware::ClientInfo>,
+    headers: axum::http::HeaderMap,
     Json(req): Json<crate::models::PutWrappedKeyRequest>,
 ) -> AppResult<StatusCode> {
-    put_wrapped_key_for_user(&state, &client_info.user_id, req).await
+    put_wrapped_key_for_user(&state, &client_info.user_id, &headers, req).await
 }
 
 /// Store or update the wrapped master key for the authenticated user (session auth)
 pub async fn put_wrapped_key_session(
     State(state): State<Arc<AppState>>,
     axum::Extension(session): axum::Extension<crate::models::Session>,
+    headers: axum::http::HeaderMap,
     Json(req): Json<crate::models::PutWrappedKeyRequest>,
 ) -> AppResult<StatusCode> {
-    put_wrapped_key_for_user(&state, &session.user_id, req).await
+    put_wrapped_key_for_user(&state, &session.user_id, &headers, req).await
 }
 
 /// A real blob is a wrapped 32-byte key, a few hundred bytes of JSON. Anything
@@ -516,10 +519,40 @@ pub fn validate_wrapped_blob(blob: &str) -> AppResult<()> {
     Ok(())
 }
 
+/// When a client wants its key written.
+enum WriteCondition<'a> {
+    /// Whatever is stored. A password change asks for this, and it's also what a
+    /// released client gets, because those send no condition at all and refusing
+    /// them would strand a password change on the old blob.
+    Always,
+    /// Only over the key last changed at this time, the one the client read.
+    IfUnchangedSince(&'a str),
+    /// Only if the account has no key yet.
+    IfAbsent,
+}
+
+fn write_condition<'a>(
+    headers: &'a axum::http::HeaderMap,
+    replace: Option<bool>,
+) -> AppResult<WriteCondition<'a>> {
+    if let Some(tag) = headers.get(axum::http::header::IF_MATCH) {
+        let tag = tag.to_str().map_err(|_| {
+            crate::error::AppError::BadRequest("Unreadable If-Match header".to_string())
+        })?;
+        return Ok(WriteCondition::IfUnchangedSince(tag.trim().trim_matches('"')));
+    }
+
+    Ok(match replace {
+        Some(false) => WriteCondition::IfAbsent,
+        Some(true) | None => WriteCondition::Always,
+    })
+}
+
 /// Shared implementation for storing wrapped key
 async fn put_wrapped_key_for_user(
     state: &AppState,
     user_id: &str,
+    headers: &axum::http::HeaderMap,
     req: crate::models::PutWrappedKeyRequest,
 ) -> AppResult<StatusCode> {
     validate_wrapped_blob(&req.blob)?;
@@ -538,23 +571,60 @@ async fn put_wrapped_key_for_user(
 
     let now = chrono::Utc::now().to_rfc3339();
 
-    sqlx::query!(
-        "INSERT INTO wrapped_keys (user_id, wrapped_blob, kdf_version, kdf_iterations, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?)
-         ON CONFLICT(user_id) DO UPDATE SET
-           wrapped_blob = excluded.wrapped_blob,
-           kdf_version = excluded.kdf_version,
-           kdf_iterations = excluded.kdf_iterations,
-           updated_at = excluded.updated_at",
-        user_id,
-        req.blob,
-        req.kdf_version,
-        req.kdf_iterations,
-        now,
-        now,
-    )
-    .execute(&state.pool)
-    .await?;
+    // Each condition is checked by the statement that writes, so two devices
+    // acting on the same read can't both succeed.
+    let written = match write_condition(headers, req.replace)? {
+        WriteCondition::Always => sqlx::query!(
+            "INSERT INTO wrapped_keys (user_id, wrapped_blob, kdf_version, kdf_iterations, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?)
+             ON CONFLICT(user_id) DO UPDATE SET
+               wrapped_blob = excluded.wrapped_blob,
+               kdf_version = excluded.kdf_version,
+               kdf_iterations = excluded.kdf_iterations,
+               updated_at = excluded.updated_at",
+            user_id,
+            req.blob,
+            req.kdf_version,
+            req.kdf_iterations,
+            now,
+            now,
+        )
+        .execute(&state.pool)
+        .await?,
+        WriteCondition::IfUnchangedSince(updated_at) => sqlx::query!(
+            "UPDATE wrapped_keys
+             SET wrapped_blob = ?, kdf_version = ?, kdf_iterations = ?, updated_at = ?
+             WHERE user_id = ? AND updated_at = ?",
+            req.blob,
+            req.kdf_version,
+            req.kdf_iterations,
+            now,
+            user_id,
+            updated_at,
+        )
+        .execute(&state.pool)
+        .await?,
+        WriteCondition::IfAbsent => sqlx::query!(
+            "INSERT INTO wrapped_keys (user_id, wrapped_blob, kdf_version, kdf_iterations, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?)
+             ON CONFLICT(user_id) DO NOTHING",
+            user_id,
+            req.blob,
+            req.kdf_version,
+            req.kdf_iterations,
+            now,
+            now,
+        )
+        .execute(&state.pool)
+        .await?,
+    };
+
+    if written.rows_affected() == 0 {
+        tracing::info!("Wrapped key not stored for user_id={}: it has changed", user_id);
+        return Err(crate::error::AppError::Conflict(
+            "The wrapped key has changed since it was read".to_string(),
+        ));
+    }
 
     tracing::info!("Wrapped key stored for user_id={}", user_id);
 

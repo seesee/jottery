@@ -5,7 +5,7 @@
 
 use axum::{
     extract::DefaultBodyLimit,
-    http::header::{AUTHORIZATION, CONTENT_TYPE, HeaderName},
+    http::header::{AUTHORIZATION, CONTENT_TYPE, HeaderName, IF_MATCH},
     http::HeaderValue,
     routing::{delete, get, patch, post},
     Router,
@@ -35,6 +35,7 @@ fn build_cors_layer(config: &Config) -> CorsLayer {
         .allow_headers(vec![
             AUTHORIZATION,
             CONTENT_TYPE,
+            IF_MATCH,
             HeaderName::from_static("x-api-key"),
             HeaderName::from_static(api::cookies::CSRF_HEADER),
         ]);

@@ -89,6 +89,10 @@ pub struct PutWrappedKeyRequest {
     pub kdf_version: i32,
     #[serde(rename = "kdfIterations")]
     pub kdf_iterations: i32,
+    /// `true` overwrites the stored key, and `false` writes only if there is none.
+    /// Released clients don't send it. See docs/sync-protocol.md.
+    #[serde(default)]
+    pub replace: Option<bool>,
 }
 
 /// Wrapped key response (for envelope encryption)
@@ -99,6 +103,9 @@ pub struct WrappedKeyResponse {
     pub kdf_version: i32,
     #[serde(rename = "kdfIterations")]
     pub kdf_iterations: i32,
+    /// What a client sends as `If-Match` to write only over this key.
+    #[serde(rename = "updatedAt")]
+    pub updated_at: String,
 }
 
 /// Admin login request

@@ -306,6 +306,22 @@ PUT /api/v1/auth/wrapped-key
 
 Stores the opaque wrapped key as `{ blob, kdfVersion, kdfIterations }`. `blob` is limited to 8 KB, `kdfVersion` must be at least 1 and `kdfIterations` at least 100,000. GET returns 404 when there is none.
 
+GET also returns `updatedAt`, an opaque string that changes on every write. Its presence means the server supports conditional writes. Check for it on each GET: sending `If-Match` to an older server can fail, because a browser's preflight for a client on another origin isn't allowed that header.
+
+There's one key per account, and overwriting it with the wrong one locks out every new device. So a new client says what it wants written, in one of three ways:
+
+| Purpose | Send | Fails when |
+|---|---|---|
+| First upload, after GET returned 404 | `"replace": false` in the body | The account already has a key |
+| Repair of a blob this device read but couldn't open | Header `If-Match: <updatedAt>`, with the value from the GET | The key has changed since that GET, or has gone |
+| Password change | `"replace": true` in the body | Never |
+
+A write that fails gets 409 and changes nothing. Don't retry it: GET again, and decide again from what's there. A 409 during a repair usually means another device has just changed the password.
+
+Send these on every PUT, including to an older server, which ignores `replace`. `If-Match` wins if a request has both. The `/user/wrapped-key` route for sessions follows the same rules.
+
+A PUT with neither overwrites whatever is stored. That's only there because released clients send it for password changes, and refusing them would leave a blob that only the old password opens. New clients must not rely on it.
+
 ## Rate limits
 
 Device sync isn't rate limited. These apply to the anonymous routes that clients use to sign in and register:
@@ -388,3 +404,4 @@ To adopt these additions, a client needs to:
 4. Read `rejectedDeletions`, treating its absence as an empty list, and drop those ids from its pending deletions.
 5. Treat 403 from a device endpoint as "account disabled", not "device removed".
 6. Honour `Retry-After` on 429.
+7. Say what it wants on every `PUT /auth/wrapped-key`, as described under [Wrapped master key](#wrapped-master-key), and treat 409 as "read it again".
