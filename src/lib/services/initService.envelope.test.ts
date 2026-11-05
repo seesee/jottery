@@ -46,7 +46,7 @@ import { createTestNote } from '../../test/db-utils';
 import { AccountKeyExistsError, AccountKeyUnreadableError, LocalNotesOrphanedError, ValidationError } from '../errors';
 import { base64ToUint8Array } from '../utils/base64';
 import { CRYPTO_PBKDF2_ITERATIONS } from '../constants';
-import type { PutWrappedKeyRequest, WrappedKeyResponse } from './authService';
+import type { PutWrappedKeyRequest, WrappedKeyResponse, WrappedKeyWrite } from './authService';
 
 const ENDPOINT = 'https://sync.example.test';
 const USER_ID = 'b3c1f5a2-8f0e-4c55-9d52-2f6a1c0e7a11';
@@ -57,6 +57,18 @@ const SERVER_PASSWORD = 'server-password-battery-staple';
 /** What the fake server currently holds for the user */
 let serverBlob: WrappedKeyResponse | null;
 let putSpy: ReturnType<typeof vi.spyOn>;
+/** How each write asked to be made */
+let writes: Array<WrappedKeyWrite | undefined>;
+/** Whether the fake server is an older one, with no updatedAt and no conditions */
+let olderServer: boolean;
+/** Runs between a client's GET and its PUT, for racing another device */
+let beforeNextWrite: (() => Promise<void>) | null;
+let writeCount: number;
+
+function stamp(): string {
+  writeCount += 1;
+  return `2026-11-05T03:00:0${writeCount}.000Z`;
+}
 
 function bytesOf(): Uint8Array {
   const masterKey = keyManager.getMasterKey();
@@ -84,7 +96,12 @@ async function setUpFirstDevice(): Promise<Uint8Array> {
 async function wrapOnServer(password: string, keyBytes: Uint8Array): Promise<void> {
   const wrappingKey = await cryptoService.deriveWrappingKey(password, USER_ID);
   const wrapped = await cryptoService.wrapMasterKey(wrappingKey, keyBytes);
-  serverBlob = { blob: JSON.stringify(wrapped), kdfVersion: 2, kdfIterations: 1_000_000 };
+  serverBlob = {
+    blob: JSON.stringify(wrapped),
+    kdfVersion: 2,
+    kdfIterations: 1_000_000,
+    updatedAt: olderServer ? undefined : stamp(),
+  };
 }
 
 /** Record that this device has completed a sync, so it must hold the account's key */
@@ -117,11 +134,35 @@ describe('server-wrapped master key', () => {
   beforeEach(async () => {
     await freshDatabase();
     serverBlob = null;
+    writes = [];
+    olderServer = false;
+    beforeNextWrite = null;
+    writeCount = 0;
 
+    // The contract in docs/sync-protocol.md, so that races are real here
     putSpy = vi
       .spyOn(authService, 'putWrappedKey')
-      .mockImplementation(async (_endpoint: string, _token: string, request: PutWrappedKeyRequest) => {
-        serverBlob = { blob: request.blob, kdfVersion: request.kdfVersion, kdfIterations: request.kdfIterations };
+      .mockImplementation(async (_endpoint: string, _token: string, request: PutWrappedKeyRequest, write?: WrappedKeyWrite) => {
+        writes.push(write);
+        const racing = beforeNextWrite;
+        beforeNextWrite = null;
+        await racing?.();
+
+        if (!olderServer && write) {
+          if ('ifMatch' in write && serverBlob?.updatedAt !== write.ifMatch) {
+            throw new AuthApiError('changed', 409);
+          }
+          if ('replace' in write && !write.replace && serverBlob) {
+            throw new AuthApiError('exists', 409);
+          }
+        }
+
+        serverBlob = {
+          blob: request.blob,
+          kdfVersion: request.kdfVersion,
+          kdfIterations: request.kdfIterations,
+          updatedAt: olderServer ? undefined : stamp(),
+        };
       });
     vi.spyOn(authService, 'getWrappedKey').mockImplementation(async () => serverBlob);
   });
@@ -745,6 +786,109 @@ describe('server-wrapped master key', () => {
         const metadata = await syncRepository.getMetadata();
         expect(metadata?.serverKeyVerified).toBeFalsy();
         expect(metadata?.lastSyncAt).toBeUndefined();
+      }, 60_000);
+    });
+
+    describe('saying what each write is for', () => {
+      const CHANGED_ELSEWHERE = 'unlock.passwordChangedElsewhere';
+      const NEW_PASSWORD = 'changed-at-the-same-moment';
+
+      it('asks for a first upload to fail if the account already has a key', async () => {
+        await setUpFirstDevice();
+
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        expect(writes).toEqual([{ replace: false }]);
+      }, 60_000);
+
+      it('leaves a key that another device uploaded first', async () => {
+        const key = await setUpFirstDevice();
+        beforeNextWrite = () => wrapOnServer(NEW_PASSWORD, key);
+
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        const wrappingKey = await cryptoService.deriveWrappingKey(NEW_PASSWORD, USER_ID);
+        await expect(cryptoService.unwrapMasterKey(wrappingKey, JSON.parse(serverBlob!.blob))).resolves.toBeTruthy();
+      }, 60_000);
+
+      it('reports the same race on first device setup, rather than replacing the key', async () => {
+        const key = await setUpFirstDevice();
+        beforeNextWrite = () => wrapOnServer(NEW_PASSWORD, key);
+
+        await expect(uploadWrappedKeyToServer(NOTES_PASSWORD)).rejects.toBeInstanceOf(AccountKeyExistsError);
+      }, 60_000);
+
+      it('still finishes moving a legacy vault if another device uploaded first', async () => {
+        const key = await setUpFirstDevice();
+        beforeNextWrite = () => wrapOnServer(NEW_PASSWORD, key);
+        const convert = vi.spyOn(encryptionRepository, 'setMetadata');
+
+        await tryMigrateToEnvelope(NOTES_PASSWORD, key);
+
+        expect(convert).toHaveBeenCalled();
+      }, 60_000);
+
+      it('makes a repair conditional on the blob it read', async () => {
+        const key = await setUpFirstDevice();
+        await wrapOnServer(SERVER_PASSWORD, key);
+        const read = serverBlob!.updatedAt;
+        await markSynced();
+
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        expect(writes).toEqual([{ ifMatch: read }]);
+      }, 60_000);
+
+      it('backs off a repair if the blob changes first, and never tries again', async () => {
+        // This is the race the per-device flag alone can't close: the device has no
+        // proof yet, and another device changes the password between its read and write
+        const info = vi.spyOn(toast, 'info');
+        const key = await setUpFirstDevice();
+        await wrapOnServer(SERVER_PASSWORD, key);
+        await markSynced();
+        beforeNextWrite = () => wrapOnServer(NEW_PASSWORD, key);
+
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+        expect(info).toHaveBeenCalledWith(CHANGED_ELSEWHERE);
+
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        expect(writes).toHaveLength(1);
+        const wrappingKey = await cryptoService.deriveWrappingKey(NEW_PASSWORD, USER_ID);
+        await expect(cryptoService.unwrapMasterKey(wrappingKey, JSON.parse(serverBlob!.blob))).resolves.toBeTruthy();
+      }, 60_000);
+
+      it('sends no If-Match to a server that gave no updatedAt, whose preflight could refuse it', async () => {
+        olderServer = true;
+        const key = await setUpFirstDevice();
+        await wrapOnServer(SERVER_PASSWORD, key);
+        await markSynced();
+
+        await ensureServerWrappedKey(NOTES_PASSWORD);
+
+        expect(writes).toEqual([{ replace: true }]);
+        expect(putSpy).toHaveBeenCalledTimes(1);
+      }, 60_000);
+
+      it('replaces the key on a password change, whatever is there', async () => {
+        const key = await setUpFirstDevice();
+        await wrapOnServer(NOTES_PASSWORD, key);
+
+        await changePassword(NOTES_PASSWORD, 'a-brand-new-password');
+
+        expect(writes).toEqual([{ replace: true }]);
+      }, 60_000);
+
+      it('keeps retrying its own password change after a conflict', async () => {
+        const key = await setUpFirstDevice();
+        await wrapOnServer(NOTES_PASSWORD, key);
+        putSpy.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+        await changePassword(NOTES_PASSWORD, 'a-brand-new-password');
+
+        beforeNextWrite = () => wrapOnServer(NEW_PASSWORD, key);
+        await ensureServerWrappedKey('a-brand-new-password');
+
+        expect((await syncRepository.getMetadata())?.serverKeyStale).toBe(true);
       }, 60_000);
     });
 

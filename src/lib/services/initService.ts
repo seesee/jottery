@@ -15,6 +15,7 @@ import { keyManager, setupActivityListeners } from './keyManager';
 import { sessionStorageService } from './sessionStorageService';
 import { passwordStorageService } from './passwordStorageService';
 import { AuthApiError, authService } from './authService';
+import type { WrappedKeyResponse, WrappedKeyWrite } from './authService';
 import { arrayBufferToBase64, base64ToUint8Array } from '../utils/base64';
 import { CRYPTO_PBKDF2_ITERATIONS, CRYPTO_WRAPPING_ITERATIONS, CRYPTO_WRAPPING_KDF_VERSION } from '../constants';
 import type { EncryptionResult } from '../types/crypto';
@@ -456,7 +457,7 @@ export async function changePassword(
   const syncMetadata = await syncRepository.getMetadata();
   if (syncMetadata?.syncEnabled && syncMetadata.userId && syncMetadata.apiKey && syncMetadata.syncEndpoint) {
     try {
-      await uploadWrappedKey(newPassword, currentMasterKey.keyBytes);
+      await uploadWrappedKey(newPassword, currentMasterKey.keyBytes, { replace: true });
       console.log('[ChangePassword] ✓ Server wrapped key updated');
     } catch (error) {
       console.warn('[ChangePassword] Failed to update server wrapped key:', error);
@@ -523,7 +524,7 @@ async function passwordUnlocksVault(
  * password in plaintext at registration and login, so a blob wrapped with it
  * could be opened by the server operator.
  */
-async function uploadWrappedKey(password: string, masterKeyBytes: Uint8Array): Promise<void> {
+async function uploadWrappedKey(password: string, masterKeyBytes: Uint8Array, write: WrappedKeyWrite): Promise<void> {
   const syncMetadata = await syncRepository.getMetadata();
   if (!syncMetadata?.syncEnabled || !syncMetadata.userId || !syncMetadata.apiKey || !syncMetadata.syncEndpoint) {
     throw new Error('Sync is not configured');
@@ -545,9 +546,22 @@ async function uploadWrappedKey(password: string, masterKeyBytes: Uint8Array): P
     blob: JSON.stringify(serverWrapped),
     kdfVersion: CRYPTO_WRAPPING_KDF_VERSION,
     kdfIterations: CRYPTO_WRAPPING_ITERATIONS,
-  });
+  }, write);
 
   await syncRepository.updateMetadata({ serverKeyVerified: true, serverKeyStale: false });
+}
+
+/** The key changed between reading it and writing, so the write was refused. */
+function isWriteConflict(error: unknown): boolean {
+  return error instanceof AuthApiError && error.status === 409;
+}
+
+/**
+ * The condition for overwriting a key this device has read. An older server gives
+ * no updatedAt, and sending If-Match there could fail its preflight.
+ */
+function overwriteOf(existing: WrappedKeyResponse): WrappedKeyWrite {
+  return existing.updatedAt ? { ifMatch: existing.updatedAt } : { replace: true };
 }
 
 /**
@@ -623,7 +637,11 @@ export async function uploadWrappedKeyToServer(notesPassword: string): Promise<v
     throw new AccountKeyExistsError();
   }
 
-  await uploadWrappedKey(notesPassword, masterKey.keyBytes);
+  try {
+    await uploadWrappedKey(notesPassword, masterKey.keyBytes, { replace: false });
+  } catch (error) {
+    throw isWriteConflict(error) ? new AccountKeyExistsError() : error;
+  }
 
   if (!metadata.envelopeVersion) {
     await convertLocalToEnvelope(notesPassword, masterKey.keyBytes);
@@ -664,6 +682,9 @@ export async function verifyUnlockPassword(password: string): Promise<boolean> {
  * - This device has never opened it. If it has synced it holds the account's real
  *   key, so it may repair the blob. Doing so sets the flag, so that happens only once.
  *
+ * Every write here is conditional on what was read, so a change made by another
+ * device in between can't be overwritten: that is the one race the flag can't close.
+ *
  * All failures (including being offline) are logged and ignored.
  */
 export async function ensureServerWrappedKey(notesPassword: string): Promise<void> {
@@ -680,29 +701,49 @@ export async function ensureServerWrappedKey(notesPassword: string): Promise<voi
 
     const plaintextApiKey = await cryptoService.decryptText(JSON.parse(syncMetadata.apiKey), masterKey.key);
     const existing = await authService.getWrappedKey(syncMetadata.syncEndpoint, plaintextApiKey);
-    if (existing) {
-      if (await unwrapServerBlob(existing.blob, notesPassword, syncMetadata.userId)) {
-        if (!syncMetadata.serverKeyVerified || syncMetadata.serverKeyStale) {
-          await syncRepository.updateMetadata({ serverKeyVerified: true, serverKeyStale: false });
-        }
-        return;
-      }
-      if (!syncMetadata.serverKeyStale) {
-        if (syncMetadata.serverKeyVerified) {
-          toast.info(get(_)('unlock.passwordChangedElsewhere'));
-          return;
-        }
-        if (!syncMetadata.lastSyncAt) {
-          return;
-        }
-      }
-      console.log('[Unlock] Server key does not open with the notes password, re-wrapping it...');
-    } else {
+
+    if (!existing) {
       console.log('[Unlock] Server has no wrapped key for this account, uploading one...');
+      await uploadWrappedKey(notesPassword, masterKey.keyBytes, { replace: false });
+      console.log('[Unlock] ✓ Wrapped key uploaded to server');
+      return;
     }
 
-    await uploadWrappedKey(notesPassword, masterKey.keyBytes);
-    console.log('[Unlock] ✓ Wrapped key uploaded to server');
+    if (await unwrapServerBlob(existing.blob, notesPassword, syncMetadata.userId)) {
+      if (!syncMetadata.serverKeyVerified || syncMetadata.serverKeyStale) {
+        await syncRepository.updateMetadata({ serverKeyVerified: true, serverKeyStale: false });
+      }
+      return;
+    }
+
+    const finishingPasswordChange = !!syncMetadata.serverKeyStale;
+    if (!finishingPasswordChange) {
+      if (syncMetadata.serverKeyVerified) {
+        toast.info(get(_)('unlock.passwordChangedElsewhere'));
+        return;
+      }
+      if (!syncMetadata.lastSyncAt) {
+        return;
+      }
+    }
+
+    console.log('[Unlock] Server key does not open with the notes password, re-wrapping it...');
+    try {
+      await uploadWrappedKey(notesPassword, masterKey.keyBytes, overwriteOf(existing));
+      console.log('[Unlock] ✓ Wrapped key uploaded to server');
+    } catch (error) {
+      if (!isWriteConflict(error)) {
+        throw error;
+      }
+
+      // Something changed the key while this ran. That was another device, so the key
+      // isn't old-format, and this device mustn't repair it at a later unlock either.
+      // Its own password change stays marked instead, and is retried.
+      if (!finishingPasswordChange) {
+        await syncRepository.updateMetadata({ serverKeyVerified: true });
+        toast.info(get(_)('unlock.passwordChangedElsewhere'));
+      }
+    }
   } catch (error) {
     console.warn('[Unlock] Could not check or upload the server wrapped key (will retry next unlock):', error);
   }
@@ -734,8 +775,15 @@ export async function tryMigrateToEnvelope(password: string, masterKeyBytes: Uin
     if (await accountHasKey()) {
       console.log('[Migration] Account already has a wrapped key, leaving it in place');
     } else {
-      await uploadWrappedKey(password, masterKeyBytes);
-      console.log('[Migration] ✓ Wrapped key uploaded to server');
+      try {
+        await uploadWrappedKey(password, masterKeyBytes, { replace: false });
+        console.log('[Migration] ✓ Wrapped key uploaded to server');
+      } catch (error) {
+        if (!isWriteConflict(error)) {
+          throw error;
+        }
+        console.log('[Migration] Another device uploaded a key first, leaving it in place');
+      }
     }
 
     await convertLocalToEnvelope(password, masterKeyBytes);

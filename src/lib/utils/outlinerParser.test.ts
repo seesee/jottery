@@ -137,24 +137,24 @@ Item 2
 });
 
 describe('parseOutliner with tabs', () => {
-  it('keeps every character of a tab-indented line', () => {
+  test('keeps every character of a tab-indented line', () => {
     const nodes = parseOutliner('- root\n\t- one\n\t\t- two\n\t\t\t- three');
     const flat = flattenNodes(nodes).map(node => node.content);
 
     expect(flat).toEqual(['root', 'one', 'two', 'three']);
   });
 
-  it('keeps text with no bullet at any depth', () => {
+  test('keeps text with no bullet at any depth', () => {
     expect(parseOutliner('\t\tfoo bar').flatMap(function all(n): string[] { return [n.content, ...n.children.flatMap(all)]; }).filter(Boolean)).toEqual(['foo bar']);
   });
 
-  it('handles tabs and spaces mixed on one line', () => {
+  test('handles tabs and spaces mixed on one line', () => {
     const flat = flattenNodes(parseOutliner('- a\n \t- b\n\t  - c')).map(node => node.content);
 
     expect(flat).toEqual(['a', 'b', 'c']);
   });
 
-  it('survives a round trip without losing anything', () => {
+  test('survives a round trip without losing anything', () => {
     const once = serialiseOutliner(parseOutliner('- a\n\t- b\n\t\t- c'));
 
     expect(flattenNodes(parseOutliner(once)).map(node => node.content)).toEqual(['a', 'b', 'c']);

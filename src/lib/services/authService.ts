@@ -45,6 +45,8 @@ export interface WrappedKeyResponse {
   blob: string;
   kdfVersion: number;
   kdfIterations: number;
+  /** Opaque. Its presence means the server supports conditional writes */
+  updatedAt?: string;
 }
 
 export interface PutWrappedKeyRequest {
@@ -53,6 +55,15 @@ export interface PutWrappedKeyRequest {
   kdfIterations: number;
 }
 
+/**
+ * What a write to the account's key is for. There is one key per account, and
+ * overwriting it with the wrong one locks out every new device.
+ * - `replace: false`: a first upload, refused if the account already has a key.
+ * - `replace: true`: a password change, which always applies.
+ * - `ifMatch`: a repair, refused if the key has changed since it was read.
+ */
+export type WrappedKeyWrite = { replace: boolean } | { ifMatch: string };
+
 /** A refusal from the server, as opposed to not reaching it at all */
 export class AuthApiError extends Error {
   constructor(message: string, public readonly status: number) {
@@ -60,6 +71,9 @@ export class AuthApiError extends Error {
     this.name = 'AuthApiError';
   }
 }
+
+/** A header value, as the server is untrusted and fetch throws on a bad one */
+const UPDATED_AT_PATTERN = /^[\x20-\x7e]{1,256}$/;
 
 /**
  * The wait a rate limit asks for, in the server's own words. Those are shown as
@@ -263,29 +277,44 @@ class AuthService {
       throw new Error(`Failed to get wrapped key: ${await response.text()}`);
     }
 
-    return await response.json();
+    const wrappedKey: WrappedKeyResponse = await response.json();
+    return {
+      ...wrappedKey,
+      updatedAt: typeof wrappedKey.updatedAt === 'string' && UPDATED_AT_PATTERN.test(wrappedKey.updatedAt)
+        ? wrappedKey.updatedAt
+        : undefined,
+    };
   }
 
   /**
    * Store or update the server-escrowed wrapped master key.
+   *
+   * @throws AuthApiError with status 409 if the write's condition failed. Nothing was
+   * written. Don't retry it: read the key again and decide again from what's there.
    */
   async putWrappedKey(
     endpoint: string,
     authToken: string,
-    request: PutWrappedKeyRequest
+    request: PutWrappedKeyRequest,
+    write: WrappedKeyWrite
   ): Promise<void> {
     endpoint = this.normalizeEndpoint(endpoint);
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${authToken}`,
+    };
+    if ('ifMatch' in write) {
+      headers['If-Match'] = write.ifMatch;
+    }
+
     const response = await fetch(`${endpoint}/api/v1/auth/wrapped-key`, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${authToken}`,
-      },
-      body: JSON.stringify(request),
+      headers,
+      body: JSON.stringify('replace' in write ? { ...request, replace: write.replace } : request),
     });
 
     if (!response.ok) {
-      throw new Error(`Failed to store wrapped key: ${await response.text()}`);
+      throw new AuthApiError(`Failed to store wrapped key: ${await response.text()}`, response.status);
     }
   }
 }
