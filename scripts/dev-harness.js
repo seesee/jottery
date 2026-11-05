@@ -6,7 +6,7 @@
  * A terminal UI for managing and monitoring development servers:
  * - Main web app (Vite on port 5173)
  * - Admin web app (Vite on port 5174)
- * - Sync server (Rust on port 3000)
+ * - Sync server (Rust on port 3030)
  *
  * Usage: node scripts/dev-harness.js [options]
  *
@@ -100,7 +100,7 @@ const servers = {
     command: 'cargo',
     args: ['run', '--bin', 'jottery-server'],
     cwd: join(projectRoot, 'server'),
-    port: 3000,
+    port: 3030,
     process: null,
     status: 'stopped',
     logs: [],
