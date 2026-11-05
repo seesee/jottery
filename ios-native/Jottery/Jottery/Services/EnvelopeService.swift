@@ -64,6 +64,10 @@ enum EnvelopeService {
         /// older build, so the password was changed on another device: the
         /// server's copy is the newer one and was left alone.
         case passwordChangedElsewhere
+        /// An upload was refused because the key changed, and reading it again
+        /// failed or found it changing still. Whatever it is now, it's no blob
+        /// from an older build, so this device must never repair it.
+        case changedUnderThisDevice
     }
 
     /// Make sure the account's wrapped key can be opened with the notes
@@ -104,7 +108,15 @@ enum EnvelopeService {
         for _ in 0..<2 {
             let write: WrappedKeyWrite
             let outcome: WrappedKeyOutcome
-            switch try await readServerKey(syncClient: syncClient, userId: userId, password: password) {
+            let found: ServerKeyRead
+            do {
+                found = try await readServerKey(syncClient: syncClient, userId: userId, password: password)
+            } catch _ where keyChangedUnderUs {
+                // The refusal was the proof. Losing it to a failed read would
+                // let the next unlock repair over another device's new password.
+                return .changedUnderThisDevice
+            }
+            switch found {
             case .opened:
                 return .leftAlone
             case .absent:
@@ -129,8 +141,9 @@ enum EnvelopeService {
                 keyChangedUnderUs = true
             }
         }
-        // It changed twice in a row. The next unlock looks again.
-        throw SyncClientError.wrappedKeyConflict
+        // It changed twice in a row. The next unlock looks again, as a device
+        // that knows better than to repair it.
+        return .changedUnderThisDevice
     }
 
     // MARK: - Migrate Legacy → Envelope
@@ -567,7 +580,7 @@ enum EnvelopeService {
                 )
                 Log.debug("[Envelope] Server key check: \(outcome)")
                 switch outcome {
-                case .published, .leftAlone, .repaired:
+                case .published, .leftAlone, .repaired, .changedUnderThisDevice:
                     try syncRepo.markServerKeyOpened()
                 case .passwordChangedElsewhere:
                     // Set here too for a key that changed under a repair: that

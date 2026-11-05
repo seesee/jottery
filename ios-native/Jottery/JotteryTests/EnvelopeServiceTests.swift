@@ -430,6 +430,44 @@ struct EnvelopeServiceTests {
         #expect(FakeKeyServerProtocol.storedBlob == theirs)
     }
 
+    /// The refusal is the proof, so it must survive the read after it failing.
+    /// Otherwise the next unlock sees an old-looking blob, with nothing saying
+    /// otherwise, and repairs over the password change that caused the refusal.
+    @Test func aRefusedRepairIsProofEvenIfReadingItAgainFails() async throws {
+        FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: serverPassword))
+        let state = try await makeSyncedState()
+        try #require(state.syncRepo).updateLastSync(at: Date().iso8601)
+        let theirs = try wrap(CryptoService.generateMasterKey(), with: "changed-on-another-device")
+        FakeKeyServerProtocol.beforeNextPut = {
+            FakeKeyServerProtocol.storedBlob = theirs
+            FakeKeyServerProtocol.failGets = true
+        }
+
+        _ = try await runEnvelopeSetup(on: state, password: notesPassword)
+        #expect(FakeKeyServerProtocol.putCount == 1)
+
+        FakeKeyServerProtocol.failGets = false
+        _ = try await runEnvelopeSetup(on: state, password: notesPassword)
+
+        #expect(FakeKeyServerProtocol.putCount == 1, "repaired over another device's password change")
+        #expect(FakeKeyServerProtocol.storedBlob == theirs)
+    }
+
+    @Test func aKeyThatKeepsChangingIsLeftAloneByAFirstUpload() async throws {
+        FakeKeyServerProtocol.reset()
+        let theirs = try wrap(CryptoService.generateMasterKey(), with: "changed-on-another-device")
+        FakeKeyServerProtocol.beforeNextPut = {
+            // Appears as this device writes, and has gone again by the next read.
+            FakeKeyServerProtocol.storedBlob = theirs
+            FakeKeyServerProtocol.failGets = true
+        }
+
+        let outcome = try await reconcile(masterKey: CryptoService.generateMasterKey(), hasSynced: true)
+
+        #expect(outcome == .changedUnderThisDevice)
+        #expect(FakeKeyServerProtocol.putCount == 1)
+    }
+
     @Test func aLegacyVaultThatLosesARepairNeverTriesAgain() async throws {
         FakeKeyServerProtocol.reset(blob: try wrap(CryptoService.generateMasterKey(), with: serverPassword))
         let state = try await makeSyncedLegacyVault()
