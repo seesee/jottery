@@ -1,18 +1,20 @@
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     Json,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 use crate::{
+    api::cookies::{clear_session_cookie, grant_session, CookieScope},
     db::{SessionRepository, UserRepository},
     error::{AppError, AppResult},
     models::{CreateSessionParams, Session},
+    services::AdminService,
     utils::{
         crypto::hash_sha256,
-        password::{hash_password_with_params, validate_password_strength, verify_password},
+        password::{hash_for_storage, validate_password_strength, verify_sign_in, verify_stored},
     },
     AppState,
 };
@@ -45,12 +47,20 @@ pub struct InboxAccountInfo {
 pub struct LoginRequest {
     pub email: String,
     pub password: String,
+    /// Ask for the session as an HttpOnly cookie. See `api::cookies`.
+    #[serde(default)]
+    pub cookie_session: bool,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoginResponse {
-    pub session_id: String,
+    /// Absent when the session is in a cookie.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
+    /// Present, and true, only when the session is in a cookie.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub cookie_session: bool,
     pub expires_at: String,
     pub user: UserInfo,
     /// The session can only change the password until this is cleared.
@@ -69,40 +79,36 @@ pub struct UserInfo {
 pub async fn login(
     State(state): State<Arc<AppState>>,
     Json(req): Json<LoginRequest>,
-) -> AppResult<(StatusCode, Json<LoginResponse>)> {
+) -> AppResult<(StatusCode, HeaderMap, Json<LoginResponse>)> {
     tracing::info!("User login request: email={}", req.email);
 
     state.login_throttle.check(&req.email)?;
 
     // Get user by email
-    let user = sqlx::query!(
-        "SELECT id, email, password_hash, is_admin, approved, is_active, must_change_password FROM users WHERE email = ?",
-        req.email
-    )
-    .fetch_optional(&state.pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Database error: {}", e);
-        AppError::InternalServerError
-    })?
-    .ok_or_else(|| {
-        tracing::warn!("Login failed: user not found: {}", req.email);
-        state.login_throttle.record_failure(&req.email);
-        AppError::Unauthorized
-    })?;
-
-    // Verify password
-    let password_valid = crate::utils::password::verify_password(&req.password, &user.password_hash)
+    let user = UserRepository::find_by_email(&state.pool, &req.email)
+        .await
         .map_err(|e| {
-            tracing::error!("Password verification failed: {}", e);
+            tracing::error!("Database error: {}", e);
             AppError::InternalServerError
         })?;
 
-    if !password_valid {
-        tracing::warn!("Login failed: invalid password for {}", req.email);
+    // Verify password
+    let password_valid = verify_sign_in(
+        &state.config,
+        &req.password,
+        user.as_ref().map(|user| user.password_hash.as_str()),
+    )
+    .await
+    .map_err(|e| {
+        tracing::error!("Password verification failed: {}", e);
+        AppError::InternalServerError
+    })?;
+
+    let Some(user) = user.filter(|_| password_valid) else {
+        tracing::warn!("Login failed: bad credentials for {}", req.email);
         state.login_throttle.record_failure(&req.email);
         return Err(AppError::Unauthorized);
-    }
+    };
     state.login_throttle.record_success(&req.email);
 
     // Registration is open, so a session must wait for an admin's approval.
@@ -155,10 +161,14 @@ pub async fn login(
 
     tracing::info!("User logged in successfully: {}", req.email);
 
+    let grant = grant_session(&state.config, CookieScope::User, req.cookie_session, session_token);
+
     Ok((
         StatusCode::OK,
+        grant.headers,
         Json(LoginResponse {
-            session_id: session_token.clone(),  // Return the actual token, not the session ID
+            session_id: grant.session_id, // The actual token, not the session ID
+            cookie_session: grant.cookie_session,
             expires_at: expires_at_str,
             user: UserInfo {
                 id: user.id,
@@ -220,21 +230,12 @@ pub async fn get_account_info(
     })?;
 
     // Calculate storage used
-    let storage_used = sqlx::query_scalar!(
-        "SELECT COALESCE(SUM(m.size), 0) FROM attachments_meta m
-         WHERE m.user_id = ?1 AND EXISTS (
-             SELECT 1 FROM note_attachments na
-             JOIN notes n ON n.id = na.note_id AND n.user_id = na.user_id
-             WHERE na.user_id = ?1 AND na.attachment_id = m.attachment_id AND n.deleted = 0
-         )",
-        user_id
-    )
-    .fetch_one(&state.pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to calculate storage: {}", e);
-        AppError::InternalServerError
-    })?;
+    let storage_used = UserRepository::measure_storage(&state.pool, &user_id)
+        .await
+        .map_err(|e| {
+            tracing::error!("Failed to calculate storage: {}", e);
+            AppError::InternalServerError
+        })?;
 
     // Get last sync time
     let last_sync: Option<String> = sqlx::query_scalar(
@@ -261,7 +262,7 @@ pub async fn get_account_info(
         email: user.email,
         note_count: note_count as i64,
         attachment_count: attachment_count as i64,
-        storage_used_bytes: storage_used as i64,
+        storage_used_bytes: storage_used,
         storage_quota_mb: user.storage_quota_mb.unwrap_or(state.config.default_storage_quota_mb) as i64,
         created_at: user.created_at,
         last_sync_at: last_sync,
@@ -346,7 +347,8 @@ pub async fn change_password(
         })?;
 
     // Verify current password
-    let password_valid = verify_password(&req.current_password, &user.password_hash)
+    let password_valid = verify_stored(&req.current_password, &user.password_hash)
+        .await
         .map_err(|e| {
             tracing::error!("Password verification failed: {}", e);
             AppError::InternalServerError
@@ -357,8 +359,10 @@ pub async fn change_password(
         return Err(AppError::Unauthorized);
     }
 
+    let kdf_version = req.kdf_version.unwrap_or(1);
+    let kdf_iterations = req.kdf_iterations.unwrap_or(1_000_000);
     if let Some(blob) = &req.wrapped_blob {
-        crate::api::auth::validate_wrapped_blob(blob)?;
+        crate::api::auth::validate_wrapped_key(blob, kdf_version, kdf_iterations)?;
     }
 
     // Validate new password strength based on configured complexity
@@ -368,37 +372,28 @@ pub async fn change_password(
     }
 
     // "Changing" to the same password would satisfy a forced change
-    if verify_password(&req.new_password, &user.password_hash).unwrap_or(false) {
+    if verify_stored(&req.new_password, &user.password_hash).await.unwrap_or(false) {
         return Err(AppError::BadRequest(
             "New password must be different from the current one".to_string(),
         ));
     }
 
     // Hash new password with configured Argon2 parameters
-    let new_password_hash = hash_password_with_params(
-        &req.new_password,
-        state.config.argon2_m_cost,
-        state.config.argon2_t_cost,
-        state.config.argon2_p_cost,
-    )
-    .map_err(|e| {
-        tracing::error!("Password hashing failed: {}", e);
-        AppError::InternalServerError
-    })?;
+    let new_password_hash = hash_for_storage(&state.config, &req.new_password)
+        .await
+        .map_err(|e| {
+            tracing::error!("Password hashing failed: {}", e);
+            AppError::InternalServerError
+        })?;
 
-    // Update password
-    sqlx::query!(
-        r#"UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?"#,
-        new_password_hash,
-        user_id
-    )
-    .execute(&state.pool)
-    .await?;
+    // All or nothing: a new password with the old blob would strand other devices,
+    // and sessions from before the change are what it's meant to end.
+    let mut tx = state.pool.begin().await?;
 
-    // If wrapped key blob provided, update it atomically with password change
+    UserRepository::set_password(&mut tx, user_id, &new_password_hash).await?;
+    SessionRepository::delete_others_for_user(&mut tx, user_id, &session.id).await?;
+
     if let Some(blob) = &req.wrapped_blob {
-        let kdf_version = req.kdf_version.unwrap_or(1);
-        let kdf_iterations = req.kdf_iterations.unwrap_or(1_000_000);
         let now = chrono::Utc::now().to_rfc3339();
 
         sqlx::query!(
@@ -416,11 +411,13 @@ pub async fn change_password(
             now,
             now,
         )
-        .execute(&state.pool)
+        .execute(&mut *tx)
         .await?;
 
         tracing::info!("Wrapped key updated during password change for user: {}", user_id);
     }
+
+    tx.commit().await?;
 
     tracing::info!("Password changed successfully for user: {}", user_id);
     Ok(StatusCode::NO_CONTENT)
@@ -441,47 +438,18 @@ pub async fn delete_account(
 ) -> AppResult<StatusCode> {
     let user_id = &session.user_id;
 
+    let user = UserRepository::get_by_id(&state.pool, user_id).await?;
+
     match query.mode.as_str() {
         "deactivate" => {
-            // Soft delete: set is_active = 0, allowing re-registration with admin approval
-            sqlx::query!(
-                r#"UPDATE users SET is_active = 0 WHERE id = ?"#,
-                user_id
-            )
-            .execute(&state.pool)
-            .await?;
-
-            // Invalidate all sessions for this user
-            sqlx::query!(
-                r#"DELETE FROM sessions WHERE user_id = ?"#,
-                user_id
-            )
-            .execute(&state.pool)
-            .await?;
-
+            // Soft delete: allows re-registration with admin approval
+            AdminService::deactivate(&state.pool, &user).await?;
             tracing::info!("User deactivated their account: {}", user_id);
             Ok(StatusCode::NO_CONTENT)
         }
         "delete" => {
             // Hard delete: remove all user data
-            let mut tx = state.pool.begin().await.map_err(|e| {
-                tracing::error!("Failed to start transaction: {}", e);
-                AppError::InternalServerError
-            })?;
-
-            // Use the helper to delete all account data
-            UserRepository::delete_account_data(&mut tx, &user_id)
-                .await
-                .map_err(|e| {
-                    tracing::error!("Failed to delete account data: {}", e);
-                    AppError::InternalServerError
-                })?;
-
-            tx.commit().await.map_err(|e| {
-                tracing::error!("Failed to commit transaction: {}", e);
-                AppError::InternalServerError
-            })?;
-
+            AdminService::delete(&state.pool, &user).await?;
             tracing::warn!("User permanently deleted their account: {}", user_id);
             Ok(StatusCode::NO_CONTENT)
         }
@@ -538,22 +506,60 @@ pub async fn check_status(
     }
 }
 
+#[derive(Debug, Deserialize)]
+pub struct StatusCheckRequest {
+    pub email: String,
+    pub password: String,
+}
+
+/// Check where an account stands, for someone who holds its password
+/// POST /api/v1/user/status
+///
+/// The GET above answers for any address, which tells anyone who has an account.
+/// It stays for released clients. This one gives a stranger the same 401 whether
+/// the address has an account or not, and counts as a password guess.
+pub async fn check_own_status(
+    State(state): State<Arc<AppState>>,
+    Json(req): Json<StatusCheckRequest>,
+) -> AppResult<Json<UserStatusResponse>> {
+    state.login_throttle.check(&req.email)?;
+
+    let user = UserRepository::find_by_email(&state.pool, &req.email).await?;
+
+    let password_valid = verify_sign_in(
+        &state.config,
+        &req.password,
+        user.as_ref().map(|user| user.password_hash.as_str()),
+    )
+    .await
+    .map_err(|e| {
+        tracing::error!("Password verification failed: {}", e);
+        AppError::InternalServerError
+    })?;
+
+    let Some(user) = user.filter(|_| password_valid) else {
+        state.login_throttle.record_failure(&req.email);
+        return Err(AppError::Unauthorized);
+    };
+    state.login_throttle.record_success(&req.email);
+
+    Ok(Json(UserStatusResponse {
+        exists: true,
+        is_approved: user.approved != 0,
+        is_active: user.is_active != 0,
+    }))
+}
+
 /// Logout - invalidate current session
 /// POST /api/v1/user/logout
 pub async fn logout(
     State(state): State<Arc<AppState>>,
     axum::Extension(session): axum::Extension<Session>,
-) -> AppResult<StatusCode> {
-    // Delete the current session
-    sqlx::query!(
-        r#"DELETE FROM sessions WHERE id = ?"#,
-        session.id
-    )
-    .execute(&state.pool)
-    .await?;
+) -> AppResult<(StatusCode, HeaderMap)> {
+    SessionRepository::delete(&state.pool, &session.id).await?;
 
     tracing::info!("User logged out: session_id={}", session.id);
-    Ok(StatusCode::NO_CONTENT)
+    Ok((StatusCode::NO_CONTENT, clear_session_cookie(CookieScope::User)))
 }
 
 // ============================================================================

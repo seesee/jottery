@@ -98,10 +98,11 @@ You can configure the server using environment variables:
 | `SESSION_EXPIRY_DAYS` | `7` | Admin session expiry in days |
 | `DEFAULT_STORAGE_QUOTA_MB` | `1000` | Default user storage quota in MB |
 | `DEFAULT_MAX_UPLOAD_SIZE_MB` | `5` | Default user upload limit in MB |
-| `MAX_PAYLOAD_SIZE` | `104857600` | Largest request body in bytes (100 MB). Each user's upload limit still applies. Lowering it can stop large syncs with a 413 |
+| `ENFORCE_STORAGE_QUOTA` | `false` | Refuse pushes that would take an account past its quota. Check accounts in the dashboard first: quotas weren't enforced before, so one may already be over, and a refused push stops that device's sync |
+| `MAX_PAYLOAD_SIZE` | `104857600` | Max size of a sync push in bytes (100 MB). Other routes have small fixed limits. Lowering it can stop large syncs with a 413 |
 | `PASSWORD_COMPLEXITY` | `standard` | Character classes a password needs, on top of the 12-character minimum: `none`, `basic` (2), `standard` (3) or `strong` (4) |
 | `CORS_ALLOWED_ORIGINS` | *(none)* | Comma-separated list of allowed CORS origins. If unset, only the server's own origin can call it from a browser |
-| `ENABLE_HSTS` | `false` | Send `Strict-Transport-Security`, on the web client as well as the server's routes. Set to `true` only when clients reach the site over HTTPS |
+| `ENABLE_HSTS` | `false` | Send `Strict-Transport-Security`, on the web client as well as the server's routes, and keep dashboard sessions in an HttpOnly cookie that script can't read. Set to `true` only when clients reach the site over HTTPS |
 | `ADMIN_ALLOWED_IPS` | *(everyone)* | Space-separated addresses or CIDR ranges allowed to reach `/admin` and the admin API; everyone else gets a 403. Behind another proxy, every request appears to come from that proxy, so restrict access there instead. If it's set but empty, nobody can reach them. The notes app, sync and the user portal aren't affected |
 | `TRUSTED_PROXY_HOPS` | `1` in the Docker image, otherwise `0` | Proxies that append to `X-Forwarded-For`, used for rate limiting. See the [server README](server/README.md#rate-limiting) |
 

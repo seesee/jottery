@@ -1,4 +1,4 @@
-use sqlx::{Sqlite, SqlitePool, Transaction};
+use sqlx::{Sqlite, SqliteConnection, SqlitePool, Transaction};
 use uuid::Uuid;
 
 use crate::models::User;
@@ -54,6 +54,17 @@ impl UserRepository {
         .await
     }
 
+    /// Find a user by email, if there is one
+    pub async fn find_by_email(pool: &SqlitePool, email: &str) -> Result<Option<User>, sqlx::Error> {
+        sqlx::query_as!(
+            User,
+            r#"SELECT * FROM users WHERE email = ?"#,
+            email
+        )
+        .fetch_optional(pool)
+        .await
+    }
+
     /// Check if email exists
     pub async fn email_exists(pool: &SqlitePool, email: &str) -> Result<bool, sqlx::Error> {
         let result = sqlx::query!(
@@ -88,12 +99,12 @@ impl UserRepository {
         .await
     }
 
-    /// Approve a user
-    #[allow(dead_code)]
+    /// Approve a user. `approved_by` is the admin who did, if it was one: the
+    /// command line has no account behind it.
     pub async fn approve(
         pool: &SqlitePool,
         user_id: &str,
-        approved_by: &str,
+        approved_by: Option<&str>,
     ) -> Result<(), sqlx::Error> {
         let now = chrono::Utc::now().to_rfc3339();
 
@@ -113,14 +124,47 @@ impl UserRepository {
         Ok(())
     }
 
+    /// What a user holds on the server, in bytes: blobs, and the content and tags of
+    /// notes and versions. Reads every note, so it isn't for the request path.
+    pub async fn measure_storage(pool: &SqlitePool, user_id: &str) -> Result<i64, sqlx::Error> {
+        let bytes: i64 = sqlx::query_scalar(
+            "SELECT
+               COALESCE((SELECT SUM(LENGTH(content) + LENGTH(tags)) FROM notes WHERE user_id = ?1), 0)
+             + COALESCE((SELECT SUM(LENGTH(content) + LENGTH(tags)) FROM note_versions WHERE user_id = ?1), 0)
+             + COALESCE((SELECT SUM(LENGTH(d.data)) FROM attachments_meta m
+                         JOIN attachments_data d ON d.id = m.id WHERE m.user_id = ?1), 0)",
+        )
+        .bind(user_id)
+        .fetch_one(pool)
+        .await?;
+
+        Ok(bytes)
+    }
+
+    /// Set a user's password, which also satisfies a forced change.
+    pub async fn set_password(
+        conn: &mut SqliteConnection,
+        user_id: &str,
+        password_hash: &str,
+    ) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            r#"UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ?"#,
+            password_hash,
+            user_id
+        )
+        .execute(conn)
+        .await?;
+
+        Ok(())
+    }
+
     /// Deactivate a user
-    #[allow(dead_code)]
-    pub async fn deactivate(pool: &SqlitePool, user_id: &str) -> Result<(), sqlx::Error> {
+    pub async fn deactivate(conn: &mut SqliteConnection, user_id: &str) -> Result<(), sqlx::Error> {
         sqlx::query!(
             r#"UPDATE users SET is_active = 0 WHERE id = ?"#,
             user_id
         )
-        .execute(pool)
+        .execute(conn)
         .await?;
 
         Ok(())

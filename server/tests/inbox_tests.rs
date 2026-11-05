@@ -14,8 +14,6 @@
 use axum::{
     body::Body,
     http::{Request, StatusCode},
-    middleware,
-    routing::{delete, get, patch, post},
     Router,
 };
 use http_body_util::BodyExt;
@@ -67,6 +65,7 @@ fn test_config() -> jottery_server::config::Config {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     }
 }
 
@@ -81,86 +80,12 @@ async fn create_test_app() -> (Router, SqlitePool) {
         sync_broadcast,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
         config: test_config(),
     });
 
     // Inbox submission routes (inbox token auth)
-    let inbox_submit_routes = Router::new()
-        .route("/api/v1/inbox", post(jottery_server::api::inbox::create_item))
-        .layer(middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::inbox_auth_middleware,
-        ));
-
-    // Inbox management routes (device API key auth)
-    let inbox_manage_routes = Router::new()
-        .route(
-            "/api/v1/inbox",
-            get(jottery_server::api::inbox::list_items)
-                .delete(jottery_server::api::inbox::delete_all),
-        )
-        .route(
-            "/api/v1/inbox/:id",
-            delete(jottery_server::api::inbox::delete_item),
-        )
-        .route(
-            "/api/v1/inbox/status",
-            get(jottery_server::api::inbox::get_status),
-        )
-        .layer(middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ));
-
-    // Sync routes (device API key auth)
-    let sync_routes = Router::new()
-        .route(
-            "/api/v1/sync/pull",
-            post(jottery_server::api::sync::pull),
-        )
-        .layer(middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::auth_middleware,
-        ));
-
-    // User routes (session auth) — for inbox token management
-    let user_routes = Router::new()
-        .route(
-            "/api/v1/user/inbox-token",
-            post(jottery_server::api::user::generate_inbox_token)
-                .delete(jottery_server::api::user::revoke_inbox_token),
-        )
-        .route(
-            "/api/v1/user/inbox-token/status",
-            get(jottery_server::api::user::get_inbox_token_status),
-        )
-        .layer(middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::user_auth_middleware,
-        ));
-
-    // Admin routes (for quota management)
-    let admin_routes = Router::new()
-        .route(
-            "/api/v1/admin/users/:id/settings",
-            patch(jottery_server::api::admin::users::update_user_settings),
-        )
-        .route(
-            "/api/v1/admin/users/:id",
-            get(jottery_server::api::admin::users::get_user),
-        )
-        .layer(middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::admin::admin_auth_middleware,
-        ));
-
-    let app = Router::new()
-        .merge(inbox_submit_routes)
-        .merge(inbox_manage_routes)
-        .merge(sync_routes)
-        .merge(user_routes)
-        .merge(admin_routes)
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     (app, pool)
 }

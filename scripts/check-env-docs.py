@@ -20,9 +20,10 @@ from pathlib import Path
 root = Path(sys.argv[1] if len(sys.argv) > 1 else '.')
 config = (root / 'server/src/config.rs').read_text()
 
-names = set(re.findall(r'env::var\("([A-Z0-9_]+)"\)', config))
-names |= set(re.findall(r'env_or\(\s*"([A-Z0-9_]+)"', config))
-defaults = dict(re.findall(r'env::var\("([A-Z0-9_]+)"\)\s*\.unwrap_or_else\(\|_\| "([^"]*)"', config))
+names = set(re.findall(r'\b(?:var|lookup)\(\s*"([A-Z0-9_]+)"\s*\)', config))
+defaults = dict(re.findall(r'\bvar\("([A-Z0-9_]+)"\)\s*\.unwrap_or_else\(\|_\| "([^"]*)"', config))
+# parsed_or's default is a Rust expression, so only a plain literal can be compared
+defaults |= dict(re.findall(r'parsed_or\(\s*lookup\("([A-Z0-9_]+)"\),\s*([a-z0-9]+)\s*,?\s*\)', config))
 
 if len(names) < 20 or len(defaults) < 15:
     sys.exit(f'Found only {len(names)} settings and {len(defaults)} defaults: has config.rs changed shape?')
