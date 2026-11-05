@@ -248,10 +248,16 @@ export interface DecryptedNoteVersion extends Omit<NoteVersion, 'content' | 'tag
 /**
  * Search query structure
  */
+/**
+ * One term of a search query. Values are normalised for comparison.
+ */
+export interface SearchTerm {
+  type: 'contains' | 'phrase' | 'prefix' | 'suffix' | 'tag';
+  value: string;
+}
+
 export interface SearchQuery {
-  text?: string; // Full-text search terms
-  tags?: string[]; // Tags to filter by (AND logic)
-  orTags?: string[]; // Tags to filter by (OR logic)
+  groups?: SearchTerm[][]; // Every group must match, through any one of its terms
   excludeText?: string[]; // Text to exclude
   excludeTags?: string[]; // Tags to exclude
   // Advanced search modifiers

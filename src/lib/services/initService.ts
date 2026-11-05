@@ -22,6 +22,7 @@ import { backupSchedulerService } from './backupSchedulerService';
 import { clearAllStores, deleteDB, initDB } from './db';
 import { syncService } from './syncService';
 import { restrictConnections } from './cspService';
+import { searchService } from './searchService';
 import { AccountKeyExistsError, AccountKeyUnreadableError, LocalNotesOrphanedError, ValidationError } from '../errors';
 import { isNotesPasswordLongEnough, MIN_NOTES_PASSWORD_LENGTH } from '../utils/passwordRules';
 
@@ -337,6 +338,7 @@ export function lock(): void {
   keyManager.clearMasterKey();
   sessionStorageService.clear();
   backupSchedulerService.stop();
+  searchService.indexNotes([]);
 }
 
 /**
