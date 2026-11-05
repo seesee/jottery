@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO clients (id, user_id, api_key, device_name, device_type, created_at, last_seen_at, is_active)\n           VALUES (?, ?, ?, ?, ?, ?, ?, 1)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 7
+    },
+    "nullable": []
+  },
+  "hash": "b76875457748c4f50b3ebf0f6ce99c845828b29dbcf22b31183513c6b230a32c"
+}

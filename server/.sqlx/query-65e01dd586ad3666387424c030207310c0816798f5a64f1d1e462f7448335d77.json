@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(*) as count FROM attachments_data d JOIN attachments_meta m ON m.id = d.id WHERE m.attachment_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "count",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "65e01dd586ad3666387424c030207310c0816798f5a64f1d1e462f7448335d77"
+}

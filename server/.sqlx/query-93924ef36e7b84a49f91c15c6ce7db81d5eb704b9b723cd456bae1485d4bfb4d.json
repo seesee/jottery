@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT\n            COUNT(*) as count,\n            COALESCE(SUM(am.size), 0) as total_bytes\n        FROM attachments_meta am\n        WHERE am.user_id = ?1 AND EXISTS (\n            SELECT 1 FROM note_attachments na\n            JOIN notes n ON n.id = na.note_id AND n.user_id = na.user_id\n            WHERE na.user_id = ?1 AND na.attachment_id = am.attachment_id AND n.deleted = 0\n        )\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "count",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "total_bytes",
+        "ordinal": 1,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "93924ef36e7b84a49f91c15c6ce7db81d5eb704b9b723cd456bae1485d4bfb4d"
+}

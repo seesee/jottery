@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT is_active FROM users WHERE email = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "is_active",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "801a877803bddeb6b4369891b511f06c6bffb0a5e55ead818d9609d674051c26"
+}

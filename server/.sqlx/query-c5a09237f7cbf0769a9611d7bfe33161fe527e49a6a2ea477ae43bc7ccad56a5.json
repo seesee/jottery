@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE notes SET change_seq = ?, server_modified_at = ? WHERE id = ? AND user_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "c5a09237f7cbf0769a9611d7bfe33161fe527e49a6a2ea477ae43bc7ccad56a5"
+}

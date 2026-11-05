@@ -51,12 +51,19 @@ enum L {
     static var syncSetupErrorEncryptionPasswordMismatch: String { String(localized: "syncSetupError.encryptionPasswordMismatch") }
     static var syncSetupErrorAccountKeyDiffers: String { String(localized: "syncSetupError.accountKeyDiffers") }
     static var syncSetupErrorAccountKeyUnreadable: String { String(localized: "syncSetupError.accountKeyUnreadable") }
+    static var syncSetupErrorNotesPasswordMatchesAccount: String { String(localized: "syncSetupError.notesPasswordMatchesAccount") }
+    static func notesPasswordTooShort(_ minimum: Int) -> String {
+        String(format: String(localized: "notesPassword.tooShort"), minimum)
+    }
 
     // MARK: - Sync Merge
     static var syncMergeTitle: String { String(localized: "syncMerge.title") }
-    static var syncMergeMessage: String { String(localized: "syncMerge.message") }
+    static func syncMergeMessage(server: String, noteCount: Int) -> String {
+        String(format: String(localized: "syncMerge.message"), server, noteCount)
+    }
     static var syncMergeConfirm: String { String(localized: "syncMerge.confirm") }
     static var syncMergeFailed: String { String(localized: "syncMerge.failed") }
+    static var syncMergeFailedOnUnlock: String { String(localized: "syncMerge.failedOnUnlock") }
 
     // MARK: - Unlock (Face ID key check)
     static var unlockBiometricOutOfDate: String { String(localized: "unlock.biometricOutOfDate") }
@@ -250,6 +257,7 @@ enum L {
     static var attachmentsDataNotAvailable: String { String(localized: "attachments.dataNotAvailable") }
     static var attachmentsInvalidData: String { String(localized: "attachments.invalidData") }
     static var attachmentsDecryptFailed: String { String(localized: "attachments.decryptFailed") }
+    static var attachmentsUnreadableName: String { String(localized: "attachments.unreadableName") }
 
     // MARK: - Saved Searches
 
@@ -379,8 +387,18 @@ enum L {
     static var backupRestoreDescription: String { String(localized: "backup.restoreDescription") }
     static var backupCreating: String { String(localized: "backup.creating") }
     static var backupRestoring: String { String(localized: "backup.restoring") }
-    static var backupSuccessTitle: String { String(localized: "backup.successTitle") }
-    static var backupSuccessMessage: String { String(localized: "backup.successMessage") }
+    static func backupProgress(_ completed: Int, _ total: Int) -> String {
+        String(format: String(localized: "backup.progress"), completed, total)
+    }
+    static func exportProgress(_ completed: Int, _ total: Int) -> String {
+        String(format: String(localized: "export.progress"), completed, total)
+    }
+    static func restoreProgress(_ completed: Int, _ total: Int) -> String {
+        String(format: String(localized: "backup.restoreProgress"), completed, total)
+    }
+    static func backupRestoreSkipped(_ count: Int) -> String {
+        String(format: String(localized: "backup.restoreSkipped"), count)
+    }
     static var backupRestoreSuccessTitle: String { String(localized: "backup.restoreSuccessTitle") }
     static var backupRestoreSuccessMessage: String { String(localized: "backup.restoreSuccessMessage") }
     static var backupRestoreWarning: String { String(localized: "backup.restoreWarning") }
@@ -403,6 +421,7 @@ enum L {
     // MARK: - Errors (Toasts)
 
     static var errorCouldntAddAttachment: String { String(localized: "error.couldntAddAttachment") }
+    static var errorCouldntExport: String { String(localized: "error.couldntExport") }
     static func errorCouldntAddTags(_ count: Int) -> String {
         String(format: String(localized: "error.couldntAddTags"), count)
     }

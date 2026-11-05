@@ -3,25 +3,36 @@ import CryptoKit
 import Foundation
 import GRDB
 
-/// Encrypted backup service — creates and restores JWE v3 backup files.
+/// Encrypted backup service. Writes and reads the v3.0 format that the web
+/// client's `backupService.ts` defines, so a backup from either client restores
+/// on the other.
 ///
-/// The `encryption` header is the one the web client's `backupService.ts` uses.
-/// The batches inside aren't compatible with it yet (jottery-ychf): each client
-/// can restore its own backups, but not the other's.
-///
-/// Format:
+/// Format, with each batch on a line of its own and the keys in this order,
+/// which the web client's streaming reader relies on:
 /// ```json
 /// {
-///   "version": "3.0",
-///   "type": "jottery-encrypted-backup",
-///   "createdAt": "ISO 8601",
-///   "encryption": { "envelopeVersion": 1, "deviceSalt": "base64", "localWrappedMaster": "json", ... },
-///   "batches": [ { "type": "notes", "index": 0, "count": N, "data": "JWE compact" } ],
-///   "summary": { "notes": N, "attachments": N, "versions": N, "savedSearches": N }
+/// "version": "3.0",
+/// "type": "jottery-encrypted-backup",
+/// "createdAt": "ISO 8601",
+/// "encryption": { "envelopeVersion": 1, "deviceSalt": "base64", "localWrappedMaster": "json", ... },
+/// "batches": [
+/// { "type": "notes", "index": 0, "count": N, "data": "JWE compact" }
+/// ],
+/// "summary": { "notes": N, "attachments": N, "versions": N, "savedSearches": N }
 /// }
 /// ```
 ///
-/// Each batch is: JSON array → DEFLATE compress → AES-256-GCM encrypt → JWE compact.
+/// Each batch is: JSON array → zlib (RFC 1950) → AES-256-GCM → JWE compact
+/// (RFC 7516), with the protected header as authenticated data. Items keep the
+/// web's shape: `tags` and `attachments` are arrays, and `tags` holds one blob
+/// with every tag in it.
+///
+/// Builds before this format was adopted sealed batches with no authenticated
+/// data, compressed them with raw DEFLATE, and stored `tags`, `attachments` and
+/// `hashChain` as strings. Those backups are still read.
+///
+/// A vault can be far larger than memory, so nothing here holds more than a
+/// batch: backups are written to a file as they're made, and read from one.
 enum BackupService {
 
     // MARK: - Constants
@@ -30,16 +41,27 @@ enum BackupService {
     static let attachmentBatchSize = 50
     static let versionBatchSize = 250
 
-    // MARK: - Backup Data Structures
+    /// A batch of attachments closes at this many bytes of blobs, however few
+    /// there are: fifty full-size videos won't fit in memory.
+    static let attachmentBatchBytes = 16 * 1024 * 1024
 
-    struct BackupFile: Codable {
-        let version: String
-        let type: String
-        let createdAt: String
-        let encryption: BackupEncryption
-        var batches: [BatchRecord]
-        let summary: BackupSummary
+    private static let formatVersion = "3.0"
+    private static let formatType = "jottery-encrypted-backup"
+
+    /// How far a backup or restore has got, in items or batches.
+    struct Progress: Sendable, Equatable {
+        let completed: Int
+        let total: Int
     }
+
+    /// What a restore did.
+    struct RestoreResult: Sendable, Equatable {
+        var notes = 0
+        /// Items in the file that couldn't be read, and were left out.
+        var skipped = 0
+    }
+
+    // MARK: - Backup Data Structures
 
     /// How to get from the password to the key the contents are encrypted with.
     /// Web, iOS and the TUI all write and read this, so keep them in step.
@@ -95,8 +117,8 @@ enum BackupService {
         let modifiedAt: String
         let syncedAt: String?
         let content: String
-        let tags: String
-        let attachments: String
+        let tags: [String]
+        let attachments: [AttachmentRef]
         let pinned: Bool
         let archived: Bool
         let archivedAt: String?
@@ -111,59 +133,64 @@ enum BackupService {
         let color: String?
         let contentHash: String?
         let parentHash: String?
-        let hashChain: String?
+        let hashChain: [String]?
+        /// Kept for the web client, which restores a backup as it stands.
+        /// Restoring here always queues the note for a push.
+        let needsSync: Bool?
 
-        init(from record: NoteRecord) {
-            self.id = record.id
-            self.createdAt = record.createdAt
-            self.modifiedAt = record.modifiedAt
-            self.syncedAt = record.syncedAt
-            self.content = record.content
-            self.tags = record.tags
-            self.attachments = record.attachments
-            self.pinned = record.pinned
-            self.archived = record.archived
-            self.archivedAt = record.archivedAt
-            self.locked = record.locked
-            self.lockedAt = record.lockedAt
-            self.deleted = record.deleted
-            self.deletedAt = record.deletedAt
-            self.version = record.version
-            self.wordWrap = record.wordWrap
-            self.syntaxLanguage = record.syntaxLanguage
-            self.showPreview = record.showPreview
-            self.color = record.color
-            self.contentHash = record.contentHash
-            self.parentHash = record.parentHash
-            self.hashChain = record.hashChain
+        init(record: NoteRecord) {
+            id = record.id
+            createdAt = record.createdAt
+            modifiedAt = record.modifiedAt
+            syncedAt = record.syncedAt
+            content = record.content
+            tags = [record.tags]
+            attachments = decodedRefs(record.attachments)
+            pinned = record.pinned
+            archived = record.archived
+            archivedAt = record.archivedAt
+            locked = record.locked
+            lockedAt = record.lockedAt
+            deleted = record.deleted
+            deletedAt = record.deletedAt
+            version = record.version
+            wordWrap = record.wordWrap
+            syntaxLanguage = record.syntaxLanguage
+            showPreview = record.showPreview
+            color = record.color
+            contentHash = record.contentHash
+            parentHash = record.parentHash
+            hashChain = record.hashChain.flatMap { try? JSONDecoder().decode([String].self, from: Data($0.utf8)) }
+            needsSync = record.needsSync
         }
 
-        func toNoteRecord() -> NoteRecord {
-            NoteRecord(
-                id: id,
-                createdAt: createdAt,
-                modifiedAt: modifiedAt,
-                syncedAt: syncedAt,
-                content: content,
-                tags: tags,
-                attachments: attachments,
-                pinned: pinned,
-                archived: archived,
-                archivedAt: archivedAt,
-                locked: locked,
-                lockedAt: lockedAt,
-                deleted: deleted,
-                deletedAt: deletedAt,
-                version: version,
-                wordWrap: wordWrap,
-                syntaxLanguage: syntaxLanguage,
-                showPreview: showPreview,
-                color: color,
-                contentHash: contentHash,
-                parentHash: parentHash,
-                hashChain: hashChain,
-                needsSync: true
-            )
+        /// Web notes leave out what they don't use, and old iOS backups hold
+        /// arrays as strings.
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(String.self, forKey: .id)
+            createdAt = try container.decode(String.self, forKey: .createdAt)
+            modifiedAt = try container.decode(String.self, forKey: .modifiedAt)
+            syncedAt = try container.decodeIfPresent(String.self, forKey: .syncedAt)
+            content = try container.decode(String.self, forKey: .content)
+            tags = try container.decodeTags(forKey: .tags)
+            attachments = try container.decodeArrayOrJSONString(AttachmentRef.self, forKey: .attachments) ?? []
+            pinned = try container.decodeIfPresent(Bool.self, forKey: .pinned) ?? false
+            archived = try container.decodeIfPresent(Bool.self, forKey: .archived) ?? false
+            archivedAt = try container.decodeIfPresent(String.self, forKey: .archivedAt)
+            locked = try container.decodeIfPresent(Bool.self, forKey: .locked) ?? false
+            lockedAt = try container.decodeIfPresent(String.self, forKey: .lockedAt)
+            deleted = try container.decodeIfPresent(Bool.self, forKey: .deleted) ?? false
+            deletedAt = try container.decodeIfPresent(String.self, forKey: .deletedAt)
+            version = try container.decodeIfPresent(Int.self, forKey: .version) ?? 0
+            wordWrap = try container.decodeIfPresent(Bool.self, forKey: .wordWrap) ?? true
+            syntaxLanguage = try container.decodeIfPresent(String.self, forKey: .syntaxLanguage) ?? "markdown"
+            showPreview = try container.decodeIfPresent(Bool.self, forKey: .showPreview) ?? false
+            color = try container.decodeIfPresent(String.self, forKey: .color)
+            contentHash = try container.decodeIfPresent(String.self, forKey: .contentHash)
+            parentHash = try container.decodeIfPresent(String.self, forKey: .parentHash)
+            hashChain = try container.decodeArrayOrJSONString(String.self, forKey: .hashChain)
+            needsSync = try container.decodeIfPresent(Bool.self, forKey: .needsSync)
         }
     }
 
@@ -179,8 +206,8 @@ enum BackupService {
         let createdAt: String
         let syncedAt: String?
         let content: String
-        let tags: String
-        let attachments: String
+        let tags: [String]
+        let attachments: [AttachmentRef]
         let syntaxLanguage: String?
         let wordWrap: Bool?
         let showPreview: Bool?
@@ -189,274 +216,465 @@ enum BackupService {
         let contentHash: String?
         let parentHash: String?
 
-        init(from record: NoteVersionRecord) {
-            self.versionKey = record.versionKey
-            self.noteId = record.noteId
-            self.version = record.version
-            self.createdAt = record.createdAt
-            self.syncedAt = record.syncedAt
-            self.content = record.content
-            self.tags = record.tags
-            self.attachments = record.attachments
-            self.syntaxLanguage = record.syntaxLanguage
-            self.wordWrap = record.wordWrap
-            self.showPreview = record.showPreview
-            self.color = record.color
-            self.reason = record.reason
-            self.contentHash = record.contentHash
-            self.parentHash = record.parentHash
+        init(record: NoteVersionRecord) {
+            versionKey = record.versionKey
+            noteId = record.noteId
+            version = record.version
+            createdAt = record.createdAt
+            syncedAt = record.syncedAt
+            content = record.content
+            tags = [record.tags]
+            attachments = decodedRefs(record.attachments)
+            syntaxLanguage = record.syntaxLanguage
+            wordWrap = record.wordWrap
+            showPreview = record.showPreview
+            color = record.color
+            reason = record.reason
+            contentHash = record.contentHash
+            parentHash = record.parentHash
         }
 
-        func toVersionRecord() -> NoteVersionRecord {
-            NoteVersionRecord(
-                versionKey: versionKey,
-                noteId: noteId,
-                version: version,
-                createdAt: createdAt,
-                syncedAt: syncedAt ?? Date().iso8601,
-                content: content,
-                tags: tags,
-                attachments: attachments,
-                syntaxLanguage: syntaxLanguage,
-                wordWrap: wordWrap,
-                showPreview: showPreview,
-                color: color,
-                reason: reason ?? "backup-restore",
-                contentHash: contentHash,
-                parentHash: parentHash
-            )
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            versionKey = try container.decode(String.self, forKey: .versionKey)
+            noteId = try container.decode(String.self, forKey: .noteId)
+            version = try container.decode(Int.self, forKey: .version)
+            createdAt = try container.decode(String.self, forKey: .createdAt)
+            syncedAt = try container.decodeIfPresent(String.self, forKey: .syncedAt)
+            content = try container.decode(String.self, forKey: .content)
+            tags = try container.decodeTags(forKey: .tags)
+            attachments = try container.decodeArrayOrJSONString(AttachmentRef.self, forKey: .attachments) ?? []
+            syntaxLanguage = try container.decodeIfPresent(String.self, forKey: .syntaxLanguage)
+            wordWrap = try container.decodeIfPresent(Bool.self, forKey: .wordWrap)
+            showPreview = try container.decodeIfPresent(Bool.self, forKey: .showPreview)
+            color = try container.decodeIfPresent(String.self, forKey: .color)
+            reason = try container.decodeIfPresent(String.self, forKey: .reason)
+            contentHash = try container.decodeIfPresent(String.self, forKey: .contentHash)
+            parentHash = try container.decodeIfPresent(String.self, forKey: .parentHash)
+        }
+    }
+
+    struct BackupSavedSearch: Codable {
+        let id: String
+        let name: String
+        let query: String
+        let order: Int
+        let createdAt: String
+        let modifiedAt: String
+        let syncedAt: String?
+        let deleted: Bool
+        let deletedAt: String?
+        let version: Int
+        let needsSync: Bool?
+
+        init(record: SavedSearchRepository.SavedSearchRecord) {
+            id = record.id
+            name = record.name
+            query = record.query
+            order = record.displayOrder
+            createdAt = record.createdAt
+            modifiedAt = record.modifiedAt
+            syncedAt = record.syncedAt
+            deleted = record.deleted
+            deletedAt = record.deletedAt
+            version = record.version
+            needsSync = record.needsSync
         }
     }
 
     // MARK: - Create Backup
 
-    /// Create an encrypted backup of all data.
-    static func createBackup(
+    /// Write an encrypted backup of all data to `url`, a batch at a time.
+    /// Run this off the main actor: it does the work of the whole vault.
+    /// Stops with `CancellationError` if the current task is cancelled.
+    @discardableResult
+    static func writeBackup(
+        to url: URL,
         noteRepo: NoteRepository,
-        versionRepo: VersionRepository,
         attachmentRepo: AttachmentRepository,
         savedSearchRepo: SavedSearchRepository,
         encryptionRepo: EncryptionRepository,
-        key: SymmetricKey
-    ) throws -> Data {
+        key: SymmetricKey,
+        maxAttachmentBatchBytes: Int = attachmentBatchBytes,
+        progress: (@Sendable (Progress) -> Void)? = nil
+    ) throws -> BackupSummary {
         guard let metadata = try encryptionRepo.get() else {
             throw BackupError.noVault
         }
 
-        // Gather all note records (raw encrypted, including deleted)
-        let allRecords = try noteRepo.db.dbPool.read { db in
-            try NoteRecord.fetchAll(db)
-        }
-
-        // Gather attachment blobs
+        // Everything goes in, including deleted notes, as raw encrypted records.
+        let database = noteRepo.db.dbPool
+        let noteIds = try database.read { try String.fetchAll($0, sql: "SELECT id FROM notes") }
+        let versionKeys = try database.read { try String.fetchAll($0, sql: "SELECT version_key FROM note_versions") }
         let blobIds = try attachmentRepo.listBlobIds()
-
-        // Gather version snapshots for all notes
-        var allVersions: [NoteVersionRecord] = []
-        for record in allRecords {
-            let versions = try versionRepo.getVersions(noteId: record.id)
-            allVersions.append(contentsOf: versions)
+        let savedSearches = try savedSearchRepo.db.dbPool.read {
+            try SavedSearchRepository.SavedSearchRecord.fetchAll($0)
         }
 
-        // Gather saved searches (raw encrypted)
-        let savedSearchRecords = try savedSearchRepo.db.dbPool.read { db in
-            try SavedSearchRepository.SavedSearchRecord
-                .filter(Column("deleted") == false)
-                .fetchAll(db)
-        }
-        let _ = savedSearchRecords  // Saved searches included in summary
-
-        // Build batches
-        var batches: [BatchRecord] = []
-
-        // Note batches
-        let noteItems = allRecords.map { BackupNote(from: $0) }
-        let noteBatches = stride(from: 0, to: noteItems.count, by: noteBatchSize).map {
-            Array(noteItems[$0..<min($0 + noteBatchSize, noteItems.count)])
-        }
-        for (index, batch) in noteBatches.enumerated() {
-            let jwe = try encryptBatch(batch, key: key)
-            batches.append(BatchRecord(type: "notes", index: index, count: batch.count, data: jwe))
+        let total = noteIds.count + versionKeys.count + blobIds.count + savedSearches.count
+        var completed = 0
+        func advance(by count: Int) {
+            completed += count
+            progress?(Progress(completed: completed, total: total))
         }
 
-        // Attachment batches
-        var attachmentItems: [BackupAttachment] = []
-        for blobId in blobIds {
-            if let blobData = try attachmentRepo.getBlob(id: blobId) {
-                attachmentItems.append(BackupAttachment(
-                    id: blobId,
-                    blob: blobData.base64EncodedString()
-                ))
+        var writer = try BackupWriter(url: url, encryption: BackupEncryption(metadata: metadata))
+        defer { writer.close() }
+
+        for (index, start) in stride(from: 0, to: noteIds.count, by: noteBatchSize).enumerated() {
+            try Task.checkCancellation()
+            try autoreleasepool {
+                let ids = noteIds[start..<min(start + noteBatchSize, noteIds.count)]
+                let records = try database.read { try NoteRecord.filter(keys: Array(ids)).fetchAll($0) }
+                let items = records.map { BackupNote(record: $0) }
+                try writer.append(type: "notes", index: index, count: items.count, data: encryptBatch(items, key: key))
+                advance(by: ids.count)
             }
         }
-        let attachmentBatches = stride(from: 0, to: attachmentItems.count, by: attachmentBatchSize).map {
-            Array(attachmentItems[$0..<min($0 + attachmentBatchSize, attachmentItems.count)])
+
+        var attachmentCount = 0
+        var pending: [BackupAttachment] = []
+        var pendingBytes = 0
+        var attachmentBatchIndex = 0
+        func flushAttachments() throws {
+            guard !pending.isEmpty else { return }
+            try autoreleasepool {
+                try writer.append(
+                    type: "attachments", index: attachmentBatchIndex, count: pending.count,
+                    data: encryptBatch(pending, key: key)
+                )
+            }
+            attachmentCount += pending.count
+            attachmentBatchIndex += 1
+            pending = []
+            pendingBytes = 0
         }
-        for (index, batch) in attachmentBatches.enumerated() {
-            let jwe = try encryptBatch(batch, key: key)
-            batches.append(BatchRecord(type: "attachments", index: index, count: batch.count, data: jwe))
+        for blobId in blobIds {
+            try Task.checkCancellation()
+            try autoreleasepool {
+                if let blob = try attachmentRepo.getBlob(id: blobId) {
+                    pending.append(BackupAttachment(id: blobId, blob: blob.base64EncodedString()))
+                    pendingBytes += blob.count
+                }
+            }
+            if pending.count >= attachmentBatchSize || pendingBytes >= maxAttachmentBatchBytes {
+                try flushAttachments()
+            }
+            advance(by: 1)
+        }
+        try flushAttachments()
+
+        for (index, start) in stride(from: 0, to: versionKeys.count, by: versionBatchSize).enumerated() {
+            try Task.checkCancellation()
+            try autoreleasepool {
+                let keys = versionKeys[start..<min(start + versionBatchSize, versionKeys.count)]
+                let records = try database.read { try NoteVersionRecord.filter(keys: Array(keys)).fetchAll($0) }
+                let items = records.map { BackupVersion(record: $0) }
+                try writer.append(type: "versions", index: index, count: items.count, data: encryptBatch(items, key: key))
+                advance(by: keys.count)
+            }
         }
 
-        // Version batches
-        let versionItems = allVersions.map { BackupVersion(from: $0) }
-        let versionBatches = stride(from: 0, to: versionItems.count, by: versionBatchSize).map {
-            Array(versionItems[$0..<min($0 + versionBatchSize, versionItems.count)])
-        }
-        for (index, batch) in versionBatches.enumerated() {
-            let jwe = try encryptBatch(batch, key: key)
-            batches.append(BatchRecord(type: "versions", index: index, count: batch.count, data: jwe))
+        if !savedSearches.isEmpty {
+            let items = savedSearches.map { BackupSavedSearch(record: $0) }
+            try writer.append(type: "saved_searches", index: 0, count: items.count, data: encryptBatch(items, key: key))
+            advance(by: items.count)
         }
 
-        let backupFile = BackupFile(
-            version: "3.0",
-            type: "jottery-encrypted-backup",
-            createdAt: Date().iso8601,
-            encryption: BackupEncryption(metadata: metadata),
-            batches: batches,
-            summary: BackupSummary(
-                notes: allRecords.count,
-                attachments: attachmentItems.count,
-                versions: allVersions.count,
-                savedSearches: savedSearchRecords.count
-            )
+        let summary = BackupSummary(
+            notes: noteIds.count,
+            attachments: attachmentCount,
+            versions: versionKeys.count,
+            savedSearches: savedSearches.count
         )
+        try writer.finish(summary: summary)
+        return summary
+    }
 
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys]
-        return try encoder.encode(backupFile)
+    /// Writes the file in the layout `downloadBackup` in `backupService.ts` uses.
+    private struct BackupWriter {
+        private let handle: FileHandle
+        private var wroteBatch = false
+
+        init(url: URL, encryption: BackupEncryption) throws {
+            guard FileManager.default.fileExists(atPath: url.path)
+                    || FileManager.default.createFile(atPath: url.path, contents: nil) else {
+                throw CocoaError(.fileWriteUnknown)
+            }
+            handle = try FileHandle(forWritingTo: url)
+            try handle.truncate(atOffset: 0)
+
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            var header = Data("{\n\"version\":\"\(formatVersion)\",\n\"type\":\"\(formatType)\"".utf8)
+            header.append(Data(",\n\"createdAt\":\"\(Date().iso8601)\",\n\"encryption\":".utf8))
+            header.append(try encoder.encode(encryption))
+            header.append(Data(",\n\"batches\":[\n".utf8))
+            try handle.write(contentsOf: header)
+        }
+
+        mutating func append(type: String, index: Int, count: Int, data: String) throws {
+            if wroteBatch {
+                try handle.write(contentsOf: Data(",\n".utf8))
+            }
+            wroteBatch = true
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            let record = BatchRecord(type: type, index: index, count: count, data: data)
+            try handle.write(contentsOf: encoder.encode(record))
+        }
+
+        func finish(summary: BackupSummary) throws {
+            var tail = Data("\n],\n\"summary\":".utf8)
+            tail.append(try JSONEncoder().encode(summary))
+            tail.append(Data("\n}".utf8))
+            try handle.write(contentsOf: tail)
+        }
+
+        func close() {
+            try? handle.close()
+        }
     }
 
     // MARK: - Restore Backup
 
-    /// Restore from an encrypted backup file. The password is used to derive the key.
-    /// Returns the number of notes restored.
+    /// Restore from an encrypted backup file, re-encrypting everything under
+    /// `currentKey`, a batch at a time. `password` leads to the backup's key.
+    /// Run this off the main actor. An item that can't be read is left out and
+    /// counted, so one bad note doesn't cost the rest of the backup.
+    /// Stops with `CancellationError` if the current task is cancelled.
     @discardableResult
     static func restoreBackup(
-        data: Data,
+        from url: URL,
         password: String,
         noteRepo: NoteRepository,
         versionRepo: VersionRepository,
         attachmentRepo: AttachmentRepository,
-        currentKey: SymmetricKey
-    ) throws -> Int {
-        let backup = try JSONDecoder().decode(BackupFile.self, from: data)
-
-        guard backup.type == "jottery-encrypted-backup" else {
+        savedSearchRepo: SavedSearchRepository,
+        currentKey: SymmetricKey,
+        progress: (@Sendable (Progress) -> Void)? = nil
+    ) throws -> RestoreResult {
+        let index: JSONFileScanner.Index
+        do {
+            index = try JSONFileScanner.scan(url, array: "batches")
+        } catch JSONFileScanner.ScanError.malformed {
             throw BackupError.invalidFormat
         }
-        guard backup.version == "3.0" else {
-            throw BackupError.unsupportedVersion(backup.version)
+
+        let decoder = JSONDecoder()
+        guard let typeJSON = index.values["type"], let versionJSON = index.values["version"],
+              let encryptionJSON = index.values["encryption"],
+              let type = try? decoder.decode(String.self, from: typeJSON),
+              let version = try? decoder.decode(String.self, from: versionJSON),
+              let encryption = try? decoder.decode(BackupEncryption.self, from: encryptionJSON),
+              type == formatType else {
+            throw BackupError.invalidFormat
+        }
+        guard version == formatVersion else {
+            throw BackupError.unsupportedVersion(version)
         }
 
-        let namedKey = try keyNamedByHeader(backup.encryption, password: password)
+        let namedKey = try keyNamedByHeader(encryption, password: password)
         let backupKey = namedKey ?? currentKey
 
-        // Verify key by trying to decrypt first batch
-        guard let firstBatch = backup.batches.first else {
-            return 0  // Empty backup
+        guard !index.elements.isEmpty else {
+            return RestoreResult()  // Empty backup
         }
+
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        func batch(at range: Range<UInt64>) throws -> BatchRecord {
+            do {
+                return try decoder.decode(BatchRecord.self, from: JSONFileScanner.read(range, from: handle))
+            } catch {
+                throw BackupError.invalidFormat
+            }
+        }
+
+        // Verify key by trying to decrypt first batch
         do {
-            let _ = try decryptBatchRaw(firstBatch.data, key: backupKey)
+            _ = try decryptBatchRaw(batch(at: index.elements[0]).data, key: backupKey)
         } catch {
             throw namedKey == nil ? BackupError.keyNotInBackup : BackupError.wrongPassword
         }
 
-        var notesRestored = 0
-
-        // Process batches
-        for batch in backup.batches {
-            switch batch.type {
-            case "notes":
-                let notes: [BackupNote] = try decryptBatch(batch.data, key: backupKey)
-                for backupNote in notes {
-                    var record = backupNote.toNoteRecord()
-                    // Re-encrypt content and tags with the current vault key
-                    // (backup stores them encrypted with the backup key)
-                    let encContent = try CryptoService.parseEncryptedJSON(record.content)
-                    let plainContent = try CryptoService.decryptText(encContent, key: backupKey)
-                    let reEncContent = try CryptoService.encryptText(plainContent, key: currentKey)
-                    record.content = try CryptoService.serializeEncryptedJSON(reEncContent)
-
-                    let encTags = try CryptoService.parseEncryptedJSON(record.tags)
-                    let plainTagsStr = try CryptoService.decryptText(encTags, key: backupKey)
-                    let reEncTags = try CryptoService.encryptText(plainTagsStr, key: currentKey)
-                    record.tags = try CryptoService.serializeEncryptedJSON(reEncTags)
-
-                    // Re-encrypt attachment filenames
-                    if let data = record.attachments.data(using: .utf8),
-                       var refs = try? JSONDecoder().decode([AttachmentRef].self, from: data) {
-                        for i in refs.indices {
-                            if let enc = try? CryptoService.parseEncryptedJSON(refs[i].filename),
-                               let plain = try? CryptoService.decryptText(enc, key: backupKey) {
-                                let reEnc = try CryptoService.encryptText(plain, key: currentKey)
-                                refs[i].filename = try CryptoService.serializeEncryptedJSON(reEnc)
-                            }
+        var result = RestoreResult()
+        for (position, range) in index.elements.enumerated() {
+            try Task.checkCancellation()
+            try autoreleasepool {
+                let record = try batch(at: range)
+                switch record.type {
+                case "notes":
+                    for item in try decryptItems(record.data, as: BackupNote.self, key: backupKey, result: &result) {
+                        do {
+                            try noteRepo.insertOrReplace(reEncrypted(item, from: backupKey, to: currentKey))
+                            result.notes += 1
+                        } catch {
+                            Log.debug("[Backup] Skipping note \(item.id): \(error)")
+                            result.skipped += 1
                         }
-                        let refsJSON = try JSONEncoder().encode(refs)
-                        record.attachments = String(data: refsJSON, encoding: .utf8) ?? "[]"
                     }
 
-                    record.needsSync = true
-                    try noteRepo.insertOrReplace(record)
-                    notesRestored += 1
-                }
-
-            case "attachments":
-                let attachments: [BackupAttachment] = try decryptBatch(batch.data, key: backupKey)
-                for att in attachments {
-                    guard let blobData = Data(base64Encoded: att.blob) else { continue }
-                    do {
-                        // Re-encrypt blob data with current key
-                        let blobStr = String(data: blobData, encoding: .utf8) ?? ""
-                        if !blobStr.isEmpty,
-                           let enc = try? CryptoService.parseEncryptedJSON(blobStr) {
-                            let plain = try CryptoService.decrypt(enc, key: backupKey)
-                            let reEnc = try CryptoService.encrypt(plain, key: currentKey)
-                            let reEncJSON = try CryptoService.serializeEncryptedJSON(reEnc)
-                            try attachmentRepo.storeBlob(
-                                id: att.id, filename: "", mimeType: "",
-                                size: plain.count, data: Data(reEncJSON.utf8)
-                            )
-                        } else {
-                            // Store as-is if not encrypted (shouldn't happen but be safe)
-                            try attachmentRepo.storeBlob(
-                                id: att.id, filename: "", mimeType: "",
-                                size: blobData.count, data: blobData
-                            )
+                case "attachments":
+                    for item in try decryptItems(record.data, as: BackupAttachment.self, key: backupKey, result: &result) {
+                        do {
+                            try restoreAttachment(item, from: backupKey, to: currentKey, repo: attachmentRepo)
+                        } catch {
+                            Log.debug("[Backup] Skipping attachment blob \(item.id): \(error)")
+                            result.skipped += 1
                         }
-                    } catch {
-                        Log.debug("[Backup] Skipping attachment blob \(att.id): \(error)")
                     }
-                }
 
-            case "versions":
-                let versions: [BackupVersion] = try decryptBatch(batch.data, key: backupKey)
-                for ver in versions {
-                    var record = ver.toVersionRecord()
-                    // Re-encrypt content and tags
-                    do {
-                        let encC = try CryptoService.parseEncryptedJSON(record.content)
-                        let plainC = try CryptoService.decryptText(encC, key: backupKey)
-                        let reEncC = try CryptoService.encryptText(plainC, key: currentKey)
-                        record.content = try CryptoService.serializeEncryptedJSON(reEncC)
-
-                        let encT = try CryptoService.parseEncryptedJSON(record.tags)
-                        let plainT = try CryptoService.decryptText(encT, key: backupKey)
-                        let reEncT = try CryptoService.encryptText(plainT, key: currentKey)
-                        record.tags = try CryptoService.serializeEncryptedJSON(reEncT)
-                    } catch {
-                        // Skip versions that fail to re-encrypt
-                        continue
+                case "versions":
+                    for item in try decryptItems(record.data, as: BackupVersion.self, key: backupKey, result: &result) {
+                        do {
+                            try versionRepo.insertOrReplace(reEncrypted(item, from: backupKey, to: currentKey))
+                        } catch {
+                            Log.debug("[Backup] Skipping version \(item.versionKey): \(error)")
+                            result.skipped += 1
+                        }
                     }
-                    try versionRepo.insertOrReplace(record)
-                }
 
-            default:
-                break
+                case "saved_searches":
+                    for item in try decryptItems(record.data, as: BackupSavedSearch.self, key: backupKey, result: &result) {
+                        do {
+                            try savedSearchRepo.insertOrReplace(record: reEncrypted(item, from: backupKey, to: currentKey))
+                        } catch {
+                            Log.debug("[Backup] Skipping saved search \(item.id): \(error)")
+                            result.skipped += 1
+                        }
+                    }
+
+                default:
+                    // Settings and sync details belong to the device that made
+                    // the backup. Restoring merges notes into this vault.
+                    break
+                }
             }
+            progress?(Progress(completed: position + 1, total: index.elements.count))
         }
 
-        return notesRestored
+        return result
+    }
+
+    private static func reEncrypted(_ note: BackupNote, from backupKey: SymmetricKey, to currentKey: SymmetricKey) throws -> NoteRecord {
+        let hashChain = try note.hashChain.map { String(decoding: try JSONEncoder().encode($0), as: UTF8.self) }
+        return NoteRecord(
+            id: note.id,
+            createdAt: note.createdAt,
+            modifiedAt: note.modifiedAt,
+            syncedAt: note.syncedAt,
+            content: try reEncrypted(note.content, from: backupKey, to: currentKey),
+            tags: try reEncryptedTags(note.tags, from: backupKey, to: currentKey),
+            attachments: try reEncrypted(note.attachments, from: backupKey, to: currentKey),
+            pinned: note.pinned,
+            archived: note.archived,
+            archivedAt: note.archivedAt,
+            locked: note.locked,
+            lockedAt: note.lockedAt,
+            deleted: note.deleted,
+            deletedAt: note.deletedAt,
+            version: note.version,
+            wordWrap: note.wordWrap,
+            syntaxLanguage: note.syntaxLanguage,
+            showPreview: note.showPreview,
+            color: note.color,
+            contentHash: note.contentHash,
+            parentHash: note.parentHash,
+            hashChain: hashChain,
+            needsSync: true
+        )
+    }
+
+    private static func reEncrypted(_ version: BackupVersion, from backupKey: SymmetricKey, to currentKey: SymmetricKey) throws -> NoteVersionRecord {
+        NoteVersionRecord(
+            versionKey: version.versionKey,
+            noteId: version.noteId,
+            version: version.version,
+            createdAt: version.createdAt,
+            syncedAt: version.syncedAt ?? Date().iso8601,
+            content: try reEncrypted(version.content, from: backupKey, to: currentKey),
+            tags: try reEncryptedTags(version.tags, from: backupKey, to: currentKey),
+            attachments: try reEncrypted(version.attachments, from: backupKey, to: currentKey),
+            syntaxLanguage: version.syntaxLanguage,
+            wordWrap: version.wordWrap,
+            showPreview: version.showPreview,
+            color: version.color,
+            reason: version.reason ?? "backup-restore",
+            contentHash: version.contentHash,
+            parentHash: version.parentHash
+        )
+    }
+
+    private static func reEncrypted(
+        _ search: BackupSavedSearch, from backupKey: SymmetricKey, to currentKey: SymmetricKey
+    ) throws -> SavedSearchRepository.SavedSearchRecord {
+        SavedSearchRepository.SavedSearchRecord(
+            id: search.id,
+            name: try reEncrypted(search.name, from: backupKey, to: currentKey),
+            query: try reEncrypted(search.query, from: backupKey, to: currentKey),
+            displayOrder: search.order,
+            createdAt: search.createdAt,
+            modifiedAt: search.modifiedAt,
+            syncedAt: search.syncedAt,
+            deleted: search.deleted,
+            deletedAt: search.deletedAt,
+            version: search.version,
+            needsSync: true
+        )
+    }
+
+    /// Text encrypted with `backupKey`, encrypted with `currentKey` instead.
+    private static func reEncrypted(_ stored: String, from backupKey: SymmetricKey, to currentKey: SymmetricKey) throws -> String {
+        let plaintext = try CryptoService.decryptText(CryptoService.parseEncryptedJSON(stored), key: backupKey)
+        return try CryptoService.serializeEncryptedJSON(CryptoService.encryptText(plaintext, key: currentKey))
+    }
+
+    /// Note tags as a backup holds them, in this client's storage form. The web
+    /// keeps one blob with every tag in it, and older notes one entry per tag.
+    private static func reEncryptedTags(_ stored: [String], from backupKey: SymmetricKey, to currentKey: SymmetricKey) throws -> String {
+        var tags: [String] = []
+        for entry in stored {
+            let text = try CryptoService.decryptText(CryptoService.parseEncryptedJSON(entry), key: backupKey)
+            tags.append(contentsOf: parsedTags(text))
+        }
+        return try CryptoService.serializeEncryptedJSON(CryptoService.encryptStringArray(tags, key: currentKey))
+    }
+
+    private static func parsedTags(_ text: String) -> [String] {
+        guard !text.isEmpty else { return [] }
+        let json = Data(text.utf8)
+        if let tags = try? JSONDecoder().decode([String].self, from: json) { return tags }
+        if let tag = try? JSONDecoder().decode(String.self, from: json) { return [tag] }
+        return text.split(separator: ",")
+            .map { String($0).trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+
+    /// Refs as JSON for the database, with their filenames moved to `currentKey`.
+    private static func reEncrypted(_ refs: [AttachmentRef], from backupKey: SymmetricKey, to currentKey: SymmetricKey) throws -> String {
+        var moved = refs
+        for index in moved.indices {
+            let name = AttachmentFilename.display(stored: refs[index].filename, key: backupKey)
+            moved[index].filename = try AttachmentFilename.encrypted(name, key: currentKey)
+        }
+        return String(decoding: try JSONEncoder().encode(moved), as: UTF8.self)
+    }
+
+    private static func restoreAttachment(
+        _ attachment: BackupAttachment,
+        from backupKey: SymmetricKey,
+        to currentKey: SymmetricKey,
+        repo: AttachmentRepository
+    ) throws {
+        guard let blob = Data(base64Encoded: attachment.blob) else { throw BackupError.invalidFormat }
+        let encrypted = try CryptoService.parseEncryptedJSON(String(decoding: blob, as: UTF8.self))
+        let plaintext = try CryptoService.decrypt(encrypted, key: backupKey)
+        let reEncrypted = try CryptoService.serializeEncryptedJSON(CryptoService.encrypt(plaintext, key: currentKey))
+        try repo.storeBlob(
+            id: attachment.id, filename: "", mimeType: "",
+            size: plaintext.count, data: Data(reEncrypted.utf8)
+        )
     }
 
     /// The key the header leads to from `password`, or nil if it leads nowhere.
@@ -493,18 +711,32 @@ enum BackupService {
 
     // MARK: - JWE Compact Encryption
 
-    /// Encrypt an array of Codable items: JSON → DEFLATE → AES-256-GCM → JWE compact.
+    /// Encrypt an array of Codable items: JSON → zlib → AES-256-GCM → JWE compact.
     private static func encryptBatch<T: Encodable>(_ items: [T], key: SymmetricKey) throws -> String {
         let jsonData = try JSONEncoder().encode(items)
         let compressed = try compress(jsonData)
         return try jweEncrypt(compressed, key: key)
     }
 
-    /// Decrypt a JWE compact string to an array of Codable items.
-    private static func decryptBatch<T: Decodable>(_ jwe: String, key: SymmetricKey) throws -> [T] {
-        let compressed = try jweDecrypt(jwe, key: key)
-        let jsonData = try decompress(compressed)
-        return try JSONDecoder().decode([T].self, from: jsonData)
+    /// Each item of a batch, leaving out and counting any that can't be read.
+    private static func decryptItems<T: Decodable>(
+        _ jwe: String,
+        as type: T.Type,
+        key: SymmetricKey,
+        result: inout RestoreResult
+    ) throws -> [T] {
+        let items = try JSONDecoder().decode([Lossy<T>].self, from: decryptBatchRaw(jwe, key: key))
+        result.skipped += items.count { $0.value == nil }
+        return items.compactMap(\.value)
+    }
+
+    /// An item of a batch, or nil if it didn't decode.
+    private struct Lossy<T: Decodable>: Decodable {
+        let value: T?
+
+        init(from decoder: Decoder) throws {
+            value = try? decoder.singleValueContainer().decode(T.self)
+        }
     }
 
     /// Decrypt a JWE compact string to raw data (for key verification).
@@ -514,7 +746,8 @@ enum BackupService {
     }
 
     /// Create JWE compact serialisation: header.encryptedKey.iv.ciphertext.tag
-    /// Using "dir" algorithm (direct key), A256GCM encryption.
+    /// Using "dir" algorithm (direct key), A256GCM encryption. RFC 7516 makes
+    /// the ASCII of the encoded header the authenticated data.
     private static func jweEncrypt(_ data: Data, key: SymmetricKey) throws -> String {
         // Header: {"alg":"dir","enc":"A256GCM"}
         let header = #"{"alg":"dir","enc":"A256GCM"}"#
@@ -522,7 +755,7 @@ enum BackupService {
 
         // Encrypt with AES-256-GCM
         let nonce = AES.GCM.Nonce()
-        let sealed = try AES.GCM.seal(data, using: key, nonce: nonce)
+        let sealed = try AES.GCM.seal(data, using: key, nonce: nonce, authenticating: Data(headerB64.utf8))
 
         let ivB64 = base64urlEncode(Data(nonce))
         let ciphertextB64 = base64urlEncode(sealed.ciphertext)
@@ -540,7 +773,7 @@ enum BackupService {
             throw BackupError.invalidJWE
         }
 
-        // parts[0] = header (ignored — we know it's dir/A256GCM)
+        // parts[0] = header (we know it's dir/A256GCM)
         // parts[1] = encrypted key (empty for dir)
         // parts[2] = iv
         // parts[3] = ciphertext
@@ -554,15 +787,21 @@ enum BackupService {
 
         let nonce = try AES.GCM.Nonce(data: ivData)
         let sealedBox = try AES.GCM.SealedBox(nonce: nonce, ciphertext: ciphertext, tag: tag)
+        if let opened = try? AES.GCM.open(sealedBox, using: key, authenticating: Data(parts[0].utf8)) {
+            return opened
+        }
+        // iOS backups made before this format was adopted have no authenticated data.
         return try AES.GCM.open(sealedBox, using: key)
     }
 
-    // MARK: - Compression (DEFLATE)
+    // MARK: - Compression (zlib)
 
+    /// RFC 1950, as `pako.deflate` writes: a two-byte header, raw DEFLATE
+    /// (what Apple's `COMPRESSION_ZLIB` produces), and an Adler-32 checksum.
     private static func compress(_ data: Data) throws -> Data {
         let sourceSize = data.count
         // Allocate buffer (compression may expand worst case, but DEFLATE usually shrinks)
-        let destinationBufferSize = sourceSize + 512
+        let destinationBufferSize = sourceSize + sourceSize / 8 + 512
         var destinationBuffer = Data(count: destinationBufferSize)
 
         let compressedSize = data.withUnsafeBytes { sourcePtr in
@@ -580,12 +819,32 @@ enum BackupService {
         guard compressedSize > 0 else {
             throw BackupError.compressionFailed
         }
-        return destinationBuffer.prefix(compressedSize)
+
+        var result = Data([0x78, 0x9C])
+        result.append(destinationBuffer.prefix(compressedSize))
+        var checksum = adler32(data).bigEndian
+        withUnsafeBytes(of: &checksum) { result.append(contentsOf: $0) }
+        return result
     }
 
     private static func decompress(_ data: Data) throws -> Data {
+        // Raw DEFLATE can happen to start like a zlib header, so a stream only
+        // counts as zlib if its checksum agrees.
+        if data.count > 6, let first = data.first, let second = data.dropFirst().first,
+           first & 0x0F == 8, (UInt16(first) << 8 | UInt16(second)) % 31 == 0,
+           let inflated = try? inflate(data.dropFirst(2).dropLast(4)) {
+            let expected = data.suffix(4).reduce(UInt32(0)) { $0 << 8 | UInt32($1) }
+            if adler32(inflated) == expected {
+                return inflated
+            }
+        }
+        return try inflate(data)
+    }
+
+    /// Inflate raw DEFLATE.
+    private static func inflate(_ data: Data) throws -> Data {
         // Start with 4x the compressed size and grow if needed
-        var bufferSize = data.count * 4
+        var bufferSize = max(data.count * 4, 1024)
         var result = Data(count: bufferSize)
 
         while true {
@@ -614,6 +873,26 @@ enum BackupService {
         }
     }
 
+    private static func adler32(_ data: Data) -> UInt32 {
+        var a: UInt32 = 1
+        var b: UInt32 = 0
+        data.withUnsafeBytes { (bytes: UnsafeRawBufferPointer) in
+            // 5552 is the most bytes that can't overflow before the reduction.
+            var position = 0
+            while position < bytes.count {
+                let end = min(position + 5552, bytes.count)
+                while position < end {
+                    a &+= UInt32(bytes[position])
+                    b &+= a
+                    position += 1
+                }
+                a %= 65521
+                b %= 65521
+            }
+        }
+        return b << 16 | a
+    }
+
     // MARK: - Base64url
 
     private static func base64urlEncode(_ data: Data) -> String {
@@ -640,7 +919,34 @@ enum BackupService {
     static func defaultFilename() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        return "jottery-backup-\(formatter.string(from: Date())).jottery"
+        // The web client only opens .jottery-backup and .json files.
+        return "jottery-backup-\(formatter.string(from: Date())).jottery-backup"
+    }
+}
+
+private func decodedRefs(_ json: String) -> [AttachmentRef] {
+    (try? JSONDecoder().decode([AttachmentRef].self, from: Data(json.utf8))) ?? []
+}
+
+private extension KeyedDecodingContainer {
+
+    /// Web backups hold an array here. Old iOS backups hold it as JSON in a string.
+    func decodeArrayOrJSONString<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> [T]? {
+        if let array = try? decodeIfPresent([T].self, forKey: key) {
+            return array
+        }
+        guard let json = try decodeIfPresent(String.self, forKey: key) else {
+            return nil
+        }
+        return try JSONDecoder().decode([T].self, from: Data(json.utf8))
+    }
+
+    /// An array of encrypted entries, or an old iOS backup's single encrypted blob.
+    func decodeTags(forKey key: Key) throws -> [String] {
+        if let tags = try? decodeIfPresent([String].self, forKey: key) {
+            return tags
+        }
+        return try decodeIfPresent(String.self, forKey: key).map { [$0] } ?? []
     }
 }
 

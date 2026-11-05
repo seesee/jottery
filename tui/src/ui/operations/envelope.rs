@@ -1,314 +1,546 @@
 //! Envelope encryption operations
 //!
-//! Handles migration from legacy (direct PBKDF2) to envelope encryption,
-//! and onboarding new devices by downloading the wrapped master key from server.
+//! Handles a device joining an account, keeping the server's wrapped copy of the
+//! master key usable, and changing the notes password.
+//!
+//! The server holds the master key wrapped with the notes password and the userId.
+//! It also receives the account password in plaintext, so a blob opened by that
+//! password proves nothing: the server could have wrapped a key of its own choosing.
+//! Only the notes password may unwrap a key this device adopts.
 
 use anyhow::{Context, Result};
-use base64::Engine as _;
+use rust_i18n::t;
 
 use crate::{
     api::{AuthClient, PutWrappedKeyRequest},
-    crypto::{WRAPPING_ITERATIONS, WRAPPING_KDF_VERSION},
-    repository::{EncryptionRepository, sync::SyncRepository},
+    crypto::{CryptoService, WRAPPING_ITERATIONS, WRAPPING_KDF_VERSION},
+    db::Database,
+    models::encryption::EncryptedData,
+    repository::{rekey::rekey_vault, sync::SyncRepository},
+    vault,
 };
 
 use super::super::app::App;
 
-/// Migrate from legacy (direct PBKDF2) to envelope encryption.
-///
-/// The master key bytes are the same — just stored differently:
-/// 1. Upload wrapped key to server (password + userId → wrapping key)
-/// 2. Convert local storage to envelope format (password + random device salt → device key)
-///
-/// This is non-fatal: if it fails, the legacy path still works.
-pub fn try_migrate_to_envelope(app: &mut App, password: &str, master_key: &[u8; 32], local_password: Option<&str>) -> Result<()> {
-    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
-    let sync_repo = SyncRepository::new(db.connection());
+/// An account this device can talk to.
+pub struct Account<'a> {
+    pub client: &'a AuthClient,
+    pub api_key: &'a str,
+    pub user_id: &'a str,
+}
 
-    let metadata = sync_repo.get_metadata()?;
-    let metadata = match metadata {
-        Some(m) => m,
-        None => {
-            app.debug_log("[Migration] Skipping: no sync metadata");
-            return Ok(());
-        }
+/// What the server's wrapped key turned out to be, for a device that already has a key.
+#[derive(Debug, PartialEq, Eq)]
+enum ServerKey {
+    /// The server has no wrapped key
+    Missing,
+    /// It unwraps with the notes password, to this device's key
+    Matches,
+    /// It unwraps with the notes password, to a different key
+    Differs,
+    /// It doesn't unwrap with the notes password
+    Unreadable,
+    /// It's wrapped in a way this version doesn't know
+    Unknown,
+}
+
+/// Unwrap a blob from the server. This is the only way a server blob becomes a key.
+fn unwrap_server_key(
+    crypto: &CryptoService,
+    notes_password: &str,
+    user_id: &str,
+    blob: &str,
+) -> Result<[u8; 32]> {
+    let wrapped: EncryptedData = serde_json::from_str(blob).context("Invalid wrapped key blob JSON")?;
+    let wrapping_key = crypto.derive_wrapping_key(notes_password, user_id)?;
+    crypto.unwrap_master_key(&wrapping_key, &wrapped)
+}
+
+/// Look at the server's wrapped key without changing anything.
+fn inspect_server_key(
+    crypto: &CryptoService,
+    account: &Account<'_>,
+    notes_password: &str,
+    master_key: &[u8; 32],
+) -> Result<ServerKey> {
+    let Some(wrapped) = account.client.get_wrapped_key(account.api_key)? else {
+        return Ok(ServerKey::Missing);
     };
 
-    // Only migrate if sync is configured and we have a userId
-    if !metadata.sync_enabled || metadata.user_id.is_none() || metadata.api_key.is_none() || metadata.sync_endpoint.is_empty() {
-        app.debug_log("[Migration] Skipping envelope migration: sync not configured or no userId");
+    if wrapped.kdf_version != WRAPPING_KDF_VERSION {
+        return Ok(ServerKey::Unknown);
+    }
+
+    Ok(match unwrap_server_key(crypto, notes_password, account.user_id, &wrapped.blob) {
+        Ok(key) if key == *master_key => ServerKey::Matches,
+        Ok(_) => ServerKey::Differs,
+        Err(_) => ServerKey::Unreadable,
+    })
+}
+
+/// Wrap `master_key` with the notes password and give it to the server.
+fn upload_wrapped_key(
+    crypto: &CryptoService,
+    account: &Account<'_>,
+    notes_password: &str,
+    master_key: &[u8; 32],
+) -> Result<()> {
+    let wrapping_key = crypto.derive_wrapping_key(notes_password, account.user_id)?;
+    let wrapped = crypto.wrap_master_key(&wrapping_key, master_key)?;
+
+    account.client.put_wrapped_key(account.api_key, &PutWrappedKeyRequest {
+        blob: serde_json::to_string(&wrapped)?,
+        kdf_version: WRAPPING_KDF_VERSION,
+        kdf_iterations: WRAPPING_ITERATIONS,
+    })
+}
+
+/// Settle which master key this device uses now it's connected to `account`,
+/// returning that key.
+///
+/// If the account has a key, the notes password must open it. Local notes move to
+/// that key in the same transaction that stores it, so they stay readable, and a
+/// failure leaves the vault untouched. If the account has no key yet, this device's
+/// key becomes the account's.
+pub fn adopt_account_key(
+    db: &Database,
+    crypto: &CryptoService,
+    account: &Account<'_>,
+    notes_password: &str,
+    local_key: &[u8; 32],
+) -> Result<[u8; 32]> {
+    let Some(wrapped) = account.client.get_wrapped_key(account.api_key)? else {
+        // Older servers can't store a key. Sync still works there, so this isn't fatal.
+        if let Err(e) = upload_wrapped_key(crypto, account, notes_password, local_key) {
+            tracing::warn!("Could not upload the wrapped key: {e}");
+        }
+        vault::store_local_envelope(db.connection(), crypto, notes_password, local_key)?;
+        return Ok(*local_key);
+    };
+
+    let account_key = unwrap_server_key(crypto, notes_password, account.user_id, &wrapped.blob)
+        .map_err(|_| anyhow::anyhow!("{}", t!("envelope.unwrap_failed")))?;
+
+    let transaction = db.connection().unchecked_transaction()?;
+    if account_key != *local_key {
+        rekey_vault(&transaction, crypto, local_key, &account_key)
+            .map_err(|e| anyhow::anyhow!("{}", t!("envelope.rekey_failed", error = format!("{e:#}"))))?;
+    }
+    vault::store_local_envelope(&transaction, crypto, notes_password, &account_key)?;
+    transaction.commit()?;
+
+    Ok(account_key)
+}
+
+/// This device's connection to its account, if it has one: endpoint, API key, userId.
+fn connection_details(app: &App, master_key: &[u8; 32]) -> Result<Option<(String, String, String)>> {
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
+    let Some(metadata) = SyncRepository::new(db.connection()).get_metadata()? else {
+        return Ok(None);
+    };
+
+    let (true, Some(user_id), Some(api_key), false) = (
+        metadata.sync_enabled,
+        metadata.user_id,
+        metadata.api_key,
+        metadata.sync_endpoint.is_empty(),
+    ) else {
+        return Ok(None);
+    };
+
+    let api_key: EncryptedData = serde_json::from_str(&api_key)
+        .context("Failed to parse encrypted API key JSON")?;
+    let api_key = app.crypto.decrypt_text(&api_key, master_key)?;
+
+    Ok(Some((metadata.sync_endpoint, api_key, user_id)))
+}
+
+/// Repair the server's wrapped key if the notes password can't open it.
+///
+/// Older clients wrote it with the account password, which the server can read. A
+/// device that has synced holds the account's real key, so it can replace such a
+/// blob safely. A blob that does open is never replaced, even when it holds another
+/// key: that means this device has diverged, and overwriting would damage the account.
+pub fn repair_server_key(app: &mut App, notes_password: &str) -> Result<()> {
+    let master_key = app.key.ok_or_else(|| anyhow::anyhow!("Vault is locked"))?;
+
+    let has_synced = app.db.as_ref()
+        .map(|db| SyncRepository::new(db.connection()).get_metadata())
+        .transpose()?
+        .flatten()
+        .is_some_and(|metadata| metadata.last_sync_at.is_some());
+    if !has_synced {
         return Ok(());
     }
 
-    let user_id = metadata.user_id.as_deref().unwrap();
-    let endpoint = &metadata.sync_endpoint;
+    let Some((endpoint, api_key, user_id)) = connection_details(app, &master_key)? else {
+        return Ok(());
+    };
 
-    app.debug_log("[Migration] Starting legacy → envelope migration...");
+    let client = AuthClient::new(endpoint);
+    let account = Account { client: &client, api_key: &api_key, user_id: &user_id };
 
-    // Derive wrapping key from the notes password + userId and wrap master key.
-    // The server sees the account password in plaintext at login, so the blob must
-    // not be wrapped with it. `password` is only the account password when no
-    // separate notes (unlock) password is available.
-    let notes_password = local_password.unwrap_or(password);
-    let wrapping_key = app.crypto.derive_wrapping_key(notes_password, user_id)?;
-    let server_wrapped = app.crypto.wrap_master_key(&wrapping_key, master_key)?;
-
-    // Get plaintext API key for auth
-    let encrypted_api_key_json = metadata.api_key.as_deref().unwrap();
-    let encrypted_api_key: crate::models::encryption::EncryptedData =
-        serde_json::from_str(encrypted_api_key_json)
-            .context("Failed to parse encrypted API key JSON")?;
-    let plaintext_api_key = app.crypto.decrypt_text(&encrypted_api_key, master_key)?;
-
-    // Upload to server
-    let client = AuthClient::new(endpoint.clone());
-    client.put_wrapped_key(&plaintext_api_key, &PutWrappedKeyRequest {
-        blob: serde_json::to_string(&server_wrapped)?,
-        kdf_version: WRAPPING_KDF_VERSION,
-        kdf_iterations: WRAPPING_ITERATIONS,
-    })?;
-    app.debug_log("[Migration] Wrapped key uploaded to server");
-
-    // Convert local storage to envelope format
-    let device_salt = app.crypto.generate_salt();
-    let device_key = app.crypto.derive_key(notes_password, &device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
-    let local_wrapped = app.crypto.wrap_master_key(&device_key, master_key)?;
-
-    let device_salt_b64 = base64::engine::general_purpose::STANDARD.encode(&device_salt);
-    let local_wrapped_json = serde_json::to_string(&local_wrapped)?;
-
-    let encryption_repo = EncryptionRepository::new(db.connection());
-    encryption_repo.save_envelope(1, &device_salt_b64, &local_wrapped_json, WRAPPING_KDF_VERSION)?;
-
-    app.debug_log("[Migration] Local metadata migrated to envelope format");
-    app.debug_log("[Migration] Migration complete!");
+    match inspect_server_key(&app.crypto, &account, notes_password, &master_key)? {
+        ServerKey::Unreadable => {
+            upload_wrapped_key(&app.crypto, &account, notes_password, &master_key)?;
+            app.debug_log("[Envelope] Replaced a wrapped key the notes password could not open");
+        }
+        ServerKey::Differs => {
+            app.error = Some(t!("envelope.diverged").to_string());
+        }
+        ServerKey::Missing | ServerKey::Matches | ServerKey::Unknown => {}
+    }
 
     Ok(())
 }
 
-/// Unwrap the server-held master key, trying each candidate password in order.
-///
-/// Duplicate candidates are skipped. If none work, the error from the last
-/// attempt is returned. Nothing is written anywhere, so a failure is harmless.
-fn unwrap_with_passwords(
-    crypto: &crate::crypto::CryptoService,
-    candidates: &[&str],
-    user_id: &str,
-    wrapped: &crate::models::encryption::EncryptedData,
-) -> Result<[u8; 32]> {
-    let mut tried: Vec<&str> = Vec::new();
-    let mut last_error = anyhow::anyhow!("No password supplied to unwrap the master key");
-
-    for &candidate in candidates {
-        if tried.contains(&candidate) {
-            continue;
-        }
-        tried.push(candidate);
-
-        let wrapping_key = crypto.derive_wrapping_key(candidate, user_id)?;
-        match crypto.unwrap_master_key(&wrapping_key, wrapped) {
-            Ok(key) => return Ok(key),
-            Err(e) => last_error = e,
-        }
-    }
-
-    Err(last_error)
-}
-
-/// Onboard a new device by downloading the wrapped master key from the server.
-///
-/// Called during sync setup when the user provides email + password and the server
-/// already has a wrapped key (from another device that migrated to envelope encryption).
-///
-/// Returns the unwrapped master key bytes.
-pub fn onboard_from_server(
-    app: &mut App,
-    password: &str,
-    endpoint: &str,
-    user_id: &str,
-    api_key: &str,
-    local_password: Option<&str>,
-) -> Result<[u8; 32]> {
-    app.debug_log("[Onboard] Downloading wrapped key from server...");
-
-    let client = AuthClient::new(endpoint.to_string());
-    let wrapped_response = client.get_wrapped_key(api_key)?
-        .ok_or_else(|| anyhow::anyhow!(
-            "No wrapped key found on server. The source device may not have migrated to envelope encryption yet."
-        ))?;
-
-    // Unwrap the master key. New blobs are wrapped with the notes password; blobs
-    // from older clients were wrapped with the account password, so try that too.
-    let server_wrapped: crate::models::encryption::EncryptedData =
-        serde_json::from_str(&wrapped_response.blob)
-            .context("Invalid wrapped key blob JSON")?;
-    let notes_password = local_password.unwrap_or(password);
-    let master_key = unwrap_with_passwords(&app.crypto, &[notes_password, password], user_id, &server_wrapped)?;
-    app.debug_log("[Onboard] Master key unwrapped from server blob");
-
-    // Create local envelope storage
-    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
-    let device_salt = app.crypto.generate_salt();
-    let device_key = app.crypto.derive_key(notes_password, &device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
-    let local_wrapped = app.crypto.wrap_master_key(&device_key, &master_key)?;
-
-    let device_salt_b64 = base64::engine::general_purpose::STANDARD.encode(&device_salt);
-    let local_wrapped_json = serde_json::to_string(&local_wrapped)?;
-
-    let encryption_repo = EncryptionRepository::new(db.connection());
-    encryption_repo.save_envelope(1, &device_salt_b64, &local_wrapped_json, WRAPPING_KDF_VERSION)?;
-
-    app.debug_log("[Onboard] Device onboarded via envelope encryption");
-
-    Ok(master_key)
-}
-
 /// Change password with envelope encryption support.
 ///
-/// With envelope encryption, changing the password only re-wraps the master key —
-/// no note re-encryption needed.
+/// Only the wrapping changes, so no note needs re-encrypting. The local copy has to
+/// succeed. If the server's copy can't be updated, this device can repair it later.
 pub fn change_password(
     app: &mut App,
     current_password: &str,
     new_password: &str,
     master_key: &[u8; 32],
 ) -> Result<()> {
-    // Check envelope status before borrowing app mutably
-    let is_legacy = {
-        let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
-        let encryption_repo = EncryptionRepository::new(db.connection());
-        let enc_meta = encryption_repo.get()?
-            .ok_or_else(|| anyhow::anyhow!("No encryption metadata found"))?;
-        enc_meta.envelope_version.is_none()
-    };
-
-    // If still on legacy, migrate first
-    if is_legacy {
-        if let Err(e) = try_migrate_to_envelope(app, current_password, master_key, None) {
-            app.debug_log(&format!("[ChangePassword] Migration failed (non-fatal): {}", e));
-        }
-    }
-
-    // Re-wrap master key with new password for local storage
-    let new_device_salt = app.crypto.generate_salt();
-    let new_device_key = app.crypto.derive_key(new_password, &new_device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
-    let new_local_wrapped = app.crypto.wrap_master_key(&new_device_key, master_key)?;
-
-    let device_salt_b64 = base64::engine::general_purpose::STANDARD.encode(&new_device_salt);
-    let local_wrapped_json = serde_json::to_string(&new_local_wrapped)?;
-
     {
         let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
-        let encryption_repo = EncryptionRepository::new(db.connection());
-        encryption_repo.save_envelope(1, &device_salt_b64, &local_wrapped_json, WRAPPING_KDF_VERSION)?;
+        vault::store_local_envelope(db.connection(), &app.crypto, new_password, master_key)?;
     }
     app.debug_log("[ChangePassword] Local envelope updated with new password");
 
-    // Re-wrap master key for server (if sync configured)
-    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
-    let sync_repo = SyncRepository::new(db.connection());
-    if let Some(sync_meta) = sync_repo.get_metadata()? {
-        if sync_meta.sync_enabled && sync_meta.user_id.is_some() && sync_meta.api_key.is_some() && !sync_meta.sync_endpoint.is_empty() {
-            let user_id = sync_meta.user_id.as_deref().unwrap();
+    let update_server = || -> Result<()> {
+        let Some((endpoint, api_key, user_id)) = connection_details(app, master_key)? else {
+            return Ok(());
+        };
+        let client = AuthClient::new(endpoint);
+        let account = Account { client: &client, api_key: &api_key, user_id: &user_id };
 
-            match (|| -> Result<()> {
-                let wrapping_key = app.crypto.derive_wrapping_key(new_password, user_id)?;
-                let server_wrapped = app.crypto.wrap_master_key(&wrapping_key, master_key)?;
-
-                // Get plaintext API key for auth
-                let encrypted_api_key_json = sync_meta.api_key.as_deref().unwrap();
-                let encrypted_api_key: crate::models::encryption::EncryptedData =
-                    serde_json::from_str(encrypted_api_key_json)?;
-                let plaintext_api_key = app.crypto.decrypt_text(&encrypted_api_key, master_key)?;
-
-                let client = AuthClient::new(sync_meta.sync_endpoint.clone());
-                client.put_wrapped_key(&plaintext_api_key, &PutWrappedKeyRequest {
-                    blob: serde_json::to_string(&server_wrapped)?,
-                    kdf_version: WRAPPING_KDF_VERSION,
-                    kdf_iterations: WRAPPING_ITERATIONS,
-                })?;
-                app.debug_log("[ChangePassword] Server wrapped key updated");
-                Ok(())
-            })() {
-                Ok(()) => {}
-                Err(e) => {
-                    app.debug_log(&format!("[ChangePassword] Failed to update server wrapped key (non-fatal): {}", e));
-                }
+        match inspect_server_key(&app.crypto, &account, current_password, master_key)? {
+            ServerKey::Differs | ServerKey::Unknown => {
+                anyhow::bail!("{}", t!("envelope.diverged"));
+            }
+            ServerKey::Missing | ServerKey::Matches | ServerKey::Unreadable => {
+                upload_wrapped_key(&app.crypto, &account, new_password, master_key)
             }
         }
+    };
+
+    if let Err(e) = update_server() {
+        app.debug_log(&format!("[ChangePassword] Server wrapped key not updated: {}", e));
     }
 
-    app.debug_log("[ChangePassword] Password changed successfully (no re-encryption needed)");
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::crypto::CryptoService;
+    use crate::models::{sync::SyncMetadata, Note};
+    use crate::repository::{EncryptionRepository, NoteRepository};
+    use serde_json::{json, Value};
+    use std::io::{Read, Write};
+    use std::net::TcpListener;
+    use std::path::PathBuf;
+    use std::sync::{Arc, Mutex};
 
     const USER_ID: &str = "b3c1f5a2-8f0e-4c55-9d52-2f6a1c0e7a11";
 
     /// A fresh random password, so no credential-like literals live in the tests
-    fn random_password(crypto: &CryptoService) -> String {
-        base64::engine::general_purpose::STANDARD.encode(crypto.generate_master_key())
+    fn random_password() -> String {
+        uuid::Uuid::new_v4().to_string()
     }
 
-    fn wrap_with(crypto: &CryptoService, password: &str, key: &[u8; 32]) -> crate::models::encryption::EncryptedData {
+    fn blob_for(crypto: &CryptoService, password: &str, key: &[u8; 32]) -> String {
         let wrapping_key = crypto.derive_wrapping_key(password, USER_ID).unwrap();
-        crypto.wrap_master_key(&wrapping_key, key).unwrap()
+        serde_json::to_string(&crypto.wrap_master_key(&wrapping_key, key).unwrap()).unwrap()
+    }
+
+    /// Serves one wrapped key, as a server would, and records what's put there.
+    struct StubServer {
+        endpoint: String,
+        stored: Arc<Mutex<Option<String>>>,
+        puts: Arc<Mutex<usize>>,
+    }
+
+    impl StubServer {
+        fn start(blob: Option<String>) -> Self {
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+            let endpoint = format!("http://{}", listener.local_addr().unwrap());
+            let stored = Arc::new(Mutex::new(blob));
+            let puts = Arc::new(Mutex::new(0));
+            let (server_stored, server_puts) = (stored.clone(), puts.clone());
+
+            std::thread::spawn(move || {
+                for stream in listener.incoming() {
+                    let mut stream = stream.unwrap();
+                    let (method, body) = read_request(&mut stream);
+                    let (status, reply) = if method == "PUT" {
+                        let request: Value = serde_json::from_slice(&body).unwrap();
+                        *server_stored.lock().unwrap() = request["blob"].as_str().map(String::from);
+                        *server_puts.lock().unwrap() += 1;
+                        ("200 OK", "{}".to_string())
+                    } else {
+                        match server_stored.lock().unwrap().as_ref() {
+                            Some(blob) => ("200 OK", json!({
+                                "blob": blob,
+                                "kdfVersion": WRAPPING_KDF_VERSION,
+                                "kdfIterations": WRAPPING_ITERATIONS,
+                                "updatedAt": "2026-01-01T00:00:00Z",
+                            }).to_string()),
+                            None => ("404 Not Found", "{}".to_string()),
+                        }
+                    };
+                    let response = format!(
+                        "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{reply}",
+                        reply.len(),
+                    );
+                    stream.write_all(response.as_bytes()).unwrap();
+                }
+            });
+
+            Self { endpoint, stored, puts }
+        }
+
+        fn blob(&self) -> Option<String> {
+            self.stored.lock().unwrap().clone()
+        }
+
+        fn put_count(&self) -> usize {
+            *self.puts.lock().unwrap()
+        }
+    }
+
+    fn read_request(stream: &mut std::net::TcpStream) -> (String, Vec<u8>) {
+        let mut received = Vec::new();
+        let mut buffer = [0u8; 8192];
+        loop {
+            let read = stream.read(&mut buffer).unwrap();
+            received.extend_from_slice(&buffer[..read]);
+            let Some(header_end) = received.windows(4).position(|w| w == b"\r\n\r\n") else {
+                continue;
+            };
+            let headers = String::from_utf8_lossy(&received[..header_end]).to_lowercase();
+            let length: usize = headers
+                .lines()
+                .find_map(|line| line.strip_prefix("content-length:"))
+                .map(|value| value.trim().parse().unwrap())
+                .unwrap_or(0);
+            if received.len() >= header_end + 4 + length {
+                let method = headers.split_whitespace().next().unwrap_or("").to_uppercase();
+                return (method, received[header_end + 4..header_end + 4 + length].to_vec());
+            }
+        }
+    }
+
+    /// A vault holding one note, under a key of its own.
+    fn local_vault(notes_password: &str) -> (Database, [u8; 32], Note) {
+        let crypto = CryptoService::new();
+        let db = Database::in_memory(&random_password()).unwrap();
+        let key = vault::unlock(db.connection(), &crypto, notes_password).unwrap();
+        let note = Note::new("Written before connecting".to_string());
+        NoteRepository::new(db.connection()).create(&note, &key).unwrap();
+        (db, key, note)
+    }
+
+    fn adopt(db: &Database, endpoint: &str, notes_password: &str, key: &[u8; 32]) -> Result<[u8; 32]> {
+        let client = AuthClient::new(endpoint.to_string());
+        let account = Account { client: &client, api_key: "device-api-key", user_id: USER_ID };
+        adopt_account_key(db, &CryptoService::new(), &account, notes_password, key)
     }
 
     #[test]
-    fn unwraps_a_blob_wrapped_with_the_notes_password() {
+    fn a_blob_wrapped_with_the_notes_password_is_adopted() {
         let crypto = CryptoService::new();
-        let (notes, server) = (random_password(&crypto), random_password(&crypto));
-        let key = crypto.generate_master_key();
-        let blob = wrap_with(&crypto, &notes, &key);
+        let notes_password = random_password();
+        let account_key = crypto.generate_master_key();
+        let server = StubServer::start(Some(blob_for(&crypto, &notes_password, &account_key)));
+        let (db, local_key, _) = local_vault(&notes_password);
 
-        let unwrapped = unwrap_with_passwords(&crypto, &[&notes, &server], USER_ID, &blob).unwrap();
+        let adopted = adopt(&db, &server.endpoint, &notes_password, &local_key).unwrap();
 
-        assert_eq!(unwrapped, key);
+        assert_eq!(adopted, account_key);
+    }
+
+    /// The attack: the server saw the account password at login, so it can wrap a
+    /// key of its own with it. A device must not accept that key.
+    #[test]
+    fn a_blob_wrapped_with_the_account_password_is_refused() {
+        let crypto = CryptoService::new();
+        let (notes_password, account_password) = (random_password(), random_password());
+        let planted_key = crypto.generate_master_key();
+        let server = StubServer::start(Some(blob_for(&crypto, &account_password, &planted_key)));
+        let (db, local_key, note) = local_vault(&notes_password);
+        let before = EncryptionRepository::new(db.connection()).get().unwrap().unwrap();
+
+        let error = adopt(&db, &server.endpoint, &notes_password, &local_key).unwrap_err();
+
+        assert_eq!(error.to_string(), t!("envelope.unwrap_failed"));
+
+        // Nothing moved: the vault still opens with what it had
+        let after = EncryptionRepository::new(db.connection()).get().unwrap().unwrap();
+        assert_eq!(after.local_wrapped_master, before.local_wrapped_master);
+        let kept = NoteRepository::new(db.connection()).get(&note.id, &local_key).unwrap().unwrap();
+        assert_eq!(kept.content, note.content);
     }
 
     #[test]
-    fn falls_back_to_the_server_password_for_older_blobs() {
+    fn joining_an_account_keeps_local_notes_readable() {
         let crypto = CryptoService::new();
-        let (notes, server) = (random_password(&crypto), random_password(&crypto));
-        let key = crypto.generate_master_key();
-        let blob = wrap_with(&crypto, &server, &key);
+        let notes_password = random_password();
+        let account_key = crypto.generate_master_key();
+        let server = StubServer::start(Some(blob_for(&crypto, &notes_password, &account_key)));
+        let (db, local_key, note) = local_vault(&notes_password);
 
-        let unwrapped = unwrap_with_passwords(&crypto, &[&notes, &server], USER_ID, &blob).unwrap();
+        adopt(&db, &server.endpoint, &notes_password, &local_key).unwrap();
 
-        assert_eq!(unwrapped, key);
+        let moved = NoteRepository::new(db.connection()).get(&note.id, &account_key).unwrap().unwrap();
+        assert_eq!(moved.content, note.content);
+
+        // And the next unlock leads to the account's key
+        assert_eq!(vault::unlock(db.connection(), &crypto, &notes_password).unwrap(), account_key);
     }
 
     #[test]
-    fn fails_when_no_candidate_matches() {
+    fn a_note_that_will_not_move_leaves_the_vault_as_it_was() {
         let crypto = CryptoService::new();
-        let (notes, other_a, other_b) = (
-            random_password(&crypto),
-            random_password(&crypto),
-            random_password(&crypto),
-        );
-        let key = crypto.generate_master_key();
-        let blob = wrap_with(&crypto, &notes, &key);
+        let notes_password = random_password();
+        let account_key = crypto.generate_master_key();
+        let server = StubServer::start(Some(blob_for(&crypto, &notes_password, &account_key)));
+        let (db, local_key, note) = local_vault(&notes_password);
+        let stranger = crypto.generate_master_key();
+        NoteRepository::new(db.connection()).create(&Note::new("Damaged".to_string()), &stranger).unwrap();
 
-        let result = unwrap_with_passwords(&crypto, &[&other_a, &other_b], USER_ID, &blob);
+        assert!(adopt(&db, &server.endpoint, &notes_password, &local_key).is_err());
 
-        assert!(result.is_err());
+        let kept = NoteRepository::new(db.connection()).get(&note.id, &local_key).unwrap().unwrap();
+        assert_eq!(kept.content, note.content);
+        assert_eq!(vault::unlock(db.connection(), &crypto, &notes_password).unwrap(), local_key);
     }
 
     #[test]
-    fn identical_candidates_are_only_tried_once() {
+    fn the_first_device_gives_the_account_its_key() {
         let crypto = CryptoService::new();
-        let notes = random_password(&crypto);
+        let notes_password = random_password();
+        let server = StubServer::start(None);
+        let (db, local_key, _) = local_vault(&notes_password);
+
+        let adopted = adopt(&db, &server.endpoint, &notes_password, &local_key).unwrap();
+
+        assert_eq!(adopted, local_key);
+        let blob = server.blob().unwrap();
+        assert_eq!(unwrap_server_key(&crypto, &notes_password, USER_ID, &blob).unwrap(), local_key);
+    }
+
+    /// An unlocked, connected app. `synced` says whether a sync has ever finished.
+    fn connected_app(endpoint: &str, key: [u8; 32], synced: bool) -> App {
+        let dir = tempfile::tempdir().unwrap();
+        let path: PathBuf = dir.path().join("test.db");
+        std::mem::forget(dir);
+        let mut app = App::new(path, None).unwrap();
+        let db = Database::in_memory(&random_password()).unwrap();
+
+        let api_key = app.crypto.encrypt_text("device-api-key", &key).unwrap();
+        let metadata = SyncMetadata {
+            api_key: Some(serde_json::to_string(&api_key).unwrap()),
+            user_id: Some(USER_ID.to_string()),
+            sync_enabled: true,
+            sync_endpoint: endpoint.to_string(),
+            last_sync_at: synced.then(chrono::Utc::now),
+            ..Default::default()
+        };
+        SyncRepository::new(db.connection()).update_metadata(&metadata).unwrap();
+
+        app.db = Some(db);
+        app.key = Some(key);
+        app
+    }
+
+    #[test]
+    fn a_synced_device_repairs_a_blob_its_password_cannot_open() {
+        let crypto = CryptoService::new();
+        let (notes_password, account_password) = (random_password(), random_password());
         let key = crypto.generate_master_key();
-        let blob = wrap_with(&crypto, &notes, &key);
+        let server = StubServer::start(Some(blob_for(&crypto, &account_password, &key)));
+        let mut app = connected_app(&server.endpoint, key, true);
 
-        // Same password for notes and account: must still work
-        let unwrapped = unwrap_with_passwords(&crypto, &[&notes, &notes], USER_ID, &blob).unwrap();
+        repair_server_key(&mut app, &notes_password).unwrap();
 
-        assert_eq!(unwrapped, key);
+        assert_eq!(server.put_count(), 1);
+        let blob = server.blob().unwrap();
+        assert_eq!(unwrap_server_key(&crypto, &notes_password, USER_ID, &blob).unwrap(), key);
+    }
+
+    #[test]
+    fn a_device_that_has_never_synced_leaves_the_blob_alone() {
+        let crypto = CryptoService::new();
+        let (notes_password, account_password) = (random_password(), random_password());
+        let key = crypto.generate_master_key();
+        let server = StubServer::start(Some(blob_for(&crypto, &account_password, &key)));
+        let mut app = connected_app(&server.endpoint, key, false);
+
+        repair_server_key(&mut app, &notes_password).unwrap();
+
+        assert_eq!(server.put_count(), 0);
+    }
+
+    #[test]
+    fn a_blob_that_opens_is_left_alone() {
+        let crypto = CryptoService::new();
+        let notes_password = random_password();
+        let key = crypto.generate_master_key();
+        let server = StubServer::start(Some(blob_for(&crypto, &notes_password, &key)));
+        let mut app = connected_app(&server.endpoint, key, true);
+
+        repair_server_key(&mut app, &notes_password).unwrap();
+
+        assert_eq!(server.put_count(), 0);
+        assert!(app.error.is_none());
+    }
+
+    #[test]
+    fn a_blob_holding_another_key_is_never_overwritten() {
+        let crypto = CryptoService::new();
+        let notes_password = random_password();
+        let (this_device, the_account) = (crypto.generate_master_key(), crypto.generate_master_key());
+        let server = StubServer::start(Some(blob_for(&crypto, &notes_password, &the_account)));
+        let mut app = connected_app(&server.endpoint, this_device, true);
+
+        repair_server_key(&mut app, &notes_password).unwrap();
+
+        assert_eq!(server.put_count(), 0);
+        assert!(app.error.is_some());
+    }
+
+    #[test]
+    fn changing_the_password_rewraps_the_servers_copy() {
+        let crypto = CryptoService::new();
+        let (old_password, new_password) = (random_password(), random_password());
+        let key = crypto.generate_master_key();
+        let server = StubServer::start(Some(blob_for(&crypto, &old_password, &key)));
+        let mut app = connected_app(&server.endpoint, key, true);
+        vault::store_local_envelope(app.db.as_ref().unwrap().connection(), &crypto, &old_password, &key).unwrap();
+
+        change_password(&mut app, &old_password, &new_password, &key).unwrap();
+
+        let blob = server.blob().unwrap();
+        assert_eq!(unwrap_server_key(&crypto, &new_password, USER_ID, &blob).unwrap(), key);
+        let conn = app.db.as_ref().unwrap().connection();
+        assert_eq!(vault::unlock(conn, &crypto, &new_password).unwrap(), key);
+    }
+
+    #[test]
+    fn changing_the_password_never_overwrites_a_different_account_key() {
+        let crypto = CryptoService::new();
+        let (old_password, new_password) = (random_password(), random_password());
+        let (this_device, the_account) = (crypto.generate_master_key(), crypto.generate_master_key());
+        let server = StubServer::start(Some(blob_for(&crypto, &old_password, &the_account)));
+        let mut app = connected_app(&server.endpoint, this_device, true);
+        vault::store_local_envelope(app.db.as_ref().unwrap().connection(), &crypto, &old_password, &this_device).unwrap();
+
+        change_password(&mut app, &old_password, &new_password, &this_device).unwrap();
+
+        assert_eq!(server.put_count(), 0);
     }
 }

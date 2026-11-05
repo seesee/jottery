@@ -577,9 +577,15 @@ actor SyncService {
     }
 
     /// Build a NoteRecord from a SyncNote for local storage.
+    ///
+    /// Older builds could send filenames in plaintext. Those are encrypted on
+    /// the way in, and the note queued for a push so the server's copy is
+    /// replaced too. (A name is also made safe to use whenever it's read: see
+    /// `AttachmentFilename`.)
     private func buildNoteRecord(from syncNote: SyncNote, syncedAt: String) throws -> NoteRecord {
         let tagsString = Self.syncTagsToStorageTags(syncNote.tags, key: key)
-        let attachmentsJSON = try JSONEncoder().encode(syncNote.attachments)
+        let attachments = try AttachmentFilename.encryptingPlaintext(in: syncNote.attachments, key: key)
+        let attachmentsJSON = try JSONEncoder().encode(attachments.refs)
         let attachmentsString = String(data: attachmentsJSON, encoding: .utf8) ?? "[]"
 
         let hashChainStr: String?
@@ -612,7 +618,7 @@ actor SyncService {
             contentHash: syncNote.contentHash,
             parentHash: syncNote.parentHash,
             hashChain: hashChainStr,
-            needsSync: false
+            needsSync: attachments.changed
         )
     }
 
@@ -678,8 +684,15 @@ actor SyncService {
                 return
             }
 
-            // CASE 2: Identical content — no update needed
+            // CASE 2: Same hash. The notes usually match, but not always: see
+            // `differsDespiteEqualHash`. A local change still waiting to go up
+            // wins, and the next push carries it.
             if localHash == remoteHash {
+                if !localRecord.needsSync, Self.differsDespiteEqualHash(local: localRecord, remote: syncNote) {
+                    let record = try buildNoteRecord(from: syncNote, syncedAt: syncedAt)
+                    try noteRepo.insertOrReplace(record)
+                    changes.updatedIds.insert(syncNote.id)
+                }
                 return
             }
 
@@ -730,6 +743,22 @@ actor SyncService {
         let record = try buildNoteRecord(from: syncNote, syncedAt: syncedAt)
         try noteRepo.insertOrReplace(record)
         changes.updatedIds.insert(syncNote.id)
+    }
+
+    /// Whether a note with the same content hash as the local one really is a
+    /// different note. Delete, archive, pin, lock and attachment changes don't
+    /// recompute the hash on every client, and older web clients restore a
+    /// version without doing so, yet the server stores them all. Comparing
+    /// hashes alone left those changes stuck on the device that made them,
+    /// until a later edit elsewhere undid them. The hash covers the ciphertext,
+    /// so different ciphertext can't be the same content.
+    private static func differsDespiteEqualHash(local: NoteRecord, remote: SyncNote) -> Bool {
+        local.content != remote.content
+            || local.pinned != remote.pinned
+            || local.archived != remote.archived
+            || local.locked != (remote.locked ?? local.locked)
+            || local.deleted != remote.deleted
+            || Set(decodeAttachments(local.attachments).map(\.id)) != Set(remote.attachments.map(\.id))
     }
 
     // MARK: - Conflict Resolution

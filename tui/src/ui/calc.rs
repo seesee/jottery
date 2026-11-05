@@ -3,13 +3,16 @@
 //! This module provides line-by-line math expression evaluation,
 //! similar to the webapp's calcExtension.ts but using evalexpr.
 
-use evalexpr::{eval_with_context_mut, HashMapContext, Value, ContextWithMutableVariables, Context};
+use evalexpr::{eval_with_context_mut, HashMapContext, IterateVariablesContext, Value, ContextWithMutableVariables, Context};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span, Text};
-use regex::Regex;
+use rust_i18n::t;
 use std::f64::consts::{E, PI, TAU};
+use std::sync::mpsc;
+use std::time::Duration;
 
 use crate::ui::helpers::truncate_to_width;
+use crate::ui::regex;
 
 /// Maximum number of lines to evaluate in calc mode
 /// Documents longer than this will show a warning
@@ -21,6 +24,23 @@ const MAX_CONSECUTIVE_ERRORS: usize = 10;
 
 /// Maximum total errors before stopping evaluation
 const MAX_TOTAL_ERRORS: usize = 50;
+
+/// Longest line handed to the evaluator, in bytes.
+///
+/// Calc notes arrive through sync, so their text is hostile until shown otherwise,
+/// and they're evaluated while drawing. evalexpr recurses over an expression and an
+/// abort from overflowing the stack can't be caught, so the terminal would be left
+/// in raw mode. This limit and the next keep every expression far from that.
+const MAX_CALC_LINE_BYTES: usize = 1024;
+
+/// Deepest bracket nesting handed to the evaluator.
+const MAX_CALC_NESTING: usize = 64;
+
+/// Stack for the evaluation thread. Generous, as the limits above already bound depth.
+const CALC_STACK_BYTES: usize = 8 * 1024 * 1024;
+
+/// How long drawing waits for a document before showing it without results.
+const CALC_DEADLINE: Duration = Duration::from_secs(2);
 
 /// Result of evaluating a single line
 #[derive(Debug, Clone)]
@@ -76,8 +96,68 @@ impl CalcEvaluator {
     /// Check if a line is an assignment and extract the variable name
     fn parse_assignment(line: &str) -> Option<String> {
         // Match pattern: identifier = expression (but not == comparison)
-        let re = Regex::new(r"^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*[^=]").ok()?;
-        re.captures(line).map(|c| c[1].to_string())
+        regex!(r"^\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*[^=]")
+            .captures(line)
+            .map(|c| c[1].to_string())
+    }
+
+    /// Why a line mustn't reach the evaluator, if there's a reason.
+    ///
+    /// Calc needs numbers. Strings, tuples and statement chains are how a short
+    /// line doubles a value until memory runs out, as in `a=a+a` from a long string
+    /// or `(a=(a,a)),(a=(a,a)),...` in one line. Without quotes, `;` or a second
+    /// assignment, a line's value can't outgrow the line. Whatever a builtin such
+    /// as `str()` still produces is dropped after the line by `drop_non_scalars`.
+    fn refusal(line: &str) -> Option<String> {
+        if line.len() > MAX_CALC_LINE_BYTES {
+            return Some(t!("calc.line_too_long", max = MAX_CALC_LINE_BYTES).to_string());
+        }
+        if line.contains('"') || line.contains(';') || Self::count_assignments(line) > 1 {
+            return Some(t!("calc.numbers_only").to_string());
+        }
+        None
+    }
+
+    /// Bracket depth of an expression.
+    fn nesting(expression: &str) -> usize {
+        let (mut depth, mut deepest) = (0usize, 0usize);
+        for c in expression.chars() {
+            match c {
+                '(' => {
+                    depth += 1;
+                    deepest = deepest.max(depth);
+                }
+                ')' => depth = depth.saturating_sub(1),
+                _ => {}
+            }
+        }
+        deepest
+    }
+
+    /// How many assignments a line makes, counting `+=` and friends but not `==`.
+    fn count_assignments(line: &str) -> usize {
+        let bytes = line.as_bytes();
+        bytes.iter().enumerate()
+            .filter(|&(i, &byte)| {
+                let comparison = bytes.get(i + 1) == Some(&b'=')
+                    || (i > 0 && matches!(bytes[i - 1], b'=' | b'!' | b'<' | b'>'));
+                byte == b'=' && !comparison
+            })
+            .count()
+    }
+
+    /// Remove any variable that isn't a number or boolean, returning whether there
+    /// was one. A variable that can't hold a string or tuple can't grow between lines.
+    fn drop_non_scalars(&mut self) -> bool {
+        let offenders: Vec<String> = self.context.iter_variables()
+            .filter(|(_, value)| !matches!(value, Value::Float(_) | Value::Int(_) | Value::Boolean(_) | Value::Empty))
+            .map(|(name, _)| name)
+            .collect();
+
+        for name in &offenders {
+            let _ = self.context.remove_value(name);
+        }
+        !offenders.is_empty()
     }
 
     /// Preprocess expression to handle syntax differences from mathjs
@@ -93,9 +173,7 @@ impl CalcEvaluator {
 
         // Fix log() function: mathjs's log() is natural log (like ln())
         // evalexpr's math::log(x, base) requires 2 args, so map log() -> ln()
-        if let Ok(re) = Regex::new(r"\blog\s*\(") {
-            result = re.replace_all(&result, "ln(").to_string();
-        }
+        result = regex!(r"\blog\s*\(").replace_all(&result, "ln(").to_string();
 
         // Fix power associativity: mathjs uses right-to-left, evalexpr uses left-to-right
         // Convert a^b^c to a^(b^c)
@@ -105,31 +183,14 @@ impl CalcEvaluator {
         // Match integer followed by / or / followed by integer
         result = Self::ensure_float_division(&result);
 
-        // Map common math functions to evalexpr's math:: namespace
-        // These need the math:: prefix in evalexpr
+        // Map common math functions to evalexpr's math:: namespace. These need the
+        // math:: prefix, and one already written with it mustn't gain a second.
         // Note: "log" is NOT in this list - we handle it above by converting to "ln"
-        let math_functions = [
-            "sqrt", "cbrt", "exp", "exp2", "ln", "log2", "log10",
-            "sin", "cos", "tan", "asin", "acos", "atan", "atan2",
-            "sinh", "cosh", "tanh", "asinh", "acosh", "atanh",
-            "abs", "hypot",
-        ];
-
-        for func in math_functions {
-            // Match function call: word boundary + function name + opening paren
-            // But skip if already prefixed with math::
-            let pattern = format!(r"\b{}\s*\(", func);
-            if let Ok(re) = Regex::new(&pattern) {
-                // Only replace if not already prefixed
-                let replacement = format!("math::{}(", func);
-                let math_prefixed = format!("math::{}", func);
-
-                // Simple approach: replace all, then fix double-prefixed ones
-                result = re.replace_all(&result, &replacement).to_string();
-                // Fix any double-prefixed functions
-                result = result.replace(&format!("math::math::{}", func), &math_prefixed);
-            }
-        }
+        result = regex!(
+            r"\b(sqrt|cbrt|exp|exp2|ln|log2|log10|sin|cos|tan|asin|acos|atan|atan2|sinh|cosh|tanh|asinh|acosh|atanh|abs|hypot)\s*\("
+        )
+        .replace_all(&result, "math::$1(")
+        .replace("math::math::", "math::");
 
         result
     }
@@ -143,21 +204,23 @@ impl CalcEvaluator {
 
         // Pattern to find x^y^z (simplified - handles basic cases)
         // We need to handle: 2^3^2 -> 2^(3^2)
-        if let Ok(re) = Regex::new(r"(\^)([^+\-*/^()]+)(\^)") {
-            // Keep replacing until no more matches
-            loop {
-                let new_result = re.replace(&result, "$1($2$3").to_string();
-                if new_result == result {
-                    break;
-                }
-                result = new_result;
+        let re = regex!(r"(\^)([^+\-*/^()]+)(\^)");
+        let mut opened = 0;
+
+        // Keep replacing until no more matches
+        loop {
+            let new_result = re.replace(&result, "$1($2$3").to_string();
+            if new_result == result {
+                break;
             }
-            // Close any opened parentheses at the end
-            let opens = result.matches("(").count();
-            let closes = result.matches(")").count();
-            for _ in 0..(opens - closes) {
-                result.push(')');
-            }
+            result = new_result;
+            opened += 1;
+        }
+
+        // Close only what was opened here. The text's own brackets aren't ours to
+        // balance: a line such as "1) milk" has more ')' than '('.
+        for _ in 0..opened {
+            result.push(')');
         }
 
         result
@@ -168,28 +231,24 @@ impl CalcEvaluator {
         let mut result = expr.to_string();
 
         // Convert integer before / to float: "4/" -> "4.0/"
-        if let Ok(re) = Regex::new(r"(\d+)(\s*/)") {
-            result = re.replace_all(&result, |caps: &regex::Captures| {
-                let num = &caps[1];
-                let slash = &caps[2];
-                // Only add .0 if not already a float
-                if !num.contains('.') {
-                    format!("{}.0{}", num, slash)
-                } else {
-                    format!("{}{}", num, slash)
-                }
-            }).to_string();
-        }
+        result = regex!(r"(\d+)(\s*/)").replace_all(&result, |caps: &regex::Captures| {
+            let num = &caps[1];
+            let slash = &caps[2];
+            // Only add .0 if not already a float
+            if !num.contains('.') {
+                format!("{}.0{}", num, slash)
+            } else {
+                format!("{}{}", num, slash)
+            }
+        }).to_string();
 
         // Convert integer after / to float: "/4" -> "/4.0"
-        if let Ok(re) = Regex::new(r"(/\s*)(\d+)") {
-            result = re.replace_all(&result, |caps: &regex::Captures| {
-                let slash = &caps[1];
-                let num = &caps[2];
-                // Only add .0 if not already a float (check next char isn't .)
-                format!("{}{}.0", slash, num)
-            }).to_string();
-        }
+        result = regex!(r"(/\s*)(\d+)").replace_all(&result, |caps: &regex::Captures| {
+            let slash = &caps[1];
+            let num = &caps[2];
+            // Only add .0 if not already a float (check next char isn't .)
+            format!("{}{}.0", slash, num)
+        }).to_string();
 
         // Fix double .0.0 that might occur
         result = result.replace(".0.0", ".0");
@@ -214,8 +273,7 @@ impl CalcEvaluator {
 
     /// Handle factorial expressions (e.g., "5!")
     fn handle_factorial(expr: &str) -> Option<String> {
-        let re = Regex::new(r"^(\d+)!$").ok()?;
-        let caps = re.captures(expr.trim())?;
+        let caps = regex!(r"^(\d+)!$").captures(expr.trim())?;
         let n: i64 = caps[1].parse().ok()?;
         Self::factorial(n).map(|r| r.to_string())
     }
@@ -244,6 +302,11 @@ impl CalcEvaluator {
             };
         }
 
+        // Anything that could exhaust the stack or memory stops here
+        if let Some(reason) = Self::refusal(trimmed) {
+            return Self::refused(line, reason);
+        }
+
         // Handle factorial expressions specially (e.g., "5!")
         if let Some(factorial_result) = Self::handle_factorial(trimmed) {
             return LineResult {
@@ -257,11 +320,22 @@ impl CalcEvaluator {
         // Preprocess the expression to handle syntax differences
         let processed = Self::preprocess(trimmed);
 
+        // Measured after preprocessing, which adds brackets of its own
+        if Self::nesting(&processed) > MAX_CALC_NESTING {
+            return Self::refused(line, t!("calc.too_deep", max = MAX_CALC_NESTING).to_string());
+        }
+
         // Check if this is an assignment
         let assignment_var = Self::parse_assignment(trimmed);
 
         // Try to evaluate the expression
-        match eval_with_context_mut(&processed, &mut self.context) {
+        let outcome = eval_with_context_mut(&processed, &mut self.context);
+
+        if self.drop_non_scalars() {
+            return Self::refused(line, t!("calc.numbers_only").to_string());
+        }
+
+        match outcome {
             Ok(value) => {
                 // For assignments, evalexpr returns Empty - get the actual value from context
                 let display_value = if let Some(var_name) = assignment_var {
@@ -309,6 +383,17 @@ impl CalcEvaluator {
                     }
                 }
             }
+        }
+    }
+
+    /// The result for a line that wasn't evaluated. It counts as an error, so a
+    /// document full of them stops early like any other that isn't calc.
+    fn refused(line: &str, reason: String) -> LineResult {
+        LineResult {
+            line: line.to_string(),
+            result: Some(reason),
+            is_error: true,
+            is_comment: false,
         }
     }
 
@@ -426,10 +511,48 @@ impl Default for CalcEvaluator {
     }
 }
 
+/// A document's results, whether evaluation stopped early, and why.
+type Evaluation = (Vec<LineResult>, bool, Option<String>);
+
+/// The text of a document with no results, for when evaluation couldn't finish.
+fn unevaluated(text: &str, warning: String) -> Evaluation {
+    let lines = text.lines()
+        .take(MAX_CALC_LINES)
+        .map(|line| LineResult {
+            line: line.to_string(),
+            result: None,
+            is_error: false,
+            is_comment: false,
+        })
+        .collect();
+    (lines, true, Some(warning))
+}
+
+/// Evaluate a document away from the UI thread.
+///
+/// Drawing calls this, so the note stays readable whatever the evaluator does: a
+/// panic ends this thread and not the app, and a document that takes too long is
+/// shown without results.
+fn evaluate_isolated(text: &str) -> Evaluation {
+    let (sender, receiver) = mpsc::channel();
+    let document = text.to_string();
+
+    let started = std::thread::Builder::new()
+        .name("calc".to_string())
+        .stack_size(CALC_STACK_BYTES)
+        .spawn(move || {
+            let _ = sender.send(CalcEvaluator::new().evaluate_document(&document));
+        });
+
+    match started.map(|_| receiver.recv_timeout(CALC_DEADLINE)) {
+        Ok(Ok(evaluation)) => evaluation,
+        _ => unevaluated(text, t!("calc.gave_up").to_string()),
+    }
+}
+
 /// Render calc mode text with syntax highlighting and inline results
 pub fn render_calc(text: &str) -> Text<'static> {
-    let mut evaluator = CalcEvaluator::new();
-    let (results, stopped_early, warning) = evaluator.evaluate_document(text);
+    let (results, stopped_early, warning) = evaluate_isolated(text);
 
     let mut lines: Vec<Line<'static>> = Vec::new();
 
@@ -461,9 +584,13 @@ pub fn render_calc(text: &str) -> Text<'static> {
             // Empty line
             spans.push(Span::raw(result.line.clone()));
         } else {
-            // Parse and highlight the expression
-            let highlighted = highlight_expression(&result.line);
-            spans.extend(highlighted);
+            // Parse and highlight the expression. A line refused for its length
+            // stays one span: highlighting makes a span per character.
+            if result.line.len() > MAX_CALC_LINE_BYTES {
+                spans.push(Span::raw(result.line.clone()));
+            } else {
+                spans.extend(highlight_expression(&result.line));
+            }
 
             // Add result if present
             if let Some(ref res) = result.result {
@@ -811,6 +938,137 @@ mod tests {
         assert!(warning.unwrap().contains("consecutive errors"));
         // Should have stopped at MAX_CONSECUTIVE_ERRORS
         assert_eq!(results.len(), MAX_CONSECUTIVE_ERRORS);
+    }
+
+    /// The reported crash: 200 KB of brackets overflowed the stack. An abort can't
+    /// be caught, so reaching the end of this test is the assertion.
+    #[test]
+    fn deep_nesting_is_refused_without_reaching_the_evaluator() {
+        let mut eval = CalcEvaluator::new();
+        let line = format!("{}1{}", "(".repeat(100_000), ")".repeat(100_000));
+        let (results, _, _) = eval.evaluate_document(&line);
+        assert!(results[0].is_error);
+    }
+
+    #[test]
+    fn nesting_inside_the_length_limit_is_refused_too() {
+        let mut eval = CalcEvaluator::new();
+        let line = format!("{}1{}", "(".repeat(100), ")".repeat(100));
+        assert!(line.len() <= MAX_CALC_LINE_BYTES);
+        let (results, _, _) = eval.evaluate_document(&line);
+        assert!(results[0].is_error);
+        assert!(results[0].result.as_ref().unwrap().contains(&MAX_CALC_NESTING.to_string()));
+    }
+
+    #[test]
+    fn reasonable_nesting_still_works() {
+        let mut eval = CalcEvaluator::new();
+        let line = format!("{}1{}", "(".repeat(20), ")".repeat(20));
+        let (results, _, _) = eval.evaluate_document(&line);
+        assert_eq!(results[0].result, Some("1".to_string()));
+    }
+
+    #[test]
+    fn a_string_cannot_be_doubled_line_by_line() {
+        let mut eval = CalcEvaluator::new();
+        let mut note = String::from("a=\"xxxxxxxxxxxxxxxx\"\n");
+        note.push_str(&"a=a+a\n".repeat(60));
+        eval.evaluate_document(&note);
+        assert!(eval.context.get_value("a").is_none());
+    }
+
+    #[test]
+    fn a_tuple_cannot_be_doubled_line_by_line() {
+        let mut eval = CalcEvaluator::new();
+        let mut note = String::from("a=(1,2)\n");
+        note.push_str(&"a=(a,a)\n".repeat(60));
+        eval.evaluate_document(&note);
+        assert!(eval.context.get_value("a").is_none());
+    }
+
+    #[test]
+    fn an_assignment_hidden_in_an_expression_cannot_keep_a_tuple() {
+        let mut eval = CalcEvaluator::new();
+        let (results, _, _) = eval.evaluate_document("1+(b=(1,2))\nb");
+        assert!(results[0].is_error);
+        assert!(eval.context.get_value("b").is_none());
+    }
+
+    #[test]
+    fn a_tuple_cannot_be_doubled_within_one_line() {
+        let mut eval = CalcEvaluator::new();
+        let line = format!("(a=(1,1)){}", ",(a=(a,a))".repeat(80));
+        assert!(line.len() <= MAX_CALC_LINE_BYTES);
+        let (results, _, _) = eval.evaluate_document(&line);
+        assert!(results[0].is_error);
+    }
+
+    #[test]
+    fn a_chain_of_statements_is_refused() {
+        let mut eval = CalcEvaluator::new();
+        let (results, _, _) = eval.evaluate_document("a=1;a=2");
+        assert!(results[0].is_error);
+    }
+
+    #[test]
+    fn a_string_from_a_builtin_is_not_kept() {
+        let mut eval = CalcEvaluator::new();
+        eval.evaluate_document("a=str(1)");
+        assert!(eval.context.get_value("a").is_none());
+    }
+
+    #[test]
+    fn comparisons_are_not_assignments() {
+        assert_eq!(CalcEvaluator::count_assignments("a == 1"), 0);
+        assert_eq!(CalcEvaluator::count_assignments("a != 1 && b <= 2 || c >= 3"), 0);
+        assert_eq!(CalcEvaluator::count_assignments("a = 1 == 1"), 1);
+        assert_eq!(CalcEvaluator::count_assignments("a += 1"), 1);
+    }
+
+    #[test]
+    fn numbers_keep_working_across_lines() {
+        let mut eval = CalcEvaluator::new();
+        let (results, stopped, _) = eval.evaluate_document("a = 2\na = a + a\nb = a * 2\nmin(a, b)");
+        assert!(!stopped);
+        assert_eq!(results[1].result, Some("4".to_string()));
+        assert_eq!(results[2].result, Some("8".to_string()));
+        assert_eq!(results[3].result, Some("4".to_string()));
+    }
+
+    #[test]
+    fn a_stray_closing_bracket_does_not_hang() {
+        let mut eval = CalcEvaluator::new();
+        let (results, _, _) = eval.evaluate_document("1) milk");
+        assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn unbalanced_brackets_are_left_alone() {
+        assert_eq!(CalcEvaluator::fix_power_associativity("1) milk"), "1) milk");
+        assert_eq!(CalcEvaluator::fix_power_associativity("))) ((("), "))) (((");
+        assert_eq!(CalcEvaluator::fix_power_associativity("2^3^2)"), "2^(3^2))");
+    }
+
+    #[test]
+    fn prose_in_a_calc_note_renders() {
+        let text = render_calc("1) milk\n2) eggs (large\n3) bread)))");
+        assert!(text.lines.len() >= 3);
+    }
+
+    #[test]
+    fn rendering_keeps_the_text_of_a_refused_line() {
+        let text = render_calc(&"9".repeat(MAX_CALC_LINE_BYTES + 1));
+        let first: String = text.lines[0].spans.iter().map(|s| s.content.as_ref()).collect();
+        assert!(first.starts_with("999"));
+    }
+
+    #[test]
+    fn a_document_with_no_result_still_shows_its_text() {
+        let (results, stopped, warning) = unevaluated("2 + 2\nnotes", "too slow".to_string());
+        assert_eq!(results.len(), 2);
+        assert_eq!(results[1].line, "notes");
+        assert!(stopped);
+        assert_eq!(warning.as_deref(), Some("too slow"));
     }
 
     #[test]

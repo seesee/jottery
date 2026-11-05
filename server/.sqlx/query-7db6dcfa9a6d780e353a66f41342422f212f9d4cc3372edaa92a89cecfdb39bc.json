@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT last_seq FROM sync_state WHERE user_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "last_seq",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7db6dcfa9a6d780e353a66f41342422f212f9d4cc3372edaa92a89cecfdb39bc"
+}

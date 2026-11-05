@@ -23,11 +23,11 @@ password:
   change_success: Şifre başarıyla değiştirildi
   change_title: "Şifre Değiştir"
   change_enter_current: "Mevcut şifrenizi girin:"
-  change_enter_new: "Yeni şifre girin (en az 12 karakter):"
+  change_enter_new: "Yeni şifre girin (en az 8 karakter):"
   change_confirm_new: "Yeni şifreyi onaylayın:"
   change_current_required: "Lütfen mevcut şifrenizi girin"
   change_wrong_current: "Mevcut şifre yanlış"
-  change_too_short: "Yeni şifre en az 12 karakter olmalıdır"
+  change_too_short: "Yeni şifre en az 8 karakter olmalıdır"
   change_mismatch: "Şifreler eşleşmiyor"
   change_failed: "Şifre değiştirilemedi"
   remember: Şifreyi hatırla
@@ -46,6 +46,10 @@ password:
   enter_to_enable: "Otomatik kilit açmayı etkinleştirmek için şifrenizi girin:"
   create_title: Şifre Oluştur
   unlock_title: Kilidi Aç
+  too_short: "Parola en az %{min} karakter olmalıdır"
+  same_as_account: "Farklı parolalar kullanın. Sunucu hesap parolanızı görür, bu yüzden aynı parola notlarınızı da açmamalıdır."
+  same_as_account_warning: "Hesap parolanız not parolanızla aynı, bu yüzden sunucu notlarınızı okuyabilir. Ayarlar bölümünden not parolanızı değiştirin."
+  no_file_encryption: "Bu derleme veritabanı dosyasını şifrelemez. Notlar ve etiketler şifreli kalır, ancak e-posta adresiniz, sunucu adresi, ek adları ve tarihler şifrelenmez."
 menu:
   notes: Notlar
   new_note: Yeni not
@@ -78,6 +82,13 @@ note:
   info: Not bilgisi
   info_title: Not Bilgileri
   untitled: "Başlıksız"
+  save_retry_hint: "q: yeniden kaydetmeyi dene | e: düzenle | Esc: değişiklikleri at"
+  empty_bin_title: "Geri dönüşüm kutusunu boşalt"
+  empty_bin_confirm: "Çöp kutusundaki %{count} not kalıcı olarak silinsin mi?"
+  empty_bin_warning: "Sunucudan ve diğer cihazlarınızdan da silinirler. Bu geri alınamaz."
+  bin_emptied: "%{count} not kalıcı olarak silindi"
+  locked_cannot_archive: "Kilitli not arşivlenemez"
+  unreadable: "Bu kasadaki %{count} not okunamıyor"
 archive:
   view: "Arşivi görüntüle"
   title: "Arşiv"
@@ -115,6 +126,18 @@ attachment:
   delete: Ek sil
   no_attachments: Ek yok
   total: "%{count} ek"
+  press_enter: "Devam etmek için Enter tuşuna basın..."
+  opened: "Dosya varsayılan uygulamada açıldı."
+  no_opener: "Bu sistemde dosya açacak bir program yok. Bunun yerine eki S ile kaydedin."
+  delete_failed: "Ek silinemedi: %{error}"
+  deleted: "Silindi: %{name}"
+  exists: "%{path} zaten var. Başka bir ad seçin."
+  saved: "%{path} konumuna kaydedildi"
+  save_failed: "Ek kaydedilemedi: %{error}"
+  added: "%{name} eklendi"
+  too_large: "Dosya çok büyük. Sınır %{max_mb} MB."
+  unsafe_title: "Bu dosya açılmayacak"
+  unsafe_body: "Bu tür bir dosyayı açmak gönderenin kodunu çalıştırabilir. Bunun yerine kaydedilsin mi?"
 version:
   history: Sürüm geçmişi
   restore: Sürümü geri yükle
@@ -188,6 +211,8 @@ sync:
   reload_failed: "Senkronizasyon başarılı ancak notlar yeniden yüklenemedi: %{error}"
   note: not
   notes: not
+  skipped_notes: "Sunucudan gelen %{count} öğe okunamadı ve atlandı"
+  rejected_notes: "%{count} not sunucuyla çakışıyor. Çözmek için Jottery uygulamasını açın."
 
 # Gelen Kutusu
 inbox:
@@ -233,6 +258,7 @@ register:
   device_failed: Cihaz kaydı başarısız
   cleared: Kayıt temizlendi. Yeniden başlayabilirsiniz.
   pending_status: Onay bekleniyor
+  password_differs: "Not parolanızdan farklı olmalıdır."
 color_scheme:
   default_dark: Varsayılan koyu
   default_light: Varsayılan açık
@@ -386,8 +412,8 @@ help:
   s_q_close_desc: Ayarlar panelini kapat
   tab_focus_attachment_key: Tab
   tab_focus_attachment_desc: Ek paneline odaklan (j/k ile gezin, Enter ile görüntüle, d ile sil)
-  A_add_attachment_key: A
-  A_add_attachment_desc: Ek ekle (dosya yolunu girin)
+  plus_add_attachment_key: "+"
+  plus_add_attachment_desc: Ek ekle (dosya yolunu girin)
   a_view_attachment_key: a + numara
   a_view_attachment_desc: Ek görüntüle (a1, a2, ...)
   shift_jk_attachment_key: Shift+j / Shift+k
@@ -450,6 +476,14 @@ help:
   click_tags_desc: Etiket düzenleme moduna gir
   scroll_key: Kaydırma tekerleği
   scroll_desc: Önizlemeyi yukarı/aşağı kaydır
+  ctrl_l_lock_key: "Ctrl+L"
+  ctrl_l_lock_desc: "Jottery uygulamasını kilitle"
+  S_save_attachment_key: "S"
+  S_save_attachment_desc: "Seçili eki bir dosyaya kaydet"
+  z_archive_key: "z"
+  z_archive_desc: "Seçili notu arşivle (arşiv modunda geri getir)"
+  multi_z_archive_key: "z"
+  multi_z_archive_desc: "Seçili notları arşivle"
 cli:
   # Eski (bazı yerlerde kullanılıyor)
   list: Notları listele
@@ -513,6 +547,14 @@ cli:
   # Çıktı mesajları
   notes_count: "%{count} not"
   results_count: "%{count} sonuç: '%{query}'"
+  attach_about: "Nota dosya ekle"
+  save_attachment_about: "Bir notun ekini dosyaya kaydet"
+  archive_about: "Bir notu arşivle"
+  unarchive_about: "Bir notu arşivden geri getir"
+  note_id_help: "Not kimliği (kısmi eşleşme desteklenir)"
+  attach_file_help: "Eklenecek dosya"
+  attachment_number_help: "Hangi ek (show numaralandırmasına göre)"
+  archived_help: "Bunun yerine arşivlenmiş notları listele"
 status:
   locked: Kilitli
   unlocked: Kilitsiz
@@ -534,6 +576,7 @@ bulk:
   enter_export_path: "Dışa aktarma yolu:"
   add_tags_to: Etiket ekle
   export_notes_to: Dışa aktar
+  archived: "%{count} not arşivlendi"
 time:
   just_now: az önce
   minutes_ago: "%{count} dakika önce"
@@ -568,6 +611,8 @@ backup:
   restoring: "Veriler geri yükleniyor..."
   restored: "Geri yüklendi"
   key_not_in_backup: "Bu yedek, Jottery'nin eski bir sürümüyle oluşturuldu ve anahtarını içermiyor. Yalnızca oluşturulduğu kasaya geri yüklenebilir."
+  incomplete: "Bu yedek eksik: kasadaki %{count} öğe okunamadı ve dışarıda bırakıldı."
+  records_failed: "Bu yedekteki %{count} kayıt geri yüklenemedi. Geri kalanı yüklendi."
 
 # Progress indicators
 progress:
@@ -591,6 +636,12 @@ ui:
   type: "Tür:"
   modified: "Değiştirildi:"
   version: "Sürüm:"
+  save_attachment: "Eki kaydet (Tab: tamamla, ↑↓: seç, Enter: onayla)"
+  path: "Yol"
+  attachments_hint: "Ekler: (odaklanmak için Tab)"
+  attachments_focused_hint: "Ekler: (geçmek için Tab, gezinmek için j/k, görüntülemek için Enter, kaydetmek için S, silmek için d)"
+  attachments_keys_hint: "Görüntülemek için 'a', eklemek için '+', seçileni kaldırmak için 'X'"
+  attachment_viewer_hint: "↑/↓: gezin │ 1-9: hızlı seçim │ Enter: görüntüle │ S: kaydet │ +: ekle │ d: sil │ Esc: kapat"
 
 # Durum çubuğu yardım metni
 status_bar:
@@ -640,8 +691,21 @@ status_bar:
   quick_select: "Hızlı seçim"
   view: "görüntüle"
   restore_version: "Sürümü geri yükle"
+  save: "kaydet"
+  add: "ekle"
 
 # Virtual tags
 tags:
   virtual:
     title: "başlık"
+
+calc:
+  line_too_long: "⚠ Satır hesaplamak için çok uzun (sınır %{max} bayt)"
+  numbers_only: "⚠ Calc sayılarla çalışır: metin, demetler ve ; hesaplanmaz"
+  too_deep: "⚠ Çok fazla iç içe parantez (sınır %{max})"
+  gave_up: "Bu notun hesaplanması çok uzun sürdü, bu yüzden sonuçlar olmadan gösteriliyor."
+
+envelope:
+  unwrap_failed: "Not parolanız bu hesabın anahtarını açamıyor. Anahtar eski bir sürüm tarafından kaydedilmiş olabilir. Zaten bağlı bir cihazda Jottery kilidini açın, bu sorunu düzeltir, sonra yeniden deneyin."
+  rekey_failed: "Yerel notlarınız bu hesabın anahtarına taşınamadı, bu yüzden hiçbir şey değişmedi: %{error}"
+  diverged: "Bu cihazın anahtarı hesabın anahtarından farklı. Diğer cihazlarınızdaki notlar burada açılmayabilir."

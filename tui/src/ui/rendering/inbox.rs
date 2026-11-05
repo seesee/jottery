@@ -66,7 +66,7 @@ pub fn render_inbox(app: &mut App, frame: &mut Frame, area: Rect) {
             ]),
             Line::from(vec![
                 Span::styled(
-                    format!("  {}{}{}", &item.created_at[..10], tags_str, source_str),
+                    format!("  {}{}{}", crate::models::char_prefix(&item.created_at, 10), tags_str, source_str),
                     Style::default().fg(Color::DarkGray),
                 ),
             ]),

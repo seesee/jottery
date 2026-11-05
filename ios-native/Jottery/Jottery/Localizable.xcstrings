@@ -139,6 +139,17 @@
         }
       }
     },
+    "attachments.unreadableName": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unreadable attachment"
+          }
+        }
+      }
+    },
     "backup.create": {
       "extractionState": "manual",
       "localizations": {
@@ -194,6 +205,17 @@
         }
       }
     },
+    "backup.progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backing up %lld of %lld…"
+          }
+        }
+      }
+    },
     "backup.restore": {
       "extractionState": "manual",
       "localizations": {
@@ -212,6 +234,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Restore notes from an encrypted backup file."
+          }
+        }
+      }
+    },
+    "backup.restoreProgress": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restoring part %lld of %lld…"
+          }
+        }
+      }
+    },
+    "backup.restoreSkipped": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld items in the backup couldn't be read and were left out."
           }
         }
       }
@@ -256,28 +300,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Restoring backup…"
-          }
-        }
-      }
-    },
-    "backup.successMessage": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your encrypted backup is ready to share."
-          }
-        }
-      }
-    },
-    "backup.successTitle": {
-      "extractionState": "manual",
-      "localizations": {
-        "en-GB": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Backup Created"
           }
         }
       }
@@ -1184,6 +1206,17 @@
         }
       }
     },
+    "error.couldntExport": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't export your notes."
+          }
+        }
+      }
+    },
     "error.couldntLockNote": {
       "extractionState": "manual",
       "localizations": {
@@ -1279,6 +1312,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couldn't unpin note"
+          }
+        }
+      }
+    },
+    "export.progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporting %lld of %lld…"
           }
         }
       }
@@ -1950,6 +1994,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unpin"
+          }
+        }
+      }
+    },
+    "notesPassword.tooShort": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use at least %lld characters."
           }
         }
       }
@@ -2697,7 +2752,7 @@
         "en-GB": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enter the same encryption password used on your other devices."
+            "value": "Enter the same encryption password used on your other devices. On your first device, choose one of at least 8 characters. It must be different from your server password."
           }
         }
       }
@@ -2741,7 +2796,7 @@
         "en-GB": {
           "stringUnit": {
             "state": "translated",
-            "value": "This password encrypts your notes. If lost, data cannot be recovered."
+            "value": "This password encrypts your notes, and must be at least 8 characters. If lost, data cannot be recovered."
           }
         }
       }
@@ -2994,7 +3049,7 @@
         "en-GB": {
           "stringUnit": {
             "state": "translated",
-            "value": "Merge Notes"
+            "value": "Merge and Upload"
           }
         }
       }
@@ -3010,13 +3065,24 @@
         }
       }
     },
+    "syncMerge.failedOnUnlock": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't merge: some of this device's notes couldn't be re-encrypted. Nothing on this device has been changed."
+          }
+        }
+      }
+    },
     "syncMerge.message": {
       "extractionState": "manual",
       "localizations": {
         "en-GB": {
           "stringUnit": {
             "state": "translated",
-            "value": "This account already has notes protected by a different encryption key from this device's. Jottery can re-encrypt the notes on this device with the account's key and then sync them, so all your notes end up together. If anything can't be re-encrypted, nothing on this device is changed."
+            "value": "The account on %1$@ already has notes, protected by a different encryption key from this device's. Your notes password opened that key, so it should be one you set up on another device.\n\nMerging re-encrypts all %2$lld notes on this device, with their attachments and history, under the account's key, then uploads them to %1$@.\n\nOnly merge if this is your own account on a server you trust. Otherwise cancel, and nothing changes. If anything can't be re-encrypted, nothing changes either."
           }
         }
       }
@@ -3027,7 +3093,7 @@
         "en-GB": {
           "stringUnit": {
             "state": "translated",
-            "value": "Merge Your Notes?"
+            "value": "Move Your Notes to This Account?"
           }
         }
       }
@@ -3104,7 +3170,7 @@
         "en-GB": {
           "stringUnit": {
             "state": "translated",
-            "value": "The password that unlocks your notes — used to protect your encryption key on the server."
+            "value": "The password that unlocks your notes, used to protect your encryption key on the server. It must be different from your server password."
           }
         }
       }
@@ -3192,7 +3258,7 @@
         "en-GB": {
           "stringUnit": {
             "state": "translated",
-            "value": "This account's encryption key can't be opened with this device's notes password. Use the same notes password as on your other devices (you can change it in Settings), then try again. Nothing has been changed."
+            "value": "This account's encryption key can't be opened with this device's notes password. Use the same notes password as on your other devices (you can change it in Settings). If the password is right, the key may have been saved by an older version of Jottery: unlocking Jottery on a device that's already connected to this account will fix it. Then try again. Nothing has been changed."
           }
         }
       }
@@ -3203,7 +3269,18 @@
         "en-GB": {
           "stringUnit": {
             "state": "translated",
-            "value": "That encryption password doesn't open this account's notes key. Use the encryption password from your other devices, not your server password. Nothing has been set up yet, so you can try again."
+            "value": "That encryption password doesn't open this account's notes key. Use the encryption password from your other devices, not your server password. If the password is right, the key may have been saved by an older version of Jottery: unlocking Jottery on a device that's already connected to this account will fix it. Nothing has been set up yet, so you can try again."
+          }
+        }
+      }
+    },
+    "syncSetupError.notesPasswordMatchesAccount": {
+      "extractionState": "manual",
+      "localizations": {
+        "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your notes password can't be the same as your server password. The server receives your server password, so it could use it to open your notes. Use a different password (you can change your notes password in Settings). Nothing has been changed."
           }
         }
       }
