@@ -34,7 +34,7 @@ import javax.crypto.spec.SecretKeySpec
 class SyncHarness {
     val key = SecretKeySpec(ByteArray(32) { it.toByte() }, "AES")
     val db: JotteryDatabase = JotteryDatabase.buildInMemory(ApplicationProvider.getApplicationContext())
-    val noteRepo = NoteRepository(db.noteDao(), db.noteVersionDao())
+    val noteRepo = NoteRepository(db.noteDao(), db.noteVersionDao()) { block -> db.withTransaction { block() } }
     val versionRepo = VersionRepository(db.noteVersionDao())
     val attachmentRepo = AttachmentRepository(db.attachmentDao())
     val syncRepo = SyncRepository(db.syncMetadataDao(), db.noteSyncMetadataDao(), db.noteDeletionDao())

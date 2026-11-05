@@ -903,6 +903,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         val key = keyManager.masterKey ?: return
         val search = repo.create(name = name, query = query, key = key)
         _savedSearches.value = _savedSearches.value + search
+        scheduleDebouncedSync()
     }
 
     /**
@@ -912,6 +913,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         val repo = savedSearchRepo ?: return
         repo.delete(id)
         _savedSearches.value = _savedSearches.value.filter { it.id != id }
+        scheduleDebouncedSync()
     }
 
     /**
@@ -949,7 +951,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         // Store encrypted blob
         val record = AttachmentRecord(
             id = attachmentId,
-            filename = filename,
+            filename = "",
             mimeType = mimeType,
             size = data.size,
             data = blobData,
@@ -1711,7 +1713,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         _syncStatusMessage.value = "Full sync in progress\u2026"
 
         try {
-            val newCount = withContext(Dispatchers.IO) { service.fullSync() }
+            withContext(Dispatchers.IO) { service.fullSync(fullPull = true) }
             _isSyncing.value = false
             _lastSyncAt.value = Instant.now()
             _syncStatusMessage.value = "Full sync complete"

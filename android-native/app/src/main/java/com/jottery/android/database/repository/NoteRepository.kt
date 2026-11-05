@@ -2,6 +2,7 @@ package com.jottery.android.database.repository
 
 import android.util.Log
 import com.jottery.android.crypto.CryptoService
+import com.jottery.android.database.dao.INLINE_CONTENT_LIMIT
 import com.jottery.android.database.dao.NoteDao
 import com.jottery.android.database.dao.NoteVersionDao
 import com.jottery.android.model.AttachmentRef
@@ -32,6 +33,7 @@ class NoteRepository(
     companion object {
         private const val TAG = "NoteRepo"
         private val DEFAULT_PURGE_INTERVAL: Duration = Duration.ofDays(30)
+        private const val READ_CHUNK = 512 * 1024
     }
 
     // MARK: - Read
@@ -55,7 +57,9 @@ class NoteRepository(
         val decrypted = mutableListOf<DecryptedNote>()
         for (record in records) {
             try {
-                decrypted.add(decrypt(record, key))
+                decrypted.add(decrypt(hydrate(record), key))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
                 failCount++
                 if (failCount <= 3) {
@@ -71,47 +75,57 @@ class NoteRepository(
 
     /** Fetch all deleted notes, decrypted (recycle bin). */
     suspend fun listDeleted(key: SecretKey): List<DecryptedNote> {
-        val records = noteDao.listDeleted()
-        return records.mapNotNull { record ->
-            try {
-                decrypt(record, key)
-            } catch (_: Exception) {
-                null
-            }
-        }
+        return decryptEach(noteDao.listDeleted(), key)
     }
 
     /** Fetch all archived notes, decrypted. */
     suspend fun listArchived(key: SecretKey): List<DecryptedNote> {
-        val records = noteDao.listArchived()
-        return records.mapNotNull { record ->
+        return decryptEach(noteDao.listArchived(), key)
+    }
+
+    /** One note that can't be read must not stop the others loading. */
+    private suspend fun decryptEach(records: List<NoteRecord>, key: SecretKey): List<DecryptedNote> =
+        records.mapNotNull { record ->
             try {
-                decrypt(record, key)
+                decrypt(hydrate(record), key)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (_: Exception) {
                 null
             }
         }
+
+    /** Fill in content too large to read with the row: see [INLINE_CONTENT_LIMIT]. */
+    private suspend fun hydrate(record: NoteRecord): NoteRecord {
+        if (record.content.isNotEmpty()) return record
+        val length = noteDao.contentLength(record.id) ?: return record
+        val content = StringBuilder(length)
+        var start = 1
+        while (start <= length) {
+            content.append(noteDao.contentChunk(record.id, start, READ_CHUNK) ?: break)
+            start += READ_CHUNK
+        }
+        return record.copy(content = content.toString())
     }
 
     /** Fetch a single note by ID, decrypted. */
     suspend fun get(id: String, key: SecretKey): DecryptedNote? {
-        val record = noteDao.getById(id) ?: return null
-        return decrypt(record, key)
+        return decrypt(getRaw(id) ?: return null, key)
     }
 
     /** Fetch a raw (encrypted) record by ID. */
     suspend fun getRaw(id: String): NoteRecord? {
-        return noteDao.getById(id)
+        return noteDao.getById(id)?.let { hydrate(it) }
     }
 
     /** Fetch all records that need syncing. */
     suspend fun listNeedingSync(): List<NoteRecord> {
-        return noteDao.listNeedingSync()
+        return noteDao.listNeedingSync().map { hydrate(it) }
     }
 
     /** Fetch all raw records (for backup). */
     suspend fun listAllRaw(): List<NoteRecord> {
-        return noteDao.listAll()
+        return noteDao.listAll().map { hydrate(it) }
     }
 
     /**
@@ -197,7 +211,7 @@ class NoteRepository(
     suspend fun update(note: DecryptedNote, key: SecretKey): Boolean {
         var saved = false
         runInTransaction {
-            val current = noteDao.getById(note.id)
+            val current = getRaw(note.id)
             if (current != null && !current.deleted) {
                 write(current, note, key)
                 saved = true
@@ -309,7 +323,7 @@ class NoteRepository(
 
     /** Toggle pin status. */
     suspend fun togglePin(id: String) {
-        val record = noteDao.getById(id) ?: return
+        val record = getRaw(id) ?: return
         val now = DateUtils.nowISO8601()
         val updated = record.copy(
             pinned = !record.pinned,
@@ -321,7 +335,7 @@ class NoteRepository(
 
     /** Toggle lock status. */
     suspend fun toggleLock(id: String) {
-        val record = noteDao.getById(id) ?: return
+        val record = getRaw(id) ?: return
         val now = DateUtils.nowISO8601()
         val updated = if (record.locked) {
             record.copy(
@@ -364,7 +378,7 @@ class NoteRepository(
 
     /** Add an attachment reference to a note's attachments JSON array. */
     suspend fun addAttachment(noteId: String, ref: AttachmentRef) {
-        val record = noteDao.getById(noteId) ?: return
+        val record = getRaw(noteId) ?: return
         val attachments: MutableList<AttachmentRef> = try {
             json.decodeFromString<List<AttachmentRef>>(record.attachments).toMutableList()
         } catch (_: Exception) {
@@ -381,7 +395,7 @@ class NoteRepository(
 
     /** Remove an attachment reference from a note's attachments JSON array. */
     suspend fun removeAttachment(noteId: String, attachmentId: String) {
-        val record = noteDao.getById(noteId) ?: return
+        val record = getRaw(noteId) ?: return
         val attachments: MutableList<AttachmentRef> = try {
             json.decodeFromString<List<AttachmentRef>>(record.attachments).toMutableList()
         } catch (_: Exception) {
@@ -431,7 +445,7 @@ class NoteRepository(
             }
             if (fixed != refs) {
                 runInTransaction {
-                    noteDao.getById(row.id)?.let {
+                    getRaw(row.id)?.let {
                         noteDao.update(it.copy(attachments = json.encodeToString(fixed), needsSync = true))
                     }
                 }
@@ -445,7 +459,7 @@ class NoteRepository(
     suspend fun allNotesOpenWith(key: SecretKey): Boolean =
         noteDao.listAll().all { record ->
             try {
-                decrypt(record, key)
+                decrypt(hydrate(record), key)
                 true
             } catch (_: Exception) {
                 false

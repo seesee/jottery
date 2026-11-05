@@ -12,6 +12,7 @@ data class AttachmentRecord(
     @PrimaryKey
     val id: String,
 
+    // Always empty: the name lives, encrypted, in the note's attachment reference
     val filename: String,
 
     @ColumnInfo(name = "mime_type")
@@ -24,6 +25,10 @@ data class AttachmentRecord(
 
     @ColumnInfo(name = "thumbnail_data")
     val thumbnailData: ByteArray? = null,
+
+    // The server holds this blob, so a push needn't send it again
+    @ColumnInfo(defaultValue = "0")
+    val uploaded: Boolean = false,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

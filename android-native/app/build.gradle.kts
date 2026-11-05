@@ -53,7 +53,8 @@ android {
     }
 
     sourceSets {
-        getByName("test").assets.srcDir("$projectDir/schemas")
+        // Debug only: the migration tests read the exported schemas as assets
+        getByName("debug").assets.srcDir("$projectDir/schemas")
     }
 }
 
@@ -107,6 +108,7 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
     testImplementation(libs.androidx.test.core)
+    testImplementation(libs.runner)
     testImplementation(libs.room.testing)
     testImplementation(libs.okhttp.mockwebserver)
     androidTestImplementation(libs.junit.ext)

@@ -94,7 +94,7 @@ class SyncClient(
         return try {
             get("/api/v1/auth/wrapped-key")
         } catch (e: SyncClientException) {
-            if (e.message?.startsWith("HTTP 404:") == true) null else throw e
+            if (e.statusCode == 404) null else throw e
         }
     }
 
@@ -105,7 +105,7 @@ class SyncClient(
         val response = client.newCall(httpRequest).execute()
         if (!response.isSuccessful) {
             val body = response.body?.string() ?: ""
-            throw SyncClientException("HTTP ${response.code}: $body")
+            throw SyncClientException("HTTP ${response.code}: $body", response.code)
         }
     }
 
@@ -135,7 +135,7 @@ class SyncClient(
         val response = client.newCall(request).execute()
         val body = response.body?.string() ?: throw SyncClientException("Empty response body")
         if (!response.isSuccessful) {
-            throw SyncClientException("HTTP ${response.code}: $body")
+            throw SyncClientException("HTTP ${response.code}: $body", response.code)
         }
         return json.decodeFromString(body)
     }
@@ -146,7 +146,7 @@ class SyncClient(
         val response = client.newCall(request).execute()
         val body = response.body?.string() ?: throw SyncClientException("Empty response body")
         if (!response.isSuccessful) {
-            throw SyncClientException("HTTP ${response.code}: $body")
+            throw SyncClientException("HTTP ${response.code}: $body", response.code)
         }
         return json.decodeFromString(body)
     }
@@ -157,7 +157,7 @@ class SyncClient(
         val response = client.newCall(request).execute()
         val body = response.body?.string() ?: throw SyncClientException("Empty response body")
         if (!response.isSuccessful) {
-            throw SyncClientException("HTTP ${response.code}: $body")
+            throw SyncClientException("HTTP ${response.code}: $body", response.code)
         }
         return json.decodeFromString(body)
     }
@@ -167,9 +167,9 @@ class SyncClient(
         val response = client.newCall(request).execute()
         if (!response.isSuccessful) {
             val body = response.body?.string() ?: ""
-            throw SyncClientException("HTTP ${response.code}: $body")
+            throw SyncClientException("HTTP ${response.code}: $body", response.code)
         }
     }
 }
 
-class SyncClientException(message: String) : Exception(message)
+class SyncClientException(message: String, val statusCode: Int? = null) : Exception(message)
