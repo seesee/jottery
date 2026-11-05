@@ -85,6 +85,35 @@ struct LocalSafetyTests {
         #expect(protected == [dir.path, path, path + "-wal", path + "-shm"])
     }
 
+    /// Before opening for a vault that's already there, and after for one that's
+    /// new, because the first run has only just created the files.
+    @Test func openingTheVaultsDatabaseProtectsItsFilesBothTimes() throws {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("jottery-protection-tests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let path = dir.appendingPathComponent("test.db").path
+        _ = try DatabaseManager(path: path)
+
+        var protected: [String] = []
+        _ = try DatabaseManager(protecting: path) { protected.append($0) }
+
+        #expect(protected.filter { $0 == path }.count == 2)
+    }
+
+    /// What's waiting in the shared inbox is plaintext, and a wipe that left it
+    /// behind would keep what the user asked to have removed.
+    @Test func wipingRemovesWhatTheShareExtensionLeft() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("jottery-wipe-tests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try SharedInboxStore.write(text: "shared", urls: [], files: [], in: root)
+        let state = try makeUnlockedState()
+
+        state.wipeAllData(sharedInboxRoot: root)
+
+        #expect(SharedInboxStore.pendingItems(in: root).isEmpty)
+    }
+
     // MARK: - Filenames at rest (R2-070, R2-092)
 
     @Test func anAttachmentsNameDoesntReachThePlaintextColumn() throws {
@@ -253,6 +282,22 @@ struct LocalSafetyTests {
         let key = try #require(state.keyManager.masterKey)
         #expect(try state.noteRepo?.get(id: note.id, key: key)?.content == "the edit")
         #expect(state.pendingEditorNote == nil)
+    }
+
+    /// It's the only copy of the edit, so failing again mustn't lose it.
+    @Test func aFlushThatFailsKeepsTheEdit() async throws {
+        let state = try makeUnlockedState()
+        let note = try #require(try state.createNote(content: "before"))
+        var fields = NoteEditorFields(note: note)
+        fields.content = "the edit"
+        try await state.db?.dbPool.write { db in
+            try db.execute(sql: "CREATE TRIGGER no_writes BEFORE UPDATE ON notes BEGIN SELECT RAISE(ABORT, 'disk full'); END")
+        }
+        state.saveEditorEdit(fields)
+
+        #expect(!state.flushPendingEditorNote())
+
+        #expect(state.pendingEditorNote?.content == "the edit")
     }
 
     @Test func aSuccessfulSaveClearsWhatWasStaged() throws {

@@ -8,15 +8,21 @@ final class DatabaseManager: Sendable {
     let dbPool: DatabasePool
 
     /// Initialise with the default application support path.
-    init() throws {
-        let path = try DatabaseManager.databasePath()
-        try Self.protectFiles(ofDatabaseAt: path)
+    convenience init() throws {
+        try self.init(protecting: DatabaseManager.databasePath())
+    }
+
+    /// Open the vault's own database, with its files protected.
+    /// - Parameter protect: replaces the attribute being set. Only used by tests,
+    ///   because the simulator doesn't keep it.
+    init(protecting path: String, protect: (String) throws -> Void = DatabaseManager.protectFile) throws {
+        try Self.protectFiles(ofDatabaseAt: path, protect: protect)
         var config = Configuration()
         config.foreignKeysEnabled = true
         dbPool = try DatabasePool(path: path, configuration: config)
         try migrate()
         // The first run has only just created these.
-        try Self.protectFiles(ofDatabaseAt: path)
+        try Self.protectFiles(ofDatabaseAt: path, protect: protect)
     }
 
     /// Initialise with a specific path (for testing).
@@ -63,6 +69,10 @@ final class DatabaseManager: Sendable {
     /// running. New files in the directory, like the WAL, take the same class.
     static let fileProtection = FileProtectionType.completeUnlessOpen
 
+    static func protectFile(_ path: String) throws {
+        try FileManager.default.setAttributes([.protectionKey: fileProtection], ofItemAtPath: path)
+    }
+
     /// Apply `fileProtection` to the database's directory and files. The files
     /// stay in device backups on purpose: a vault that doesn't sync has no
     /// other copy, and notes in a backup are encrypted with the vault's key.
@@ -70,9 +80,7 @@ final class DatabaseManager: Sendable {
     /// `protect` is replaced in tests: the simulator ignores file protection.
     static func protectFiles(
         ofDatabaseAt path: String,
-        protect: (String) throws -> Void = {
-            try FileManager.default.setAttributes([.protectionKey: fileProtection], ofItemAtPath: $0)
-        }
+        protect: (String) throws -> Void = protectFile
     ) throws {
         try protect((path as NSString).deletingLastPathComponent)
         for file in [path, path + "-wal", path + "-shm"] where FileManager.default.fileExists(atPath: file) {
