@@ -22,6 +22,12 @@
             "value": "Close"
           }
         },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
@@ -106,6 +112,12 @@
           }
         },
         "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This couldn't be saved to Jottery."
+          }
+        },
+        "en-US": {
           "stringUnit": {
             "state": "translated",
             "value": "This couldn't be saved to Jottery."
@@ -200,6 +212,12 @@
             "value": "Some of this couldn't be saved. The rest will be added next time you unlock Jottery."
           }
         },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some of this couldn't be saved. The rest will be added next time you unlock Jottery."
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
@@ -289,6 +307,12 @@
             "value": "Saved. It stays unencrypted on this device until you next unlock Jottery."
           }
         },
+        "en-US": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved. It stays unencrypted on this device until you next unlock Jottery."
+          }
+        },
         "es": {
           "stringUnit": {
             "state": "translated",
@@ -373,6 +397,12 @@
           }
         },
         "en-GB": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saving to Jottery…"
+          }
+        },
+        "en-US": {
           "stringUnit": {
             "state": "translated",
             "value": "Saving to Jottery…"
