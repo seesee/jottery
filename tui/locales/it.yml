@@ -235,6 +235,7 @@ sync:
   device_still_registered: "Disconnesso qui, ma non è stato possibile avvisare il server, quindi la chiave di questo dispositivo funziona ancora. Revocala nel portale utente."
 
 # Posta in arrivo
+  stopped_unexpectedly: "La sincronizzazione si è interrotta inaspettatamente. Non è andato perso nulla e verrà ritentata."
 inbox:
   title: "Posta in arrivo"
   empty: "La posta in arrivo è vuota. Le note inviate tramite l'API Inbox appariranno qui."

@@ -235,6 +235,7 @@ sync:
   device_still_registered: "Burada bağlantı kesildi, ancak sunucuya bildirilemedi, bu yüzden bu cihazın anahtarı hâlâ çalışıyor. Kullanıcı portalından iptal edin."
 
 # Gelen Kutusu
+  stopped_unexpectedly: "Eşitleme beklenmedik şekilde durdu. Hiçbir şey kaybolmadı, yeniden denenecek."
 inbox:
   title: "Gelen Kutusu"
   empty: "Gelen kutusu boş. Gelen Kutusu API'si üzerinden gönderilen notlar burada görünecek."

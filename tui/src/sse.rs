@@ -35,6 +35,16 @@ pub struct SseHandle {
 }
 
 impl SseHandle {
+    /// A handle with these messages waiting, and no thread behind it.
+    #[cfg(test)]
+    pub fn holding(messages: Vec<SseMessage>) -> Self {
+        let (sender, receiver) = mpsc::channel();
+        for message in messages {
+            sender.send(message).unwrap();
+        }
+        Self { receiver, stop_flag: Arc::default(), thread_handle: None }
+    }
+
     /// Check for pending messages without blocking
     pub fn try_recv(&self) -> Option<SseMessage> {
         self.receiver.try_recv().ok()

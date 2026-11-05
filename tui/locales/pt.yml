@@ -235,6 +235,7 @@ sync:
   device_still_registered: "Desligado aqui, mas não foi possível avisar o servidor, por isso a chave deste dispositivo ainda funciona. Revogue-a no portal do utilizador."
 
 # Caixa de entrada
+  stopped_unexpectedly: "A sincronização parou inesperadamente. Nada se perdeu e será tentada de novo."
 inbox:
   title: "Caixa de entrada"
   empty: "A caixa de entrada está vazia. Notas enviadas via API da caixa de entrada aparecerão aqui."

@@ -235,6 +235,7 @@ sync:
   device_still_registered: "Odłączono tutaj, ale nie udało się powiadomić serwera, więc klucz tego urządzenia nadal działa. Unieważnij go w portalu użytkownika."
 
 # Skrzynka odbiorcza
+  stopped_unexpectedly: "Synchronizacja nieoczekiwanie się zatrzymała. Nic nie zostało utracone, a próba zostanie ponowiona."
 inbox:
   title: "Skrzynka odbiorcza"
   empty: "Skrzynka odbiorcza jest pusta. Notatki przesłane przez API skrzynki odbiorczej pojawią się tutaj."

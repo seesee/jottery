@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::super::app::App;
-use super::super::state::{AppState, InputMode};
+use super::super::state::{AppState, InputMode, ViewMode};
 
 /// Load notes from database, preserving current selection via persisted ID
 ///
@@ -35,6 +35,17 @@ pub fn load_notes(app: &mut App) -> Result<()> {
         app.keep_selection_on_note();
     }
     Ok(())
+}
+
+/// Reload whichever list is showing: the bin holds different notes from the rest.
+pub fn load_current_view(app: &mut App) -> Result<()> {
+    if matches!(app.view_mode, ViewMode::RecycleBin) {
+        load_deleted_notes(app)?;
+        app.notes_loaded();
+        app.keep_selection_on_note();
+        return Ok(());
+    }
+    load_notes(app)
 }
 
 /// Save current note

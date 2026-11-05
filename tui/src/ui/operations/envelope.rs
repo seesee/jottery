@@ -26,6 +26,7 @@ use crate::{
 };
 
 use super::super::app::App;
+use super::sync::SyncLink;
 
 /// How many times to read the key again after losing a race for it. Each loss means
 /// another device has just written, so a few rounds is plenty.
@@ -207,9 +208,12 @@ pub fn adopt_account_key(
 }
 
 /// This device's connection to its account, if it has one: endpoint, API key, userId.
-fn connection_details(app: &App, master_key: &[u8; 32]) -> Result<Option<(String, String, String)>> {
-    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
-    let Some(metadata) = SyncRepository::new(db.connection()).get_metadata()? else {
+fn connection_details(
+    conn: &Connection,
+    crypto: &CryptoService,
+    master_key: &[u8; 32],
+) -> Result<Option<(String, String, String)>> {
+    let Some(metadata) = SyncRepository::new(conn).get_metadata()? else {
         return Ok(None);
     };
 
@@ -224,7 +228,7 @@ fn connection_details(app: &App, master_key: &[u8; 32]) -> Result<Option<(String
 
     let api_key: EncryptedData = serde_json::from_str(&api_key)
         .context("Failed to parse encrypted API key JSON")?;
-    let api_key = app.crypto.decrypt_text(&api_key, master_key)?;
+    let api_key = crypto.decrypt_text(&api_key, master_key)?;
 
     Ok(Some((metadata.sync_endpoint, api_key, user_id)))
 }
@@ -253,20 +257,39 @@ fn may_replace_unreadable(metadata: &SyncMetadata, fingerprint: Option<&str>) ->
 /// would damage the account.
 pub fn repair_server_key(app: &mut App, notes_password: &str) -> Result<()> {
     let master_key = app.key.ok_or_else(|| anyhow::anyhow!("Vault is locked"))?;
-
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
-    let metadata = SyncRepository::new(db.connection()).get_metadata()?.unwrap_or_default();
+
+    let debug_log = app.debug_log.clone();
+    let log = move |message: &str| crate::ui::app::write_debug_log(&debug_log, message);
+
+    let notice = check_server_key(db.connection(), &app.crypto, &master_key, notes_password, &SyncLink::default(), &log)?;
+    if let Some(notice) = notice {
+        app.error = Some(notice);
+    }
+    Ok(())
+}
+
+/// The work of `repair_server_key`, which needs nothing but the database, so a background
+/// sync can do it. Returns anything the user has to be told.
+pub(crate) fn check_server_key(
+    conn: &Connection,
+    crypto: &CryptoService,
+    master_key: &[u8; 32],
+    notes_password: &str,
+    link: &SyncLink,
+    log: &dyn Fn(&str),
+) -> Result<Option<String>> {
+    let metadata = SyncRepository::new(conn).get_metadata()?.unwrap_or_default();
     if metadata.last_sync_at.is_none() {
-        return Ok(());
+        return Ok(None);
     }
 
-    let Some((endpoint, api_key, user_id)) = connection_details(app, &master_key)? else {
-        return Ok(());
+    let Some((endpoint, api_key, user_id)) = connection_details(conn, crypto, master_key)? else {
+        return Ok(None);
     };
 
     let client = AuthClient::new(endpoint);
     let account = Account { client: &client, api_key: &api_key, user_id: &user_id };
-    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
 
     // Losing a race means another device has just written the key. What it wrote is
     // judged afresh, except that a blob that still won't open is then known not to be
@@ -274,42 +297,40 @@ pub fn repair_server_key(app: &mut App, notes_password: &str) -> Result<()> {
     let mut lost_a_race = false;
 
     for _ in 0..KEY_WRITE_ATTEMPTS {
-        let found = inspect_server_key(&app.crypto, &account, notes_password, &master_key)?;
+        let found = inspect_server_key(crypto, &account, notes_password, master_key)?;
 
         let purpose = match found.state {
             ServerKey::Matches => {
-                remember_server_key(db.connection(), found.fingerprint, false)?;
-                return Ok(());
+                link.write(|| remember_server_key(conn, found.fingerprint, false))?;
+                return Ok(None);
             }
             ServerKey::Differs => {
-                remember_server_key(db.connection(), found.fingerprint, false)?;
-                app.error = Some(t!("envelope.diverged").to_string());
-                return Ok(());
+                link.write(|| remember_server_key(conn, found.fingerprint, false))?;
+                return Ok(Some(t!("envelope.diverged").to_string()));
             }
-            ServerKey::Unknown => return Ok(()),
+            ServerKey::Unknown => return Ok(None),
             ServerKey::Missing => KeyWrite::First,
             ServerKey::Unreadable if !lost_a_race && may_replace_unreadable(&metadata, found.fingerprint.as_deref()) => {
                 KeyWrite::Repair { updated_at: found.updated_at.as_deref() }
             }
             ServerKey::Unreadable => {
                 let seen = if lost_a_race { found.fingerprint } else { metadata.server_key_seen };
-                remember_server_key(db.connection(), seen, false)?;
-                app.error = Some(t!("envelope.password_changed_elsewhere").to_string());
-                return Ok(());
+                link.write(|| remember_server_key(conn, seen, false))?;
+                return Ok(Some(t!("envelope.password_changed_elsewhere").to_string()));
             }
         };
 
-        match upload_wrapped_key(&app.crypto, &account, notes_password, &master_key, purpose)? {
+        match upload_wrapped_key(crypto, &account, notes_password, master_key, purpose)? {
             Upload::Stored(fingerprint) => {
-                remember_server_key(db.connection(), Some(fingerprint), false)?;
-                app.debug_log("[Envelope] Gave the server a wrapped key the notes password can open");
-                return Ok(());
+                link.write(|| remember_server_key(conn, Some(fingerprint), false))?;
+                log("[Envelope] Gave the server a wrapped key the notes password can open");
+                return Ok(None);
             }
             Upload::Lost => lost_a_race = true,
         }
     }
 
-    Ok(())
+    Ok(None)
 }
 
 /// Why a device left the server's wrapped key alone after a password change.
@@ -328,10 +349,10 @@ fn rewrap_on_server(
     new_password: &str,
     master_key: &[u8; 32],
 ) -> Result<Rewrap> {
-    let Some((endpoint, api_key, user_id)) = connection_details(app, master_key)? else {
+    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
+    let Some((endpoint, api_key, user_id)) = connection_details(db.connection(), &app.crypto, master_key)? else {
         return Ok(Rewrap::Done);
     };
-    let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
     let metadata = SyncRepository::new(db.connection()).get_metadata()?.unwrap_or_default();
 
     let client = AuthClient::new(endpoint);
@@ -386,6 +407,9 @@ pub fn change_password(
     new_password: &str,
     master_key: &[u8; 32],
 ) -> Result<()> {
+    // A running sync holds the old password, and it may be about to use it on the server
+    super::sync::cancel_background_sync(app);
+
     {
         let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
         vault::store_local_envelope(db.connection(), &app.crypto, new_password, master_key)?;

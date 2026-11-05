@@ -235,6 +235,7 @@ sync:
   device_still_registered: "Hier getrennt, aber der Server konnte nicht benachrichtigt werden, daher funktioniert der Schlüssel dieses Geräts weiterhin. Widerrufen Sie ihn im Benutzerportal."
 
 # Posteingang
+  stopped_unexpectedly: "Die Synchronisierung wurde unerwartet beendet. Es ging nichts verloren, und sie wird erneut versucht."
 inbox:
   title: "Posteingang"
   empty: "Posteingang ist leer. Notizen, die über die Posteingang-API eingereicht werden, erscheinen hier."

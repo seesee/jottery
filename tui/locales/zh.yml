@@ -235,6 +235,7 @@ sync:
   device_still_registered: "已在此处断开，但无法通知服务器，因此此设备的密钥仍然有效。请在用户门户中撤销。"
 
 # 收件箱
+  stopped_unexpectedly: "同步意外停止。没有丢失任何内容,将会重试。"
 inbox:
   title: "收件箱"
   empty: "收件箱为空。通过收件箱 API 提交的笔记将显示在这里。"

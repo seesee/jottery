@@ -235,6 +235,7 @@ sync:
   device_still_registered: "Desconectado aquí, pero no se ha podido avisar al servidor, así que la clave de este dispositivo sigue funcionando. Revócala en el portal de usuario."
 
 # Bandeja de entrada
+  stopped_unexpectedly: "La sincronización se detuvo inesperadamente. No se ha perdido nada y volverá a intentarse."
 inbox:
   title: "Bandeja de entrada"
   empty: "La bandeja de entrada está vacía. Las notas enviadas a través de la API de bandeja de entrada aparecerán aquí."

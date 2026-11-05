@@ -235,6 +235,7 @@ sync:
   device_still_registered: "Déconnecté ici, mais le serveur n'a pas pu être prévenu : la clé de cet appareil fonctionne encore. Révoquez-la dans le portail utilisateur."
 
 # Boîte de réception
+  stopped_unexpectedly: "La synchronisation s'est arrêtée de façon inattendue. Rien n'a été perdu et elle sera relancée."
 inbox:
   title: "Boîte de réception"
   empty: "La boîte de réception est vide. Les notes soumises via l'API de boîte de réception apparaîtront ici."

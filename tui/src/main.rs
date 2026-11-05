@@ -1466,6 +1466,7 @@ fn run() -> Result<()> {
 
     // Create app
     let mut app = App::new(db_path, debug_log)?;
+    app.enable_background_sync();
 
     // Try auto-unlock if password is stored
     if let Ok(true) = app.try_auto_unlock() {
@@ -1527,144 +1528,16 @@ fn run() -> Result<()> {
                 needs_draw = app.on_tick();
             }
             ui::Event::Mouse(mouse) => {
-                use crossterm::event::{MouseEventKind, MouseButton};
-                use ui::state::{AppState, ViewMode, InputMode, FocusedPanel};
-
                 needs_draw = true;
                 app.register_activity();
-
-                match mouse.kind {
-                    MouseEventKind::ScrollUp => {
-                        // Scroll preview up 3 lines
-                        app.preview_scroll_offset = app.preview_scroll_offset.saturating_sub(3);
-                    }
-                    MouseEventKind::ScrollDown => {
-                        // Scroll preview down 3 lines
-                        app.preview_scroll_offset = app.preview_scroll_offset.saturating_add(3);
-                    }
-                    MouseEventKind::Down(MouseButton::Left) => {
-                        // Only handle clicks in NoteList state
-                        if !matches!(app.state, AppState::NoteList) {
-                            continue;
-                        }
-                        if !matches!(app.view_mode, ViewMode::NoteList) {
-                            continue;
-                        }
-                        if app.search_active {
-                            // Clicking outside search exits search mode
-                            app.search_active = false;
-                        }
-
-                        let x = mouse.column;
-                        let y = mouse.row;
-
-                        // Check if click is in note list area
-                        if let Some(area) = app.note_list_area {
-                            if x >= area.x && x < area.x + area.width
-                                && y >= area.y && y < area.y + area.height
-                            {
-                                // Notes are several rows tall and the list scrolls, so
-                                // the row alone doesn't say which note this is
-                                if let Some(clicked_index) = app.note_at_row(y - area.y) {
-                                    if app.is_multi_select_mode {
-                                        // In multi-select mode, toggle selection
-                                        app.toggle_note_selection(clicked_index);
-                                    } else {
-                                        // Normal mode: select the note
-                                        app.selected_note = clicked_index;
-                                        app.selected_note_id = app.filtered_notes().get(clicked_index).map(|n| n.id.clone());
-                                        app.preview_scroll_offset = 0;
-                                        app.focused_panel = FocusedPanel::NoteContent;
-                                    }
-                                }
-                                continue;
-                            }
-                        }
-
-                        // Check if click is on tags line (for entering tag mode)
-                        if let Some(area) = app.tags_line_area {
-                            if y == area.y && x >= area.x && x < area.x + area.width {
-                                // Check if click is on a specific tag (for search)
-                                let mut found_tag = None;
-                                for (tag_name, tag_start, tag_end) in &app.tag_positions {
-                                    if x >= *tag_start && x < *tag_end {
-                                        found_tag = Some(tag_name.clone());
-                                        break;
-                                    }
-                                }
-
-                                if let Some(tag) = found_tag {
-                                    // Click on a tag: search for it
-                                    app.search_input = format!("#{}", tag);
-                                    app.invalidate_filter_cache();
-                                    app.search_active = true;
-                                    app.select_note_at(0);
-                                } else {
-                                    // Click on "Tags:" label or empty area: enter tag mode
-                                    let filtered = app.filtered_notes();
-                                    if !filtered.is_empty() && app.selected_note < filtered.len() {
-                                        let note = &filtered[app.selected_note];
-                                        let note_id = note.id.clone();
-                                        let content = note.content.clone();
-                                        let syntax_lang = note.syntax_language;
-                                        let tags = note.tags.clone();
-
-                                        app.note_input = content;
-                                        app.note_syntax = syntax_lang;
-                                        app.current_tags = tags;
-                                        app.editing_note_id = Some(note_id);
-                                        app.state = AppState::NoteView;
-                                        app.input_mode = InputMode::Tag;
-                                        app.tag_input.clear();
-                                    }
-                                }
-                                continue;
-                            }
-                        }
-
-                        // Check if click is on a note link in the preview area
-                        if let Some(_preview_area) = app.preview_area {
-                            let mut found_link = None;
-                            for (note_id, link_y, link_x_start, link_x_end) in &app.note_link_positions {
-                                if y == *link_y && x >= *link_x_start && x < *link_x_end {
-                                    found_link = Some(note_id.clone());
-                                    break;
-                                }
-                            }
-
-                            if let Some(target_note_id) = found_link {
-                                // Navigate to the linked note
-                                // Find the note in the full notes list and update selection
-                                let notes = app.filtered_notes();
-                                if let Some(idx) = notes.iter().position(|n| n.id == target_note_id) {
-                                    app.selected_note = idx;
-                                    app.selected_note_id = Some(target_note_id);
-                                    app.preview_scroll_offset = 0;
-                                    app.focused_panel = FocusedPanel::NoteContent;
-                                } else {
-                                    // Note not in current filter, clear search and try again
-                                    app.search_input.clear();
-                                    app.invalidate_filter_cache();
-                                    app.search_active = false;
-                                    let all_notes = app.filtered_notes();
-                                    if let Some(idx) = all_notes.iter().position(|n| n.id == target_note_id) {
-                                        app.selected_note = idx;
-                                        app.selected_note_id = Some(target_note_id);
-                                        app.preview_scroll_offset = 0;
-                                        app.focused_panel = FocusedPanel::NoteContent;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    _ => {}
-                }
+                app.handle_mouse(mouse);
             }
         }
     }
 
     // Clean exit
     tui.exit()?;
+    app.wait_for_sync(std::time::Duration::from_secs(5));
 
     Ok(())
 }

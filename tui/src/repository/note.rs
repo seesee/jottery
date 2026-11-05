@@ -414,12 +414,29 @@ impl<'a> NoteRepository<'a> {
         )
     }
 
-    /// The server has this note. If it changed again since being read for the push,
-    /// that later change still counts as pending.
-    pub fn mark_pushed(&self, id: &str, modified_at: DateTime<Utc>, synced_at: DateTime<Utc>) -> Result<()> {
+    /// The server has this note as `pushed`. If it changed again since being read for
+    /// the push, that later change still counts as pending. A pin or a colour leaves
+    /// modified_at alone, so the hash has to match too, and nobody's hash covers deleted.
+    pub fn mark_pushed(&self, pushed: &Note, synced_at: DateTime<Utc>) -> Result<()> {
         self.conn.execute(
-            "UPDATE notes SET needs_sync = 0, synced_at = ?1 WHERE id = ?2 AND modified_at = ?3",
-            params![synced_at.to_rfc3339(), id, modified_at.to_rfc3339()],
+            "UPDATE notes SET needs_sync = 0, synced_at = ?1
+             WHERE id = ?2 AND modified_at = ?3 AND content_hash IS ?4 AND deleted = ?5",
+            params![
+                synced_at.to_rfc3339(),
+                &pushed.id,
+                pushed.modified_at.to_rfc3339(),
+                &pushed.content_hash,
+                pushed.deleted as i32,
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// Give a note from an older build its first hash, unless it's changed and got one.
+    pub fn set_first_hash(&self, id: &str, hash: &str, chain: &[String]) -> Result<()> {
+        self.conn.execute(
+            "UPDATE notes SET content_hash = ?1, hash_chain = ?2 WHERE id = ?3 AND content_hash IS NULL",
+            params![hash, serde_json::to_string(chain)?, id],
         )?;
         Ok(())
     }
@@ -788,9 +805,38 @@ mod tests {
         later.touch();
         repo.update(&later, &key).unwrap();
 
-        repo.mark_pushed(&note.id, note.modified_at, Utc::now()).unwrap();
+        repo.mark_pushed(&note, Utc::now()).unwrap();
 
         assert!(repo.get(&note.id, &key).unwrap().unwrap().needs_sync);
+    }
+
+    /// A pin leaves modified_at alone, so that can't be what tells the two apart.
+    #[test]
+    fn a_pin_made_while_pushing_stays_pending() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+        repo.create(&Note::new("Sent".to_string()), &key).unwrap();
+        let sent = repo.get_pending(&key).unwrap().notes.remove(0);
+
+        let mut pinned = sent.clone();
+        pinned.pinned = true;
+        repo.update(&pinned, &key).unwrap();
+
+        repo.mark_pushed(&sent, Utc::now()).unwrap();
+
+        assert!(repo.get(&sent.id, &key).unwrap().unwrap().needs_sync);
+    }
+
+    #[test]
+    fn a_note_unchanged_since_the_push_is_no_longer_pending() {
+        let (db, key) = setup_test_db();
+        let repo = NoteRepository::new(db.connection());
+        repo.create(&Note::new("Sent".to_string()), &key).unwrap();
+        let sent = repo.get_pending(&key).unwrap().notes.remove(0);
+
+        repo.mark_pushed(&sent, Utc::now()).unwrap();
+
+        assert!(!repo.get(&sent.id, &key).unwrap().unwrap().needs_sync);
     }
 
     #[test]

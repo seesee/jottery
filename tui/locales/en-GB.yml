@@ -257,6 +257,7 @@ sync:
   device_still_registered: "Disconnected here, but the server couldn't be told, so this device's key still works. Revoke it in the user portal."
 
 # Inbox
+  stopped_unexpectedly: "The sync stopped unexpectedly. Nothing was lost, and it will try again."
 inbox:
   title: "Inbox"
   empty: "Inbox is empty. Notes submitted via the Inbox API will appear here."

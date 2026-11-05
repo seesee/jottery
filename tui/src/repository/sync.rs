@@ -114,6 +114,22 @@ impl<'a> SyncRepository<'a> {
         Ok(())
     }
 
+    /// Record a finished sync. Only what a sync owns goes here. Settings and the server
+    /// key's state can change while a sync runs, and this mustn't put them back.
+    pub fn record_finished_sync(&self, metadata: &SyncMetadata) -> Result<()> {
+        self.conn.execute(
+            "UPDATE sync_metadata SET last_sync_at = ?1, last_push_at = ?2, last_pull_at = ?3, pull_cursor = ?4
+             WHERE id = 1",
+            params![
+                metadata.last_sync_at.map(|dt| dt.to_rfc3339()),
+                metadata.last_push_at.map(|dt| dt.to_rfc3339()),
+                metadata.last_pull_at.map(|dt| dt.to_rfc3339()),
+                &metadata.pull_cursor,
+            ],
+        )?;
+        Ok(())
+    }
+
     /// Save how far the pull has got. A page and this go in one transaction, so a crash
     /// can only repeat a page, never lose one.
     pub fn set_pull_cursor(&self, cursor: Option<&str>) -> Result<()> {

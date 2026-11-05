@@ -235,6 +235,7 @@ sync:
   device_still_registered: "Hier losgekoppeld, maar de server kon niet worden bereikt, dus de sleutel van dit apparaat werkt nog. Trek hem in via het gebruikersportaal."
 
 # Postvak IN
+  stopped_unexpectedly: "De synchronisatie is onverwacht gestopt. Er is niets verloren gegaan en het wordt opnieuw geprobeerd."
 inbox:
   title: "Postvak IN"
   empty: "Postvak IN is leeg. Notities ingediend via de Postvak IN API verschijnen hier."

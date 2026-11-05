@@ -204,6 +204,13 @@ fn point_sync_at(app: &mut App, endpoint: &str) -> Result<()> {
     let sync_repo = SyncRepository::new(db.connection());
     if let Some(mut metadata) = sync_repo.get_metadata()? {
         if metadata.sync_endpoint != endpoint {
+            // What it's fetching belongs to the old address
+            super::sync::cancel_background_sync(app);
+            let Some(db) = &app.db else {
+                return Ok(());
+            };
+            let sync_repo = SyncRepository::new(db.connection());
+
             metadata.sync_endpoint = endpoint.to_string();
             metadata.pull_cursor = None;
             metadata.last_pull_at = None;
@@ -307,6 +314,7 @@ pub fn disconnect_from_sync(app: &mut App) -> Result<()> {
 
     // Stop SSE connection since we're disabling sync
     app.stop_sse();
+    super::sync::cancel_background_sync(app);
 
     let revoked = revoke_this_device(app);
     if let Err(e) = &revoked {
@@ -429,6 +437,9 @@ pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &st
     let local_key = app.key.ok_or_else(|| anyhow::anyhow!("No encryption key"))?;
 
     let client = crate::api::AuthClient::new(endpoint.to_string());
+
+    // A sync still running belongs to whatever this device was connected to before
+    super::sync::cancel_background_sync(app);
 
     app.debug_log("[Register] Starting device registration");
 

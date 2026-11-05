@@ -104,6 +104,30 @@ impl<'a> AttachmentRepository<'a> {
         Ok(ids)
     }
 
+    /// Attachments the notes here refer to whose files this device doesn't hold.
+    ///
+    /// The list reads the notes' own attachment column, which isn't encrypted here. A
+    /// note in the bin counts, as it can be restored.
+    pub fn list_missing_blobs(&self) -> Result<Vec<crate::models::Attachment>> {
+        let held: std::collections::HashSet<String> = self.list_ids()?.into_iter().collect();
+
+        let mut stmt = self.conn.prepare("SELECT attachments FROM notes WHERE attachments != '[]'")?;
+        let lists = stmt.query_map([], |row| row.get::<_, String>(0))?;
+
+        let mut seen = std::collections::HashSet::new();
+        let mut missing = Vec::new();
+        for list in lists {
+            let attachments: Vec<crate::models::Attachment> = serde_json::from_str(&list?).unwrap_or_default();
+            for attachment in attachments {
+                if !held.contains(&attachment.id) && seen.insert(attachment.id.clone()) {
+                    missing.push(attachment);
+                }
+            }
+        }
+
+        Ok(missing)
+    }
+
     /// Delete an attachment
     pub fn delete(&self, id: &str) -> Result<()> {
         self.conn

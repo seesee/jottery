@@ -148,6 +148,19 @@ pub struct App {
     pub(crate) sync_status_set_at: Option<Instant>,
     /// Automatic syncs wait until then, because the server asked or refused
     pub(crate) sync_paused_until: Option<Instant>,
+    /// Sync on a thread of its own, so a slow server can't freeze the screen. Only the
+    /// terminal app does: a CLI command waits for its result anyway.
+    pub(crate) sync_in_background: bool,
+    /// The sync running in the background
+    pub(crate) sync_job: Option<crate::ui::operations::sync::BackgroundSync>,
+    /// A sync was asked for that has to wait, and whether it's a forced one
+    pub(crate) sync_requested: Option<bool>,
+    /// When the list last caught up with a running sync
+    pub(crate) last_sync_absorb: Option<Instant>,
+    /// Keeps a background sync and this thread from changing the vault at the same time
+    pub(crate) sync_gate: crate::ui::operations::sync::VaultGate,
+    /// The next successful sync should look at the server's copy of the key
+    pub(crate) server_key_check_owed: bool,
     /// Current color scheme (cached from settings)
     pub color_scheme: crate::ui::ColorScheme,
     /// Cached color palette names (for color cycling without allocation)
@@ -356,6 +369,12 @@ impl App {
             last_auto_sync: None,
             sync_status_set_at: None,
             sync_paused_until: None,
+            sync_in_background: false,
+            sync_job: None,
+            sync_requested: None,
+            last_sync_absorb: None,
+            sync_gate: Default::default(),
+            server_key_check_owed: false,
             color_scheme: crate::ui::ColorScheme::default(),
             color_palette_cache: Vec::new(), // Populated when settings are loaded
             all_tags_cache: Vec::new(), // Populated when notes are loaded
@@ -474,6 +493,7 @@ impl App {
             }
         }
 
+        crate::ui::operations::sync::cancel_background_sync(self);
         self.stop_sse();
         self.key_manager.clear_master_key();
         if let Some(key) = self.key.as_mut() {
@@ -566,14 +586,38 @@ impl App {
         self.show_inbox_delete_confirm = false;
         self.show_inbox_delete_all_confirm = false;
         self.last_auto_sync = None;
+        self.server_key_check_owed = false;
 
         // Dropping the old state wipes any password held in it
         self.state = AppState::Locked;
         self.need_redraw = true;
     }
 
-    /// Handle key events
+    /// Handle a key press, holding off a background sync until it's finished with.
     pub fn handle_key(&mut self, key: KeyEvent) -> Result<()> {
+        let gate = self.sync_gate.clone();
+        let _held = gate.hold();
+        crate::ui::operations::sync::absorb_sync_changes(self);
+
+        let result = self.dispatch_key(key);
+
+        self.sync_gate.set_open_note(self.editing_note_id.as_deref());
+        result
+    }
+
+    /// Handle a mouse event, on the same terms as a key press.
+    pub fn handle_mouse(&mut self, mouse: crossterm::event::MouseEvent) {
+        let gate = self.sync_gate.clone();
+        let _held = gate.hold();
+        crate::ui::operations::sync::absorb_sync_changes(self);
+
+        input::mouse::handle_mouse(self, mouse);
+
+        self.sync_gate.set_open_note(self.editing_note_id.as_deref());
+    }
+
+    /// Handle key events
+    fn dispatch_key(&mut self, key: KeyEvent) -> Result<()> {
         if key.code == KeyCode::Char('l')
             && key.modifiers.contains(KeyModifiers::CONTROL)
             && self.is_unlocked()
@@ -926,6 +970,12 @@ impl App {
     /// Drawing a vault of notes isn't free, and this runs four times a second, so an
     /// idle app shouldn't redraw.
     pub fn on_tick(&mut self) -> bool {
+        // A sync is applying a page. The next tick is a moment away.
+        let gate = self.sync_gate.clone();
+        let Some(_held) = gate.try_hold() else {
+            return false;
+        };
+
         let status = self.sync_status.clone();
         let error = self.error.clone();
         let generation = self.notes_generation;
@@ -1038,12 +1088,33 @@ impl App {
         crate::ui::operations::sync::trigger_sync(self);
     }
 
+    /// Run syncs on their own thread from now on, as the terminal app does.
+    pub fn enable_background_sync(&mut self) {
+        self.sync_in_background = true;
+    }
+
+    /// Whether the user has a note open, whose text is in a buffer rather than the
+    /// database. A sync that starts now could change the note under them.
+    pub(crate) fn is_editing(&self) -> bool {
+        matches!(self.state, AppState::NoteView) || self.editing_note_id.is_some()
+    }
+
+    /// Wait a moment for a background sync on the way out, so that what was saved last
+    /// reaches the server now. If it doesn't, it's still pending for the next run.
+    pub fn wait_for_sync(&self, patience: std::time::Duration) {
+        if let Some(job) = &self.sync_job {
+            job.wait(patience);
+        }
+    }
+
     /// Check if auto-sync should run and trigger it if needed
     /// Also handles auto-clearing sync status after timeout
     /// Call this periodically (e.g., on Tick events) to enable background sync
     pub fn check_auto_sync(&mut self) {
-        // Auto-clear sync status after 5 seconds
-        if let Some(set_at) = self.sync_status_set_at {
+        crate::ui::operations::sync::poll_background_sync(self);
+
+        // Auto-clear sync status after 5 seconds. A running sync is still news.
+        if let (Some(set_at), None) = (self.sync_status_set_at, &self.sync_job) {
             let now = Instant::now();
             let elapsed = now.duration_since(set_at);
             if elapsed >= std::time::Duration::from_secs(5) {
@@ -1056,6 +1127,17 @@ impl App {
         // This must happen BEFORE the early returns below, as SSE should work
         // even when auto-sync interval is disabled (set to 0)
         self.check_sse_messages();
+
+        // Anything asked for while a note was open, or while another sync ran, goes now
+        if !self.sync_paused_until.is_some_and(|until| Instant::now() < until) {
+            crate::ui::operations::sync::start_requested_sync(self);
+        }
+
+        // A sync that started during an edit could change the note being edited, and one
+        // that's running already covers what this would do
+        if self.is_editing() || self.sync_job.is_some() {
+            return;
+        }
 
         // Check if auto-sync is enabled (interval > 0)
         if self.settings.auto_sync_interval_minutes <= 0 {
@@ -1239,9 +1321,9 @@ impl App {
             }
         }
 
-        // Trigger sync if we received a notification
+        // Waits its turn, as the note the user has open is what might change
         if should_sync {
-            self.trigger_sync();
+            self.sync_requested = Some(self.sync_requested.unwrap_or(false));
         }
     }
 

@@ -234,16 +234,12 @@ pub fn unlock(app: &mut App) -> Result<()> {
     // Start SSE connection for real-time sync notifications
     app.start_sse_if_enabled();
 
+    // Once the device has the password and a sync behind it, it can repair the server's
+    // copy of the key if an older client left it unreadable
+    app.server_key_check_owed = true;
+
     // Trigger an immediate sync to fetch inbox items and any pending changes
     app.trigger_sync();
-
-    // Now the device has the password and a sync behind it, it can repair the
-    // server's copy of the key if an older client left it unreadable
-    if let Some(password) = app.unlock_password.clone() {
-        if let Err(e) = super::envelope::repair_server_key(app, &password) {
-            app.debug_log(&format!("Unlock - Could not check the server's wrapped key: {}", e));
-        }
-    }
 
     Ok(())
 }
