@@ -143,10 +143,11 @@ async fn a_full_account_can_still_make_room() {
     // Permanent deletion
     let (status, body) = raw_push(
         &f,
-        json!({ "deletions": [{ "id": first, "deletedAt": "2099-01-01T00:00:00Z" }] }),
+        json!({ "deletions": [{ "id": first, "deletedAt": chrono::Utc::now().to_rfc3339() }] }),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["rejectedDeletions"], json!([]));
 
     // Moving a note to the bin
     let mut binned = note(&second, "binned", TIME);
