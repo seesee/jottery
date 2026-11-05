@@ -976,6 +976,22 @@ struct SyncProtocolTests {
         #expect(!changes.removedByServerIds.contains(note.id))
     }
 
+    /// An answer is the server's word on a note, whatever else the response names.
+    @Test func aNoteTheServerAnsweredForIsntBinnedForBeingNamedAsWell() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "accepted and named", key: key)
+        ScriptedServerProtocol.pushHandler = { request in
+            var response = SyncPushResponse(accepted: request.notes.map { SyncAccepted(id: $0.id) }, rejected: [])
+            response.skippedDeleted = request.notes.map(\.id)
+            return .init(body: (try? JSONEncoder().encode(response)) ?? Data())
+        }
+
+        let changes = try await fixture.service.sync()
+
+        #expect(try #require(try fixture.repo.getRaw(id: note.id)).deleted == false)
+        #expect(!changes.removedByServerIds.contains(note.id))
+    }
+
     @Test func theServerCantSkipANoteItWasntSent() async throws {
         let fixture = try makeFixture()
         let bystander = try synced(fixture.repo)
