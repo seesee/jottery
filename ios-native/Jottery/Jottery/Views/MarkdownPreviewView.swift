@@ -2,6 +2,29 @@ import CryptoKit
 import SwiftUI
 import WebKit
 
+// MARK: - Preview Policy
+
+/// What a note's preview may do. A note is untrusted: it can come from the
+/// server, or from a pasted or imported file, and this web view has a bridge to
+/// native code that can open URLs and read decrypted attachments. The bundle
+/// sanitises what it renders and has a content security policy; this is the
+/// native half, which holds even if those were ever bypassed.
+enum PreviewPolicy {
+
+    /// `UIApplication.open` would otherwise follow any scheme a note names,
+    /// including `tel:` and other apps' own.
+    static func canOpenExternally(_ url: URL) -> Bool {
+        guard let scheme = url.scheme?.lowercased() else { return false }
+        return ["http", "https", "mailto"].contains(scheme)
+    }
+
+    /// The web view only ever shows the bundle itself.
+    static func allowsNavigation(to url: URL?, bundle: URL?, isMainFrame: Bool) -> Bool {
+        guard isMainFrame, let url, let bundle, url.isFileURL else { return false }
+        return url.standardizedFileURL.path == bundle.standardizedFileURL.path
+    }
+}
+
 // MARK: - Markdown Preview (WKWebView Bundle)
 
 /// Renders markdown content as HTML using a marked.js + highlight.js bundle in WKWebView.
@@ -25,6 +48,8 @@ struct MarkdownPreviewView: UIViewRepresentable {
 
         let config = WKWebViewConfiguration()
         config.userContentController = contentController
+        // Nothing a note does may outlive the preview, or reach another note's.
+        config.websiteDataStore = .nonPersistent()
 
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.isOpaque = false
@@ -34,12 +59,17 @@ struct MarkdownPreviewView: UIViewRepresentable {
 
         context.coordinator.webView = webView
 
-        // Load the preview bundle HTML from app resources
-        if let url = Bundle.main.url(forResource: "preview", withExtension: "html") {
-            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+        // Load the preview bundle HTML from app resources. It's a single file,
+        // so it needs to read nothing else from the app.
+        if let url = Self.bundleURL {
+            webView.loadFileURL(url, allowingReadAccessTo: url)
         }
 
         return webView
+    }
+
+    static var bundleURL: URL? {
+        Bundle.main.url(forResource: "preview", withExtension: "html")
     }
 
     func updateUIView(_ webView: WKWebView, context: Context) {
@@ -104,7 +134,8 @@ struct MarkdownPreviewView: UIViewRepresentable {
             _ userContentController: WKUserContentController,
             didReceive message: WKScriptMessage
         ) {
-            guard let body = message.body as? [String: Any],
+            guard message.frameInfo.isMainFrame,
+                  let body = message.body as? [String: Any],
                   let type = body["type"] as? String else { return }
 
             switch type {
@@ -126,7 +157,8 @@ struct MarkdownPreviewView: UIViewRepresentable {
 
             case "openLink":
                 guard let urlString = body["url"] as? String,
-                      let url = URL(string: urlString) else { return }
+                      let url = URL(string: urlString),
+                      PreviewPolicy.canOpenExternally(url) else { return }
                 UIApplication.shared.open(url)
 
             default:
@@ -134,16 +166,27 @@ struct MarkdownPreviewView: UIViewRepresentable {
             }
         }
 
-        // Prevent navigation away from the loaded bundle
+        // Prevent navigation away from the loaded bundle. A link the user taps
+        // opens outside the app, if it's one that may.
         func webView(
             _ webView: WKWebView,
             decidePolicyFor navigationAction: WKNavigationAction,
             decisionHandler: @escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void
         ) {
+            let url = navigationAction.request.url
             if navigationAction.navigationType == .linkActivated {
+                if let url, PreviewPolicy.canOpenExternally(url) {
+                    UIApplication.shared.open(url)
+                }
                 decisionHandler(.cancel)
-            } else {
+            } else if PreviewPolicy.allowsNavigation(
+                to: url,
+                bundle: MarkdownPreviewView.bundleURL,
+                isMainFrame: navigationAction.targetFrame?.isMainFrame ?? false
+            ) {
                 decisionHandler(.allow)
+            } else {
+                decisionHandler(.cancel)
             }
         }
 
@@ -151,6 +194,8 @@ struct MarkdownPreviewView: UIViewRepresentable {
 
         /// Find the AttachmentRef matching a requested ID (could match id, data, or filename).
         private func findAttachment(id: String) -> AttachmentRef? {
+            // An empty id is a prefix of everything.
+            guard !id.isEmpty else { return nil }
             return attachments.first { ref in
                 ref.id == id ||
                 ref.data == id ||
