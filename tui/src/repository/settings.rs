@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 use anyhow::Result;
 use rusqlite::{params, Connection, OptionalExtension};
-use base64::{Engine as _, engine::general_purpose};
 
 use crate::models::{SortOrder, Theme, UserSettings, ColorPalette};
 use crate::crypto::CryptoService;
@@ -60,21 +59,17 @@ impl<'a> SettingsRepository<'a> {
     pub fn get_with_key(&self, key: Option<&[u8; 32]>) -> Result<UserSettings> {
         let result = self.conn
             .query_row(
-                "SELECT language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint, auto_sync_interval_minutes, remember_password, stored_password, color_palette, tag_colors
+                "SELECT language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint, auto_sync_interval_minutes, remember_password, color_palette, tag_colors
                  FROM settings WHERE id = 1",
                 [],
                 |row| {
-                    // Decode stored password if present
-                    let stored_password: Option<String> = row.get(8)?;
-                    let decoded_password = stored_password.map(|p| decode_password(&p));
-
                     // Parse color_palette JSON if present
-                    let color_palette_json: Option<String> = row.get(9)?;
+                    let color_palette_json: Option<String> = row.get(8)?;
                     let color_palette = color_palette_json
                         .and_then(|json| serde_json::from_str(&json).ok());
 
                     // Parse tag_colors JSON if present
-                    let tag_colors_json: Option<String> = row.get(10)?;
+                    let tag_colors_json: Option<String> = row.get(9)?;
                     let tag_colors = tag_colors_json
                         .and_then(|json| serde_json::from_str(&json).ok());
 
@@ -87,7 +82,6 @@ impl<'a> SettingsRepository<'a> {
                         sync_endpoint: row.get(5)?,
                         auto_sync_interval_minutes: row.get::<_, Option<i32>>(6)?.unwrap_or(1),
                         remember_password: row.get::<_, Option<i32>>(7)?.unwrap_or(0) != 0,
-                        stored_password: decoded_password,
                         color_palette,
                         tag_colors,
                     };
@@ -118,7 +112,6 @@ impl<'a> SettingsRepository<'a> {
         settings.validate().map_err(|e| anyhow::anyhow!("{}", e))?;
 
         // Encode password if present
-        let encoded_password = settings.stored_password.as_ref().map(|p| encode_password(p));
 
         // Encrypt and serialize color_palette to JSON if present
         let color_palette_json = if let Some(palette) = &settings.color_palette {
@@ -139,8 +132,8 @@ impl<'a> SettingsRepository<'a> {
             .transpose()?;
 
         self.conn.execute(
-            "INSERT OR REPLACE INTO settings (id, language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint, auto_sync_interval_minutes, remember_password, stored_password, color_palette, tag_colors)
-             VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            "INSERT OR REPLACE INTO settings (id, language, theme, sort_order, auto_lock_timeout, sync_enabled, sync_endpoint, auto_sync_interval_minutes, remember_password, color_palette, tag_colors)
+             VALUES (1, ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             params![
                 &settings.language,
                 settings.theme.to_string(),
@@ -150,7 +143,6 @@ impl<'a> SettingsRepository<'a> {
                 &settings.sync_endpoint,
                 settings.auto_sync_interval_minutes,
                 settings.remember_password as i32,
-                &encoded_password,
                 &color_palette_json,
                 &tag_colors_json,
             ],
@@ -246,30 +238,3 @@ fn parse_sort_order(s: &str) -> SortOrder {
     }
 }
 
-/// Encode password with base64 for minimal obfuscation (NOT encryption)
-/// Note: This provides basic obfuscation only, not real security
-fn encode_password(password: &str) -> String {
-    general_purpose::STANDARD.encode(password.as_bytes())
-}
-
-/// Decode base64 encoded password
-/// Handles both encoded and plaintext for backward compatibility
-fn decode_password(stored: &str) -> String {
-    // Try to decode as base64
-    match general_purpose::STANDARD.decode(stored.as_bytes()) {
-        Ok(decoded) => {
-            // Successfully decoded, convert to string
-            match String::from_utf8(decoded) {
-                Ok(password) => password,
-                Err(_) => {
-                    // Not valid UTF-8 after decoding, assume it's plaintext
-                    stored.to_string()
-                }
-            }
-        }
-        Err(_) => {
-            // Not valid base64, assume it's plaintext (backward compatibility)
-            stored.to_string()
-        }
-    }
-}

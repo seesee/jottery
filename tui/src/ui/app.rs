@@ -777,7 +777,6 @@ impl App {
         if self.settings.remember_password {
             // Disable: clear stored password using the storage backend
             self.settings.remember_password = false;
-            self.settings.stored_password = None;
 
             // Delete stored password
             let _ = self.password_storage.delete();
@@ -811,7 +810,6 @@ impl App {
 
         // Update settings (note: we no longer store encrypted password in settings)
         self.settings.remember_password = true;
-        self.settings.stored_password = None; // No longer needed in settings
 
         if let Some(db) = &self.db {
             let settings_repo = SettingsRepository::new(db.connection());

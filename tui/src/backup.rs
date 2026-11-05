@@ -1713,12 +1713,10 @@ mod tests {
     #[test]
     fn settings_leave_secrets_and_sync_behind() {
         let mut settings = UserSettings::default();
-        settings.stored_password = Some("not for backups".to_string());
         settings.sync_endpoint = Some("https://example.com".to_string());
 
         let item = settings_for_backup(&settings).to_string();
 
-        assert!(!item.contains("not for backups"));
         assert!(!item.contains("example.com"));
     }
 

@@ -65,7 +65,6 @@ pub struct UserSettings {
     pub auto_sync_interval_minutes: i32, // Minutes between auto-syncs (0 = disabled)
     #[serde(default)]
     pub remember_password: bool, // Whether to store password for auto-unlock
-    pub stored_password: Option<String>, // Encrypted password (JSON encrypted data)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "colorPalette")]
     pub color_palette: Option<ColorPalette>, // User-customized color palette
@@ -221,7 +220,6 @@ impl UserSettings {
             sync_endpoint: None,
             auto_sync_interval_minutes: 1, // 1 minute for responsive sync
             remember_password: false, // Disabled by default for security
-            stored_password: None,
             color_palette: None, // Will use default palette if None
             tag_colors: None,    // No tag colors by default
         }

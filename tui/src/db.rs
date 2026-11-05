@@ -149,6 +149,7 @@ impl Database {
             (20, include_str!("../migrations/020_add_held_deletions.sql")),
             (21, include_str!("../migrations/021_language_follows_system.sql")),
             (22, include_str!("../migrations/022_add_saved_searches.sql")),
+            (23, include_str!("../migrations/023_clear_stored_password.sql")),
         ];
 
         // Run pending migrations
@@ -337,6 +338,25 @@ mod tests {
         db
     }
 
+    /// Older releases left this here, encrypted with a constant from the public source.
+    #[test]
+    fn upgrading_clears_a_password_left_in_the_settings() {
+        let conn = Connection::open_in_memory().unwrap();
+        let mut db = Database { conn };
+        db.migrate_to(22).unwrap();
+        db.conn.execute(
+            "INSERT OR REPLACE INTO settings (id, stored_password) VALUES (1, ?1)",
+            [uuid::Uuid::new_v4().to_string()],
+        ).unwrap();
+
+        db.run_migrations().unwrap();
+
+        let stored: Option<String> = db.conn
+            .query_row("SELECT stored_password FROM settings WHERE id = 1", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(stored, None);
+    }
+
     #[test]
     fn upgrading_keeps_every_note_and_finds_what_was_waiting_to_be_pushed() {
         let mut db = database_before_sync_state();
@@ -368,7 +388,7 @@ mod tests {
     fn test_in_memory_database() {
         let db = Database::in_memory(&test_password()).unwrap();
         assert!(db.is_initialized().unwrap() == false);
-        assert_eq!(db.schema_version().unwrap(), 21);
+        assert_eq!(db.schema_version().unwrap(), 23);
         assert_eq!(db.count_notes(false).unwrap(), 0);
     }
 
@@ -431,13 +451,13 @@ mod tests {
         // Create and close database
         {
             let db = Database::open(&db_path, &password).unwrap();
-            assert_eq!(db.schema_version().unwrap(), 21);
+            assert_eq!(db.schema_version().unwrap(), 23);
         }
 
         // Reopen and verify
         {
             let db = Database::open(&db_path, &password).unwrap();
-            assert_eq!(db.schema_version().unwrap(), 21);
+            assert_eq!(db.schema_version().unwrap(), 23);
         }
     }
 }

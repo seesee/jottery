@@ -205,7 +205,7 @@ pub fn unlock(app: &mut App) -> Result<()> {
     // Store password if remember checkbox was enabled
     if app.remember_password_checkbox {
         // The password is still in app.password_input at this point
-        let password_to_store = app.password_input.clone();
+        let password_to_store = Zeroizing::new(app.password_input.clone());
         if let Err(e) = store_password_for_autounlock(app, &password_to_store) {
             app.error = Some(format!("Failed to store password: {}", e));
         } else {
@@ -251,7 +251,6 @@ pub fn toggle_remember_password(app: &mut App) -> Result<()> {
     if app.settings.remember_password {
         // Disable: clear stored password using the storage backend
         app.settings.remember_password = false;
-        app.settings.stored_password = None;
 
         // Delete stored password
         let _ = app.password_storage.delete();
@@ -295,7 +294,6 @@ pub fn store_password_for_autounlock(app: &mut App, password: &str) -> Result<()
 
     // Update settings (note: we no longer store encrypted password in settings)
     app.settings.remember_password = true;
-    app.settings.stored_password = None; // No longer needed in settings
 
     if let Some(db) = &app.db {
         let settings_repo = SettingsRepository::new(db.connection());
@@ -312,7 +310,6 @@ pub fn forget_stored_password(app: &mut App) -> Result<()> {
 
     // Update settings
     app.settings.remember_password = false;
-    app.settings.stored_password = None;
 
     if let Some(db) = &app.db {
         let settings_repo = SettingsRepository::new(db.connection());
