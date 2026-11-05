@@ -1,7 +1,10 @@
+# Base images are pinned by digest, so a retagged image can't change a release and a
+# tag can be rebuilt identically. Dependabot's docker updates keep them current.
+
 # -----------------------------
 # Stage 1: Build the Svelte web client
 # -----------------------------
-FROM node:20-slim AS web-builder
+FROM node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0 AS web-builder
 WORKDIR /app
 
 # Registry fetches are slow under QEMU emulation (arm builds) and intermittently
@@ -33,7 +36,7 @@ RUN npm run build
 # -----------------------------
 # Stage 2: Build the Admin Dashboard
 # -----------------------------
-FROM node:20-slim AS admin-builder
+FROM node:20-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0 AS admin-builder
 WORKDIR /app/admin
 
 # Same npm network hardening as the web-builder stage (see above)
@@ -59,7 +62,7 @@ RUN npm run build
 # -----------------------------
 # Stage 3: Build the Rust server (using cargo-chef for dependency caching)
 # -----------------------------
-FROM rust:1.85 AS chef
+FROM rust:1.85@sha256:e51d0265072d2d9d5d320f6a44dde6b9ef13653b035098febd68cce8fa7c0bc4 AS chef
 WORKDIR /app
 # 0.1.75 is the newest cargo-chef whose lock file builds on Rust 1.85
 RUN cargo install cargo-chef --locked --version 0.1.75
@@ -84,19 +87,29 @@ COPY server/ .
 RUN cargo build --release --locked --bin jottery-server
 
 # -----------------------------
-# Stage 4: Final unified runtime image (Caddy + Server)
+# Stage 4: Caddy, the only component that faces the internet
 # -----------------------------
-FROM debian:bookworm-slim
+# Taken from the official image because Debian's package is frozen at 2.6.2 from
+# 2022. The binary is static, so it runs on bookworm-slim on all three platforms.
+FROM caddy:2.11.8-alpine@sha256:3db3a09e418f86a8fce8de4bc0026fccd2b4cd925aef00cc7d843d9fdc75e442 AS caddy
+# Copying the contents leaves behind the official binary's file capability, which
+# it only needs to bind low ports. This image listens on 8088.
+RUN cat /usr/bin/caddy > /tmp/caddy && chmod 0755 /tmp/caddy
+
+# -----------------------------
+# Stage 5: Final unified runtime image (Caddy + Server)
+# -----------------------------
+FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates \
-      caddy \
     && rm -rf /var/lib/apt/lists/*
 
 # -----------------------------
 # Copy server + web client + admin dashboard
 # -----------------------------
+COPY --from=caddy          /tmp/caddy /usr/bin/caddy
 COPY --from=server-builder /app/server/target/release/jottery-server /usr/local/bin/jottery-server
 COPY --from=web-builder    /app/dist ./dist
 COPY --from=admin-builder  /app/admin/dist ./admin/dist
