@@ -30,6 +30,8 @@ All sensitive data is encrypted on the client before transmission to the server:
 
 **The server never sees unencrypted note content, tags, or attachments.**
 
+This depends on your notes password and account password being different. The server receives your account password when you sign in, so if the two match it could unwrap the master key it stores. Clients refuse a match when either password is being chosen, and warn if an existing vault already has one. Changing your notes password restores the guarantee.
+
 ### Envelope Encryption (v1.1.0+)
 
 Jottery uses an envelope encryption model that decouples the master key from the user's password:
