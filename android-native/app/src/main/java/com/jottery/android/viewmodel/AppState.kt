@@ -4,6 +4,7 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.room.withTransaction
 import com.jottery.android.crypto.CryptoService
 import com.jottery.android.crypto.KeyManager
 import com.jottery.android.crypto.KeystoreService
@@ -1763,15 +1764,16 @@ class AppState(application: Application) : AndroidViewModel(application) {
             attachmentRepo = attachmentRepository,
             syncRepo = syncRepository,
             savedSearchRepo = savedSearchRepository,
-            key = key,
+            keyProvider = { keyManager.masterKey },
             scope = viewModelScope,
+            transaction = { block -> db?.withTransaction { block() } },
         )
 
         service.onSyncStatusChanged = { status ->
             _syncStatusMessage.value = status
         }
         service.onConflictDetected = { conflict ->
-            _pendingConflicts.value = _pendingConflicts.value + conflict
+            _pendingConflicts.value = _pendingConflicts.value.filter { it.id != conflict.id } + conflict
         }
         service.onSyncComplete = { _ ->
             viewModelScope.launch { loadNotes() }
@@ -2216,16 +2218,12 @@ class AppState(application: Application) : AndroidViewModel(application) {
         Log.d(TAG, "[Sync] resolveConflict: noteId=$noteId, strategy=$strategy")
 
         val conflict = _pendingConflicts.value.firstOrNull { it.id == noteId } ?: return
-        val service = syncServiceInstance
+        val service = syncServiceInstance ?: return
 
-        if (service != null) {
-            try {
-                withContext(Dispatchers.IO) {
-                    service.resolveConflict(conflict, strategy)
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "[Sync] resolveConflict failed: ${e.message}", e)
-            }
+        // On failure the conflict stays: the caller shows the error and the user
+        // can choose again. Nothing has been lost.
+        withContext(Dispatchers.IO) {
+            service.resolveConflict(conflict, strategy)
         }
 
         _pendingConflicts.value = _pendingConflicts.value.filter { it.id != noteId }

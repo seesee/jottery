@@ -295,6 +295,12 @@ class NoteRepository(
         noteDao.hardDelete(id)
     }
 
+    /**
+     * Hard-delete a note only if it has no unsynced local changes.
+     * Returns true if the note was removed.
+     */
+    suspend fun hardDeleteIfSynced(id: String): Boolean = noteDao.hardDeleteIfSynced(id) > 0
+
     /** Archive a note. */
     suspend fun archive(id: String) {
         val now = DateUtils.nowISO8601()
@@ -341,13 +347,23 @@ class NoteRepository(
         noteDao.update(updated)
     }
 
-    /** Mark note as synced, optionally updating version from server. */
-    suspend fun markSynced(id: String, syncedAt: String, serverVersion: Int? = null) {
-        if (serverVersion != null) {
-            noteDao.markSyncedWithVersion(id, syncedAt, serverVersion)
+    /**
+     * Mark a pushed note as synced. Returns true if the flag was cleared, false
+     * if the note changed after [pushedModifiedAt] was read, in which case it
+     * stays queued for the next push.
+     */
+    suspend fun markSynced(
+        id: String,
+        syncedAt: String,
+        serverVersion: Int?,
+        pushedModifiedAt: String,
+    ): Boolean {
+        val updated = if (serverVersion != null) {
+            noteDao.markSyncedWithVersionIfUnchanged(id, syncedAt, serverVersion, pushedModifiedAt)
         } else {
-            noteDao.markSynced(id, syncedAt)
+            noteDao.markSyncedIfUnchanged(id, syncedAt, pushedModifiedAt)
         }
+        return updated > 0
     }
 
     // MARK: - Attachment Management

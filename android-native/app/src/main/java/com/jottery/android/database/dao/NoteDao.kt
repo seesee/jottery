@@ -61,15 +61,31 @@ interface NoteDao {
     """)
     suspend fun unarchive(id: String, modifiedAt: String)
 
+    /**
+     * Clear needs_sync only if the row still has the modified_at that was pushed.
+     * An edit saved while the request was in flight has a newer modified_at, so
+     * it keeps its flag and goes out on the next push.
+     */
     @Query("""
-        UPDATE notes SET needs_sync = 0, synced_at = :syncedAt WHERE id = :id
+        UPDATE notes SET needs_sync = 0, synced_at = :syncedAt
+        WHERE id = :id AND modified_at = :pushedModifiedAt
     """)
-    suspend fun markSynced(id: String, syncedAt: String)
+    suspend fun markSyncedIfUnchanged(id: String, syncedAt: String, pushedModifiedAt: String): Int
 
     @Query("""
-        UPDATE notes SET needs_sync = 0, synced_at = :syncedAt, version = :version WHERE id = :id
+        UPDATE notes SET needs_sync = 0, synced_at = :syncedAt, version = :version
+        WHERE id = :id AND modified_at = :pushedModifiedAt
     """)
-    suspend fun markSyncedWithVersion(id: String, syncedAt: String, version: Int)
+    suspend fun markSyncedWithVersionIfUnchanged(
+        id: String,
+        syncedAt: String,
+        version: Int,
+        pushedModifiedAt: String,
+    ): Int
+
+    /** Remote deletions must never destroy an edit the server has not seen. */
+    @Query("DELETE FROM notes WHERE id = :id AND needs_sync = 0")
+    suspend fun hardDeleteIfSynced(id: String): Int
 
     @Query("SELECT id, attachments FROM notes")
     suspend fun listIdsAndAttachments(): List<NoteIdAttachments>

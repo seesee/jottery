@@ -44,6 +44,17 @@ android {
         compose = true
     }
 
+    testOptions {
+        unitTests {
+            // Robolectric needs merged resources and the manifest; the Room
+            // migration tests read exported schemas from assets.
+            isIncludeAndroidResources = true
+        }
+    }
+
+    sourceSets {
+        getByName("test").assets.srcDir("$projectDir/schemas")
+    }
 }
 
 ksp {
@@ -94,6 +105,10 @@ dependencies {
     // Testing
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.room.testing)
+    testImplementation(libs.okhttp.mockwebserver)
     androidTestImplementation(libs.junit.ext)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.runner)

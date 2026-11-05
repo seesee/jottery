@@ -174,7 +174,7 @@ private fun ConflictCard(
                         )
                     }
                     Text(
-                        text = conflict.serverContent,
+                        text = conflict.serverContent ?: "This version can't be decrypted on this device.",
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = if (expanded) Int.MAX_VALUE else 3,
                         overflow = TextOverflow.Ellipsis,
