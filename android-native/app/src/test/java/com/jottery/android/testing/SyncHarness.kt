@@ -59,7 +59,11 @@ class SyncHarness {
                 return when (request.path) {
                     "/api/v1/sync/push" -> {
                         pushBodies += body
-                        MockResponse().setBody(json.encodeToString(onPush(body)))
+                        try {
+                            MockResponse().setBody(json.encodeToString(onPush(body)))
+                        } catch (refusal: HttpRefusal) {
+                            MockResponse().setResponseCode(refusal.status).setBody(refusal.body)
+                        }
                     }
                     "/api/v1/sync/pull" -> {
                         pullBodies += body
@@ -77,6 +81,11 @@ class SyncHarness {
         }
         start()
     }
+
+    /** Thrown by [onPush] to answer with an error status. */
+    class HttpRefusal(val status: Int, val body: String) : Exception()
+
+    fun storageFull() = HttpRefusal(507, """{"error":"Your account is full","code":"storage_quota_exceeded"}""")
 
     val endpoint: String get() = server.url("/").toString().trimEnd('/')
     val client = SyncClient(endpoint, "test-api-key", "test-client")

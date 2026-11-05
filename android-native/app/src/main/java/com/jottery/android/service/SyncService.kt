@@ -42,6 +42,7 @@ class SyncService(
         private const val TAG = "SyncService"
         private const val HTTP_NOT_FOUND = 404
         private const val HTTP_PAYLOAD_TOO_LARGE = 413
+        private const val HTTP_STORAGE_FULL = 507
 
         /** Comfortably under the server's default 5 MB limit per request. */
         internal const val PUSH_CHUNK_BYTES = 3L * 1024 * 1024
@@ -49,8 +50,11 @@ class SyncService(
 
         internal const val PULL_PAGE_SIZE = 100
 
-        /** A page holding this much base64 makes the next page smaller. */
-        internal const val PULL_PAGE_BYTES = 16L * 1024 * 1024
+        /**
+         * A page holding this much base64 makes the next page smaller. A current
+         * server stops a page near 16 MB itself, so this is for older ones.
+         */
+        internal const val PULL_PAGE_BYTES = 32L * 1024 * 1024
 
         /** Stops a server that always says there's more. A million changes at full size. */
         private const val MAX_PULL_PAGES = 10_000
@@ -140,26 +144,47 @@ class SyncService(
 
             val chunks = chunk(notesToSync)
             var tooLarge: SyncClientException? = null
+            var storageFull: SyncClientException? = null
 
-            chunks.forEachIndexed { index, records ->
-                val isLast = index == chunks.lastIndex
+            for (records in chunks) {
                 try {
                     pushChunk(records, key)
                 } catch (e: SyncClientException) {
-                    if (e.statusCode != HTTP_PAYLOAD_TOO_LARGE) throw e
-                    Log.w(TAG, "Server refused a chunk of ${records.size} note(s) as too large")
-                    tooLarge = e
+                    when (e.statusCode) {
+                        HTTP_PAYLOAD_TOO_LARGE -> {
+                            Log.w(TAG, "Server refused a chunk of ${records.size} note(s) as too large")
+                            tooLarge = e
+                        }
+                        HTTP_STORAGE_FULL -> {
+                            storageFull = e
+                            break
+                        }
+                        else -> throw e
+                    }
                 }
-                if (isLast) pushOthers(deletions, searches)
             }
-            if (chunks.isEmpty()) pushOthers(deletions, searches)
+
+            if (storageFull != null) pushBinnedNotes(inConflict, key)
+            pushOthers(deletions, searches)
 
             syncRepo.updateLastPushAt(DateUtils.nowISO8601())
+            storageFull?.let { throw it }
             tooLarge?.let { throw it }
         } catch (e: Exception) {
             Log.e(TAG, "Push failed: ${e.message}")
             throw e
         }
+    }
+
+    /**
+     * A full account refuses anything that adds to it, and a chunk fails as a whole,
+     * so notes the user has binned to make room would go down with the others. A
+     * note going to the bin doesn't count, as long as nothing else rides along, so
+     * those go by themselves. Without this a full account could never be emptied.
+     */
+    private suspend fun pushBinnedNotes(inConflict: Set<String>, key: SecretKey) {
+        val binned = noteRepo.listNeedingSync().filter { it.deleted && it.id !in inConflict }
+        for (records in chunk(binned)) pushChunk(records, key, includeVersions = false)
     }
 
     /** Split notes into consecutive chunks of at most [PUSH_CHUNK_NOTES] and [PUSH_CHUNK_BYTES]. */
@@ -181,7 +206,7 @@ class SyncService(
         return chunks
     }
 
-    private suspend fun pushChunk(records: List<NoteRecord>, key: SecretKey) {
+    private suspend fun pushChunk(records: List<NoteRecord>, key: SecretKey, includeVersions: Boolean = true) {
         // Guards the accepted notes below: markSynced only clears the flag if
         // modified_at still matches the snapshot that was actually pushed.
         val pushedModifiedAt = records.associate { it.id to it.modifiedAt }
@@ -191,7 +216,8 @@ class SyncService(
         if (syncNotes.isEmpty()) return
 
         val noteBytes = syncNotes.sumOf { it.content.length.toLong() }
-        val syncVersions = buildSyncVersions(records, key, PUSH_CHUNK_BYTES - noteBytes)
+        val syncVersions =
+            if (includeVersions) buildSyncVersions(records, key, PUSH_CHUNK_BYTES - noteBytes) else emptyList()
 
         // Notes go first, without their blobs: the server only stores a blob
         // whose note it knows, and a blob can be most of a request by itself.
@@ -236,7 +262,16 @@ class SyncService(
             .filter { it.data !in uploaded }
             .map { it.id to it.data }
         val warned = response.attachmentWarnings.orEmpty().flatMap { it.attachmentIds }.map { it to it }
-        uploadBlobs((needed + warned).distinctBy { it.first })
+        try {
+            uploadBlobs((needed + warned).distinctBy { it.first })
+        } catch (e: Exception) {
+            // The notes are marked synced, and only pushing one sends its blobs, so
+            // without this they'd never go. A repeat push of the note changes nothing.
+            val waiting = needed.map { it.second }.toSet()
+            syncNotes.filter { note -> note.id in acceptedIds && note.attachments.any { it.data in waiting } }
+                .forEach { noteRepo.requeue(it.id) }
+            throw e
+        }
     }
 
     private fun toSyncNote(record: NoteRecord, key: SecretKey): SyncNote? {

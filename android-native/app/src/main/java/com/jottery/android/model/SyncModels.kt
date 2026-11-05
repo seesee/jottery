@@ -274,6 +274,8 @@ data class WrappedKeyResponse(
     val blob: String,           // JSON {"ciphertext":"...","iv":"..."}
     val kdfVersion: Int,
     val kdfIterations: Int,
+    /** Opaque. Absent on a server without conditional writes. */
+    val updatedAt: String? = null,
 )
 
 @Serializable
@@ -281,4 +283,6 @@ data class PutWrappedKeyRequest(
     val blob: String,
     val kdfVersion: Int,
     val kdfIterations: Int,
+    /** False: only if the account has no key. True: whatever is there. */
+    val replace: Boolean? = null,
 )

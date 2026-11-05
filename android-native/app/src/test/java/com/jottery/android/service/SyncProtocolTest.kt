@@ -500,6 +500,66 @@ class SyncProtocolTest {
         assertFalse(h.noteRepo.getRaw(noteId)!!.deleted)
     }
 
+    // MARK: - A full account
+
+    /** The server's rule: anything that adds to the account fails. */
+    private fun quota(body: String): SyncPushResponse {
+        val request = pushRequest(body)
+        val grows = request.attachments.isNotEmpty() || request.versions.isNotEmpty() ||
+            request.notes.any { !it.deleted }
+        if (grows) throw h.storageFull()
+        return accepted(request)
+    }
+
+    @Test fun `a full account can still send what the user binned to make room`() = runBlocking {
+        h.seedSynced(noteId, "OLD", "h0")
+        h.versionRepo.insertOrReplace(
+            com.jottery.android.model.NoteVersionRecord.from(h.noteRepo.getRaw(noteId)!!, "sync")
+        )
+        h.noteRepo.softDelete(noteId)
+        h.noteRepo.create("a new note that won't fit", emptyList(), h.key)
+        h.onPush = ::quota
+
+        val failure = runCatching { h.service().push() }.exceptionOrNull()
+
+        assertEquals(507, (failure as com.jottery.android.network.SyncClientException).statusCode)
+        assertEquals("storage_quota_exceeded", failure.code)
+        assertFalse("the binned note reached the server", h.noteRepo.getRaw(noteId)!!.needsSync)
+        assertEquals(1, h.noteRepo.listNeedingSync().size)
+    }
+
+    @Test fun `a full account still sends permanent deletes`() = runBlocking {
+        h.syncRepo.addDeletion(NoteDeletion(noteId, DateUtils.nowISO8601()))
+        h.noteRepo.create("a new note that won't fit", emptyList(), h.key)
+        h.onPush = ::quota
+
+        runCatching { h.service().push() }
+
+        assertTrue(h.syncRepo.listDeletions().isEmpty())
+    }
+
+    @Test fun `a note stays queued if its blob couldn't follow it`() = runBlocking {
+        val note = h.noteRepo.create("note", emptyList(), h.key)
+        val blobId = id(5)
+        h.attachmentRepo.insertOrReplace(AttachmentRecord(blobId, "", "", 1, byteArrayOf(1)))
+        h.noteRepo.addAttachment(note.id, ref(blobId), h.key)
+        h.onPush = { body ->
+            val request = pushRequest(body)
+            if (request.attachments.isNotEmpty()) throw h.storageFull()
+            accepted(request)
+        }
+
+        runCatching { h.service().push() }
+
+        assertTrue("nothing else would ever send the blob", h.noteRepo.getRaw(note.id)!!.needsSync)
+
+        h.onPush = { accepted(pushRequest(it)) }
+        h.service().push()
+
+        assertTrue(h.pushBodies.last().contains(blobId))
+        assertFalse(h.noteRepo.getRaw(note.id)!!.needsSync)
+    }
+
     // MARK: - Many saves between syncs
 
     /** The server's rule: its hash has to be the parent, or somewhere in the chain. */

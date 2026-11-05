@@ -29,6 +29,22 @@ class SyncRetryPolicyTest {
         assertEquals(60L, SyncRetryPolicy.delaySeconds(SyncClientException("x", 429), 3))
     }
 
+    @Test fun `a full account isn't retried until the user makes room`() {
+        assertNull(SyncRetryPolicy.delaySeconds(SyncClientException("x", 507, code = "storage_quota_exceeded"), 0))
+    }
+
+    @Test fun `a busy server is asked again when it said, then given more room`() {
+        val busy = SyncClientException("x", 503, retryAfterSeconds = 1)
+
+        assertEquals(1L, SyncRetryPolicy.delaySeconds(busy, 0))
+        assertEquals(30L, SyncRetryPolicy.delaySeconds(busy, 1))
+        assertEquals(60L, SyncRetryPolicy.delaySeconds(busy, 2))
+    }
+
+    @Test fun `a timeout is retried, because sending a push twice is safe`() {
+        assertEquals(30L, SyncRetryPolicy.delaySeconds(SyncClientException("x", 408), 0))
+    }
+
     @Test fun `a server error is retried`() {
         assertEquals(30L, SyncRetryPolicy.delaySeconds(SyncClientException("x", 503), 0))
     }

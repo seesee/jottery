@@ -89,6 +89,9 @@ interface NoteDao {
     """)
     suspend fun unarchive(id: String, modifiedAt: String)
 
+    @Query("UPDATE notes SET needs_sync = 1 WHERE id = :id")
+    suspend fun requeue(id: String)
+
     @Query("UPDATE notes SET sync_hash = :hash WHERE id = :id")
     suspend fun setSyncHash(id: String, hash: String)
 

@@ -109,7 +109,7 @@ class EnvelopeServiceTest {
     }
 
     @Test fun `with no key on the server, the device publishes`() = runBlocking {
-        assertEquals(EnvelopeService.Reconciliation.Publish, reconcile())
+        assertEquals(EnvelopeService.Reconciliation.PublishFirst, reconcile())
     }
 
     @Test fun `a blob that opens to the same key needs no upload`() = runBlocking {
@@ -137,7 +137,7 @@ class EnvelopeServiceTest {
     @Test fun `a blob that won't open heals only if the device can vouch for its key`() = runBlocking {
         blob = wrappedWith(accountPassword)
 
-        assertEquals(EnvelopeService.Reconciliation.Publish, reconcile(canVouch = true))
+        assertEquals(EnvelopeService.Reconciliation.Repair(null), reconcile(canVouch = true))
         assertEquals(EnvelopeService.Reconciliation.CannotHeal, reconcile(canVouch = false))
     }
 
@@ -151,7 +151,7 @@ class EnvelopeServiceTest {
     }
 
     @Test fun `what is published opens with the notes password and not the account password`() = runBlocking {
-        EnvelopeService.publishKey(client, userId, notesPassword, masterKey)
+        EnvelopeService.publishKey(client, userId, notesPassword, masterKey, EnvelopeService.KeyWrite.FirstUpload)
 
         val sent = Json.decodeFromString<PutWrappedKeyRequest>(puts.single())
         val wrapped = CryptoService.parseEncryptedJSON(sent.blob)

@@ -124,11 +124,15 @@ class SyncClient(
         }
     }
 
-    /** Upload a wrapped master key to the server. */
-    suspend fun putWrappedKey(request: PutWrappedKeyRequest) {
+    /**
+     * Upload a wrapped master key to the server. With [ifMatch] it lands only if
+     * the key is still the one that value came with. A write that's refused gets 409.
+     */
+    suspend fun putWrappedKey(request: PutWrappedKeyRequest, ifMatch: String? = null) {
         val jsonBody = json.encodeToString(request).toRequestBody(jsonMediaType)
-        val httpRequest = buildAuthRequest("/api/v1/auth/wrapped-key").put(jsonBody).build()
-        client.newCall(httpRequest).execute().use { response ->
+        val builder = buildAuthRequest("/api/v1/auth/wrapped-key").put(jsonBody)
+        ifMatch?.let { builder.header("If-Match", it) }
+        client.newCall(builder.build()).execute().use { response ->
             if (!response.isSuccessful) throw failure(response)
         }
     }

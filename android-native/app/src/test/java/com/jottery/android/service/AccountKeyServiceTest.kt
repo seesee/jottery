@@ -18,7 +18,6 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
-import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -43,27 +42,64 @@ class AccountKeyServiceTest {
     private val accountPassword = "account-${UUID.randomUUID()}"
     private val masterKey = CryptoService.generateSalt()
 
-    /** The server's one copy. */
+    /** The server's one copy, and what changes with every write to it. */
     private var blob: String? = null
+    private var updatedAt = 0
     private var putStatus = 200
     private var puts = 0
+    private var refusals = 0
+    private val ifMatches = mutableListOf<String?>()
+    private val replaces = mutableListOf<Boolean?>()
+
+    /** An older server sends no updatedAt and writes whatever it's given. */
+    private var conditional = true
+
+    /** Runs as a PUT arrives, to put another device's write ahead of it. */
+    private var beforePut: (() -> Unit)? = null
+
+    private fun store(value: String) {
+        blob = value
+        updatedAt++
+    }
 
     private val server = MockWebServer().apply {
         dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse = when (request.method) {
-                "PUT" -> if (putStatus == 200) {
-                    puts++
-                    blob = Json.decodeFromString<PutWrappedKeyRequest>(request.body.readUtf8()).blob
-                    MockResponse().setBody("{}")
-                } else {
-                    MockResponse().setResponseCode(putStatus).setBody("{}")
-                }
+                "PUT" -> put(request)
                 else -> blob?.let {
-                    MockResponse().setBody(Json.encodeToString(WrappedKeyResponse(it, 1, 1_000_000)))
+                    MockResponse().setBody(
+                        Json.encodeToString(
+                            WrappedKeyResponse(it, 1, 1_000_000, updatedAt.toString().takeIf { conditional })
+                        )
+                    )
                 } ?: MockResponse().setResponseCode(404).setBody("{}")
             }
         }
         start()
+    }
+
+    private fun put(request: RecordedRequest): MockResponse {
+        beforePut?.invoke()
+        beforePut = null
+        if (putStatus != 200) return MockResponse().setResponseCode(putStatus).setBody("{}")
+
+        val body = Json.decodeFromString<PutWrappedKeyRequest>(request.body.readUtf8())
+        val ifMatch = request.getHeader("If-Match")
+        ifMatches += ifMatch
+        replaces += body.replace
+
+        val refused = conditional && when {
+            ifMatch != null -> blob == null || ifMatch != updatedAt.toString()
+            body.replace == false -> blob != null
+            else -> false
+        }
+        if (refused) {
+            refusals++
+            return MockResponse().setResponseCode(409).setBody("{}")
+        }
+        puts++
+        store(body.blob)
+        return MockResponse().setBody("{}")
     }
 
     private inner class Device(opened: Boolean, lastSyncAt: String? = "2026-01-01T00:00:00.000Z") {
@@ -117,7 +153,7 @@ class AccountKeyServiceTest {
     }.getOrNull()?.contentEquals(masterKey) == true
 
     @Test fun `a password change on one device isn't undone by another that still has the old one`() = runBlocking {
-        blob = wrapped(oldPassword)
+        store(wrapped(oldPassword))
         val a = device()
         val b = device()
         assertEquals(AccountKeyService.Outcome.InStep, a.unlock(oldPassword))
@@ -137,19 +173,19 @@ class AccountKeyServiceTest {
     }
 
     @Test fun `a device that has only ever seen the blob open is covered by the flag`() = runBlocking {
-        blob = wrapped(oldPassword)
+        store(wrapped(oldPassword))
         val b = device(opened = false)
 
         b.unlock(oldPassword)
 
         assertTrue("opening the blob sets the flag", b.flag())
-        blob = wrapped(newPassword)
+        store(wrapped(newPassword))
         assertEquals(AccountKeyService.Outcome.PasswordChangedElsewhere, b.unlock(oldPassword))
         assertEquals(0, puts)
     }
 
     @Test fun `an old-format blob is healed by a device that never opened it, once`() = runBlocking {
-        blob = wrapped(accountPassword)
+        store(wrapped(accountPassword))
         val device = device(opened = false)
 
         assertEquals(AccountKeyService.Outcome.InStep, device.unlock(oldPassword))
@@ -159,13 +195,13 @@ class AccountKeyServiceTest {
         assertTrue(device.flag())
 
         // Having healed once, a later failure means a change elsewhere
-        blob = wrapped(newPassword)
+        store(wrapped(newPassword))
         assertEquals(AccountKeyService.Outcome.PasswordChangedElsewhere, device.unlock(oldPassword))
         assertEquals(1, puts)
     }
 
     @Test fun `a device that can't vouch for its key leaves an old-format blob alone`() = runBlocking {
-        blob = wrapped(accountPassword)
+        store(wrapped(accountPassword))
         val device = device(opened = false)
 
         assertEquals(AccountKeyService.Outcome.CannotHeal, device.unlock(oldPassword, canVouch = false))
@@ -176,7 +212,7 @@ class AccountKeyServiceTest {
 
     @Test fun `a blob that opens to another key is never overwritten`() = runBlocking {
         val other = wrapped(oldPassword, CryptoService.generateSalt())
-        blob = other
+        store(other)
 
         assertEquals(AccountKeyService.Outcome.Diverged, device(opened = false).unlock(oldPassword))
 
@@ -194,7 +230,7 @@ class AccountKeyServiceTest {
     }
 
     @Test fun `a password change the server missed is retried, and isn't mistaken for one made elsewhere`() = runBlocking {
-        blob = wrapped(oldPassword)
+        store(wrapped(oldPassword))
         val device = device()
 
         putStatus = 503
@@ -216,7 +252,7 @@ class AccountKeyServiceTest {
     }
 
     @Test fun `the retry that runs before a sync sends a waiting rewrap`() = runBlocking {
-        blob = wrapped(oldPassword)
+        store(wrapped(oldPassword))
         val device = device()
         putStatus = 503
         device.changePassword(newPassword)
@@ -228,12 +264,125 @@ class AccountKeyServiceTest {
         assertNull(device.syncRepo.getSyncMetadata()!!.pendingWrappedKey)
     }
 
+    // MARK: - Conditional writes
+
+    @Test fun `each purpose says what it expects to find`() = runBlocking {
+        val first = device(opened = false)
+        first.unlock(oldPassword)
+        assertEquals("a first upload", false, replaces.last())
+        assertNull(ifMatches.last())
+
+        first.changePassword(newPassword)
+        assertEquals("a password change", true, replaces.last())
+        assertNull(ifMatches.last())
+
+        store(wrapped(accountPassword))
+        val tag = updatedAt.toString()
+        device(opened = false).unlock(oldPassword)
+        assertEquals("a repair names what it read", tag, ifMatches.last())
+    }
+
+    @Test fun `a password change between a repair's read and its write isn't overwritten`() = runBlocking {
+        // The race the flag can't close on its own: this device has never opened the
+        // blob, so it may heal, and then another device changes the password
+        store(wrapped(accountPassword))
+        val device = device(opened = false)
+        beforePut = { store(wrapped(newPassword)) }
+
+        val outcome = device.unlock(oldPassword)
+
+        assertEquals(1, refusals)
+        assertEquals(0, puts)
+        assertTrue("the other device's password still opens it", blobOpensWith(newPassword))
+        assertEquals(AccountKeyService.Outcome.PasswordChangedElsewhere, outcome)
+    }
+
+    @Test fun `a refused repair isn't tried again at the next unlock either`() = runBlocking {
+        store(wrapped(accountPassword))
+        val device = device(opened = false)
+        beforePut = { store(wrapped(newPassword)) }
+        device.unlock(oldPassword)
+
+        assertEquals(AccountKeyService.Outcome.PasswordChangedElsewhere, device.unlock(oldPassword))
+
+        assertEquals(0, puts)
+        assertTrue(blobOpensWith(newPassword))
+    }
+
+    @Test fun `losing the race for a first upload adopts nothing and overwrites nothing`() = runBlocking {
+        val device = device(opened = false)
+        val theirs = wrapped(oldPassword, CryptoService.generateSalt())
+        beforePut = { store(theirs) }
+
+        val outcome = device.unlock(oldPassword)
+
+        assertEquals(1, refusals)
+        assertEquals(theirs, blob)
+        assertEquals(AccountKeyService.Outcome.Diverged, outcome)
+    }
+
+    @Test fun `a first upload that loses to the same key is simply in step`() = runBlocking {
+        val device = device(opened = false)
+        beforePut = { store(wrapped(oldPassword)) }
+
+        assertEquals(AccountKeyService.Outcome.InStep, device.unlock(oldPassword))
+
+        assertEquals(0, puts)
+        assertTrue(device.flag())
+    }
+
+    @Test fun `a password change writes whatever is there`() = runBlocking {
+        store(wrapped(oldPassword))
+        val device = device()
+        beforePut = { store(wrapped("elsewhere-${UUID.randomUUID()}")) }
+
+        device.changePassword(newPassword)
+
+        assertTrue(blobOpensWith(newPassword))
+        assertNull(device.syncRepo.getSyncMetadata()!!.pendingWrappedKey)
+    }
+
+    @Test fun `an older server gets no If-Match, and a repair still heals`() = runBlocking {
+        conditional = false
+        store(wrapped(accountPassword))
+        val device = device(opened = false)
+
+        assertEquals(AccountKeyService.Outcome.InStep, device.unlock(oldPassword))
+
+        assertNull(ifMatches.single())
+        assertEquals(true, replaces.single())
+        assertTrue(blobOpensWith(oldPassword))
+    }
+
+    @Test fun `a server's updatedAt can't break out of the header`() = runBlocking {
+        val response = WrappedKeyResponse(wrapped(accountPassword), 1, 1_000_000, "x\r\nEvil: yes")
+        val hostile = MockWebServer().apply {
+            dispatcher = object : Dispatcher() {
+                override fun dispatch(request: RecordedRequest): MockResponse = when (request.method) {
+                    "PUT" -> {
+                        ifMatches += request.getHeader("If-Match")
+                        MockResponse().setBody("{}")
+                    }
+                    else -> MockResponse().setBody(Json.encodeToString(response))
+                }
+            }
+            start()
+        }
+        val device = device(opened = false)
+        val client = SyncClient(hostile.url("/").toString().trimEnd('/'), "key", "client")
+
+        AccountKeyService(client, device.syncRepo, device.encryptionRepo).settle(oldPassword, masterKey) { true }
+
+        assertNull(ifMatches.single())
+        hostile.shutdown()
+    }
+
     @Test fun `an account with no user id changes nothing`() = runBlocking {
         val device = device()
         device.syncRepo.saveSyncMetadata(SyncMetadata())
 
         assertEquals(AccountKeyService.Outcome.InStep, device.unlock(oldPassword))
         assertEquals(0, puts)
-        assertArrayEquals(null, blob?.toByteArray())
+        assertNull(blob)
     }
 }

@@ -276,6 +276,7 @@
     <string name="sync_error_device_removed">This device is no longer registered. Connect it again in Sync Setup.</string>
     <string name="sync_error_account_disabled">Sync has stopped: your account has been deactivated or isn\'t approved. Your notes are safe on this device.</string>
     <string name="sync_error_rate_limited">The server is busy. Jottery will try again shortly.</string>
+    <string name="sync_error_storage_full">Your account is full, so changes here can\'t sync. Move notes to the bin or remove attachments to make room.</string>
     <string name="sync_error_offline">Couldn\'t reach the server. Jottery will try again.</string>
     <string name="sync_error_failed">Sync failed. Jottery will try again.</string>
     <string name="sync_done">Synced</string>

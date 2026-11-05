@@ -1597,8 +1597,17 @@ class AppState(application: Application) : AndroidViewModel(application) {
                 if (confirmation != notesPassword) {
                     throw ConnectRefused(text(R.string.password_mismatch))
                 }
-                master = CryptoService.generateSalt()
-                EnvelopeService.publishKey(client, connection.userId, notesPassword, master)
+                master = try {
+                    CryptoService.generateSalt().also {
+                        EnvelopeService.publishKey(
+                            client, connection.userId, notesPassword, it, EnvelopeService.KeyWrite.FirstUpload,
+                        )
+                    }
+                } catch (e: SyncClientException) {
+                    if (e.statusCode != HTTP_CONFLICT) throw e
+                    // Another device got there first, so its key is the account's
+                    EnvelopeService.fetchServerKey(client, connection.userId, notesPassword) ?: throw e
+                }
             } else {
                 warnIfMatchingPasswords(notesPassword, connection.accountPassword)
             }
@@ -1631,7 +1640,11 @@ class AppState(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private suspend fun joinAccount(connection: PendingConnection, notesPassword: String) {
+    private suspend fun joinAccount(
+        connection: PendingConnection,
+        notesPassword: String,
+        readAgain: Boolean = true,
+    ) {
         val encRepo = encryptionRepo ?: throw AppStateError.NotInitialised
         val localKey = keyManager.masterKey?.encoded ?: throw AppStateError.NotInitialised
         val metadata = encRepo.get() ?: throw AppStateError.NoVault
@@ -1652,7 +1665,19 @@ class AppState(application: Application) : AndroidViewModel(application) {
                     revokeQuietly(connection)
                     throw ConnectRefused(text(R.string.connect_error_wrong_notes_password))
                 }
-                EnvelopeService.publishKey(client, connection.userId, notesPassword, localKey)
+                try {
+                    EnvelopeService.publishKey(
+                        client, connection.userId, notesPassword, localKey, EnvelopeService.KeyWrite.FirstUpload,
+                    )
+                } catch (e: SyncClientException) {
+                    // Another device got there first: compare with what it wrote
+                    if (e.statusCode == HTTP_CONFLICT && readAgain) {
+                        joinAccount(connection, notesPassword, readAgain = false)
+                        return
+                    }
+                    revokeQuietly(connection)
+                    throw e
+                }
                 if (metadata.envelopeVersion == null) {
                     EnvelopeService.saveLocalEnvelope(encRepo, localKey, notesPassword)
                 }
@@ -1906,7 +1931,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
     private fun syncFailureText(e: Exception): String = when {
         e is SyncClientException && e.statusCode == 401 -> text(R.string.sync_error_device_removed)
         e is SyncClientException && e.statusCode == 403 -> text(R.string.sync_error_account_disabled)
-        e is SyncClientException && e.statusCode == 429 -> text(R.string.sync_error_rate_limited)
+        e is SyncClientException && e.statusCode == 507 -> text(R.string.sync_error_storage_full)
+        e is SyncClientException && (e.statusCode == 429 || e.statusCode == 503) ->
+            text(R.string.sync_error_rate_limited)
         e is java.io.IOException -> text(R.string.sync_error_offline)
         else -> text(R.string.sync_error_failed)
     }
@@ -2518,6 +2545,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         private const val KEY_SCREEN_SECURITY = "screenSecurity"
         private const val MAX_LOAD_ATTEMPTS = 3
         private const val DEFAULT_SYNC_MINUTES = 5
+        private const val HTTP_CONFLICT = 409
 
         /** What web puts between notes it combines. */
         private const val COMBINED_NOTE_SEPARATOR = "\n\n---\n\n"

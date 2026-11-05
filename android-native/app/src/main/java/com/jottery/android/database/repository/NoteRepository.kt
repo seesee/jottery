@@ -485,6 +485,9 @@ class NoteRepository(
         return updated > 0
     }
 
+    /** Send a note again without changing it. */
+    suspend fun requeue(id: String) = noteDao.requeue(id)
+
     // MARK: - Attachment Management
 
     /** Add or remove tags on one note, as an edit. */
