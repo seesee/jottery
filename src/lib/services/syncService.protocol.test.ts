@@ -1431,12 +1431,9 @@ describe('sync protocol', () => {
     });
 
     const stream = () => FakeEventSource.instances.at(-1)!;
-    const waitFor = async (check: () => boolean) => {
-      for (let attempt = 0; attempt < 500 && !check(); attempt++) {
-        await new Promise(resolve => setImmediate(resolve));
-      }
-      expect(check()).toBe(true);
-    };
+    // On real time: the token request can outlast any fixed number of event-loop turns
+    const waitFor = (check: () => boolean) =>
+      vi.waitFor(() => expect(check()).toBe(true), { timeout: 15_000, interval: 5 });
 
     it('asks for a new token when the server refuses the stream', async () => {
       await syncService.connectToSyncEvents();
