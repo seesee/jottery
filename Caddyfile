@@ -32,12 +32,21 @@
 	@webClient {
 		not path /api* /admin* /user* /health
 	}
+	# Proxied routes are left out here too: the server compresses its own responses,
+	# and the sync event stream has to reach clients as it's written.
+	encode @webClient zstd gzip
+
 	header @webClient {
 		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self' blob: http://localhost:* http://127.0.0.1:* https://*; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
 		X-Content-Type-Options nosniff
 		X-Frame-Options DENY
 		Referrer-Policy no-referrer
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+		# Revalidate on every load, or a browser's own guess at freshness can hold on
+		# to an old build after a deploy. An unchanged file still costs only a 304.
+		# This covers every path, not just index.html: headers are set before the
+		# fallback below rewrites a deep link to it.
+		Cache-Control no-cache
 		-Server
 	}
 
