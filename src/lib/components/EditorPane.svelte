@@ -586,12 +586,14 @@
     saveTimeout = null;
     if (!$selectedNote) return;
 
+    // What's being saved, as the editor can hold another note once the save finishes
+    const saving = { content, tags };
+
     saveInFlight = true;
     try {
       // Save note and get the updated encrypted note with correct version
       const savedNote = await noteService.updateNote($selectedNote.id, {
-        content,
-        tags: tags,
+        ...saving,
         attachments: attachments,
         syntaxLanguage: language,
         wordWrap,
@@ -602,8 +604,7 @@
       // This ensures we have the correct version without re-reading from DB
       const updatedNote: DecryptedNote = {
         ...savedNote,
-        content,
-        tags,
+        ...saving,
         decryptedAt: Date.now(),
       };
 
