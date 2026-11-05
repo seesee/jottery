@@ -368,7 +368,7 @@ class SyncService {
         // Database was terminated - disable auto-sync to stop the error loop
         this.disableAutoSync();
         console.error('[SyncService] Database terminated. Auto-sync disabled. Please refresh the page.');
-        toast.error('Database connection lost. Please refresh the page to continue.');
+        toast.error(get(_)('sync.databaseLost'));
         return { success: false, error: 'Database connection lost. Please refresh the page.' };
       }
       return { success: false, error: 'Database not available' };

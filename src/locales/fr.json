@@ -186,7 +186,16 @@
     "confirmDelete": {
       "title": "Supprimer la note",
       "message": "Cette action déplacera la note vers la corbeille. Vous pourrez la restaurer plus tard si nécessaire."
-    }
+    },
+    "actionFailed": {
+      "archive": "Échec de l'archivage de la note : {error}",
+      "unarchive": "Échec de la sortie de la note des archives : {error}",
+      "lock": "Échec du verrouillage de la note : {error}",
+      "unlock": "Échec du déverrouillage de la note : {error}",
+      "delete": "Échec de la suppression de la note : {error}"
+    },
+    "copyLinkFailed": "Échec de la copie du lien dans le presse-papiers",
+    "noteEditor": "Éditeur de note"
   },
   "noteList": {
     "deleteNote": "Supprimer la note",
@@ -195,7 +204,8 @@
     "noteCountAll": "{total} notes"
   },
   "tagInput": {
-    "removeTag": "Supprimer l'étiquette"
+    "removeTag": "Supprimer l'étiquette",
+    "suggestions": "Suggestions de tags"
   },
   "backupReminder": {
     "title": "Il est temps de sauvegarder vos notes",
@@ -216,7 +226,8 @@
     "frequencyMonthly": "Mensuel",
     "frequencyOnChanges": "Après un certain nombre de modifications",
     "changesThreshold": "Sauvegarder après ce nombre de modifications",
-    "description": "Les sauvegardes automatiques sont téléchargées sur votre appareil. Activez les rappels pour être notifié quand il est temps de sauvegarder."
+    "description": "Les sauvegardes automatiques sont téléchargées sur votre appareil. Activez les rappels pour être notifié quand il est temps de sauvegarder.",
+    "saveFailed": "Ce paramètre n'a pas été enregistré. Réessayez."
   },
   "backup": {
     "title": "Sauvegarde chiffrée",
@@ -256,7 +267,8 @@
         "records": "Enregistrements"
       },
       "storageFull": "Le navigateur n'a plus d'espace de stockage : la restauration n'a pas abouti et rien n'a été conservé. Votre fichier de sauvegarde est intact : libérez de l'espace et restaurez-le à nouveau."
-    }
+    },
+    "autoFailed": "La sauvegarde automatique a échoué. Créez une sauvegarde manuelle."
   },
   "settings": {
     "title": "Paramètres",
@@ -447,7 +459,19 @@
         "mustDiffer": "Votre mot de passe des notes et celui de votre compte doivent être différents. Le serveur de synchronisation voit le mot de passe de votre compte : s'ils sont identiques, il pourrait lire vos notes.",
         "matchesAccountWarning": "Votre mot de passe des notes est identique à celui de votre compte : le serveur de synchronisation pourrait donc lire vos notes. Changez votre mot de passe des notes pour corriger cela."
       },
-      "existingAccountDetected": "Cette adresse e-mail a déjà un compte : cet appareil va donc s'y connecter. Saisissez le mot de passe des notes que vous utilisez sur vos autres appareils."
+      "existingAccountDetected": "Cette adresse e-mail a déjà un compte : cet appareil va donc s'y connecter. Saisissez le mot de passe des notes que vous utilisez sur vos autres appareils.",
+      "errors": {
+        "credentialsRequired": "L'adresse e-mail et le mot de passe sont requis",
+        "passwordTooShort": "Le mot de passe doit comporter au moins 12 caractères",
+        "registrationFailed": "Échec de l'inscription de l'utilisateur",
+        "deviceRegistrationFailed": "Échec de l'enregistrement de l'appareil",
+        "loginFailed": "Échec de la connexion",
+        "accountInfoFailed": "Échec du chargement des informations du compte",
+        "deleteNotesFailed": "Échec de la suppression des notes",
+        "disconnectFailed": "Échec de la déconnexion",
+        "syncFailed": "Échec de la synchronisation",
+        "toggleFailed": "Échec de la modification de la synchronisation"
+      }
     },
     "editorTab": {
       "vimMode": "Mode éditeur",
@@ -485,7 +509,9 @@
       "formatHelp": "Utilisez les jetons YYYY, MM, DD, HH, mm, ss",
       "value": "Valeur",
       "description": "Description",
-      "preview": "Aperçu"
+      "preview": "Aperçu",
+      "textPlaceholder": "Texte à insérer",
+      "descriptionPlaceholder": "Description affichée dans l'autocomplétion"
     },
     "keyboardTab": {
       "description": "Personnalisez les raccourcis clavier. Cliquez sur un raccourci pour le modifier, puis appuyez sur la combinaison de touches souhaitée.",
@@ -658,7 +684,9 @@
       "note": "Aucun compte requis • Fonctionne hors ligne • Auto-hébergeable"
     },
     "screenshots": {
-      "mainInterface": "Interface principale montrant la liste des notes et l'éditeur"
+      "mainInterface": "Interface principale montrant la liste des notes et l'éditeur",
+      "carouselLabel": "Carrousel de captures d'écran",
+      "fullSizeLabel": "Image en taille réelle"
     },
     "features": {
       "title": "Tout ce dont vous avez besoin",
@@ -947,7 +975,9 @@
   "lock": {
     "title": "Verrouiller l'application",
     "message": "Verrouiller l'application ? Les modifications non enregistrées seront perdues.",
-    "confirmButton": "Verrouiller"
+    "confirmButton": "Verrouiller",
+    "locking": "Verrouillage...",
+    "savingAndSyncing": "Enregistrement et synchronisation de vos notes"
   },
   "recycleBin": {
     "title": "Corbeille",
@@ -1011,14 +1041,18 @@
     "markdownCopied": "Lien markdown copié dans le presse-papiers",
     "error": {
       "download": "Échec du téléchargement de la pièce jointe",
-      "copyMarkdown": "Échec de la copie du lien markdown"
+      "copyMarkdown": "Échec de la copie du lien markdown",
+      "upload": "Échec de l'envoi de {name} : {error}",
+      "delete": "Échec de la suppression de la pièce jointe : {error}",
+      "paste": "Échec du collage de l'image : {error}"
     },
     "preview": {
       "title": "Aperçu de la pièce jointe",
       "loading": "Chargement de l'aperçu...",
       "notAvailable": "Aperçu non disponible pour ce type de fichier.",
       "audioNotSupported": "Votre navigateur ne prend pas en charge la lecture audio.",
-      "videoNotSupported": "Votre navigateur ne prend pas en charge la lecture vidéo."
+      "videoNotSupported": "Votre navigateur ne prend pas en charge la lecture vidéo.",
+      "videoLabel": "Aperçu de la vidéo"
     },
     "confirmDelete": {
       "title": "Retirer la pièce jointe ?",
@@ -1071,7 +1105,8 @@
     "previousPage": "Page précédente",
     "nextPage": "Page suivante",
     "zoomOut": "Zoom arrière",
-    "zoomIn": "Zoom avant"
+    "zoomIn": "Zoom avant",
+    "loadFailed": "Impossible d'ouvrir ce PDF. Vous pouvez toujours le télécharger."
   },
   "versionHistory": {
     "title": "Historique des versions",
@@ -1094,7 +1129,8 @@
       "title": "Restaurer la version",
       "message": "Êtes-vous sûr de vouloir restaurer cette version ? Votre note actuelle sera sauvegardée comme nouvelle version avant la restauration.",
       "confirmButton": "Restaurer"
-    }
+    },
+    "restoreFailed": "Échec de la restauration de la version : {error}"
   },
   "header": {
     "menu": "Menu",
@@ -1103,7 +1139,8 @@
     "addContentFirst": "Ajoutez d'abord du contenu à la note actuelle",
     "lastSynced": "Dernière synchronisation : {time}",
     "neverSynced": "Pas encore synchronisé",
-    "syncDisabled": "La synchronisation n'est pas activée"
+    "syncDisabled": "La synchronisation n'est pas activée",
+    "newNote": "Nouvelle note"
   },
   "confirm": {
     "deleteDatabase": {
@@ -1192,7 +1229,9 @@
     "resolveButton": "Résoudre le conflit",
     "syncNotification": "{count, plural, one {1 note a un conflit de synchronisation} other {{count} notes ont des conflits de synchronisation}}",
     "serverUnreadable": "La copie de cette note sur le serveur est illisible et a peut-être été modifiée. Seule votre version peut être conservée.",
-    "localUnreadable": "La copie de cette note sur cet appareil est illisible."
+    "localUnreadable": "La copie de cette note sur cet appareil est illisible.",
+    "loadFailed": "Échec du chargement des données du conflit",
+    "resolveFailed": "Échec de la résolution du conflit"
   },
   "pullToRefresh": {
     "pull": "Tirez vers le bas pour synchroniser",
@@ -1208,7 +1247,8 @@
     "storageQuotaExceeded": "Votre compte a atteint sa limite de stockage, les modifications de cet appareil ne peuvent donc pas être envoyées. Supprimez définitivement des notes ou des pièces jointes pour libérer de l'espace.",
     "massDeletionHeld": "Le serveur a demandé la suppression de {count} notes d'un coup. Elles sont dans la corbeille au cas où cela ne viendrait pas de vous. Restaurez-les depuis celle-ci, ou videz-la si c'était voulu.",
     "clockAhead": "Certaines modifications n'ont pas été synchronisées, car leur date a plus d'un jour d'avance sur le serveur. Vérifiez la date et l'heure de cet appareil.",
-    "deviceRevoked": "Cet appareil n'est plus connecté à votre compte, la synchronisation est donc arrêtée. Vos notes sur cet appareil sont en sécurité. Reconnectez-le dans les paramètres."
+    "deviceRevoked": "Cet appareil n'est plus connecté à votre compte, la synchronisation est donc arrêtée. Vos notes sur cet appareil sont en sécurité. Reconnectez-le dans les paramètres.",
+    "databaseLost": "Connexion à la base de données perdue. Actualisez la page pour continuer."
   },
   "inbox": {
     "title": "Boîte de réception",
@@ -1458,6 +1498,7 @@
       "attachment": "Pièce jointe",
       "inboxItem": "Élément de la boîte de réception",
       "deletion": "Suppression"
-    }
+    },
+    "scanFailed": "L'analyse n'a pas abouti. Réessayez."
   }
 }

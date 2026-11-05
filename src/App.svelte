@@ -805,8 +805,8 @@
   <div class="fixed inset-0 bg-gray-900 flex items-center justify-center z-[100]" role="status" aria-live="polite">
     <div class="text-center">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-      <p class="text-white text-lg font-medium">Locking...</p>
-      <p class="text-gray-300 text-sm mt-2">Saving and syncing your notes</p>
+      <p class="text-white text-lg font-medium">{$_('lock.locking')}</p>
+      <p class="text-gray-300 text-sm mt-2">{$_('lock.savingAndSyncing')}</p>
     </div>
   </div>
 {/if}

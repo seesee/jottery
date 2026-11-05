@@ -252,17 +252,17 @@
   // Multi-user registration flow
   async function handleRegisterUser() {
     if (!syncEndpoint) {
-      syncError = 'Please enter a sync endpoint URL';
+      syncError = $_('unlock.connectExisting.errors.endpointRequired');
       return;
     }
 
     if (!userEmail.trim()) {
-      syncError = 'Please enter your email address';
+      syncError = $_('unlock.connectExisting.errors.emailRequired');
       return;
     }
 
     if (!userPassword.trim() || userPassword.length < 12) {
-      syncError = 'Password must be at least 12 characters';
+      syncError = $_('settings.syncSetup.errors.passwordTooShort');
       return;
     }
 
@@ -294,7 +294,7 @@
       }
     } catch (error) {
       console.error('User registration failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'User registration failed';
+      const errorMessage = error instanceof Error ? error.message : $_('settings.syncSetup.errors.registrationFailed');
 
       // The account exists, so this device is joining it, not creating it: it must
       // take the account's key rather than upload its own over the top.
@@ -312,12 +312,12 @@
 
   async function handleRegisterDevice() {
     if (!userEmail || !userPassword) {
-      syncError = 'Email and password are required';
+      syncError = $_('settings.syncSetup.errors.credentialsRequired');
       return;
     }
 
     if (!deviceName.trim()) {
-      syncError = 'Please provide a device name';
+      syncError = $_('unlock.connectExisting.errors.deviceNameRequired');
       return;
     }
 
@@ -441,7 +441,7 @@
       }
     } catch (error) {
       console.error('Device registration failed:', error);
-      syncError = error instanceof Error ? error.message : 'Device registration failed';
+      syncError = error instanceof Error ? error.message : $_('settings.syncSetup.errors.deviceRegistrationFailed');
     } finally {
       registeringDevice = false;
     }
@@ -461,12 +461,12 @@
   // Account management functions
   async function handleAccountLogin() {
     if (!syncEndpoint) {
-      syncError = 'Please enter a sync endpoint URL first';
+      syncError = $_('unlock.connectExisting.errors.endpointRequired');
       return;
     }
 
     if (!accountEmail.trim() || !accountPassword.trim()) {
-      syncError = 'Please enter email and password';
+      syncError = $_('settings.syncSetup.errors.credentialsRequired');
       return;
     }
 
@@ -486,13 +486,13 @@
       });
 
       if (!response.ok) {
-        let errorMessage = 'Login failed';
+        let errorMessage = $_('settings.syncSetup.errors.loginFailed');
         try {
           const error = await response.json();
           errorMessage = error.error || errorMessage;
         } catch (e) {
           // Response body is not JSON, use status text
-          errorMessage = response.statusText || `Login failed (${response.status})`;
+          errorMessage = response.statusText || $_('settings.syncSetup.errors.loginFailed');
         }
         throw new Error(errorMessage);
       }
@@ -514,7 +514,7 @@
       await fetchAccountInfo();
     } catch (error) {
       console.error('Account login failed:', error);
-      syncError = error instanceof Error ? error.message : 'Login failed';
+      syncError = error instanceof Error ? error.message : $_('settings.syncSetup.errors.loginFailed');
     } finally {
       loggingIn = false;
     }
@@ -536,7 +536,7 @@
 
 
       if (!response.ok) {
-        let errorMessage = `Failed to fetch account info (${response.status})`;
+        let errorMessage = $_('settings.syncSetup.errors.accountInfoFailed');
         try {
           const error = await response.json();
           errorMessage = error.error || errorMessage;
@@ -549,7 +549,7 @@
       accountInfo = await response.json();
     } catch (error) {
       console.error('Failed to fetch account info:', error);
-      syncError = error instanceof Error ? error.message : 'Failed to load account info';
+      syncError = error instanceof Error ? error.message : $_('settings.syncSetup.errors.accountInfoFailed');
     } finally {
       loadingAccountInfo = false;
     }
@@ -568,7 +568,7 @@
       });
 
       if (!response.ok) {
-        throw new Error('Failed to delete notes');
+        throw new Error($_('settings.syncSetup.errors.deleteNotesFailed'));
       }
 
 
@@ -578,7 +578,7 @@
       showDeleteServerNotesConfirm = false;
     } catch (error) {
       console.error('Failed to delete notes:', error);
-      syncError = error instanceof Error ? error.message : 'Failed to delete notes';
+      syncError = error instanceof Error ? error.message : $_('settings.syncSetup.errors.deleteNotesFailed');
     }
   }
 
@@ -608,7 +608,7 @@
       syncStatus = await syncService.getSyncStatus();
     } catch (error) {
       console.error('Failed to disconnect:', error);
-      syncError = error instanceof Error ? error.message : 'Failed to disconnect';
+      syncError = error instanceof Error ? error.message : $_('settings.syncSetup.errors.disconnectFailed');
     }
   }
 
@@ -629,11 +629,11 @@
       if (result.success) {
         await loadSyncStatus();
       } else {
-        syncError = result.error || 'Sync failed';
+        syncError = result.error || $_('settings.syncSetup.errors.syncFailed');
       }
     } catch (error) {
       console.error('Sync failed:', error);
-      syncError = error instanceof Error ? error.message : 'Sync failed';
+      syncError = error instanceof Error ? error.message : $_('settings.syncSetup.errors.syncFailed');
     } finally {
       syncing = false;
     }
@@ -648,11 +648,11 @@
       if (result.success) {
         await loadSyncStatus();
       } else {
-        syncError = result.error || 'Sync failed';
+        syncError = result.error || $_('settings.syncSetup.errors.syncFailed');
       }
     } catch (error) {
       console.error('Full sync failed:', error);
-      syncError = error instanceof Error ? error.message : 'Full sync failed';
+      syncError = error instanceof Error ? error.message : $_('settings.syncSetup.errors.syncFailed');
     } finally {
       syncing = false;
     }
@@ -685,7 +685,7 @@
 
     } catch (error) {
       console.error('Failed to toggle sync feature:', error);
-      syncError = error instanceof Error ? error.message : 'Failed to toggle sync';
+      syncError = error instanceof Error ? error.message : $_('settings.syncSetup.errors.toggleFailed');
     }
   }
 

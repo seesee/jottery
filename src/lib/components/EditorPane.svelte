@@ -699,7 +699,7 @@
       triggerBackgroundSync();
     } catch (error) {
       console.error('Failed to toggle archive:', error);
-      toast.error(`Failed to ${$selectedNote.archived ? 'unarchive' : 'archive'} note: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error($_($selectedNote.archived ? 'editor.actionFailed.unarchive' : 'editor.actionFailed.archive', { values: { error: error instanceof Error ? error.message : String(error) } }));
     }
   }
 
@@ -729,7 +729,7 @@
       triggerBackgroundSync();
     } catch (error) {
       console.error('Failed to toggle lock:', error);
-      toast.error(`Failed to ${$selectedNote.locked ? 'unlock' : 'lock'} note: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error($_($selectedNote.locked ? 'editor.actionFailed.unlock' : 'editor.actionFailed.lock', { values: { error: error instanceof Error ? error.message : String(error) } }));
     }
   }
 
@@ -755,6 +755,7 @@
 
     } catch (error) {
       console.error('[EditorPane] Failed to delete note:', error);
+      toast.error($_('editor.actionFailed.delete', { values: { error: error instanceof Error ? error.message : String(error) } }));
     }
   }
 
@@ -824,7 +825,7 @@
           newAttachments.push(attachment);
         } catch (error) {
           console.error(`Failed to upload ${file.name}:`, error);
-          toast.error(`Failed to upload ${file.name}: ${error instanceof Error ? error.message : String(error)}`);
+          toast.error($_('attachments.error.upload', { values: { name: file.name, error: error instanceof Error ? error.message : String(error) } }));
         }
       }
 
@@ -860,7 +861,7 @@
       handleInput(); // Trigger auto-save
     } catch (error) {
       console.error('Failed to delete attachment:', error);
-      toast.error(`Failed to delete attachment: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error($_('attachments.error.delete', { values: { error: error instanceof Error ? error.message : String(error) } }));
     }
   }
 
@@ -880,7 +881,7 @@
       await attachmentService.downloadAttachment(attachment);
     } catch (error) {
       console.error('Failed to download attachment:', error);
-      toast.error(`Failed to download attachment: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error(`${$_('attachments.error.download')}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -900,7 +901,7 @@
       toast.success($_('editor.linkCopied'));
     } catch (error) {
       console.error('Failed to copy link:', error);
-      toast.error('Failed to copy link to clipboard');
+      toast.error($_('editor.copyLinkFailed'));
     }
   }
 
@@ -1030,7 +1031,7 @@
       return `![${altText}](attachment:${attachment.id})`;
     } catch (error) {
       console.error('Failed to create attachment from pasted image:', error);
-      toast.error(`Failed to paste image: ${error instanceof Error ? error.message : String(error)}`);
+      toast.error($_('attachments.error.paste', { values: { error: error instanceof Error ? error.message : String(error) } }));
       return null;
     }
   }
@@ -1256,7 +1257,7 @@
     class="h-full flex flex-col bg-white dark:bg-gray-900"
     use:dropzone={{ onDrop: handleFileUpload, onDragStateChange: handleDragStateChange, disabled: isReadOnly }}
     role="region"
-    aria-label="Note editor"
+    aria-label={$_('editor.noteEditor')}
   >
     <!-- Toolbar -->
     <EditorToolbar

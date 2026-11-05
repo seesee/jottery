@@ -12,6 +12,7 @@
  */
 
 import { writable, get } from 'svelte/store';
+import { _ } from 'svelte-i18n';
 import { settingsRepository } from './settingsRepository';
 import { createBackupFile, downloadBackupFile } from './backupService';
 import { toast } from '../utils/toast.svelte';
@@ -172,7 +173,7 @@ export async function triggerAutoBackup(): Promise<void> {
   } catch (error) {
     console.error('[BackupScheduler] Auto-backup failed:', error);
     // Show error toast - backup downloads can fail silently if browser blocks
-    toast.error('Automatic backup failed. Please create a manual backup.');
+    toast.error(get(_)('backup.autoFailed'));
   } finally {
     isAutoBackingUp.set(false);
   }

@@ -270,7 +270,7 @@
       // Reload the page to reinitialize
       window.location.reload();
     } catch (err) {
-      error = 'Failed to delete database: ' + (err instanceof Error ? err.message : 'Unknown error');
+      error = $_('settings.deleteDatabaseFailed', { values: { error: err instanceof Error ? err.message : String(err) } });
       loading = false;
     }
   }

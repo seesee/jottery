@@ -186,7 +186,16 @@
     "confirmDelete": {
       "title": "ノートを削除",
       "message": "このノートはごみ箱に移動されます。必要に応じて後から復元できます。"
-    }
+    },
+    "actionFailed": {
+      "archive": "ノートのアーカイブに失敗しました: {error}",
+      "unarchive": "ノートのアーカイブ解除に失敗しました: {error}",
+      "lock": "ノートのロックに失敗しました: {error}",
+      "unlock": "ノートのロック解除に失敗しました: {error}",
+      "delete": "ノートの削除に失敗しました: {error}"
+    },
+    "copyLinkFailed": "リンクのコピーに失敗しました",
+    "noteEditor": "ノートエディター"
   },
   "noteList": {
     "deleteNote": "ノートを削除",
@@ -195,7 +204,8 @@
     "noteCountAll": "{total}件のノート"
   },
   "tagInput": {
-    "removeTag": "タグを削除"
+    "removeTag": "タグを削除",
+    "suggestions": "タグの候補"
   },
   "backupReminder": {
     "title": "ノートをバックアップする時間です",
@@ -216,7 +226,8 @@
     "frequencyMonthly": "毎月",
     "frequencyOnChanges": "一定回数の変更後",
     "changesThreshold": "この回数の変更後にバックアップ",
-    "description": "自動バックアップはデバイスにダウンロードされます。リマインダーを有効にすると、バックアップの時間になったら通知されます。"
+    "description": "自動バックアップはデバイスにダウンロードされます。リマインダーを有効にすると、バックアップの時間になったら通知されます。",
+    "saveFailed": "その設定は保存されませんでした。もう一度お試しください。"
   },
   "backup": {
     "title": "暗号化バックアップ",
@@ -256,7 +267,8 @@
         "records": "レコード"
       },
       "storageFull": "ブラウザーの保存容量が不足したため、復元は完了せず、何も保持されませんでした。バックアップファイルは問題ありません。空き容量を確保して、もう一度復元してください。"
-    }
+    },
+    "autoFailed": "自動バックアップに失敗しました。手動でバックアップを作成してください。"
   },
   "settings": {
     "title": "設定",
@@ -447,7 +459,19 @@
         "mustDiffer": "ノートのパスワードとアカウントのパスワードは別にする必要があります。同期サーバーはアカウントのパスワードを受け取るため、同じだとノートを読まれる可能性があります。",
         "matchesAccountWarning": "ノートのパスワードがアカウントのパスワードと同じため、同期サーバーにノートを読まれる可能性があります。ノートのパスワードを変更してください。"
       },
-      "existingAccountDetected": "このメールアドレスのアカウントは既に存在するため、このデバイスをそのアカウントに接続します。他のデバイスで使用しているノートのパスワードを入力してください。"
+      "existingAccountDetected": "このメールアドレスのアカウントは既に存在するため、このデバイスをそのアカウントに接続します。他のデバイスで使用しているノートのパスワードを入力してください。",
+      "errors": {
+        "credentialsRequired": "メールアドレスとパスワードが必要です",
+        "passwordTooShort": "パスワードは12文字以上にしてください",
+        "registrationFailed": "ユーザー登録に失敗しました",
+        "deviceRegistrationFailed": "デバイス登録に失敗しました",
+        "loginFailed": "ログインに失敗しました",
+        "accountInfoFailed": "アカウント情報の読み込みに失敗しました",
+        "deleteNotesFailed": "ノートの削除に失敗しました",
+        "disconnectFailed": "切断に失敗しました",
+        "syncFailed": "同期に失敗しました",
+        "toggleFailed": "同期の変更に失敗しました"
+      }
     },
     "editorTab": {
       "vimMode": "エディターモード",
@@ -485,7 +509,9 @@
       "formatHelp": "YYYY、MM、DD、HH、mm、ssトークンを使用",
       "value": "値",
       "description": "説明",
-      "preview": "プレビュー"
+      "preview": "プレビュー",
+      "textPlaceholder": "挿入するテキスト",
+      "descriptionPlaceholder": "オートコンプリートに表示される説明"
     },
     "keyboardTab": {
       "description": "キーボードショートカットをカスタマイズします。ショートカットをクリックして変更し、希望するキーの組み合わせを押してください。",
@@ -658,7 +684,9 @@
       "note": "アカウント不要 • オフラインで動作 • セルフホスト可能"
     },
     "screenshots": {
-      "mainInterface": "ノートリストとエディターを表示するメインインターフェース"
+      "mainInterface": "ノートリストとエディターを表示するメインインターフェース",
+      "carouselLabel": "スクリーンショットのカルーセル",
+      "fullSizeLabel": "画像のフルサイズ表示"
     },
     "features": {
       "title": "必要なすべてが揃っています",
@@ -947,7 +975,9 @@
   "lock": {
     "title": "アプリケーションをロック",
     "message": "アプリケーションをロックしますか? 保存されていない変更は失われます。",
-    "confirmButton": "ロック"
+    "confirmButton": "ロック",
+    "locking": "ロック中...",
+    "savingAndSyncing": "ノートを保存して同期しています"
   },
   "recycleBin": {
     "title": "ごみ箱",
@@ -1011,14 +1041,18 @@
     "markdownCopied": "Markdownリンクをクリップボードにコピーしました",
     "error": {
       "download": "添付ファイルのダウンロードに失敗しました",
-      "copyMarkdown": "Markdownリンクのコピーに失敗しました"
+      "copyMarkdown": "Markdownリンクのコピーに失敗しました",
+      "upload": "{name} のアップロードに失敗しました: {error}",
+      "delete": "添付ファイルの削除に失敗しました: {error}",
+      "paste": "画像の貼り付けに失敗しました: {error}"
     },
     "preview": {
       "title": "添付ファイルのプレビュー",
       "loading": "プレビューを読み込み中...",
       "notAvailable": "このファイルタイプのプレビューは利用できません。",
       "audioNotSupported": "お使いのブラウザは音声の再生に対応していません。",
-      "videoNotSupported": "お使いのブラウザは動画の再生に対応していません。"
+      "videoNotSupported": "お使いのブラウザは動画の再生に対応していません。",
+      "videoLabel": "動画プレビュー"
     },
     "confirmDelete": {
       "title": "添付ファイルを削除しますか？",
@@ -1071,7 +1105,8 @@
     "previousPage": "前のページ",
     "nextPage": "次のページ",
     "zoomOut": "縮小",
-    "zoomIn": "拡大"
+    "zoomIn": "拡大",
+    "loadFailed": "このPDFを開けませんでした。ダウンロードは可能です。"
   },
   "versionHistory": {
     "title": "バージョン履歴",
@@ -1094,7 +1129,8 @@
       "title": "バージョンを復元",
       "message": "このバージョンを復元してもよろしいですか? 現在のノートは復元前に新しいバージョンとして保存されます。",
       "confirmButton": "復元"
-    }
+    },
+    "restoreFailed": "バージョンの復元に失敗しました: {error}"
   },
   "header": {
     "menu": "メニュー",
@@ -1103,7 +1139,8 @@
     "addContentFirst": "最初に現在のノートに内容を追加してください",
     "lastSynced": "最終同期: {time}",
     "neverSynced": "まだ同期されていません",
-    "syncDisabled": "同期が有効になっていません"
+    "syncDisabled": "同期が有効になっていません",
+    "newNote": "新規ノート"
   },
   "confirm": {
     "deleteDatabase": {
@@ -1192,7 +1229,9 @@
     "resolveButton": "競合を解決",
     "syncNotification": "{count}件のノートに同期の競合があります",
     "serverUnreadable": "サーバー上のこのノートのコピーは読み取れず、改ざんされている可能性があります。保持できるのはお使いのバージョンのみです。",
-    "localUnreadable": "このデバイス上のノートのコピーは読み取れません。"
+    "localUnreadable": "このデバイス上のノートのコピーは読み取れません。",
+    "loadFailed": "競合データの読み込みに失敗しました",
+    "resolveFailed": "競合の解決に失敗しました"
   },
   "pullToRefresh": {
     "pull": "下に引いて同期",
@@ -1208,7 +1247,8 @@
     "storageQuotaExceeded": "アカウントのストレージ上限に達したため、このデバイスの変更をアップロードできません。ノートや添付ファイルを完全に削除して空き容量を確保してください。",
     "massDeletionHeld": "サーバーが {count} 件のノートを一度に削除するよう要求しました。ご自身の操作でない場合に備えてごみ箱に移動しています。そこから復元するか、ご自身の操作であればごみ箱を空にしてください。",
     "clockAhead": "日付がサーバーより1日以上先になっているため、一部の変更を同期できませんでした。このデバイスの日付と時刻を確認してください。",
-    "deviceRevoked": "このデバイスはアカウントに接続されなくなったため、同期を停止しました。このデバイスのノートは安全です。設定から再接続してください。"
+    "deviceRevoked": "このデバイスはアカウントに接続されなくなったため、同期を停止しました。このデバイスのノートは安全です。設定から再接続してください。",
+    "databaseLost": "データベースとの接続が切れました。続行するにはページを再読み込みしてください。"
   },
   "inbox": {
     "title": "受信トレイ",
@@ -1458,6 +1498,7 @@
       "attachment": "添付ファイル",
       "inboxItem": "受信トレイの項目",
       "deletion": "削除"
-    }
+    },
+    "scanFailed": "スキャンが完了しませんでした。もう一度お試しください。"
   }
 }

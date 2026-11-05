@@ -512,4 +512,17 @@ test.describe('Attachments', () => {
       }
     });
   });
+  test('a PDF that cannot be read says so, not "1 of 0"', async ({ page }) => {
+    const filePath = createTestFile('test-broken.pdf', 'this is not a pdf');
+    try {
+      await openAttachmentsModal(page, jp);
+      await uploadFileAndWait(page, jp, filePath, 'test-broken');
+      await jp.dialog.locator('.attachment-item').first().locator('button').nth(1).click();
+
+      await expect(page.getByText(/couldn't be opened/)).toBeVisible({ timeout: 15000 });
+      await expect(page.getByText(/1 (of|\/) 0/)).toHaveCount(0);
+    } finally {
+      cleanupTestFile(filePath);
+    }
+  });
 });

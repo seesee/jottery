@@ -209,7 +209,7 @@
           </div>
         {:else if previewType === 'video' && previewContent}
           <div class="flex items-center justify-center h-full">
-            <video controls class="max-w-full max-h-full" aria-label="Video preview - captions not available for user-uploaded content">
+            <video controls class="max-w-full max-h-full" aria-label={$_('attachments.preview.videoLabel')}>
               <source src={previewContent} type={attachment.mimeType} />
               <track kind="captions" />
               {$_('attachments.preview.videoNotSupported')}

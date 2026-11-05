@@ -18,6 +18,7 @@
   let missing: MissingAttachment[] = [];
   let scanning = false;
   let scanned = false;
+  let scanFailed = false;
   let repairing: Record<string, boolean> = {};
   let repairResult: Record<string, RepairResult> = {};
   let confirmDeleteId: string | null = null;
@@ -25,11 +26,13 @@
 
   async function rescan() {
     scanning = true;
+    scanFailed = false;
     try {
       missing = await scanMissingAttachments();
       scanned = true;
     } catch (error) {
       console.error('[VaultHealth] Attachment scan failed:', error);
+      scanFailed = true;
     } finally {
       scanning = false;
     }
@@ -94,6 +97,9 @@
   <p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
     {$_('vaultHealth.description')}
   </p>
+  {#if scanFailed}
+    <p class="text-sm text-red-600 dark:text-red-400 mb-3" role="alert">{$_('vaultHealth.scanFailed')}</p>
+  {/if}
 
   {#if healthy}
     <p class="text-sm text-green-700 dark:text-green-400" data-testid="vault-health-healthy">

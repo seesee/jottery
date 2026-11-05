@@ -139,7 +139,7 @@
       onClose();
     } catch (error) {
       console.error('Failed to restore version:', error);
-      toast.error('Failed to restore version: ' + (error instanceof Error ? error.message : String(error)));
+      toast.error($_('versionHistory.restoreFailed', { values: { error: error instanceof Error ? error.message : String(error) } }));
     }
   }
 

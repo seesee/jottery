@@ -32,7 +32,7 @@
     on:keydown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onClose())}
     role="button"
     tabindex="-1"
-    aria-label="Close modal"
+    aria-label={$_('common.close')}
   >
     <div
       class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6"
