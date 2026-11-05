@@ -80,7 +80,6 @@ test.describe('Recycle Bin', () => {
 		// Close recycle bin
 		const closeButton = recycleBinModal.locator('button[aria-label*="Close"], button').filter({ hasText: /✕/ }).first();
 		await closeButton.click();
-		await page.waitForTimeout(500);
 
 		// Note should immediately appear in the main notes list (without refresh)
 		await expect(jp.noteListItems.filter({ hasText: /Note to restore/i })).toBeVisible();
@@ -108,7 +107,6 @@ test.describe('Recycle Bin', () => {
 		// Search for the restored note
 		const searchInput = jp.searchInput;
 		await searchInput.fill('UniqueSearchableContent12345');
-		await page.waitForTimeout(500);
 
 		// Note should appear in search results
 		await expect(jp.noteListItems.filter({ hasText: /UniqueSearchableContent12345/i })).toBeVisible();

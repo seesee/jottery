@@ -43,7 +43,6 @@ test.describe('Tags', () => {
       // Add a tag
       await tagInput.fill('important');
       await tagInput.press('Enter');
-      await page.waitForTimeout(500);
 
       // Tag should appear
       const tagBadge = page.locator('[class*="tag"], .tag, [data-tag]').filter({ hasText: /important/i });
@@ -446,7 +445,6 @@ test.describe('Tags', () => {
 
       // Search with both tag and text
       await jp.searchInput.fill('#combined tags');
-      await page.waitForTimeout(500);
 
       // Should filter by both criteria
       const noteList = page.getByRole('list');

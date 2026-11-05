@@ -52,7 +52,6 @@ test.describe('Keyboard Shortcuts', () => {
   test('should open settings with Ctrl/Cmd+,', async ({ page }) => {
     // Press Ctrl+,
     await page.keyboard.press('Control+,');
-    await page.waitForTimeout(500);
 
     // Settings panel should be visible
     const settingsModal = jp.dialog;
@@ -142,7 +141,6 @@ test.describe('Keyboard Shortcuts', () => {
 
     // Press Enter to open first note
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(500);
 
     // Editor should be visible with the note content
     const editor = jp.editorContent;

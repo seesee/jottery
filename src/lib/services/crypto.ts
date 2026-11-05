@@ -189,6 +189,11 @@ class WebCryptoService implements CryptoService {
    * This hash uniquely identifies the note's content state for conflict detection.
    * Includes all fields that constitute a "change" to the note.
    *
+   * This is a version token, not an integrity check. Nothing recomputes a hash to compare
+   * it, and each client builds its own differently, so two clients never produce the same
+   * value for one note. It's only compared with the values already in a chain. Changing
+   * how it's computed is a format change: see "Deferred by design" in the review notes.
+   *
    * @param note - The note to hash (with encrypted content/tags)
    * @returns SHA-256 hash of the note's change-triggering fields
    */
@@ -210,7 +215,7 @@ class WebCryptoService implements CryptoService {
       color: note.color ?? null,
     };
 
-    // JSON.stringify produces deterministic output for this simple object
+    // JSON.stringify keeps this order: ECMAScript has guaranteed it since ES2020
     const data = JSON.stringify(hashData);
     return this.hash(data);
   }

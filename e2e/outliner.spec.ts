@@ -55,7 +55,6 @@ test.describe('Outliner Mode', () => {
 		const firstContent = page.locator('.outliner-editor .content').first();
 		await typeInContentEditable(page, firstContent, 'Item 1');
 		await page.keyboard.press('Enter');
-		await page.waitForTimeout(200);
 
 		// Verify two items exist
 		const contents = page.locator('.outliner-editor .content');
@@ -88,7 +87,6 @@ test.describe('Outliner Mode', () => {
 		const secondContent = page.locator('.outliner-editor .content').nth(1);
 		await typeInContentEditable(page, secondContent, 'Child');
 		await page.keyboard.press('Tab');
-		await page.waitForTimeout(200);
 
 		// Verify nested structure exists
 		const childrenContainer = page.locator('.outliner-editor .outliner-node .children');
@@ -114,14 +112,12 @@ test.describe('Outliner Mode', () => {
 		const secondContent = page.locator('.outliner-editor .content').nth(1);
 		await typeInContentEditable(page, secondContent, 'Child');
 		await page.keyboard.press('Tab');
-		await page.waitForTimeout(200);
 
 		// Verify it's nested
 		await expect(page.locator('.outliner-editor .children .content')).toHaveCount(1);
 
 		// Outdent
 		await page.keyboard.press('Shift+Tab');
-		await page.waitForTimeout(200);
 
 		// After outdent, both should be at root level
 		const rootNodes = page.locator('.outliner-editor > .outliner-node');
@@ -147,7 +143,6 @@ test.describe('Outliner Mode', () => {
 		const secondContent = page.locator('.outliner-editor .content').nth(1);
 		await typeInContentEditable(page, secondContent, 'Child');
 		await page.keyboard.press('Tab');
-		await page.waitForTimeout(300);
 
 		// Verify child is visible in children container
 		const childContent = page.locator('.outliner-editor .children .content');
@@ -164,7 +159,6 @@ test.describe('Outliner Mode', () => {
 
 		// Click expand button
 		await collapseButton.click();
-		await page.waitForTimeout(300);
 
 		// Children container should be visible again
 		await expect(childrenContainer).toBeVisible();
