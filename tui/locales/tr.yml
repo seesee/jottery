@@ -555,6 +555,8 @@ cli:
   attach_file_help: "Eklenecek dosya"
   attachment_number_help: "Hangi ek (show numaralandırmasına göre)"
   archived_help: "Bunun yerine arşivlenmiş notları listele"
+  import_summary: "%{created} eklendi, %{updated} güncellendi, %{skipped} zaten güncel"
+  import_failed: "Dosyadaki %{count} öğe içe aktarılamadı"
 status:
   locked: Kilitli
   unlocked: Kilitsiz

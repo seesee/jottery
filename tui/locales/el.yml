@@ -555,6 +555,8 @@ cli:
   attach_file_help: "Αρχείο για επισύναψη"
   attachment_number_help: "Ποιο συνημμένο, με την αρίθμηση του show"
   archived_help: "Εμφάνιση αρχειοθετημένων σημειώσεων"
+  import_summary: "%{created} προστέθηκαν, %{updated} ενημερώθηκαν, %{skipped} ήδη ενημερωμένες"
+  import_failed: "%{count} στοιχεία του αρχείου δεν εισήχθησαν"
 status:
   locked: Κλειδωμένο
   unlocked: Ξεκλείδωτο

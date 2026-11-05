@@ -555,6 +555,8 @@ cli:
   attach_file_help: "Bestand om toe te voegen"
   attachment_number_help: "Welke bijlage, genummerd zoals bij show"
   archived_help: "In plaats daarvan gearchiveerde notities tonen"
+  import_summary: "%{created} toegevoegd, %{updated} bijgewerkt, %{skipped} al up-to-date"
+  import_failed: "%{count} items in het bestand konden niet worden geïmporteerd"
 status:
   locked: Vergrendeld
   unlocked: Ontgrendeld

@@ -555,6 +555,8 @@ cli:
   attach_file_help: "要附加的文件"
   attachment_number_help: "哪个附件（按 show 的编号）"
   archived_help: "改为列出已归档的笔记"
+  import_summary: "已添加 %{created} 条，已更新 %{updated} 条，%{skipped} 条已是最新"
+  import_failed: "文件中有 %{count} 项无法导入"
 status:
   locked: 已锁定
   unlocked: 已解锁

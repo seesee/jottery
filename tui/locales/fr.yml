@@ -555,6 +555,8 @@ cli:
   attach_file_help: "Fichier à joindre"
   attachment_number_help: "Quelle pièce jointe, selon la numérotation de show"
   archived_help: "Lister plutôt les notes archivées"
+  import_summary: "%{created} ajoutées, %{updated} mises à jour, %{skipped} déjà à jour"
+  import_failed: "%{count} éléments du fichier n'ont pas pu être importés"
 status:
   locked: Verrouillé
   unlocked: Déverrouillé

@@ -604,6 +604,8 @@ cli:
   attach_file_help: "File to attach"
   attachment_number_help: "Which attachment, as numbered by show"
   archived_help: "List archived notes instead"
+  import_summary: "%{created} added, %{updated} updated, %{skipped} already up to date"
+  import_failed: "%{count} items in the file couldn't be imported"
 
 # Status messages
 status:

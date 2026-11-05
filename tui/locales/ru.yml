@@ -555,6 +555,8 @@ cli:
   attach_file_help: "Файл для прикрепления"
   attachment_number_help: "Какое вложение, по нумерации show"
   archived_help: "Показать вместо этого архивные заметки"
+  import_summary: "Добавлено: %{created}, обновлено: %{updated}, уже актуальны: %{skipped}"
+  import_failed: "Не удалось импортировать элементов файла: %{count}"
 status:
   locked: Заблокировано
   unlocked: Разблокировано

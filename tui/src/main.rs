@@ -1201,8 +1201,15 @@ fn run() -> Result<()> {
             // Derive key using stored salt
             let key = derive_key_from_db(&db, &password)?;
 
-            let count = export::import_notes(&db, &key, &input)?;
-            outln!("✓ {}: {} {}", t!("cli.import"), count, input.display());
+            let summary = export::import_notes(&db, &key, &input)?;
+            outln!(
+                "✓ {}: {}",
+                input.display(),
+                t!("cli.import_summary", created = summary.created, updated = summary.updated, skipped = summary.skipped),
+            );
+            if summary.failed > 0 {
+                errln!("⚠ {}", t!("cli.import_failed", count = summary.failed));
+            }
             return Ok(());
         }
         Some(Commands::Backup { output, password }) => {

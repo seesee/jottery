@@ -555,6 +555,8 @@ cli:
   attach_file_help: "Archivo que adjuntar"
   attachment_number_help: "Qué adjunto, según la numeración de show"
   archived_help: "Mostrar las notas archivadas"
+  import_summary: "%{created} añadidas, %{updated} actualizadas, %{skipped} ya al día"
+  import_failed: "No se han podido importar %{count} elementos del archivo"
 status:
   locked: Bloqueado
   unlocked: Desbloqueado

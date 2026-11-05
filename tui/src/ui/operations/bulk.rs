@@ -2,36 +2,15 @@
 
 use anyhow::{Context, Result};
 use chrono::Utc;
-use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
-use crate::repository::NoteRepository;
+use crate::{
+    export::{export_note, ExportData},
+    repository::{attachment::AttachmentRepository, NoteRepository},
+};
 
 use super::super::app::App;
-
-/// Export format for notes
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ExportData {
-    pub version: String,
-    pub export_date: String,
-    pub notes: Vec<ExportNote>,
-}
-
-/// Export format for a single note
-#[derive(Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ExportNote {
-    pub id: String,
-    pub created_at: String,
-    pub modified_at: String,
-    pub content: String,
-    pub tags: Vec<String>,
-    pub pinned: bool,
-    pub word_wrap: bool,
-    pub syntax_language: Option<String>,
-}
 
 /// Add tags to all selected notes
 pub fn add_tags_to_selected(app: &mut App, tags: &[String]) -> Result<usize> {
@@ -153,27 +132,19 @@ pub fn export_selected(app: &App, path: &Path) -> Result<usize> {
         return Ok(0);
     }
 
-    let mut export_notes = Vec::new();
+    let db = app.db.as_ref().context("Database not available")?;
+    let key = app.key.as_ref().context("Key not available")?;
+    let attachments = AttachmentRepository::new(db.connection());
 
-    for note in &app.notes {
-        if app.selected_note_ids.contains(&note.id) {
-            export_notes.push(ExportNote {
-                id: note.id.clone(),
-                created_at: note.created_at.to_rfc3339(),
-                modified_at: note.modified_at.to_rfc3339(),
-                content: note.content.clone(),
-                tags: note.tags.clone(),
-                pinned: note.pinned,
-                word_wrap: note.word_wrap,
-                syntax_language: Some(note.syntax_language.to_string()),
-            });
-        }
-    }
+    let notes = app.notes.iter()
+        .filter(|note| app.selected_note_ids.contains(&note.id))
+        .map(|note| export_note(note, &attachments, key))
+        .collect();
 
     let export_data = ExportData {
         version: "1.0".to_string(),
         export_date: Utc::now().to_rfc3339(),
-        notes: export_notes,
+        notes,
     };
 
     let count = export_data.notes.len();
