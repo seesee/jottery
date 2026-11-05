@@ -477,6 +477,60 @@ enum InboxTokenAction {
     },
 }
 
+/// Open the debug log for this user alone. What it holds is meant to be safe, but it
+/// says when notes were touched and how a vault is set up, which is nobody else's.
+fn open_debug_log(path: &Path) -> Result<Arc<Mutex<std::fs::File>>> {
+    let mut options = OpenOptions::new();
+    options.create(true).append(true);
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+
+    let file = options.open(path)
+        .with_context(|| format!("Failed to open debug log: {}", path.display()))?;
+
+    // An existing log keeps its permissions when opened, so they're set here as well
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        file.set_permissions(std::fs::Permissions::from_mode(0o600))
+            .context("Failed to restrict the debug log")?;
+    }
+
+    Ok(Arc::new(Mutex::new(file)))
+}
+
+/// The debug log as a place for tracing to write, shared with the app's own lines.
+#[derive(Clone)]
+struct SharedLog(Arc<Mutex<std::fs::File>>);
+
+impl Write for SharedLog {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        match self.0.lock() {
+            Ok(mut file) => file.write(bytes),
+            Err(_) => Ok(bytes.len()),
+        }
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        match self.0.lock() {
+            Ok(mut file) => file.flush(),
+            Err(_) => Ok(()),
+        }
+    }
+}
+
+impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for SharedLog {
+    type Writer = SharedLog;
+
+    fn make_writer(&'a self) -> Self::Writer {
+        self.clone()
+    }
+}
+
 /// Prompt for password from stdin
 fn prompt_password() -> Result<String> {
     print!("{}", t!("password.prompt"));
@@ -675,15 +729,26 @@ fn run() -> Result<()> {
     let matches = cmd.get_matches();
     let cli = Cli::from_arg_matches(&matches)?;
 
-    // Initialize logging
-    // If debug-log is specified, automatically enable debug level
-    let log_level = if cli.debug || cli.debug_log.is_some() { "debug" } else { "info" };
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive(format!("jottery_tui={}", log_level).parse()?),
-        )
-        .init();
+    // Initialize logging. With a log file it all goes there, and otherwise to stderr,
+    // because stdout is a command's output and the terminal is the TUI's. This crate is
+    // called jottery, whatever the package is called.
+    let debug_log = cli.debug_log.as_deref().map(open_debug_log).transpose()?;
+
+    let log_level = if cli.debug || debug_log.is_some() { "debug" } else { "error" };
+    let filter = tracing_subscriber::EnvFilter::from_default_env()
+        .add_directive(format!("jottery={}", log_level).parse()?);
+
+    match &debug_log {
+        Some(file) => tracing_subscriber::fmt()
+            .with_env_filter(filter)
+            .with_ansi(false)
+            .with_writer(SharedLog(file.clone()))
+            .init(),
+        None => tracing_subscriber::fmt()
+            .with_env_filter(filter)
+            .with_writer(io::stderr)
+            .init(),
+    }
 
     info!("Jottery TUI v{}", env!("CARGO_PKG_VERSION"));
 
@@ -1355,18 +1420,6 @@ fn run() -> Result<()> {
             // Run interactive TUI
         }
     }
-
-    // Open debug log file if specified
-    let debug_log = if let Some(log_path) = cli.debug_log {
-        let file = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&log_path)
-            .context(format!("Failed to open debug log: {}", log_path.display()))?;
-        Some(Arc::new(Mutex::new(file)))
-    } else {
-        None
-    };
 
     // Create TUI
     ui::install_panic_hook();

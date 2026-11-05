@@ -6,7 +6,6 @@
 use zeroize::Zeroizing;
 
 /// Application state
-#[derive(Debug)]
 pub enum AppState {
     /// Locked - password input screen
     Locked,
@@ -82,6 +81,31 @@ pub enum AppState {
     Quit,
 }
 
+/// Names the state and nothing else, because several states hold passwords, which
+/// `Zeroizing` prints in full.
+impl std::fmt::Debug for AppState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Locked => "Locked",
+            Self::NoteList => "NoteList",
+            Self::NoteView => "NoteView",
+            Self::Settings { .. } => "Settings",
+            Self::Help { .. } => "Help",
+            Self::InputEmailForStatus { .. } => "InputEmailForStatus",
+            Self::ShowRegistrationStatus { .. } => "ShowRegistrationStatus",
+            Self::RegisterInputEndpoint { .. } => "RegisterInputEndpoint",
+            Self::RegisterInputEmail { .. } => "RegisterInputEmail",
+            Self::RegisterInputPassword { .. } => "RegisterInputPassword",
+            Self::RegisterPendingApproval { .. } => "RegisterPendingApproval",
+            Self::RegisterInputDeviceName { .. } => "RegisterInputDeviceName",
+            Self::ChangePasswordCurrent { .. } => "ChangePasswordCurrent",
+            Self::ChangePasswordNew { .. } => "ChangePasswordNew",
+            Self::ChangePasswordConfirm { .. } => "ChangePasswordConfirm",
+            Self::Quit => "Quit",
+        })
+    }
+}
+
 /// Current input mode
 pub enum InputMode {
     /// Normal mode (navigation)
@@ -126,4 +150,26 @@ pub enum FocusedPanel {
     NoteContent,
     /// Attachments panel
     Attachments,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn debug_output_never_shows_a_password() {
+        let password = uuid::Uuid::new_v4().to_string();
+        let state = AppState::ChangePasswordConfirm {
+            current_password: Zeroizing::new(password.clone()),
+            new_password: Zeroizing::new(password.clone()),
+            previous: Box::new(AppState::RegisterInputDeviceName {
+                endpoint: String::new(),
+                email: String::new(),
+                password: Zeroizing::new(password.clone()),
+                previous: Box::new(AppState::NoteList),
+            }),
+        };
+
+        assert!(!format!("{state:?}").contains(&password));
+    }
 }

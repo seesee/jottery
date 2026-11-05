@@ -450,11 +450,10 @@ pub fn add_attachment(app: &mut App, note_id: &str, file_path: &str) -> Result<(
         }
     };
 
-    log_debug(&format!("add_attachment: Starting with path: {}", file_path));
+    log_debug("add_attachment: Starting");
 
     // Expand tilde in path
     let expanded_path = expand_tilde(file_path)?;
-    log_debug(&format!("add_attachment: Expanded path: {:?}", expanded_path));
 
     // Validate file exists
     if !expanded_path.exists() {
@@ -722,7 +721,7 @@ mod tests {
 
         view_attachment(&mut app, &attachment).unwrap();
 
-        assert_eq!(app.attachment_to_confirm.unwrap().filename, "page.html");
+        assert_eq!(app.attachment_to_confirm.as_ref().unwrap().filename, "page.html");
     }
 
     #[test]

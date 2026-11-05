@@ -301,8 +301,6 @@ pub fn check_registration_status(app: &mut App, email: &str) -> Result<String> {
     let endpoint = app.settings.sync_endpoint.as_ref()
         .ok_or_else(|| anyhow::anyhow!(t!("sync.endpoint_not_configured").to_string()))?;
 
-    app.debug_log(&format!("Checking registration status for: {}", email));
-
     let client = crate::api::AuthClient::new(endpoint.clone());
     let status = client.check_status(email)?;
 
@@ -388,7 +386,7 @@ pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &st
 
     let client = crate::api::AuthClient::new(endpoint.to_string());
 
-    app.debug_log(&format!("[Register] Starting device registration: endpoint={}, email={}", endpoint, email));
+    app.debug_log("[Register] Starting device registration");
 
     // Register the device
     let response = client.register_device(email, password, device_name, "tui")?;
@@ -457,7 +455,7 @@ pub fn save_pending_registration(app: &mut App, endpoint: &str, email: &str) -> 
     metadata.pending_registration_email = Some(email.to_string());
     sync_repo.update_metadata(&metadata)?;
 
-    app.debug_log(&format!("Saved pending registration: endpoint={}, email={}", endpoint, email));
+    app.debug_log("Saved pending registration");
 
     Ok(())
 }
@@ -472,7 +470,7 @@ pub fn get_pending_registration(app: &mut App) -> Result<Option<(String, String)
         if !metadata.sync_endpoint.is_empty() && metadata.pending_registration_email.is_some() && metadata.api_key.is_none() {
             let endpoint = metadata.sync_endpoint;
             let email = metadata.pending_registration_email.unwrap();
-            app.debug_log(&format!("Found pending registration: endpoint={}, email={}", endpoint, email));
+            app.debug_log("Found pending registration");
             return Ok(Some((endpoint, email)));
         }
     }

@@ -414,6 +414,41 @@ fn a_backup_this_client_wrote_restores() {
 }
 
 #[test]
+fn debug_goes_to_stderr_and_leaves_the_output_alone() {
+    let (_temp_dir, db) = create_test_env();
+    let password = uuid::Uuid::new_v4().to_string();
+    vault_with_note(&db, &password, "Hello");
+
+    let (ok, stdout, stderr) = run_on(&db, &["--debug", "list", "-p", &password]);
+
+    assert!(ok, "{stderr}");
+    assert!(stderr.contains("Opening database"), "the filter should match this crate: {stderr}");
+    assert!(!stdout.contains("Opening database"), "{stdout}");
+}
+
+#[cfg(unix)]
+#[test]
+fn the_debug_log_is_private_and_holds_no_password() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let (dir, db) = create_test_env();
+    let password = uuid::Uuid::new_v4().to_string();
+    vault_with_note(&db, &password, "Hello");
+
+    let log = dir.path().join("debug.log");
+    fs::write(&log, "").unwrap();
+    fs::set_permissions(&log, fs::Permissions::from_mode(0o644)).unwrap();
+
+    let (ok, _, stderr) = run_on(&db, &["--debug-log", log.to_str().unwrap(), "list", "-p", &password]);
+    assert!(ok, "{stderr}");
+
+    assert_eq!(fs::metadata(&log).unwrap().permissions().mode() & 0o777, 0o600);
+    let contents = fs::read_to_string(&log).unwrap();
+    assert!(contents.contains("Opening database"), "{contents}");
+    assert!(!contents.contains(&password));
+}
+
+#[test]
 fn output_to_a_pipe_keeps_the_note_exact() {
     let (dir, _) = create_test_env();
     let db = dir.path().join("test.db");
