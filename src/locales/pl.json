@@ -254,7 +254,8 @@
         "title": "Informacje o Kopii Zapasowej",
         "created": "Utworzono",
         "records": "Rekordy"
-      }
+      },
+      "storageFull": "W przeglądarce zabrakło miejsca, więc przywracanie nie zostało ukończone i nic nie zachowano. Plik kopii zapasowej jest w porządku: zwolnij miejsce i przywróć go ponownie."
     }
   },
   "settings": {
@@ -442,8 +443,11 @@
         "hintExisting": "Hasło, którym odblokowujesz notatki na innych urządzeniach. Nigdy nie jest wysyłane na serwer.",
         "required": "Wpisz hasło do notatek.",
         "incorrect": "To nie jest hasło odblokowujące notatki na tym urządzeniu. Wpisz hasło do notatek, a nie hasło do serwera.",
-        "uploadFailed": "Synchronizacja jest skonfigurowana, ale nie udało się zapisać klucza szyfrowania na serwerze, więc inne urządzenia nie mogą jeszcze się połączyć. Ponowna próba nastąpi przy następnym odblokowaniu"
-      }
+        "uploadFailed": "Synchronizacja jest skonfigurowana, ale nie udało się zapisać klucza szyfrowania na serwerze, więc inne urządzenia nie mogą jeszcze się połączyć. Ponowna próba nastąpi przy następnym odblokowaniu",
+        "mustDiffer": "Hasło do notatek i hasło do konta muszą być różne. Serwer synchronizacji widzi hasło do konta, więc jeśli są takie same, mógłby odczytać Twoje notatki. Jeśli są takie same na innych urządzeniach, najpierw zmień tam hasło do notatek.",
+        "matchesAccountWarning": "Hasło do notatek jest takie samo jak hasło do konta, więc serwer synchronizacji mógłby odczytać Twoje notatki. Zmień hasło do notatek, aby to naprawić."
+      },
+      "existingAccountDetected": "Ten adres e-mail ma już konto, więc to urządzenie się z nim połączy. Wpisz hasło do notatek używane na innych urządzeniach."
     },
     "editorTab": {
       "vimMode": "Tryb edytora",
@@ -919,7 +923,9 @@
         "emailRequired": "Adres e-mail jest wymagany.",
         "serverPasswordRequired": "Hasło serwera jest wymagane.",
         "notesPasswordMinLength": "Hasło notatek musi mieć co najmniej 8 znaków.",
-        "onboardingFailed": "Nie udało się pobrać kluczy szyfrowania z serwera. Upewnij się, że hasło notatek jest zgodne z hasłem na pozostałych urządzeniach i urządzenie źródłowe zostało zsynchronizowane"
+        "onboardingFailed": "Nie udało się pobrać kluczy szyfrowania z serwera. Upewnij się, że hasło notatek jest zgodne z hasłem na pozostałych urządzeniach i urządzenie źródłowe zostało zsynchronizowane",
+        "accountKeyUnreadable": "To hasło do notatek nie może otworzyć klucza Twojego konta. Sprawdź hasło. Jeśli jest poprawne, klucz mógł zostać zapisany przez starszą wersję Jottery: odblokowanie Jottery na już połączonym urządzeniu to naprawi. Następnie spróbuj ponownie.",
+        "localNotesOrphaned": "Notatki na tym urządzeniu używają innego klucza niż Twoje konto, więc połączenie sprawiłoby, że byłyby nieczytelne. Nic nie zostało zmienione. Aby je zachować, wyeksportuj notatki, usuń dane tego urządzenia, połącz się, a następnie je zaimportuj."
       },
       "steps": {
         "initialising": "Inicjalizacja lokalnego szyfrowania…",
@@ -1005,6 +1011,11 @@
       "notAvailable": "Podgląd niedostępny dla tego typu pliku.",
       "audioNotSupported": "Twoja przeglądarka nie obsługuje odtwarzania audio.",
       "videoNotSupported": "Twoja przeglądarka nie obsługuje odtwarzania wideo."
+    },
+    "confirmDelete": {
+      "title": "Usunąć załącznik?",
+      "message": "Plik zostanie usunięty z tej notatki. Jeśli nie ma go w żadnej wcześniejszej wersji notatki, nie będzie można go odzyskać.",
+      "confirmButton": "Usuń"
     }
   },
   "keyboard": {
@@ -1171,7 +1182,9 @@
     "indicator": "Konflikt synchronizacji",
     "bannerText": "Ta notatka ma konflikt synchronizacji, który należy rozwiązać",
     "resolveButton": "Rozwiąż konflikt",
-    "syncNotification": "{count, plural, one {1 notatka ma konflikt synchronizacji} few {{count} notatki mają konflikty synchronizacji} other {{count} notatek ma konflikty synchronizacji}}"
+    "syncNotification": "{count, plural, one {1 notatka ma konflikt synchronizacji} few {{count} notatki mają konflikty synchronizacji} other {{count} notatek ma konflikty synchronizacji}}",
+    "serverUnreadable": "Kopii tej notatki na serwerze nie można odczytać i mogła zostać zmieniona. Można zachować tylko Twoją wersję.",
+    "localUnreadable": "Nie można odczytać kopii tej notatki na tym urządzeniu."
   },
   "pullToRefresh": {
     "pull": "Pociągnij w dół, aby zsynchronizować",
@@ -1420,6 +1433,17 @@
     "openNote": "Otwórz tę notatkę",
     "repairNotOnServer": "Brak także na serwerze — otwórz notatkę i usuń załącznik",
     "serverMissingTitle": "Brak na serwerze",
-    "serverMissingHint": "Serwer synchronizacji nie ma kopii tych załączników, to urządzenie również nie. Otwórz notatkę i usuń załącznik lub zsynchronizuj z urządzenia, które nadal ma ten plik."
+    "serverMissingHint": "Serwer synchronizacji nie ma kopii tych załączników, to urządzenie również nie. Otwórz notatkę i usuń załącznik lub zsynchronizuj z urządzenia, które nadal ma ten plik.",
+    "rejectedTitle": "Odrzucone z serwera synchronizacji",
+    "rejectedHint": "Serwer synchronizacji przesłał te dane w formie, której nie można zaufać, więc nie zostały zapisane. Istniejące notatki nie zostały naruszone. Jeśli to się powtarza, sprawdź, kto kontroluje serwer.",
+    "rejectedKind": {
+      "note": "Notatka",
+      "version": "Wersja notatki",
+      "conflict": "Konflikt synchronizacji",
+      "savedSearch": "Zapisane wyszukiwanie",
+      "attachment": "Załącznik",
+      "inboxItem": "Element skrzynki odbiorczej",
+      "deletion": "Usunięcie"
+    }
   }
 }

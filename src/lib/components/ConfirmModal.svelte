@@ -28,7 +28,10 @@
     onCancel();
   }
 
-  function handleEnterKey(e: KeyboardEvent) {
+  // Only the text field confirms on Enter. A focused button already acts on Enter by
+  // itself, and Cancel has focus when this opens, so handling it any higher up would
+  // make Enter on Cancel confirm.
+  function handleInputKeydown(e: KeyboardEvent) {
     if (e.key === 'Enter' && canConfirm) {
       handleConfirm();
     }
@@ -38,10 +41,10 @@
 </script>
 
 {#if show}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
   <div
     class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
     on:click={backdropHandler}
-    on:keydown={handleEnterKey}
     role="dialog"
     aria-modal="true"
     tabindex="-1"
@@ -68,6 +71,7 @@
               id="confirm-input"
               type="text"
               bind:value={inputValue}
+              on:keydown={handleInputKeydown}
               placeholder={requireTextMatch}
               class="w-full px-3 py-2.5 min-h-11 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
             />

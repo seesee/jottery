@@ -8,6 +8,7 @@ import { getDB, STORES } from './db';
 import { keyManager } from './keyManager';
 import { cryptoService } from './crypto';
 import { ApplicationLockedError } from '../errors';
+import type { EncryptionResult } from '../types/crypto';
 
 const SETTINGS_KEY = 'user-settings';
 
@@ -42,6 +43,31 @@ async function encryptColorPalette(palette?: ColorPalette): Promise<ColorPalette
 }
 
 /**
+ * Decrypt a colour's display name. Older vaults stored these as plaintext, and
+ * since the palette never leaves this device they can still be read. A value that
+ * is ciphertext but fails to decrypt is an error, so it is dropped, not shown.
+ */
+async function decryptDisplayName(value: string, key: CryptoKey): Promise<string | undefined> {
+  let parsed: { ciphertext?: unknown; iv?: unknown } | null;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    return value;
+  }
+
+  if (typeof parsed?.ciphertext !== 'string' || typeof parsed?.iv !== 'string') {
+    return value;
+  }
+
+  try {
+    return await cryptoService.decryptText(parsed as EncryptionResult, key);
+  } catch (error) {
+    console.warn('[SettingsRepository] Colour name failed to decrypt:', error);
+    return undefined;
+  }
+}
+
+/**
  * Decrypt displayNames in color palette
  */
 async function decryptColorPalette(palette?: ColorPalette): Promise<ColorPalette | undefined> {
@@ -61,16 +87,7 @@ async function decryptColorPalette(palette?: ColorPalette): Promise<ColorPalette
 
     // Decrypt displayName if present
     if (typedColorDef.displayName) {
-      try {
-        const encryptedDisplayName = JSON.parse(typedColorDef.displayName);
-        decrypted[colorKey].displayName = await cryptoService.decryptText(
-          encryptedDisplayName,
-          masterKey.key
-        );
-      } catch {
-        // Handle legacy unencrypted displayNames
-        decrypted[colorKey].displayName = typedColorDef.displayName;
-      }
+      decrypted[colorKey].displayName = await decryptDisplayName(typedColorDef.displayName, masterKey.key);
     }
   }
 
