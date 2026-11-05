@@ -1209,6 +1209,124 @@ struct SyncProtocolTests {
         #expect(resolved.content == "newest on the server")
     }
 
+    // MARK: - A side of a conflict that won't decrypt (R2-071)
+
+    /// Text the server could send, encrypted with some other key.
+    private func undecryptable() throws -> String {
+        let other = SymmetricKey(data: Data(repeating: 9, count: 32))
+        return try CryptoService.serializeEncryptedJSON(CryptoService.encryptText("not for this key", key: other))
+    }
+
+    private func refuseWith(serverContent: String) {
+        ScriptedServerProtocol.pushHandler = { request in
+            let rejected = request.notes.map { note in
+                SyncRejected(
+                    id: note.id, reason: "conflict", serverModifiedAt: "2026-11-05T09:00:00Z",
+                    serverContent: serverContent, serverTags: [], serverVersion: 9,
+                    serverAttachments: [], serverPinned: false,
+                    serverContentHash: "server-hash", serverHashChain: ["server-hash"]
+                )
+            }
+            return .init(body: (try? JSONEncoder().encode(SyncPushResponse(accepted: [], rejected: rejected))) ?? Data())
+        }
+    }
+
+    @Test(arguments: [ConflictResolutionStrategy.keepServer, .keepBoth])
+    func aServerCopyThatWontDecryptCantBeTaken(strategy: ConflictResolutionStrategy) async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "the only readable copy", key: key)
+        refuseWith(serverContent: try undecryptable())
+
+        try await fixture.service.sync()
+
+        let waiting = try #require(await fixture.service.pendingConflicts.first)
+        #expect(waiting.serverUnreadable)
+        await #expect(throws: ConflictResolutionError.unreadable) {
+            try await fixture.service.resolveConflict(noteId: note.id, strategy: strategy)
+        }
+
+        let kept = try #require(try fixture.repo.get(id: note.id, key: key))
+        #expect(kept.content == "the only readable copy")
+        #expect(await fixture.service.pendingConflicts.count == 1, "the conflict stays until it can be settled")
+    }
+
+    @Test func plaintextFromTheServerIsNotTakenForANote() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "the only readable copy", key: key)
+        refuseWith(serverContent: "plaintext chosen by the server")
+
+        try await fixture.service.sync()
+
+        let waiting = try #require(await fixture.service.pendingConflicts.first)
+        #expect(waiting.serverUnreadable)
+        #expect(waiting.serverContent.isEmpty, "never shown as if it were the server's version")
+        await #expect(throws: ConflictResolutionError.unreadable) {
+            try await fixture.service.resolveConflict(noteId: note.id, strategy: .keepBoth)
+        }
+    }
+
+    @Test func aServerCopyThatWontDecryptCanStillBeOverruled() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "kept over a copy nobody can read", key: key)
+        refuseWith(serverContent: try undecryptable())
+        try await fixture.service.sync()
+
+        try await fixture.service.resolveConflict(noteId: note.id, strategy: .keepLocal)
+
+        let record = try #require(try fixture.repo.getRaw(id: note.id))
+        #expect(record.needsSync)
+        #expect(await fixture.service.pendingConflicts.isEmpty)
+    }
+
+    /// Keep Both copies the local side, so a local side that can't be read would
+    /// become an empty note while the original is overwritten.
+    @Test func aLocalCopyThatWontDecryptCantBeKeptAsWell() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "soon unreadable", key: key)
+        var record = try #require(try fixture.repo.getRaw(id: note.id))
+        record.content = try undecryptable()
+        try fixture.repo.updateRaw(record)
+        let serverCopy = try CryptoService.serializeEncryptedJSON(CryptoService.encryptText("the server's copy", key: key))
+        refuseWith(serverContent: serverCopy)
+
+        try await fixture.service.sync()
+
+        let waiting = try #require(await fixture.service.pendingConflicts.first)
+        #expect(waiting.localUnreadable)
+        await #expect(throws: ConflictResolutionError.unreadable) {
+            try await fixture.service.resolveConflict(noteId: note.id, strategy: .keepBoth)
+        }
+        #expect(try fixture.repo.getRaw(id: note.id)?.content == record.content)
+
+        try await fixture.service.resolveConflict(noteId: note.id, strategy: .keepServer)
+        #expect(try fixture.repo.get(id: note.id, key: key)?.content == "the server's copy")
+    }
+
+    /// Keep Both writes two notes. Stopping between them must not leave the
+    /// original overwritten with the local side nowhere.
+    @Test func keepBothWritesBothNotesOrNeither() async throws {
+        let fixture = try makeFixture()
+        let note = try fixture.repo.create(content: "the local side", key: key)
+        let serverCopy = try CryptoService.serializeEncryptedJSON(CryptoService.encryptText("the server's copy", key: key))
+        refuseWith(serverContent: serverCopy)
+        try await fixture.service.sync()
+        // Fails the second of the two writes: the duplicate is a new row.
+        try await fixture.db.dbPool.write { db in
+            try db.execute(sql: """
+                CREATE TRIGGER no_new_notes BEFORE INSERT ON notes
+                WHEN NOT EXISTS (SELECT 1 FROM notes WHERE id = NEW.id)
+                BEGIN SELECT RAISE(ABORT, 'no new notes'); END
+            """)
+        }
+
+        await #expect(throws: (any Error).self) {
+            try await fixture.service.resolveConflict(noteId: note.id, strategy: .keepBoth)
+        }
+
+        #expect(try fixture.repo.get(id: note.id, key: key)?.content == "the local side")
+        #expect(await fixture.service.pendingConflicts.count == 1)
+    }
+
     // MARK: - A note edited many times between syncs (R2-060)
 
     @Test func theServersHashStaysInTheChainHoweverManyEditsThereAre() throws {

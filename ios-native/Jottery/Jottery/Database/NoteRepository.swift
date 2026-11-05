@@ -587,6 +587,15 @@ struct NoteRepository: Sendable {
         }
     }
 
+    /// Write several notes as one change: all of them, or none.
+    func insertOrReplace(_ records: [NoteRecord]) throws {
+        try db.dbPool.write { db in
+            for record in records {
+                try record.save(db)
+            }
+        }
+    }
+
     /// Write a batch of restored notes in one transaction. A note here that's
     /// at least as new as the backup's copy stays as it is: it holds edits the
     /// backup doesn't, and they'd otherwise be overwritten and synced everywhere.

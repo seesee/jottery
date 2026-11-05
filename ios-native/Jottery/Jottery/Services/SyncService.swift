@@ -455,23 +455,23 @@ actor SyncService {
                   let record = try noteRepo.getRaw(id: rejected.id) else { continue }
 
             // Decrypt local content for display
-            let (localContent, localTags) = Self.decryptNoteForDisplay(
+            let local = Self.decryptNoteForDisplay(
                 content: record.content, tags: record.tags, key: key
             )
 
             // Decrypt server content for display (tags are in sync format)
-            let (serverContent, serverTags) = Self.decryptServerNoteForDisplay(
+            let server = Self.decryptServerNoteForDisplay(
                 content: rejected.serverContent, syncTags: rejected.serverTags, key: key
             )
 
             pendingConflicts.append(ConflictInfo(
                 id: rejected.id,
-                localContent: localContent,
-                localTags: localTags,
+                localContent: local?.content ?? "",
+                localTags: local?.tags ?? [],
                 localModifiedAt: record.modifiedAt,
                 localAttachments: Self.decodeAttachments(record.attachments),
-                serverContent: serverContent,
-                serverTags: serverTags,
+                serverContent: server?.content ?? "",
+                serverTags: server?.tags ?? [],
                 serverModifiedAt: rejected.serverModifiedAt,
                 serverEncryptedContent: rejected.serverContent,
                 serverEncryptedTags: rejected.serverTags,
@@ -490,7 +490,9 @@ actor SyncService {
                 serverLockedAt: rejected.serverLockedAt,
                 serverColor: rejected.serverColor,
                 serverDeleted: rejected.serverDeleted,
-                serverDeletedAt: rejected.serverDeletedAt
+                serverDeletedAt: rejected.serverDeletedAt,
+                localUnreadable: local == nil,
+                serverUnreadable: server == nil
             ))
         }
 
@@ -845,21 +847,21 @@ actor SyncService {
 
     /// Build a ConflictInfo for a pull-side conflict.
     private func buildPullConflictInfo(localRecord: NoteRecord, syncNote: SyncNote) -> ConflictInfo {
-        let (localContent, localTags) = Self.decryptNoteForDisplay(
+        let local = Self.decryptNoteForDisplay(
             content: localRecord.content, tags: localRecord.tags, key: key
         )
-        let (serverContent, serverTags) = Self.decryptServerNoteForDisplay(
+        let server = Self.decryptServerNoteForDisplay(
             content: syncNote.content, syncTags: syncNote.tags, key: key
         )
 
         return ConflictInfo(
             id: syncNote.id,
-            localContent: localContent,
-            localTags: localTags,
+            localContent: local?.content ?? "",
+            localTags: local?.tags ?? [],
             localModifiedAt: localRecord.modifiedAt,
             localAttachments: Self.decodeAttachments(localRecord.attachments),
-            serverContent: serverContent,
-            serverTags: serverTags,
+            serverContent: server?.content ?? "",
+            serverTags: server?.tags ?? [],
             serverModifiedAt: syncNote.modifiedAt,
             serverEncryptedContent: syncNote.content,
             serverEncryptedTags: syncNote.tags,
@@ -878,7 +880,9 @@ actor SyncService {
             serverLockedAt: syncNote.lockedAt,
             serverColor: syncNote.color,
             serverDeleted: syncNote.deleted,
-            serverDeletedAt: syncNote.deletedAt
+            serverDeletedAt: syncNote.deletedAt,
+            localUnreadable: local == nil,
+            serverUnreadable: server == nil
         )
     }
 
@@ -990,6 +994,7 @@ actor SyncService {
     func resolveConflict(noteId: String, strategy: ConflictResolutionStrategy) throws {
         guard let conflictIndex = pendingConflicts.firstIndex(where: { $0.id == noteId }) else { return }
         let conflict = pendingConflicts[conflictIndex]
+        guard conflict.allows(strategy) else { throw ConflictResolutionError.unreadable }
         let now = Date().iso8601
 
         switch strategy {
@@ -1036,9 +1041,6 @@ actor SyncService {
             // Accept server version for the existing note
             let record = try recreateRecordIfMissing(noteId: noteId, conflict: conflict)
             let serverRecord = try Self.applyingServerCopy(from: conflict, to: record, syncedAt: now, key: key)
-            // insertOrReplace (upsert) rather than updateRaw: the record may have
-            // just been recreated in-memory above and doesn't exist in the DB yet.
-            try noteRepo.insertOrReplace(serverRecord)
 
             // Create a duplicate note with the local content
             let encContent = try CryptoService.encryptText(conflict.localContent, key: key)
@@ -1056,7 +1058,10 @@ actor SyncService {
             // ids is unsafe (single-attachment removal deletes by explicit id).
             let duplicateAttachments = try copyAttachments(conflict.localAttachments)
             duplicate.attachments = Self.encodeAttachments(duplicateAttachments)
-            try noteRepo.insertOrReplace(duplicate)
+            // Together, or stopping between them would lose the local side:
+            // the original overwritten, and no copy made. A copied blob left
+            // behind costs space and nothing else.
+            try noteRepo.insertOrReplace([serverRecord, duplicate])
         }
 
         pendingConflicts.remove(at: conflictIndex)
@@ -1142,7 +1147,7 @@ actor SyncService {
     // MARK: - Decryption Helpers
 
     /// Decrypt storage-format content and tags for display.
-    private static func decryptNoteForDisplay(content: String, tags: String, key: SymmetricKey) -> (String, [String]) {
+    private static func decryptNoteForDisplay(content: String, tags: String, key: SymmetricKey) -> (content: String, tags: [String])? {
         do {
             let encContent = try CryptoService.parseEncryptedJSON(content)
             let plainContent = try CryptoService.decryptText(encContent, key: key)
@@ -1158,12 +1163,12 @@ actor SyncService {
             }
             return (plainContent, plainTags)
         } catch {
-            return ("", [])
+            return nil
         }
     }
 
     /// Decrypt server content and sync-format tags for display.
-    private static func decryptServerNoteForDisplay(content: String, syncTags: [String], key: SymmetricKey) -> (String, [String]) {
+    private static func decryptServerNoteForDisplay(content: String, syncTags: [String], key: SymmetricKey) -> (content: String, tags: [String])? {
         do {
             let encContent = try CryptoService.parseEncryptedJSON(content)
             let plainContent = try CryptoService.decryptText(encContent, key: key)
@@ -1180,7 +1185,7 @@ actor SyncService {
             }
             return (plainContent, tags)
         } catch {
-            return ("", [])
+            return nil
         }
     }
 
@@ -1274,7 +1279,8 @@ actor SyncService {
                 mimeType: ref.mimeType,
                 size: ref.size,
                 data: newId,
-                thumbnailData: ref.thumbnailData
+                // Would name the original's blob, the sharing this exists to avoid.
+                thumbnailData: nil
             ))
         }
         return copied

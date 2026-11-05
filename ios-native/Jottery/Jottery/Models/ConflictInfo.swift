@@ -35,6 +35,25 @@ struct ConflictInfo: Identifiable, Sendable {
     var serverColor: String?
     var serverDeleted: Bool?
     var serverDeletedAt: String?
+
+    // A side that failed to decrypt. Its content above is empty, and is never
+    // to be shown, kept or copied as if it were the note.
+    var localUnreadable = false
+    var serverUnreadable = false
+
+    /// Whether `strategy` could only be carried out by taking what can't be read.
+    func allows(_ strategy: ConflictResolutionStrategy) -> Bool {
+        switch strategy {
+        case .keepLocal: return !localUnreadable || serverUnreadable
+        case .keepServer: return !serverUnreadable
+        case .keepBoth: return !localUnreadable && !serverUnreadable
+        }
+    }
+}
+
+enum ConflictResolutionError: Error, Equatable {
+    /// The choice depends on a side of the conflict that failed to decrypt.
+    case unreadable
 }
 
 enum ConflictResolutionStrategy: Sendable {

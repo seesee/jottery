@@ -102,6 +102,11 @@ struct ConflictDetailView: View {
     let conflict: ConflictInfo
 
     @State private var showingLocal = true
+    @State private var couldntResolve = false
+
+    private var shownSideIsUnreadable: Bool {
+        showingLocal ? conflict.localUnreadable : conflict.serverUnreadable
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -141,10 +146,17 @@ struct ConflictDetailView: View {
                     .padding(.horizontal)
 
                     // Content
-                    Text(showingLocal ? conflict.localContent : conflict.serverContent)
-                        .font(.body.monospaced())
-                        .padding(.horizontal)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if shownSideIsUnreadable {
+                        Label(L.conflictUnreadable, systemImage: "lock.trianglebadge.exclamationmark")
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        Text(showingLocal ? conflict.localContent : conflict.serverContent)
+                            .font(.body.monospaced())
+                            .padding(.horizontal)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
             }
 
@@ -159,6 +171,7 @@ struct ConflictDetailView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
+                .disabled(!conflict.allows(.keepLocal))
 
                 Button {
                     resolveConflict(strategy: .keepServer)
@@ -167,6 +180,7 @@ struct ConflictDetailView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
+                .disabled(!conflict.allows(.keepServer))
 
                 Button {
                     resolveConflict(strategy: .keepBoth)
@@ -176,17 +190,26 @@ struct ConflictDetailView: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(.secondary)
+                .disabled(!conflict.allows(.keepBoth))
             }
             .padding()
         }
         .navigationTitle(L.conflictResolve)
         .navigationBarTitleDisplayMode(.inline)
+        .alert(L.conflictCouldntResolve, isPresented: $couldntResolve) {
+            Button(L.versionHistoryDone, role: .cancel) {}
+        }
     }
 
     private func resolveConflict(strategy: ConflictResolutionStrategy) {
         Task {
-            try? await appState.resolveConflict(noteId: conflict.id, strategy: strategy)
-            dismiss()
+            do {
+                try await appState.resolveConflict(noteId: conflict.id, strategy: strategy)
+                dismiss()
+            } catch {
+                // It stays waiting, so the user can try again.
+                couldntResolve = true
+            }
         }
     }
 
