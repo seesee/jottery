@@ -752,10 +752,10 @@ async fn test_sync_push_conflict_with_attachments() {
 
     // Insert attachment into attachments_meta table (separate from notes table)
     sqlx::query!(
-        r#"INSERT INTO attachments_meta (id, note_id, note_user_id, filename, mime_type, size, created_at)
+        r#"INSERT INTO attachments_meta (id, attachment_id, user_id, filename, mime_type, size, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?)"#,
         attachment_id,
-        note_id,
+        attachment_id,
         user_id,
         "server-file.pdf",
         "application/pdf",
@@ -765,6 +765,16 @@ async fn test_sync_push_conflict_with_attachments() {
     .execute(&pool)
     .await
     .expect("Failed to insert attachment metadata");
+
+    sqlx::query!(
+        r#"INSERT INTO note_attachments (user_id, note_id, attachment_id) VALUES (?, ?, ?)"#,
+        user_id,
+        note_id,
+        attachment_id
+    )
+    .execute(&pool)
+    .await
+    .expect("Failed to link attachment to note");
 
     // Try to push outdated client version
     let client_time = "2024-01-01T12:00:00Z";

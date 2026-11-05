@@ -187,7 +187,12 @@ pub async fn get_account_info(
 
     // Count attachments
     let attachment_count = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM attachments_meta WHERE note_id IN (SELECT id FROM notes WHERE user_id = ? AND deleted = 0)",
+        "SELECT COUNT(*) FROM attachments_meta m
+         WHERE m.user_id = ?1 AND EXISTS (
+             SELECT 1 FROM note_attachments na
+             JOIN notes n ON n.id = na.note_id AND n.user_id = na.user_id
+             WHERE na.user_id = ?1 AND na.attachment_id = m.attachment_id AND n.deleted = 0
+         )",
         user_id
     )
     .fetch_one(&state.pool)
@@ -199,8 +204,12 @@ pub async fn get_account_info(
 
     // Calculate storage used
     let storage_used = sqlx::query_scalar!(
-        "SELECT COALESCE(SUM(size), 0) FROM attachments_meta
-         WHERE note_id IN (SELECT id FROM notes WHERE user_id = ? AND deleted = 0)",
+        "SELECT COALESCE(SUM(m.size), 0) FROM attachments_meta m
+         WHERE m.user_id = ?1 AND EXISTS (
+             SELECT 1 FROM note_attachments na
+             JOIN notes n ON n.id = na.note_id AND n.user_id = na.user_id
+             WHERE na.user_id = ?1 AND na.attachment_id = m.attachment_id AND n.deleted = 0
+         )",
         user_id
     )
     .fetch_one(&state.pool)

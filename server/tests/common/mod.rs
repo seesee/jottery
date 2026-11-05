@@ -184,3 +184,133 @@ pub async fn create_device(pool: &SqlitePool, user_id: &str) -> (String, String)
     .unwrap();
     (id, api_key)
 }
+
+/// A note as a client pushes it.
+pub fn note(id: &str, content: &str, modified_at: &str) -> Value {
+    serde_json::json!({
+        "id": id,
+        "createdAt": "2024-01-01T00:00:00Z",
+        "modifiedAt": modified_at,
+        "content": content,
+        "tags": [],
+        "attachments": [],
+        "pinned": false,
+        "archived": false,
+        "archivedAt": null,
+        "locked": false,
+        "lockedAt": null,
+        "deleted": false,
+        "deletedAt": null,
+        "version": 1,
+        "wordWrap": null,
+        "syntaxLanguage": null,
+        "showPreview": null,
+        "color": null,
+        "contentHash": null,
+        "parentHash": null,
+        "hashChain": null,
+    })
+}
+
+pub fn note_with_attachments(id: &str, content: &str, modified_at: &str, attachments: &[&str]) -> Value {
+    let mut value = note(id, content, modified_at);
+    value["attachments"] = attachments.iter().map(|a| attachment_ref(a)).collect();
+    value
+}
+
+pub fn attachment_ref(id: &str) -> Value {
+    serde_json::json!({
+        "id": id,
+        "filename": "encrypted-name",
+        "mimeType": "application/octet-stream",
+        "size": 4,
+        "data": id,
+    })
+}
+
+/// A base64 blob for a push's `attachments` array.
+pub fn blob(id: &str, bytes: &[u8]) -> Value {
+    use base64::Engine;
+    serde_json::json!({
+        "id": id,
+        "data": base64::engine::general_purpose::STANDARD.encode(bytes),
+    })
+}
+
+pub fn version(note_id: &str, version: i64, content: &str) -> Value {
+    serde_json::json!({
+        "versionKey": format!("{note_id}:{version}"),
+        "noteId": note_id,
+        "version": version,
+        "createdAt": "2024-01-01T00:00:00Z",
+        "syncedAt": "2024-01-01T00:00:00Z",
+        "content": content,
+        "tags": [],
+        "attachments": [],
+        "syntaxLanguage": null,
+        "wordWrap": null,
+        "showPreview": null,
+        "color": null,
+        "reason": "sync",
+        "contentHash": format!("hash-{content}"),
+        "parentHash": null,
+    })
+}
+
+pub fn saved_search(id: &str, name: &str, modified_at: &str) -> Value {
+    serde_json::json!({
+        "id": id,
+        "name": name,
+        "query": "#tag",
+        "order": 0,
+        "createdAt": "2024-01-01T00:00:00Z",
+        "modifiedAt": modified_at,
+        "deleted": false,
+        "deletedAt": null,
+        "version": 1,
+    })
+}
+
+/// Push, asserting the request succeeded. Fields default to empty.
+pub async fn push(app: &Router, api_key: &str, fields: Value) -> Value {
+    let mut body = serde_json::json!({ "notes": [], "attachments": [], "versions": [] });
+    for (key, value) in fields.as_object().expect("push fields must be an object") {
+        body[key] = value.clone();
+    }
+    let (status, response) = call(app, "POST", "/api/v1/sync/push", Some(api_key), Some(body)).await;
+    assert_eq!(status, StatusCode::OK, "push failed: {response}");
+    response
+}
+
+/// Pull, asserting the request succeeded.
+pub async fn pull(app: &Router, api_key: &str, fields: Value) -> Value {
+    let mut body = serde_json::json!({ "knownNoteIds": [], "knownAttachmentIds": [] });
+    for (key, value) in fields.as_object().expect("pull fields must be an object") {
+        body[key] = value.clone();
+    }
+    let (status, response) = call(app, "POST", "/api/v1/sync/pull", Some(api_key), Some(body)).await;
+    assert_eq!(status, StatusCode::OK, "pull failed: {response}");
+    response
+}
+
+/// A full pull with no cursor or timestamp.
+pub async fn pull_all(app: &Router, api_key: &str) -> Value {
+    pull(app, api_key, serde_json::json!({ "limit": 1000 })).await
+}
+
+/// The ids in a response array, sorted.
+pub fn ids(items: &Value) -> Vec<String> {
+    let mut ids: Vec<String> = items
+        .as_array()
+        .expect("expected an array")
+        .iter()
+        .map(|item| item["id"].as_str().expect("item has an id").to_string())
+        .collect();
+    ids.sort();
+    ids
+}
+
+/// A fresh id, so tests can't collide.
+pub fn new_id() -> String {
+    Uuid::new_v4().to_string()
+}

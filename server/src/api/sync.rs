@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use crate::{
     api::extractors::AuthClient,
+    db::AttachmentRepository,
     error::{AppError, AppResult},
     models::{
         AttachmentRef, SyncAccepted, SyncAttachmentData, SyncNote, SyncPullRequest,
@@ -316,25 +317,15 @@ pub async fn push(
             });
 
             // Store attachment metadata for this note
+            let mut conn = state.pool.acquire().await?;
             for attachment_ref in &note.attachments {
-                sqlx::query!(
-                    r#"
-                    INSERT INTO attachments_meta (id, note_id, note_user_id, filename, mime_type, size, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(id) DO UPDATE SET
-                        filename = excluded.filename,
-                        mime_type = excluded.mime_type,
-                        size = excluded.size
-                    "#,
-                    attachment_ref.id,
-                    note.id,
-                    client_info.user_id,
-                    attachment_ref.filename,
-                    attachment_ref.mime_type,
-                    attachment_ref.size,
-                    now
+                AttachmentRepository::link_to_note(
+                    &mut conn,
+                    &client_info.user_id,
+                    &note.id,
+                    attachment_ref,
+                    &now,
                 )
-                .execute(&state.pool)
                 .await?;
 
                 tracing::debug!("Stored attachment metadata: {} for note {}", attachment_ref.id, note.id);
@@ -353,27 +344,18 @@ pub async fn push(
             .fetch_one(&state.pool)
             .await?;
 
-            // Fetch server attachments for this note (note ownership already verified)
-            let server_attachments_rows = sqlx::query!(
-                r#"SELECT id, filename, mime_type, size FROM attachments_meta WHERE note_id = ?"#,
-                note.id
+            // Fetch this user's attachments for the note
+            let mut conn = state.pool.acquire().await?;
+            let server_attachments: Vec<AttachmentRef> = AttachmentRepository::refs_for_notes(
+                &mut conn,
+                &client_info.user_id,
+                &[note.id.as_str()],
             )
-            .fetch_all(&state.pool)
-            .await?;
-
-            let server_attachments: Vec<AttachmentRef> = server_attachments_rows
-                .into_iter()
-                .filter_map(|row| {
-                    let id = row.id?;
-                    Some(AttachmentRef {
-                        id: id.clone(),
-                        filename: row.filename,
-                        mime_type: row.mime_type,
-                        size: row.size,
-                        data: id, // Reference ID same as attachment ID
-                    })
-                })
-                .collect();
+            .await?
+            .into_iter()
+            .map(|(_, attachment)| attachment)
+            .collect();
+            drop(conn);
 
             // Parse server tags from JSON
             let server_tags: Vec<String> = serde_json::from_str(&server_note.tags)
@@ -499,7 +481,7 @@ pub async fn push(
                 content_hash, parent_hash
             )
             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)
-            ON CONFLICT(version_key) DO UPDATE SET
+            ON CONFLICT(user_id, version_key) DO UPDATE SET
                 synced_at = excluded.synced_at,
                 server_synced_at = excluded.server_synced_at,
                 content_hash = excluded.content_hash,
@@ -543,30 +525,10 @@ pub async fn push(
         }
     }
 
-    // Store attachment data (binary blobs)
-    // Handle FK errors gracefully - attachment metadata may not exist if note was rejected
+    // Store attachment data (binary blobs). A blob is only stored against
+    // this user's own metadata, so one user can't reach another's attachment.
+    let mut conn = state.pool.acquire().await?;
     for attachment in push_req.attachments {
-        // Ownership guard: only store data for attachments whose metadata
-        // belongs to the authenticated user. SQLite FK enforcement cannot be
-        // relied on here, and without this check one user could overwrite
-        // another user's attachment data by id.
-        let owned: Option<(String,)> = sqlx::query_as(
-            "SELECT id FROM attachments_meta WHERE id = ? AND note_user_id = ?",
-        )
-        .bind(&attachment.id)
-        .bind(&client_info.user_id)
-        .fetch_optional(&state.pool)
-        .await?;
-        if owned.is_none() {
-            tracing::warn!(
-                "Skipping attachment data {} from client {}: no matching metadata for user {}",
-                attachment.id,
-                client_info.client_id,
-                client_info.user_id
-            );
-            continue;
-        }
-
         // Decode base64
         let data = match base64::engine::general_purpose::STANDARD.decode(&attachment.data) {
             Ok(d) => d,
@@ -576,35 +538,28 @@ pub async fn push(
             }
         };
 
-        // Store in attachments_data
-        let result = sqlx::query!(
-            r#"
-            INSERT INTO attachments_data (id, data, created_at)
-            VALUES (?, ?, ?)
-            ON CONFLICT(id) DO UPDATE SET data = excluded.data
-            "#,
-            attachment.id,
-            data,
-            now
+        let stored = AttachmentRepository::store_blob(
+            &mut conn,
+            &client_info.user_id,
+            &attachment.id,
+            &data,
+            &now,
         )
-        .execute(&state.pool)
-        .await;
+        .await?;
 
-        match result {
-            Ok(_) => {
-                tracing::debug!("Stored attachment: {}", attachment.id);
-            }
-            Err(e) => {
-                // Log and skip on FK or other errors (graceful degradation)
-                // This can happen if attachment metadata wasn't stored because note was rejected
-                tracing::warn!(
-                    "Failed to store attachment data {}: {} (skipping)",
-                    attachment.id,
-                    e
-                );
-            }
+        if stored {
+            tracing::debug!("Stored attachment: {}", attachment.id);
+        } else {
+            // Expected when the note was rejected: its metadata was never stored.
+            tracing::warn!(
+                "Skipping attachment data {} from client {}: no matching metadata for user {}",
+                attachment.id,
+                client_info.client_id,
+                client_info.user_id
+            );
         }
     }
+    drop(conn);
 
     // Store saved searches (similar to notes, with last-write-wins conflict resolution)
     for search in push_req.saved_searches {
@@ -636,7 +591,7 @@ pub async fn push(
                     synced_at, deleted, deleted_at, version
                 )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(id) DO UPDATE SET
+                ON CONFLICT(id, user_id) DO UPDATE SET
                     name = excluded.name,
                     query = excluded.query,
                     "order" = excluded."order",
@@ -725,17 +680,18 @@ pub async fn push(
         None
     } else {
         let mut qb: sqlx::QueryBuilder<'_, sqlx::Sqlite> = sqlx::QueryBuilder::new(
-            "SELECT m.note_id, m.id FROM attachments_meta m \
+            "SELECT na.note_id, m.attachment_id FROM note_attachments na \
+             JOIN attachments_meta m ON m.user_id = na.user_id AND m.attachment_id = na.attachment_id \
              LEFT JOIN attachments_data d ON d.id = m.id \
-             WHERE d.id IS NULL AND m.note_user_id = ",
+             WHERE d.id IS NULL AND na.user_id = ",
         );
         qb.push_bind(&client_info.user_id);
-        qb.push(" AND m.note_id IN (");
+        qb.push(" AND na.note_id IN (");
         let mut sep = qb.separated(", ");
         for a in &accepted {
             sep.push_bind(a.id.as_str());
         }
-        sep.push_unseparated(") ORDER BY m.note_id, m.id");
+        sep.push_unseparated(") ORDER BY na.note_id, m.attachment_id");
 
         match qb
             .build_query_as::<(String, String)>()
@@ -889,24 +845,9 @@ pub async fn pull(
     let note_ids: Vec<&str> = db_notes.iter().map(|n| n.id.as_str()).collect();
 
     // Fetch all attachments for all notes in a single query (avoids N+1 problem)
-    // Uses QueryBuilder for type-safe dynamic SQL construction
-    let all_attachments: Vec<(Option<String>, Option<String>, String, String, i64, String)> = if !note_ids.is_empty() {
-        let mut query_builder: sqlx::QueryBuilder<'_, sqlx::Sqlite> = sqlx::QueryBuilder::new(
-            "SELECT id, note_id, filename, mime_type, size, created_at FROM attachments_meta WHERE note_id IN ("
-        );
-        let mut separated = query_builder.separated(", ");
-        for note_id in &note_ids {
-            separated.push_bind(*note_id);
-        }
-        separated.push_unseparated(")");
-
-        query_builder
-            .build_query_as()
-            .fetch_all(&state.pool)
-            .await?
-    } else {
-        Vec::new()
-    };
+    let mut conn = state.pool.acquire().await?;
+    let all_attachments =
+        AttachmentRepository::refs_for_notes(&mut conn, &client_info.user_id, &note_ids).await?;
 
     // Group attachments by note_id for O(1) lookup
     // Pre-allocate capacity based on number of notes to avoid reallocations
@@ -914,21 +855,9 @@ pub async fn pull(
         std::collections::HashMap::with_capacity(db_notes.len());
     let mut needed_attachments = Vec::new();
 
-    for (id, note_id, filename, mime_type, size, _created_at) in all_attachments {
-        if let (Some(att_id), Some(nid)) = (id, note_id) {
-            needed_attachments.push(att_id.clone());
-            let attachment = crate::models::AttachmentRef {
-                id: att_id.clone(),
-                filename,
-                mime_type,
-                size,
-                data: att_id,
-            };
-            attachments_by_note
-                .entry(nid)
-                .or_default()
-                .push(attachment);
-        }
+    for (note_id, attachment) in all_attachments {
+        needed_attachments.push(attachment.id.clone());
+        attachments_by_note.entry(note_id).or_default().push(attachment);
     }
 
     // Build notes with pre-fetched attachments
@@ -982,34 +911,18 @@ pub async fn pull(
         .map(|s| s.as_str())
         .collect();
 
-    let attachments_data: Vec<SyncAttachmentData> = if !unknown_attachments.is_empty() {
-        // Batch fetch all unknown attachments in a single query
-        let mut query_builder: sqlx::QueryBuilder<'_, sqlx::Sqlite> = sqlx::QueryBuilder::new(
-            "SELECT id, data FROM attachments_data WHERE id IN ("
-        );
-        let mut separated = query_builder.separated(", ");
-        for att_id in &unknown_attachments {
-            separated.push_bind(*att_id);
-        }
-        separated.push_unseparated(")");
-
-        let rows: Vec<(Option<String>, Vec<u8>)> = query_builder
-            .build_query_as()
-            .fetch_all(&state.pool)
-            .await?;
-
-        rows.into_iter()
-            .filter_map(|(id, data)| {
-                id.map(|att_id| {
-                    let encoded = base64::engine::general_purpose::STANDARD.encode(&data);
-                    tracing::debug!("Sending attachment {} to client", att_id);
-                    SyncAttachmentData { id: att_id, data: encoded }
-                })
+    // Batch fetch all unknown attachments in a single query
+    let attachments_data: Vec<SyncAttachmentData> =
+        AttachmentRepository::blobs(&mut conn, &client_info.user_id, &unknown_attachments)
+            .await?
+            .into_iter()
+            .map(|(id, data)| {
+                let encoded = base64::engine::general_purpose::STANDARD.encode(&data);
+                tracing::debug!("Sending attachment {} to client", id);
+                SyncAttachmentData { id, data: encoded }
             })
-            .collect()
-    } else {
-        Vec::new()
-    };
+            .collect();
+    drop(conn);
 
     // Get hard deletions that this client needs to apply
     // Query deletions since last sync (or all if no last sync)
@@ -1222,28 +1135,26 @@ pub async fn delete_note(
 }
 
 /// Fetch a single attachment blob the client is missing locally (vault health
-/// repair). Ownership is enforced via attachments_meta.note_user_id; unknown
-/// or foreign attachments return 404 so existence is not leaked.
-///
-/// Uses the runtime query API (not the query! macro) so the SQLX_OFFLINE
-/// build cache does not need regenerating.
+/// repair). Lookups are scoped to the caller, so unknown or foreign attachments
+/// return 404 and existence is not leaked.
 pub async fn get_attachment(
     State(state): State<Arc<AppState>>,
     AuthClient(client_info): AuthClient,
     Path(attachment_id): Path<String>,
 ) -> AppResult<Json<serde_json::Value>> {
-    let row: Option<(Vec<u8>,)> = sqlx::query_as(
-        "SELECT d.data FROM attachments_data d
-         JOIN attachments_meta m ON m.id = d.id
-         WHERE d.id = ? AND m.note_user_id = ?",
+    let mut conn = state.pool.acquire().await?;
+    let blob = AttachmentRepository::blobs(
+        &mut conn,
+        &client_info.user_id,
+        &[attachment_id.as_str()],
     )
-    .bind(&attachment_id)
-    .bind(&client_info.user_id)
-    .fetch_optional(&state.pool)
-    .await?;
+    .await?
+    .into_iter()
+    .next();
+    drop(conn);
 
-    match row {
-        Some((data,)) => {
+    match blob {
+        Some((_, data)) => {
             tracing::info!(
                 "Serving attachment {} ({} bytes) to user {} (client {})",
                 attachment_id,

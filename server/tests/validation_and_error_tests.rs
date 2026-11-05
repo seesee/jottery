@@ -1381,7 +1381,7 @@ async fn test_sync_push_handles_orphan_attachment_data_gracefully() {
 
     // Verify attachment data was NOT inserted (no corresponding metadata)
     let attachment_count: i32 = sqlx::query_scalar!(
-        "SELECT COUNT(*) as count FROM attachments_data WHERE id = ?",
+        "SELECT COUNT(*) as count FROM attachments_data d JOIN attachments_meta m ON m.id = d.id WHERE m.attachment_id = ?",
         orphan_attachment_id
     )
     .fetch_one(&pool)

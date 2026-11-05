@@ -758,6 +758,16 @@ SQLite connection pool can be tuned in `src/db.rs`:
 .max_connections(5)  // Default is 10
 ```
 
+### Upgrading
+
+The server applies migrations itself when it starts. **Take a backup first** (see above), then let the server do it: never run `sqlx migrate run` against a database that holds data.
+
+Some migrations rebuild tables, and SQLite's `DROP TABLE` deletes through `ON DELETE CASCADE` while foreign keys are on, which would empty the child tables. The server turns foreign keys off for the migration; `sqlx migrate run` doesn't. Migration 016 checks its row counts and rolls back rather than lose data, but migrations 003 and 004 predate that check.
+
+A failed migration rolls back and the server exits, leaving the database as it was.
+
+Servers older than migration 004 that were already upgraded with an earlier release lost their child rows at that point, and that can't be repaired here. A full sync from a device that still holds the notes restores them.
+
 ### Migration Failures
 
 If migrations fail:
@@ -799,6 +809,17 @@ sqlx migrate add <migration_name>
 
 # Edit the generated file in migrations/
 # Then run the server to apply it automatically
+```
+
+A migration that rebuilds a table is safe only because `db::run_migrations` runs it with foreign keys off. Don't reach for the `-- no-transaction` marker: sqlx's SQLite driver ignores it, so a `BEGIN` in the file fails, and a `PRAGMA foreign_keys = OFF` silently does nothing and the rebuild cascade-deletes. Test any rebuild against a populated database, as `tests/migration_tests.rs` does.
+
+If you change a `sqlx::query!` macro, regenerate the offline cache, because the Docker build compiles with `SQLX_OFFLINE`. Use a database built from the migrations:
+
+```bash
+export DATABASE_URL=sqlite:///tmp/jottery-prepare.db
+rm -f /tmp/jottery-prepare.db
+sqlx database setup --source migrations
+cargo sqlx prepare -- --all-targets
 ```
 
 ### Environment Variables

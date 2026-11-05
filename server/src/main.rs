@@ -30,8 +30,7 @@ async fn main() {
     tracing::info!("Database connection established");
 
     // Run migrations
-    sqlx::migrate!("./migrations")
-        .run(&pool)
+    db::run_migrations(&pool)
         .await
         .expect("Failed to run migrations");
 

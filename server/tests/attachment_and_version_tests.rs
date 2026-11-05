@@ -216,7 +216,7 @@ async fn test_push_note_with_attachment() {
 
     // Verify attachment metadata was stored
     let attachment_meta = sqlx::query!(
-        r#"SELECT id, filename, mime_type, size FROM attachments_meta WHERE id = ?"#,
+        r#"SELECT attachment_id AS id, filename, mime_type, size FROM attachments_meta WHERE attachment_id = ?"#,
         attachment_id
     )
     .fetch_one(&pool)
@@ -229,7 +229,7 @@ async fn test_push_note_with_attachment() {
 
     // Verify attachment data was stored
     let attachment_data_record = sqlx::query!(
-        r#"SELECT id, data FROM attachments_data WHERE id = ?"#,
+        r#"SELECT m.attachment_id AS id, d.data FROM attachments_data d JOIN attachments_meta m ON m.id = d.id WHERE m.attachment_id = ?"#,
         attachment_id
     )
     .fetch_one(&pool)
@@ -551,7 +551,7 @@ async fn test_multiple_attachments_per_note() {
 
     // Verify both attachments were stored
     let count = sqlx::query_scalar::<_, i64>(
-        "SELECT COUNT(*) FROM attachments_meta WHERE note_id = ?"
+        "SELECT COUNT(*) FROM note_attachments WHERE note_id = ?"
     )
     .bind(&note_id)
     .fetch_one(&pool)
@@ -1045,7 +1045,7 @@ async fn test_large_attachment_handling() {
 
     // Verify attachment was stored correctly
     let stored = sqlx::query!(
-        r#"SELECT data FROM attachments_data WHERE id = ?"#,
+        r#"SELECT d.data FROM attachments_data d JOIN attachments_meta m ON m.id = d.id WHERE m.attachment_id = ?"#,
         attachment_id
     )
     .fetch_one(&pool)
@@ -1314,7 +1314,7 @@ async fn test_attachments_only_push_clears_warning() {
     );
 
     // Data now stored
-    let stored: (i64,) = sqlx::query_as("SELECT length(data) FROM attachments_data WHERE id = ?")
+    let stored: (i64,) = sqlx::query_as("SELECT length(d.data) FROM attachments_data d JOIN attachments_meta m ON m.id = d.id WHERE m.attachment_id = ?")
         .bind(&attachment_id)
         .fetch_one(&pool)
         .await
@@ -1346,7 +1346,7 @@ async fn test_attachments_only_push_rejects_foreign_attachment() {
     let response = send_push(&mut app, &other_key, body_str).await;
     assert_eq!(response.status(), StatusCode::OK);
 
-    let stored: Option<(i64,)> = sqlx::query_as("SELECT length(data) FROM attachments_data WHERE id = ?")
+    let stored: Option<(i64,)> = sqlx::query_as("SELECT length(d.data) FROM attachments_data d JOIN attachments_meta m ON m.id = d.id WHERE m.attachment_id = ?")
         .bind(&attachment_id)
         .fetch_optional(&pool)
         .await
