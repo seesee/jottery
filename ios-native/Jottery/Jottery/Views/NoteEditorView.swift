@@ -15,6 +15,8 @@ struct NoteEditorView: View {
     /// Changes when the text is replaced from outside, for a fresh editor: Runestone
     /// ignores new text while it has focus, and would type over it.
     @State private var editorGeneration = 0
+    /// The calc or outliner editor keeps dying on this note, so it's shown as text.
+    @State private var webEditorIsUnusable = false
     @State private var saveTask: Task<Void, Never>?
     @State private var didSaveDuringSession = false
     @State private var showVersionHistory = false
@@ -42,6 +44,11 @@ struct NoteEditorView: View {
         note.locked || note.archived
     }
 
+    private func fallBackToPlainText() {
+        webEditorIsUnusable = true
+        appState.reportError(L.editorShownAsPlainText)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Tags
@@ -66,10 +73,16 @@ struct NoteEditorView: View {
                         noteTitles: appState.noteTitles(linkedFrom: content),
                         onOpenNote: { appState.openLinkedNote(id: $0) }
                     )
-                } else if syntaxLanguage == "calc" {
-                    WebCalcEditorView(content: $content, fontSize: appState.editorFontSize, isReadOnly: isReadOnly)
-                } else if syntaxLanguage == "outliner" {
-                    WebOutlinerEditorView(content: $content, fontSize: appState.editorFontSize, isReadOnly: isReadOnly)
+                } else if syntaxLanguage == "calc" && !webEditorIsUnusable {
+                    WebCalcEditorView(
+                        content: $content, fontSize: appState.editorFontSize, isReadOnly: isReadOnly,
+                        onUnusable: fallBackToPlainText
+                    )
+                } else if syntaxLanguage == "outliner" && !webEditorIsUnusable {
+                    WebOutlinerEditorView(
+                        content: $content, fontSize: appState.editorFontSize, isReadOnly: isReadOnly,
+                        onUnusable: fallBackToPlainText
+                    )
                 } else {
                     RunestoneEditorView(
                         text: $content,

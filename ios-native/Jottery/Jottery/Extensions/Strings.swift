@@ -342,6 +342,7 @@ enum L {
     static var conflictKeepServer: String { String(localized: "conflict.keepServer") }
     static var conflictKeepBoth: String { String(localized: "conflict.keepBoth") }
     static var conflictUnreadable: String { String(localized: "conflict.unreadable") }
+    static var editorShownAsPlainText: String { String(localized: "editor.shownAsPlainText") }
     static var conflictCouldntResolve: String { String(localized: "conflict.couldntResolve") }
     static func conflictBanner(_ count: Int) -> String {
         String(format: String(localized: "conflict.banner"), count)

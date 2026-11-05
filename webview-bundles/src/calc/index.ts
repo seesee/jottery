@@ -12,8 +12,9 @@ import { Compartment, EditorState, Text, Range } from '@codemirror/state';
 import { HighlightStyle, syntaxHighlighting, LanguageSupport, StreamLanguage } from '@codemirror/language';
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { tags as t } from '@lezer/highlight';
-import * as math from 'mathjs';
+import type { MathType } from 'mathjs';
 import { postToSwift } from '../bridge';
+import { math } from './limits';
 
 // ---- Constants ----
 
@@ -168,7 +169,7 @@ class CalcEvaluator {
     }
   }
 
-  private formatResult(value: math.MathType): string {
+  private formatResult(value: MathType): string {
     if (typeof value === 'number') {
       return Number.isInteger(value)
         ? value.toString()
