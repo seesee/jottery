@@ -32,6 +32,10 @@ All sensitive data is encrypted on the client before transmission to the server:
 
 This depends on your notes password and account password being different. The server receives your account password when you sign in, so if the two match it could unwrap the master key it stores. Clients refuse a match when either password is being chosen, and warn if an existing vault already has one. Changing your notes password restores the guarantee.
 
+### Keys in Memory
+
+Locking overwrites the raw master key bytes and drops the key, but JavaScript can't guarantee more than that: a `CryptoKey` can't be wiped, and copies stay in memory until the browser reclaims them. Someone with access to a running browser's memory could still recover a key after a lock.
+
 ### Envelope Encryption (v1.1.0+)
 
 Jottery uses an envelope encryption model that decouples the master key from the user's password:
