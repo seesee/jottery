@@ -27,9 +27,14 @@ const MAX_CURSOR_PULL_LIMIT: i64 = 500;
 
 /// How far a `lastSyncAt` filter reaches back. Clients that haven't moved to the
 /// cursor store a timestamp, and a row can be stamped before that timestamp yet
-/// commit after it, or the client's clock can run ahead. Re-sending recent rows
-/// is harmless: clients recognise them by hash.
-const LAST_SYNC_OVERLAP_MINUTES: i64 = 5;
+/// commit after it. Several clients also take theirs from their own clock when a
+/// pull ends, so this has to cover a pull as well as a push.
+///
+/// It is kept short because a re-sent note isn't always harmless. Some released
+/// clients overwrite a local edit made between their push and their pull, so
+/// every note in this window is exposed to that for as long as the window lasts.
+/// Cursor mode has no overlap.
+const LAST_SYNC_OVERLAP_MINUTES: i64 = 2;
 
 const CURSOR_PREFIX: &str = "v1.";
 

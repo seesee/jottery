@@ -344,7 +344,7 @@ async fn last_sync_reaches_back_over_the_commit_window() {
     )
     .await;
     // Stamped before the client's lastSyncAt but committed after it
-    age_note(&db.pool, &just_before, 2).await;
+    age_note(&db.pool, &just_before, 1).await;
     age_note(&db.pool, &long_before, 30).await;
 
     let page = pull(&app, &key, json!({ "lastSyncAt": Utc::now().to_rfc3339() })).await;

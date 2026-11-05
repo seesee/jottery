@@ -10,7 +10,7 @@ This is the reference for how the sync API behaves today. It covers push, pull, 
 - Device endpoints authenticate with `Authorization: Bearer <apiKey>`.
 - Times are RFC 3339 strings. Send UTC.
 - Note content, tags, attachment filenames and blobs are encrypted by the client. The server can't read them.
-- **The server is untrusted.** Clients must validate everything it sends, as described in the implementation brief's D4: ids are UUIDs, timestamps parse, sizes and mime types are sane. Decryption failure is an error, never plaintext.
+- **The server is untrusted.** Clients must validate everything it sends when it arrives: ids are UUIDs, timestamps parse, sizes and mime types are sane. Decryption failure is an error, never plaintext.
 
 ### Compatibility rules
 
@@ -86,7 +86,7 @@ For each note, in order:
 3. **Both sides have hashes** (the push sends `contentHash` and `parentHash`, and the server has `contentHash`). It is accepted if the server's hash equals the pushed `parentHash` (a fast-forward), equals the pushed `contentHash` (no change), or appears in the pushed `hashChain`. Otherwise it is rejected as a conflict.
 4. **Otherwise** it is accepted if `modifiedAt` is not earlier than the server's.
 
-A note that isn't accepted changes nothing: its versions and attachments are skipped too.
+A note that isn't accepted changes nothing: its versions and attachment references are skipped too.
 
 ### Rejection
 
@@ -153,13 +153,13 @@ The rules:
 | Request | What comes back |
 |---|---|
 | `cursor: ""`, no `lastSyncAt` | Everything, from the start: a full sync |
-| `cursor: ""` with `lastSyncAt` | Everything since that time, with the five-minute overlap described under timestamp mode. Rows from around then may come too |
+| `cursor: ""` with `lastSyncAt` | Everything since that time, with the two-minute overlap described under timestamp mode. Rows from around then may come too |
 
 ### Timestamp mode
 
 This is how released clients pull, and it keeps working. It has known weaknesses that cursor mode doesn't.
 
-- `lastSyncAt` selects rows the **server** stamped after that time. It is reached back five minutes first, to cover a row stamped before the client's timestamp but committed after it, and modest clock skew. Rows in that window are sent again.
+- `lastSyncAt` selects rows the **server** stamped after that time. It is reached back two minutes first, to cover a row stamped before the client's timestamp but committed after it, and modest clock skew. Rows in that window are sent again.
 - Omitting it, or sending `null`, selects everything.
 - Notes are paged with `limit` and `offset`, ordered by server time. `limit` counts notes only, and `totalCount` is the number of matching notes across all pages.
 - `deletions`, `versions` and `savedSearches` aren't paged: all of them are sent on every page.
@@ -168,6 +168,23 @@ Its weaknesses, which is why clients should move off it:
 
 - If a note changes while a client is partway through its pages, that note moves to the end, the rest shift forward, and one note can be skipped.
 - A push that takes longer than the overlap, or a clock further out than that, can still lose a change.
+
+### Applying a pulled note
+
+**Any pull can deliver a note the client already has.** A push's own notes come back on the next pull, a page can be repeated after a crash, and the timestamp overlap and a full pull both re-send notes. So applying a note must be idempotent, and it must never overwrite a local edit that hasn't been pushed yet.
+
+The note's hashes say what to do. When the client has a local edit pending:
+
+| Pulled note | Meaning | Action |
+|---|---|---|
+| `contentHash` equals the local `contentHash` | The same note | Nothing |
+| `contentHash` equals the local `parentHash`, or appears in the local `hashChain` | Older than the local edit: the client has already seen it | Keep the local edit, and push it |
+| `hashChain` contains the local `contentHash` | Newer, and includes the local edit | Take the pulled note |
+| Anything else | The two have diverged, even if `hashChain` contains the local `parentHash` | A conflict: merge, or ask the user |
+
+`hashChain` starts with the note's own `contentHash`, so a chain containing the local `parentHash` shows only that the two share an ancestor. It doesn't make the pulled note newer.
+
+With no local edit pending, take the pulled note unless the first row applies.
 
 ### Moving a client to the cursor
 
@@ -277,7 +294,7 @@ Exchanges the API key for `{ token, expires_in }`, valid for five minutes, so th
 GET /api/v1/sync/events?token=<token>
 ```
 
-A Server-Sent Events stream. An event named `sync` with data `pull` means another of the user's devices changed something, so pull. The device that made the change isn't told. Heartbeats arrive every 30 seconds. A device can also receive one because a deletion it pushed elsewhere was refused.
+A Server-Sent Events stream. An event named `sync` with data `pull` means another of the user's devices changed something, so pull. The device that made the change isn't told. Heartbeats arrive every 30 seconds.
 
 ### Wrapped master key
 

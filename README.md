@@ -92,7 +92,7 @@ You can configure the server using environment variables:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DEFAULT_ADMIN_EMAIL` | `admin@localhost` | Admin account email, applied while the account is unconfigured |
-| `DEFAULT_ADMIN_PASSWORD` | *(none)* | Admin account password. If unset, a random one is generated and logged once |
+| `DEFAULT_ADMIN_PASSWORD` | *(none)* | Admin account password. If unset, or too weak for `PASSWORD_COMPLEXITY`, a random one is generated and logged once |
 | `DATABASE_URL` | `sqlite:jottery.db` | Database file path |
 | `PORT` | `3030` | Internal server port |
 | `SESSION_EXPIRY_DAYS` | `7` | Admin session expiry in days |
@@ -109,7 +109,7 @@ docker run -d \
   -p 8088:8088 \
   -v jottery-data:/app/data \
   -e DEFAULT_ADMIN_EMAIL=admin@example.com \
-  -e DEFAULT_ADMIN_PASSWORD=your-secure-password \
+  -e DEFAULT_ADMIN_PASSWORD='Choose-a-Str0ng-Password' \
   ghcr.io/seesee/jottery:latest
 ```
 
