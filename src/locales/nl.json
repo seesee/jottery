@@ -195,7 +195,13 @@
       "delete": "Verwijderen van notitie mislukt: {error}"
     },
     "copyLinkFailed": "Kopiëren van link naar klembord mislukt",
-    "noteEditor": "Notitie-editor"
+    "noteEditor": "Notitie-editor",
+    "calc": {
+      "tooLong": "Deze notitie is te lang om te berekenen ({lines} regels, maximaal {max}). Maak hem korter of gebruik een andere syntaxis.",
+      "consecutiveErrors": "Gestopt na {count} fouten op rij. Dit lijkt geen berekening, dus probeer een andere syntaxis.",
+      "totalErrors": "Gestopt na {count} fouten. Probeer een andere syntaxis voor deze notitie.",
+      "tooSlow": "Gestopt omdat dit te lang duurde. De regels hieronder hebben geen resultaat."
+    }
   },
   "noteList": {
     "deleteNote": "Notitie verwijderen",

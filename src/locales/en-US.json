@@ -195,7 +195,13 @@
       "delete": "Failed to delete note: {error}"
     },
     "copyLinkFailed": "Failed to copy link to clipboard",
-    "noteEditor": "Note editor"
+    "noteEditor": "Note editor",
+    "calc": {
+      "tooLong": "This note is too long to calculate ({lines} lines, at most {max}). Shorten it, or use a different syntax.",
+      "consecutiveErrors": "Stopped after {count} errors in a row. This doesn't look like calculations, so try a different syntax.",
+      "totalErrors": "Stopped after {count} errors. Try a different syntax for this note.",
+      "tooSlow": "Stopped because this was taking too long. Lines below here have no results."
+    }
   },
   "noteList": {
     "deleteNote": "Delete note",

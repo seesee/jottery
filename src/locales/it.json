@@ -195,7 +195,13 @@
       "delete": "Impossibile eliminare la nota: {error}"
     },
     "copyLinkFailed": "Impossibile copiare il link negli appunti",
-    "noteEditor": "Editor di note"
+    "noteEditor": "Editor di note",
+    "calc": {
+      "tooLong": "Questa nota è troppo lunga da calcolare ({lines} righe, massimo {max}). Accorciala o usa una sintassi diversa.",
+      "consecutiveErrors": "Interrotto dopo {count} errori consecutivi. Non sembrano calcoli: prova una sintassi diversa.",
+      "totalErrors": "Interrotto dopo {count} errori. Prova una sintassi diversa per questa nota.",
+      "tooSlow": "Interrotto perché richiedeva troppo tempo. Le righe seguenti non hanno risultati."
+    }
   },
   "noteList": {
     "deleteNote": "Elimina nota",

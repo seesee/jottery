@@ -195,7 +195,13 @@
       "delete": "Nie udało się usunąć notatki: {error}"
     },
     "copyLinkFailed": "Nie udało się skopiować linku do schowka",
-    "noteEditor": "Edytor notatek"
+    "noteEditor": "Edytor notatek",
+    "calc": {
+      "tooLong": "Ta notatka jest zbyt długa do obliczeń ({lines} wierszy, maksymalnie {max}). Skróć ją lub użyj innej składni.",
+      "consecutiveErrors": "Zatrzymano po {count} błędach z rzędu. To nie wygląda na obliczenia, więc spróbuj innej składni.",
+      "totalErrors": "Zatrzymano po {count} błędach. Spróbuj innej składni dla tej notatki.",
+      "tooSlow": "Zatrzymano, ponieważ trwało to zbyt długo. Wiersze poniżej nie mają wyników."
+    }
   },
   "noteList": {
     "deleteNote": "Usuń notatkę",

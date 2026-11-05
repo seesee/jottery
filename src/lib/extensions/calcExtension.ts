@@ -4,8 +4,10 @@ import { Text, Range } from '@codemirror/state';
 import { HighlightStyle, syntaxHighlighting, LanguageSupport } from '@codemirror/language';
 import { tags as t } from '@lezer/highlight';
 import { StreamLanguage } from '@codemirror/language';
-import * as math from 'mathjs';
-import { CALC_MAX_LINES, CALC_MAX_TOTAL_ERRORS } from '../constants';
+import { CalcScope, evaluateLine, formatValue } from './calcMath';
+import { get } from 'svelte/store';
+import { _ } from 'svelte-i18n';
+import { CALC_MAX_EVALUATION_MS, CALC_MAX_LINES, CALC_MAX_TOTAL_ERRORS } from '../constants';
 
 const RESULT_PREFIX = '  ';
 
@@ -175,13 +177,13 @@ class CalcParser {
 
 // Evaluator: Process expressions with mathjs
 class CalcEvaluator {
-	private scope: Record<string, any> = {};
+	private scope = new CalcScope();
 	// Map Unicode variable names to ASCII internal names (math.js only supports ASCII)
 	private unicodeToAscii: Map<string, string> = new Map();
 	private varCounter = 0;
 
 	reset() {
-		this.scope = {};
+		this.scope = new CalcScope();
 		this.unicodeToAscii.clear();
 		this.varCounter = 0;
 	}
@@ -224,7 +226,7 @@ class CalcEvaluator {
 		try {
 			// Rewrite expression to replace Unicode variable names with ASCII aliases
 			const rewrittenExpr = this.rewriteExpression(parsedLine.expression);
-			const result = math.evaluate(rewrittenExpr, this.scope);
+			const result = evaluateLine(rewrittenExpr, this.scope);
 
 			// Format and return result (including for assignments)
 			return {
@@ -241,7 +243,7 @@ class CalcEvaluator {
 		}
 	}
 
-	formatResult(value: math.MathType): string {
+	formatResult(value: unknown): string {
 		// Handle different types
 		if (typeof value === 'number') {
 			// Limit decimal places
@@ -251,7 +253,7 @@ class CalcEvaluator {
 		}
 
 		// Use mathjs formatter for units, complex numbers, etc.
-		return math.format(value, { precision: 14 });
+		return formatValue(value);
 	}
 
 	formatError(error: unknown): string {
@@ -259,6 +261,48 @@ class CalcEvaluator {
 		// Truncate long errors
 		return `Error: ${message.substring(0, 50)}${message.length > 50 ? '...' : ''}`;
 	}
+}
+
+/**
+ * Evaluate a document in order, top to bottom, so that variables carry down, stopping
+ * if it clearly isn't calculations or it's taking too long. A note evaluates as it
+ * opens, so a slow one must not be able to hold the tab for long, line after line.
+ */
+export function evaluateDocument(
+	evaluator: CalcEvaluator,
+	parsedLines: ParsedLine[],
+	now: () => number = () => performance.now()
+): { results: EvaluationResult[]; warning?: { key: 'consecutiveErrors' | 'totalErrors' | 'tooSlow'; count?: number } } {
+	const startedAt = now();
+	const results: EvaluationResult[] = [];
+	let consecutiveErrors = 0;
+	let totalErrors = 0;
+
+	for (const parsedLine of parsedLines) {
+		if (now() - startedAt > CALC_MAX_EVALUATION_MS) {
+			return { results, warning: { key: 'tooSlow' } };
+		}
+
+		const result = evaluator.evaluateLine(parsedLine);
+		results.push(result);
+
+		if (result.isError) {
+			consecutiveErrors++;
+			totalErrors++;
+
+			if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+				return { results, warning: { key: 'consecutiveErrors', count: MAX_CONSECUTIVE_ERRORS } };
+			}
+			if (totalErrors >= CALC_MAX_TOTAL_ERRORS) {
+				return { results, warning: { key: 'totalErrors', count: CALC_MAX_TOTAL_ERRORS } };
+			}
+		} else if (!parsedLine.isComment && result.result !== null) {
+			// Reset consecutive errors on successful evaluation
+			consecutiveErrors = 0;
+		}
+	}
+
+	return { results };
 }
 
 // Widget: Visual representation of result
@@ -375,47 +419,21 @@ const calcPlugin = ViewPlugin.fromClass(
 
 			// Check if document is too long for calc mode
 			if (totalLines > CALC_MAX_LINES) {
-				const warning = `Document too long for calc mode (${totalLines} lines, max ${CALC_MAX_LINES}). Try a shorter document or switch to a different syntax mode.`;
+				const warning = get(_)('editor.calc.tooLong', { values: { lines: totalLines, max: CALC_MAX_LINES } });
 				return this.builder.buildDecorations([], doc, warning);
 			}
 
 			// Parse all lines (gets current line numbers)
 			const parsedLines = this.parser.parseDocument(doc);
 
-			// Evaluate in order (top-to-bottom) to maintain variable scope
-			// Track errors to stop early if too many
-			const results: EvaluationResult[] = [];
-			let consecutiveErrors = 0;
-			let totalErrors = 0;
-			let warning: string | undefined;
-
-			for (const parsedLine of parsedLines) {
-				const result = this.evaluator.evaluateLine(parsedLine);
-				results.push(result);
-
-				if (result.isError) {
-					consecutiveErrors++;
-					totalErrors++;
-
-					// Check consecutive error limit
-					if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-						warning = `Stopped after ${MAX_CONSECUTIVE_ERRORS} consecutive errors. This doesn't look like calc content - try switching to a different syntax mode.`;
-						break;
-					}
-
-					// Check total error limit
-					if (totalErrors >= CALC_MAX_TOTAL_ERRORS) {
-						warning = `Stopped after ${CALC_MAX_TOTAL_ERRORS} total errors. Consider switching to a different syntax mode for this content.`;
-						break;
-					}
-				} else if (!parsedLine.isComment && result.result !== null) {
-					// Reset consecutive errors on successful evaluation
-					consecutiveErrors = 0;
-				}
-			}
+			const { results, warning } = evaluateDocument(this.evaluator, parsedLines);
 
 			// Build decorations with current line positions
-			return this.builder.buildDecorations(results, doc, warning);
+			return this.builder.buildDecorations(
+				results,
+				doc,
+				warning && get(_)(`editor.calc.${warning.key}`, { values: { count: warning.count } })
+			);
 		}
 
 		destroy() {

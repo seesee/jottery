@@ -195,7 +195,13 @@
       "delete": "Not silinemedi: {error}"
     },
     "copyLinkFailed": "Bağlantı panoya kopyalanamadı",
-    "noteEditor": "Not düzenleyici"
+    "noteEditor": "Not düzenleyici",
+    "calc": {
+      "tooLong": "Bu not hesaplama için çok uzun ({lines} satır, en fazla {max}). Kısaltın veya başka bir sözdizimi kullanın.",
+      "consecutiveErrors": "Art arda {count} hatadan sonra durduruldu. Bu hesaplama gibi görünmüyor, başka bir sözdizimi deneyin.",
+      "totalErrors": "{count} hatadan sonra durduruldu. Bu not için başka bir sözdizimi deneyin.",
+      "tooSlow": "Çok uzun sürdüğü için durduruldu. Aşağıdaki satırların sonucu yok."
+    }
   },
   "noteList": {
     "deleteNote": "Notu sil",

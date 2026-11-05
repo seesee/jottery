@@ -195,7 +195,13 @@
       "delete": "Fehler beim Löschen der Notiz: {error}"
     },
     "copyLinkFailed": "Fehler beim Kopieren des Links in die Zwischenablage",
-    "noteEditor": "Notizeditor"
+    "noteEditor": "Notizeditor",
+    "calc": {
+      "tooLong": "Diese Notiz ist zu lang zum Berechnen ({lines} Zeilen, höchstens {max}). Kürzen Sie sie oder wählen Sie eine andere Syntax.",
+      "consecutiveErrors": "Nach {count} Fehlern in Folge angehalten. Das sieht nicht nach Berechnungen aus. Versuchen Sie eine andere Syntax.",
+      "totalErrors": "Nach {count} Fehlern angehalten. Versuchen Sie für diese Notiz eine andere Syntax.",
+      "tooSlow": "Angehalten, weil es zu lange gedauert hat. Die Zeilen darunter haben kein Ergebnis."
+    }
   },
   "noteList": {
     "deleteNote": "Notiz löschen",

@@ -195,7 +195,13 @@
       "delete": "删除笔记失败: {error}"
     },
     "copyLinkFailed": "复制链接到剪贴板失败",
-    "noteEditor": "笔记编辑器"
+    "noteEditor": "笔记编辑器",
+    "calc": {
+      "tooLong": "此笔记太长，无法计算（{lines} 行，最多 {max} 行）。请缩短或改用其他语法。",
+      "consecutiveErrors": "连续出现 {count} 个错误后已停止。这看起来不像计算内容，请尝试其他语法。",
+      "totalErrors": "出现 {count} 个错误后已停止。请为此笔记尝试其他语法。",
+      "tooSlow": "由于耗时过长已停止。下方各行没有结果。"
+    }
   },
   "noteList": {
     "deleteNote": "删除笔记",

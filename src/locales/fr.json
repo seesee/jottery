@@ -195,7 +195,13 @@
       "delete": "Échec de la suppression de la note : {error}"
     },
     "copyLinkFailed": "Échec de la copie du lien dans le presse-papiers",
-    "noteEditor": "Éditeur de note"
+    "noteEditor": "Éditeur de note",
+    "calc": {
+      "tooLong": "Cette note est trop longue pour être calculée ({lines} lignes, {max} au maximum). Raccourcissez-la ou utilisez une autre syntaxe.",
+      "consecutiveErrors": "Arrêté après {count} erreurs consécutives. Cela ne ressemble pas à des calculs : essayez une autre syntaxe.",
+      "totalErrors": "Arrêté après {count} erreurs. Essayez une autre syntaxe pour cette note.",
+      "tooSlow": "Arrêté car cela prenait trop de temps. Les lignes suivantes n'ont pas de résultat."
+    }
   },
   "noteList": {
     "deleteNote": "Supprimer la note",

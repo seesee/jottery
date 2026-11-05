@@ -195,7 +195,13 @@
       "delete": "Error al eliminar nota: {error}"
     },
     "copyLinkFailed": "Error al copiar el enlace al portapapeles",
-    "noteEditor": "Editor de notas"
+    "noteEditor": "Editor de notas",
+    "calc": {
+      "tooLong": "Esta nota es demasiado larga para calcular ({lines} líneas, máximo {max}). Acórtala o usa otra sintaxis.",
+      "consecutiveErrors": "Detenido tras {count} errores seguidos. Esto no parecen cálculos, así que prueba otra sintaxis.",
+      "totalErrors": "Detenido tras {count} errores. Prueba otra sintaxis para esta nota.",
+      "tooSlow": "Detenido porque tardaba demasiado. Las líneas siguientes no tienen resultado."
+    }
   },
   "noteList": {
     "deleteNote": "Eliminar nota",

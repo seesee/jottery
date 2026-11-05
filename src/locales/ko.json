@@ -195,7 +195,13 @@
       "delete": "노트 삭제 실패: {error}"
     },
     "copyLinkFailed": "링크를 클립보드에 복사하지 못했습니다",
-    "noteEditor": "노트 편집기"
+    "noteEditor": "노트 편집기",
+    "calc": {
+      "tooLong": "이 노트는 너무 길어 계산할 수 없습니다({lines}줄, 최대 {max}줄). 줄이거나 다른 구문을 사용하세요.",
+      "consecutiveErrors": "오류가 {count}번 연속 발생하여 중지했습니다. 계산 내용이 아닌 것 같으니 다른 구문을 사용해 보세요.",
+      "totalErrors": "오류 {count}개가 발생하여 중지했습니다. 이 노트에는 다른 구문을 사용해 보세요.",
+      "tooSlow": "시간이 너무 오래 걸려 중지했습니다. 아래 줄에는 결과가 없습니다."
+    }
   },
   "noteList": {
     "deleteNote": "노트 삭제",

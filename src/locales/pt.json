@@ -195,7 +195,13 @@
       "delete": "Falha ao excluir nota: {error}"
     },
     "copyLinkFailed": "Falha ao copiar o link",
-    "noteEditor": "Editor de notas"
+    "noteEditor": "Editor de notas",
+    "calc": {
+      "tooLong": "Esta nota é demasiado longa para calcular ({lines} linhas, no máximo {max}). Encurte-a ou use outra sintaxe.",
+      "consecutiveErrors": "Parado após {count} erros seguidos. Isto não parecem cálculos, por isso experimente outra sintaxe.",
+      "totalErrors": "Parado após {count} erros. Experimente outra sintaxe para esta nota.",
+      "tooSlow": "Parado porque estava a demorar demasiado. As linhas seguintes não têm resultado."
+    }
   },
   "noteList": {
     "deleteNote": "Excluir nota",
