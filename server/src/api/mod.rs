@@ -12,11 +12,15 @@ pub mod middleware {
         extract::{Request, State},
         http::{HeaderMap, StatusCode},
         middleware::Next,
-        response::Response,
+        response::{IntoResponse, Response},
     };
     use std::sync::Arc;
 
-    use crate::{utils::crypto::hash_sha256, AppState, db::SessionRepository};
+    use crate::{error::AppError, utils::crypto::hash_sha256, AppState, db::SessionRepository};
+
+    /// The only account routes open to a user who must change their password.
+    const PASSWORD_CHANGE_ALLOWED_PATHS: [&str; 2] =
+        ["/api/v1/user/change-password", "/api/v1/user/logout"];
 
     /// Client information extracted from API key authentication
     /// Contains both client_id (for audit trail) and user_id (for access control)
@@ -24,6 +28,51 @@ pub mod middleware {
     pub struct ClientInfo {
         pub client_id: String,
         pub user_id: String,
+    }
+
+    /// Find the device an API key belongs to, if it may still be used.
+    ///
+    /// A device is only as good as its account, so a deactivated or unapproved
+    /// user is refused with 403 rather than 401: the key is valid, and clients
+    /// shouldn't conclude the device has been removed.
+    pub async fn authenticate_device(
+        pool: &sqlx::SqlitePool,
+        api_key: &str,
+    ) -> Result<ClientInfo, StatusCode> {
+        let hashed_key = hash_sha256(api_key);
+
+        let client = sqlx::query!(
+            r#"SELECT c.id, c.user_id, c.is_active, u.is_active AS user_is_active, u.approved AS user_approved
+               FROM clients c
+               JOIN users u ON u.id = c.user_id
+               WHERE c.api_key = ?"#,
+            hashed_key
+        )
+        .fetch_optional(pool)
+        .await
+        .map_err(|e| {
+            tracing::error!("Database error during device authentication: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+
+        if client.is_active != Some(1) {
+            return Err(StatusCode::UNAUTHORIZED);
+        }
+
+        if client.user_is_active != 1 || client.user_approved != 1 {
+            tracing::warn!(
+                "Device {} refused: user {} is deactivated or unapproved",
+                client.id,
+                client.user_id
+            );
+            return Err(StatusCode::FORBIDDEN);
+        }
+
+        Ok(ClientInfo {
+            client_id: client.id,
+            user_id: client.user_id,
+        })
     }
 
     pub async fn auth_middleware(
@@ -45,50 +94,24 @@ pub mod middleware {
 
         let api_key = &auth_header[7..]; // Remove "Bearer " prefix
 
-        // Hash the API key
-        let hashed_key = hash_sha256(api_key);
+        let client = authenticate_device(&state.pool, api_key).await?;
+        let client_id = client.client_id.clone();
 
-        tracing::debug!(
-            "API auth attempt: api_key_len={}, hashed_key={}",
-            api_key.len(),
-            &hashed_key[..16] // First 16 chars for debugging
-        );
+        // Add both client_id and user_id to request extensions
+        // client_id for audit trail, user_id for access control
+        request.extensions_mut().insert(client);
 
-        // Look up client in database (including user_id for access control)
-        let result = sqlx::query!(
-            "SELECT id, user_id, is_active FROM clients WHERE api_key = ?",
-            hashed_key
+        // Update last_seen_at
+        let now = chrono::Utc::now().to_rfc3339();
+        let _ = sqlx::query!(
+            "UPDATE clients SET last_seen_at = ? WHERE id = ?",
+            now,
+            client_id
         )
-        .fetch_optional(&state.pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .execute(&state.pool)
+        .await;
 
-        match result {
-            Some(client) if client.is_active == Some(1) => {
-                let client_id = client.id;
-                let user_id = client.user_id;
-
-                // Add both client_id and user_id to request extensions
-                // client_id for audit trail, user_id for access control
-                request.extensions_mut().insert(ClientInfo {
-                    client_id: client_id.clone(),
-                    user_id,
-                });
-
-                // Update last_seen_at
-                let now = chrono::Utc::now().to_rfc3339();
-                let _ = sqlx::query!(
-                    "UPDATE clients SET last_seen_at = ? WHERE id = ?",
-                    now,
-                    client_id
-                )
-                .execute(&state.pool)
-                .await;
-
-                Ok(next.run(request).await)
-            }
-            _ => Err(StatusCode::UNAUTHORIZED),
-        }
+        Ok(next.run(request).await)
     }
 
     /// User session middleware (for account management, not admin)
@@ -113,7 +136,7 @@ pub mod middleware {
 
         // Verify user is active (but don't check is_admin)
         let user = match sqlx::query!(
-            r#"SELECT id, is_active FROM users WHERE id = ?"#,
+            r#"SELECT id, is_active, approved, must_change_password FROM users WHERE id = ?"#,
             session.user_id
         )
         .fetch_optional(&state.pool)
@@ -134,6 +157,20 @@ pub mod middleware {
         if user.is_active != 1 {
             tracing::warn!("Inactive user attempted access: {}", session.user_id);
             return Err(StatusCode::FORBIDDEN);
+        }
+
+        // Sessions issued before an account was approved mustn't outlive that
+        // rule: login refuses unapproved accounts.
+        if user.approved != 1 {
+            tracing::warn!("Unapproved user attempted access: {}", session.user_id);
+            return Err(StatusCode::FORBIDDEN);
+        }
+
+        // A session on a password that must be changed can do nothing else
+        if user.must_change_password != 0
+            && !PASSWORD_CHANGE_ALLOWED_PATHS.contains(&request.uri().path())
+        {
+            return Ok(AppError::PasswordChangeRequired.into_response());
         }
 
         // Add session to request extensions for use in handlers

@@ -221,44 +221,25 @@ impl UserRepository {
 
     /// Delete all notes and related data for a user within a transaction
     ///
-    /// Deletes in the correct order to respect foreign key constraints:
-    /// 1. note_versions
-    /// 2. attachments_data
-    /// 3. attachments_meta
-    /// 4. notes
+    /// Every statement filters on the owner. Note ids are only unique per user,
+    /// so matching on a note id alone would reach into other accounts.
+    ///
+    /// Deleting attachment metadata cascades to the blobs and to
+    /// `note_attachments`.
     ///
     /// Returns the number of notes deleted.
     pub async fn delete_all_notes_data(
         tx: &mut Transaction<'_, Sqlite>,
         user_id: &str,
     ) -> Result<u64, sqlx::Error> {
-        // Delete note versions
-        sqlx::query!(
-            "DELETE FROM note_versions WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)",
-            user_id
-        )
-        .execute(&mut **tx)
-        .await?;
+        sqlx::query!("DELETE FROM note_versions WHERE user_id = ?", user_id)
+            .execute(&mut **tx)
+            .await?;
 
-        // Delete attachment data
-        sqlx::query!(
-            "DELETE FROM attachments_data WHERE id IN
-             (SELECT id FROM attachments_meta WHERE note_id IN
-              (SELECT id FROM notes WHERE user_id = ?))",
-            user_id
-        )
-        .execute(&mut **tx)
-        .await?;
+        sqlx::query!("DELETE FROM attachments_meta WHERE user_id = ?", user_id)
+            .execute(&mut **tx)
+            .await?;
 
-        // Delete attachment metadata
-        sqlx::query!(
-            "DELETE FROM attachments_meta WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)",
-            user_id
-        )
-        .execute(&mut **tx)
-        .await?;
-
-        // Delete notes
         let result = sqlx::query!("DELETE FROM notes WHERE user_id = ?", user_id)
             .execute(&mut **tx)
             .await?;

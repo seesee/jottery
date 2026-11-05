@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO notes (id, user_id, client_id, created_at, modified_at, server_modified_at, content, tags, pinned, deleted, version, server_version)\n           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 2, 2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": []
+  },
+  "hash": "b0fb678bf57213f27f9097b91bd254444e01a83ed00d01f4f9c254a214621af1"
+}

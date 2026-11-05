@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE users SET inbox_max_items = 50, inbox_max_size_mb = 5 WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "b08e1e25a32ffd96c0e9960e9543af63874862eda962d2618c255afc06d5b9d0"
+}

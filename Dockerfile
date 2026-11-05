@@ -125,6 +125,9 @@ COPY Caddyfile /etc/caddy/Caddyfile
 ENV ROCKET_ADDRESS=0.0.0.0
 ENV ROCKET_PORT=3030
 ENV DATABASE_URL=/app/data/jottery.db
+# The bundled Caddy is the one proxy in front of the server. It replaces any
+# X-Forwarded-For a client sends, and port 3030 is never published.
+ENV TRUSTED_PROXY_HOPS=1
 
 # Expose only the Caddy HTTP port
 EXPOSE 8088

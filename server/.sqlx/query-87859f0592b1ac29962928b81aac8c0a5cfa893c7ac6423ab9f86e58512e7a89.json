@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT is_active FROM clients WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "is_active",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "87859f0592b1ac29962928b81aac8c0a5cfa893c7ac6423ab9f86e58512e7a89"
+}

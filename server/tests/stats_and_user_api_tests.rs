@@ -167,7 +167,7 @@ async fn test_admin_stats_requires_authentication() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -177,6 +177,7 @@ async fn test_admin_stats_requires_authentication() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
@@ -191,6 +192,7 @@ async fn test_admin_stats_requires_authentication() {
         sync_broadcast,
         config,
         sse_tokens,
+        login_throttle: Default::default(),
     });
 
     let app = axum::Router::new()
@@ -225,7 +227,7 @@ async fn test_admin_stats_success() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -235,6 +237,7 @@ async fn test_admin_stats_success() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
@@ -249,6 +252,7 @@ async fn test_admin_stats_success() {
         sync_broadcast,
         config,
         sse_tokens,
+        login_throttle: Default::default(),
     });
 
     let app = axum::Router::new()
@@ -303,7 +307,7 @@ async fn test_user_login_success() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -313,6 +317,7 @@ async fn test_user_login_success() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
@@ -327,6 +332,7 @@ async fn test_user_login_success() {
         sync_broadcast,
         config,
         sse_tokens,
+        login_throttle: Default::default(),
     });
 
     let app = axum::Router::new()
@@ -374,7 +380,7 @@ async fn test_user_login_wrong_password() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -384,6 +390,7 @@ async fn test_user_login_wrong_password() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
@@ -398,6 +405,7 @@ async fn test_user_login_wrong_password() {
         sync_broadcast,
         config,
         sse_tokens,
+        login_throttle: Default::default(),
     });
 
     let app = axum::Router::new()
@@ -438,7 +446,7 @@ async fn test_user_login_nonexistent_user() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -448,6 +456,7 @@ async fn test_user_login_nonexistent_user() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
@@ -462,6 +471,7 @@ async fn test_user_login_nonexistent_user() {
         sync_broadcast,
         config,
         sse_tokens,
+        login_throttle: Default::default(),
     });
 
     let app = axum::Router::new()
@@ -501,7 +511,7 @@ async fn test_get_account_info_success() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -511,6 +521,7 @@ async fn test_get_account_info_success() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
@@ -525,6 +536,7 @@ async fn test_get_account_info_success() {
         sync_broadcast,
         config,
         sse_tokens,
+        login_throttle: Default::default(),
     });
 
     let app = axum::Router::new()
@@ -595,7 +607,7 @@ async fn test_get_account_info_requires_authentication() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -605,6 +617,7 @@ async fn test_get_account_info_requires_authentication() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
@@ -619,6 +632,7 @@ async fn test_get_account_info_requires_authentication() {
         sync_broadcast,
         config,
         sse_tokens,
+        login_throttle: Default::default(),
     });
 
     let app = axum::Router::new()
@@ -655,7 +669,7 @@ async fn test_delete_all_notes_success() {
         cors_allowed_origins: None,
         session_expiry_days: 7,
         default_admin_email: "admin@localhost".to_string(),
-        default_admin_password: "changeme".to_string(),
+        default_admin_password: None,
         argon2_m_cost: 19456,
         argon2_t_cost: 2,
         argon2_p_cost: 1,
@@ -665,6 +679,7 @@ async fn test_delete_all_notes_success() {
             default_inbox_max_size_mb: 10,
         password_complexity: "none".to_string(),
         enable_hsts: false,
+        rate_limit: Default::default(),
         max_device_name_length: 255,
         max_inbox_content_size: 1_048_576,
         max_note_content_size: 10_485_760,
@@ -679,6 +694,7 @@ async fn test_delete_all_notes_success() {
         sync_broadcast,
         config,
         sse_tokens,
+        login_throttle: Default::default(),
     });
 
     let app = axum::Router::new()

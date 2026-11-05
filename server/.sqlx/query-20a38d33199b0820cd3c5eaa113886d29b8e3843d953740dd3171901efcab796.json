@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO note_attachments (user_id, note_id, attachment_id)\n            VALUES (?, ?, ?)\n            ON CONFLICT DO NOTHING\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "20a38d33199b0820cd3c5eaa113886d29b8e3843d953740dd3171901efcab796"
+}
