@@ -13,12 +13,23 @@ actor SSEClient {
     /// Dedicated session for SSE — long timeouts, no caching.
     private let sseSession: URLSession
 
+    /// Waits out a backoff.
+    private let pause: @Sendable (Duration) async -> Void
+
     var onSyncEvent: (@Sendable () async -> Void)?
 
-    /// - Parameter configuration: replaces the session's configuration. Only used
-    ///   by tests, to install a stub `URLProtocol`.
-    init(syncClient: SyncClient, configuration: URLSessionConfiguration? = nil) {
+    /// - Parameters:
+    ///   - configuration: replaces the session's configuration. Only used by
+    ///     tests, to install a stub `URLProtocol`.
+    ///   - pause: replaces the wait between attempts. Only used by tests, which
+    ///     see what was asked for without a clock coming into it.
+    init(
+        syncClient: SyncClient,
+        configuration: URLSessionConfiguration? = nil,
+        pause: @escaping @Sendable (Duration) async -> Void = { try? await Task.sleep(for: $0) }
+    ) {
         self.syncClient = syncClient
+        self.pause = pause
         self.sseSession = URLSession(configuration: configuration ?? {
             let config = URLSessionConfiguration.default
             config.timeoutIntervalForRequest = 45   // Must receive data within 45 s (heartbeat is 30 s)
@@ -75,7 +86,7 @@ actor SSEClient {
                 reconnectAttempts += 1
                 let delay = min(pow(2.0, Double(min(reconnectAttempts, 5))), maxBackoffSeconds)
                 Log.debug("[SSE] connection error (attempt \(reconnectAttempts)), retrying in \(delay)s")
-                try? await Task.sleep(for: .seconds(delay))
+                await pause(.seconds(delay))
             }
         }
     }

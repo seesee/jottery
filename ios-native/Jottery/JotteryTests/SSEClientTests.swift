@@ -86,17 +86,24 @@ private actor EventCounter {
     func record() { count += 1 }
 }
 
+/// The waits a client asked for between attempts.
+private actor PauseLog {
+    private(set) var pauses: [Duration] = []
+    func record(_ pause: Duration) { pauses.append(pause) }
+}
+
 /// A stream can end, and connecting can get 401, for a revoked device. The token
 /// request is what says why (docs/sync-protocol.md).
 struct SSEClientTests {
 
-    private func makeClient(_ script: StreamScript) -> SSEClient {
+    private func makeClient(_ script: StreamScript, pauses: PauseLog? = nil) -> SSEClient {
         let host = "\(UUID().uuidString).example.test"
         ScriptedStreamProtocol.add(script, host: host)
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [ScriptedStreamProtocol.self]
         let syncClient = SyncClient(endpoint: "https://\(host)", apiKey: "device-key", configuration: configuration)
-        return SSEClient(syncClient: syncClient, configuration: configuration)
+        guard let pauses else { return SSEClient(syncClient: syncClient, configuration: configuration) }
+        return SSEClient(syncClient: syncClient, configuration: configuration) { await pauses.record($0) }
     }
 
     @Test func aRefusedTokenIsReplacedAndTheStreamCarriesOn() async {
@@ -111,6 +118,51 @@ struct SSEClientTests {
 
         #expect(await events.count > 0)
         #expect(script.streamRequests.prefix(2) == ["token-1", "token-2"])
+    }
+
+    /// A token that has run out is routine, and a wait here would leave a healthy
+    /// device without live updates for no reason.
+    @Test func aRefusedTokenIsReplacedWithoutWaiting() async {
+        let script = StreamScript(refusedTokens: ["token-1"])
+        let pauses = PauseLog()
+        let client = makeClient(script, pauses: pauses)
+        let events = EventCounter()
+        await client.setOnSyncEvent { await events.record() }
+
+        await client.start()
+        await waitUntil { await events.count > 0 }
+        await client.stop()
+
+        #expect(await events.count > 0)
+        #expect(await pauses.pauses.isEmpty)
+    }
+
+    /// Only the first refusal is free. Otherwise a server refusing every token
+    /// would be asked for another as fast as it could answer.
+    @Test func aSecondRefusalInARowWaits() async {
+        let script = StreamScript(refusedTokens: ["token-1", "token-2"])
+        let pauses = PauseLog()
+        let client = makeClient(script, pauses: pauses)
+        let events = EventCounter()
+        await client.setOnSyncEvent { await events.record() }
+
+        await client.start()
+        await waitUntil { await events.count > 0 }
+        await client.stop()
+
+        #expect(await events.count > 0)
+        #expect(await pauses.pauses.count == 1)
+    }
+
+    /// Whoever set the listener can be kept alive by it, along with the key they
+    /// hold, so a stopped client has to let go (jottery-4u01).
+    @Test func stoppingLetsGoOfTheListener() async {
+        let client = makeClient(StreamScript())
+        await client.setOnSyncEvent {}
+
+        await client.stop()
+
+        #expect(await client.onSyncEvent == nil)
     }
 
     @Test func aRevokedDeviceStopsWhenTheNewTokenIsRefused() async {
