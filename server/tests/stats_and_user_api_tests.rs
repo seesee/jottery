@@ -183,6 +183,7 @@ async fn test_admin_stats_requires_authentication() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -193,15 +194,10 @@ async fn test_admin_stats_requires_authentication() {
         config,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/admin/stats", axum::routing::get(jottery_server::api::admin::stats::get_stats))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::admin::admin_auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let request = Request::builder()
         .uri("/api/v1/admin/stats")
@@ -243,6 +239,7 @@ async fn test_admin_stats_success() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -253,15 +250,10 @@ async fn test_admin_stats_success() {
         config,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/admin/stats", axum::routing::get(jottery_server::api::admin::stats::get_stats))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::admin::admin_auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let session_token = create_admin_user_and_session(&pool).await;
 
@@ -323,6 +315,7 @@ async fn test_user_login_success() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -333,11 +326,10 @@ async fn test_user_login_success() {
         config,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/user/login", axum::routing::post(jottery_server::api::user::login))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let email = "testuser@example.com";
     let password = "testpassword123";
@@ -396,6 +388,7 @@ async fn test_user_login_wrong_password() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -406,11 +399,10 @@ async fn test_user_login_wrong_password() {
         config,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/user/login", axum::routing::post(jottery_server::api::user::login))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let email = "testuser@example.com";
     create_test_user(&pool, email, "correctpassword", true).await;
@@ -462,6 +454,7 @@ async fn test_user_login_nonexistent_user() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -472,11 +465,10 @@ async fn test_user_login_nonexistent_user() {
         config,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/user/login", axum::routing::post(jottery_server::api::user::login))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let request = Request::builder()
         .uri("/api/v1/user/login")
@@ -527,6 +519,7 @@ async fn test_get_account_info_success() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -537,15 +530,10 @@ async fn test_get_account_info_success() {
         config,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/user/account", axum::routing::get(jottery_server::api::user::get_account_info))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::user_auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let email = "testuser@example.com";
     let user_id = create_test_user(&pool, email, "password123", true).await;
@@ -590,7 +578,7 @@ async fn test_get_account_info_success() {
     assert_eq!(body["email"], email);
     assert_eq!(body["noteCount"], 2);
     assert_eq!(body["attachmentCount"], 0);
-    assert_eq!(body["storageUsedBytes"], 0);
+    assert!(body["storageUsedBytes"].as_i64().unwrap() > 0, "notes take up space too");
     assert!(body["storageQuotaMb"].as_i64().unwrap() > 0);
 
     pool.close().await;
@@ -623,6 +611,7 @@ async fn test_get_account_info_requires_authentication() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -633,15 +622,10 @@ async fn test_get_account_info_requires_authentication() {
         config,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/user/account", axum::routing::get(jottery_server::api::user::get_account_info))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::user_auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let request = Request::builder()
         .uri("/api/v1/user/account")
@@ -685,6 +669,7 @@ async fn test_delete_all_notes_success() {
         max_note_content_size: 10_485_760,
         max_tag_length: 100,
         max_tags_per_note: 50,
+        enforce_storage_quota: false,
     };
 
     let (sync_broadcast, _) = broadcast::channel(100);
@@ -695,15 +680,10 @@ async fn test_delete_all_notes_success() {
         config,
         sse_tokens,
         login_throttle: Default::default(),
+        shutdown: Default::default(),
     });
 
-    let app = axum::Router::new()
-        .route("/api/v1/user/notes", axum::routing::delete(jottery_server::api::user::delete_all_notes))
-        .layer(axum::middleware::from_fn_with_state(
-            app_state.clone(),
-            jottery_server::api::middleware::user_auth_middleware,
-        ))
-        .with_state(app_state);
+    let app = jottery_server::app::build_app(app_state);
 
     let email = "testuser@example.com";
     let user_id = create_test_user(&pool, email, "password123", true).await;

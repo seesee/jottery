@@ -29,8 +29,11 @@ An error response has the shape `{ "error": "message" }`. Some carry a stable `c
 | 403 | The key is valid but the account is deactivated or not approved. Stop syncing and tell the user. Don't discard the credentials: reactivating the account restores the key |
 | 404 | The attachment doesn't exist for this user |
 | 413 | The body is over the limit, or over the account's upload limit. A push over the limit writes nothing |
+| 408 | The request took too long. Try again: sending the same push twice is safe |
 | 429 | Rate limited. See [Rate limits](#rate-limits) |
 | 500 | Server error. A push that fails writes nothing, so it is safe to retry |
+| 503 | The server is busy. Try again after `Retry-After` |
+| 507 | The account is at its storage quota, on a server that enforces one. `code` is `storage_quota_exceeded`. Nothing was written. Pushes that only delete still work, so tell the user to make room |
 
 ## Detecting what a server supports
 
@@ -138,7 +141,7 @@ The rules:
 
 - **`cursor` is opaque.** Store it and send it back. Don't parse it, compare it or construct one, other than the empty string. It is a short ASCII string.
 - **One page is one range of the sequence.** Every kind of change in that range is in the response, and nothing is sent twice unless it changed again.
-- **`limit` counts changes of every kind**, not just notes. It is clamped to 1–500.
+- **`limit` counts changes of every kind**, not just notes. It is clamped to 1–500. A page can also end sooner, once its blobs reach about 16 MB, so don't expect it to be full.
 - **`hasMore: true` means pull again at once with `nextCursor`.** Use `hasMore` alone to decide. A page can hold no notes at all and still have more behind it, because it might be all versions.
 - **Save `nextCursor` only after the page is applied.** If a client stops between applying and saving, it gets the same page again, which is harmless as long as applying is idempotent. Saving first can lose a page.
 - **Every cursor-mode response has `nextCursor`, even an empty one.** It then equals the cursor sent.
@@ -161,7 +164,8 @@ This is how released clients pull, and it keeps working. It has known weaknesses
 
 - `lastSyncAt` selects rows the **server** stamped after that time. It is reached back two minutes first, to cover a row stamped before the client's timestamp but committed after it, and modest clock skew. Rows in that window are sent again.
 - Omitting it, or sending `null`, selects everything.
-- Notes are paged with `limit` and `offset`, ordered by server time. `limit` counts notes only, and `totalCount` is the number of matching notes across all pages.
+- Notes are paged with `limit` and `offset`, ordered by server time. `limit` counts notes only, and `totalCount` is the number of matching notes across all pages. `limit` is clamped to 1–500.
+- A page can hold fewer than `limit` notes, because it ends once its blobs reach about 16 MB. The first note with blobs is always sent, however large, so a page with `hasMore: true` always has a note in it. Advance `offset` by the number of notes received, not by `limit`.
 - `deletions`, `versions` and `savedSearches` aren't paged: all of them are sent on every page.
 - `deletions` leaves out tombstones older than 30 days, so a client offline for longer misses them. Cursor mode has no such limit.
 
@@ -248,7 +252,7 @@ A push with `attachmentsAuthoritative: true` means every note in it carries its 
 
 There are two kinds of deletion.
 
-**Soft delete** is an ordinary note update with `deleted: true` and `deletedAt`, pushed in `notes`. It syncs like any other edit. The server purges soft-deleted notes 30 days after `deletedAt`.
+**Soft delete** is an ordinary note update with `deleted: true` and `deletedAt`, pushed in `notes`. It syncs like any other edit. The server purges soft-deleted notes 30 days after it received them, and records a tombstone as it does, with the note's `deletedAt`.
 
 **Permanent delete**, as when the bin is emptied, is pushed in `deletions` with the time it happened. The server deletes the note and records a tombstone, which other devices receive in `deletions`.
 
@@ -267,7 +271,7 @@ A client that gets an id in `rejectedDeletions` should **stop sending that delet
 
 A deletion for a note the server doesn't have is ignored. No tombstone is recorded, and it isn't reported.
 
-Don't use `DELETE /api/v1/sync/notes/:id`. It records no tombstone, so other devices never hear about the deletion. No client uses it.
+Don't use `DELETE /api/v1/sync/notes/:id`. It bypasses the rule above: it deletes whatever edit the server holds. No client uses it.
 
 ## Other endpoints
 
@@ -306,13 +310,29 @@ PUT /api/v1/auth/wrapped-key
 
 Stores the opaque wrapped key as `{ blob, kdfVersion, kdfIterations }`. `blob` is limited to 8 KB, `kdfVersion` must be at least 1 and `kdfIterations` at least 100,000. GET returns 404 when there is none.
 
+GET also returns `updatedAt`, an opaque string that changes on every write. Its presence means the server supports conditional writes. Check for it on each GET: sending `If-Match` to an older server can fail, because a browser's preflight for a client on another origin isn't allowed that header.
+
+There's one key per account, and overwriting it with the wrong one locks out every new device. So a new client says what it wants written, in one of three ways:
+
+| Purpose | Send | Fails when |
+|---|---|---|
+| First upload, after GET returned 404 | `"replace": false` in the body | The account already has a key |
+| Repair of a blob this device read but couldn't open | Header `If-Match: <updatedAt>`, with the value from the GET | The key has changed since that GET, or has gone |
+| Password change | `"replace": true` in the body | Never |
+
+A write that fails gets 409 and changes nothing. Don't retry it: GET again, and decide again from what's there. A 409 during a repair usually means another device has just changed the password.
+
+Send these on every PUT, including to an older server, which ignores `replace`. `If-Match` wins if a request has both. The `/user/wrapped-key` route for sessions follows the same rules.
+
+A PUT with neither overwrites whatever is stored. That's only there because released clients send it for password changes, and refusing them would leave a blob that only the old password opens. New clients must not rely on it.
+
 ## Rate limits
 
 Device sync isn't rate limited. These apply to the anonymous routes that clients use to sign in and register:
 
-- Sign-in, device registration and device cloning are limited per client address.
+- Sign-in, `POST /user/status`, device registration and device cloning are limited per client address.
 - Account registration and `GET /api/v1/user/status` have their own per-address limits.
-- Wrong passwords are counted per email address across `POST /auth/login`, `POST /user/login` and `POST /auth/register-device`. After five, each attempt waits, doubling from one second up to 15 minutes. A correct password is refused during a wait.
+- Wrong passwords are counted per email address across `POST /auth/login`, `POST /user/login`, `POST /user/status` and `POST /auth/register-device`. After five, each attempt waits, doubling from one second up to 15 minutes. A correct password is refused during a wait.
 
 A refused request gets 429 with a `Retry-After` header in seconds, and the body:
 
@@ -327,7 +347,25 @@ Show the message and don't retry until the wait is over.
 These affect clients that sign in, not device sync.
 
 - `POST /user/login` and `POST /auth/login` return 403 for an account that isn't approved (`Account pending admin approval`) or is deactivated (`Account deactivated`), after checking the password. Show the `error` text. Poll `GET /user/status` for approval rather than retrying sign-in.
-- Both login responses include `mustChangePassword`. When it is true the account has to change its password first: every other account or admin route, and `POST /auth/register-device`, returns 403 with `code: "password_change_required"`. The routes that stay open are `POST /admin/change-password`, `POST /user/change-password` and `POST /user/logout`. Existing device keys keep syncing.
+- `POST /user/status` with `{ email, password }` returns the same `{ exists, isApproved, isActive }` as the GET, but only for the right password. Anything else gets the 401 that sign-in gives, and counts as a wrong password. Prefer it where the client has the password: the GET tells anyone whether an address has an account, and stays only for released clients. Fall back to the GET on 404 or 405, which mean an older server.
+- Both login responses include `mustChangePassword`. When it is true the account has to change its password first: every other account or admin route, and `POST /auth/register-device`, returns 403 with `code: "password_change_required"`. The routes that stay open are `POST /admin/change-password`, `POST /user/change-password`, `POST /user/logout` and `POST /admin/logout`. Existing device keys keep syncing.
+
+## Dashboard sessions
+
+This applies to the admin dashboard and user portal, not to device clients. Anything that doesn't ask for a cookie is unaffected.
+
+`POST /auth/login` and `POST /user/login` accept an optional `cookieSession: true`. On a server with `ENABLE_HSTS=true`, the session then comes back as a cookie, and the response has `cookieSession: true` and no `sessionId`:
+
+```
+Set-Cookie: session_token=<token>; HttpOnly; Secure; SameSite=Strict; Max-Age=<session expiry>; Path=/api/v1/admin
+```
+
+The path is `/api/v1/admin` from `/auth/login` and `/api/v1/user` from `/user/login`. Any other server ignores the field and returns `sessionId` as usual, because a `Secure` cookie wouldn't come back over plain HTTP.
+
+A `POST`, `PUT`, `PATCH` or `DELETE` that authenticates with the cookie gets 403 unless it has the header `X-Requested-With: JotteryDashboard`. A request with `Authorization: Bearer <token>` doesn't need it.
+
+- `GET /admin/me` returns `{ id, email, isAdmin }` for the signed-in admin. It's the check that a cookie session still works, because that cookie isn't sent to `/user/account`. During a forced password change it returns 403 with `code: "password_change_required"`.
+- `POST /admin/logout` and `POST /user/logout` end the session and clear that route's cookie. Both work with a token too. `/admin/logout` is new, so a dashboard holding a token should keep using `/user/logout`, which every server has.
 
 ## Data shapes
 
@@ -371,3 +409,4 @@ To adopt these additions, a client needs to:
 4. Read `rejectedDeletions`, treating its absence as an empty list, and drop those ids from its pending deletions.
 5. Treat 403 from a device endpoint as "account disabled", not "device removed".
 6. Honour `Retry-After` on 429.
+7. Say what it wants on every `PUT /auth/wrapped-key`, as described under [Wrapped master key](#wrapped-master-key), and treat 409 as "read it again".

@@ -400,6 +400,31 @@ async fn running_with_foreign_keys_on_rolls_back_instead_of_losing_data() {
 }
 
 #[tokio::test]
+async fn upgrading_adds_the_audit_log_and_measures_existing_accounts() {
+    let db = empty_db().await;
+    migrate_to(&db.pool, 15).await;
+    seed_v15(&db.pool).await;
+    let users = count(&db.pool, "users").await;
+
+    run_migrations(&db.pool).await.expect("migrate");
+
+    assert_eq!(count(&db.pool, "users").await, users);
+    assert_eq!(count(&db.pool, "admin_audit_log").await, 0);
+
+    let used = |pool: SqlitePool| async move {
+        sqlx::query_scalar::<_, i64>("SELECT storage_used_bytes FROM users WHERE email = 'alice@example.com'")
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+    };
+    assert_eq!(used(db.pool.clone()).await, 0);
+
+    jottery_server::maintenance::run_once(&db.pool).await.expect("housekeeping");
+
+    assert!(used(db.pool.clone()).await > 0);
+}
+
+#[tokio::test]
 async fn migrating_twice_changes_nothing() {
     let db = empty_db().await;
     migrate_to(&db.pool, 15).await;

@@ -18,6 +18,8 @@ pub enum AppError {
     TooManyRequests(String),
     /// The account must set a new password before it can do anything else.
     PasswordChangeRequired,
+    /// The push would take the account past its storage quota.
+    StorageQuotaExceeded,
     /// Too many attempts: the client should wait this long before trying again.
     RateLimited { retry_after_secs: u64 },
     InternalError(String),
@@ -36,6 +38,7 @@ impl std::fmt::Display for AppError {
             AppError::PayloadTooLarge(msg) => write!(f, "Payload too large: {}", msg),
             AppError::TooManyRequests(msg) => write!(f, "Too many requests: {}", msg),
             AppError::PasswordChangeRequired => write!(f, "Password change required"),
+            AppError::StorageQuotaExceeded => write!(f, "Storage quota exceeded"),
             AppError::RateLimited { retry_after_secs } => {
                 write!(f, "Rate limited for {} seconds", retry_after_secs)
             }
@@ -53,6 +56,23 @@ impl From<sqlx::Error> for AppError {
     }
 }
 
+impl From<crate::services::AdminError> for AppError {
+    fn from(err: crate::services::AdminError) -> Self {
+        use crate::services::AdminError;
+
+        match err {
+            AdminError::UserNotFound(_) => AppError::NotFound("User not found".to_string()),
+            AdminError::DeviceNotFound(_) => AppError::NotFound("Device not found".to_string()),
+            AdminError::LastAdmin | AdminError::WeakPassword(_) => {
+                AppError::BadRequest(err.to_string())
+            }
+            AdminError::AlreadyInState(_) => AppError::Conflict(err.to_string()),
+            AdminError::Database(e) => AppError::DatabaseError(e),
+            AdminError::PasswordHash(e) => AppError::InternalError(e),
+        }
+    }
+}
+
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         if matches!(self, AppError::PasswordChangeRequired) {
@@ -61,6 +81,14 @@ impl IntoResponse for AppError {
                 "code": "password_change_required"
             }));
             return (StatusCode::FORBIDDEN, body).into_response();
+        }
+
+        if matches!(self, AppError::StorageQuotaExceeded) {
+            let body = Json(json!({
+                "error": "This account has reached its storage quota",
+                "code": "storage_quota_exceeded"
+            }));
+            return (StatusCode::INSUFFICIENT_STORAGE, body).into_response();
         }
 
         if let AppError::RateLimited { retry_after_secs } = self {
@@ -85,7 +113,9 @@ impl IntoResponse for AppError {
             AppError::Forbidden(msg) => (StatusCode::FORBIDDEN, msg),
             AppError::PayloadTooLarge(msg) => (StatusCode::PAYLOAD_TOO_LARGE, msg),
             AppError::TooManyRequests(msg) => (StatusCode::TOO_MANY_REQUESTS, msg),
-            AppError::PasswordChangeRequired | AppError::RateLimited { .. } => {
+            AppError::PasswordChangeRequired
+            | AppError::StorageQuotaExceeded
+            | AppError::RateLimited { .. } => {
                 unreachable!("handled above")
             }
             AppError::InternalError(msg) => {
