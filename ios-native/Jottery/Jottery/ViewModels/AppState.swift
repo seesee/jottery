@@ -1396,10 +1396,18 @@ final class AppState {
         try addAttachment(to: noteId, data: try Data(contentsOf: url), filename: filename, mimeType: mimeType)
     }
 
-    func addAttachment(to noteId: String, data fileData: Data, filename rawFilename: String, mimeType: String) throws {
+    /// The attachment as it was added, with its name in the clear, or nil if
+    /// there's nothing to add it to.
+    @discardableResult
+    func addAttachment(
+        to noteId: String,
+        data fileData: Data,
+        filename rawFilename: String,
+        mimeType: String
+    ) throws -> AttachmentRef? {
         guard !isReKeying else { throw AppStateError.vaultBusy }
-        guard let noteRepo, let attachmentRepo, let key = keyManager.masterKey else { return }
-        guard try noteRepo.get(id: noteId, key: key) != nil else { return }
+        guard let noteRepo, let attachmentRepo, let key = keyManager.masterKey else { return nil }
+        guard try noteRepo.get(id: noteId, key: key) != nil else { return nil }
         let filename = AttachmentFilename.safe(rawFilename)
 
         // Encrypt the file data
@@ -1433,6 +1441,10 @@ final class AppState {
         // DecryptedNote's Equatable ignores `attachments`, so a stale
         // modifiedAt would stop SwiftUI re-rendering the editor.
         refreshNoteFromStore(id: noteId)
+
+        var added = ref
+        added.filename = filename
+        return added
     }
 
     func removeAttachment(from noteId: String, attachmentId: String) throws {
