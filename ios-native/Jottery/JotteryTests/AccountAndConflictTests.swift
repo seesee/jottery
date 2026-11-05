@@ -129,6 +129,23 @@ struct AccountAndConflictTests {
         AccountServer.recorded.filter { $0.method == method && $0.path == path }
     }
 
+    // MARK: - Deleting the account
+
+    /// The server asks for the password again for the deletion itself.
+    @Test func deletingTheAccountSendsThePasswordThatWasTyped() async throws {
+        let client = makeClient()
+        let sessionId = makeSessionId()
+        AccountServer.reply("POST", "/api/v1/user/login", json: #"{"sessionId":"\#(sessionId)","expiresAt":"2030-01-01T00:00:00Z"}"#)
+        AccountServer.reply("DELETE", "/api/v1/user/account")
+
+        try await client.deleteAccount(email: "me@example.org", password: "typed-password", mode: .delete)
+
+        let request = try #require(requests("DELETE", "/api/v1/user/account").first)
+        let body = try JSONDecoder().decode(DeleteAccountRequest.self, from: request.body)
+        #expect(body.currentPassword == "typed-password")
+        #expect(request.authorization == "Bearer \(sessionId)")
+    }
+
     // MARK: - Signing in
 
     @Test func signingInShowsTheAccount() async {

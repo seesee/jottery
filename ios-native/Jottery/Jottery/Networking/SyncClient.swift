@@ -241,6 +241,13 @@ actor SyncClient {
         try validateResponse(response, data: data)
     }
 
+    /// Log in and delete or deactivate the account, with one password for both,
+    /// so the second can't drift from the first.
+    func deleteAccount(email: String, password: String, mode: AccountDeletionMode) async throws {
+        let sessionId = try await logIn(email: email, password: password)
+        try await deleteAccount(sessionId: sessionId, mode: mode, currentPassword: password)
+    }
+
     /// What the account holds, and how much of its quota that is.
     func accountInfo(sessionId: String) async throws -> AccountInfo {
         let (data, response) = try await session.data(for: sessionRequest("user/account", "GET", sessionId))
