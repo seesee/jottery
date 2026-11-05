@@ -190,6 +190,10 @@
 
     <!-- Joining an account -->
     <string name="password_same_as_account">Your notes password must be different from your account password. The server sees your account password, so a matching notes password would let it read your notes.</string>
+    <string name="password_matches_account_warning">Your notes password is the same as your account password. The server sees your account password, so it could read your notes. Change your notes password in Settings.</string>
+    <string name="account_password_changed_elsewhere">Your notes password was changed on another device. This device keeps working with its current password and nothing has been overwritten. To use the new password here, change it in Settings.</string>
+    <string name="account_key_cannot_heal">Your account\'s encryption key won\'t open with this password, and this device hasn\'t synced enough to repair it. Unlock Jottery on a device that\'s already connected to fix it.</string>
+    <string name="account_key_update_pending">Your password has changed on this device, but your account hasn\'t been updated yet. New devices will need the old password until it has. Jottery will keep trying.</string>
     <string name="connect_error_cannot_unwrap">That password doesn\'t open this account\'s encryption key. The key may have been saved by an older version of Jottery: unlocking Jottery on a device that\'s already connected will fix it. Then try again.</string>
     <string name="connect_error_wrong_notes_password">That isn\'t the notes password for this vault.</string>
     <string name="connect_error_network">Couldn\'t reach the server to check this account\'s encryption key. Nothing has been changed. Check your connection and try again.</string>

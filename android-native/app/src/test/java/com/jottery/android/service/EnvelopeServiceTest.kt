@@ -71,8 +71,8 @@ class EnvelopeServiceTest {
             CryptoService.wrapMasterKey(key, CryptoService.deriveWrappingKey(password, userId))
         )
 
-    private suspend fun reconcile(legacy: Boolean = false, canVouch: Boolean = true) =
-        EnvelopeService.reconcile(client, userId, notesPassword, masterKey, legacy) { canVouch }
+    private suspend fun reconcile(legacy: Boolean = false, canVouch: Boolean = true, opened: Boolean = false) =
+        EnvelopeService.reconcile(client, userId, notesPassword, masterKey, legacy, opened) { canVouch }
 
     @Test fun `a blob wrapped with the account password is refused`() {
         // D1: the server receives the account password, so it could wrap a key
@@ -139,6 +139,15 @@ class EnvelopeServiceTest {
 
         assertEquals(EnvelopeService.Reconciliation.Publish, reconcile(canVouch = true))
         assertEquals(EnvelopeService.Reconciliation.CannotHeal, reconcile(canVouch = false))
+    }
+
+    @Test fun `a device that has opened the blob before never heals over it`() = runBlocking {
+        blob = wrappedWith("changed-${UUID.randomUUID()}")
+
+        assertEquals(
+            EnvelopeService.Reconciliation.PasswordChangedElsewhere,
+            reconcile(canVouch = true, opened = true),
+        )
     }
 
     @Test fun `what is published opens with the notes password and not the account password`() = runBlocking {

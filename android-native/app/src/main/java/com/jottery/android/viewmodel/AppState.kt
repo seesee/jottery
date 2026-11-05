@@ -41,6 +41,7 @@ import com.jottery.android.service.backup.BackupSource
 import com.jottery.android.service.backup.RestorePlan
 import com.jottery.android.service.backup.RestoreResult
 import com.jottery.android.service.backup.keyBytes
+import com.jottery.android.service.AccountKeyService
 import com.jottery.android.service.EnvelopeException
 import com.jottery.android.service.EnvelopeService
 import com.jottery.android.service.VaultReKeyService
@@ -214,6 +215,9 @@ class AppState(application: Application) : AndroidViewModel(application) {
     private var searchJob: Job? = null
     private var syncDebounceJob: Job? = null
     private var isBackgrounded = false
+
+    /** The user hears once per session that a password change hasn't reached the server. */
+    private var rewrapWarningShown = false
 
     /** Bumped by every local change to the note lists, so a slow load can see it. */
     private val notesRevision = AtomicLong()
@@ -1201,12 +1205,24 @@ class AppState(application: Application) : AndroidViewModel(application) {
      */
     suspend fun changePassword(currentPassword: String, newPassword: String) {
         val encRepo = encryptionRepo ?: throw AppStateError.NotInitialised
+        val database = db ?: throw AppStateError.NotInitialised
         val metadata = encRepo.get() ?: throw AppStateError.NoVault
 
         val masterKeyData = unwrapVaultKey(metadata, currentPassword)
             ?: throw AppStateError.WrongPassword
 
-        EnvelopeService.saveLocalEnvelope(encRepo, masterKeyData, newPassword)
+        // The account's blob has to follow the new password. Only this device can
+        // tell that the server's copy is now out of date, so the rewrap is written
+        // with the password change and kept until the server has it.
+        val userId = syncRepo?.getSyncMetadata()?.userId
+        val rewrapped = if (userId.isNullOrEmpty()) null else {
+            EnvelopeService.wrapForAccount(userId, newPassword, masterKeyData)
+        }
+        val envelope = EnvelopeService.localEnvelope(masterKeyData, newPassword)
+        database.withTransaction {
+            encRepo.store(EnvelopeService.metadataFor(envelope, metadata))
+            if (rewrapped != null) syncRepo?.setPendingWrappedKey(rewrapped)
+        }
 
         // Update biometric key if enabled (master key unchanged)
         if (KeystoreService.hasBiometricKey(getApplication())) {
@@ -1215,20 +1231,21 @@ class AppState(application: Application) : AndroidViewModel(application) {
             } catch (_: Exception) { /* ignore */ }
         }
 
-        // The account's blob follows the new password. If this fails, the next
-        // unlock heals it, because the blob then won't open with the new password.
-        val client = syncClientInstance
-        val userId = syncRepo?.getSyncMetadata()?.userId
-        if (client != null && !userId.isNullOrEmpty()) {
-            val dataForServer = masterKeyData.copyOf()
-            viewModelScope.launch {
-                try {
-                    EnvelopeService.publishKey(client, userId, newPassword, dataForServer)
-                } catch (e: Exception) {
-                    Log.w(TAG, "[Envelope] Server re-wrap failed: ${e.javaClass.simpleName}")
-                }
-            }
+        if (rewrapped != null) uploadPendingRewrap()
+    }
+
+    /** Sends any rewrap still owed to the server, telling the user if it has to wait. */
+    private suspend fun uploadPendingRewrap() {
+        val service = accountKeyService() ?: return
+        if (!service.uploadPending() && !rewrapWarningShown) {
+            rewrapWarningShown = true
+            showMessage(text(R.string.account_key_update_pending))
         }
+    }
+
+    private fun accountKeyService(): AccountKeyService? {
+        val client = syncClientInstance ?: return null
+        return AccountKeyService(client, syncRepo ?: return null, encryptionRepo ?: return null)
     }
 
     /** The vault's key, if [password] opens it. */
@@ -1342,6 +1359,16 @@ class AppState(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * For a password that already exists, which can't be refused: that would stop
+     * these users adding a device. They should still know, and change it.
+     */
+    private fun warnIfMatchingPasswords(notesPassword: String, accountPassword: String?) {
+        if (accountPassword != null && notesPassword == accountPassword) {
+            showMessage(text(R.string.password_matches_account_warning))
+        }
+    }
+
     private fun refuseShortNewPassword(password: String) {
         if (password.length < MIN_NOTES_PASSWORD_LENGTH) {
             throw ConnectRefused(text(R.string.password_too_short, MIN_NOTES_PASSWORD_LENGTH))
@@ -1359,15 +1386,28 @@ class AppState(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** Sync starts only here, once this device holds the account's key. */
-    private suspend fun finishConnection(connection: PendingConnection) {
+    /**
+     * Sync starts only here, once this device holds the account's key.
+     *
+     * @param openedBlob this device opened or uploaded the account's wrapped key
+     *   while joining. False only when the account has none yet.
+     */
+    private suspend fun finishConnection(connection: PendingConnection, openedBlob: Boolean = true) {
         val context = getApplication<Application>()
         KeystoreService.setAPIKey(context, connection.apiKey)
         KeystoreService.setClientId(context, connection.clientId)
 
         syncRepo?.let { repo ->
             val syncMeta = repo.getSyncMetadata() ?: com.jottery.android.model.SyncMetadata()
-            repo.saveSyncMetadata(syncMeta.copy(userId = connection.userId))
+            // What this device knew about any earlier connection doesn't carry over
+            repo.saveSyncMetadata(
+                syncMeta.copy(
+                    userId = connection.userId,
+                    lastSyncAt = null,
+                    wrappedKeyOpened = openedBlob,
+                    pendingWrappedKey = null,
+                )
+            )
         }
         attachmentRepo?.markAllNotUploaded()
         updateSettings(_settings.value.copy(syncEnabled = true, syncEndpoint = connection.endpoint))
@@ -1397,14 +1437,13 @@ class AppState(application: Application) : AndroidViewModel(application) {
     fun connectNewVault(notesPassword: String, confirmation: String? = null) {
         val connection = _pendingConnection.value ?: return
         connecting {
-            refuseMatchingPasswords(notesPassword, connection.accountPassword)
-
             val client = SyncClient(connection.endpoint, connection.apiKey, connection.clientId)
             var master = EnvelopeService.fetchServerKey(client, connection.userId, notesPassword)
             if (master == null) {
                 // First device on the account: its key becomes the account's, and
                 // is published before anything else, so no second device can
                 // start on a key of its own in the meantime.
+                refuseMatchingPasswords(notesPassword, connection.accountPassword)
                 refuseShortNewPassword(notesPassword)
                 // Nothing can recover a mistyped password, so a new one is typed
                 // twice. A password that opened the account's key has proved itself.
@@ -1417,6 +1456,8 @@ class AppState(application: Application) : AndroidViewModel(application) {
                 }
                 master = CryptoService.generateSalt()
                 EnvelopeService.publishKey(client, connection.userId, notesPassword, master)
+            } else {
+                warnIfMatchingPasswords(notesPassword, connection.accountPassword)
             }
             createVaultFromMasterKey(master, notesPassword)
             finishConnection(connection)
@@ -1441,7 +1482,8 @@ class AppState(application: Application) : AndroidViewModel(application) {
      */
     fun connectExistingVault(connection: PendingConnection, notesPassword: String) {
         connecting {
-            refuseMatchingPasswords(notesPassword, connection.accountPassword)
+            // This vault's password already exists, so it can't be refused here
+            warnIfMatchingPasswords(notesPassword, connection.accountPassword)
             joinAccount(connection, notesPassword)
         }
     }
@@ -1547,43 +1589,24 @@ class AppState(application: Application) : AndroidViewModel(application) {
      * next unlock tries again.
      */
     private suspend fun reconcileAccountKey(notesPassword: String) {
-        val encRepo = encryptionRepo ?: return
-        val client = syncClientInstance ?: return
-        val syncMeta = syncRepo?.getSyncMetadata() ?: return
-        val userId = syncMeta.userId
-        if (userId.isNullOrEmpty()) return
+        val service = accountKeyService() ?: return
         val localKey = keyManager.masterKey ?: return
-        val localKeyData = localKey.encoded
-        val isLegacy = encRepo.get()?.envelopeVersion == null
 
         try {
-            val action = EnvelopeService.reconcile(
-                client = client,
-                userId = userId,
-                notesPassword = notesPassword,
-                localKey = localKeyData,
-                isLegacyVault = isLegacy,
-                canVouchForLocalKey = {
-                    syncMeta.lastSyncAt != null && noteRepo?.allNotesOpenWith(localKey) == true
-                },
-            )
-            when (action) {
-                EnvelopeService.Reconciliation.Publish -> {
-                    EnvelopeService.publishKey(client, userId, notesPassword, localKeyData)
-                    if (isLegacy) EnvelopeService.saveLocalEnvelope(encRepo, localKeyData, notesPassword)
-                }
-                is EnvelopeService.Reconciliation.InStep -> {
-                    if (action.finishMigration) {
-                        EnvelopeService.saveLocalEnvelope(encRepo, localKeyData, notesPassword)
-                    }
-                }
-                is EnvelopeService.Reconciliation.MoveToAccountKey -> {
-                    switchVaultToMasterKey(action.accountKey, notesPassword)
+            val outcome = service.settle(notesPassword, localKey.encoded) {
+                syncRepo?.getSyncMetadata()?.lastSyncAt != null &&
+                    noteRepo?.allNotesOpenWith(localKey) == true
+            }
+            when (outcome) {
+                AccountKeyService.Outcome.InStep -> Unit
+                is AccountKeyService.Outcome.MoveToAccountKey -> {
+                    switchVaultToMasterKey(outcome.accountKey, notesPassword)
                     triggerSync()
                 }
-                EnvelopeService.Reconciliation.Diverged -> showMessage(text(R.string.connect_key_diverged))
-                EnvelopeService.Reconciliation.CannotHeal ->
-                    Log.w(TAG, "[Envelope] Account key won't open and this device can't vouch for its own")
+                AccountKeyService.Outcome.Diverged -> showMessage(text(R.string.connect_key_diverged))
+                AccountKeyService.Outcome.PasswordChangedElsewhere ->
+                    showMessage(text(R.string.account_password_changed_elsewhere))
+                AccountKeyService.Outcome.CannotHeal -> showMessage(text(R.string.account_key_cannot_heal))
             }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e
@@ -1721,6 +1744,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
         _syncError.value = null
 
         try {
+            uploadPendingRewrap()
             val newCount = withContext(Dispatchers.IO) { service.fullSync() }
             _isSyncing.value = false
             _lastSyncAt.value = Instant.now()
@@ -1860,7 +1884,7 @@ class AppState(application: Application) : AndroidViewModel(application) {
                 // The account has no wrapped key: its key comes from this salt
                 createVault(password, credentials.salt, credentials.iterations)
             }
-            finishConnection(connection)
+            finishConnection(connection, openedBlob = master != null)
         }
     }
 

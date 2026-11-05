@@ -41,7 +41,7 @@ import com.jottery.android.model.UserSettings
         NoteDeletion::class,
         SavedSearch::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class JotteryDatabase : RoomDatabase() {
@@ -129,13 +129,24 @@ abstract class JotteryDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration 4→5: remember what this device knows about the account's
+         * wrapped key. Every value starts empty, so existing rows are untouched.
+         */
+        internal val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE sync_metadata ADD COLUMN wrapped_key_opened INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE sync_metadata ADD COLUMN pending_wrapped_key TEXT")
+            }
+        }
+
         private fun buildDatabase(context: Context): JotteryDatabase {
             return Room.databaseBuilder(
                 context.applicationContext,
                 JotteryDatabase::class.java,
                 DATABASE_NAME,
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)

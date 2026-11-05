@@ -15,10 +15,12 @@ import javax.crypto.spec.SecretKeySpec
  * Envelope encryption: a master key encrypts the data, and passwords only wrap
  * it, so changing a password never touches the notes.
  *
- * The server stores ciphertext and is not trusted, so two rules hold here (D1):
+ * The server stores ciphertext and is not trusted, so three rules hold here (D1):
  * the blob on the server is only ever opened with the notes password, never the
- * account password the server itself receives; and a blob that opens is never
- * overwritten, even if it holds a different key.
+ * account password the server itself receives; a blob that opens is never
+ * overwritten, even if it holds a different key; and a device that has already
+ * opened or uploaded the blob never overwrites one that stops opening, because
+ * that only happens when the password was changed on another device.
  */
 object EnvelopeService {
 
@@ -93,6 +95,13 @@ object EnvelopeService {
 
         /** The blob won't open and this device can't vouch for its own key. */
         data object CannotHeal : Reconciliation()
+
+        /**
+         * The blob won't open, and this device has opened or uploaded it before,
+         * so it isn't in the old format: another device changed the password.
+         * Overwriting it would undo that change.
+         */
+        data object PasswordChangedElsewhere : Reconciliation()
     }
 
     /**
@@ -101,10 +110,14 @@ object EnvelopeService {
      * - No key on the server: publish this vault's. Only an explicit 404 counts.
      * - It opens with the notes password: never overwrite it, even if the key
      *   differs, because that means this device has diverged.
-     * - It won't open: older clients wrapped it with the account password. A
-     *   device that has synced and can read everything it holds has the account's
-     *   real key, so it may re-wrap with the notes password (D1 self-healing).
+     * - It won't open, and this device has opened or uploaded it before: the
+     *   password changed elsewhere. Never overwrite it.
+     * - It won't open, and this device never has: older clients wrapped it with
+     *   the account password. A device that has synced and can read everything it
+     *   holds has the account's real key, so it may re-wrap with the notes password
+     *   (D1 self-healing). Doing so sets the flag, so that happens once at most.
      *
+     * @param hasOpenedBlob this device's flag: it has opened or uploaded the blob.
      * @param canVouchForLocalKey has completed a sync and opens every local note.
      *   Android's check goes further than D1's "has synced" because older builds
      *   could sync on a key of their own after a failed onboarding.
@@ -115,12 +128,17 @@ object EnvelopeService {
         notesPassword: String,
         localKey: ByteArray,
         isLegacyVault: Boolean,
+        hasOpenedBlob: Boolean,
         canVouchForLocalKey: suspend () -> Boolean,
     ): Reconciliation {
         val status = try {
             checkAccountKey(client, userId, notesPassword, localKey)
         } catch (_: EnvelopeException.CannotUnwrap) {
-            return if (canVouchForLocalKey()) Reconciliation.Publish else Reconciliation.CannotHeal
+            return when {
+                hasOpenedBlob -> Reconciliation.PasswordChangedElsewhere
+                canVouchForLocalKey() -> Reconciliation.Publish
+                else -> Reconciliation.CannotHeal
+            }
         }
         return when (status) {
             AccountKeyStatus.NoServerKey -> Reconciliation.Publish
@@ -131,12 +149,15 @@ object EnvelopeService {
         }
     }
 
-    /** Wrap [masterKey] with the notes password and upload it. */
-    suspend fun publishKey(client: SyncClient, userId: String, notesPassword: String, masterKey: ByteArray) {
-        val blob = withContext(Dispatchers.Default) {
+    /** [masterKey] wrapped with the notes password, as the server stores it. */
+    suspend fun wrapForAccount(userId: String, notesPassword: String, masterKey: ByteArray): String =
+        withContext(Dispatchers.Default) {
             val wrappingKey = CryptoService.deriveWrappingKey(notesPassword, userId)
             CryptoService.serializeEncryptedJSON(CryptoService.wrapMasterKey(masterKey, wrappingKey))
         }
+
+    /** Upload a blob from [wrapForAccount]. */
+    suspend fun uploadBlob(client: SyncClient, blob: String) {
         withContext(Dispatchers.IO) {
             client.putWrappedKey(
                 PutWrappedKeyRequest(
@@ -146,6 +167,11 @@ object EnvelopeService {
                 )
             )
         }
+    }
+
+    /** Wrap [masterKey] with the notes password and upload it. */
+    suspend fun publishKey(client: SyncClient, userId: String, notesPassword: String, masterKey: ByteArray) {
+        uploadBlob(client, wrapForAccount(userId, notesPassword, masterKey))
     }
 
     /** A fresh device salt, the master key wrapped under it, and a verification token. */

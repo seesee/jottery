@@ -48,4 +48,25 @@ class MigrationTest {
             }
         }
     }
+
+    @Test fun `4 to 5 keeps the connection and starts with nothing known about the wrapped key`() {
+        helper.createDatabase(dbName, 4).use { db ->
+            db.execSQL(
+                "INSERT INTO sync_metadata (id, last_sync_at, sync_enabled, user_id) " +
+                    "VALUES (1, '2026-01-01T00:00:00.000Z', 1, 'user')"
+            )
+        }
+
+        helper.runMigrationsAndValidate(dbName, 5, true, JotteryDatabase.MIGRATION_4_5).use { db ->
+            db.query(
+                "SELECT last_sync_at, user_id, wrapped_key_opened, pending_wrapped_key FROM sync_metadata WHERE id = 1"
+            ).use {
+                it.moveToFirst()
+                assertEquals("2026-01-01T00:00:00.000Z", it.getString(0))
+                assertEquals("user", it.getString(1))
+                assertEquals(0, it.getInt(2))
+                assertEquals(true, it.isNull(3))
+            }
+        }
+    }
 }
