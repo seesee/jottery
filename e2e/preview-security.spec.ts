@@ -112,23 +112,46 @@ test.describe('Note previews', () => {
     await app.setup(PASSWORD);
   });
 
-  for (const [field, value] of [
-    ['data', { id: ATTACHMENT_ID, data: `"><img src=x onerror="${SET_FLAG}">` }],
-    ['id', { id: ATTACHMENT_ID, data: ATTACHMENT_ID }],
-  ] as const) {
-    test(`hostile attachment ${field} is inert in a markdown preview`, async ({ page }) => {
-      await app.createNote(`Target ![pic](attachment:${ATTACHMENT_ID}`);
+  const PAYLOAD = `"><img src=x onerror="${SET_FLAG}">`;
+
+  // Each case has to reach the template that interpolates the hostile value, so each
+  // also checks that the element it should produce is really there. Without that, a
+  // note that fails to render would look like a pass.
+  const hostileAttachments = [
+    {
+      name: 'data in an image',
+      content: `Note with a hostile attachment ![pic](attachment:${ATTACHMENT_ID})`,
+      attachment: { id: ATTACHMENT_ID, data: PAYLOAD, mimeType: 'image/png' },
+      rendered: 'img.attachment-image',
+    },
+    {
+      name: 'data in a download link',
+      content: `Note with a hostile attachment [file](attachment:${ATTACHMENT_ID})`,
+      attachment: { id: ATTACHMENT_ID, data: PAYLOAD, mimeType: 'application/pdf' },
+      rendered: '.attachment-download',
+    },
+    {
+      name: 'id in a download link',
+      content: `Note with a hostile attachment [file](attachment:${ATTACHMENT_ID})`,
+      attachment: { id: PAYLOAD, data: ATTACHMENT_ID, mimeType: 'application/pdf' },
+      rendered: '.attachment-download',
+    },
+  ];
+
+  for (const { name, content, attachment, rendered } of hostileAttachments) {
+    test(`hostile attachment ${name} is inert in a markdown preview`, async ({ page }) => {
+      await app.createNote(content);
       await patchNote(page, {
         syntaxLanguage: 'markdown',
         showPreview: true,
-        attachments: [{ filename: '{}', mimeType: 'image/png', size: 1, ...value }],
+        attachments: [{ filename: '{}', size: 1, ...attachment }],
       });
 
       await reloadAndUnlock(page);
       await selectNote(page);
 
       const preview = page.locator('[data-preview-container]');
-      await expect(preview).toBeVisible({ timeout: 10000 });
+      await expect(preview.locator(rendered)).toHaveCount(1, { timeout: 10000 });
       expect(await pwned(page)).toBeUndefined();
       await expect(preview.locator('[onerror]')).toHaveCount(0);
       await expect(preview.locator('img[src="x"]')).toHaveCount(0);
