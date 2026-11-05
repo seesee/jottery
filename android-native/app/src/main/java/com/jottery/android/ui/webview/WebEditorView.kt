@@ -44,16 +44,16 @@ fun WebEditorView(
     // The latest text, read when the page finishes loading.
     val currentContent by rememberUpdatedState(content)
 
-    // What the page holds: set when we send it text and when it reports an edit.
-    // The two differ only if something else changed the note, such as a sync, a
-    // restored version or a resolved conflict, and then the page must be told, or
-    // the next keystroke would write its stale buffer back over the note.
+    // Tells the page's own edits coming back from anything else that changed the
+    // note, such as a sync, a restored version or a resolved conflict. The page
+    // must be told about those, or the next keystroke would write its stale buffer
+    // back over the note.
     val pageState = remember { WebPageState() }
 
     val bridge = remember {
         WebBridge(
             onContentChanged = {
-                pageState.content = it
+                pageState.reported(it)
                 currentOnContentChanged(it)
             },
             onReady = { currentOnReady() },
@@ -89,8 +89,7 @@ fun WebEditorView(
                             "window.bridge.setFontSize($fontSize)",
                             null,
                         )
-                        pageState.content = text
-                        pageState.loaded = true
+                        pageState.loaded(text)
                     },
                 )
 
@@ -101,8 +100,7 @@ fun WebEditorView(
         update = { webView ->
             webView.evaluateJavascript("window.bridge.setTheme($isDark)", null)
             webView.evaluateJavascript("window.bridge.setFontSize($fontSize)", null)
-            if (pageState.loaded && pageState.content != content) {
-                pageState.content = content
+            if (pageState.isExternalChange(content)) {
                 val jsonContent = org.json.JSONObject.quote(content)
                 webView.evaluateJavascript("window.bridge.setContent($jsonContent, $isDark)", null)
             }
@@ -111,10 +109,46 @@ fun WebEditorView(
     )
 }
 
-/** What a loaded page currently holds. Used only on the main thread. */
-private class WebPageState {
-    var content: String? = null
-    var loaded = false
+/**
+ * Works out whether text arriving from Compose is news to the page. Compose runs
+ * behind the page: by the time it recomposes with one keystroke, the page may have
+ * reported two more, so comparing with the latest report would see a change, send
+ * the older text back, and lose what was just typed. Each report is therefore
+ * remembered until Compose has caught up with it. Main thread only.
+ */
+internal class WebPageState {
+    private var loaded = false
+    private var composed: String? = null
+    private val unconfirmed = ArrayDeque<String>()
+
+    fun loaded(content: String) {
+        loaded = true
+        composed = content
+        unconfirmed.clear()
+    }
+
+    fun reported(content: String) {
+        unconfirmed.addLast(content)
+        if (unconfirmed.size > MAX_UNCONFIRMED) unconfirmed.removeFirst()
+    }
+
+    /** True if [content] came from somewhere other than the page. */
+    fun isExternalChange(content: String): Boolean {
+        if (!loaded || content == composed) return false
+        composed = content
+
+        val index = unconfirmed.lastIndexOf(content)
+        if (index >= 0) {
+            repeat(index + 1) { unconfirmed.removeFirst() }
+            return false
+        }
+        unconfirmed.clear()
+        return true
+    }
+
+    private companion object {
+        const val MAX_UNCONFIRMED = 64
+    }
 }
 
 /**
