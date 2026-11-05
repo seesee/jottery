@@ -215,6 +215,8 @@ sync:
   rejected_notes: "%{count} notities conflicteren met de server. Open Jottery om ze op te lossen."
   rate_limited: "De server heeft Jottery gevraagd %{seconds} seconden te wachten voordat er opnieuw wordt gesynchroniseerd."
   key_refused: "De server heeft de API-sleutel van dit apparaat niet geaccepteerd. Registreer het apparaat opnieuw."
+  server_busy: "De server is bezet. Jottery probeert het over %{seconds} seconden opnieuw."
+  quota_exceeded: "Je account heeft de opslaglimiet bereikt, dus wijzigingen konden niet worden geüpload. Ze staan veilig op dit apparaat. Leeg de prullenbak of verwijder bijlagen om ruimte te maken."
 
 # Postvak IN
 inbox:
@@ -734,3 +736,4 @@ envelope:
   diverged: "De sleutel van dit apparaat wijkt af van die van het account. Notities van je andere apparaten worden hier mogelijk niet geopend."
   password_changed_elsewhere: "Je notitiewachtwoord is op een ander apparaat gewijzigd, dus er is niets overschreven. Dit apparaat ontgrendelt nog met het oude wachtwoord. Wijzig het ook hier, zodat nieuwe apparaten kunnen koppelen."
   server_update_pending: "Je wachtwoord is op dit apparaat gewijzigd, maar de kopie van je sleutel op de server kon niet worden bijgewerkt. Jottery probeert het opnieuw. Tot die tijd kan een nieuw apparaat niet koppelen met het nieuwe wachtwoord."
+  key_keeps_changing: "De sleutel van het account verandert steeds op de server, dus dit apparaat heeft hem met rust gelaten. Probeer het zo opnieuw."

@@ -215,6 +215,8 @@ sync:
   rejected_notes: "%{count} not sunucuyla çakışıyor. Çözmek için Jottery uygulamasını açın."
   rate_limited: "Sunucu, Jottery'den yeniden eşitlemeden önce %{seconds} saniye beklemesini istedi."
   key_refused: "Sunucu bu cihazın API anahtarını kabul etmedi. Cihazı yeniden kaydedin."
+  server_busy: "Sunucu meşgul. Jottery %{seconds} saniye sonra yeniden deneyecek."
+  quota_exceeded: "Hesabınız depolama sınırına ulaştı, bu yüzden değişiklikler yüklenemedi. Bu cihazda güvendeler. Yer açmak için çöp kutusunu boşaltın veya ekleri kaldırın."
 
 # Gelen Kutusu
 inbox:
@@ -734,3 +736,4 @@ envelope:
   diverged: "Bu cihazın anahtarı hesabın anahtarından farklı. Diğer cihazlarınızdaki notlar burada açılmayabilir."
   password_changed_elsewhere: "Not parolanız başka bir cihazda değiştirildi, bu yüzden hiçbir şeyin üzerine yazılmadı. Bu cihazın kilidi hâlâ eski parolayla açılıyor. Yeni cihazların bağlanabilmesi için parolayı burada da değiştirin."
   server_update_pending: "Parolanız bu cihazda değişti, ancak anahtarınızın sunucudaki kopyası güncellenemedi. Jottery yeniden deneyecek. O zamana kadar yeni bir cihaz yeni parolayla bağlanamaz."
+  key_keeps_changing: "Hesabın anahtarı sunucuda sürekli değişiyor, bu yüzden bu cihaz ona dokunmadı. Birazdan yeniden deneyin."

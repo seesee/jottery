@@ -215,6 +215,8 @@ sync:
   rejected_notes: "%{count} Notizen stehen im Konflikt mit dem Server. Öffne Jottery, um sie aufzulösen."
   rate_limited: "Der Server hat Jottery gebeten, %{seconds} Sekunden zu warten, bevor erneut synchronisiert wird."
   key_refused: "Der Server hat den API-Schlüssel dieses Geräts nicht akzeptiert. Registrieren Sie das Gerät erneut."
+  server_busy: "Der Server ist ausgelastet. Jottery versucht es in %{seconds} Sekunden erneut."
+  quota_exceeded: "Ihr Konto hat sein Speicherlimit erreicht, daher konnten Änderungen nicht hochgeladen werden. Sie sind auf diesem Gerät sicher. Leeren Sie den Papierkorb oder entfernen Sie Anhänge, um Platz zu schaffen."
 
 # Posteingang
 inbox:
@@ -734,3 +736,4 @@ envelope:
   diverged: "Der Schlüssel dieses Geräts weicht vom Kontoschlüssel ab. Notizen von deinen anderen Geräten lassen sich hier möglicherweise nicht öffnen."
   password_changed_elsewhere: "Ihr Notizen-Passwort wurde auf einem anderen Gerät geändert, daher wurde nichts überschrieben. Dieses Gerät lässt sich weiterhin mit dem alten Passwort entsperren. Ändern Sie es hier entsprechend, damit neue Geräte beitreten können."
   server_update_pending: "Ihr Passwort wurde auf diesem Gerät geändert, aber die Kopie Ihres Schlüssels auf dem Server konnte nicht aktualisiert werden. Jottery versucht es erneut. Bis dahin kann kein neues Gerät mit dem neuen Passwort beitreten."
+  key_keeps_changing: "Der Kontoschlüssel ändert sich auf dem Server ständig, daher hat dieses Gerät ihn nicht angerührt. Versuchen Sie es gleich noch einmal."

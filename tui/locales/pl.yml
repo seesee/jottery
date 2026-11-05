@@ -215,6 +215,8 @@ sync:
   rejected_notes: "Notatki w konflikcie z serwerem: %{count}. Otwórz Jottery, aby je rozwiązać."
   rate_limited: "Serwer poprosił Jottery o odczekanie %{seconds} s przed ponowną synchronizacją."
   key_refused: "Serwer nie zaakceptował klucza API tego urządzenia. Zarejestruj urządzenie ponownie."
+  server_busy: "Serwer jest zajęty. Jottery spróbuje ponownie za %{seconds} s."
+  quota_exceeded: "Konto osiągnęło limit miejsca, więc nie udało się wysłać zmian. Są bezpieczne na tym urządzeniu. Opróżnij kosz lub usuń załączniki, aby zwolnić miejsce."
 
 # Skrzynka odbiorcza
 inbox:
@@ -734,3 +736,4 @@ envelope:
   diverged: "Klucz tego urządzenia różni się od klucza konta. Notatki z innych urządzeń mogą się tu nie otwierać."
   password_changed_elsewhere: "Hasło do notatek zmieniono na innym urządzeniu, więc niczego nie nadpisano. To urządzenie nadal odblokowuje się starym hasłem. Zmień je tutaj, aby mogły dołączać nowe urządzenia."
   server_update_pending: "Hasło zmieniono na tym urządzeniu, ale nie udało się zaktualizować kopii klucza na serwerze. Jottery spróbuje ponownie. Do tego czasu nowe urządzenie nie dołączy z nowym hasłem."
+  key_keeps_changing: "Klucz konta ciągle zmienia się na serwerze, więc to urządzenie go nie ruszyło. Spróbuj ponownie za chwilę."

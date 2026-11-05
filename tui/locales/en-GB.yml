@@ -237,6 +237,8 @@ sync:
   rejected_notes: "%{count} notes conflict with the server. Open Jottery to resolve them."
   rate_limited: "The server asked Jottery to wait %{seconds} seconds before syncing again."
   key_refused: "The server didn't accept this device's API key. Register the device again."
+  server_busy: "The server is busy. Jottery will try again in %{seconds} seconds."
+  quota_exceeded: "Your account is at its storage limit, so changes here couldn't be uploaded. They're safe on this device. Empty the bin or remove attachments to make room."
 
 # Inbox
 inbox:
@@ -775,3 +777,4 @@ envelope:
   diverged: "This device's key differs from the account's. Notes from your other devices may not open here."
   password_changed_elsewhere: "Your notes password was changed on another device, so nothing was overwritten. This device still unlocks with its old password. Change it here to match, so that new devices can join."
   server_update_pending: "Your password changed on this device, but the server's copy of your key couldn't be updated. Jottery will try again. Until then, a new device can't join with the new password."
+  key_keeps_changing: "The account's key keeps changing on the server, so this device has left it alone. Try again in a moment."

@@ -289,7 +289,11 @@ pub fn check_registration_status_with_endpoint(_app: &mut App, endpoint: &str, e
     Ok(status.exists && status.is_approved && status.is_active)
 }
 
-/// Whether the server already has an account for this email
+/// Whether the server already has an account for this email.
+///
+/// This is the check that doesn't take a password, on purpose. It's asked when the
+/// password just typed is the notes password, to decide whether to refuse it, and the
+/// checks that take one would hand it to the server before that's decided.
 pub fn account_exists(endpoint: &str, email: &str) -> Result<bool> {
     Ok(crate::api::AuthClient::new(endpoint.to_string()).check_status(email)?.exists)
 }
@@ -309,7 +313,7 @@ pub fn register_user(_app: &mut App, endpoint: &str, email: &str, password: &str
             let error_msg = e.to_string();
             // If user already exists, check their status
             if error_msg.contains("already exists") || error_msg.contains("409") {
-                let status = client.check_status(email)?;
+                let status = client.check_own_status(email, password)?;
                 if status.is_approved && status.is_active {
                     // User exists and is approved, can proceed to device registration
                     Ok(false)

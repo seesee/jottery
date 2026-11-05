@@ -238,16 +238,42 @@ impl AuthClient {
         Ok(Some(result))
     }
 
-    /// Store or update the server-escrowed wrapped master key (API key auth)
-    pub fn put_wrapped_key(&self, api_key: &str, request: &PutWrappedKeyRequest) -> Result<()> {
+    /// Store or update the server-escrowed wrapped master key (API key auth).
+    ///
+    /// There's one key per account and the wrong one locks out every new device, so
+    /// every write says what it's for. A write the server refuses for that reason comes
+    /// back as `KeyWriteResult::Lost`: read the key again and decide again.
+    pub fn put_wrapped_key(&self, api_key: &str, request: &PutWrappedKeyRequest, purpose: KeyWrite<'_>) -> Result<KeyWriteResult> {
         let url = format!("{}/api/v1/auth/wrapped-key", self.base_url);
 
-        let response = self.client
+        // `If-Match` only goes to a server that offered an updatedAt: a browser's
+        // preflight to an older one wouldn't allow it. Without one, `replace: false`
+        // is the safe claim, as older servers ignore it and newer ones always offer one.
+        let (replace, if_match) = match purpose {
+            KeyWrite::First => (Some(false), None),
+            KeyWrite::Repair { updated_at: Some(updated_at) } => (None, Some(updated_at)),
+            KeyWrite::Repair { updated_at: None } => (Some(false), None),
+            KeyWrite::PasswordChange => (Some(true), None),
+        };
+
+        let mut body = serde_json::to_value(request)?;
+        if let Some(replace) = replace {
+            body["replace"] = serde_json::Value::Bool(replace);
+        }
+
+        let mut put = self.client
             .put(&url)
             .header("Authorization", format!("Bearer {}", api_key))
-            .json(request)
-            .send()
-            .context("Failed to store wrapped key")?;
+            .json(&body);
+        if let Some(if_match) = if_match {
+            put = put.header(reqwest::header::IF_MATCH, if_match);
+        }
+
+        let response = put.send().context("Failed to store wrapped key")?;
+
+        if response.status() == reqwest::StatusCode::CONFLICT {
+            return Ok(KeyWriteResult::Lost);
+        }
 
         if !response.status().is_success() {
             let status = response.status();
@@ -255,7 +281,35 @@ impl AuthClient {
             anyhow::bail!("Failed to store wrapped key: {} - {}", status, error_body);
         }
 
-        Ok(())
+        Ok(KeyWriteResult::Stored)
+    }
+
+    /// Check an account's status with its password. A server answers this only for the
+    /// right password, unlike the plain check, which tells anyone whether an address
+    /// has an account. An older server doesn't have it, so that's the fallback.
+    pub fn check_own_status(&self, email: &str, password: &str) -> Result<UserStatusResponse> {
+        let url = format!("{}/api/v1/user/status", self.base_url);
+
+        let response = self.client
+            .post(&url)
+            .json(&serde_json::json!({ "email": email, "password": password }))
+            .timeout(std::time::Duration::from_secs(10))
+            .send()
+            .context("Failed to check status")?;
+
+        let status = response.status();
+        if status == reqwest::StatusCode::NOT_FOUND || status == reqwest::StatusCode::METHOD_NOT_ALLOWED {
+            return self.check_status(email);
+        }
+        if status == reqwest::StatusCode::UNAUTHORIZED {
+            anyhow::bail!("Invalid email or password.");
+        }
+        if !status.is_success() {
+            let error_body = response.text().unwrap_or_else(|_| "Unknown error".to_string());
+            anyhow::bail!("Status check failed: {} - {}", status, error_body);
+        }
+
+        response.json().context("Failed to parse status response")
     }
 
     /// Check user approval status (no auth required)
@@ -293,6 +347,29 @@ pub struct WrappedKeyResponse {
     pub blob: String,
     pub kdf_version: u32,
     pub kdf_iterations: u32,
+    /// Changes on every write. Older servers don't send it, and it's how a client can
+    /// tell that a server takes conditional writes.
+    #[serde(default)]
+    pub updated_at: Option<String>,
+}
+
+/// What a write to the server's wrapped key is for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KeyWrite<'a> {
+    /// The account had no key when last read
+    First,
+    /// Replacing a blob this device read but couldn't open, and no other
+    Repair { updated_at: Option<&'a str> },
+    /// The password changed, so the blob has to follow it
+    PasswordChange,
+}
+
+/// How a write to the server's wrapped key went.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KeyWriteResult {
+    Stored,
+    /// Something else wrote first, and this changed nothing
+    Lost,
 }
 
 /// Put wrapped key request (envelope encryption)
@@ -525,6 +602,70 @@ mod tests {
             .err().unwrap();
 
         assert_eq!(error.to_string(), rust_i18n::t!("cli.password_change_required"));
+    }
+
+    /// Answers one request per reply given, in order, and hands back each request line.
+    fn serve(replies: Vec<(&'static str, &'static str)>) -> (String, std::sync::mpsc::Receiver<String>) {
+        use std::io::{Read, Write};
+
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let endpoint = format!("http://{}", listener.local_addr().unwrap());
+        let (sender, receiver) = std::sync::mpsc::channel();
+
+        std::thread::spawn(move || {
+            for (status, body) in replies {
+                let (mut stream, _) = listener.accept().unwrap();
+                let mut request = [0u8; 4096];
+                let read = stream.read(&mut request).unwrap();
+                let line = String::from_utf8_lossy(&request[..read]).lines().next().unwrap_or("").to_string();
+                let response = format!(
+                    "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len(),
+                );
+                stream.write_all(response.as_bytes()).unwrap();
+                sender.send(line).unwrap();
+            }
+        });
+
+        (endpoint, receiver)
+    }
+
+    const APPROVED: &str = r#"{"exists":true,"isApproved":true,"isActive":true}"#;
+
+    #[test]
+    fn a_status_check_with_a_password_posts_it() {
+        let (endpoint, requests) = serve(vec![("200 OK", APPROVED)]);
+
+        let status = AuthClient::new(endpoint)
+            .check_own_status("someone@example.com", &uuid::Uuid::new_v4().to_string())
+            .unwrap();
+
+        assert!(status.is_approved);
+        assert!(requests.recv().unwrap().starts_with("POST /api/v1/user/status "));
+    }
+
+    #[test]
+    fn an_older_server_is_asked_the_old_way() {
+        for refusal in ["404 Not Found", "405 Method Not Allowed"] {
+            let (endpoint, requests) = serve(vec![(refusal, "{}"), ("200 OK", APPROVED)]);
+
+            let status = AuthClient::new(endpoint)
+                .check_own_status("someone@example.com", &uuid::Uuid::new_v4().to_string())
+                .unwrap();
+
+            assert!(status.is_approved);
+            assert!(requests.recv().unwrap().starts_with("POST "));
+            assert!(requests.recv().unwrap().starts_with("GET /api/v1/user/status?email="));
+        }
+    }
+
+    #[test]
+    fn a_wrong_password_is_not_answered_the_old_way() {
+        let (endpoint, _requests) = serve(vec![("401 Unauthorized", "{}")]);
+
+        assert!(AuthClient::new(endpoint)
+            .check_own_status("someone@example.com", &uuid::Uuid::new_v4().to_string())
+            .is_err());
     }
 
     #[test]

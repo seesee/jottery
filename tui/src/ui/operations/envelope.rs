@@ -17,7 +17,7 @@ use rusqlite::Connection;
 use rust_i18n::t;
 
 use crate::{
-    api::{AuthClient, PutWrappedKeyRequest},
+    api::{AuthClient, KeyWrite, KeyWriteResult, PutWrappedKeyRequest},
     crypto::{CryptoService, WRAPPING_ITERATIONS, WRAPPING_KDF_VERSION},
     db::Database,
     models::{encryption::EncryptedData, sync::SyncMetadata},
@@ -26,6 +26,10 @@ use crate::{
 };
 
 use super::super::app::App;
+
+/// How many times to read the key again after losing a race for it. Each loss means
+/// another device has just written, so a few rounds is plenty.
+const KEY_WRITE_ATTEMPTS: usize = 3;
 
 /// An account this device can talk to.
 pub struct Account<'a> {
@@ -76,46 +80,71 @@ fn compare_with_master_key(
     }
 }
 
-/// Look at the server's wrapped key without changing anything, returning what it is
-/// and its fingerprint.
+/// The server's wrapped key as this device found it.
+struct FoundKey {
+    state: ServerKey,
+    /// Identifies the blob, if there is one
+    fingerprint: Option<String>,
+    /// What a conditional write has to quote, if the server offers those
+    updated_at: Option<String>,
+}
+
+/// Look at the server's wrapped key without changing anything.
 fn inspect_server_key(
     crypto: &CryptoService,
     account: &Account<'_>,
     notes_password: &str,
     master_key: &[u8; 32],
-) -> Result<(ServerKey, Option<String>)> {
+) -> Result<FoundKey> {
     let Some(wrapped) = account.client.get_wrapped_key(account.api_key)? else {
-        return Ok((ServerKey::Missing, None));
+        return Ok(FoundKey { state: ServerKey::Missing, fingerprint: None, updated_at: None });
     };
 
-    let fingerprint = Some(crypto.hash(&wrapped.blob));
-    if wrapped.kdf_version != WRAPPING_KDF_VERSION {
-        return Ok((ServerKey::Unknown, fingerprint));
-    }
+    let state = if wrapped.kdf_version == WRAPPING_KDF_VERSION {
+        compare_with_master_key(crypto, notes_password, account.user_id, &wrapped.blob, master_key)
+    } else {
+        ServerKey::Unknown
+    };
 
-    let state = compare_with_master_key(crypto, notes_password, account.user_id, &wrapped.blob, master_key);
-    Ok((state, fingerprint))
+    Ok(FoundKey {
+        state,
+        fingerprint: Some(crypto.hash(&wrapped.blob)),
+        updated_at: wrapped.updated_at,
+    })
 }
 
-/// Wrap `master_key` with the notes password and give it to the server, returning the
-/// fingerprint of what was stored.
+/// How giving the server a wrapped key went.
+#[derive(Debug, PartialEq, Eq)]
+enum Upload {
+    /// It's there, and this is its fingerprint
+    Stored(String),
+    /// Another device wrote first and nothing changed. Read the key again and decide
+    /// again: never send the same thing back.
+    Lost,
+}
+
+/// Wrap `master_key` with the notes password and give it to the server.
 fn upload_wrapped_key(
     crypto: &CryptoService,
     account: &Account<'_>,
     notes_password: &str,
     master_key: &[u8; 32],
-) -> Result<String> {
+    purpose: KeyWrite<'_>,
+) -> Result<Upload> {
     let wrapping_key = crypto.derive_wrapping_key(notes_password, account.user_id)?;
     let wrapped = crypto.wrap_master_key(&wrapping_key, master_key)?;
     let blob = serde_json::to_string(&wrapped)?;
 
-    account.client.put_wrapped_key(account.api_key, &PutWrappedKeyRequest {
+    let request = PutWrappedKeyRequest {
         blob: blob.clone(),
         kdf_version: WRAPPING_KDF_VERSION,
         kdf_iterations: WRAPPING_ITERATIONS,
-    })?;
+    };
 
-    Ok(crypto.hash(&blob))
+    Ok(match account.client.put_wrapped_key(account.api_key, &request, purpose)? {
+        KeyWriteResult::Stored => Upload::Stored(crypto.hash(&blob)),
+        KeyWriteResult::Lost => Upload::Lost,
+    })
 }
 
 /// Record what this device knows about the server's wrapped key. `seen` being set is
@@ -142,29 +171,39 @@ pub fn adopt_account_key(
     notes_password: &str,
     local_key: &[u8; 32],
 ) -> Result<[u8; 32]> {
-    let Some(wrapped) = account.client.get_wrapped_key(account.api_key)? else {
-        // Older servers can't store a key. Sync still works there, so this isn't fatal.
-        let seen = upload_wrapped_key(crypto, account, notes_password, local_key)
-            .map_err(|e| tracing::warn!("Could not upload the wrapped key: {e}"))
-            .ok();
-        vault::store_local_envelope(db.connection(), crypto, notes_password, local_key)?;
-        remember_server_key(db.connection(), seen, false)?;
-        return Ok(*local_key);
-    };
+    for _ in 0..KEY_WRITE_ATTEMPTS {
+        let Some(wrapped) = account.client.get_wrapped_key(account.api_key)? else {
+            // Older servers can't store a key. Sync still works there, so this isn't fatal.
+            let seen = match upload_wrapped_key(crypto, account, notes_password, local_key, KeyWrite::First) {
+                Ok(Upload::Stored(fingerprint)) => Some(fingerprint),
+                // Another device gave the account its key first, so that's the one to use
+                Ok(Upload::Lost) => continue,
+                Err(e) => {
+                    tracing::warn!("Could not upload the wrapped key: {e}");
+                    None
+                }
+            };
+            vault::store_local_envelope(db.connection(), crypto, notes_password, local_key)?;
+            remember_server_key(db.connection(), seen, false)?;
+            return Ok(*local_key);
+        };
 
-    let account_key = unwrap_server_key(crypto, notes_password, account.user_id, &wrapped.blob)
-        .map_err(|_| anyhow::anyhow!("{}", t!("envelope.unwrap_failed")))?;
+        let account_key = unwrap_server_key(crypto, notes_password, account.user_id, &wrapped.blob)
+            .map_err(|_| anyhow::anyhow!("{}", t!("envelope.unwrap_failed")))?;
 
-    let transaction = db.connection().unchecked_transaction()?;
-    if account_key != *local_key {
-        rekey_vault(&transaction, crypto, local_key, &account_key)
-            .map_err(|e| anyhow::anyhow!("{}", t!("envelope.rekey_failed", error = format!("{e:#}"))))?;
+        let transaction = db.connection().unchecked_transaction()?;
+        if account_key != *local_key {
+            rekey_vault(&transaction, crypto, local_key, &account_key)
+                .map_err(|e| anyhow::anyhow!("{}", t!("envelope.rekey_failed", error = format!("{e:#}"))))?;
+        }
+        vault::store_local_envelope(&transaction, crypto, notes_password, &account_key)?;
+        remember_server_key(&transaction, Some(crypto.hash(&wrapped.blob)), false)?;
+        transaction.commit()?;
+
+        return Ok(account_key);
     }
-    vault::store_local_envelope(&transaction, crypto, notes_password, &account_key)?;
-    remember_server_key(&transaction, Some(crypto.hash(&wrapped.blob)), false)?;
-    transaction.commit()?;
 
-    Ok(account_key)
+    anyhow::bail!("{}", t!("envelope.key_keeps_changing"))
 }
 
 /// This device's connection to its account, if it has one: endpoint, API key, userId.
@@ -227,30 +266,47 @@ pub fn repair_server_key(app: &mut App, notes_password: &str) -> Result<()> {
 
     let client = AuthClient::new(endpoint);
     let account = Account { client: &client, api_key: &api_key, user_id: &user_id };
-
-    let (state, fingerprint) = inspect_server_key(&app.crypto, &account, notes_password, &master_key)?;
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
 
-    match state {
-        ServerKey::Matches => remember_server_key(db.connection(), fingerprint, false)?,
-        ServerKey::Differs => {
-            remember_server_key(db.connection(), fingerprint, false)?;
-            app.error = Some(t!("envelope.diverged").to_string());
+    // Losing a race means another device has just written the key. What it wrote is
+    // judged afresh, except that a blob that still won't open is then known not to be
+    // in the old format, so it's left alone.
+    let mut lost_a_race = false;
+
+    for _ in 0..KEY_WRITE_ATTEMPTS {
+        let found = inspect_server_key(&app.crypto, &account, notes_password, &master_key)?;
+
+        let purpose = match found.state {
+            ServerKey::Matches => {
+                remember_server_key(db.connection(), found.fingerprint, false)?;
+                return Ok(());
+            }
+            ServerKey::Differs => {
+                remember_server_key(db.connection(), found.fingerprint, false)?;
+                app.error = Some(t!("envelope.diverged").to_string());
+                return Ok(());
+            }
+            ServerKey::Unknown => return Ok(()),
+            ServerKey::Missing => KeyWrite::First,
+            ServerKey::Unreadable if !lost_a_race && may_replace_unreadable(&metadata, found.fingerprint.as_deref()) => {
+                KeyWrite::Repair { updated_at: found.updated_at.as_deref() }
+            }
+            ServerKey::Unreadable => {
+                let seen = if lost_a_race { found.fingerprint } else { metadata.server_key_seen };
+                remember_server_key(db.connection(), seen, false)?;
+                app.error = Some(t!("envelope.password_changed_elsewhere").to_string());
+                return Ok(());
+            }
+        };
+
+        match upload_wrapped_key(&app.crypto, &account, notes_password, &master_key, purpose)? {
+            Upload::Stored(fingerprint) => {
+                remember_server_key(db.connection(), Some(fingerprint), false)?;
+                app.debug_log("[Envelope] Gave the server a wrapped key the notes password can open");
+                return Ok(());
+            }
+            Upload::Lost => lost_a_race = true,
         }
-        ServerKey::Missing => {
-            let uploaded = upload_wrapped_key(&app.crypto, &account, notes_password, &master_key)?;
-            remember_server_key(db.connection(), Some(uploaded), false)?;
-        }
-        ServerKey::Unreadable if may_replace_unreadable(&metadata, fingerprint.as_deref()) => {
-            let uploaded = upload_wrapped_key(&app.crypto, &account, notes_password, &master_key)?;
-            remember_server_key(db.connection(), Some(uploaded), false)?;
-            app.debug_log("[Envelope] Replaced a wrapped key the notes password could not open");
-        }
-        ServerKey::Unreadable => {
-            remember_server_key(db.connection(), metadata.server_key_seen, false)?;
-            app.error = Some(t!("envelope.password_changed_elsewhere").to_string());
-        }
-        ServerKey::Unknown => {}
     }
 
     Ok(())
@@ -281,29 +337,41 @@ fn rewrap_on_server(
     let client = AuthClient::new(endpoint);
     let account = Account { client: &client, api_key: &api_key, user_id: &user_id };
 
-    let (state, fingerprint) = inspect_server_key(&app.crypto, &account, current_password, master_key)?;
+    let mut lost_a_race = false;
 
-    match state {
-        ServerKey::Differs | ServerKey::Unknown => {
-            return Ok(Rewrap::Refused(t!("envelope.diverged").to_string()));
-        }
-        ServerKey::Unreadable => {
-            // Another device may already have set this very password
-            let (with_new, _) = inspect_server_key(&app.crypto, &account, new_password, master_key)?;
-            if with_new == ServerKey::Matches {
-                remember_server_key(db.connection(), fingerprint, false)?;
+    for _ in 0..KEY_WRITE_ATTEMPTS {
+        let found = inspect_server_key(&app.crypto, &account, current_password, master_key)?;
+
+        let purpose = match found.state {
+            ServerKey::Differs | ServerKey::Unknown => {
+                return Ok(Rewrap::Refused(t!("envelope.diverged").to_string()));
+            }
+            ServerKey::Matches => KeyWrite::PasswordChange,
+            ServerKey::Missing => KeyWrite::First,
+            ServerKey::Unreadable => {
+                // Another device may already have set this very password
+                let with_new = inspect_server_key(&app.crypto, &account, new_password, master_key)?;
+                if with_new.state == ServerKey::Matches {
+                    remember_server_key(db.connection(), with_new.fingerprint, false)?;
+                    return Ok(Rewrap::Done);
+                }
+                if lost_a_race || !may_replace_unreadable(&metadata, found.fingerprint.as_deref()) {
+                    return Ok(Rewrap::Refused(t!("envelope.password_changed_elsewhere").to_string()));
+                }
+                KeyWrite::Repair { updated_at: found.updated_at.as_deref() }
+            }
+        };
+
+        match upload_wrapped_key(&app.crypto, &account, new_password, master_key, purpose)? {
+            Upload::Stored(fingerprint) => {
+                remember_server_key(db.connection(), Some(fingerprint), false)?;
                 return Ok(Rewrap::Done);
             }
-            if !may_replace_unreadable(&metadata, fingerprint.as_deref()) {
-                return Ok(Rewrap::Refused(t!("envelope.password_changed_elsewhere").to_string()));
-            }
+            Upload::Lost => lost_a_race = true,
         }
-        ServerKey::Missing | ServerKey::Matches => {}
     }
 
-    let uploaded = upload_wrapped_key(&app.crypto, &account, new_password, master_key)?;
-    remember_server_key(db.connection(), Some(uploaded), false)?;
-    Ok(Rewrap::Done)
+    Ok(Rewrap::Refused(t!("envelope.key_keeps_changing").to_string()))
 }
 
 /// Change password with envelope encryption support.
@@ -363,12 +431,27 @@ mod tests {
         serde_json::to_string(&crypto.wrap_master_key(&wrapping_key, key).unwrap()).unwrap()
     }
 
-    /// Serves one wrapped key, as a server would, and records what's put there.
+    /// What a client said it wanted from a PUT.
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    struct PutSeen {
+        if_match: Option<String>,
+        replace: Option<bool>,
+    }
+
+    /// Serves one wrapped key as the real server does, conditional writes included, and
+    /// records what's put there.
     struct StubServer {
         endpoint: String,
         stored: Arc<Mutex<Option<String>>>,
         puts: Arc<Mutex<usize>>,
+        seen: Arc<Mutex<Vec<PutSeen>>>,
         refusing_puts: Arc<Mutex<bool>>,
+        /// Written by "another device" just before the next PUT is looked at
+        written_first: Arc<Mutex<Option<String>>>,
+        /// Answer the next GET as though there were no key
+        hide_next_get: Arc<Mutex<bool>>,
+        /// An older server: it offers no updatedAt and ignores conditions
+        older: Arc<Mutex<bool>>,
     }
 
     impl StubServer {
@@ -377,27 +460,62 @@ mod tests {
             let endpoint = format!("http://{}", listener.local_addr().unwrap());
             let stored = Arc::new(Mutex::new(blob));
             let puts = Arc::new(Mutex::new(0));
+            let seen = Arc::new(Mutex::new(Vec::new()));
             let refusing_puts = Arc::new(Mutex::new(false));
-            let (server_stored, server_puts, server_refusing) = (stored.clone(), puts.clone(), refusing_puts.clone());
+            let written_first: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+            let hide_next_get = Arc::new(Mutex::new(false));
+            let older = Arc::new(Mutex::new(false));
+            let (server_stored, server_puts, server_seen) = (stored.clone(), puts.clone(), seen.clone());
+            let (server_refusing, server_written, server_hiding, server_older) =
+                (refusing_puts.clone(), written_first.clone(), hide_next_get.clone(), older.clone());
 
             std::thread::spawn(move || {
+                let mut revision = 0;
                 for stream in listener.incoming() {
                     let mut stream = stream.unwrap();
-                    let (method, body) = read_request(&mut stream);
+                    let (method, if_match, body) = read_request(&mut stream);
+                    let is_older = *server_older.lock().unwrap();
+
                     let (status, reply) = if method == "PUT" && *server_refusing.lock().unwrap() {
                         ("500 Internal Server Error", "{}".to_string())
                     } else if method == "PUT" {
                         let request: Value = serde_json::from_slice(&body).unwrap();
-                        *server_stored.lock().unwrap() = request["blob"].as_str().map(String::from);
-                        *server_puts.lock().unwrap() += 1;
-                        ("200 OK", "{}".to_string())
+                        let replace = request["replace"].as_bool();
+                        server_seen.lock().unwrap().push(PutSeen { if_match: if_match.clone(), replace });
+
+                        if let Some(blob) = server_written.lock().unwrap().take() {
+                            *server_stored.lock().unwrap() = Some(blob);
+                            revision += 1;
+                        }
+
+                        let mut stored = server_stored.lock().unwrap();
+                        let allowed = is_older || match (&if_match, replace) {
+                            (Some(tag), _) => stored.is_some() && *tag == format!("revision-{revision}"),
+                            (None, Some(false)) => stored.is_none(),
+                            (None, _) => true,
+                        };
+
+                        if allowed {
+                            *stored = request["blob"].as_str().map(String::from);
+                            *server_puts.lock().unwrap() += 1;
+                            revision += 1;
+                            ("200 OK", "{}".to_string())
+                        } else {
+                            ("409 Conflict", "{}".to_string())
+                        }
                     } else {
-                        match server_stored.lock().unwrap().as_ref() {
+                        let hidden = std::mem::take(&mut *server_hiding.lock().unwrap());
+                        match server_stored.lock().unwrap().as_ref().filter(|_| !hidden) {
+                            Some(blob) if is_older => ("200 OK", json!({
+                                "blob": blob,
+                                "kdfVersion": WRAPPING_KDF_VERSION,
+                                "kdfIterations": WRAPPING_ITERATIONS,
+                            }).to_string()),
                             Some(blob) => ("200 OK", json!({
                                 "blob": blob,
                                 "kdfVersion": WRAPPING_KDF_VERSION,
                                 "kdfIterations": WRAPPING_ITERATIONS,
-                                "updatedAt": "2026-01-01T00:00:00Z",
+                                "updatedAt": format!("revision-{revision}"),
                             }).to_string()),
                             None => ("404 Not Found", "{}".to_string()),
                         }
@@ -410,12 +528,21 @@ mod tests {
                 }
             });
 
-            Self { endpoint, stored, puts, refusing_puts }
+            Self { endpoint, stored, puts, seen, refusing_puts, written_first, hide_next_get, older }
         }
 
         /// Fail every upload from now on, or stop failing them.
         fn refuse_puts(&self, refuse: bool) {
             *self.refusing_puts.lock().unwrap() = refuse;
+        }
+
+        /// Have another device write this blob after this client's next read.
+        fn another_device_writes_first(&self, blob: String) {
+            *self.written_first.lock().unwrap() = Some(blob);
+        }
+
+        fn last_put(&self) -> PutSeen {
+            self.seen.lock().unwrap().last().unwrap().clone()
         }
 
         fn blob(&self) -> Option<String> {
@@ -427,7 +554,8 @@ mod tests {
         }
     }
 
-    fn read_request(stream: &mut std::net::TcpStream) -> (String, Vec<u8>) {
+    /// A request's method, its If-Match header, and its body.
+    fn read_request(stream: &mut std::net::TcpStream) -> (String, Option<String>, Vec<u8>) {
         let mut received = Vec::new();
         let mut buffer = [0u8; 8192];
         loop {
@@ -436,15 +564,15 @@ mod tests {
             let Some(header_end) = received.windows(4).position(|w| w == b"\r\n\r\n") else {
                 continue;
             };
-            let headers = String::from_utf8_lossy(&received[..header_end]).to_lowercase();
-            let length: usize = headers
-                .lines()
-                .find_map(|line| line.strip_prefix("content-length:"))
-                .map(|value| value.trim().parse().unwrap())
-                .unwrap_or(0);
+            let headers = String::from_utf8_lossy(&received[..header_end]).to_string();
+            let header = |name: &str| headers.lines().find_map(|line| {
+                let (key, value) = line.split_once(':')?;
+                key.eq_ignore_ascii_case(name).then(|| value.trim().to_string())
+            });
+            let length: usize = header("content-length").map(|value| value.parse().unwrap()).unwrap_or(0);
             if received.len() >= header_end + 4 + length {
                 let method = headers.split_whitespace().next().unwrap_or("").to_uppercase();
-                return (method, received[header_end + 4..header_end + 4 + length].to_vec());
+                return (method, header("if-match"), received[header_end + 4..header_end + 4 + length].to_vec());
             }
         }
     }
@@ -863,5 +991,144 @@ mod tests {
         assert_eq!(server.blob().unwrap(), elsewhere);
         assert_eq!(app.error, Some(t!("envelope.password_changed_elsewhere").to_string()));
         assert!(!seen_and_stale(&app).1);
+    }
+
+    #[test]
+    fn a_first_upload_says_it_is_one() {
+        let notes_password = random_password();
+        let server = StubServer::start(None);
+        let (db, local_key, _) = local_vault(&notes_password);
+
+        adopt(&db, &server.endpoint, &notes_password, &local_key).unwrap();
+
+        assert_eq!(server.last_put(), PutSeen { if_match: None, replace: Some(false) });
+    }
+
+    /// Two devices join an empty account at once. The loser must take the winner's key,
+    /// or the account ends up with notes under two keys.
+    #[test]
+    fn a_device_that_loses_the_first_upload_adopts_the_winners_key() {
+        let crypto = CryptoService::new();
+        let notes_password = random_password();
+        let winners_key = crypto.generate_master_key();
+        let server = StubServer::start(Some(blob_for(&crypto, &notes_password, &winners_key)));
+        *server.hide_next_get.lock().unwrap() = true;
+        let (db, local_key, note) = local_vault(&notes_password);
+
+        let adopted = adopt(&db, &server.endpoint, &notes_password, &local_key).unwrap();
+
+        assert_eq!(adopted, winners_key);
+        assert_eq!(server.put_count(), 0);
+        let moved = NoteRepository::new(db.connection()).get(&note.id, &winners_key).unwrap().unwrap();
+        assert_eq!(moved.content, note.content);
+    }
+
+    #[test]
+    fn a_repair_names_the_blob_it_read() {
+        let crypto = CryptoService::new();
+        let (notes_password, account_password) = (random_password(), random_password());
+        let key = crypto.generate_master_key();
+        let server = StubServer::start(Some(blob_for(&crypto, &account_password, &key)));
+        let mut app = connected_app(&server.endpoint, key, true);
+
+        repair_server_key(&mut app, &notes_password).unwrap();
+
+        assert_eq!(server.last_put(), PutSeen { if_match: Some("revision-0".to_string()), replace: None });
+        assert_eq!(server.put_count(), 1);
+    }
+
+    /// The race the flag alone can't close: a device that has never seen the blob reads
+    /// it, can't open it, and another device changes the password before the write lands.
+    /// Without a condition, that write would undo the change.
+    #[test]
+    fn a_repair_that_loses_a_race_leaves_the_winner_alone() {
+        let crypto = CryptoService::new();
+        let (notes_password, account_password) = (random_password(), random_password());
+        let key = crypto.generate_master_key();
+        let server = StubServer::start(Some(blob_for(&crypto, &account_password, &key)));
+        let mut app = connected_app(&server.endpoint, key, true);
+
+        let the_new_blob = blob_for(&crypto, &random_password(), &key);
+        server.another_device_writes_first(the_new_blob.clone());
+
+        repair_server_key(&mut app, &notes_password).unwrap();
+
+        assert_eq!(server.blob().unwrap(), the_new_blob);
+        assert_eq!(server.put_count(), 0);
+        assert_eq!(app.error, Some(t!("envelope.password_changed_elsewhere").to_string()));
+
+        // Losing proved the blob isn't in the old format, so this device can't heal later
+        let (seen, _) = seen_and_stale(&app);
+        assert_eq!(seen, Some(crypto.hash(&the_new_blob)));
+    }
+
+    /// If the race was lost to the very password this device has, it's simply settled.
+    #[test]
+    fn a_repair_that_loses_to_its_own_password_is_finished() {
+        let crypto = CryptoService::new();
+        let (notes_password, account_password) = (random_password(), random_password());
+        let key = crypto.generate_master_key();
+        let server = StubServer::start(Some(blob_for(&crypto, &account_password, &key)));
+        let mut app = connected_app(&server.endpoint, key, true);
+        server.another_device_writes_first(blob_for(&crypto, &notes_password, &key));
+
+        repair_server_key(&mut app, &notes_password).unwrap();
+
+        assert!(app.error.is_none());
+        assert_eq!(server.put_count(), 0);
+        assert!(seen_and_stale(&app).0.is_some());
+    }
+
+    #[test]
+    fn a_password_change_says_it_means_to_replace() {
+        let crypto = CryptoService::new();
+        let (old_password, new_password) = (random_password(), random_password());
+        let key = crypto.generate_master_key();
+        let server = StubServer::start(Some(blob_for(&crypto, &old_password, &key)));
+        let mut app = connected_app(&server.endpoint, key, true);
+        vault::store_local_envelope(app.db.as_ref().unwrap().connection(), &crypto, &old_password, &key).unwrap();
+
+        change_password(&mut app, &old_password, &new_password, &key).unwrap();
+
+        assert_eq!(server.last_put(), PutSeen { if_match: None, replace: Some(true) });
+    }
+
+    /// `If-Match` can fail on an older server, so it only goes to one that offers an
+    /// updatedAt, and the repair still works there.
+    #[test]
+    fn an_older_server_gets_no_if_match_and_a_repair_still_lands() {
+        let crypto = CryptoService::new();
+        let (notes_password, account_password) = (random_password(), random_password());
+        let key = crypto.generate_master_key();
+        let server = StubServer::start(Some(blob_for(&crypto, &account_password, &key)));
+        *server.older.lock().unwrap() = true;
+        let mut app = connected_app(&server.endpoint, key, true);
+
+        repair_server_key(&mut app, &notes_password).unwrap();
+
+        assert_eq!(server.last_put(), PutSeen { if_match: None, replace: Some(false) });
+        let blob = server.blob().unwrap();
+        assert_eq!(unwrap_server_key(&crypto, &notes_password, USER_ID, &blob).unwrap(), key);
+    }
+
+    #[test]
+    fn an_owed_rewrap_names_the_blob_it_replaces() {
+        let crypto = CryptoService::new();
+        let (old_password, new_password) = (random_password(), random_password());
+        let key = crypto.generate_master_key();
+        let server = StubServer::start(Some(blob_for(&crypto, &old_password, &key)));
+        let mut app = connected_app(&server.endpoint, key, true);
+        repair_server_key(&mut app, &old_password).unwrap();
+        vault::store_local_envelope(app.db.as_ref().unwrap().connection(), &crypto, &old_password, &key).unwrap();
+
+        server.refuse_puts(true);
+        change_password(&mut app, &old_password, &new_password, &key).unwrap();
+        server.refuse_puts(false);
+        app.error = None;
+
+        repair_server_key(&mut app, &new_password).unwrap();
+
+        assert_eq!(server.last_put().if_match.as_deref(), Some("revision-0"));
+        assert!(app.error.is_none());
     }
 }

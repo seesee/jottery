@@ -215,6 +215,8 @@ sync:
   rejected_notes: "%{count} 条笔记与服务器冲突。请打开 Jottery 解决。"
   rate_limited: "服务器要求 Jottery 等待 %{seconds} 秒后再同步。"
   key_refused: "服务器未接受此设备的 API 密钥。请重新注册设备。"
+  server_busy: "服务器繁忙。Jottery 将在 %{seconds} 秒后重试。"
+  quota_exceeded: "您的账户已达到存储上限，因此无法上传更改。更改已安全保存在此设备上。请清空回收站或移除附件以腾出空间。"
 
 # 收件箱
 inbox:
@@ -734,3 +736,4 @@ envelope:
   diverged: "此设备的密钥与账户密钥不同。来自其他设备的笔记可能无法在此打开。"
   password_changed_elsewhere: "您的笔记密码已在另一台设备上更改，因此没有覆盖任何内容。此设备仍使用旧密码解锁。请在此处改为相同的密码，以便新设备可以加入。"
   server_update_pending: "此设备上的密码已更改，但无法更新服务器上的密钥副本。Jottery 将重试。在此之前，新设备无法使用新密码加入。"
+  key_keeps_changing: "服务器上的账户密钥一直在变化，因此此设备未作更改。请稍后重试。"

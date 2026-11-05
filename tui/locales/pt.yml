@@ -215,6 +215,8 @@ sync:
   rejected_notes: "%{count} notas entram em conflito com o servidor. Abra o Jottery para os resolver."
   rate_limited: "O servidor pediu ao Jottery que aguarde %{seconds} segundos antes de sincronizar novamente."
   key_refused: "O servidor não aceitou a chave de API deste dispositivo. Registe o dispositivo novamente."
+  server_busy: "O servidor está ocupado. O Jottery tentará novamente dentro de %{seconds} segundos."
+  quota_exceeded: "A sua conta atingiu o limite de armazenamento, por isso as alterações não foram enviadas. Estão seguras neste dispositivo. Esvazie o lixo ou remova anexos para libertar espaço."
 
 # Caixa de entrada
 inbox:
@@ -734,3 +736,4 @@ envelope:
   diverged: "A chave deste dispositivo é diferente da chave da conta. As notas dos seus outros dispositivos podem não abrir aqui."
   password_changed_elsewhere: "A sua palavra-passe das notas foi alterada noutro dispositivo, por isso nada foi substituído. Este dispositivo ainda desbloqueia com a palavra-passe antiga. Altere-a aqui para que novos dispositivos possam ligar-se."
   server_update_pending: "A sua palavra-passe foi alterada neste dispositivo, mas não foi possível atualizar a cópia da chave no servidor. O Jottery tentará novamente. Até lá, um novo dispositivo não poderá ligar-se com a nova palavra-passe."
+  key_keeps_changing: "A chave da conta continua a mudar no servidor, por isso este dispositivo não lhe tocou. Tente novamente daqui a pouco."

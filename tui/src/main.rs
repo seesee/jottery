@@ -601,6 +601,9 @@ fn report_sync(outcome: &ui::operations::sync::SyncOutcome) {
     if outcome.skipped > 0 {
         errln!("⚠ {}", t!("sync.skipped_notes", count = outcome.skipped));
     }
+    if outcome.quota_exceeded {
+        errln!("⚠ {}", t!("sync.quota_exceeded"));
+    }
 }
 
 /// Format a note for display

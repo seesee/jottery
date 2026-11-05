@@ -59,6 +59,8 @@ pub struct SyncOutcome {
     pub rejected: usize,
     /// Notes or attachments from the server that couldn't be read, and were skipped
     pub skipped: usize,
+    /// The account is at its storage quota, so local changes are still waiting to go
+    pub quota_exceeded: bool,
 }
 
 /// The server turned this device away, and retrying at once won't help.
@@ -68,9 +70,12 @@ pub enum SyncRefused {
     /// reactivating the account brings the key back.
     #[error("{0}")]
     AccountDisabled(String),
-    /// Too many requests: wait this long
+    /// Too many requests, or a busy server: wait this long
     #[error("{message}")]
-    RateLimited { seconds: u64, message: String },
+    Wait { seconds: u64, message: String },
+    /// Nothing was written. Pushes that only delete still work.
+    #[error("{0}")]
+    QuotaExceeded(String),
 }
 
 /// A filename as it goes to the server: encrypted, like everything else in a note.
@@ -185,12 +190,21 @@ impl Run<'_> {
     /// POST to a device endpoint and return the body, turning a refusal into an error
     /// that says what to do about it.
     fn post<T: Serialize>(&self, path: &str, body: &T) -> Result<String> {
-        let response = self.client
-            .post(format!("{}{path}", self.endpoint))
-            .header("Authorization", format!("Bearer {}", self.api_key))
-            .json(body)
-            .send()
-            .with_context(|| format!("Failed to reach {path}"))?;
+        let send = || {
+            self.client
+                .post(format!("{}{path}", self.endpoint))
+                .header("Authorization", format!("Bearer {}", self.api_key))
+                .json(body)
+                .send()
+                .with_context(|| format!("Failed to reach {path}"))
+        };
+
+        // A timed-out request is safe to send again, because a push that fails writes
+        // nothing, and one more try usually saves waiting for the next sync
+        let mut response = send()?;
+        if response.status() == reqwest::StatusCode::REQUEST_TIMEOUT {
+            response = send()?;
+        }
 
         let status = response.status();
         if status.is_success() {
@@ -202,13 +216,13 @@ impl Run<'_> {
             .and_then(|value| value.to_str().ok())
             .and_then(|value| value.trim().parse::<u64>().ok());
         let body = response.text().unwrap_or_default();
+        let wait = retry_after.unwrap_or(60).min(MAX_RETRY_AFTER_SECONDS);
 
         Err(match status.as_u16() {
             403 => SyncRefused::AccountDisabled(t!("sync.account_deactivated").to_string()).into(),
-            429 => {
-                let seconds = retry_after.unwrap_or(60).min(MAX_RETRY_AFTER_SECONDS);
-                SyncRefused::RateLimited { seconds, message: t!("sync.rate_limited", seconds = seconds).to_string() }.into()
-            }
+            429 => SyncRefused::Wait { seconds: wait, message: t!("sync.rate_limited", seconds = wait).to_string() }.into(),
+            503 => SyncRefused::Wait { seconds: wait, message: t!("sync.server_busy", seconds = wait).to_string() }.into(),
+            507 => SyncRefused::QuotaExceeded(t!("sync.quota_exceeded").to_string()).into(),
             401 => anyhow::anyhow!("{}", t!("sync.key_refused")),
             _ => anyhow::anyhow!("{} {}: {}", path, status, char_prefix(&body, 200)),
         })
@@ -550,26 +564,41 @@ fn push_changes(run: &Run<'_>, metadata: &mut SyncMetadata, outcome: &mut SyncOu
 
     let anything_to_push = !vouched.is_empty() || !unproven.is_empty() || !deletions.is_empty();
 
-    for (notes, authoritative) in [(vouched, true), (unproven, false)] {
-        let mut batch = PushBatch::default();
-        for note in notes {
-            batch.add(run, note)?;
-            if batch.is_full() {
-                push_batch(run, std::mem::take(&mut batch), std::mem::take(&mut deletions), authoritative, outcome)?;
-            }
-        }
-        if !batch.notes.is_empty() {
-            push_batch(run, batch, std::mem::take(&mut deletions), authoritative, outcome)?;
-        }
+    // These go first and on their own, because a push that only deletes still works at
+    // the storage quota, and it's how the user makes room.
+    if !deletions.is_empty() {
+        push_batch(run, PushBatch::default(), std::mem::take(&mut deletions), false, outcome)?;
     }
 
-    if !deletions.is_empty() {
-        push_batch(run, PushBatch::default(), deletions, false, outcome)?;
+    match push_notes(run, vouched, unproven, outcome) {
+        Err(e) if matches!(e.downcast_ref::<SyncRefused>(), Some(SyncRefused::QuotaExceeded(_))) => {
+            // The notes stay pending, and there's still everything to pull
+            outcome.quota_exceeded = true;
+        }
+        result => result?,
     }
 
     if anything_to_push {
         metadata.last_push_at = Some(Utc::now());
     }
+    Ok(())
+}
+
+/// Send changed notes in batches, those this device can vouch for apart from the rest.
+fn push_notes(run: &Run<'_>, vouched: Vec<Note>, unproven: Vec<Note>, outcome: &mut SyncOutcome) -> Result<()> {
+    for (notes, authoritative) in [(vouched, true), (unproven, false)] {
+        let mut batch = PushBatch::default();
+        for note in notes {
+            batch.add(run, note)?;
+            if batch.is_full() {
+                push_batch(run, std::mem::take(&mut batch), Vec::new(), authoritative, outcome)?;
+            }
+        }
+        if !batch.notes.is_empty() {
+            push_batch(run, batch, Vec::new(), authoritative, outcome)?;
+        }
+    }
+
     Ok(())
 }
 
@@ -1173,13 +1202,13 @@ fn report_failed_sync(app: &mut App, error: &anyhow::Error, force: bool) {
     reload_after_failed_sync(app);
 
     match error.downcast_ref::<SyncRefused>() {
-        Some(SyncRefused::RateLimited { seconds, .. }) => {
+        Some(SyncRefused::Wait { seconds, .. }) => {
             app.sync_paused_until = Some(Instant::now() + Duration::from_secs(*seconds));
         }
         Some(SyncRefused::AccountDisabled(_)) => {
             app.sync_paused_until = Some(Instant::now() + ACCOUNT_DISABLED_PAUSE);
         }
-        None => {}
+        Some(SyncRefused::QuotaExceeded(_)) | None => {}
     }
 
     let label = if force { "Force sync failed" } else { "Sync failed" };
@@ -1196,6 +1225,9 @@ const ACCOUNT_DISABLED_PAUSE: Duration = Duration::from_secs(15 * 60);
 fn report_skipped(app: &mut App, outcome: &SyncOutcome) {
     if outcome.skipped > 0 {
         app.error = Some(t!("sync.skipped_notes", count = outcome.skipped).to_string());
+    }
+    if outcome.quota_exceeded {
+        app.error = Some(t!("sync.quota_exceeded").to_string());
     }
 }
 
@@ -1593,6 +1625,8 @@ mod tests {
         fail_next: Arc<Mutex<Option<String>>>,
         /// The wrapped key the server holds
         wrapped_key: Arc<Mutex<Option<String>>>,
+        /// Refuse any push with notes in it, as a full account does
+        quota_full: Arc<Mutex<bool>>,
     }
 
     fn reply(stream: &mut std::net::TcpStream, body: &str) {
@@ -1634,6 +1668,8 @@ mod tests {
             let failing = fail_next.clone();
             let wrapped_key: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
             let held_key = wrapped_key.clone();
+            let quota_full = Arc::new(Mutex::new(false));
+            let over_quota = quota_full.clone();
 
             std::thread::spawn(move || {
                 for stream in listener.incoming() {
@@ -1671,6 +1707,11 @@ mod tests {
                     // A push has notes of its own. Conflicts are the ones marked
                     // for the server to refuse.
                     if let Some(pushed) = request["notes"].as_array().cloned() {
+                        if !pushed.is_empty() && *over_quota.lock().unwrap() {
+                            reply_with(&mut stream, "507 Insufficient Storage", r#"{"error":"full","code":"storage_quota_exceeded"}"#);
+                            continue;
+                        }
+
                         let (rejected, accepted): (Vec<Value>, Vec<Value>) = pushed.iter()
                             .cloned()
                             .partition(|note| rejecting.lock().unwrap().contains(note["id"].as_str().unwrap_or("")));
@@ -1731,7 +1772,7 @@ mod tests {
                 }
             });
 
-            Self { endpoint, pulls, pushes, refuse, script, push_reply, fail_next, wrapped_key }
+            Self { endpoint, pulls, pushes, refuse, script, push_reply, fail_next, wrapped_key, quota_full }
         }
 
         /// Give these pull responses next, in order.
@@ -3149,5 +3190,60 @@ mod tests {
         let note_repo = NoteRepository::new(db.connection());
         assert_eq!(note_repo.get(&copy_id, key()).unwrap().unwrap().content, "The server's text");
         assert_eq!(note_repo.get(&note.id, key()).unwrap().unwrap().content, "My edit");
+    }
+
+    #[test]
+    fn a_timed_out_request_is_tried_again() {
+        let server = StubServer::start(remote_notes(1), vec![]);
+        server.fail_next("408 Request Timeout");
+        let mut app = app_connected_to(&server.endpoint);
+
+        perform_sync(&mut app, false).unwrap();
+
+        assert_eq!(stored_note_count(&app), 1);
+    }
+
+    #[test]
+    fn a_busy_server_holds_off_automatic_syncs_for_as_long_as_it_asks() {
+        let server = StubServer::start(vec![], vec![]);
+        let mut app = app_connected_to(&server.endpoint);
+        app.settings.sync_enabled = true;
+        app.settings.sync_endpoint = Some(server.endpoint.clone());
+        server.fail_next("503 Service Unavailable\r\nRetry-After: 300");
+
+        trigger_sync(&mut app);
+
+        let wait = app.sync_paused_until.expect("should be told to wait").saturating_duration_since(Instant::now());
+        assert!(wait > Duration::from_secs(250) && wait <= Duration::from_secs(300), "{wait:?}");
+        assert!(app.error.as_ref().unwrap().contains(t!("sync.server_busy", seconds = 300).as_ref()));
+    }
+
+    /// A full account can still delete, which is how the user makes room, and it can
+    /// still hear about everything other devices did.
+    #[test]
+    fn a_full_account_still_deletes_and_pulls_and_says_so() {
+        let server = StubServer::start(remote_notes(1), vec![]);
+        *server.quota_full.lock().unwrap() = true;
+        let mut app = app_connected_to(&server.endpoint);
+        app.settings.sync_enabled = true;
+        app.settings.sync_endpoint = Some(server.endpoint.clone());
+
+        let db = app.db.as_ref().unwrap();
+        let note_repo = NoteRepository::new(db.connection());
+        let binned = Note::new("Binned".to_string());
+        note_repo.create(&binned, key()).unwrap();
+        note_repo.hard_delete(&binned.id).unwrap();
+        let waiting = Note::new("Waiting for room".to_string());
+        note_repo.create(&waiting, key()).unwrap();
+
+        trigger_sync(&mut app);
+
+        assert_eq!(server.all_pushes()[0]["deletions"][0]["id"], json!(binned.id));
+        assert_eq!(stored_note_count(&app), 2);
+        assert_eq!(app.error, Some(t!("sync.quota_exceeded").to_string()));
+
+        let db = app.db.as_ref().unwrap();
+        assert!(NoteRepository::new(db.connection()).get(&waiting.id, key()).unwrap().unwrap().needs_sync);
+        assert!(NoteRepository::new(db.connection()).get_pending_deletions().unwrap().is_empty());
     }
 }
