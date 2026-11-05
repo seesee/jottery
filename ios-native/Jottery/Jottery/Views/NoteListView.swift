@@ -32,6 +32,9 @@ struct NoteListView: View {
         .listStyle(.insetGrouped)
         .refreshable { await appState.triggerSync() }
         .searchable(text: $state.searchQuery, isPresented: $searchIsActive, prompt: L.noteListSearch)
+        // As in the editor: search terms stay out of the keyboard's learned words.
+        .autocorrectionDisabled()
+        .textInputAutocapitalization(.never)
         .navigationTitle(appState.showArchive ? L.noteListArchiveTitle : L.noteListTitle)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {

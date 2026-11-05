@@ -211,6 +211,10 @@ function renderNode(node: OutlinerNode, depth: number): HTMLElement {
   const contentEl = document.createElement('div');
   contentEl.className = 'outliner-content';
   contentEl.contentEditable = isReadOnly ? 'false' : 'true';
+  // What's typed here stays out of the keyboard's learned words, as in the main editor.
+  contentEl.setAttribute('autocorrect', 'off');
+  contentEl.setAttribute('autocapitalize', 'off');
+  contentEl.spellcheck = false;
   contentEl.textContent = node.content;
   contentEl.dataset.id = node.id;
 

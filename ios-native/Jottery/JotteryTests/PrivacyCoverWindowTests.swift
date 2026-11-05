@@ -124,7 +124,7 @@ struct PrivacyCoverWindowTests {
     @Test func aReturnPastTheTimeoutLocksBeforeTheCoverLifts() async throws {
         let state = try await makeUnlockedState()
         state.keyManager.autoLockTimeout = 60
-        state.backgroundedAt = Date().addingTimeInterval(-120)
+        state.backgroundedAt = .now - .seconds(120)
         let scene = try connectedScene()
         let controller = PrivacyCoverController(appState: state)
         controller.coverIfNeeded(scene)
@@ -141,7 +141,7 @@ struct PrivacyCoverWindowTests {
     @Test func aReturnWithinTheTimeoutDoesntLock() async throws {
         let state = try await makeUnlockedState()
         state.keyManager.autoLockTimeout = 600
-        state.backgroundedAt = Date().addingTimeInterval(-5)
+        state.backgroundedAt = .now - .seconds(5)
 
         #expect(!state.lockIfAwayTooLong())
         #expect(!state.isLocked)
@@ -150,7 +150,7 @@ struct PrivacyCoverWindowTests {
     @Test func aTimeoutOfZeroMeansNever() async throws {
         let state = try await makeUnlockedState()
         state.keyManager.autoLockTimeout = 0
-        state.backgroundedAt = Date().addingTimeInterval(-86_400)
+        state.backgroundedAt = .now - .seconds(86_400)
 
         #expect(!state.lockIfAwayTooLong())
     }
@@ -159,7 +159,7 @@ struct PrivacyCoverWindowTests {
     @Test func checkingTwiceLocksOnce() async throws {
         let state = try await makeUnlockedState()
         state.keyManager.autoLockTimeout = 60
-        state.backgroundedAt = Date().addingTimeInterval(-120)
+        state.backgroundedAt = .now - .seconds(120)
 
         #expect(state.lockIfAwayTooLong())
         #expect(!state.lockIfAwayTooLong())
@@ -170,7 +170,7 @@ struct PrivacyCoverWindowTests {
     @Test func anUnfinishedLiftIsCancelledIfTheAppLeavesAgain() async throws {
         let state = try await makeUnlockedState()
         state.keyManager.autoLockTimeout = 60
-        state.backgroundedAt = Date().addingTimeInterval(-120)
+        state.backgroundedAt = .now - .seconds(120)
         let scene = try connectedScene()
         let controller = PrivacyCoverController(appState: state)
         controller.coverIfNeeded(scene)

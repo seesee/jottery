@@ -83,7 +83,7 @@ final class AppState {
 
     // MARK: - Lifecycle
 
-    var backgroundedAt: Date?
+    var backgroundedAt: ContinuousClock.Instant?
 
     // MARK: - Editor Font
 
@@ -288,7 +288,7 @@ final class AppState {
         removeTemporaryFiles()
 
         do {
-            try initialise(database: DatabaseManager())
+            try initialise(database: DatabaseManager(), forgetEarlierInstall: KeychainService.deleteAll)
         } catch {
             // Database init failed — stay on first launch screen
             isFirstLaunch = true
@@ -303,7 +303,12 @@ final class AppState {
 
     /// Wire repositories to a specific database. Internal so tests can
     /// inject a temporary database instead of the app-support default.
-    func initialise(database: DatabaseManager) throws {
+    ///
+    /// `forgetEarlierInstall` runs when the database opened and holds no vault:
+    /// an earlier install's Keychain items are all that could be left, and they
+    /// include its master key and API key. A database that can't be opened, as
+    /// on a locked device, throws before that, and says nothing about the vault.
+    func initialise(database: DatabaseManager, forgetEarlierInstall: () -> Void = {}) throws {
         // Wire auto-lock so the timer triggers a full app lock (UI + key wipe)
         keyManager.onAutoLock = { [weak self] in
             self?.lock()
@@ -322,6 +327,7 @@ final class AppState {
         // Check if vault exists
         let hasVault = try encryptionRepo?.isVaultSetUp() ?? false
         isFirstLaunch = !hasVault
+        if !hasVault { forgetEarlierInstall() }
 
         // Load settings
         if let loaded = try settingsRepo?.get() {
@@ -1737,7 +1743,7 @@ final class AppState {
     /// Start the auto-lock clock, if it isn't already running.
     func noteEnteredBackground() {
         if backgroundedAt == nil {
-            backgroundedAt = Date()
+            backgroundedAt = .now
         }
     }
 
@@ -1747,7 +1753,7 @@ final class AppState {
     @discardableResult
     func lockIfAwayTooLong() -> Bool {
         guard !isLocked, let away = backgroundedAt, keyManager.autoLockTimeout > 0,
-              Date().timeIntervalSince(away) >= keyManager.autoLockTimeout else {
+              away.duration(to: .now) >= .seconds(keyManager.autoLockTimeout) else {
             return false
         }
         lock()

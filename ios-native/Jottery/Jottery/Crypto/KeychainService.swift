@@ -16,6 +16,18 @@ enum KeychainService {
     private static let biometricKeyAccount = "biometric-master-key"
     private static let clientIdAccount = "sync-client-id"
 
+    // MARK: - Everything
+
+    /// Remove every item this app has stored. iOS keeps Keychain items when an
+    /// app is deleted, so this is how the next install lets go of them.
+    static func deleteAll() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+
     // MARK: - API Key
 
     /// Store the sync API key.

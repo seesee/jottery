@@ -29,6 +29,9 @@ struct TagInputView: View {
                     }
 
                     TextField(L.tagsAddTag, text: $newTag)
+                        // As in the editor: these stay out of the keyboard's learned words.
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
                         .font(.callout)
                         .frame(minWidth: 80, maxWidth: 150)
                         .focused($isInputFocused)

@@ -67,6 +67,28 @@ struct KeyManagerAutoLockTests {
         #expect(manager.isUnlocked)
     }
 
+    @Test func aTimeoutThatHasPassedLocks() {
+        let manager = KeyManager()
+        manager.unlockWithKeyData(Data(repeating: 7, count: 32))
+        manager.autoLockTimeout = 60
+
+        manager.recordActivity(at: .now - .seconds(61))
+        manager.checkAutoLock()
+
+        #expect(!manager.isUnlocked)
+    }
+
+    @Test func aTimeoutThatHasntPassedDoesntLock() {
+        let manager = KeyManager()
+        manager.unlockWithKeyData(Data(repeating: 7, count: 32))
+        manager.autoLockTimeout = 60
+
+        manager.recordActivity(at: .now - .seconds(30))
+        manager.checkAutoLock()
+
+        #expect(manager.isUnlocked)
+    }
+
     @Test func choosingNeverStopsTheTimer() {
         let manager = KeyManager()
         manager.unlockWithKeyData(Data(repeating: 7, count: 32))
