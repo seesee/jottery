@@ -3,7 +3,7 @@
   import { describeError } from '../lib/apiErrors';
   import type { UserDetail, Device } from '../lib/api';
   import { toast } from '../lib/toast.svelte';
-  import { _ } from 'svelte-i18n';
+  import { _, locale } from 'svelte-i18n';
   import ConfirmModal from './ConfirmModal.svelte';
   import Modal from './Modal.svelte';
 
@@ -185,7 +185,7 @@
 
   function formatDate(dateStr: string | null): string {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('en-GB', {
+    return new Date(dateStr).toLocaleDateString($locale ?? undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -194,7 +194,7 @@
 
   function formatDateTime(dateStr: string | null): string {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleString('en-GB', {
+    return new Date(dateStr).toLocaleString($locale ?? undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

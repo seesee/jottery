@@ -3,7 +3,7 @@
   import { describeError } from '../../lib/apiErrors';
   import type { Device } from '../../lib/userApi';
   import { toast } from '../../lib/toast.svelte';
-  import { _ } from 'svelte-i18n';
+  import { _, locale } from 'svelte-i18n';
   import ConfirmModal from '../ConfirmModal.svelte';
 
   let devices = $state<Device[]>([]);
@@ -65,7 +65,7 @@
   }
 
   function formatDate(dateStr: string): string {
-    return new Date(dateStr).toLocaleDateString(undefined, {
+    return new Date(dateStr).toLocaleDateString($locale ?? undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -74,7 +74,7 @@
 
   function formatDateTime(dateStr: string | null): string {
     if (!dateStr) return $_('userPortal.devices.never');
-    return new Date(dateStr).toLocaleString(undefined, {
+    return new Date(dateStr).toLocaleString($locale ?? undefined, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

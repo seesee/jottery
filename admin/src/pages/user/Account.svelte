@@ -3,7 +3,7 @@
   import { describeError } from '../../lib/apiErrors';
   import { copyText } from '../../lib/clipboard';
   import { toast } from '../../lib/toast.svelte';
-  import { _ } from 'svelte-i18n';
+  import { _, locale } from 'svelte-i18n';
   import ConfirmModal from '../../components/ConfirmModal.svelte';
   import DevicesSection from '../../components/user/DevicesSection.svelte';
 
@@ -93,7 +93,7 @@
   }
 
   function formatDate(dateStr: string): string {
-    return new Date(dateStr).toLocaleDateString(undefined, {
+    return new Date(dateStr).toLocaleDateString($locale ?? undefined, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -102,7 +102,7 @@
 
   function formatDateTime(dateStr: string | null): string {
     if (!dateStr) return $_('userPortal.account.never');
-    return new Date(dateStr).toLocaleString();
+    return new Date(dateStr).toLocaleString($locale ?? undefined);
   }
 
   const serverBase = import.meta.env.VITE_API_BASE_URL || window.location.origin;

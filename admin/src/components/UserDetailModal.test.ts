@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeAll, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/svelte';
-import { addMessages, init } from 'svelte-i18n';
+import { addMessages, init, locale } from 'svelte-i18n';
 import en from '../locales/en-GB.json';
+import de from '../locales/de.json';
 import UserDetailModal from './UserDetailModal.svelte';
 
 const detail = {
@@ -45,7 +46,21 @@ describe('UserDetailModal', () => {
     await init({ fallbackLocale: 'en-GB', initialLocale: 'en-GB' });
   });
 
+  beforeEach(async () => {
+    await locale.set('en-GB');
+  });
+
   afterEach(cleanup);
+
+  it('formats dates for the chosen language', async () => {
+    addMessages('de', de);
+    await locale.set('de');
+
+    await show();
+
+    const expected = new Date(detail.createdAt).toLocaleDateString('de', { year: 'numeric', month: 'short', day: 'numeric' });
+    expect(screen.getAllByText(expected).length).toBeGreaterThan(0);
+  });
 
   it('is a named dialog that closes on Escape', async () => {
     const { onClose } = await show();
