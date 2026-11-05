@@ -47,10 +47,22 @@ class RealServerTest {
     private lateinit var laptop: SyncHarness
     private lateinit var phone: SyncHarness
 
-    private fun device(name: String): SyncHarness = runBlocking {
-        val response = SyncClient(endpoint, "", "").registerDevice(RegisterDeviceRequest(email, password, name))
-        SyncHarness(SyncHarness.RealServer(endpoint, response.apiKey, response.clientId))
+    private companion object {
+        /**
+         * Registration is limited to a burst of 20 calls from one address, then one
+         * every three seconds. A device per test goes over that, and the 429 in setUp
+         * stops the test before it has tried anything, so each is registered only once.
+         */
+        val registered = mutableMapOf<String, SyncHarness.RealServer>()
     }
+
+    private fun register(name: String): SyncHarness.RealServer = runBlocking {
+        val response = SyncClient(endpoint, "", "").registerDevice(RegisterDeviceRequest(email, password, name))
+        SyncHarness.RealServer(endpoint, response.apiKey, response.clientId)
+    }
+
+    /** A device with an empty database. Its registration lasts the whole run: see [registered]. */
+    private fun device(name: String) = SyncHarness(registered.getOrPut(name) { register(name) })
 
     @Before fun setUp() {
         assumeTrue("needs a real server", endpoint.isNotEmpty())
@@ -268,7 +280,7 @@ class RealServerTest {
     }
 
     @Test fun `a revoked device is told so`() = runBlocking {
-        val spare = device("spare")
+        val spare = SyncHarness(register("spare"))
         spare.client.revokeThisDevice()
 
         val failure = runCatching { spare.service().pull() }.exceptionOrNull()
