@@ -500,6 +500,59 @@ class SyncProtocolTest {
         assertFalse(h.noteRepo.getRaw(noteId)!!.deleted)
     }
 
+    // MARK: - Many saves between syncs
+
+    /** The server's rule: its hash has to be the parent, or somewhere in the chain. */
+    private fun serverWouldAccept(request: SyncPushRequest, serverHash: String) = request.notes.single().let {
+        it.parentHash == serverHash || it.contentHash == serverHash || serverHash in it.hashChain.orEmpty()
+    }
+
+    @Test fun `any number of saves between syncs is still accepted`() = runBlocking {
+        h.seedSynced(noteId, "BASE", "hash-base")
+        repeat(120) { n ->
+            val note = h.noteRepo.get(noteId, h.key)!!
+            h.noteRepo.update(note.copy(content = "save $n"), h.key)
+        }
+        h.onPush = { accepted(pushRequest(it)) }
+
+        h.service().push()
+
+        val pushed = pushRequest(h.pushBodies.first())
+        assertTrue("rejected as a conflict on a note nothing else touched", serverWouldAccept(pushed, "hash-base"))
+        assertTrue(pushed.notes.single().hashChain!!.size <= 50)
+    }
+
+    @Test fun `the same holds when the server's hash came from a push here`() = runBlocking {
+        h.seedSynced(noteId, "BASE", "hash-base")
+        h.noteRepo.update(h.noteRepo.get(noteId, h.key)!!.copy(content = "first"), h.key)
+        val onServer = h.noteRepo.getRaw(noteId)!!.contentHash!!
+        h.onPush = { accepted(pushRequest(it)) }
+        h.service().push()
+
+        repeat(120) { n ->
+            h.noteRepo.update(h.noteRepo.get(noteId, h.key)!!.copy(content = "save $n"), h.key)
+        }
+        h.pushBodies.clear()
+        h.service().push()
+
+        assertTrue(serverWouldAccept(pushRequest(h.pushBodies.first()), onServer))
+    }
+
+    @Test fun `the same holds when the server's hash came from a pull`() = runBlocking {
+        h.seedSynced(noteId, "BASE", "hash-base")
+        val remote = h.remoteNote(noteId, "REMOTE", "hash-r", "hash-base", listOf("hash-r", "hash-base"))
+        h.onPull = { SyncHarness.emptyPull(remote) }
+        h.service().pull()
+
+        repeat(120) { n ->
+            h.noteRepo.update(h.noteRepo.get(noteId, h.key)!!.copy(content = "save $n"), h.key)
+        }
+        h.onPush = { accepted(pushRequest(it)) }
+        h.service().push()
+
+        assertTrue(serverWouldAccept(pushRequest(h.pushBodies.first()), "hash-r"))
+    }
+
     // MARK: - Applying a pulled note
 
     @Test fun `an edit made between push and pull survives the echo`() = runBlocking {

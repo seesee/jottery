@@ -185,6 +185,7 @@ class SyncService(
         // Guards the accepted notes below: markSynced only clears the flag if
         // modified_at still matches the snapshot that was actually pushed.
         val pushedModifiedAt = records.associate { it.id to it.modifiedAt }
+        val pushedHashes = records.associate { it.id to it.contentHash }
 
         val syncNotes = records.mapNotNull { record -> toSyncNote(record, key) }
         if (syncNotes.isEmpty()) return
@@ -217,6 +218,7 @@ class SyncService(
                 syncedAt = accepted.syncedAt?.takeIf { DateUtils.parseISO8601(it) != null } ?: now,
                 serverVersion = accepted.serverVersion,
                 pushedModifiedAt = modifiedAt,
+                pushedHash = pushedHashes[accepted.id],
             )
             if (cleared) {
                 noteRepo.getRaw(accepted.id)?.let {
@@ -818,6 +820,7 @@ class SyncService(
             parentHash = syncNote.parentHash,
             hashChain = syncNote.hashChain?.let { json.encodeToString(it) },
             needsSync = false,
+            syncHash = syncNote.contentHash,
             // Its time in the bin runs from when this device saw it go there
             localDeletedAt = when {
                 !syncNote.deleted -> null
@@ -1029,6 +1032,7 @@ class SyncService(
                             version = stored.serverVersion + 1,
                             parentHash = stored.serverContentHash,
                             hashChain = json.encodeToString(merged),
+                            syncHash = stored.serverContentHash,
                             needsSync = true,
                             modifiedAt = DateUtils.nowISO8601(),
                         )
@@ -1093,6 +1097,7 @@ class SyncService(
         parentHash = stored.serverParentHash,
         hashChain = stored.serverHashChain?.let { json.encodeToString(it) },
         needsSync = false,
+        syncHash = stored.serverContentHash,
         syncedAt = DateUtils.nowISO8601(),
         modifiedAt = stored.serverModifiedAt,
     )

@@ -89,6 +89,9 @@ interface NoteDao {
     """)
     suspend fun unarchive(id: String, modifiedAt: String)
 
+    @Query("UPDATE notes SET sync_hash = :hash WHERE id = :id")
+    suspend fun setSyncHash(id: String, hash: String)
+
     /**
      * Clear needs_sync only if the row still has the modified_at that was pushed.
      * An edit saved while the request was in flight has a newer modified_at, so

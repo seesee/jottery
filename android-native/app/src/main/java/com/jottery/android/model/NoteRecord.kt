@@ -74,6 +74,7 @@ data class NoteRecord(
     @ColumnInfo(name = "needs_sync")
     var needsSync: Boolean = true,
 
+    /** The content hash the server holds for this note, as far as this device knows. */
     @ColumnInfo(name = "sync_hash")
     var syncHash: String? = null,
 

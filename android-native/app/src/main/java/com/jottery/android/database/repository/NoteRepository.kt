@@ -353,7 +353,11 @@ class NoteRepository(
                 color = note.color,
             )
         )
-        val hashChainStr = json.encodeToString(CryptoService.updateHashChain(contentHash, previousChain))
+        // What the server holds: this row itself, if nothing is waiting to go
+        val serverHash = current.syncHash ?: current.contentHash.takeIf { !current.needsSync }
+        val hashChainStr = json.encodeToString(
+            CryptoService.updateHashChain(contentHash, previousChain, keep = serverHash)
+        )
 
         // First-edit snapshot: when version is 0, create a snapshot of the original state
         // then advance version to 1
@@ -378,6 +382,7 @@ class NoteRepository(
                 parentHash = current.contentHash,
                 hashChain = hashChainStr,
                 needsSync = true,
+                syncHash = serverHash,
             )
         )
     }
@@ -468,7 +473,10 @@ class NoteRepository(
         syncedAt: String,
         serverVersion: Int?,
         pushedModifiedAt: String,
+        pushedHash: String?,
     ): Boolean {
+        // True even if the note has moved on: this is now what the server holds
+        pushedHash?.let { noteDao.setSyncHash(id, it) }
         val updated = if (serverVersion != null) {
             noteDao.markSyncedWithVersionIfUnchanged(id, syncedAt, serverVersion, pushedModifiedAt)
         } else {
