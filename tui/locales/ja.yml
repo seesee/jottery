@@ -23,11 +23,11 @@ password:
   change_success: パスワードを正常に変更しました
   change_title: "パスワード変更"
   change_enter_current: "現在のパスワードを入力してください:"
-  change_enter_new: "新しいパスワードを入力 (12文字以上):"
+  change_enter_new: "新しいパスワードを入力 (8文字以上):"
   change_confirm_new: "新しいパスワードを確認:"
   change_current_required: "現在のパスワードを入力してください"
   change_wrong_current: "現在のパスワードが正しくありません"
-  change_too_short: "新しいパスワードは12文字以上必要です"
+  change_too_short: "新しいパスワードは8文字以上必要です"
   change_mismatch: "パスワードが一致しません"
   change_failed: "パスワードの変更に失敗しました"
   remember: パスワードを記憶
@@ -46,6 +46,9 @@ password:
   enter_to_enable: "自動ロック解除を有効にするにはパスワードを入力してください:"
   create_title: パスワードを作成
   unlock_title: ロック解除
+  too_short: "パスワードは %{min} 文字以上にしてください"
+  same_as_account: "別のパスワードを使用してください。サーバーはアカウントのパスワードを見ることができるため、ノートを開くパスワードと同じにしてはいけません。"
+  same_as_account_warning: "アカウントのパスワードがノートのパスワードと同じため、サーバーがノートを読める状態です。設定でノートのパスワードを変更してください。"
 menu:
   notes: ノート
   new_note: 新しいノート
@@ -661,3 +664,8 @@ calc:
   numbers_only: "⚠ Calc は数値のみ扱います：テキスト、タプル、; は計算されません"
   too_deep: "⚠ 括弧のネストが深すぎます（上限 %{max}）"
   gave_up: "このノートの計算に時間がかかりすぎたため、結果なしで表示しています。"
+
+envelope:
+  unwrap_failed: "ノートのパスワードではこのアカウントのキーを開けません。古いバージョンで保存された可能性があります。すでに接続済みのデバイスで Jottery のロックを解除すると修復されるので、その後もう一度お試しください。"
+  rekey_failed: "ローカルのノートをこのアカウントのキーに移行できなかったため、何も変更されていません: %{error}"
+  diverged: "このデバイスのキーはアカウントのキーと異なります。他のデバイスのノートをここで開けない場合があります。"

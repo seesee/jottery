@@ -9,12 +9,12 @@ mod repository;
 mod sse;
 mod terminal_text;
 mod ui;
+mod vault;
 
 // Initialize rust-i18n with fallback to en-GB
 rust_i18n::i18n!("locales", fallback = "en-GB");
 
 use anyhow::{Context, Result};
-use base64::Engine as _;
 use rust_i18n::t;
 use clap::{Parser, Subcommand, CommandFactory, FromArgMatches};
 use std::path::{Path, PathBuf};
@@ -432,37 +432,9 @@ fn get_password(password_opt: Option<String>, db_path: &Path) -> Result<String> 
     }
 }
 
-/// Derive encryption key from password using stored salt
+/// Get the vault's key from its password, creating the vault if this is the first run
 fn derive_key_from_db(db: &Database, password: &str) -> Result<[u8; 32]> {
-    let encryption_repo = EncryptionRepository::new(db.connection());
-    let crypto = CryptoService::new();
-
-    // Get stored salt and iterations from database
-    if let Some(metadata) = encryption_repo.get()? {
-        if metadata.envelope_version.is_some() {
-            // Envelope path: derive device key, unwrap master key
-            let device_salt_b64 = metadata.device_salt.as_deref()
-                .ok_or_else(|| anyhow::anyhow!("Envelope metadata missing device_salt"))?;
-            let device_salt = base64::engine::general_purpose::STANDARD.decode(device_salt_b64)
-                .context("Invalid device_salt base64")?;
-            let device_key = crypto.derive_key(password, &device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
-            let wrapped_json = metadata.local_wrapped_master.as_deref()
-                .ok_or_else(|| anyhow::anyhow!("Envelope metadata missing local_wrapped_master"))?;
-            let wrapped: crate::models::encryption::EncryptedData = serde_json::from_str(wrapped_json)
-                .context("Invalid local_wrapped_master JSON")?;
-            crypto.unwrap_master_key(&device_key, &wrapped)
-        } else if let (Some(salt), Some(iterations)) = (&metadata.salt, metadata.iterations) {
-            crypto.derive_key(password, salt, iterations)
-        } else {
-            anyhow::bail!("Invalid encryption metadata")
-        }
-    } else {
-        // First-time setup: generate new salt and save it
-        let new_salt = crypto.generate_salt();
-        let iterations = 256_000;
-        encryption_repo.save(&new_salt, iterations)?;
-        crypto.derive_key(password, &new_salt, iterations)
-    }
+    vault::unlock(db.connection(), &CryptoService::new(), password)
 }
 
 /// Open $EDITOR with content and return the edited result
@@ -890,7 +862,12 @@ fn run() -> Result<()> {
 
             // Validate password strength
             if password.len() < 12 {
-                anyhow::bail!("{}", t!("password.empty_error"));
+                anyhow::bail!("{}", t!("register.password_too_short"));
+            }
+
+            // The server will see this password, so it mustn't be the one for the notes
+            if let Ok(Some(notes_password)) = try_load_stored_password(&db_path) {
+                vault::check_passwords_differ(&notes_password, &password)?;
             }
 
             outln!("{} {} {}...", t!("cli.register"), email, server);
@@ -952,6 +929,15 @@ fn run() -> Result<()> {
                 }
             };
 
+            // The server will see the account password, so it mustn't be the one for the notes
+            vault::check_passwords_differ(&key_password, &password)?;
+
+            // Open the vault before involving the server, so a wrong password leaves
+            // no stray device behind
+            let db = Database::open(&db_path, &key_password)
+                .context("Failed to create database")?;
+            let local_key = derive_key_from_db(&db, &key_password)?;
+
             outln!("{} '{}' {}...", t!("cli.register"), device_name, email);
 
             // Create auth client and register device
@@ -971,15 +957,17 @@ fn run() -> Result<()> {
             outln!("User ID: {}", response.user_id);
             outln!("{}: {}", t!("settings.device_name"), response.device_name);
 
-            // Initialize database with encryption password
-            let db = Database::open(&db_path, &key_password)
-                .context("Failed to create database")?;
-
-            // Derive key using stored salt
-            let key = derive_key_from_db(&db, &key_password)?;
+            // Use the account's key if it has one, or give it this vault's. Notes
+            // written under any other key couldn't be read on the account's devices.
+            let crypto = CryptoService::new();
+            let account = ui::operations::envelope::Account {
+                client: &client,
+                api_key: &response.api_key,
+                user_id: &response.user_id,
+            };
+            let key = ui::operations::envelope::adopt_account_key(&db, &crypto, &account, &key_password, &local_key)?;
 
             // Encrypt and store API key
-            let crypto = CryptoService::new();
             let encrypted_api_key = crypto.encrypt_text(&response.api_key, &key)?;
             let api_key_json = serde_json::to_string(&encrypted_api_key)?;
 
@@ -1001,6 +989,13 @@ fn run() -> Result<()> {
             };
 
             sync_repo.update_metadata(&sync_metadata)?;
+
+            // The TUI reads these to decide whether to sync
+            let settings_repo = repository::SettingsRepository::new(db.connection());
+            let mut settings = settings_repo.get()?;
+            settings.sync_enabled = true;
+            settings.sync_endpoint = Some(server.clone());
+            settings_repo.update(&settings)?;
 
             outln!("\n✓ {}", t!("sync.success"));
             outln!("\n{}:", t!("help.general"));
@@ -1044,6 +1039,14 @@ fn run() -> Result<()> {
                     rpassword::read_password()?
                 }
             };
+
+            // Both passwords being in hand is a chance to spot a dangerous reuse. It's
+            // an existing account, so this warns: refusing would help nobody.
+            if let Ok(Some(notes_password)) = try_load_stored_password(&db_path) {
+                if vault::check_passwords_differ(&notes_password, &password).is_err() {
+                    errln!("⚠ {}", t!("password.same_as_account_warning"));
+                }
+            }
 
             // Login to get session
             outln!("{}", t!("inbox.token.logging_in"));
@@ -1218,7 +1221,9 @@ fn run() -> Result<()> {
             // Store password for auto-unlock (used for demo/testing automation)
             // First verify the password works with the database
             if db_path.exists() {
-                let _db = Database::open(&db_path, &password)
+                let db = Database::open(&db_path, &password)
+                    .context("Password verification failed - incorrect password")?;
+                derive_key_from_db(&db, &password)
                     .context("Password verification failed - incorrect password")?;
             }
 

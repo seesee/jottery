@@ -5,11 +5,10 @@ use rust_i18n::t;
 use std::time::Instant;
 use zeroize::Zeroize;
 
-use base64::Engine as _;
-
 use crate::{
     db::Database,
-    repository::{EncryptionRepository, SettingsRepository, sync::SyncRepository},
+    repository::{SettingsRepository, sync::SyncRepository},
+    vault,
 };
 
 use super::super::app::App;
@@ -21,47 +20,8 @@ pub fn unlock(app: &mut App) -> Result<()> {
     let db = Database::open(&app.db_path, &app.password_input)
         .context("Failed to open database")?;
 
-    let encryption_repo = EncryptionRepository::new(db.connection());
-
-    // Get or create encryption metadata
-    let metadata = encryption_repo.get()?;
-    let key = if let Some(ref meta) = metadata {
-        if meta.envelope_version.is_some() {
-            // === ENVELOPE PATH ===
-            app.debug_log("Unlock - Envelope encryption detected");
-            let device_salt_b64 = meta.device_salt.as_deref()
-                .ok_or_else(|| anyhow::anyhow!("Envelope metadata missing device_salt"))?;
-            let device_salt = base64::engine::general_purpose::STANDARD.decode(device_salt_b64)
-                .context("Invalid device_salt base64")?;
-
-            let device_key = app.crypto.derive_key(&app.password_input, &device_salt, crate::crypto::DEFAULT_ITERATIONS)?;
-
-            let wrapped_json = meta.local_wrapped_master.as_deref()
-                .ok_or_else(|| anyhow::anyhow!("Envelope metadata missing local_wrapped_master"))?;
-            let wrapped: crate::models::encryption::EncryptedData = serde_json::from_str(wrapped_json)
-                .context("Invalid local_wrapped_master JSON")?;
-
-            let master_key = app.crypto.unwrap_master_key(&device_key, &wrapped)?;
-            app.debug_log("Unlock - Master key unwrapped from envelope");
-            master_key
-        } else if let (Some(salt), Some(iterations)) = (&meta.salt, meta.iterations) {
-            // === LEGACY PATH ===
-            app.debug_log(&format!("Unlock - Legacy encryption, iterations: {}", iterations));
-            app.debug_log(&format!("Unlock - Salt (hex): {}", hex::encode(salt)));
-            app.crypto.derive_key(&app.password_input, salt, iterations)?
-        } else {
-            anyhow::bail!("Invalid encryption metadata: neither envelope nor legacy fields found");
-        }
-    } else {
-        // First-time setup: generate new salt and save it
-        let new_salt = app.crypto.generate_salt();
-        let iterations = 256_000;
-        encryption_repo.save(&new_salt, iterations)?;
-        app.debug_log(&format!("Unlock - New database, generated salt, iterations: {}", iterations));
-        app.crypto.derive_key(&app.password_input, &new_salt, iterations)?
-    };
-
-    app.debug_log(&format!("Unlock - Password length: {} chars", app.password_input.len()));
+    // Checks the password, and creates the vault if there isn't one yet
+    let key = vault::unlock(db.connection(), &app.crypto, &app.password_input)?;
 
     app.key_manager.set_master_key(key);
     app.key = Some(key);
@@ -272,6 +232,14 @@ pub fn unlock(app: &mut App) -> Result<()> {
     // Trigger an immediate sync to fetch inbox items and any pending changes
     app.trigger_sync();
 
+    // Now the device has the password and a sync behind it, it can repair the
+    // server's copy of the key if an older client left it unreadable
+    if let Some(password) = app.unlock_password.clone() {
+        if let Err(e) = super::envelope::repair_server_key(app, &password) {
+            app.debug_log(&format!("Unlock - Could not check the server's wrapped key: {}", e));
+        }
+    }
+
     Ok(())
 }
 
@@ -342,21 +310,9 @@ pub fn forget_stored_password(app: &mut App) -> Result<()> {
     Ok(())
 }
 
-/// Verify password is correct for enabling remember password
-/// Returns Ok(true) if password is correct, Ok(false) if incorrect, Err on database error
-pub fn verify_password_for_remember(app: &App, password: &str) -> Result<bool> {
-    // Try to open the database with the provided password
-    // This verifies the password without actually unlocking the app
-    match Database::open(&app.db_path, password) {
-        Ok(_) => Ok(true),  // Password is correct
-        Err(e) => {
-            // Check if it's a password error or other error
-            let error_msg = format!("{:?}", e);
-            if error_msg.contains("wrong password") || error_msg.contains("corrupted") {
-                Ok(false)  // Password is incorrect
-            } else {
-                Err(e)  // Other database error
-            }
-        }
-    }
+/// Check a password against the open vault, for actions that ask for it again.
+pub fn verify_password(app: &App, password: &str) -> Result<bool> {
+    let db = app.db.as_ref().context("Database not unlocked")?;
+    let key = app.key.as_ref().context("Vault is locked")?;
+    vault::password_matches(db.connection(), &app.crypto, password, key)
 }

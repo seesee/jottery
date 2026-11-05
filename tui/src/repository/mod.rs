@@ -7,6 +7,7 @@ pub mod settings;
 pub mod attachment;
 pub mod sync;
 pub mod encryption;
+pub mod rekey;
 
 pub use note::NoteRepository;
 pub use note_version::{NoteVersionRepository, NoteVersion, VersionReason};

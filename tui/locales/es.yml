@@ -23,11 +23,11 @@ password:
   change_success: Contraseña cambiada con éxito
   change_title: "Cambiar contraseña"
   change_enter_current: "Introduzca su contraseña actual:"
-  change_enter_new: "Introduzca nueva contraseña (mín. 12 caracteres):"
+  change_enter_new: "Introduzca nueva contraseña (mín. 8 caracteres):"
   change_confirm_new: "Confirme la nueva contraseña:"
   change_current_required: "Introduzca su contraseña actual"
   change_wrong_current: "La contraseña actual es incorrecta"
-  change_too_short: "La nueva contraseña debe tener al menos 12 caracteres"
+  change_too_short: "La nueva contraseña debe tener al menos 8 caracteres"
   change_mismatch: "Las contraseñas no coinciden"
   change_failed: "Error al cambiar la contraseña"
   remember: Recordar contraseña
@@ -46,6 +46,9 @@ password:
   enter_to_enable: "Introduzca su contraseña para activar el desbloqueo automático:"
   create_title: Crear contraseña
   unlock_title: Desbloquear
+  too_short: "La contraseña debe tener al menos %{min} caracteres"
+  same_as_account: "Usa contraseñas distintas. El servidor ve la contraseña de tu cuenta, así que no debe abrir también tus notas."
+  same_as_account_warning: "La contraseña de tu cuenta es la misma que la de tus notas, así que el servidor podría leerlas. Cambia la contraseña de las notas en Ajustes."
 menu:
   notes: Notas
   new_note: Nueva nota
@@ -661,3 +664,8 @@ calc:
   numbers_only: "⚠ Calc trabaja con números: el texto, las tuplas y ; no se calculan"
   too_deep: "⚠ Demasiados paréntesis anidados (límite %{max})"
   gave_up: "Esta nota tardó demasiado en calcularse, así que se muestra sin resultados."
+
+envelope:
+  unwrap_failed: "La contraseña de tus notas no puede abrir la clave de esta cuenta. Puede que la guardara una versión anterior. Desbloquea Jottery en un dispositivo ya conectado, lo que lo arreglará, y vuelve a intentarlo."
+  rekey_failed: "Tus notas locales no se pudieron pasar a la clave de esta cuenta, así que no ha cambiado nada: %{error}"
+  diverged: "La clave de este dispositivo no coincide con la de la cuenta. Puede que las notas de tus otros dispositivos no se abran aquí."

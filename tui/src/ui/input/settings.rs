@@ -215,7 +215,7 @@ pub fn handle_settings_key(app: &mut App, key: KeyEvent) -> Result<()> {
                         app.error = Some(t!("password.empty_error").to_string());
                     } else {
                         // Verify password by attempting to derive the key
-                        match operations::auth::verify_password_for_remember(
+                        match operations::auth::verify_password(
                             app,
                             &app.setting_input,
                         ) {

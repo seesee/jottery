@@ -40,6 +40,10 @@ pub fn handle_locked_key(app: &mut App, key: KeyEvent) -> Result<()> {
                     app.error = Some(t!("password.mismatch_error").to_string());
                     return Ok(());
                 }
+                if let Err(e) = crate::vault::check_new_password(&app.password_input) {
+                    app.error = Some(e.to_string());
+                    return Ok(());
+                }
             }
 
             if let Err(e) = operations::auth::unlock(app) {

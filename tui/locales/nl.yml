@@ -23,11 +23,11 @@ password:
   change_success: Wachtwoord succesvol gewijzigd
   change_title: "Wachtwoord wijzigen"
   change_enter_current: "Voer uw huidige wachtwoord in:"
-  change_enter_new: "Voer een nieuw wachtwoord in (min. 12 tekens):"
+  change_enter_new: "Voer een nieuw wachtwoord in (min. 8 tekens):"
   change_confirm_new: "Bevestig het nieuwe wachtwoord:"
   change_current_required: "Voer uw huidige wachtwoord in"
   change_wrong_current: "Huidig wachtwoord is onjuist"
-  change_too_short: "Nieuw wachtwoord moet minimaal 12 tekens bevatten"
+  change_too_short: "Nieuw wachtwoord moet minimaal 8 tekens bevatten"
   change_mismatch: "Wachtwoorden komen niet overeen"
   change_failed: "Wachtwoord wijzigen mislukt"
   remember: Wachtwoord onthouden
@@ -46,6 +46,9 @@ password:
   enter_to_enable: "Voer uw wachtwoord in om automatisch ontgrendelen te activeren:"
   create_title: Wachtwoord aanmaken
   unlock_title: Ontgrendelen
+  too_short: "Het wachtwoord moet minstens %{min} tekens bevatten"
+  same_as_account: "Gebruik verschillende wachtwoorden. De server ziet je accountwachtwoord, dus dat mag niet ook je notities openen."
+  same_as_account_warning: "Je accountwachtwoord is hetzelfde als je notitiewachtwoord, dus de server zou je notities kunnen lezen. Wijzig je notitiewachtwoord in Instellingen."
 menu:
   notes: Notities
   new_note: Nieuwe notitie
@@ -661,3 +664,8 @@ calc:
   numbers_only: "⚠ Calc werkt met getallen: tekst, tupels en ; worden niet berekend"
   too_deep: "⚠ Te veel geneste haakjes (limiet %{max})"
   gave_up: "Het berekenen van deze notitie duurde te lang, dus wordt ze zonder resultaten getoond."
+
+envelope:
+  unwrap_failed: "Je notitiewachtwoord kan de sleutel van dit account niet openen. Die is mogelijk door een oudere versie opgeslagen. Ontgrendel Jottery op een apparaat dat al verbonden is, dat lost het op, en probeer het opnieuw."
+  rekey_failed: "Je lokale notities konden niet naar de sleutel van dit account worden overgezet, dus er is niets gewijzigd: %{error}"
+  diverged: "De sleutel van dit apparaat wijkt af van die van het account. Notities van je andere apparaten worden hier mogelijk niet geopend."

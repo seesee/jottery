@@ -32,11 +32,11 @@ password:
   remember_keychain_enabled: "Password stored securely in system keychain."
   change_title: "Change Password"
   change_enter_current: "Enter your current password:"
-  change_enter_new: "Enter new password (min 12 characters):"
+  change_enter_new: "Enter new password (min 8 characters):"
   change_confirm_new: "Confirm new password:"
   change_current_required: "Please enter your current password"
   change_wrong_current: "Current password is incorrect"
-  change_too_short: "New password must be at least 12 characters"
+  change_too_short: "New password must be at least 8 characters"
   change_mismatch: "Passwords do not match"
   change_failed: "Failed to change password"
   remember_disabled: "Password storage disabled. You will be prompted on next start."
@@ -51,6 +51,9 @@ password:
   enter_to_enable: "Enter your password to enable auto-unlock:"
   create_title: "Create Password"
   unlock_title: "Unlock"
+  too_short: "Password must be at least %{min} characters"
+  same_as_account: "Use different passwords. The server sees your account password, so it must not also open your notes."
+  same_as_account_warning: "Your account password is the same as your notes password, so the server could read your notes. Change your notes password in Settings."
 
 # Main menu / Navigation
 menu:
@@ -702,3 +705,8 @@ calc:
   numbers_only: "⚠ Calc works with numbers: text, tuples and ; are not calculated"
   too_deep: "⚠ Too many nested brackets (limit %{max})"
   gave_up: "This note took too long to calculate, so it is shown without results."
+
+envelope:
+  unwrap_failed: "Your notes password can't open this account's key. It may have been saved by an older version. Unlock Jottery on a device that's already connected, which will fix it, then try again."
+  rekey_failed: "Your local notes couldn't be moved to this account's key, so nothing has changed: %{error}"
+  diverged: "This device's key differs from the account's. Notes from your other devices may not open here."

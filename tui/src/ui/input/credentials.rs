@@ -3,6 +3,7 @@
 use anyhow::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 use rust_i18n::t;
+use zeroize::Zeroize;
 
 use crate::ui::app::App;
 use crate::ui::operations;
@@ -27,16 +28,16 @@ pub fn handle_change_password_current_key(app: &mut App, key: KeyEvent) -> Resul
                 return Ok(());
             }
             // Verify current password
-            match crate::db::Database::open(&app.db_path, &current_password) {
-                Ok(_) => {
-                    app.credential_input.clear();
+            match operations::auth::verify_password(app, &current_password) {
+                Ok(true) => {
+                    app.credential_input.zeroize();
                     if let AppState::ChangePasswordCurrent { previous } =
                         std::mem::replace(&mut app.state, AppState::Quit)
                     {
                         app.state = AppState::ChangePasswordNew { current_password, previous };
                     }
                 }
-                Err(_) => {
+                Ok(false) | Err(_) => {
                     app.error = Some(t!("password.change_wrong_current").to_string());
                 }
             }
@@ -62,11 +63,11 @@ pub fn handle_change_password_new_key(app: &mut App, key: KeyEvent) -> Result<()
         }
         KeyCode::Enter => {
             let new_password = app.credential_input.clone();
-            if new_password.len() < 12 {
+            if crate::vault::check_new_password(&new_password).is_err() {
                 app.error = Some(t!("password.change_too_short").to_string());
                 return Ok(());
             }
-            app.credential_input.clear();
+            app.credential_input.zeroize();
             if let AppState::ChangePasswordNew { current_password, previous } =
                 std::mem::replace(&mut app.state, AppState::Quit)
             {
@@ -113,19 +114,29 @@ pub fn handle_change_password_confirm_key(app: &mut App, key: KeyEvent) -> Resul
                         return Ok(());
                     }
                 };
+                // Re-wrap the master key first. If that fails nothing has changed,
+                // whereas changing the database password first could leave the two
+                // disagreeing, with no password that opens both.
+                if let Err(e) = operations::envelope::change_password(app, &current_password, &new_password, &master_key) {
+                    app.error = Some(format!("{}: {}", t!("password.change_failed"), e));
+                    app.state = *previous;
+                    app.input_mode = InputMode::Normal;
+                    return Ok(());
+                }
                 // Change SQLCipher database password
                 if let Some(db) = &app.db {
                     if let Err(e) = db.change_password(&new_password) {
+                        // Put the wrapped key back, so the old password opens both
+                        if let Err(undo) = operations::envelope::change_password(app, &new_password, &current_password, &master_key) {
+                            app.debug_log(&format!("Could not restore the wrapped key: {}", undo));
+                        }
                         app.error = Some(format!("{}: {}", t!("password.change_failed"), e));
                         app.state = *previous;
                         app.input_mode = InputMode::Normal;
                         return Ok(());
                     }
                 }
-                // Re-wrap envelope encryption (non-fatal)
-                if let Err(e) = operations::envelope::change_password(app, &current_password, &new_password, &master_key) {
-                    app.debug_log(&format!("Envelope password change failed (non-fatal): {}", e));
-                }
+                app.unlock_password = Some(new_password.clone());
                 // Update stored password if remember is enabled
                 if app.settings.remember_password {
                     let _ = operations::auth::store_password_for_autounlock(app, &new_password);
@@ -317,7 +328,14 @@ pub fn handle_register_input_password_key(app: &mut App, key: KeyEvent) -> Resul
                 app.error = Some(t!("register.password_too_short").to_string());
                 return Ok(());
             }
-            app.credential_input.clear();
+            if let Some(notes_password) = app.unlock_password.as_deref() {
+                if let Err(e) = crate::vault::check_passwords_differ(notes_password, &password) {
+                    app.credential_input.zeroize();
+                    app.error = Some(e.to_string());
+                    return Ok(());
+                }
+            }
+            app.credential_input.zeroize();
 
             // Try to register user
             if let AppState::RegisterInputPassword { endpoint, email, previous } =

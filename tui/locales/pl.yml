@@ -23,11 +23,11 @@ password:
   change_success: Hasło zmienione pomyślnie
   change_title: "Zmiana hasła"
   change_enter_current: "Wprowadź aktualne hasło:"
-  change_enter_new: "Wprowadź nowe hasło (min. 12 znaków):"
+  change_enter_new: "Wprowadź nowe hasło (min. 8 znaków):"
   change_confirm_new: "Potwierdź nowe hasło:"
   change_current_required: "Wprowadź aktualne hasło"
   change_wrong_current: "Aktualne hasło jest nieprawidłowe"
-  change_too_short: "Nowe hasło musi mieć co najmniej 12 znaków"
+  change_too_short: "Nowe hasło musi mieć co najmniej 8 znaków"
   change_mismatch: "Hasła nie pasują"
   change_failed: "Zmiana hasła nie powiodła się"
   remember: Zapamiętaj hasło
@@ -46,6 +46,9 @@ password:
   enter_to_enable: "Wprowadź hasło, aby włączyć automatyczne odblokowywanie:"
   create_title: Utwórz hasło
   unlock_title: Odblokuj
+  too_short: "Hasło musi mieć co najmniej %{min} znaków"
+  same_as_account: "Użyj różnych haseł. Serwer widzi hasło konta, więc nie może ono również otwierać notatek."
+  same_as_account_warning: "Hasło konta jest takie samo jak hasło notatek, więc serwer mógłby je odczytać. Zmień hasło notatek w Ustawieniach."
 menu:
   notes: Notatki
   new_note: Nowa notatka
@@ -661,3 +664,8 @@ calc:
   numbers_only: "⚠ Calc działa na liczbach: tekst, krotki i ; nie są obliczane"
   too_deep: "⚠ Zbyt wiele zagnieżdżonych nawiasów (limit %{max})"
   gave_up: "Obliczanie tej notatki trwało zbyt długo, więc jest wyświetlana bez wyników."
+
+envelope:
+  unwrap_failed: "Hasło notatek nie otwiera klucza tego konta. Mógł zostać zapisany przez starszą wersję. Odblokuj Jottery na już połączonym urządzeniu, co to naprawi, i spróbuj ponownie."
+  rekey_failed: "Nie udało się przenieść lokalnych notatek na klucz tego konta, więc nic się nie zmieniło: %{error}"
+  diverged: "Klucz tego urządzenia różni się od klucza konta. Notatki z innych urządzeń mogą się tu nie otwierać."

@@ -23,11 +23,11 @@ password:
   change_success: Senha alterada com sucesso
   change_title: "Alterar senha"
   change_enter_current: "Digite a sua senha atual:"
-  change_enter_new: "Digite a nova senha (mín. 12 caracteres):"
+  change_enter_new: "Digite a nova senha (mín. 8 caracteres):"
   change_confirm_new: "Confirme a nova senha:"
   change_current_required: "Digite a sua senha atual"
   change_wrong_current: "A senha atual está incorreta"
-  change_too_short: "A nova senha deve ter pelo menos 12 caracteres"
+  change_too_short: "A nova senha deve ter pelo menos 8 caracteres"
   change_mismatch: "As senhas não correspondem"
   change_failed: "Falha ao alterar a senha"
   remember: Lembrar senha
@@ -46,6 +46,9 @@ password:
   enter_to_enable: "Digite sua senha para ativar o desbloqueio automático:"
   create_title: Criar senha
   unlock_title: Desbloquear
+  too_short: "A palavra-passe deve ter pelo menos %{min} caracteres"
+  same_as_account: "Utilize palavras-passe diferentes. O servidor vê a palavra-passe da conta, por isso esta não pode também abrir as suas notas."
+  same_as_account_warning: "A palavra-passe da conta é igual à das notas, por isso o servidor poderia lê-las. Altere a palavra-passe das notas nas Definições."
 menu:
   notes: Notas
   new_note: Nova nota
@@ -661,3 +664,8 @@ calc:
   numbers_only: "⚠ O Calc funciona com números: texto, tuplos e ; não são calculados"
   too_deep: "⚠ Demasiados parênteses aninhados (limite %{max})"
   gave_up: "O cálculo desta nota demorou demasiado, por isso é apresentada sem resultados."
+
+envelope:
+  unwrap_failed: "A palavra-passe das notas não abre a chave desta conta. Pode ter sido guardada por uma versão anterior. Desbloqueie o Jottery num dispositivo já ligado, o que resolverá o problema, e tente novamente."
+  rekey_failed: "Não foi possível mover as notas locais para a chave desta conta, por isso nada foi alterado: %{error}"
+  diverged: "A chave deste dispositivo é diferente da chave da conta. As notas dos seus outros dispositivos podem não abrir aqui."

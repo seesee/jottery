@@ -23,11 +23,11 @@ password:
   change_success: Passwort erfolgreich geändert
   change_title: "Passwort ändern"
   change_enter_current: "Geben Sie Ihr aktuelles Passwort ein:"
-  change_enter_new: "Neues Passwort eingeben (mind. 12 Zeichen):"
+  change_enter_new: "Neues Passwort eingeben (mind. 8 Zeichen):"
   change_confirm_new: "Neues Passwort bestätigen:"
   change_current_required: "Bitte geben Sie Ihr aktuelles Passwort ein"
   change_wrong_current: "Aktuelles Passwort ist falsch"
-  change_too_short: "Neues Passwort muss mindestens 12 Zeichen haben"
+  change_too_short: "Neues Passwort muss mindestens 8 Zeichen haben"
   change_mismatch: "Passwörter stimmen nicht überein"
   change_failed: "Passwort konnte nicht geändert werden"
   remember: Passwort merken
@@ -46,6 +46,9 @@ password:
   enter_to_enable: "Geben Sie Ihr Passwort ein, um Auto-Unlock zu aktivieren:"
   create_title: Passwort erstellen
   unlock_title: Entsperren
+  too_short: "Das Passwort muss mindestens %{min} Zeichen lang sein"
+  same_as_account: "Verwende unterschiedliche Passwörter. Der Server sieht dein Kontopasswort, daher darf es nicht auch deine Notizen öffnen."
+  same_as_account_warning: "Dein Kontopasswort ist dasselbe wie dein Notizenpasswort, daher könnte der Server deine Notizen lesen. Ändere dein Notizenpasswort in den Einstellungen."
 menu:
   notes: Notizen
   new_note: Neue Notiz
@@ -661,3 +664,8 @@ calc:
   numbers_only: "⚠ Calc rechnet nur mit Zahlen: Text, Tupel und ; werden nicht berechnet"
   too_deep: "⚠ Zu viele verschachtelte Klammern (Grenze %{max})"
   gave_up: "Die Berechnung dieser Notiz dauerte zu lange, daher wird sie ohne Ergebnisse angezeigt."
+
+envelope:
+  unwrap_failed: "Dein Notizenpasswort kann den Schlüssel dieses Kontos nicht öffnen. Er wurde möglicherweise von einer älteren Version gespeichert. Entsperre Jottery auf einem bereits verbundenen Gerät, das behebt das Problem, und versuche es dann erneut."
+  rekey_failed: "Deine lokalen Notizen konnten nicht auf den Schlüssel dieses Kontos umgestellt werden, daher wurde nichts geändert: %{error}"
+  diverged: "Der Schlüssel dieses Geräts weicht vom Kontoschlüssel ab. Notizen von deinen anderen Geräten lassen sich hier möglicherweise nicht öffnen."

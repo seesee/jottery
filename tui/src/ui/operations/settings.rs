@@ -321,7 +321,16 @@ pub fn register_user(_app: &mut App, endpoint: &str, email: &str, password: &str
 }
 
 /// Register a device with the sync server
+///
+/// Nothing is saved locally until this device knows which key it will use, so a
+/// refusal leaves it as it was, not half connected and pushing under the wrong key.
 pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &str, device_name: &str) -> Result<()> {
+    let notes_password = app.unlock_password.clone()
+        .ok_or_else(|| anyhow::anyhow!("Vault is locked"))?;
+    crate::vault::check_passwords_differ(&notes_password, password)?;
+
+    let local_key = app.key.ok_or_else(|| anyhow::anyhow!("No encryption key"))?;
+
     let client = crate::api::AuthClient::new(endpoint.to_string());
 
     app.debug_log(&format!("[Register] Starting device registration: endpoint={}, email={}", endpoint, email));
@@ -330,22 +339,30 @@ pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &st
     let response = client.register_device(email, password, device_name, "tui")?;
     app.debug_log(&format!("[Register] Server responded: user_id={}, client_id={}", response.user_id, response.client_id));
 
-    // Copy key before borrowing app mutably
-    let key = *app.key.as_ref().ok_or_else(|| anyhow::anyhow!("No encryption key"))?;
-    app.debug_log(&format!("[Register] Current master key fingerprint: {:02x}{:02x}{:02x}{:02x}", key[0], key[1], key[2], key[3]));
+    let key = {
+        let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
+        let account = super::envelope::Account {
+            client: &client,
+            api_key: &response.api_key,
+            user_id: &response.user_id,
+        };
+        super::envelope::adopt_account_key(db, &app.crypto, &account, &notes_password, &local_key)?
+    };
+
+    if key != local_key {
+        app.debug_log("[Register] Now using the account's master key");
+        app.key = Some(key);
+        app.key_manager.set_master_key(key);
+    }
 
     let db = app.db.as_ref().ok_or_else(|| anyhow::anyhow!("Database not unlocked"))?;
 
     // Encrypt and save the API key
     let encrypted = app.crypto.encrypt_text(&response.api_key, &key)?;
     let encrypted_api_key = serde_json::to_string(&encrypted)?;
-    app.debug_log("[Register] API key encrypted with current master key");
 
-    // Save values before moving response fields
-    let api_key_for_check = response.api_key.clone();
-    let user_id_for_check = response.user_id.clone();
-
-    // Save sync metadata - also clear pending registration since we're now fully registered
+    // Save sync metadata - also clear pending registration since we're now fully
+    // registered. The first sync with an account pushes and pulls everything.
     let sync_repo = SyncRepository::new(db.connection());
     let mut metadata = sync_repo.get_metadata()?.unwrap_or_default();
     metadata.api_key = Some(encrypted_api_key);
@@ -354,6 +371,8 @@ pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &st
     metadata.sync_endpoint = endpoint.to_string();
     metadata.sync_enabled = true;
     metadata.pending_registration_email = None;
+    metadata.last_sync_at = None;
+    metadata.last_pull_at = None;
     sync_repo.update_metadata(&metadata)?;
     app.debug_log("[Register] Sync metadata saved to database");
 
@@ -363,71 +382,9 @@ pub fn register_device(app: &mut App, endpoint: &str, email: &str, password: &st
     save_settings(app)?;
     app.debug_log("[Register] Settings persisted to database");
 
-    let has_unlock_pw = app.unlock_password.is_some();
-    app.debug_log(&format!("[Register] unlock_password available: {}", has_unlock_pw));
-
-    let local_password = app.unlock_password.clone();
-    match try_envelope_setup(app, password, &key, endpoint, &api_key_for_check, &user_id_for_check, local_password.as_deref()) {
-        Ok(()) => {
-            app.debug_log("Envelope setup succeeded after device registration");
-            // If onboarding changed the master key, re-encrypt the API key with the new key
-            if let Some(new_key) = app.key.as_ref() {
-                if *new_key != key {
-                    app.debug_log(&format!("[Register] Master key CHANGED after onboarding: {:02x}{:02x}{:02x}{:02x} -> {:02x}{:02x}{:02x}{:02x}",
-                        key[0], key[1], key[2], key[3],
-                        new_key[0], new_key[1], new_key[2], new_key[3]));
-                    let re_encrypted = app.crypto.encrypt_text(&api_key_for_check, new_key)?;
-                    let re_encrypted_json = serde_json::to_string(&re_encrypted)?;
-                    let db = app.db.as_ref().unwrap();
-                    let sync_repo = SyncRepository::new(db.connection());
-                    let mut meta = sync_repo.get_metadata()?.unwrap_or_default();
-                    meta.api_key = Some(re_encrypted_json);
-                    sync_repo.update_metadata(&meta)?;
-                    app.debug_log("[Register] API key re-encrypted with new master key");
-                } else {
-                    app.debug_log("[Register] Master key unchanged after onboarding");
-                }
-            }
-        }
-        Err(e) => app.debug_log(&format!("[Register] Envelope setup FAILED (non-fatal): {}", e)),
-    }
+    super::notes::load_notes(app)?;
 
     Ok(())
-}
-
-/// Try to set up envelope encryption after device registration.
-/// First attempts onboarding (downloading wrapped key from server),
-/// then falls back to migrating local legacy encryption.
-fn try_envelope_setup(
-    app: &mut App,
-    password: &str,
-    master_key: &[u8; 32],
-    endpoint: &str,
-    plaintext_api_key: &str,
-    user_id: &str,
-    local_password: Option<&str>,
-) -> Result<()> {
-    // Try onboarding first (server may already have a wrapped key from another device)
-    let client = crate::api::AuthClient::new(endpoint.to_string());
-    match client.get_wrapped_key(plaintext_api_key)? {
-        Some(_) => {
-            // Server has a wrapped key — onboard from it
-            app.debug_log("Server has wrapped key, onboarding...");
-            let onboarded_key = super::envelope::onboard_from_server(app, password, endpoint, user_id, plaintext_api_key, local_password)?;
-            // Update app key to the shared master key from server
-            if onboarded_key != *master_key {
-                app.debug_log("Onboarded master key differs from local key — updating to server key");
-                app.key = Some(onboarded_key);
-                app.key_manager.set_master_key(onboarded_key);
-            }
-            Ok(())
-        }
-        None => {
-            // No wrapped key on server — migrate our local key
-            app.debug_log("No wrapped key on server, migrating local...");
-            super::envelope::try_migrate_to_envelope(app, password, master_key, local_password)
-        }
-    }
 }
 
 /// Save pending registration state to database

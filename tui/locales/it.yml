@@ -23,11 +23,11 @@ password:
   change_success: Password modificata con successo
   change_title: "Cambia password"
   change_enter_current: "Inserisci la password attuale:"
-  change_enter_new: "Inserisci la nuova password (min. 12 caratteri):"
+  change_enter_new: "Inserisci la nuova password (min. 8 caratteri):"
   change_confirm_new: "Conferma la nuova password:"
   change_current_required: "Inserisci la password attuale"
   change_wrong_current: "La password attuale non è corretta"
-  change_too_short: "La nuova password deve avere almeno 12 caratteri"
+  change_too_short: "La nuova password deve avere almeno 8 caratteri"
   change_mismatch: "Le password non corrispondono"
   change_failed: "Modifica password non riuscita"
   remember: Ricorda password
@@ -46,6 +46,9 @@ password:
   enter_to_enable: "Inserisci la password per attivare lo sblocco automatico:"
   create_title: Crea password
   unlock_title: Sblocca
+  too_short: "La password deve contenere almeno %{min} caratteri"
+  same_as_account: "Usa password diverse. Il server vede la password dell'account, quindi non deve aprire anche le note."
+  same_as_account_warning: "La password dell'account è uguale a quella delle note, quindi il server potrebbe leggerle. Cambia la password delle note nelle Impostazioni."
 menu:
   notes: Note
   new_note: Nuova nota
@@ -661,3 +664,8 @@ calc:
   numbers_only: "⚠ Calc lavora con i numeri: testo, tuple e ; non vengono calcolati"
   too_deep: "⚠ Troppe parentesi annidate (limite %{max})"
   gave_up: "Il calcolo di questa nota ha richiesto troppo tempo, quindi viene mostrata senza risultati."
+
+envelope:
+  unwrap_failed: "La password delle note non apre la chiave di questo account. Potrebbe essere stata salvata da una versione precedente. Sblocca Jottery su un dispositivo già connesso, che risolverà il problema, poi riprova."
+  rekey_failed: "Non è stato possibile spostare le note locali sulla chiave di questo account, quindi non è cambiato nulla: %{error}"
+  diverged: "La chiave di questo dispositivo è diversa da quella dell'account. Le note degli altri dispositivi potrebbero non aprirsi qui."

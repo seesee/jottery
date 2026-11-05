@@ -23,11 +23,11 @@ password:
   change_success: "비밀번호가 성공적으로 변경되었습니다"
   change_title: "비밀번호 변경"
   change_enter_current: "현재 비밀번호를 입력하세요:"
-  change_enter_new: "새 비밀번호를 입력하세요 (12자 이상):"
+  change_enter_new: "새 비밀번호를 입력하세요 (8자 이상):"
   change_confirm_new: "새 비밀번호를 확인하세요:"
   change_current_required: "현재 비밀번호를 입력하세요"
   change_wrong_current: "현재 비밀번호가 올바르지 않습니다"
-  change_too_short: "새 비밀번호는 12자 이상이어야 합니다"
+  change_too_short: "새 비밀번호는 8자 이상이어야 합니다"
   change_mismatch: "비밀번호가 일치하지 않습니다"
   change_failed: "비밀번호 변경에 실패했습니다"
   remember: "비밀번호 기억"
@@ -46,6 +46,9 @@ password:
   enter_to_enable: "자동 잠금 해제를 활성화하려면 비밀번호를 입력하세요:"
   create_title: "비밀번호 만들기"
   unlock_title: "잠금 해제"
+  too_short: "비밀번호는 %{min}자 이상이어야 합니다"
+  same_as_account: "서로 다른 비밀번호를 사용하세요. 서버는 계정 비밀번호를 볼 수 있으므로 노트를 여는 비밀번호와 같으면 안 됩니다."
+  same_as_account_warning: "계정 비밀번호가 노트 비밀번호와 같아서 서버가 노트를 읽을 수 있습니다. 설정에서 노트 비밀번호를 변경하세요."
 menu:
   notes: "노트"
   new_note: "새 노트"
@@ -661,3 +664,8 @@ calc:
   numbers_only: "⚠ Calc는 숫자만 처리합니다: 텍스트, 튜플, ;는 계산되지 않습니다"
   too_deep: "⚠ 중첩된 괄호가 너무 많습니다 (제한 %{max})"
   gave_up: "이 노트를 계산하는 데 시간이 너무 오래 걸려 결과 없이 표시합니다."
+
+envelope:
+  unwrap_failed: "노트 비밀번호로 이 계정의 키를 열 수 없습니다. 이전 버전에서 저장되었을 수 있습니다. 이미 연결된 기기에서 Jottery를 잠금 해제하면 해결되니, 그런 다음 다시 시도하세요."
+  rekey_failed: "로컬 노트를 이 계정의 키로 옮길 수 없어 아무것도 변경되지 않았습니다: %{error}"
+  diverged: "이 기기의 키가 계정의 키와 다릅니다. 다른 기기의 노트가 여기서 열리지 않을 수 있습니다."

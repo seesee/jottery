@@ -23,11 +23,11 @@ password:
   change_success: Şifre başarıyla değiştirildi
   change_title: "Şifre Değiştir"
   change_enter_current: "Mevcut şifrenizi girin:"
-  change_enter_new: "Yeni şifre girin (en az 12 karakter):"
+  change_enter_new: "Yeni şifre girin (en az 8 karakter):"
   change_confirm_new: "Yeni şifreyi onaylayın:"
   change_current_required: "Lütfen mevcut şifrenizi girin"
   change_wrong_current: "Mevcut şifre yanlış"
-  change_too_short: "Yeni şifre en az 12 karakter olmalıdır"
+  change_too_short: "Yeni şifre en az 8 karakter olmalıdır"
   change_mismatch: "Şifreler eşleşmiyor"
   change_failed: "Şifre değiştirilemedi"
   remember: Şifreyi hatırla
@@ -46,6 +46,9 @@ password:
   enter_to_enable: "Otomatik kilit açmayı etkinleştirmek için şifrenizi girin:"
   create_title: Şifre Oluştur
   unlock_title: Kilidi Aç
+  too_short: "Parola en az %{min} karakter olmalıdır"
+  same_as_account: "Farklı parolalar kullanın. Sunucu hesap parolanızı görür, bu yüzden aynı parola notlarınızı da açmamalıdır."
+  same_as_account_warning: "Hesap parolanız not parolanızla aynı, bu yüzden sunucu notlarınızı okuyabilir. Ayarlar bölümünden not parolanızı değiştirin."
 menu:
   notes: Notlar
   new_note: Yeni not
@@ -661,3 +664,8 @@ calc:
   numbers_only: "⚠ Calc sayılarla çalışır: metin, demetler ve ; hesaplanmaz"
   too_deep: "⚠ Çok fazla iç içe parantez (sınır %{max})"
   gave_up: "Bu notun hesaplanması çok uzun sürdü, bu yüzden sonuçlar olmadan gösteriliyor."
+
+envelope:
+  unwrap_failed: "Not parolanız bu hesabın anahtarını açamıyor. Anahtar eski bir sürüm tarafından kaydedilmiş olabilir. Zaten bağlı bir cihazda Jottery kilidini açın, bu sorunu düzeltir, sonra yeniden deneyin."
+  rekey_failed: "Yerel notlarınız bu hesabın anahtarına taşınamadı, bu yüzden hiçbir şey değişmedi: %{error}"
+  diverged: "Bu cihazın anahtarı hesabın anahtarından farklı. Diğer cihazlarınızdaki notlar burada açılmayabilir."
