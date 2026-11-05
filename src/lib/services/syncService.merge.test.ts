@@ -14,7 +14,7 @@ import { noteService } from './noteService';
 import { keyManager } from './keyManager';
 import { cryptoService } from './crypto';
 import { initTestDB, cleanupTestDB, createTestNote } from '../../test/db-utils';
-import { notes, settings } from '../stores/appStore';
+import { notes, remoteNoteUpdate, settings } from '../stores/appStore';
 import { searchService } from './searchService';
 import { DEFAULT_SETTINGS } from '../types';
 import type { Note, SyncNote, SyncPullResponse, SyncPushRequest, SyncPushResponse } from '../types';
@@ -291,6 +291,59 @@ describe('sync merge', () => {
       const note = await stored();
       expect(note.pinned).toBe(true);
       expect(note.attachments.map(x => x.id)).toEqual([ATTACHMENT_A]);
+    });
+  });
+
+  describe('telling the editor what a pull changed', () => {
+    beforeEach(() => remoteNoteUpdate.set(null));
+
+    it('names a note the pull replaced', async () => {
+      await localNote();
+      serve({ notes: [await remoteNote()] });
+
+      await syncService.syncNow();
+
+      expect(get(remoteNoteUpdate)?.ids).toEqual([NOTE_ID]);
+    });
+
+    it('names a new note', async () => {
+      serve({ notes: [await remoteNote()] });
+
+      await syncService.syncNow();
+
+      expect(get(remoteNoteUpdate)?.ids).toEqual([NOTE_ID]);
+    });
+
+    it('says nothing when the pull changed nothing', async () => {
+      await localNote();
+      serve({ notes: [await remoteNote({ contentHash: HASH_1, parentHash: null, hashChain: [HASH_1], syntaxLanguage: 'plain', wordWrap: true })] });
+
+      await syncService.syncNow();
+
+      expect(get(remoteNoteUpdate)).toBeNull();
+    });
+
+    it('says nothing about a push', async () => {
+      await localNote({ needsSync: true });
+      serve({}, async () => ({ accepted: [{ id: NOTE_ID, serverVersion: 2, syncedAt: NOW }] }));
+
+      await syncService.syncNow();
+
+      expect(get(remoteNoteUpdate)).toBeNull();
+    });
+
+    it('has the store up to date before it announces', async () => {
+      await localNote();
+      serve({ notes: [await remoteNote()] });
+      let textWhenAnnounced: string | undefined;
+      const stop = remoteNoteUpdate.subscribe(update => {
+        if (update) textWhenAnnounced = get(notes).find(note => note.id === NOTE_ID)?.content;
+      });
+
+      await syncService.syncNow();
+      stop();
+
+      expect(textWhenAnnounced).toBe('remote text');
     });
   });
 

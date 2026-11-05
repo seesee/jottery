@@ -13,6 +13,7 @@ import { syncRepository } from './syncRepository';
 import { noteService } from './noteService';
 import { cryptoService, encryptStringArray, updateHashChain } from './crypto';
 import { keyManager } from './keyManager';
+import { storageToSync } from './tagConversionService';
 import { ApplicationLockedError, CryptoError, NotFoundError } from '../errors';
 
 export type ConflictResolution = 'keep-mine' | 'keep-server' | 'keep-both' | 'merge';
@@ -386,6 +387,37 @@ export async function resolveMerge(
 }
 
 /**
+ * Record a conflict with the copy of a note now in storage. For a pull that lands
+ * while the editor holds unsaved text: the text is about to be saved over the pulled
+ * note, so this keeps the pulled copy as the version the user can choose instead.
+ */
+export async function raiseConflictWithStoredNote(noteId: string): Promise<void> {
+  const masterKey = keyManager.getMasterKey();
+  if (!masterKey) {
+    throw new ApplicationLockedError();
+  }
+
+  const note = await noteRepository.getById(noteId);
+  if (!note) {
+    return;
+  }
+
+  await storeConflict(noteId, {
+    serverContent: note.content,
+    serverTags: await storageToSync(note.tags, masterKey.key),
+    serverModifiedAt: note.modifiedAt,
+    serverVersion: note.version,
+    serverAttachments: note.attachments,
+    serverPinned: note.pinned,
+    serverSyntaxLanguage: note.syntaxLanguage,
+    serverWordWrap: note.wordWrap,
+    serverContentHash: note.contentHash,
+    serverParentHash: note.parentHash,
+    serverHashChain: note.hashChain,
+  });
+}
+
+/**
  * Store conflict data when a push is rejected
  */
 export async function storeConflict(
@@ -446,4 +478,5 @@ export const conflictService = {
   resolveKeepBoth,
   resolveMerge,
   storeConflict,
+  raiseConflictWithStoredNote,
 };

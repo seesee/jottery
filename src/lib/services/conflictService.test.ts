@@ -4,8 +4,9 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { initTestDB, cleanupTestDB, createTestNote } from '../../test/db-utils';
-import { storeConflict, getConflicts, getConflictInfo, resolveKeepMine, resolveKeepServer, resolveKeepBoth } from './conflictService';
+import { raiseConflictWithStoredNote, storeConflict, getConflicts, getConflictInfo, resolveKeepMine, resolveKeepServer, resolveKeepBoth } from './conflictService';
 import { noteRepository } from './noteRepository';
+import { noteService } from './noteService';
 import { syncRepository } from './syncRepository';
 import { keyManager } from './keyManager';
 import { cryptoService, decryptStringArray } from './crypto';
@@ -594,5 +595,65 @@ describe('a server copy that fails to decrypt is never treated as plaintext', ()
     await conflictWith(FORGED);
     await expect(resolveKeepMine(noteId)).resolves.toBeUndefined();
     expect((await syncRepository.getNoteSyncMetadata(noteId))?.conflictData).toBeUndefined();
+  });
+});
+
+describe('a pull that lands while the editor has unsaved text', () => {
+  let masterKey: CryptoKey;
+  let noteId: string;
+
+  beforeEach(async () => {
+    masterKey = (await initTestDB()).masterKey;
+    keyManager.setMasterKey({ key: masterKey, keyBytes: new Uint8Array(32), derivedAt: Date.now() });
+
+    const pulled = await noteService.createNote('Pulled text', ['from-elsewhere']);
+    noteId = pulled.id;
+  });
+
+  afterEach(async () => {
+    keyManager.clearMasterKey();
+    await cleanupTestDB();
+  });
+
+  it('records the pulled copy, so it can be chosen', async () => {
+    await raiseConflictWithStoredNote(noteId);
+
+    const info = await getConflictInfo(noteId);
+    expect(info?.serverContent).toBe('Pulled text');
+    expect(info?.serverTags).toEqual(['from-elsewhere']);
+    expect(await getConflicts()).toEqual([noteId]);
+  });
+
+  it('keeps the pulled copy after the editor saves over it', async () => {
+    await raiseConflictWithStoredNote(noteId);
+
+    await noteService.updateNote(noteId, { content: 'Typed here' });
+
+    expect((await getConflictInfo(noteId))?.serverContent).toBe('Pulled text');
+  });
+
+  it('can bring the pulled copy back', async () => {
+    await raiseConflictWithStoredNote(noteId);
+    await noteService.updateNote(noteId, { content: 'Typed here' });
+
+    await resolveKeepServer(noteId);
+
+    const restored = await noteService.getNote(noteId);
+    expect(restored?.content).toBe('Pulled text');
+    expect(restored?.tags).toEqual(['from-elsewhere']);
+  });
+
+  it('can keep what was typed', async () => {
+    await raiseConflictWithStoredNote(noteId);
+    await noteService.updateNote(noteId, { content: 'Typed here' });
+
+    await resolveKeepMine(noteId);
+
+    expect((await noteService.getNote(noteId))?.content).toBe('Typed here');
+    expect(await getConflicts()).toEqual([]);
+  });
+
+  it('does nothing for a note that has gone', async () => {
+    await expect(raiseConflictWithStoredNote('a0000000-0000-4000-8000-000000000099')).resolves.toBeUndefined();
   });
 });

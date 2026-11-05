@@ -27,7 +27,7 @@ import { noteService } from './noteService';
 import { storeConflict } from './conflictService';
 import { arrayBufferToBase64, base64ToArrayBuffer } from '../utils/base64';
 import { searchService } from './searchService';
-import { notes, settings, isSyncRefreshing, isSyncing as isSyncingStore, syncProgress, inboxItems } from '../stores/appStore';
+import { notes, remoteNoteUpdate, settings, isSyncRefreshing, isSyncing as isSyncingStore, syncProgress, inboxItems } from '../stores/appStore';
 import { toast } from '../utils/toast.svelte';
 import { createSyncRecoveryNote, deleteSyncRecoveryNote } from './syncRecoveryService';
 import { recordRejectedRemoteRecord, reportServerMissingAttachments } from './vaultHealthService';
@@ -62,6 +62,8 @@ class SyncService {
   private autoSyncTimer?: number;
   private backgroundSyncTimer?: number;
   private eventSource: EventSource | null = null;
+  /** Notes the last pull changed, for telling the open editor */
+  private pulledNoteIds: string[] = [];
   private sseReconnectAttempts = 0;
   private maxSseReconnectAttempts = 5;
   private sseReconnectDelay = 1000; // Start with 1 second
@@ -350,6 +352,9 @@ class SyncService {
 
         // Rebuild search index with all notes
         searchService.indexNotes(allNotes);
+
+        // After the store, so the editor reloads from the new copy
+        remoteNoteUpdate.set({ ids: this.pulledNoteIds });
 
         console.log('[SyncService] Notes refreshed after pull:', allNotes.length);
 
@@ -1105,6 +1110,8 @@ class SyncService {
       throw new Error('Application is locked');
     }
 
+    this.pulledNoteIds = [];
+
     let offset = 0;
     let hasMore = true;
     let totalNotes = 0;
@@ -1150,7 +1157,10 @@ class SyncService {
       let processedInBatch = 0;
       for (const remoteNote of result.notes) {
         const wasChanged = await this.processRemoteNote(remoteNote, masterKey.key, syncedAt);
-        if (wasChanged) totalNotes++;
+        if (wasChanged) {
+          totalNotes++;
+          this.pulledNoteIds.push(remoteNote.id);
+        }
         processedInBatch++;
 
         // Update progress every 10 notes to avoid too many store updates

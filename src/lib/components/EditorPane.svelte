@@ -1,14 +1,16 @@
 <script lang="ts">
   import { onMount, onDestroy, afterUpdate } from 'svelte';
   import { _ } from 'svelte-i18n';
-  import { selectedNote, clearSelection, notes, settings, isDraftMode, exitDraftMode, searchQuery, selectNote, isContentOnlyUpdate, refreshEditorTagsSignal, isLocked } from '../stores/appStore';
-  import { updateNoteInStore, updateNoteInStoreAndSearch, removeNoteFromStoreAndSearch, addNoteToStoreAndSearch } from '../stores/storeHelpers';
+  import { selectedNote, clearSelection, notes, remoteNoteUpdate, settings, isDraftMode, exitDraftMode, searchQuery, selectNote, isContentOnlyUpdate, refreshEditorTagsSignal, isLocked } from '../stores/appStore';
+  import { updateNoteInStore, updateNoteInStoreAndSearch, reloadNotesAfterConflict, removeNoteFromStoreAndSearch, addNoteToStoreAndSearch } from '../stores/storeHelpers';
   import { noteService, tagService, attachmentService, syncService, versionRepository, noteRepository, syncRepository } from '../services';
   import { lock } from '../services/initService';
   import { isApplicationLockedError } from '../errors';
   import { EDITOR_AUTOSAVE_DELAY_MS } from '../constants';
   import { formatDateTime } from '../utils/dateFormat';
   import { formatShortcutForTooltip } from '../utils/keyboardShortcuts';
+  import type { RemoteNoteUpdate } from '../stores/appStore';
+  import { conflictService } from '../services/conflictService';
   import type { Attachment, KeyboardShortcut, CodeEditorRef, HighlightJsInstance, DecryptedNote } from '../types';
   import VersionHistoryModal from './VersionHistoryModal.svelte';
   import AttachmentPreviewModal from './AttachmentPreviewModal.svelte';
@@ -94,6 +96,7 @@
   }
 
   let saveTimeout: number | null = null;
+  let saveInFlight = false;
   let language: string = 'plain';
   let wordWrap: boolean = true;
   let showPreview: boolean = false;
@@ -255,16 +258,78 @@
   }
 
   // Handler to open conflict resolution modal
-  function handleResolveConflict() {
+  async function handleResolveConflict() {
     if ($selectedNote?.id) {
+      // The modal shows what's stored, so that has to include what was just typed
+      if (saveTimeout) {
+        clearTimeout(saveTimeout);
+        await handleSave();
+      }
       showConflictModal = true;
     }
   }
 
   // Handler when conflict is resolved
-  function handleConflictResolved() {
+  async function handleConflictResolved() {
     hasConflict = false;
     showConflictModal = false;
+    if ($selectedNote) {
+      await reloadNotesAfterConflict($selectedNote.id, $settings.sortOrder);
+    }
+  }
+
+  // Text waiting to be saved. hasContentChanged can't answer this: it stays set after
+  // an autosave, so that switching notes still creates a version.
+  function hasUnsavedEdit(): boolean {
+    return saveTimeout !== null || saveInFlight;
+  }
+
+  function loadNoteIntoEditor(note: DecryptedNote) {
+    content = note.content;
+    tags = [...note.tags];
+    attachments = [...note.attachments];
+    language = note.syntaxLanguage || 'plain';
+    wordWrap = note.wordWrap ?? true;
+  }
+
+  /**
+   * A pull landed on the open note while text was unsaved. Neither copy can be dropped,
+   * so the typed text stays and saves as normal, and the pulled copy is kept as the
+   * conflict's other side. New attachments are taken regardless: the save would
+   * otherwise see them as removed.
+   */
+  async function keepEditsAndRaiseConflict(note: DecryptedNote) {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+      saveTimeout = null;
+    }
+
+    const known = new Set(attachments.map(attachment => attachment.id));
+    attachments = [...attachments, ...note.attachments.filter(attachment => !known.has(attachment.id))];
+
+    await conflictService.raiseConflictWithStoredNote(note.id);
+    await checkForConflict(note.id);
+    handleInput();
+  }
+
+  function applyRemoteNoteUpdate(update: RemoteNoteUpdate) {
+    const note = $selectedNote;
+    if (!note || $isDraftMode || !update.ids.includes(note.id)) return;
+
+    if (update.resolved && saveTimeout) {
+      clearTimeout(saveTimeout);
+      saveTimeout = null;
+    }
+
+    if (hasUnsavedEdit()) {
+      void keepEditsAndRaiseConflict(note);
+    } else {
+      loadNoteIntoEditor(note);
+    }
+  }
+
+  $: if ($remoteNoteUpdate) {
+    applyRemoteNoteUpdate($remoteNoteUpdate);
   }
 
   // Watch for note selection changes
@@ -517,8 +582,10 @@
   }
 
   async function handleSave() {
+    saveTimeout = null;
     if (!$selectedNote) return;
 
+    saveInFlight = true;
     try {
       // Save note and get the updated encrypted note with correct version
       const savedNote = await noteService.updateNote($selectedNote.id, {
@@ -564,6 +631,8 @@
         lock();
         isLocked.set(true);
       }
+    } finally {
+      saveInFlight = false;
     }
   }
 
