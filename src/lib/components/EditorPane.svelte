@@ -1274,13 +1274,7 @@
     });
 
     // Restore version data to the note in database
-    currentNote.content = version.content;
-    currentNote.tags = version.tags;
-    currentNote.attachments = version.attachments;
-    currentNote.syntaxLanguage = version.syntaxLanguage;
-    currentNote.wordWrap = version.wordWrap;
-
-    await noteRepository.update(currentNote);
+    await noteService.restoreVersion(currentNote.id, version);
 
     // Reload the note to get decrypted content for display
     const updatedNote = await noteService.getNote($selectedNote.id);

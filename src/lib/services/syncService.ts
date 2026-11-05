@@ -512,8 +512,18 @@ class SyncService {
     }));
   }
 
+  /**
+   * Whether a note is exactly as it was pushed. An edit saved while the request was
+   * in flight isn't on the server, so it must stay marked for the next sync.
+   */
+  private isUnchangedSincePush(note: Note, pushed: Note | undefined): boolean {
+    return pushed !== undefined
+      && note.modifiedAt === pushed.modifiedAt
+      && note.contentHash === pushed.contentHash;
+  }
+
   /** Process notes accepted by server during push */
-  private async processAcceptedNotes(accepted: SyncAccepted[]): Promise<void> {
+  private async processAcceptedNotes(accepted: SyncAccepted[], pushedNotes: Map<string, Note>): Promise<void> {
     for (const item of accepted) {
       if (!isUuid(item?.id)) continue;
       const syncedAt = isTimestamp(item.syncedAt) ? item.syncedAt : new Date().toISOString();
@@ -529,14 +539,16 @@ class SyncService {
       const note = await noteRepository.getById(item.id);
       if (note) {
         note.syncedAt = syncedAt;
-        note.needsSync = false;
+        if (this.isUnchangedSincePush(note, pushedNotes.get(item.id))) {
+          note.needsSync = false;
+        }
         await noteRepository.update(note, false, true);
       }
     }
   }
 
   /** Process notes rejected by server during push (conflicts) */
-  private async processRejectedNotes(rejected: SyncRejected[]): Promise<void> {
+  private async processRejectedNotes(rejected: SyncRejected[], pushedNotes: Map<string, Note>): Promise<void> {
     for (const candidate of rejected) {
       const validated = validateConflict(candidate);
       if (!validated.ok) {
@@ -568,7 +580,7 @@ class SyncService {
 
       // Clear needsSync flag to prevent infinite retry loop
       const note = await noteRepository.getById(item.id);
-      if (note) {
+      if (note && this.isUnchangedSincePush(note, pushedNotes.get(item.id))) {
         note.needsSync = false;
         await noteRepository.update(note, false, true);
       }
@@ -636,8 +648,9 @@ class SyncService {
 
     // Send to server and process results
     const result = await pushToServer(endpoint, apiKey, pushRequest);
-    await this.processAcceptedNotes(result.accepted);
-    await this.processRejectedNotes(result.rejected);
+    const pushedNotes = new Map(batchNotes.map(note => [note.id, note]));
+    await this.processAcceptedNotes(result.accepted, pushedNotes);
+    await this.processRejectedNotes(result.rejected, pushedNotes);
     const warnings = result.attachmentWarnings ?? [];
 
     // Update progress
@@ -837,9 +850,15 @@ class SyncService {
       if (localNote.contentHash === remoteNote.parentHash) {
         isFastForward = true;
       }
-      // Case 2: Same content hash -> identical, no-op
+      // Case 2: Same content hash. The text is the same, but state can still differ:
+      // deleted isn't part of the hash, and not every client recomputes it for a pin
+      // or an attachment. A note with unsent changes pushes its own state instead.
       else if (localNote.contentHash === remoteNote.contentHash) {
-        return false; // No change needed
+        if (localNote.needsSync || !this.hasRemoteStateChange(localNote, remoteNote)) {
+          return false;
+        }
+        noteForStorage.attachments = this.mergedAttachments(localNote, remoteNote);
+        isFastForward = true;
       }
       // Case 3: Local has unsaved changes and hashes diverged
       else if (localNote.needsSync) {
@@ -854,8 +873,10 @@ class SyncService {
       else if (remoteNote.parentHash && localNote.hashChain?.includes(remoteNote.parentHash)) {
         return false; // Local is ahead, no update needed
       }
-      // Case 5: Check if local parent exists in remote chain (can fast-forward)
-      else if (localNote.contentHash && remoteNote.hashChain?.includes(localNote.contentHash)) {
+      // Case 5: The histories can't be related, typically because the local hash has
+      // aged out of a long remote chain. Nothing here is unsent (that's case 3), so
+      // the server's copy is the newer one.
+      else {
         isFastForward = true;
       }
     } else {
@@ -908,6 +929,34 @@ class SyncService {
     }
 
     return false; // Local is newer or equal
+  }
+
+  /**
+   * Whether the remote copy differs in anything apart from the text. showPreview is
+   * left out, because it stays with each device.
+   */
+  private hasRemoteStateChange(local: Note, remote: SyncNote): boolean {
+    const localAttachments = new Set(local.attachments.map(attachment => attachment.id));
+
+    return local.pinned !== remote.pinned
+      || !!local.archived !== !!remote.archived
+      || !!local.locked !== !!remote.locked
+      || !!local.deleted !== !!remote.deleted
+      || (local.color ?? null) !== (remote.color ?? null)
+      || (local.wordWrap ?? true) !== (remote.wordWrap ?? true)
+      || (local.syntaxLanguage ?? null) !== (remote.syntaxLanguage ?? null)
+      || remote.attachments.some(attachment => !localAttachments.has(attachment.id));
+  }
+
+  /**
+   * Local attachments plus any new remote ones. A shorter remote list isn't a removal:
+   * some clients send empty lists by mistake, and the server can return a note
+   * without an attachment it holds. When the text changes, the remote list is taken
+   * as it is.
+   */
+  private mergedAttachments(local: Note, remote: SyncNote): Note['attachments'] {
+    const localAttachments = new Set(local.attachments.map(attachment => attachment.id));
+    return [...local.attachments, ...remote.attachments.filter(attachment => !localAttachments.has(attachment.id))];
   }
 
   /** Download attachments from server */

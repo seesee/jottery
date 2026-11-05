@@ -8,7 +8,7 @@ import { DEFAULT_NOTE } from '../types';
 import { noteRepository } from './noteRepository';
 import { attachmentRepository } from './attachmentRepository';
 import { versionRepository } from './versionRepository';
-import { cryptoService, encryptStringArray, decryptStringArray, updateHashChain } from './crypto';
+import { advanceContentHash, cryptoService, encryptStringArray, decryptStringArray, updateHashChain } from './crypto';
 import { recordDecryptFailure } from './vaultHealthService';
 import { keyManager } from './keyManager';
 import { ApplicationLockedError, NotFoundError, CryptoError } from '../errors';
@@ -456,6 +456,30 @@ class NoteService {
   }
 
   /**
+   * Put a note back to an earlier version. This counts as a new change: without a new
+   * hash, other devices would treat the note as identical and keep what they have,
+   * and a later edit there would undo the restore.
+   */
+  async restoreVersion(
+    id: string,
+    version: Pick<Note, 'content' | 'tags' | 'attachments' | 'syntaxLanguage' | 'wordWrap'>
+  ): Promise<Note> {
+    const note = await noteRepository.getById(id);
+    if (!note) {
+      throw new NotFoundError('Note', id);
+    }
+
+    note.content = version.content;
+    note.tags = version.tags;
+    note.attachments = version.attachments;
+    note.syntaxLanguage = version.syntaxLanguage;
+    note.wordWrap = version.wordWrap;
+
+    await advanceContentHash(note);
+    return await noteRepository.update(note);
+  }
+
+  /**
    * Toggle pin status
    */
   async togglePin(id: string): Promise<Note> {
@@ -465,6 +489,7 @@ class NoteService {
     }
 
     note.pinned = !note.pinned;
+    await advanceContentHash(note);
     return await noteRepository.update(note);
   }
 
