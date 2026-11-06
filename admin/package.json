@@ -16,17 +16,17 @@
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
-    "svelte": "^5.55.7",
+    "svelte": "^5.57.3",
     "svelte-i18n": "^4.0.1"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
-    "@testing-library/svelte": "^5.3.1",
+    "@testing-library/svelte": "^5.4.2",
     "@types/node": "^25.0.5",
-    "autoprefixer": "^10.4.20",
+    "autoprefixer": "^10.6.2",
     "happy-dom": "^21.0.4",
-    "postcss": "^8.5.1",
-    "svelte-check": "^4.3.5",
+    "postcss": "^8.5.32",
+    "svelte-check": "^4.7.8",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.9.3",
     "vite": "^7.3.7",

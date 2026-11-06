@@ -67,8 +67,8 @@ const normalised: Record<string, [string, string]> = {
   'loose list becomes tight': ['- a\n\n- b', '- a\n- b'],
   'table columns are padded': ['| a | b |\n| --- | --- |\n| longer | x |', '| a      | b   |\n| ------ | --- |\n| longer | x   |'],
   'trailing blank lines are dropped': ['text\n\n\n', 'text'],
-  // the task-list tokeniser treats an indented continuation as nested content
-  'task item continuation line becomes a second paragraph': ['- [ ] task with\n  continuation line', '- [ ] task with\n\n  continuation line'],
+  // the line stays in the item's paragraph, indented to where the text starts
+  'task item continuation line is re-indented': ['- [ ] task with\n  continuation line', '- [ ] task with\n    continuation line'],
 };
 
 describe('wysiwyg markdown round trip', () => {
