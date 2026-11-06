@@ -11,6 +11,7 @@ cd "${1:-.}"
 
 toolchain=$(sed -n 's/^channel = "\(.*\)"$/\1/p' server/rust-toolchain.toml)
 image=$(sed -n 's/^FROM rust:\([^@ ]*\).*/\1/p' Dockerfile)
+image=${image%%-*}  # 1.99.1-bookworm is Rust 1.99.1
 
 if [[ -z "$toolchain" || -z "$image" ]]; then
   echo "Couldn't read the versions: toolchain [$toolchain], image [$image]" >&2

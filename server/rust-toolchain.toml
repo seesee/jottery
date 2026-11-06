@@ -1,4 +1,4 @@
 # The compiler that builds the release image, so the tests run on it too.
 # scripts/check-rust-toolchain.sh fails if this and the Dockerfile disagree.
 [toolchain]
-channel = "1.85.1"
+channel = "1.99.1"
