@@ -20,6 +20,15 @@ updates:
     groups:
       npm-minor-and-patch:
         update-types: [minor, patch]
+    ignore:
+      # Breaks restoring backups. Move to it only with the cross-client tests passing.
+      - dependency-name: pako
+        update-types: [version-update:semver-major]
+      - dependency-name: '@types/pako'
+        update-types: [version-update:semver-major]
+      # A full styling migration, to be done on purpose rather than by a bot.
+      - dependency-name: tailwindcss
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: cargo
     directories:
@@ -43,3 +52,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Newer images have no linux/arm/v7, which CI's docker-check doesn't build, so a
+      # bump looks fine until a release fails. See R2-020.
+      - dependency-name: node
+        update-types: [version-update:semver-major]
