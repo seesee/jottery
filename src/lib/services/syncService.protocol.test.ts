@@ -1257,8 +1257,22 @@ describe('sync protocol', () => {
     const clockNotices = (spy: { mock: { calls: unknown[][] } }) =>
       spy.mock.calls.filter(([message]) => message === 'sync.clockAhead');
 
-    afterEach(() => {
+    // The stub server's time is fixed, so the device's has to be too. A test note is
+    // stamped with the current time, which a day after NOW looks a day ahead of the server.
+    // Tests elsewhere can raise the notice too, and its rate limit would swallow the
+    // next one, so it starts clear as well as ending that way.
+    const clearClockNotice = () => {
       (syncService as unknown as { clockNoticeAt: number }).clockNoticeAt = 0;
+    };
+
+    beforeEach(() => {
+      vi.useFakeTimers({ toFake: ['Date'], now: Date.parse(NOW) });
+      clearClockNotice();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      clearClockNotice();
     });
 
     async function noteDated(modifiedAt: string, overrides: Partial<Note> = {}): Promise<void> {

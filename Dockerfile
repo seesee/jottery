@@ -64,9 +64,11 @@ RUN npm run build
 # -----------------------------
 # The version has to match server/rust-toolchain.toml, so that the tests run on the
 # compiler that builds the release. scripts/check-rust-toolchain.sh checks it.
-FROM rust:1.85.1@sha256:e51d0265072d2d9d5d320f6a44dde6b9ef13653b035098febd68cce8fa7c0bc4 AS chef
+# bookworm, to match the runtime image below: a newer distribution's glibc would stop
+# the binaries starting there.
+FROM rust:1.99.1-bookworm@sha256:e6f2cff35d0f309acf8433b4f05878ed77092602c5065cc81801177da0bb3a9c AS chef
 WORKDIR /app
-# 0.1.75 is the newest cargo-chef whose lock file builds on Rust 1.85
+# Pinned, with its lock file, so that a release can be rebuilt
 RUN cargo install cargo-chef --locked --version 0.1.75
 
 FROM chef AS planner
