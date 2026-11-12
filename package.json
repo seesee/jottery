@@ -73,7 +73,7 @@
     "asciichart": "^1.5.25",
     "autoprefixer": "^10.6.2",
     "better-sqlite3": "^13.0.3",
-    "chalk": "^4.1.2",
+    "chalk": "^6.0.1",
     "codemirror": "^6.0.2",
     "fake-indexeddb": "^6.2.7",
     "happy-dom": "^21.0.4",
