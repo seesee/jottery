@@ -95,7 +95,7 @@ RUN cargo build --release --locked --bin jottery-server --bin jottery-admin
 # -----------------------------
 # Taken from the official image because Debian's package is frozen at 2.6.2 from
 # 2022. The binary is static, so it runs on bookworm-slim on all three platforms.
-FROM caddy:2.11.8-alpine@sha256:3db3a09e418f86a8fce8de4bc0026fccd2b4cd925aef00cc7d843d9fdc75e442 AS caddy
+FROM caddy:2.11.9-alpine@sha256:0bbb055bda6793c999bde78b1b5ce3e89f829fb031af2cf50056ea1246559fee AS caddy
 # Copying the contents leaves behind the official binary's file capability, which
 # it only needs to bind low ports. This image listens on 8088.
 RUN cat /usr/bin/caddy > /tmp/caddy && chmod 0755 /tmp/caddy
